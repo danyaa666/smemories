@@ -1,0 +1,10 @@
+{
+  "project_name": "SMemories",
+  "main_branch": "main",
+  "integration_branch": "develop",
+  "commands": {
+    "build": "make build",
+    "test": "make test",
+    "lint": "make lint"
+  }
+}

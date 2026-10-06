@@ -1,0 +1,33 @@
+# Team machinery (local only)
+.team/worktrees/
+.team/state/
+.claude/settings.local.json
+
+# Secrets: this is a PUBLIC repo. Never commit real credentials.
+.env
+.env.local
+.env.production
+.env.staging
+*.pem
+*.key
+
+# Go
+/bin/
+*.test
+*.out
+coverage.txt
+
+# Web
+node_modules/
+/web/dist/
+/web/coverage/
+*.tsbuildinfo
+
+# Local dev data
+/tmp/
+*.log
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
