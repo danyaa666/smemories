@@ -2,6 +2,7 @@
 .team/worktrees/
 .team/state/
 .claude/settings.local.json
+.claude/scheduled_tasks.lock
 
 # Secrets: this is a PUBLIC repo. Never commit real credentials.
 .env
