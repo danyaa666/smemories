@@ -38,10 +38,107 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/auth/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create an account and sign in
+         * @description Email is trimmed, lower-cased and normalised to NFC; a duplicate (case-insensitive, and NFC/NFD spellings are the same address) is `409 email_taken`. Password: 10-128 characters and not equal to the email. Display name: 1-100 characters after trimming, no control or format characters (see the field). Rate limit: 5 per hour per IP (counted once the input is valid). A cookie-less request needs no Origin; one that carries a session cookie must satisfy the CSRF origin check.
+         */
+        post: operations["register"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign in with email and password
+         * @description A wrong password and an unknown email give the identical `401 invalid_credentials` (same body, same work). Every login issues a new session token; a session cookie sent with the request is revoked. Failures are limited to 10 per 15 minutes per IP+email and 100 per 15 minutes per IP.
+         */
+        post: operations["login"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign out (idempotent)
+         * @description Deletes the session and clears the cookie. Always 204, also when nobody is signed in.
+         */
+        post: operations["logout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The signed-in user
+         * @description Sliding expiry: once more than half of the 30-day lifetime has elapsed the expiry is extended and the cookie is sent again.
+         */
+        get: operations["getMe"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        User: {
+            /**
+             * @description Opaque ULID.
+             * @example 01J9Z3K6V8Q4M7N2P5R8T0W1XY
+             */
+            id: string;
+            email: string;
+            email_verified: boolean;
+            display_name: string;
+            /** @enum {string} */
+            locale: "en" | "vi";
+            /** Format: date-time */
+            created_at: string;
+        };
+        UserEnvelope: {
+            user: components["schemas"]["User"];
+        };
         /** @description Shared error envelope. `code` is a stable snake_case contract (clients localise it); `message` is English text meant for logs. */
         Error: {
             error: {
@@ -51,6 +148,9 @@ export interface components {
                  * @example payload_too_large
                  * @example internal_error
                  * @example not_ready
+                 * @example invalid_credentials
+                 * @example unauthenticated
+                 * @example rate_limited
                  */
                 code: string;
                 message: string;
@@ -60,6 +160,54 @@ export interface components {
         };
     };
     responses: {
+        /** @description The request carries the session cookie but its Origin (or Referer) is missing or not allowed (`csrf_origin_mismatch`). */
+        CsrfOriginMismatch: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description Body over the 1 MiB cap (`payload_too_large`). */
+        PayloadTooLarge: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description A body was sent with a Content-Type other than application/json (`unsupported_media_type`). */
+        UnsupportedMediaType: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description Too many attempts (`rate_limited`). */
+        RateLimited: {
+            headers: {
+                /** @description Seconds until the oldest counted attempt leaves the window. */
+                "Retry-After"?: number;
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description All password-hashing slots stayed taken for 2 seconds (`busy`); retry shortly. */
+        Busy: {
+            headers: {
+                "Retry-After"?: number;
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
         /** @description No route matches this path. Error code `not_found`. */
         NotFound: {
             headers: {
@@ -83,7 +231,10 @@ export interface components {
     };
     parameters: never;
     requestBodies: never;
-    headers: never;
+    headers: {
+        /** @description `smem_session=<32 random bytes, base64url>; Path=/; Max-Age=2592000; HttpOnly; SameSite=Lax` (plus `Secure` unless SMEM_ENV=dev). Only the token's SHA-256 is stored server-side. */
+        SessionCookie: string;
+    };
     pathItems: never;
 }
 export type $defs = Record<string, never>;
@@ -137,6 +288,173 @@ export interface operations {
             405: components["responses"]["MethodNotAllowed"];
             /** @description The database did not answer in time. Error code `not_ready`; the body never carries driver error text (it is logged server-side). */
             503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    register: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Trimmed, lower-cased and normalised to Unicode NFC, so NFC and NFD spellings of one address are the same account (also at login). The local part (before the last `@`) is at most 64 bytes, and the address contains no control (Cc) or format (Cf) characters; otherwise `invalid_email`. */
+                    email: string;
+                    /**
+                     * Format: password
+                     * @description Normalised to Unicode NFKC before the length rules (counted in characters after normalisation) and before hashing, so NFC and NFD forms of the same password are equal.
+                     */
+                    password: string;
+                    /** @description Normalised to Unicode NFC, then trimmed; stored and returned in that form. Control characters (Cc), format characters (Cf: zero-width space, bidi overrides and isolates, LRM/RLM, BOM) except U+200D (zero-width joiner, used in emoji sequences), and line or paragraph separators (Zl, Zp) are rejected with `invalid_display_name`. */
+                    display_name: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Account created; the session cookie is set. */
+            201: {
+                headers: {
+                    "Set-Cookie": components["headers"]["SessionCookie"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserEnvelope"];
+                };
+            };
+            /** @description `invalid_email`, `weak_password`, `invalid_display_name` or `invalid_body`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            403: components["responses"]["CsrfOriginMismatch"];
+            /** @description Email already registered (`email_taken`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            413: components["responses"]["PayloadTooLarge"];
+            415: components["responses"]["UnsupportedMediaType"];
+            429: components["responses"]["RateLimited"];
+            503: components["responses"]["Busy"];
+        };
+    };
+    login: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Trimmed, lower-cased and NFC-normalised as at registration, so either Unicode spelling signs in. */
+                    email: string;
+                    /**
+                     * Format: password
+                     * @description Normalised to Unicode NFKC before verification, exactly as at registration.
+                     */
+                    password: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Signed in; the session cookie is set. */
+            200: {
+                headers: {
+                    "Set-Cookie": components["headers"]["SessionCookie"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserEnvelope"];
+                };
+            };
+            /** @description Malformed body (`invalid_body`). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Wrong email or password (`invalid_credentials`). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            403: components["responses"]["CsrfOriginMismatch"];
+            413: components["responses"]["PayloadTooLarge"];
+            415: components["responses"]["UnsupportedMediaType"];
+            429: components["responses"]["RateLimited"];
+            503: components["responses"]["Busy"];
+        };
+    };
+    logout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Signed out; the cookie is cleared. */
+            204: {
+                headers: {
+                    /** @description smem_session with an empty value and a negative Max-Age. */
+                    "Set-Cookie"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["CsrfOriginMismatch"];
+            415: components["responses"]["UnsupportedMediaType"];
+        };
+    };
+    getMe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The current user. */
+            200: {
+                headers: {
+                    /** @description Present only when the session expiry was extended. */
+                    "Set-Cookie"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserEnvelope"];
+                };
+            };
+            /** @description No, unknown or expired session (`unauthenticated`). */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
