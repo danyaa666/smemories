@@ -25,6 +25,8 @@ paths:
                   status:
                     type: string
                     const: ok
+        "404":
+          $ref: "#/components/responses/NotFound"
         "405":
           $ref: "#/components/responses/MethodNotAllowed"
   /readyz:
@@ -55,8 +57,14 @@ paths:
           $ref: "#/components/responses/MethodNotAllowed"
 components:
   responses:
+    NotFound:
+      description: No route matches this path. Error code `not_found`.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
     MethodNotAllowed:
-      description: Wrong HTTP method for this path.
+      description: Wrong HTTP method for this path. Error code `method_not_allowed`.
       headers:
         Allow:
           description: Methods this path accepts.

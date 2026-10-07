@@ -38,7 +38,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "database error:", err)
 		os.Exit(1)
 	}
-	defer d.Close()
+	defer func() { _ = d.Close() }()
 
 	switch os.Args[1] {
 	case "up":

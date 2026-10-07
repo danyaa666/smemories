@@ -60,7 +60,16 @@ export interface components {
         };
     };
     responses: {
-        /** @description Wrong HTTP method for this path. */
+        /** @description No route matches this path. Error code `not_found`. */
+        NotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description Wrong HTTP method for this path. Error code `method_not_allowed`. */
         MethodNotAllowed: {
             headers: {
                 /** @description Methods this path accepts. */
@@ -100,6 +109,7 @@ export interface operations {
                     };
                 };
             };
+            404: components["responses"]["NotFound"];
             405: components["responses"]["MethodNotAllowed"];
         };
     };

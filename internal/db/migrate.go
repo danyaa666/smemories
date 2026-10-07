@@ -50,7 +50,7 @@ func MigrateStatus(ctx context.Context, d *sql.DB, w io.Writer) error {
 		if s.State == goose.StateApplied {
 			applied = "applied " + s.AppliedAt.UTC().Format("2006-01-02 15:04:05Z")
 		}
-		fmt.Fprintf(w, "%04d %-20s %s\n", s.Source.Version, s.Source.Path, applied)
+		_, _ = fmt.Fprintf(w, "%04d %-20s %s\n", s.Source.Version, s.Source.Path, applied)
 	}
 	return nil
 }
