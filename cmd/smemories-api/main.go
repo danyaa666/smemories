@@ -14,6 +14,7 @@ import (
 	"github.com/danyaa666/smemories/internal/config"
 	"github.com/danyaa666/smemories/internal/db"
 	"github.com/danyaa666/smemories/internal/httpx"
+	"github.com/danyaa666/smemories/internal/yearbook"
 )
 
 func main() {
@@ -53,7 +54,9 @@ func main() {
 		AllowedOrigins: cfg.AllowedOrigins, SecureCookie: cfg.Env != "dev", TrustProxy: cfg.TrustProxy,
 	}, logger)
 
-	srv := httpx.NewServer(cfg.HTTPAddr, httpx.NewRouter(logger, httpx.Ready(d, logger), authH.Routes))
+	bookH := yearbook.NewHandler(yearbook.NewStore(d), authH.RequireUser, cfg.AllowedOrigins, logger, nil)
+
+	srv := httpx.NewServer(cfg.HTTPAddr, httpx.NewRouter(logger, httpx.Ready(d, logger), authH.Routes, bookH.Routes))
 	if err := httpx.Serve(ctx, srv, ln, httpx.DrainTimeout); err != nil {
 		logger.Error("server stopped", "error", err)
 		os.Exit(1)

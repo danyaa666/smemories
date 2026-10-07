@@ -1,8 +1,12 @@
 package httpx
 
 import (
+	"cmp"
+	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
+	"strings"
 )
 
 // ErrorBody is the inner object of the shared error envelope.
@@ -31,4 +35,29 @@ func WriteBodyError(w http.ResponseWriter, r *http.Request, err error) {
 		return
 	}
 	WriteError(w, r, http.StatusBadRequest, "invalid_body", "request body could not be read")
+}
+
+// DecodeJSON reads exactly one JSON object from the body into v. On failure it writes the error
+// response itself and returns false: 413 payload_too_large, 400 unknown_field (only when strict
+// and the body has a field v does not declare) or 400 invalid_body.
+func DecodeJSON(w http.ResponseWriter, r *http.Request, v any, strict bool) bool {
+	dec := json.NewDecoder(r.Body)
+	if strict {
+		dec.DisallowUnknownFields()
+	}
+	err := dec.Decode(v)
+	if err == nil {
+		if _, e := dec.Token(); e != io.EOF { // anything after the object is an error
+			err = cmp.Or(e, errors.New("trailing data"))
+		}
+	}
+	if err == nil {
+		return true
+	}
+	if strict && strings.HasPrefix(err.Error(), "json: unknown field ") {
+		WriteError(w, r, http.StatusBadRequest, "unknown_field", "request body has an unknown field")
+		return false
+	}
+	WriteBodyError(w, r, err)
+	return false
 }

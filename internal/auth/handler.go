@@ -1,11 +1,8 @@
 package auth
 
 import (
-	"cmp"
 	"context"
-	"encoding/json"
 	"errors"
-	"io"
 	"log/slog"
 	"net"
 	"net/http"
@@ -119,18 +116,7 @@ func (h *Handler) me(w http.ResponseWriter, r *http.Request) {
 // decode reads exactly one JSON object from the body; on failure it writes the error
 // response itself (413 payload_too_large or 400 invalid_body).
 func decode(w http.ResponseWriter, r *http.Request, v any) bool {
-	dec := json.NewDecoder(r.Body)
-	err := dec.Decode(v)
-	if err == nil {
-		if _, e := dec.Token(); e != io.EOF { // anything after the object is an error
-			err = cmp.Or(e, errors.New("trailing data"))
-		}
-	}
-	if err != nil {
-		httpx.WriteBodyError(w, r, err)
-		return false
-	}
-	return true
+	return httpx.DecodeJSON(w, r, v, false)
 }
 
 // fail maps a service error to the shared envelope; unexpected errors are logged (never
