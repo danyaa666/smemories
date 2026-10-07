@@ -22,6 +22,9 @@ require (
 	github.com/sethvargo/go-retry v0.4.0 // indirect
 	github.com/tetratelabs/wazero v1.12.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
+	golang.org/x/crypto v0.55.0
 	golang.org/x/sync v0.23.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect
 )
+
+replace golang.org/x/crypto => golang.org/x/crypto v0.0.0-20200220183623-bac4c82f6975
