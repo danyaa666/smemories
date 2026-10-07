@@ -26,6 +26,9 @@ const (
 // UTC times parsed into time.Time and utf8mb4 / utf8mb4_0900_ai_ci. The error never
 // includes the DSN, which carries the password.
 func Normalize(dsn string) (*mysql.Config, error) {
+	if dsn == "" { // ParseDSN("") succeeds and would silently dial 127.0.0.1:3306
+		return nil, errors.New("DSN is empty: want user:pass@tcp(host:port)/dbname")
+	}
 	mc, err := mysql.ParseDSN(dsn)
 	if err != nil {
 		return nil, errors.New("DSN is not valid: want user:pass@tcp(host:port)/dbname")
@@ -51,8 +54,8 @@ func New(mc *mysql.Config, cfg config.Config) (*sql.DB, error) {
 }
 
 // Open builds the pool from cfg.DBDSN and retries the first ping for up to FirstPingWait.
-// On failure the pool is closed and the error says the database is unreachable (driver
-// error text only, never the DSN).
+// Errors that retrying cannot fix (access denied, unknown database) fail at once. On failure
+// the pool is closed and the error names the address and user, never the password.
 func Open(ctx context.Context, cfg config.Config, logger *slog.Logger) (*sql.DB, error) {
 	mc, err := Normalize(cfg.DBDSN)
 	if err != nil {
@@ -62,20 +65,36 @@ func Open(ctx context.Context, cfg config.Config, logger *slog.Logger) (*sql.DB,
 	if err != nil {
 		return nil, err
 	}
+	if err := waitReady(ctx, mc.Addr, mc.User, d.PingContext, logger); err != nil {
+		_ = d.Close()
+		return nil, err
+	}
+	return d, nil
+}
+
+// permanent reports MySQL errors that cannot fix themselves: 1045 access denied, 1049 unknown database.
+func permanent(err error) bool {
+	var me *mysql.MySQLError
+	return errors.As(err, &me) && (me.Number == 1045 || me.Number == 1049)
+}
+
+func waitReady(ctx context.Context, addr, user string, ping func(context.Context) error, logger *slog.Logger) error {
 	ctx, cancel := context.WithTimeout(ctx, FirstPingWait)
 	defer cancel()
 	for {
 		pctx, pcancel := context.WithTimeout(ctx, pingTimeout)
-		err = d.PingContext(pctx)
+		err := ping(pctx)
 		pcancel()
 		if err == nil {
-			return d, nil
+			return nil
 		}
-		logger.Warn("database not ready, retrying", "addr", mc.Addr, "error", err)
+		if permanent(err) {
+			return fmt.Errorf("database at %s refused user %q (check the credentials and database name in SMEM_DB_DSN): %w", addr, user, err)
+		}
+		logger.Warn("database not ready, retrying", "addr", addr, "error", err)
 		select {
 		case <-ctx.Done():
-			_ = d.Close()
-			return nil, fmt.Errorf("database at %s not reachable after %s: %w", mc.Addr, FirstPingWait, err)
+			return fmt.Errorf("database at %s not reachable after %s: %w", addr, FirstPingWait, err)
 		case <-time.After(pingEvery):
 		}
 	}

@@ -10,17 +10,16 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 19 | T-011, T-012, T-013, T-014, T-015, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031 |
-| TODO | 4 | T-007, T-008, T-009, T-010 |
-| READY_FOR_QA | 1 | T-030 |
-| IN_QA | 1 | T-006 |
-| MERGED | 6 | T-001, T-002, T-003, T-004, T-005, T-028 |
+| BACKLOG | 21 | T-011, T-012, T-013, T-014, T-015, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-033 |
+| TODO | 3 | T-007, T-008, T-009 |
+| IN_PROGRESS | 1 | T-010 |
+| MERGED | 8 | T-001, T-002, T-003, T-004, T-005, T-006, T-028, T-030 |
 
-**Awaiting your review (MERGED):** T-001 (Repo foundation and API skeleton); T-002 (Local stack (MySQL + MinIO), migrations and readiness); T-003 (Web scaffold: Vite + React + TypeScript + EN/VI i18n); T-004 (CI pipeline (Go, web, integration, security)); T-005 (Spike: choose the pure-Go PDF engine); T-028 (T-001 follow-ups: log route not path, lint scope and findings, OpenAPI 404/405)
+**Awaiting your review (MERGED):** T-001 (Repo foundation and API skeleton); T-002 (Local stack (MySQL + MinIO), migrations and readiness); T-003 (Web scaffold: Vite + React + TypeScript + EN/VI i18n); T-004 (CI pipeline (Go, web, integration, security)); T-005 (Spike: choose the pure-Go PDF engine); T-006 (Email + password auth core (register, login, sessions)); T-028 (T-001 follow-ups: log route not path, lint scope and findings, OpenAPI 404/405); T-030 (T-002 follow-ups: isolate compose stacks, fail fast on auth errors, test-DB grants)
 
 **Open questions for you:** none
 
-_Board last written 2026-10-07 11:04Z_
+_Board last written 2026-10-07 11:16Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -499,7 +498,7 @@ Only trusted synthetic fixtures. Photos for the benchmark must be generated, nev
 - 2026-10-07 06:09Z · leader · merged b1eaffa (squash). Review: ADR 0002 is thorough and honest about fpdf's quirks; verdict GO codeberg.org/go-pdf/fpdf v0.12.0 (gopdf the fallback); spike code is behind the spike build tag and excluded from default builds; licences checked by QA. For owner to check: docs/adr/0002-pdf-engine.md and the PNGs in docs/adr/0002-assets/ (note: emoji print as monochrome outlines, colour emoji is out of scope).
 
 ### T-006 — Email + password auth core (register, login, sessions)
-- **Status:** IN_QA
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -507,11 +506,11 @@ Only trusted synthetic fixtures. Photos for the benchmark must be generated, nev
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** yes
-- **Assignee:** qa
+- **Assignee:** —
 - **Branch:** task/t-006-email-password-auth-core-register-login-
 - **PR:** https://github.com/danyaa666/smemories/pull/6
-- **Updated:** 2026-10-07 11:04Z by qa
-- **Comments-seen:** 19
+- **Updated:** 2026-10-07 11:12Z by leader
+- **Comments-seen:** 21
 
 #### Description
 The core of email+password authentication: register, login, logout, "who am I", cookie sessions, password hashing, rate limiting and CSRF protection. Everything user-owned in M1 hangs off this. Email verification and password reset are T-007; Google sign-in is T-011; the web pages are T-015. Decisions: D-07 (in-house auth, argon2id), L-05, L-06.
@@ -611,6 +610,8 @@ Constant-time comparisons; no user enumeration on login; hash concurrency cap so
 - 2026-10-07 07:45Z · human · owner approved merge
 - 2026-10-07 07:45Z · leader · Leader: the owner approved this merge at 07:45Z (bin/team approve T-006), after the gosec findings were reported. I merge only when all of these hold: 1) the dev's fix lands (range checks for the six G115 findings, nothing else); 2) QA re-passes the new head; 3) the CI jobs go, go-integration, web and security are green on the PR (if GitHub does not start a run for the PR, I run the full make lint build test on a simulated merge of develop plus the PR instead); 4) my review of the delta finds nothing beyond range checks. If the fix changes any auth behaviour, I ask the owner again before merging.
 - 2026-10-07 11:00Z · dev · Rework 3 (CI gosec only): merged origin/develop, fixed the 6 G115 findings and nothing else. password.go: key len > 1024 rejected, nolint names that check (test case in TestVerifyRejectsMalformedHashes); store.go: id<=0 -> error; config.go x3: nolint, ranges already checked; ulid.go: pre-1970 clamps to 0 (TestPreEpochTimeClampsToZero). make lint (golangci-lint v2.8.0) build test test-integration green (dev root DSN); Newman x2 30 req/82 assert/0 failures; throwaway DB dropped. PR body has an updated section. Delta is one commit on top of the merge.
+- 2026-10-07 11:07Z · qa · Round 3 (delta 77924c1..06a970d, fresh clone of PR #6 head 06a970d, gosec G115 fixes). EVIDENCE. (1) DELTA: 'git diff 77924c1 06a970d -- internal/auth internal/config internal/ulid' = exactly 6 files, 23+/8-: password.go (maxStoredKeyLen=1024 bound added to the existing empty/decode check + one narrow nolint:gosec), password_test.go (one malformed-hash case), store.go (id<=0 -> error before uint64(id)), config.go (three narrow nolint:gosec, no logic change), ulid.go (ms<0 clamp to 0, then nolint on uint64), ulid_test.go (TestPreEpochTimeClampsToZero). Rest of the PR-vs-77924c1 diff is develop merged in: .github/dependabot.yml, ci.yml, .golangci.yml, docs/ci.md, Makefile (golangci-lint line), README.md, httpx/server_test.go (bodyclose fix), .team/README.md; 'git diff origin/develop pr6' outside auth/migrations/api/postman/web shows only T-006 feature files, nothing foreign. (2) NOLINT COMMENTS TRUE: config.go checks sit on the line directly above each conversion and return an error: MEMORY_KIB 'err!=nil || n>1<<20' with getInt min 8, TIME 'n>100' min 1, PARALLELISM 'n>255' min 1. I ran config.Load with each value via a scratch program (SMEM_ENV=dev, fake DSN). MEMORY_KIB: 0 REJECT, 1 REJECT, 7 REJECT, 8 ok, 100 ok, 101 ok, 255 ok, 256 ok, 1048576 ok, 1048577 REJECT; also -1, 4294967296, 99999999999999999999, abc all REJECT (message 'want an integer between 8 and 1048576'). TIME: 0 REJECT, 1 ok, 7 ok, 8 ok, 100 ok, 101 REJECT, 255 256 1048576 1048577 -1 4294967296 huge abc all REJECT. PARALLELISM: 0 REJECT, 1 7 8 100 101 255 ok (stored as 1,7,8,100,101,255), 256 REJECT, 1048576 1048577 -1 4294967296 huge abc REJECT. Empty = default (19456/2/1). password.go: len(want)==0 or >1024 returns 'auth: bad argon2 encoding' before uint32(len(want)); store.go: id<=0 returns an error before uint64(id); ulid: ms<0 clamped before uint64. (3) UNCHANGED BEHAVIOUR: golangci-lint v2.8.0 'make lint' rc 0 (gofmt, vet, vet -tags integration, golangci-lint '0 issues.', also 0 issues with --build-tags integration, web lint/check:api); 'make build' rc 0; 'make test' (go test -race ./..., vitest 25/25) green; 'make test-integration' with SMEM_TEST_DB_DSN=dev root DSN from .env.example: all packages ok (-race -count=1 -tags integration). Postman via newman 6.2.2 against the built API on throwaway DB smem_test_qa_t006c (SMEM_ENV=dev, 127.0.0.1:18090), twice back to back: 30 requests / 82 assertions / 0 failures both runs. Live curl: register 201 + cookie (HttpOnly, SameSite=Lax, Path=/, Max-Age 2592000, no Secure in dev) with email lower-cased; /v1/me 200; logout 204 + cookie cleared; /v1/me after logout 401; login with different-case email 200 and /v1/me 200; wrong password 401 invalid_credentials. API log (69 lines): 0 hits for the password, argon2id, smem_session. (4) CI: gh pr checks 6 = go, go-integration, security, web, dependabot all pass on the run for this head; the golangci-lint step in the go job: 'golangci-lint found no issues', '0 issues.', no warnings (only a git 'hint' line from checkout). (5) OVERSIZE KEY / PRE-1970: scratch tests (not committed, removed): Verify with stored key of 1,1023,1024 bytes proceeds to hashing (ok=false err=nil), 1025 and 1026 bytes -> 'auth: bad argon2 encoding' in about 20 microseconds; a 100000-char key string is rejected with 377 KiB total allocation (no spike, no panic), 5 KiB for the ~1 KB case. Note the column password_hash is varchar(255), so a >1024-byte key cannot even be stored via the app; a crafted DB row is therefore impossible, the guard is defence in depth and the unit case (strings.Repeat QQ x1025 -> 1537 bytes) is in TestVerifyRejectsMalformedHashes. ulid.New: time.Time{} (year 1), UnixMilli(-1), Unix(-2^40) all give timestamp prefix 0000000000 (random 16-char tail kept, so the ULID is the zero-TIME one, not an all-zero string), UnixMilli(0) prefix 0000000000, UnixMilli(1) prefix 0000000001. Cleanup: API stopped, smem_test_qa_t006c dropped (show databases = information_schema, mysql, performance_schema, smemories, sys). Nothing touched on the shared containers except the throwaway DB created/dropped via root. NON-BLOCKING: none new (earlier ones stand: all-ZWJ display name, Postman has no entries for NFD-email/ZWSP-name rules). No auth behaviour changed for valid data.
+- 2026-10-07 11:12Z · leader · merged ff48f5b (squash), owner-approved at 07:45Z; merge conditions met: gosec fix landed with only the six changes, QA re-passed at 06a970d, CI green on the PR (go, go-integration, web, security), delta reviewed. For owner to check: with the stack up and make run, curl -i -X POST localhost:8080/v1/auth/register -H 'Content-Type: application/json' -d '{"email":"you@example.com","password":"a long test password","display_name":"Test"}' then GET /v1/me with the cookie. Follow-ups: T-031 (go-live hardening, incl. all-ZWJ display names).
 
 ### T-007 — Email verification and password reset
 - **Status:** TODO
@@ -834,7 +835,7 @@ Decode-bomb protection before allocation; bounded memory per request (read with 
 - 2026-10-07 02:47Z · leader · Leader note from the T-001 review: the server timeouts are ReadTimeout 15 s and WriteTimeout 30 s (global, from T-001). A 10 MiB upload over a slow phone connection, or a streamed download, can exceed them. Do not raise the global values; extend the deadline per route with http.NewResponseController(w).SetReadDeadline / SetWriteDeadline (the statusWriter already implements Unwrap) and add a test. Same applies to the PDF download in T-014.
 
 ### T-010 — Template spec and PDF page renderer
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -842,10 +843,10 @@ Decode-bomb protection before allocation; bounded memory per request (read with 
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** dev
 - **Branch:** task/t-010-template-spec-and-pdf-page-renderer
 - **PR:** —
-- **Updated:** 2026-10-07 06:27Z by leader
+- **Updated:** 2026-10-07 11:04Z by dev
 - **Comments-seen:** 3
 
 #### Description
@@ -1366,7 +1367,7 @@ _BACKLOG: needs a full spec before it moves to TODO. Do it before M2 go-live, or
 - 2026-10-07 03:16Z · leader · QA note: bitnamilegacy/minio works (arm64 native) but is AGPL-3.0, unsupported by Broadcom, gets no CVE fixes, and the Docker Hub namespace can vanish. Fine for dev-only and loopback-only use. Until this task runs, pin the image by digest in docker-compose.yml and the T-009 CI service so a vanished tag cannot silently change what we run.
 
 ### T-030 — T-002 follow-ups: isolate compose stacks, fail fast on auth errors, test-DB grants
-- **Status:** READY_FOR_QA
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** tech-debt
 - **Milestone:** M0
@@ -1377,8 +1378,8 @@ _BACKLOG: needs a full spec before it moves to TODO. Do it before M2 go-live, or
 - **Assignee:** —
 - **Branch:** task/t-030-t-002-follow-ups-isolate-compose-stacks-
 - **PR:** https://github.com/danyaa666/smemories/pull/7
-- **Updated:** 2026-10-07 11:03Z by dev
-- **Comments-seen:** 4
+- **Updated:** 2026-10-07 11:12Z by leader
+- **Comments-seen:** 6
 
 #### Description
 Findings from the T-002 QA run. The compose project name is fixed (`name: smemories`), so two checkouts on one machine share containers and volumes: QA's `make up` recreated the dev's running MySQL container. The other items are small reliability and dev-experience fixes in the same area.
@@ -1412,6 +1413,8 @@ Never print the DSN or password in new messages. Keep compose ports on loopback.
 - 2026-10-07 06:42Z · leader · Conflict only, before QA: PR #7 conflicts with develop since T-003 (web targets in the Makefile and README) and T-006's neighbours landed. 1) Merge origin/develop into the branch (no force-push) and resolve the Makefile and README as the union; keep your COMPOSE_PROJECT_NAME and grants logic in make up. 2) Re-run make lint build test and test-integration (dev root DSN via SMEM_TEST_DB_DSN while the shared stack's smem_test_% grant is missing; do not touch the shared containers; your isolated two-stack check can be re-run quickly). 3) Change nothing else, then READY_FOR_QA.
 - 2026-10-07 07:37Z · leader · Leader FYI: T-004 (CI) is merged, so make lint now runs golangci-lint v2.8.0 with gosec and bodyclose (see .golangci.yml; install per the README, binary at ~/go/bin if not on PATH). After you merge origin/develop, fix any findings in your own code with explicit range checks, never by disabling a linter or editing .golangci.yml, and make sure the CI jobs go, go-integration, web and security pass on the PR.
 - 2026-10-07 11:03Z · dev · Conflict-only rework: merged origin/develop (Makefile conflict resolved as the union: COMPOSE_PROJECT_NAME block kept + web targets in .PHONY; README merged cleanly, both changes present). No other change. make lint (golangci-lint v2.8.0 clean) build test test-integration green (dev root DSN). Re-checked AC1/AC3 on an isolated stack (project t030chk, ports 23306/29000/29001): make up grants smem_test_% and smemories account runs the db integration tests there; stack removed with down -v. Shared smemories containers untouched. CI on the PR: go, go-integration, web, security all pass.
+- 2026-10-07 11:10Z · qa · Fresh clone of PR #7 head 6c22600 (two clones in dirs qa-t030-a and qa-t030-b, isolated compose stacks on MYSQL_PORT 23306/24306, MINIO 29000/29100, console 29001/29101; shared smemories-mysql-1 and smemories-minio-1 never touched, still 'Up 8 hours' at the end, their grants and databases unchanged; all my stacks removed with down -v). CI: gh pr checks 7 = go, go-integration, security, web, dependabot all pass. EVIDENCE BY AC. AC1: no COMPOSE_PROJECT_NAME in the env; 'make up' in qa-t030-a and qa-t030-b both succeeded at the same time, containers qa-t030-a-{mysql,minio}-1 and qa-t030-b-*, separate volumes qa-t030-{a,b}_{mysql,minio}-data (the name comes from the directory); 'make down' in a removed only a's containers and network (volumes kept as documented), b stayed healthy (docker ps healthy, MinIO ready 200 on 29100, mysqladmin ping alive). Makefile logic read: COMPOSE_PROJECT_NAME is only derived when empty (shell or .env wins), the old name 'smemories' is kept for a checkout whose containers carry that name AND working_dir label equals CURDIR. For the MAIN checkout (/Users/unisoft/GolandProjects/awesomeProject1): I evaluated the Makefile shell expression read-only against the live labels: smemories-mysql-1 has working_dir .../scratchpad/t2 and smemories-minio-1 has .../.team/worktrees/T-002, neither equals the main checkout, so it would resolve to project 'awesomeproject1', i.e. a NEW project; it does not rename or recreate 'smemories' (it would fail on ports 3306/9000 while the shared stack holds them). A checkout whose dir matches a label (simulated with the T-002 worktree) keeps 'smemories'. AC2: unit tests TestWaitReadyFailsFastOnPermanentErrors (1045 and 1049, one attempt, <1 s, error names address and user), TestWaitReadyRetriesTransientErrors (1040 retried, ok on 3rd), run -race -count=3 green. Live with the built smemories-api against the isolated MySQL: wrong password (fake) -> rc 1 in 0.4 s 'database at 127.0.0.1:24306 refused user "smemories" ... Error 1045', the password string appears 0 times in the output; unknown database as root -> rc 1 in 0.0 s with Error 1049; connection refused (port 24399) -> retries and fails after 10.0 s 'not reachable after 10s'; MySQL stopped at start then started 3 s later -> /readyz 200 at about 4 s (retry works). AC3: on the isolated stack I ran REVOKE of the smem_test_% grant (SHOW GRANTS then lists only smemories.*), 'make test-integration' failed with Error 1044 on every CREATE DATABASE; 'make up' re-applied the grant (SHOW GRANTS lists it again), a second 'make up' is idempotent (still 4 lines), and 'make test-integration' with the smemories account (SMEM_TEST_DB_DSN smemories@...:24306) passed: config, db, httpx ok; no leftover smem_test_* databases. AC4: empty SMEM_DB_DSN, binary exits rc 1 immediately in SMEM_ENV=dev, prod, unset ('config error: SMEM_DB_DSN is required') and in SMEM_ENV=test ('SMEM_DB_DSN: DSN is empty'), never dials 3306; a whitespace-only DSN -> 'DSN is not valid'. AC5: README Development section documents the per-checkout project name, MYSQL_PORT/MINIO_PORT/MINIO_CONSOLE_PORT (and matching the port in SMEM_DB_DSN and SMEM_TEST_DB_DSN), the legacy 'smemories' name and how to retire it, and that 'make up' re-applies the smem_test_% grants; SMEM_DB_DSN doc updated. Mechanical: make lint (golangci-lint v2.8.0 '0 issues.') build test rc 0; make test-integration green on the isolated stack. NON-BLOCKING OBSERVATIONS: (1) a nonexistent database name as the NON-privileged smemories account returns MySQL Error 1044 (not 1049), because MySQL checks the privilege first (reproduced: DSN .../nosuchdb -> retries the full 10 s, then fails with the 1044 text). AC2 names only 1045 and 1049 so it is met; adding 1044 (access denied to database) to permanent() would make a typo in the database name, and the missing smem_test_% grant fault, fail at once too. (2) a bare 'docker compose ...' (outside make) in any checkout still resolves to the compose file's 'name: smemories' and therefore the SHARED project (I saw this with a read-only 'docker compose ps' from qa-t030-b, it listed smemories-*); only 'make' sets the derived name. A bare 'docker compose down -v' in a checkout would wipe the shared stack; consider mentioning in the README that compose commands must go through make or COMPOSE_PROJECT_NAME. (3) the grants in SHOW GRANTS appear as smem\\_test\\_% (doubled backslashes); that is only the display of the escaped pattern, the grant works (tests ran), so the earlier 'mis-escaped grant' suspicion on the shared MySQL was a false alarm: its real fault is the revoke the dev reported.
+- 2026-10-07 11:12Z · leader · merged 7c8b302 (squash). Review: per-checkout compose project names, an existing smemories stack keeps its name, make up re-applies the test grants, permanent DB errors fail at once without leaking the password, empty DSN rejected everywhere. For owner to check: your running shared stack is still the old smemories project; see the note in the README before running make up from the main checkout (its default ports are taken by that stack). Follow-up in T-032.
 
 ### T-031 — Auth hardening for go-live: edge rate limits, shared limiter, session purge, stored-hash caps
 - **Status:** BACKLOG
@@ -1435,6 +1438,52 @@ _BACKLOG: needs a full spec before it moves to TODO._
 
 #### Comments
 - 2026-10-07 07:07Z · leader · From the T-006 review: also require at least one visible character in a display name (a name made only of U+200D passes today), preferably through one shared helper that T-008 and later text fields reuse.
+
+### T-032 — db.Open: treat MySQL 1044 as permanent; README warning about bare docker compose
+- **Status:** BACKLOG
+- **Priority:** P3
+- **Type:** tech-debt
+- **Milestone:** M1
+- **Depends-on:** T-030
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-07 11:12Z by leader
+- **Comments-seen:** 0
+
+#### Intent
+From the T-030 QA notes. (1) For an unprivileged account an unknown database (or a missing grant) answers MySQL error 1044, not 1049, so db.Open still retries for the full 10 s: add 1044 to permanent() with a test. (2) A bare 'docker compose' outside make still targets the old shared 'smemories' project and a bare 'down -v' would wipe its volumes: add a short warning to the README's compose section.
+
+_BACKLOG: needs a full spec before it moves to TODO; tiny, can be bundled into the next db task._
+
+#### Comments
+
+### T-033 — CI: do not cancel in-progress runs on develop and main
+- **Status:** BACKLOG
+- **Priority:** P2
+- **Type:** infra
+- **Milestone:** M1
+- **Depends-on:** T-004
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-07 11:16Z by leader
+- **Comments-seen:** 0
+
+#### Intent
+Evidence from the T-006/T-030 merges: the workflow's concurrency group has cancel-in-progress: true for every event, so a push to develop cancels the still-running CI of the previous push (the leader's board-sync commits do this right after each merge). The CI runs of ff48f5b and 7c8b302 were cancelled; only the later commit ran to the end. Cancelling superseded runs is right for pull requests but wrong for develop and main, where every merge commit should get a complete run.
+Change: cancel-in-progress: ${{ github.event_name == 'pull_request' }} in .github/workflows/ci.yml, and one sentence in docs/ci.md. Also digest-pin the mysql:8.4 image in the go-integration job (QA note from T-004).
+Risk high (CI): needs owner approval to merge. Tiny change.
+
+_BACKLOG: needs a full spec before it moves to TODO (acceptance: a push to develop followed within a minute by a second push leaves both runs to finish; a superseded PR run is still cancelled)._
+
+#### Comments
 
 <!-- tasks:end -->
 

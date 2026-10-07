@@ -100,7 +100,7 @@ Prerequisites: Go 1.26 (the `go` directive in `go.mod`), `make`, Docker with Com
 | `make lint` | Fails (listing the files) if a tracked or new Go file is not gofmt-clean, runs `go vet` (with and without the `integration` tag), then the web checks (eslint, prettier, `tsc`, i18n key parity, stale API types) |
 | `make web-install` | `npm ci` in `web/` (Node 22, see `web/.nvmrc`); the other web targets do it on demand. Dev server: `cd web && npm run dev` (proxies `/api/*` to `localhost:8080`) |
 | `make run` | Runs the API from source (needs the stack below: `SMEM_DB_DSN` is required) |
-| `make up` / `make down` | Start (and wait for) / stop MySQL 8.4 and MinIO; creates `.env` from `.env.example` first. Ports bind to `127.0.0.1` |
+| `make up` / `make down` | Start (and wait for) / stop MySQL 8.4 and MinIO; creates `.env` from `.env.example` first. Ports bind to `127.0.0.1`. `make up` also (re)applies the `smem_test_%` grants, so it works on older MySQL volumes |
 | `make migrate` / `make migrate-down` | Apply all migrations / roll back the last one |
 | `make test-integration` | Tests tagged `integration` against the local MySQL (run `make up migrate` first; each test gets its own throwaway database) |
 
@@ -113,13 +113,25 @@ curl -i localhost:8080/healthz   # {"status":"ok"}
 curl -i localhost:8080/readyz    # {"status":"ready"}; 503 not_ready while MySQL is down
 ```
 
+Several checkouts on one machine: `make up` names the compose project after the checkout directory
+(`COMPOSE_PROJECT_NAME`, lower-cased; set it in your shell or `.env` to choose another name), so each checkout has its own
+containers and volumes and `make down` in one leaves the others running. The host ports are fixed per machine, so give each
+checkout free ones in its `.env`: `MYSQL_PORT`, `MINIO_PORT`, `MINIO_CONSOLE_PORT` (and match the port in `SMEM_DB_DSN` and
+`SMEM_TEST_DB_DSN`). A checkout whose stack already runs under the old fixed name `smemories` keeps that name; to retire an
+old stack run `COMPOSE_PROJECT_NAME=smemories docker compose down` once from the directory that started it.
+
 MinIO console: <http://127.0.0.1:9001> (credentials in `.env`). MinIO stopped publishing Docker images, so
 the compose file uses a frozen Bitnami build; it is for local development only.
 
 Configuration is read from environment variables (see `.env.example`): `SMEM_HTTP_ADDR` (default `:8080`),
 `SMEM_ENV` (`dev|test|prod`, default `dev`), `SMEM_LOG_LEVEL` (`debug|info|warn|error`, default `info`),
-`SMEM_DB_DSN` (`user:pass@tcp(host:port)/db`, required unless `SMEM_ENV=test`), and the pool settings
+`SMEM_DB_DSN` (`user:pass@tcp(host:port)/db`; required, in every `SMEM_ENV`, for the API binary, which exits with a clear message when it is empty), and the pool settings
 `SMEM_DB_MAX_OPEN` (20), `SMEM_DB_MAX_IDLE` (5), `SMEM_DB_CONN_MAX_LIFETIME` (5m).
+Auth (see `.env.example`): `SMEM_ALLOWED_ORIGINS` (comma-separated browser origins allowed to send cookie-carrying
+state-changing requests; required in prod, default `http://localhost:5173`), `SMEM_TRUST_PROXY` (take the client IP from the
+last `X-Forwarded-For` hop; only behind a trusted proxy), `SMEM_AUTH_MAX_CONCURRENT_HASHES` (4), `SMEM_AUTH_ARGON_MEMORY_KIB`
+(19456), `SMEM_AUTH_ARGON_TIME` (2), `SMEM_AUTH_ARGON_PARALLELISM` (1), and the rate limits `SMEM_RATE_REGISTER_PER_HOUR` (5),
+`SMEM_RATE_LOGIN_FAILS_PER_EMAIL` (10) and `SMEM_RATE_LOGIN_FAILS_PER_IP` (100). The session cookie is `Secure` unless `SMEM_ENV=dev`.
 An invalid value stops the process with a message naming the variable. The API contract is
 `api/openapi.yaml`; the Postman collections live in `postman/` (`newman run postman/platform.postman_collection.json`
 against a running API).

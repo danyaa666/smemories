@@ -46,7 +46,7 @@ func TestLoadPoolSettings(t *testing.T) {
 }
 
 func TestLoadValid(t *testing.T) {
-	cfg, err := Load(env(map[string]string{"SMEM_HTTP_ADDR": "127.0.0.1:0", "SMEM_ENV": "prod", "SMEM_LOG_LEVEL": "debug", "SMEM_DB_DSN": dsn}))
+	cfg, err := Load(env(map[string]string{"SMEM_HTTP_ADDR": "127.0.0.1:0", "SMEM_ENV": "prod", "SMEM_LOG_LEVEL": "debug", "SMEM_DB_DSN": dsn, "SMEM_ALLOWED_ORIGINS": "https://app.example.com"}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,6 +74,41 @@ func TestLoadInvalidNamesVariable(t *testing.T) {
 		_, err := Load(env(map[string]string{c.key: c.val, "SMEM_DB_DSN": dsn}))
 		if err == nil || !strings.Contains(err.Error(), c.key) {
 			t.Errorf("%s=%q: want error naming the variable, got %v", c.key, c.val, err)
+		}
+	}
+}
+
+func TestLoadAuthDefaults(t *testing.T) {
+	cfg, err := Load(env(map[string]string{"SMEM_DB_DSN": dsn}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cfg.AllowedOrigins) != 1 || cfg.AllowedOrigins[0] != "http://localhost:5173" || cfg.TrustProxy ||
+		cfg.MaxHashes != 4 || cfg.ArgonMemoryKiB != 19456 || cfg.ArgonTime != 2 || cfg.ArgonParallelism != 1 ||
+		cfg.RegisterPerHour != 5 || cfg.LoginFailsPerPair != 10 || cfg.LoginFailsPerIP != 100 {
+		t.Fatalf("unexpected auth defaults: %+v", cfg)
+	}
+}
+
+func TestLoadAllowedOrigins(t *testing.T) {
+	cfg, err := Load(env(map[string]string{"SMEM_DB_DSN": dsn, "SMEM_ENV": "prod", "SMEM_ALLOWED_ORIGINS": " https://App.Example.com , http://localhost:5173 ", "SMEM_TRUST_PROXY": "true"}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cfg.AllowedOrigins) != 2 || cfg.AllowedOrigins[0] != "https://app.example.com" || !cfg.TrustProxy {
+		t.Fatalf("unexpected: %+v", cfg)
+	}
+	if _, err := Load(env(map[string]string{"SMEM_DB_DSN": dsn, "SMEM_ENV": "prod"})); err == nil || !strings.Contains(err.Error(), "SMEM_ALLOWED_ORIGINS") {
+		t.Errorf("prod without origins: got %v", err)
+	}
+	for _, bad := range []string{"example.com", "https://example.com/path", "ftp://example.com", "*"} {
+		if _, err := Load(env(map[string]string{"SMEM_DB_DSN": dsn, "SMEM_ALLOWED_ORIGINS": bad})); err == nil || !strings.Contains(err.Error(), "SMEM_ALLOWED_ORIGINS") {
+			t.Errorf("origin %q: got %v", bad, err)
+		}
+	}
+	for k, v := range map[string]string{"SMEM_TRUST_PROXY": "maybe", "SMEM_AUTH_MAX_CONCURRENT_HASHES": "0", "SMEM_AUTH_ARGON_MEMORY_KIB": "99999999999", "SMEM_AUTH_ARGON_PARALLELISM": "300", "SMEM_RATE_REGISTER_PER_HOUR": "x"} {
+		if _, err := Load(env(map[string]string{"SMEM_DB_DSN": dsn, k: v})); err == nil || !strings.Contains(err.Error(), k) {
+			t.Errorf("%s=%s: got %v", k, v, err)
 		}
 	}
 }
