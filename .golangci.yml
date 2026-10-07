@@ -1,0 +1,25 @@
+# golangci-lint v2 (pinned in .github/workflows/ci.yml and README.md; keep them in step).
+version: "2"
+
+run:
+  # Also analyses the *_test.go files behind the integration tag; a superset of the default build.
+  build-tags:
+    - integration
+
+linters:
+  default: standard # errcheck, govet, ineffassign, staticcheck, unused
+  enable:
+    - bodyclose
+    - gosec
+  exclusions:
+    presets:
+      - std-error-handling
+    rules:
+      # Tests use fixed fake credentials and throwaway files on purpose.
+      - path: _test\.go
+        linters:
+          - gosec
+
+formatters:
+  enable:
+    - gofmt

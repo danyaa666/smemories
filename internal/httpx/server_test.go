@@ -27,9 +27,11 @@ func TestServeStartsAndShutsDownOnCancel(t *testing.T) {
 	go func() { served <- Serve(ctx, NewServer(ln.Addr().String(), h), ln, 5*time.Second) }()
 
 	base := "http://" + ln.Addr().String()
-	if resp, err := http.Get(base + "/healthz"); err != nil || resp.StatusCode != 200 {
+	resp, err := http.Get(base + "/healthz")
+	if err != nil || resp.StatusCode != 200 {
 		t.Fatalf("healthz: %v %v", resp, err)
 	}
+	_ = resp.Body.Close()
 
 	// A slow request in flight must finish even though shutdown has begun.
 	type result struct {
@@ -63,7 +65,8 @@ func TestServeStartsAndShutsDownOnCancel(t *testing.T) {
 	if err := <-served; err != nil {
 		t.Fatalf("Serve returned %v, want nil", err)
 	}
-	if _, err := http.Get(base + "/healthz"); err == nil {
+	if resp, err := http.Get(base + "/healthz"); err == nil {
+		_ = resp.Body.Close()
 		t.Fatal("server still accepting after shutdown")
 	}
 }
