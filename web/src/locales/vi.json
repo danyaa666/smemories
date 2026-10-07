@@ -1,7 +1,6 @@
 {
   "app": {
-    "name": "SMemories",
-    "tagline": "Thiết kế, thu thập và in kỷ yếu của riêng bạn."
+    "name": "SMemories"
   },
   "language": {
     "label": "Ngôn ngữ",
