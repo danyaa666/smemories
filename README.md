@@ -91,26 +91,34 @@ Structured fields for the content that goes into the book:
 
 ## Development
 
-Prerequisites: Go 1.26 (the `go` directive in `go.mod`), `make`.
+Prerequisites: Go 1.26 (the `go` directive in `go.mod`), `make`, Docker with Compose.
 
 | Command | What it does |
 |---|---|
 | `make build` | Builds the API to `bin/smemories-api` |
 | `make test` | Runs the Go tests with the race detector |
 | `make lint` | Fails if `gofmt -l .` prints anything, then runs `go vet ./...` |
-| `make run` | Runs the API from source |
+| `make run` | Runs the API from source (needs the stack below: `SMEM_DB_DSN` is required) |
+| `make up` / `make down` | Start (and wait for) / stop MySQL 8.4 and MinIO; creates `.env` from `.env.example` first. Ports bind to `127.0.0.1` |
+| `make migrate` / `make migrate-down` | Apply all migrations / roll back the last one |
+| `make test-integration` | Tests tagged `integration` against the local MySQL (run `make up migrate` first; each test gets its own throwaway database) |
 
 Run the API locally:
 
 ```sh
-cp .env.example .env          # optional, every variable has a default
-set -a; . ./.env; set +a      # optional
-make run
+make up migrate               # creates .env, starts MySQL + MinIO, applies migrations
+make run                      # make loads .env for you
 curl -i localhost:8080/healthz   # {"status":"ok"}
+curl -i localhost:8080/readyz    # {"status":"ready"}; 503 not_ready while MySQL is down
 ```
 
+MinIO console: <http://127.0.0.1:9001> (credentials in `.env`). MinIO stopped publishing Docker images, so
+the compose file uses a frozen Bitnami build; it is for local development only.
+
 Configuration is read from environment variables (see `.env.example`): `SMEM_HTTP_ADDR` (default `:8080`),
-`SMEM_ENV` (`dev|test|prod`, default `dev`), `SMEM_LOG_LEVEL` (`debug|info|warn|error`, default `info`).
+`SMEM_ENV` (`dev|test|prod`, default `dev`), `SMEM_LOG_LEVEL` (`debug|info|warn|error`, default `info`),
+`SMEM_DB_DSN` (`user:pass@tcp(host:port)/db`, required unless `SMEM_ENV=test`), and the pool settings
+`SMEM_DB_MAX_OPEN` (20), `SMEM_DB_MAX_IDLE` (5), `SMEM_DB_CONN_MAX_LIFETIME` (5m).
 An invalid value stops the process with a message naming the variable. The API contract is
 `api/openapi.yaml`; the Postman collections live in `postman/` (`newman run postman/platform.postman_collection.json`
 against a running API).
