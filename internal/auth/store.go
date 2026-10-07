@@ -69,6 +69,9 @@ func (s *Store) createUserWithSession(ctx context.Context, u *User, passwordHash
 	if err != nil {
 		return err
 	}
+	if id <= 0 {
+		return errors.New("auth: insert returned a non-positive user id")
+	}
 	u.InternalID = uint64(id)
 	sess.userID = u.InternalID
 	if err := insertSession(ctx, tx, sess); err != nil {

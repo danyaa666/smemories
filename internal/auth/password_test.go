@@ -65,6 +65,7 @@ func TestVerifyRejectsMalformedHashes(t *testing.T) {
 		"$argon2id$v=19$m=99999999,t=1,p=1$c2FsdHNhbHQ$a2V5a2V5",
 		"$argon2id$v=19$m=64,t=1,p=1$!!!$a2V5a2V5",
 		"$argon2id$v=19$m=64,t=1,p=1$c2FsdHNhbHQ$",
+		"$argon2id$v=19$m=64,t=1,p=1$c2FsdHNhbHQ$" + strings.Repeat("QQ", 1025), // key > maxStoredKeyLen
 	} {
 		if ok, err := h.Verify(context.Background(), "x", bad); ok || err == nil {
 			t.Errorf("%q: want an error, got ok=%v err=%v", bad, ok, err)

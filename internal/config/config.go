@@ -114,15 +114,15 @@ func Load(getenv func(string) string) (Config, error) {
 	if n, err = getInt(get, "SMEM_AUTH_ARGON_MEMORY_KIB", "19456", 8); err != nil || n > 1<<20 {
 		return Config{}, fmt.Errorf("SMEM_AUTH_ARGON_MEMORY_KIB=%q: want an integer between 8 and 1048576", get("SMEM_AUTH_ARGON_MEMORY_KIB", "19456"))
 	}
-	cfg.ArgonMemoryKiB = uint32(n)
+	cfg.ArgonMemoryKiB = uint32(n) //nolint:gosec // G115: 8 <= n <= 1<<20 checked above
 	if n, err = getInt(get, "SMEM_AUTH_ARGON_TIME", "2", 1); err != nil || n > 100 {
 		return Config{}, fmt.Errorf("SMEM_AUTH_ARGON_TIME=%q: want an integer between 1 and 100", get("SMEM_AUTH_ARGON_TIME", "2"))
 	}
-	cfg.ArgonTime = uint32(n)
+	cfg.ArgonTime = uint32(n) //nolint:gosec // G115: 1 <= n <= 100 checked above
 	if n, err = getInt(get, "SMEM_AUTH_ARGON_PARALLELISM", "1", 1); err != nil || n > 255 {
 		return Config{}, fmt.Errorf("SMEM_AUTH_ARGON_PARALLELISM=%q: want an integer between 1 and 255", get("SMEM_AUTH_ARGON_PARALLELISM", "1"))
 	}
-	cfg.ArgonParallelism = uint8(n)
+	cfg.ArgonParallelism = uint8(n) //nolint:gosec // G115: 1 <= n <= 255 checked above
 	if cfg.RegisterPerHour, err = getInt(get, "SMEM_RATE_REGISTER_PER_HOUR", "5", 1); err != nil {
 		return Config{}, err
 	}

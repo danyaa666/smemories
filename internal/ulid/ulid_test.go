@@ -29,3 +29,9 @@ func TestTimestampPrefixKnownValue(t *testing.T) {
 		t.Fatalf("not sortable: %s %s", a, b)
 	}
 }
+
+func TestPreEpochTimeClampsToZero(t *testing.T) {
+	if got := New(time.UnixMilli(-1))[:10]; got != "0000000000" {
+		t.Fatalf("pre-1970 time should clamp to 0, got prefix %q", got)
+	}
+}

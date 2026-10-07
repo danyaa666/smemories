@@ -23,6 +23,7 @@ const (
 	// make one login allocate gigabytes.
 	maxStoredMemoryKiB = 1 << 20
 	maxStoredTime      = 100
+	maxStoredKeyLen    = 1024 // bytes; ours is 32, the bound keeps uint32(len(want)) provably safe
 )
 
 // HashParams are the argon2id cost parameters (config: SMEM_AUTH_ARGON_*).
@@ -97,13 +98,13 @@ func (h *Hasher) Verify(ctx context.Context, password, phc string) (bool, error)
 	enc := base64.RawStdEncoding
 	salt, err1 := enc.DecodeString(parts[4])
 	want, err2 := enc.DecodeString(parts[5])
-	if err1 != nil || err2 != nil || len(salt) == 0 || len(want) == 0 {
+	if err1 != nil || err2 != nil || len(salt) == 0 || len(want) == 0 || len(want) > maxStoredKeyLen {
 		return false, errors.New("auth: bad argon2 encoding")
 	}
 	if err := h.acquire(ctx); err != nil {
 		return false, err
 	}
 	defer h.release()
-	got := argon2.IDKey([]byte(password), salt, p.Time, p.MemoryKiB, p.Parallelism, uint32(len(want)))
+	got := argon2.IDKey([]byte(password), salt, p.Time, p.MemoryKiB, p.Parallelism, uint32(len(want))) //nolint:gosec // G115: 0 < len(want) <= maxStoredKeyLen checked above
 	return subtle.ConstantTimeCompare(got, want) == 1, nil
 }

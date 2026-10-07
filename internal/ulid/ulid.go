@@ -13,10 +13,14 @@ const alphabet = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 // differs), which is fine for ids that are only ever looked up, never ordered by.
 func New(t time.Time) string {
 	var b [16]byte
-	ms := uint64(t.UnixMilli())
+	ms := t.UnixMilli()
+	if ms < 0 { // before 1970 has no ULID; clamp to the epoch
+		ms = 0
+	}
+	msu := uint64(ms) //nolint:gosec // G115: ms >= 0 checked above
 	for i := 5; i >= 0; i-- {
-		b[i] = byte(ms)
-		ms >>= 8
+		b[i] = byte(msu)
+		msu >>= 8
 	}
 	if _, err := rand.Read(b[6:]); err != nil {
 		panic("ulid: crypto/rand failed: " + err.Error()) // never happens on supported platforms
