@@ -95,9 +95,10 @@ Prerequisites: Go 1.26 (the `go` directive in `go.mod`), `make`, Docker with Com
 
 | Command | What it does |
 |---|---|
-| `make build` | Builds the API to `bin/smemories-api` |
-| `make test` | Runs the Go tests with the race detector |
-| `make lint` | Fails if `gofmt -l .` prints anything, then runs `go vet ./...` |
+| `make build` | Builds the API to `bin/smemories-api` and the web app to `web/dist` |
+| `make test` | Runs the Go tests with the race detector, then the web tests (vitest) |
+| `make lint` | Fails if `gofmt -l .` prints anything, runs `go vet ./...`, then the web checks (eslint, prettier, `tsc`, i18n key parity, stale API types) |
+| `make web-install` | `npm ci` in `web/` (Node 22, see `web/.nvmrc`); the other web targets do it on demand. Dev server: `cd web && npm run dev` (proxies `/api/*` to `localhost:8080`) |
 | `make run` | Runs the API from source (needs the stack below: `SMEM_DB_DSN` is required) |
 | `make up` / `make down` | Start (and wait for) / stop MySQL 8.4 and MinIO; creates `.env` from `.env.example` first. Ports bind to `127.0.0.1` |
 | `make migrate` / `make migrate-down` | Apply all migrations / roll back the last one |
