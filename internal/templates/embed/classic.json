@@ -1,0 +1,42 @@
+{
+  "id": "classic",
+  "name": {"en": "Classic", "vi": "Cổ điển"},
+  "unit": "mm",
+  "page_sizes": ["A5", "A4"],
+  "theme": {"font": "BeVietnamPro", "colors": {"ink": "#1b1b1b", "accent": "#7a2e2e", "paper": "#fffdf8", "tint": "#efe6d8"}},
+  "pages": [
+    {"kind": "cover", "elements": [
+      {"type": "image", "slot": "cover_photo", "x": 0, "y": 0, "w": 148, "h": 120, "fit": "cover"},
+      {"type": "rect", "x": 0, "y": 120, "w": 148, "h": 2, "fill": "accent"},
+      {"type": "text", "slot": "title", "x": 14, "y": 130, "w": 120, "h": 30, "size": 28, "min_size": 16, "align": "center", "bold": true, "color": "accent"},
+      {"type": "text", "slot": "school", "x": 14, "y": 163, "w": 120, "h": 10, "size": 13, "min_size": 9, "align": "center"},
+      {"type": "text", "slot": "class", "x": 14, "y": 175, "w": 120, "h": 8, "size": 11, "min_size": 8, "align": "center"},
+      {"type": "text", "slot": "year", "x": 14, "y": 190, "w": 120, "h": 8, "size": 11, "align": "center", "color": "accent"}
+    ]},
+    {"kind": "profile", "elements": [
+      {"type": "image", "slot": "photo", "x": 14, "y": 16, "w": 50, "h": 66, "fit": "cover", "shape": "rounded", "radius": 3},
+      {"type": "text", "slot": "full_name", "x": 70, "y": 18, "w": 64, "h": 24, "size": 20, "min_size": 11, "bold": true, "color": "accent"},
+      {"type": "text", "slot": "nickname", "x": 70, "y": 46, "w": 64, "h": 8, "size": 12, "min_size": 8, "label": {"en": "Nickname: ", "vi": "Biệt danh: "}},
+      {"type": "rect", "x": 14, "y": 88, "w": 120, "h": 0.5, "fill": "accent"},
+      {"type": "text", "slot": "quote", "x": 14, "y": 94, "w": 120, "h": 34, "size": 13, "min_size": 8, "align": "center"},
+      {"type": "text", "slot": "hobbies", "x": 14, "y": 134, "w": 120, "h": 30, "size": 11, "min_size": 7, "label": {"en": "Hobbies: ", "vi": "Sở thích: "}},
+      {"type": "text", "slot": "plans", "x": 14, "y": 168, "w": 120, "h": 30, "size": 11, "min_size": 7, "label": {"en": "Plans: ", "vi": "Dự định: "}}
+    ]},
+    {"kind": "notes",
+     "elements": [{"type": "rect", "x": 12, "y": 10, "w": 124, "h": 0.5, "fill": "accent"}],
+     "flow": {"x": 12, "y": 16, "w": 124, "h": 182, "gap": 4, "item_h": 56, "elements": [
+       {"type": "rect", "x": 0, "y": 0, "w": 1, "h": 56, "fill": "accent"},
+       {"type": "text", "slot": "note_author", "x": 4, "y": 0, "w": 78, "h": 7, "size": 11, "min_size": 8, "bold": true, "color": "accent"},
+       {"type": "text", "slot": "note_relationship", "x": 4, "y": 7, "w": 78, "h": 6, "size": 8.5, "min_size": 6},
+       {"type": "text", "slot": "note_message", "x": 4, "y": 14, "w": 78, "h": 42, "size": 10, "min_size": 6.5},
+       {"type": "image", "slot": "note_photo_1", "x": 86, "y": 0, "w": 38, "h": 18, "fit": "cover"},
+       {"type": "image", "slot": "note_photo_2", "x": 86, "y": 19, "w": 38, "h": 18, "fit": "cover"},
+       {"type": "image", "slot": "note_photo_3", "x": 86, "y": 38, "w": 38, "h": 18, "fit": "cover"}
+     ]}},
+    {"kind": "back", "elements": [
+      {"type": "text", "slot": "motto", "x": 20, "y": 80, "w": 108, "h": 50, "size": 18, "min_size": 10, "align": "center", "color": "accent"},
+      {"type": "rect", "x": 64, "y": 140, "w": 20, "h": 1, "fill": "accent"},
+      {"type": "text", "slot": "title", "x": 20, "y": 150, "w": 108, "h": 12, "size": 11, "min_size": 7, "align": "center"}
+    ]}
+  ]
+}

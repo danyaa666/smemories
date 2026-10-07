@@ -78,7 +78,19 @@ complex scripts needing shaping, or CMYK/bleed for print shops). Then try gopdf 
 
 ## Reproduce
 
-`make spike` (needs Go, network on first run to download modules). Dev-only dependencies of the spike: `go-pdfium`
+`make spike` (needs Go, network on first run to download modules). The spike code and its Makefile target were
+removed by T-010 (ADR item 9); check out the T-005 merge commit to rerun it. The dev-only dependencies were `go-pdfium`
 (PDFium compiled to WebAssembly, run by `wazero`; MIT/Apache) as the Go text extractor and renderer, and `pdfcpu`
 (Apache-2.0, run via `go install`) as the validator. `ledongthuc/pdf` was tried first and rejected: its `ToUnicode`
 range decoding drops the high byte, so it mis-reads valid fpdf output (pdftotext and PDFium read it correctly).
+
+## Addendum from T-010 (implementation findings)
+
+- **Rendered-page test without PDFium.** With `go-pdfium` gone (item 9), the full-bleed check
+  (`TestCoverImageIsPlacedAtNegativeOffset`) reads the drawing commands of the rendered page instead of pixels: the
+  image matrix must cover the whole clipped frame and start at a negative offset. It fails if
+  `AllowNegativePosition` is dropped. Text extraction in tests decodes fpdf's own UTF-16 text operators.
+- **Image object order is not deterministic for equal widths.** fpdf (`putimages`) sorts image objects by pixel
+  width and, for equal widths, in random map order, even with `SetCatalogSort(true)`. Everything else is stable, so
+  byte-identical output (`Options.Now`) holds when the embedded photos have distinct widths; photos of the same
+  width can swap object numbers between renders (pages look the same). A fix needs an upstream change or a fork.
