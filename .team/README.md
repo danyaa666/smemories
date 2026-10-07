@@ -10,7 +10,7 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 20 | T-011, T-012, T-013, T-014, T-015, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032 |
+| BACKLOG | 21 | T-011, T-012, T-013, T-014, T-015, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-033 |
 | TODO | 3 | T-007, T-008, T-009 |
 | IN_PROGRESS | 1 | T-010 |
 | MERGED | 8 | T-001, T-002, T-003, T-004, T-005, T-006, T-028, T-030 |
@@ -19,7 +19,7 @@
 
 **Open questions for you:** none
 
-_Board last written 2026-10-07 11:12Z_
+_Board last written 2026-10-07 11:16Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -1458,6 +1458,30 @@ _BACKLOG: needs a full spec before it moves to TODO._
 From the T-030 QA notes. (1) For an unprivileged account an unknown database (or a missing grant) answers MySQL error 1044, not 1049, so db.Open still retries for the full 10 s: add 1044 to permanent() with a test. (2) A bare 'docker compose' outside make still targets the old shared 'smemories' project and a bare 'down -v' would wipe its volumes: add a short warning to the README's compose section.
 
 _BACKLOG: needs a full spec before it moves to TODO; tiny, can be bundled into the next db task._
+
+#### Comments
+
+### T-033 — CI: do not cancel in-progress runs on develop and main
+- **Status:** BACKLOG
+- **Priority:** P2
+- **Type:** infra
+- **Milestone:** M1
+- **Depends-on:** T-004
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-07 11:16Z by leader
+- **Comments-seen:** 0
+
+#### Intent
+Evidence from the T-006/T-030 merges: the workflow's concurrency group has cancel-in-progress: true for every event, so a push to develop cancels the still-running CI of the previous push (the leader's board-sync commits do this right after each merge). The CI runs of ff48f5b and 7c8b302 were cancelled; only the later commit ran to the end. Cancelling superseded runs is right for pull requests but wrong for develop and main, where every merge commit should get a complete run.
+Change: cancel-in-progress: ${{ github.event_name == 'pull_request' }} in .github/workflows/ci.yml, and one sentence in docs/ci.md. Also digest-pin the mysql:8.4 image in the go-integration job (QA note from T-004).
+Risk high (CI): needs owner approval to merge. Tiny change.
+
+_BACKLOG: needs a full spec before it moves to TODO (acceptance: a push to develop followed within a minute by a second push leaves both runs to finish; a superseded PR run is still cancelled)._
 
 #### Comments
 
