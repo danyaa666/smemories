@@ -4,6 +4,7 @@
  */
 
 export interface paths {
+    "/qa-stale": never;
     "/healthz": {
         parameters: {
             query?: never;
