@@ -43,7 +43,7 @@ func TestServeStartsAndShutsDownOnCancel(t *testing.T) {
 			res <- result{err: err}
 			return
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 		b, _ := io.ReadAll(resp.Body)
 		res <- result{body: string(b)}
 	}()
