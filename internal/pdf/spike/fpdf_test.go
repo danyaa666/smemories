@@ -14,6 +14,10 @@ import (
 	"golang.org/x/text/unicode/norm"
 )
 
+// jpgCover: AllowNegativePosition is required for cover crops (x or y < 0); without it fpdf
+// silently replaces a negative x/y with the current margin/cursor and the photo is not full-bleed.
+var jpgCover = fpdf.ImageOptions{ImageType: "JPG", AllowNegativePosition: true}
+
 func newFpdf(size string) *fpdf.Fpdf {
 	// fpdf's built-in "A5" is 148.5 x 210 mm (420.94 pt), 0.5 mm too wide: use exact sizes.
 	dims := map[string]fpdf.SizeType{"A5": {Wd: a5W, Ht: a5H}, "A4": {Wd: 210, Ht: 297}}[size]
@@ -109,7 +113,7 @@ func TestFpdf_Image(t *testing.T) {
 	x, y, w, h, dpi := coverRect(photoW, photoH, 0, 0, a5W, a5H)
 	pdf.ClipRect(0, 0, a5W, a5H, false)
 	pdf.RegisterImageOptionsReader("p0", fpdf.ImageOptions{ImageType: "JPG"}, bytes.NewReader(jpg))
-	pdf.ImageOptions("p0", x, y, w, h, false, fpdf.ImageOptions{ImageType: "JPG"}, 0, "")
+	pdf.ImageOptions("p0", x, y, w, h, false, jpgCover, 0, "")
 	pdf.ClipEnd()
 	pdf.AddPage()
 	pdf.SetFillColor(240, 240, 200)
@@ -146,7 +150,7 @@ func TestFpdf_Layout(t *testing.T) {
 	pdf.RegisterImageOptionsReader("p1", fpdf.ImageOptions{ImageType: "JPG"}, bytes.NewReader(jpg))
 	img := func(fx, fy, fw, fh float64) {
 		x, y, w, h, _ := coverRect(photoW, photoH, fx, fy, fw, fh)
-		pdf.ImageOptions("p1", x, y, w, h, false, fpdf.ImageOptions{ImageType: "JPG"}, 0, "")
+		pdf.ImageOptions("p1", x, y, w, h, false, jpgCover, 0, "")
 	}
 	pdf.SetFillColor(250, 235, 215)
 	pdf.Rect(0, 0, a5W, a5H, "F")
@@ -222,7 +226,7 @@ func TestBenchFpdf(t *testing.T) {
 		pdf.RegisterImageOptionsReader(name, fpdf.ImageOptions{ImageType: "JPG"}, bytes.NewReader(must(os.ReadFile(name))))
 		x, y, w, h, _ := coverRect(photoW, photoH, 10, 10, 128, 150)
 		pdf.ClipRoundedRect(10, 10, 128, 150, 6, false)
-		pdf.ImageOptions(name, x, y, w, h, false, fpdf.ImageOptions{ImageType: "JPG"}, 0, "")
+		pdf.ImageOptions(name, x, y, w, h, false, jpgCover, 0, "")
 		pdf.ClipEnd()
 		pdf.SetFont("bvp", "", 11)
 		pdf.SetXY(10, 168)

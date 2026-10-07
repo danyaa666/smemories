@@ -23,4 +23,6 @@ f.save("NotoEmoji-Regular.ttf")
 PY
 ```
 
+The modified file keeps the name "Noto Emoji" (allowed: the OFL text declares no Reserved Font Name); it is not the upstream file.
+
 The original supplementary-plane mappings stay in the file, so other engines still work with the real code points.
