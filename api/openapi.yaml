@@ -215,6 +215,153 @@ paths:
           content:
             application/json:
               schema: {$ref: "#/components/schemas/Error"}
+  /v1/yearbooks:
+    post:
+      operationId: createYearbook
+      tags: [yearbooks]
+      summary: Create a yearbook (and its owner profile)
+      description: >-
+        Creates the book and one owner profile whose `full_name` is the user's display name.
+        A user owns at most 20 books (`409 limit_reached`). Unknown fields (for example `owner_id`)
+        are rejected with `400 unknown_field`. Text fields are normalised to NFC and trimmed;
+        control characters (Cc), format characters (Cf, except U+200D) and line/paragraph
+        separators are rejected with `invalid_<field>`.
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/YearbookCreate"}
+      responses:
+        "201":
+          description: Created.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/YearbookEnvelope"}
+        "400": {$ref: "#/components/responses/YearbookInvalid"}
+        "401": {$ref: "#/components/responses/Unauthenticated"}
+        "403": {$ref: "#/components/responses/CsrfOriginMismatch"}
+        "409":
+          description: The user already owns 20 yearbooks (`limit_reached`).
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
+        "413": {$ref: "#/components/responses/PayloadTooLarge"}
+        "415": {$ref: "#/components/responses/UnsupportedMediaType"}
+    get:
+      operationId: listYearbooks
+      tags: [yearbooks]
+      summary: List the caller's yearbooks
+      description: >-
+        Only the caller's books, newest `updated_at` first (editing the book or its profile updates it).
+        Pass `next_cursor` back as `cursor` for the next page; `next_cursor` is null on the last page.
+        A malformed or tampered cursor is `400 invalid_cursor`.
+      security:
+        - sessionCookie: []
+      parameters:
+        - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 50, default: 20}, description: "Out of range or not a number: `400 invalid_limit`."}
+        - {name: cursor, in: query, required: false, schema: {type: string}, description: Opaque token from a previous page.}
+      responses:
+        "200":
+          description: A page of books (each with its profile).
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [yearbooks, next_cursor]
+                properties:
+                  yearbooks:
+                    type: array
+                    items: {$ref: "#/components/schemas/Yearbook"}
+                  next_cursor: {type: [string, "null"]}
+        "400": {$ref: "#/components/responses/YearbookInvalid"}
+        "401": {$ref: "#/components/responses/Unauthenticated"}
+  /v1/yearbooks/{id}:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: string}, description: Yearbook ULID.}
+    get:
+      operationId: getYearbook
+      tags: [yearbooks]
+      summary: Read one yearbook with its profile
+      description: A missing book and a book owned by someone else both answer `404 not_found`.
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: The book.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/YearbookEnvelope"}
+        "401": {$ref: "#/components/responses/Unauthenticated"}
+        "404": {$ref: "#/components/responses/YearbookNotFound"}
+    patch:
+      operationId: updateYearbook
+      tags: [yearbooks]
+      summary: Partially update a yearbook
+      description: >-
+        Only the fields present change. An empty string clears an optional text field; `graduation_year: null`
+        clears the year. A JSON null on any other field counts as absent. Unknown fields are `400 unknown_field`.
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/YearbookPatch"}
+      responses:
+        "200":
+          description: The updated book.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/YearbookEnvelope"}
+        "400": {$ref: "#/components/responses/YearbookInvalid"}
+        "401": {$ref: "#/components/responses/Unauthenticated"}
+        "403": {$ref: "#/components/responses/CsrfOriginMismatch"}
+        "404": {$ref: "#/components/responses/YearbookNotFound"}
+        "413": {$ref: "#/components/responses/PayloadTooLarge"}
+        "415": {$ref: "#/components/responses/UnsupportedMediaType"}
+    delete:
+      operationId: deleteYearbook
+      tags: [yearbooks]
+      summary: Delete a yearbook
+      description: Hard-deletes the book and its profile.
+      security:
+        - sessionCookie: []
+      responses:
+        "204": {description: Deleted.}
+        "401": {$ref: "#/components/responses/Unauthenticated"}
+        "403": {$ref: "#/components/responses/CsrfOriginMismatch"}
+        "404": {$ref: "#/components/responses/YearbookNotFound"}
+  /v1/yearbooks/{id}/profile:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: string}, description: Yearbook ULID.}
+    put:
+      operationId: replaceYearbookProfile
+      tags: [yearbooks]
+      summary: Replace the owner's profile information
+      description: >-
+        Replaces every field: an omitted optional field is cleared. Unknown fields (for example `is_owner`)
+        are `400 unknown_field`. Birthday is personal data and is never logged.
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/ProfileInput"}
+      responses:
+        "200":
+          description: The book with its updated profile.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/YearbookEnvelope"}
+        "400": {$ref: "#/components/responses/YearbookInvalid"}
+        "401": {$ref: "#/components/responses/Unauthenticated"}
+        "403": {$ref: "#/components/responses/CsrfOriginMismatch"}
+        "404": {$ref: "#/components/responses/YearbookNotFound"}
+        "413": {$ref: "#/components/responses/PayloadTooLarge"}
+        "415": {$ref: "#/components/responses/UnsupportedMediaType"}
 components:
   securitySchemes:
     sessionCookie:
@@ -231,6 +378,23 @@ components:
         (plus `Secure` unless SMEM_ENV=dev). Only the token's SHA-256 is stored server-side.
       schema: {type: string}
   responses:
+    Unauthenticated:
+      description: No, unknown or expired session (`unauthenticated`).
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/Error"}
+    YearbookNotFound:
+      description: The yearbook does not exist or belongs to someone else (`not_found`); the two cannot be told apart.
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/Error"}
+    YearbookInvalid:
+      description: >-
+        `invalid_<field>` (title, school_name, class_name, graduation_year, motto, language, page_size, full_name,
+        nickname, birthday, quote, hobbies, future_plans, limit, cursor), `unknown_field` or `invalid_body`.
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/Error"}
     CsrfOriginMismatch:
       description: >-
         The request carries the session cookie but its Origin (or Referer) is missing or not
@@ -300,6 +464,75 @@ components:
       required: [user]
       properties:
         user: {$ref: "#/components/schemas/User"}
+    Profile:
+      type: object
+      additionalProperties: false
+      required: [id, is_owner, full_name, nickname, birthday, quote, hobbies, future_plans]
+      properties:
+        id: {type: string, description: Opaque ULID.}
+        is_owner: {type: boolean}
+        full_name: {type: string, minLength: 1, maxLength: 100}
+        nickname: {type: string, maxLength: 50, description: Empty when not set.}
+        birthday: {type: [string, "null"], format: date}
+        quote: {type: string, maxLength: 500}
+        hobbies: {type: string, maxLength: 300}
+        future_plans: {type: string, maxLength: 300}
+    Yearbook:
+      type: object
+      additionalProperties: false
+      required: [id, title, school_name, class_name, graduation_year, motto, language, page_size, template_id, created_at, updated_at, profile]
+      properties:
+        id: {type: string, description: Opaque ULID., examples: ["01J9Z3K6V8Q4M7N2P5R8T0W1XY"]}
+        title: {type: string, minLength: 1, maxLength: 120}
+        school_name: {type: string, maxLength: 120, description: Empty when not set.}
+        class_name: {type: string, maxLength: 120, description: Empty when not set.}
+        graduation_year: {type: [integer, "null"], minimum: 1950, maximum: 2100}
+        motto: {type: string, maxLength: 200}
+        language: {type: string, enum: [en, vi]}
+        page_size: {type: string, enum: [A5, A4]}
+        template_id: {type: [string, "null"], description: Null until a template is chosen.}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+        profile: {$ref: "#/components/schemas/Profile"}
+    YearbookEnvelope:
+      type: object
+      required: [yearbook]
+      properties:
+        yearbook: {$ref: "#/components/schemas/Yearbook"}
+    YearbookCreate:
+      type: object
+      additionalProperties: false
+      required: [title, language]
+      properties:
+        title: {type: string, minLength: 1, maxLength: 120}
+        school_name: {type: string, maxLength: 120}
+        class_name: {type: string, maxLength: 120}
+        graduation_year: {type: [integer, "null"], minimum: 1950, maximum: 2100}
+        motto: {type: string, maxLength: 200}
+        language: {type: string, enum: [en, vi]}
+        page_size: {type: string, enum: [A5, A4], default: A5}
+    YearbookPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        title: {type: string, minLength: 1, maxLength: 120}
+        school_name: {type: string, maxLength: 120}
+        class_name: {type: string, maxLength: 120}
+        graduation_year: {type: [integer, "null"], minimum: 1950, maximum: 2100}
+        motto: {type: string, maxLength: 200}
+        language: {type: string, enum: [en, vi]}
+        page_size: {type: string, enum: [A5, A4]}
+    ProfileInput:
+      type: object
+      additionalProperties: false
+      required: [full_name]
+      properties:
+        full_name: {type: string, minLength: 1, maxLength: 100}
+        nickname: {type: string, maxLength: 50}
+        birthday: {type: [string, "null"], format: date, description: "YYYY-MM-DD, a real date strictly before today (UTC) and not before 1900-01-01."}
+        quote: {type: string, maxLength: 500}
+        hobbies: {type: string, maxLength: 300}
+        future_plans: {type: string, maxLength: 300}
     Error:
       type: object
       description: >-
@@ -313,7 +546,7 @@ components:
           properties:
             code:
               type: string
-              examples: [not_found, method_not_allowed, payload_too_large, internal_error, not_ready, invalid_credentials, unauthenticated, rate_limited]
+              examples: [not_found, method_not_allowed, payload_too_large, internal_error, not_ready, invalid_credentials, unauthenticated, rate_limited, limit_reached, unknown_field]
             message:
               type: string
             request_id:

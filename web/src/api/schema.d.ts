@@ -118,6 +118,84 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/yearbooks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the caller's yearbooks
+         * @description Only the caller's books, newest `updated_at` first (editing the book or its profile updates it). Pass `next_cursor` back as `cursor` for the next page; `next_cursor` is null on the last page. A malformed or tampered cursor is `400 invalid_cursor`.
+         */
+        get: operations["listYearbooks"];
+        put?: never;
+        /**
+         * Create a yearbook (and its owner profile)
+         * @description Creates the book and one owner profile whose `full_name` is the user's display name. A user owns at most 20 books (`409 limit_reached`). Unknown fields (for example `owner_id`) are rejected with `400 unknown_field`. Text fields are normalised to NFC and trimmed; control characters (Cc), format characters (Cf, except U+200D) and line/paragraph separators are rejected with `invalid_<field>`.
+         */
+        post: operations["createYearbook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/yearbooks/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Yearbook ULID. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Read one yearbook with its profile
+         * @description A missing book and a book owned by someone else both answer `404 not_found`.
+         */
+        get: operations["getYearbook"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete a yearbook
+         * @description Hard-deletes the book and its profile.
+         */
+        delete: operations["deleteYearbook"];
+        options?: never;
+        head?: never;
+        /**
+         * Partially update a yearbook
+         * @description Only the fields present change. An empty string clears an optional text field; `graduation_year: null` clears the year. A JSON null on any other field counts as absent. Unknown fields are `400 unknown_field`.
+         */
+        patch: operations["updateYearbook"];
+        trace?: never;
+    };
+    "/v1/yearbooks/{id}/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Yearbook ULID. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Replace the owner's profile information
+         * @description Replaces every field: an omitted optional field is cleared. Unknown fields (for example `is_owner`) are `400 unknown_field`. Birthday is personal data and is never logged.
+         */
+        put: operations["replaceYearbookProfile"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -139,6 +217,84 @@ export interface components {
         UserEnvelope: {
             user: components["schemas"]["User"];
         };
+        Profile: {
+            /** @description Opaque ULID. */
+            id: string;
+            is_owner: boolean;
+            full_name: string;
+            /** @description Empty when not set. */
+            nickname: string;
+            /** Format: date */
+            birthday: string | null;
+            quote: string;
+            hobbies: string;
+            future_plans: string;
+        };
+        Yearbook: {
+            /**
+             * @description Opaque ULID.
+             * @example 01J9Z3K6V8Q4M7N2P5R8T0W1XY
+             */
+            id: string;
+            title: string;
+            /** @description Empty when not set. */
+            school_name: string;
+            /** @description Empty when not set. */
+            class_name: string;
+            graduation_year: number | null;
+            motto: string;
+            /** @enum {string} */
+            language: "en" | "vi";
+            /** @enum {string} */
+            page_size: "A5" | "A4";
+            /** @description Null until a template is chosen. */
+            template_id: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            profile: components["schemas"]["Profile"];
+        };
+        YearbookEnvelope: {
+            yearbook: components["schemas"]["Yearbook"];
+        };
+        YearbookCreate: {
+            title: string;
+            school_name?: string;
+            class_name?: string;
+            graduation_year?: number | null;
+            motto?: string;
+            /** @enum {string} */
+            language: "en" | "vi";
+            /**
+             * @default A5
+             * @enum {string}
+             */
+            page_size: "A5" | "A4";
+        };
+        YearbookPatch: {
+            title?: string;
+            school_name?: string;
+            class_name?: string;
+            graduation_year?: number | null;
+            motto?: string;
+            /** @enum {string} */
+            language?: "en" | "vi";
+            /** @enum {string} */
+            page_size?: "A5" | "A4";
+        };
+        ProfileInput: {
+            full_name: string;
+            nickname?: string;
+            /**
+             * Format: date
+             * @description YYYY-MM-DD, a real date strictly before today (UTC) and not before 1900-01-01.
+             */
+            birthday?: string | null;
+            quote?: string;
+            hobbies?: string;
+            future_plans?: string;
+        };
         /** @description Shared error envelope. `code` is a stable snake_case contract (clients localise it); `message` is English text meant for logs. */
         Error: {
             error: {
@@ -151,6 +307,8 @@ export interface components {
                  * @example invalid_credentials
                  * @example unauthenticated
                  * @example rate_limited
+                 * @example limit_reached
+                 * @example unknown_field
                  */
                 code: string;
                 message: string;
@@ -160,6 +318,33 @@ export interface components {
         };
     };
     responses: {
+        /** @description No, unknown or expired session (`unauthenticated`). */
+        Unauthenticated: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description The yearbook does not exist or belongs to someone else (`not_found`); the two cannot be told apart. */
+        YearbookNotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description `invalid_<field>` (title, school_name, class_name, graduation_year, motto, language, page_size, full_name, nickname, birthday, quote, hobbies, future_plans, limit, cursor), `unknown_field` or `invalid_body`. */
+        YearbookInvalid: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
         /** @description The request carries the session cookie but its Origin (or Referer) is missing or not allowed (`csrf_origin_mismatch`). */
         CsrfOriginMismatch: {
             headers: {
@@ -462,6 +647,189 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+        };
+    };
+    listYearbooks: {
+        parameters: {
+            query?: {
+                /** @description Out of range or not a number: `400 invalid_limit`. */
+                limit?: number;
+                /** @description Opaque token from a previous page. */
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of books (each with its profile). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        yearbooks: components["schemas"]["Yearbook"][];
+                        next_cursor: string | null;
+                    };
+                };
+            };
+            400: components["responses"]["YearbookInvalid"];
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    createYearbook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["YearbookCreate"];
+            };
+        };
+        responses: {
+            /** @description Created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["YearbookEnvelope"];
+                };
+            };
+            400: components["responses"]["YearbookInvalid"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["CsrfOriginMismatch"];
+            /** @description The user already owns 20 yearbooks (`limit_reached`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            413: components["responses"]["PayloadTooLarge"];
+            415: components["responses"]["UnsupportedMediaType"];
+        };
+    };
+    getYearbook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Yearbook ULID. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The book. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["YearbookEnvelope"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["YearbookNotFound"];
+        };
+    };
+    deleteYearbook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Yearbook ULID. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["CsrfOriginMismatch"];
+            404: components["responses"]["YearbookNotFound"];
+        };
+    };
+    updateYearbook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Yearbook ULID. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["YearbookPatch"];
+            };
+        };
+        responses: {
+            /** @description The updated book. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["YearbookEnvelope"];
+                };
+            };
+            400: components["responses"]["YearbookInvalid"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["CsrfOriginMismatch"];
+            404: components["responses"]["YearbookNotFound"];
+            413: components["responses"]["PayloadTooLarge"];
+            415: components["responses"]["UnsupportedMediaType"];
+        };
+    };
+    replaceYearbookProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Yearbook ULID. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileInput"];
+            };
+        };
+        responses: {
+            /** @description The book with its updated profile. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["YearbookEnvelope"];
+                };
+            };
+            400: components["responses"]["YearbookInvalid"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["CsrfOriginMismatch"];
+            404: components["responses"]["YearbookNotFound"];
+            413: components["responses"]["PayloadTooLarge"];
+            415: components["responses"]["UnsupportedMediaType"];
         };
     };
 }

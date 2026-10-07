@@ -7,6 +7,8 @@ import (
 	"unicode/utf8"
 
 	"golang.org/x/text/unicode/norm"
+
+	"github.com/danyaa666/smemories/internal/textx"
 )
 
 const (
@@ -15,7 +17,6 @@ const (
 	minPasswordLen    = 10
 	maxPasswordLen    = 128
 	maxDisplayNameLen = 100
-	zwj               = '\u200d'
 )
 
 // Validation error codes returned in the error envelope.
@@ -66,19 +67,5 @@ func validPassword(password, email string) bool {
 	return n >= minPasswordLen && n <= maxPasswordLen && !strings.EqualFold(password, email)
 }
 
-// cleanDisplayName normalises name to NFC, trims it and reports whether it has 1-100 characters, no
-// control characters (Cc), no format characters (Cf: zero-width space, bidi overrides/isolates, LRM/RLM,
-// BOM) except U+200D (ZWJ, used in emoji sequences), and no line/paragraph separators (Zl, Zp).
-func cleanDisplayName(name string) (string, bool) {
-	name = strings.TrimSpace(norm.NFC.String(name))
-	n := utf8.RuneCountInString(name)
-	if n < 1 || n > maxDisplayNameLen {
-		return "", false
-	}
-	for _, r := range name {
-		if unicode.IsControl(r) || r == utf8.RuneError || unicode.In(r, unicode.Cf, unicode.Zl, unicode.Zp) && r != zwj {
-			return "", false
-		}
-	}
-	return name, true
-}
+// cleanDisplayName applies the shared text rules (textx.Clean) with 1-100 characters.
+func cleanDisplayName(name string) (string, bool) { return textx.Clean(name, 1, maxDisplayNameLen) }

@@ -1,0 +1,3052 @@
+{
+  "info": {
+    "name": "SMemories - yearbooks",
+    "description": "Yearbook CRUD and profile information (T-008). Run against an API started with SMEM_ENV=dev, after the auth collection's assumptions: the session token is read from the register response's Set-Cookie header and sent in an explicit Cookie header, so two users (A and B) can act in one run (an explicit header wins over Newman's cookie jar; \"no session\" requests send an empty smem_session). Each run registers 2 users (the register limit is 5 per hour per IP: restart the API, or set SMEM_RATE_REGISTER_PER_HOUR higher, before a third run within the hour). Run the whole collection in order: the Edge cases folder reuses the users and the yearbook from the Full flow.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "origin",
+      "value": "http://localhost:5173"
+    },
+    {
+      "key": "emailA",
+      "value": ""
+    },
+    {
+      "key": "emailB",
+      "value": ""
+    },
+    {
+      "key": "password",
+      "value": ""
+    },
+    {
+      "key": "nameA",
+      "value": ""
+    },
+    {
+      "key": "tokenA",
+      "value": ""
+    },
+    {
+      "key": "tokenB",
+      "value": ""
+    },
+    {
+      "key": "bookId",
+      "value": ""
+    },
+    {
+      "key": "bookId2",
+      "value": ""
+    },
+    {
+      "key": "profileId",
+      "value": ""
+    },
+    {
+      "key": "cursor",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Full flow",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Folder scripts run before every request in the folder, so generate only before the first one: the whole flow then",
+              "// uses one consistent pair of accounts, and every new run gets fresh ones (no collision with data from older runs).",
+              "if (pm.info.requestName.startsWith('1. ')) {",
+              "  const n = Date.now() + '-' + Math.floor(Math.random() * 1e6);",
+              "  pm.collectionVariables.set('emailA', 'newman-yb-a-' + n + '@example.com');",
+              "  pm.collectionVariables.set('emailB', 'newman-yb-b-' + n + '@example.com');",
+              "  pm.collectionVariables.set('password', 'Fake-Newman-pw-' + n);",
+              "  pm.collectionVariables.set('nameA', 'Newman Alice \\u0110\\u1eb7ng');",
+              "}"
+            ]
+          }
+        }
+      ],
+      "item": [
+        {
+          "name": "1. Register user A",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{emailA}}\",\"password\":\"{{password}}\",\"display_name\":\"{{nameA}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "const sc = pm.response.headers.get('Set-Cookie') || '';",
+                  "const m = /smem_session=([^;]+)/.exec(sc);",
+                  "pm.test('session cookie issued', () => pm.expect(m).to.not.be.null);",
+                  "pm.collectionVariables.set('tokenA', m ? m[1] : '');",
+                  "pm.test('user body', () => pm.expect(pm.response.json().user.display_name).to.eql(pm.collectionVariables.get('nameA')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. Register user B",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{emailB}}\",\"password\":\"{{password}}\",\"display_name\":\"Newman Bob\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "const sc = pm.response.headers.get('Set-Cookie') || '';",
+                  "const m = /smem_session=([^;]+)/.exec(sc);",
+                  "pm.test('session cookie issued', () => pm.expect(m).to.not.be.null);",
+                  "pm.collectionVariables.set('tokenB', m ? m[1] : '');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3. A creates a yearbook (NFD title is stored as NFC; profile name defaults to the display name)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"  Class of 2026 Vie\\u0302\\u0323t \",\"school_name\":\"Fake University\",\"graduation_year\":2026,\"language\":\"vi\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "const b = pm.response.json().yearbook;\npm.test('book shape', () => { pm.expect(b.id).to.match(/^[0-9A-Z]{26}$/); pm.expect(b).to.not.have.any.keys('owner_id', 'internal_id'); pm.expect(b.profile.id).to.match(/^[0-9A-Z]{26}$/); pm.expect(b.profile.is_owner).to.eql(true); });\npm.test('values', () => {\n  pm.expect(b.title).to.eql('Class of 2026 Vi\\u1ec7t');\n  pm.expect(b.school_name).to.eql('Fake University');\n  pm.expect(b.graduation_year).to.eql(2026);\n  pm.expect(b.language).to.eql('vi');\n  pm.expect(b.page_size).to.eql('A5');\n  pm.expect(b.template_id).to.eql(null);\n  pm.expect(b.profile.full_name).to.eql(pm.collectionVariables.get('nameA'));\n  pm.expect(b.profile.birthday).to.eql(null);\n});\npm.collectionVariables.set('bookId', b.id);\npm.collectionVariables.set('profileId', b.profile.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4. A reads the yearbook",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks",
+                "{{bookId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json().yearbook;\npm.test('book shape', () => { pm.expect(b.id).to.match(/^[0-9A-Z]{26}$/); pm.expect(b).to.not.have.any.keys('owner_id', 'internal_id'); pm.expect(b.profile.id).to.match(/^[0-9A-Z]{26}$/); pm.expect(b.profile.is_owner).to.eql(true); });pm.test('same book', () => { pm.expect(b.id).to.eql(pm.collectionVariables.get('bookId')); pm.expect(b.profile.id).to.eql(pm.collectionVariables.get('profileId')); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5. A lists yearbooks (only the own book)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('one book, no next page', () => { pm.expect(j.yearbooks).to.have.length(1); pm.expect(j.yearbooks[0].id).to.eql(pm.collectionVariables.get('bookId')); pm.expect(j.next_cursor).to.eql(null); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6. A patches the yearbook (partial; null clears the year)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks",
+                "{{bookId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"Renamed book\",\"motto\":\"Carpe diem\",\"graduation_year\":null,\"page_size\":\"A4\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json().yearbook;\npm.test('book shape', () => { pm.expect(b.id).to.match(/^[0-9A-Z]{26}$/); pm.expect(b).to.not.have.any.keys('owner_id', 'internal_id'); pm.expect(b.profile.id).to.match(/^[0-9A-Z]{26}$/); pm.expect(b.profile.is_owner).to.eql(true); });pm.test('patched, rest kept', () => { pm.expect(b.title).to.eql('Renamed book'); pm.expect(b.motto).to.eql('Carpe diem'); pm.expect(b.graduation_year).to.eql(null); pm.expect(b.school_name).to.eql('Fake University'); pm.expect(b.page_size).to.eql('A4'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "7. A replaces the profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks",
+                "{{bookId}}",
+                "profile"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"full_name\":\"Nguy\\u1ec5n V\\u0103n A\",\"nickname\":\"Bong\",\"birthday\":\"2004-02-29\",\"quote\":\"Stay hungry\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json().yearbook;\npm.test('book shape', () => { pm.expect(b.id).to.match(/^[0-9A-Z]{26}$/); pm.expect(b).to.not.have.any.keys('owner_id', 'internal_id'); pm.expect(b.profile.id).to.match(/^[0-9A-Z]{26}$/); pm.expect(b.profile.is_owner).to.eql(true); });pm.test('profile replaced', () => { const p = b.profile; pm.expect(p.full_name).to.eql('Nguy\\u1ec5n V\\u0103n A'); pm.expect(p.nickname).to.eql('Bong'); pm.expect(p.birthday).to.eql('2004-02-29'); pm.expect(p.quote).to.eql('Stay hungry'); pm.expect(p.hobbies).to.eql(''); pm.expect(p.id).to.eql(pm.collectionVariables.get('profileId')); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "8. B cannot read A's yearbook - 404",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks",
+                "{{bookId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('error code not_found', () => pm.expect(pm.response.json().error.code).to.eql('not_found'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "9. B cannot patch A's yearbook - 404",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks",
+                "{{bookId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"hijack\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('error code not_found', () => pm.expect(pm.response.json().error.code).to.eql('not_found'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10. B cannot replace A's profile - 404",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks",
+                "{{bookId}}",
+                "profile"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"full_name\":\"hijack\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('error code not_found', () => pm.expect(pm.response.json().error.code).to.eql('not_found'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "11. B cannot delete A's yearbook - 404",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks",
+                "{{bookId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('error code not_found', () => pm.expect(pm.response.json().error.code).to.eql('not_found'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "12. B's list is empty",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('empty', () => pm.expect(pm.response.json().yearbooks).to.eql([]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "13. A's yearbook is unchanged after B's attempts",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks",
+                "{{bookId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json().yearbook;",
+                  "pm.test('unchanged', () => { pm.expect(b.title).to.eql('Renamed book'); pm.expect(b.profile.full_name).to.eql('Nguy\\u1ec5n V\\u0103n A'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "14. A deletes the yearbook - 204",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks",
+                "{{bookId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15. A reads the deleted yearbook - 404",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks",
+                "{{bookId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('error code not_found', () => pm.expect(pm.response.json().error.code).to.eql('not_found'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "16. A deletes it again - 404",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks",
+                "{{bookId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('error code not_found', () => pm.expect(pm.response.json().error.code).to.eql('not_found'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "17. A creates a yearbook again (delete then recreate)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"Second book\",\"language\":\"en\",\"page_size\":\"A4\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('bookId', pm.response.json().yearbook.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "18. A pages through two books (limit=1, then the cursor)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"Third book\",\"language\":\"en\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('bookId2', pm.response.json().yearbook.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "19. List page 1 (limit=1): newest first, with next_cursor",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks?limit=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('newest first', () => { pm.expect(j.yearbooks).to.have.length(1); pm.expect(j.yearbooks[0].id).to.eql(pm.collectionVariables.get('bookId2')); pm.expect(j.next_cursor).to.be.a('string'); });",
+                  "pm.collectionVariables.set('cursor', j.next_cursor);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "20. List page 2 via the cursor: the older book, no next_cursor",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks?limit=1&cursor={{cursor}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "1"
+                },
+                {
+                  "key": "cursor",
+                  "value": "{{cursor}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('older book', () => { pm.expect(j.yearbooks).to.have.length(1); pm.expect(j.yearbooks[0].id).to.eql(pm.collectionVariables.get('bookId')); pm.expect(j.next_cursor).to.eql(null); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Edge cases",
+      "item": [
+        {
+          "name": "Create without a session - 401",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"x\",\"language\":\"en\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 401', () => pm.response.to.have.status(401));",
+                  "pm.test('error code unauthenticated', () => pm.expect(pm.response.json().error.code).to.eql('unauthenticated'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List without a session - 401",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 401', () => pm.response.to.have.status(401));",
+                  "pm.test('error code unauthenticated', () => pm.expect(pm.response.json().error.code).to.eql('unauthenticated'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get without a session - 401",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks",
+                "{{bookId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 401', () => pm.response.to.have.status(401));",
+                  "pm.test('error code unauthenticated', () => pm.expect(pm.response.json().error.code).to.eql('unauthenticated'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Patch without a session - 401",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks",
+                "{{bookId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"x\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 401', () => pm.response.to.have.status(401));",
+                  "pm.test('error code unauthenticated', () => pm.expect(pm.response.json().error.code).to.eql('unauthenticated'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Put profile without a session - 401",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks",
+                "{{bookId}}",
+                "profile"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"full_name\":\"x\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 401', () => pm.response.to.have.status(401));",
+                  "pm.test('error code unauthenticated', () => pm.expect(pm.response.json().error.code).to.eql('unauthenticated'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete without a session - 401",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks",
+                "{{bookId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 401', () => pm.response.to.have.status(401));",
+                  "pm.test('error code unauthenticated', () => pm.expect(pm.response.json().error.code).to.eql('unauthenticated'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get with a garbage session cookie - 401",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Cookie",
+                "value": "smem_session=garbage"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 401', () => pm.response.to.have.status(401));",
+                  "pm.test('error code unauthenticated', () => pm.expect(pm.response.json().error.code).to.eql('unauthenticated'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create - missing title - 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"language\":\"en\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code invalid_title', () => pm.expect(pm.response.json().error.code).to.eql('invalid_title'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create - blank title - 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"   \",\"language\":\"en\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code invalid_title', () => pm.expect(pm.response.json().error.code).to.eql('invalid_title'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create - 121 character title (boundary) - 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"language\":\"en\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code invalid_title', () => pm.expect(pm.response.json().error.code).to.eql('invalid_title'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create - missing language - 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"x\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code invalid_language', () => pm.expect(pm.response.json().error.code).to.eql('invalid_language'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create - unsupported language - 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"x\",\"language\":\"fr\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code invalid_language', () => pm.expect(pm.response.json().error.code).to.eql('invalid_language'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create - unsupported page size - 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"x\",\"language\":\"en\",\"page_size\":\"A3\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code invalid_page_size', () => pm.expect(pm.response.json().error.code).to.eql('invalid_page_size'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create - graduation year 1949 (boundary) - 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"x\",\"language\":\"en\",\"graduation_year\":1949}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code invalid_graduation_year', () => pm.expect(pm.response.json().error.code).to.eql('invalid_graduation_year'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create - graduation year 2101 (boundary) - 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"x\",\"language\":\"en\",\"graduation_year\":2101}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code invalid_graduation_year', () => pm.expect(pm.response.json().error.code).to.eql('invalid_graduation_year'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create - 201 character motto (boundary) - 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"x\",\"language\":\"en\",\"motto\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code invalid_motto', () => pm.expect(pm.response.json().error.code).to.eql('invalid_motto'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create - control character in the title - 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"a\\u0007b\",\"language\":\"en\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code invalid_title', () => pm.expect(pm.response.json().error.code).to.eql('invalid_title'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create - zero-width space in the title - 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"a\\u200bb\",\"language\":\"en\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code invalid_title', () => pm.expect(pm.response.json().error.code).to.eql('invalid_title'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create - mass assignment owner_id - 400 unknown_field",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"x\",\"language\":\"en\",\"owner_id\":1}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code unknown_field', () => pm.expect(pm.response.json().error.code).to.eql('unknown_field'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create - mass assignment public_id - 400 unknown_field",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"x\",\"language\":\"en\",\"public_id\":\"01J9Z3K6V8Q4M7N2P5R8T0W1XY\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code unknown_field', () => pm.expect(pm.response.json().error.code).to.eql('unknown_field'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create - malformed JSON - 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code invalid_body', () => pm.expect(pm.response.json().error.code).to.eql('invalid_body'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create - form-encoded body - 415",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "title=x&language=en"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 415', () => pm.response.to.have.status(415));",
+                  "pm.test('error code unsupported_media_type', () => pm.expect(pm.response.json().error.code).to.eql('unsupported_media_type'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create - 120 character title and emoji + Vietnamese (boundary) - 201",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"ĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐĐ\",\"language\":\"vi\",\"motto\":\"Học, học nữa 🎓\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "const b = pm.response.json().yearbook;",
+                  "pm.test('kept', () => { pm.expect([...b.title].length).to.eql(120); pm.expect(b.motto).to.eql('Học, học nữa 🎓'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Patch - unknown field is_owner - 400",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks",
+                "{{bookId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"is_owner\":false}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code unknown_field', () => pm.expect(pm.response.json().error.code).to.eql('unknown_field'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Patch - empty title - 400",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks",
+                "{{bookId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code invalid_title', () => pm.expect(pm.response.json().error.code).to.eql('invalid_title'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Patch - bad language - 400",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks",
+                "{{bookId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"language\":\"de\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code invalid_language', () => pm.expect(pm.response.json().error.code).to.eql('invalid_language'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Patch - nonexistent yearbook - 404",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks/01J9Z3K6V8Q4M7N2P5R8T0W1XY",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks",
+                "01J9Z3K6V8Q4M7N2P5R8T0W1XY"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"x\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('error code not_found', () => pm.expect(pm.response.json().error.code).to.eql('not_found'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get - id that is not a ULID - 404",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks/not-a-ulid",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks",
+                "not-a-ulid"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('error code not_found', () => pm.expect(pm.response.json().error.code).to.eql('not_found'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Profile - missing full_name - 400",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks",
+                "{{bookId}}",
+                "profile"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code invalid_full_name', () => pm.expect(pm.response.json().error.code).to.eql('invalid_full_name'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Profile - 101 character full_name (boundary) - 400",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks",
+                "{{bookId}}",
+                "profile"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"full_name\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code invalid_full_name', () => pm.expect(pm.response.json().error.code).to.eql('invalid_full_name'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Profile - 51 character nickname (boundary) - 400",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks",
+                "{{bookId}}",
+                "profile"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"full_name\":\"a\",\"nickname\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code invalid_nickname', () => pm.expect(pm.response.json().error.code).to.eql('invalid_nickname'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Profile - 501 character quote (boundary) - 400",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks",
+                "{{bookId}}",
+                "profile"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"full_name\":\"a\",\"quote\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code invalid_quote', () => pm.expect(pm.response.json().error.code).to.eql('invalid_quote'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Profile - 301 character hobbies (boundary) - 400",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks",
+                "{{bookId}}",
+                "profile"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"full_name\":\"a\",\"hobbies\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code invalid_hobbies', () => pm.expect(pm.response.json().error.code).to.eql('invalid_hobbies'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Profile - 301 character future_plans (boundary) - 400",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks",
+                "{{bookId}}",
+                "profile"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"full_name\":\"a\",\"future_plans\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code invalid_future_plans', () => pm.expect(pm.response.json().error.code).to.eql('invalid_future_plans'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Profile - birthday in the future - 400",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks",
+                "{{bookId}}",
+                "profile"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"full_name\":\"a\",\"birthday\":\"2999-01-01\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code invalid_birthday', () => pm.expect(pm.response.json().error.code).to.eql('invalid_birthday'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Profile - birthday that is not a date - 400",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks",
+                "{{bookId}}",
+                "profile"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"full_name\":\"a\",\"birthday\":\"2001-02-30\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code invalid_birthday', () => pm.expect(pm.response.json().error.code).to.eql('invalid_birthday'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Profile - mass assignment is_owner - 400 unknown_field",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks",
+                "{{bookId}}",
+                "profile"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"full_name\":\"a\",\"is_owner\":false}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code unknown_field', () => pm.expect(pm.response.json().error.code).to.eql('unknown_field'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List - limit 0 - 400",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks?limit=0",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "0"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code invalid_limit', () => pm.expect(pm.response.json().error.code).to.eql('invalid_limit'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List - limit 51 (boundary) - 400",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks?limit=51",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "51"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code invalid_limit', () => pm.expect(pm.response.json().error.code).to.eql('invalid_limit'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List - tampered cursor - 400",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks?cursor=dGFtcGVyZWQ",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks"
+              ],
+              "query": [
+                {
+                  "key": "cursor",
+                  "value": "dGFtcGVyZWQ"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code invalid_cursor', () => pm.expect(pm.response.json().error.code).to.eql('invalid_cursor'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List - limit 50 (boundary) - 200",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks?limit=50",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CSRF - delete with a session cookie from a foreign Origin - 403",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "https://evil.example"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks",
+                "{{bookId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 403', () => pm.response.to.have.status(403));",
+                  "pm.test('error code csrf_origin_mismatch', () => pm.expect(pm.response.json().error.code).to.eql('csrf_origin_mismatch'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CSRF - create with a session cookie and no Origin - 403",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"x\",\"language\":\"en\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 403', () => pm.response.to.have.status(403));",
+                  "pm.test('error code csrf_origin_mismatch', () => pm.expect(pm.response.json().error.code).to.eql('csrf_origin_mismatch'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create - 21st yearbook of one user - 409 limit_reached",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"21st\",\"language\":\"en\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Create 20 books for user B (sequentially, one request at a time), so the request itself is the 21st.",
+                  "const tok = pm.collectionVariables.get('tokenB');",
+                  "const base = pm.variables.get('baseUrl');",
+                  "const origin = pm.collectionVariables.get('origin');",
+                  "const one = (i) => new Promise((resolve, reject) => pm.sendRequest({",
+                  "  url: base + '/v1/yearbooks', method: 'POST',",
+                  "  header: { 'Content-Type': 'application/json', 'Origin': origin, 'Cookie': 'smem_session=' + tok },",
+                  "  body: { mode: 'raw', raw: JSON.stringify({ title: 'Filler ' + i, language: 'en' }) }",
+                  "}, (e, r) => (e || r.code !== 201) ? reject(e || new Error('filler ' + i + ' got ' + r.code)) : resolve()));",
+                  "(async () => { for (let i = 1; i <= 20; i++) { await one(i); } })();"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 409', () => pm.response.to.have.status(409));",
+                  "pm.test('error code limit_reached', () => pm.expect(pm.response.json().error.code).to.eql('limit_reached'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create - user A is not affected by B's limit - 201",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"Still fine\",\"language\":\"en\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
