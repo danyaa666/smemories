@@ -11,7 +11,8 @@ and `usage_gate.py` would sleep forever. **Leader only:** before the usage gate 
 1. Call the read-only `get_usage` tool (`mcp__ccd_session_mgmt__get_usage`).
 2. If `plan.status` is `ok` and both the "5-hour limit" and "Weekly" windows are present, run
    `python3 .team/refresh_usage.py <5h percentUsed> <5h resetsAt> <weekly percentUsed> <weekly resetsAt>`
-   using exactly the numbers that call returned.
+   using exactly the numbers that call returned. If a window has no `resetsAt` (a window that has just reset and not
+   started again), pass `-` for it; the helper accepts that only together with 0% used.
 3. Then run the normal gate: `usage_gate.py --wait-fresh`. Obey it literally.
 
 Rules:

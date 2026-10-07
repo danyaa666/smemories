@@ -24,6 +24,10 @@ def window(pct, iso):
     p = float(pct)
     if not 0 <= p <= 100:
         raise ValueError("percent out of range: %r" % pct)
+    if iso == "-":  # the app reports no reset time for a window that has not started: only valid at 0% used
+        if p != 0:
+            raise ValueError("no reset time given for a window at %r%% used" % pct)
+        return {"used_percentage": p, "resets_at": None}
     return {"used_percentage": p, "resets_at": dt.datetime.fromisoformat(iso.replace("Z", "+00:00")).timestamp()}
 
 
