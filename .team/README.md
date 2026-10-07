@@ -19,7 +19,7 @@
 
 **Open questions for you:** none
 
-_Board last written 2026-10-07 14:04Z_
+_Board last written 2026-10-07 14:05Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -190,6 +190,7 @@ Owner decisions (2026-10-06, `/team-init` interview). "Rejected" lists the optio
 | D-11 | **Roadmap order: M2 go-live before M3 class yearbook.** | Answered `A` on the board (2026-10-07, Q-002). Prove deployment, email, backups and deletion with a small user base before holding a whole class's data. | M3 class first | A school or class pilot gets a date |
 | D-12 | **PDF library: `codeberg.org/go-pdf/fpdf` v0.12.0** (spike T-005, ADR 0002). | Accepted by merging the ADR; `signintech/gopdf` is the fallback. Both libraries passed all criteria; fpdf wins on text wrapping and memory. Consequences: import the Codeberg path (the GitHub repo is archived); fpdf panics on runes above U+FFFF, handled with PUA aliases and a run splitter in T-010; **emoji print as monochrome outlines, colour emoji is out of scope**; small community (single-digit maintainers), so watch release health. | `gopdf`; `unipdf` (AGPL or commercial); Chromium | fpdf has no release for a year, or a template needs colour emoji, complex-script shaping or CMYK/bleed |
 | D-13 | **No CAPTCHA on the public friends' note form for now; a verifier hook stays in place.** | Answered by the owner in chat 2026-10-07 (Q-005, option A). Abuse is bounded by an unguessable revocable link, per-IP and per-link rate limits, a 300-note cap, size limits, a honeypot field, a verified-email owner and pending-by-default moderation; friction for friends on phones is the larger risk. | Cloudflare Turnstile from the start; hCaptcha/reCAPTCHA | A link is actually spammed, or a public (non-link) form is added |
+| D-14 | **Branch protection on `develop` and `main` (set 2026-10-07 at the owner's request).** | Required checks `go`, `go-integration`, `web`, `security`; pull request required with 0 approvals; force-push and deletion blocked; administrators NOT enforced, so the owner can promote develop to main and the leader's board-sync pushes to develop still work. A PR with failing checks cannot be merged without `--admin`. | Require approvals; enforce for admins | A second human contributor joins (then require 1 approval and enforce admins) |
 
 Leader decisions (low-risk, inside the approved stack):
 
@@ -1641,3 +1642,4 @@ _BACKLOG: tiny; needs a one-paragraph spec before TODO._
 - 2026-10-07 — T-028 merged (a0d9429): access log uses the route pattern, make lint scope fixed. T-006 (auth core, PR #6) sent back before QA to add Unicode normalisation (L-09) and merge develop. T-003 (web scaffold) waits for a conflict-only merge.
 - 2026-10-07 — T-010 (PDF renderer, PR #16) passed QA and my review and awaits owner approval; T-008 (yearbook API, PR #17) is in QA; T-007 starts next. L-11 records that sqlc is not used. QA and dev both worked within the usage gate; the freshness guard left T-007 unclaimed once more.
 - 2026-10-07 — Owner answers in chat: T-010 approved and merged (357e78a); Q-005 decided (D-13, no CAPTCHA); all merged tasks T-001..T-006, T-008, T-028, T-030 accepted (DONE). Branch protection and replacing the old shared dev stack were authorised and follow.
+- 2026-10-07 — Branch protection enabled on develop and main (D-14).
