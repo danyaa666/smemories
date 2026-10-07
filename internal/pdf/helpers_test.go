@@ -78,15 +78,20 @@ func synthGIF(t testing.TB) []byte {
 
 // ---- reading the PDF back (fpdf output, no external tools) ----
 
-var streamRe = regexp.MustCompile(`(?s)stream\r?\n(.*?)\r?\nendstream`)
+var streamRe = regexp.MustCompile(`/Length (\d+)>>\nstream\n`)
 
 // pageStreams returns the decompressed content streams of the first n pages. fpdf writes the page
-// objects (each followed by its content stream) before fonts and images.
+// objects (each followed by its content stream) before fonts and images. Streams are cut by their
+// /Length, not by the endstream keyword, because compressed data may end in a carriage return.
 func pageStreams(t testing.TB, pdf []byte, n int) []string {
 	t.Helper()
 	var out []string
-	for _, m := range streamRe.FindAllSubmatch(pdf, n) {
-		zr, err := zlib.NewReader(bytes.NewReader(m[1]))
+	for _, m := range streamRe.FindAllSubmatchIndex(pdf, n) {
+		size, err := strconv.Atoi(string(pdf[m[2]:m[3]]))
+		if err != nil || m[1]+size > len(pdf) {
+			t.Fatalf("bad stream length %q", pdf[m[2]:m[3]])
+		}
+		zr, err := zlib.NewReader(bytes.NewReader(pdf[m[1] : m[1]+size]))
 		if err != nil {
 			t.Fatalf("page stream is not zlib data: %v", err)
 		}
