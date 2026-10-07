@@ -74,7 +74,7 @@ func TestUTF8MB4RoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer c.Close()
+	defer func() { _ = c.Close() }()
 	var cs, cc, cr, coll, tz string
 	if err := c.QueryRowContext(ctx, "SELECT @@character_set_client, @@character_set_connection, @@character_set_results, @@collation_connection, @@session.time_zone").Scan(&cs, &cc, &cr, &coll, &tz); err != nil {
 		t.Fatal(err)
@@ -102,7 +102,7 @@ func TestReadyzAgainstRealDatabase(t *testing.T) {
 	if rec := get(); rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"ready"`) {
 		t.Fatalf("got %d %s", rec.Code, rec.Body.String())
 	}
-	d.Close() // a closed pool cannot ping
+	_ = d.Close() // a closed pool cannot ping
 	rec := get()
 	if rec.Code != http.StatusServiceUnavailable || !strings.Contains(rec.Body.String(), `"not_ready"`) {
 		t.Fatalf("got %d %s", rec.Code, rec.Body.String())

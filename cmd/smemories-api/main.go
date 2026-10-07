@@ -31,7 +31,7 @@ func main() {
 		logger.Error("database unavailable", "error", err)
 		os.Exit(1)
 	}
-	defer d.Close()
+	defer func() { _ = d.Close() }()
 
 	ln, err := net.Listen("tcp", cfg.HTTPAddr)
 	if err != nil {

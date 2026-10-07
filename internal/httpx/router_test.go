@@ -117,7 +117,7 @@ func TestAccessLogLine(t *testing.T) {
 	if err := json.Unmarshal([]byte(strings.TrimSpace(line)), &m); err != nil {
 		t.Fatalf("log line is not one JSON object: %q", line)
 	}
-	if m["request_id"] != "req-12345678" || m["method"] != "GET" || m["path"] != "/healthz" || m["status"] != float64(200) {
+	if m["request_id"] != "req-12345678" || m["method"] != "GET" || m["route"] != "GET /healthz" || m["status"] != float64(200) {
 		t.Errorf("unexpected fields: %v", m)
 	}
 	if _, ok := m["duration_ms"]; !ok {
@@ -185,4 +185,49 @@ func TestPathValuesStillWork(t *testing.T) {
 	if rec := do(h, "GET", "/v1/x/abc", nil); strings.TrimSpace(rec.Body.String()) != `"abc"` {
 		t.Fatalf("path value lost: %q", rec.Body.String())
 	}
+}
+
+func TestAccessLogRouteNeverLogsRawPath(t *testing.T) {
+	h, logs := newTestRouter(t, func(m *http.ServeMux) {
+		m.HandleFunc("GET /v1/secret/{token}", func(w http.ResponseWriter, r *http.Request) {
+			WriteJSON(w, 200, map[string]string{"token": r.PathValue("token")})
+		})
+		m.HandleFunc("GET /boom/{token}", func(http.ResponseWriter, *http.Request) { panic("x") })
+	})
+	cases := []struct {
+		method, path, route string
+		status              int
+	}{
+		{"GET", "/v1/secret/abc123secret", "GET /v1/secret/{token}", 200},
+		{"GET", "/boom/abc123secret", "GET /boom/{token}", 500},
+		{"GET", "/nope/abc123secret", "-", 404},
+		{"POST", "/healthz", "-", 405},
+		{"GET", "/v1/secret/a%2Fb..secret?token=abc123secret", "GET /v1/secret/{token}", 200},
+	}
+	for _, c := range cases {
+		logs.Reset()
+		do(h, c.method, c.path, nil)
+		lines := strings.Split(strings.TrimSpace(logs.String()), "\n")
+		if want := 1 + btoi(c.status == 500); len(lines) != want { // a panic adds its own line
+			t.Fatalf("%s %s: %d log lines, want %d: %q", c.method, c.path, len(lines), want, lines)
+		}
+		line := lines[len(lines)-1]
+		var m map[string]any
+		if err := json.Unmarshal([]byte(line), &m); err != nil {
+			t.Fatalf("%s %s: not a JSON line: %q", c.method, c.path, line)
+		}
+		if m["route"] != c.route || m["status"] != float64(c.status) {
+			t.Errorf("%s %s: route=%v status=%v, want %q %d", c.method, c.path, m["route"], m["status"], c.route, c.status)
+		}
+		if _, ok := m["path"]; ok || strings.Contains(line, "abc123secret") {
+			t.Errorf("%s %s: raw path leaked into %q", c.method, c.path, line)
+		}
+	}
+}
+
+func btoi(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
 }

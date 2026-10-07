@@ -1,6 +1,7 @@
 package httpx
 
 import (
+	"cmp"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
@@ -20,7 +21,18 @@ type ctxKey int
 const (
 	requestIDKey ctxKey = iota
 	rawBodyKey
+	routeKey
 )
+
+// routeHolder lets the router tell the outer AccessLog which mux pattern matched: the mux
+// sets Request.Pattern only on the request it dispatches, not on the one AccessLog holds.
+type routeHolder struct{ pattern string }
+
+func setRoute(ctx context.Context, pattern string) {
+	if h, ok := ctx.Value(routeKey).(*routeHolder); ok {
+		h.pattern = pattern
+	}
+}
 
 var validRequestID = regexp.MustCompile(`^[A-Za-z0-9-]{8,64}$`)
 
@@ -68,13 +80,16 @@ func (s *statusWriter) Write(b []byte) (int, error) {
 
 func (s *statusWriter) Unwrap() http.ResponseWriter { return s.ResponseWriter }
 
-// AccessLog writes one JSON line per request. It deliberately logs only the path
-// (no query string, headers or body) so tokens and credentials never reach the log.
+// AccessLog writes one JSON line per request. It logs the matched route pattern (e.g.
+// "GET /v1/x/{token}", "-" when nothing matched), never the raw path, query string,
+// headers or body, so tokens and credentials never reach the log.
 // It must wrap Recover so that a recovered panic is logged as a 500.
 func AccessLog(logger *slog.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		sw := &statusWriter{ResponseWriter: w}
+		route := &routeHolder{}
+		r = r.WithContext(context.WithValue(r.Context(), routeKey, route))
 		defer func() {
 			if sw.status == 0 {
 				sw.status = http.StatusOK
@@ -82,7 +97,7 @@ func AccessLog(logger *slog.Logger, next http.Handler) http.Handler {
 			logger.LogAttrs(r.Context(), slog.LevelInfo, "request",
 				slog.String("request_id", RequestIDFrom(r.Context())),
 				slog.String("method", r.Method),
-				slog.String("path", r.URL.Path),
+				slog.String("route", cmp.Or(route.pattern, "-")),
 				slog.Int("status", sw.status),
 				slog.Int64("duration_ms", time.Since(start).Milliseconds()),
 			)

@@ -20,7 +20,7 @@ func NewRouter(logger *slog.Logger, routes ...func(*http.ServeMux)) http.Handler
 		register(mux)
 	}
 
-	var h http.Handler = envelopeNotFound(mux)
+	h := envelopeNotFound(mux)
 	h = BodyLimit(DefaultMaxBody, h)
 	h = Recover(logger, h)
 	h = SecurityHeaders(h)
@@ -33,6 +33,7 @@ func NewRouter(logger *slog.Logger, routes ...func(*http.ServeMux)) http.Handler
 func envelopeNotFound(mux *http.ServeMux) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		h, pattern := mux.Handler(r)
+		setRoute(r.Context(), pattern)
 		if pattern != "" {
 			mux.ServeHTTP(w, r)
 			return

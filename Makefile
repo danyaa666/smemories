@@ -13,9 +13,10 @@ build:
 test:
 	go test -race ./...
 
-# golangci-lint, eslint and tsc join this target in later tasks (T-004, T-003).
+# gofmt checks tracked and new (not ignored) Go files, so .team/worktrees/* is never scanned.
+# golangci-lint joins this target in T-004; eslint and tsc in T-003.
 lint:
-	@out="$$(gofmt -l .)"; if [ -n "$$out" ]; then echo "gofmt needed on:"; echo "$$out"; exit 1; fi
+	@out="$$(git ls-files -co --exclude-standard '*.go' | xargs gofmt -l)"; if [ -n "$$out" ]; then echo "gofmt needed on:"; echo "$$out"; exit 1; fi
 	go vet ./...
 	go vet -tags integration ./...
 
