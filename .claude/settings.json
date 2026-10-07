@@ -1,7 +1,7 @@
 {
   "statusLine": {
     "type": "command",
-    "command": "bash -c 'exec python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/statusline.py\"'",
+    "command": "bash -c 'exec python3 \"$(ls -d \"$HOME\"/.claude/plugins/cache/claude-agent-team/agent-team/*/scripts/statusline.py | sort -V | tail -1)\"'",
     "refreshInterval": 60
   },
   "permissions": {
