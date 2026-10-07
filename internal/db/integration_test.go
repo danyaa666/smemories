@@ -4,6 +4,8 @@ package db_test
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -12,10 +14,27 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pressly/goose/v3"
+
 	"github.com/danyaa666/smemories/internal/db"
 	"github.com/danyaa666/smemories/internal/db/dbtest"
 	"github.com/danyaa666/smemories/internal/httpx"
 )
+
+// migrateDownAll rolls back every migration, however many exist (each Down undoes one).
+func migrateDownAll(t *testing.T, ctx context.Context, d *sql.DB) {
+	t.Helper()
+	for i := 0; i < 100; i++ {
+		err := db.MigrateDown(ctx, d)
+		if errors.Is(err, goose.ErrNoNextVersion) {
+			return
+		}
+		if err != nil {
+			t.Fatalf("down: %v", err)
+		}
+	}
+	t.Fatal("down never reached version 0")
+}
 
 func TestMigrateCycle(t *testing.T) {
 	ctx := context.Background()
@@ -32,9 +51,7 @@ func TestMigrateCycle(t *testing.T) {
 		t.Fatalf("schema_epoch = %q, want 1", epoch())
 	}
 	for i := 0; i < 2; i++ { // down -> up, twice
-		if err := db.MigrateDown(ctx, d); err != nil {
-			t.Fatalf("down: %v", err)
-		}
+		migrateDownAll(t, ctx, d)
 		if _, err := d.ExecContext(ctx, "SELECT 1 FROM app_meta"); err == nil {
 			t.Fatal("app_meta should be gone after down")
 		}

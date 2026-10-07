@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/danyaa666/smemories/internal/auth"
 	"github.com/danyaa666/smemories/internal/config"
 	"github.com/danyaa666/smemories/internal/db"
 	"github.com/danyaa666/smemories/internal/httpx"
@@ -40,7 +41,19 @@ func main() {
 	}
 	logger.Info("listening", "addr", ln.Addr().String(), "env", cfg.Env)
 
-	srv := httpx.NewServer(cfg.HTTPAddr, httpx.NewRouter(logger, httpx.Ready(d, logger)))
+	hasher := auth.NewHasher(auth.HashParams{MemoryKiB: cfg.ArgonMemoryKiB, Time: cfg.ArgonTime, Parallelism: cfg.ArgonParallelism}, cfg.MaxHashes, auth.HashWait)
+	svc, err := auth.NewService(auth.NewStore(d), hasher, auth.Limits{
+		RegisterPerHour: cfg.RegisterPerHour, LoginFailsPerPair: cfg.LoginFailsPerPair, LoginFailsPerIP: cfg.LoginFailsPerIP,
+	}, nil)
+	if err != nil {
+		logger.Error("auth setup failed", "error", err)
+		os.Exit(1)
+	}
+	authH := auth.NewHandler(svc, auth.HandlerConfig{
+		AllowedOrigins: cfg.AllowedOrigins, SecureCookie: cfg.Env != "dev", TrustProxy: cfg.TrustProxy,
+	}, logger)
+
+	srv := httpx.NewServer(cfg.HTTPAddr, httpx.NewRouter(logger, httpx.Ready(d, logger), authH.Routes))
 	if err := httpx.Serve(ctx, srv, ln, httpx.DrainTimeout); err != nil {
 		logger.Error("server stopped", "error", err)
 		os.Exit(1)

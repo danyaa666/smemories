@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"net/url"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -19,6 +21,16 @@ type Config struct {
 	DBMaxOpen         int           // SMEM_DB_MAX_OPEN, default 20
 	DBMaxIdle         int           // SMEM_DB_MAX_IDLE, default 5
 	DBConnMaxLifetime time.Duration // SMEM_DB_CONN_MAX_LIFETIME, default 5m
+
+	AllowedOrigins    []string // SMEM_ALLOWED_ORIGINS: comma-separated browser origins; required in prod, default http://localhost:5173 otherwise
+	TrustProxy        bool     // SMEM_TRUST_PROXY: take the client IP from the last X-Forwarded-For hop
+	MaxHashes         int      // SMEM_AUTH_MAX_CONCURRENT_HASHES, default 4
+	ArgonMemoryKiB    uint32   // SMEM_AUTH_ARGON_MEMORY_KIB, default 19456
+	ArgonTime         uint32   // SMEM_AUTH_ARGON_TIME, default 2
+	ArgonParallelism  uint8    // SMEM_AUTH_ARGON_PARALLELISM, default 1
+	RegisterPerHour   int      // SMEM_RATE_REGISTER_PER_HOUR (per IP), default 5
+	LoginFailsPerPair int      // SMEM_RATE_LOGIN_FAILS_PER_EMAIL (per IP+email, 15 min), default 10
+	LoginFailsPerIP   int      // SMEM_RATE_LOGIN_FAILS_PER_IP (15 min), default 100
 }
 
 var logLevels = map[string]slog.Level{
@@ -73,6 +85,52 @@ func Load(getenv func(string) string) (Config, error) {
 	raw = get("SMEM_DB_CONN_MAX_LIFETIME", "5m")
 	if cfg.DBConnMaxLifetime, err = time.ParseDuration(raw); err != nil || cfg.DBConnMaxLifetime < 0 {
 		return Config{}, fmt.Errorf("SMEM_DB_CONN_MAX_LIFETIME=%q: want a non-negative duration such as 5m", raw)
+	}
+
+	origins := get("SMEM_ALLOWED_ORIGINS", "")
+	if origins == "" && cfg.Env != "prod" {
+		origins = "http://localhost:5173"
+	}
+	for _, o := range strings.Split(origins, ",") {
+		if o = strings.TrimSpace(o); o == "" {
+			continue
+		}
+		u, err := url.Parse(o)
+		if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.Path != "" || u.RawQuery != "" || u.User != nil {
+			return Config{}, fmt.Errorf("SMEM_ALLOWED_ORIGINS: %q is not an origin such as https://example.com", o)
+		}
+		cfg.AllowedOrigins = append(cfg.AllowedOrigins, strings.ToLower(u.Scheme+"://"+u.Host))
+	}
+	if len(cfg.AllowedOrigins) == 0 {
+		return Config{}, fmt.Errorf("SMEM_ALLOWED_ORIGINS is required in prod (e.g. https://app.example.com)")
+	}
+	if cfg.TrustProxy, err = strconv.ParseBool(get("SMEM_TRUST_PROXY", "false")); err != nil {
+		return Config{}, fmt.Errorf("SMEM_TRUST_PROXY=%q: want true or false", getenv("SMEM_TRUST_PROXY"))
+	}
+	if cfg.MaxHashes, err = getInt(get, "SMEM_AUTH_MAX_CONCURRENT_HASHES", "4", 1); err != nil {
+		return Config{}, err
+	}
+	var n int
+	if n, err = getInt(get, "SMEM_AUTH_ARGON_MEMORY_KIB", "19456", 8); err != nil || n > 1<<20 {
+		return Config{}, fmt.Errorf("SMEM_AUTH_ARGON_MEMORY_KIB=%q: want an integer between 8 and 1048576", get("SMEM_AUTH_ARGON_MEMORY_KIB", "19456"))
+	}
+	cfg.ArgonMemoryKiB = uint32(n)
+	if n, err = getInt(get, "SMEM_AUTH_ARGON_TIME", "2", 1); err != nil || n > 100 {
+		return Config{}, fmt.Errorf("SMEM_AUTH_ARGON_TIME=%q: want an integer between 1 and 100", get("SMEM_AUTH_ARGON_TIME", "2"))
+	}
+	cfg.ArgonTime = uint32(n)
+	if n, err = getInt(get, "SMEM_AUTH_ARGON_PARALLELISM", "1", 1); err != nil || n > 255 {
+		return Config{}, fmt.Errorf("SMEM_AUTH_ARGON_PARALLELISM=%q: want an integer between 1 and 255", get("SMEM_AUTH_ARGON_PARALLELISM", "1"))
+	}
+	cfg.ArgonParallelism = uint8(n)
+	if cfg.RegisterPerHour, err = getInt(get, "SMEM_RATE_REGISTER_PER_HOUR", "5", 1); err != nil {
+		return Config{}, err
+	}
+	if cfg.LoginFailsPerPair, err = getInt(get, "SMEM_RATE_LOGIN_FAILS_PER_EMAIL", "10", 1); err != nil {
+		return Config{}, err
+	}
+	if cfg.LoginFailsPerIP, err = getInt(get, "SMEM_RATE_LOGIN_FAILS_PER_IP", "100", 1); err != nil {
+		return Config{}, err
 	}
 	return cfg, nil
 }
