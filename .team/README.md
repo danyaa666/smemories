@@ -11,13 +11,14 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 17 | T-011, T-012, T-013, T-014, T-015, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027 |
-| TODO | 10 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010 |
+| TODO | 8 | T-002, T-003, T-004, T-006, T-007, T-008, T-009, T-010 |
+| IN_PROGRESS | 2 | T-001, T-005 |
 
 **Awaiting your review (MERGED):** nothing
 
 **Open questions for you:** Q-001 (IaC tool for AWS (OpenTofu/Terraform, CDK, or CloudFormation)); Q-002 (Roadmap order after M1: go-live (M2) before class yearbook (M3)?)
 
-_Board last written 2026-10-06 10:13Z_
+_Board last written 2026-10-07 02:17Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -159,7 +160,7 @@ Task block anatomy (leader-written; dev/qa touch only `Status`, `Branch`, `PR`, 
 <!-- tasks:start -->
 
 ### T-001 — Repo foundation and API skeleton
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P1
 - **Type:** infra
 - **Milestone:** M0
@@ -167,10 +168,10 @@ Task block anatomy (leader-written; dev/qa touch only `Status`, `Branch`, `PR`, 
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-001-repo-foundation-and-api-skeleton
 - **PR:** —
-- **Updated:** 2026-10-06 10:11Z by leader
+- **Updated:** 2026-10-07 02:17Z by dev
 - **Comments-seen:** 0
 
 #### Description
@@ -384,7 +385,7 @@ Least-privilege `GITHUB_TOKEN`; SHA-pinned actions (supply chain); no `pull_requ
 #### Comments
 
 ### T-005 — Spike: choose the pure-Go PDF engine
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M0
@@ -392,10 +393,10 @@ Least-privilege `GITHUB_TOKEN`; SHA-pinned actions (supply chain); no `pull_requ
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-005-spike-choose-the-pure-go-pdf-engine
 - **PR:** —
-- **Updated:** 2026-10-06 10:11Z by leader
+- **Updated:** 2026-10-07 02:17Z by dev
 - **Comments-seen:** 0
 
 #### Description
