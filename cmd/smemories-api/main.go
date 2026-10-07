@@ -14,6 +14,7 @@ import (
 	"github.com/danyaa666/smemories/internal/config"
 	"github.com/danyaa666/smemories/internal/db"
 	"github.com/danyaa666/smemories/internal/httpx"
+	"github.com/danyaa666/smemories/internal/mailer"
 	"github.com/danyaa666/smemories/internal/yearbook"
 )
 
@@ -24,6 +25,12 @@ func main() {
 		os.Exit(1)
 	}
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: cfg.LogLevel}))
+
+	mail, err := mailer.NewLog(cfg.Env, os.Stdout) // ponytail: the only mailer; a real provider is chosen here in M2
+	if err != nil {
+		logger.Error("mailer setup failed", "error", err)
+		os.Exit(1)
+	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
@@ -45,7 +52,7 @@ func main() {
 	hasher := auth.NewHasher(auth.HashParams{MemoryKiB: cfg.ArgonMemoryKiB, Time: cfg.ArgonTime, Parallelism: cfg.ArgonParallelism}, cfg.MaxHashes, auth.HashWait)
 	svc, err := auth.NewService(auth.NewStore(d), hasher, auth.Limits{
 		RegisterPerHour: cfg.RegisterPerHour, LoginFailsPerPair: cfg.LoginFailsPerPair, LoginFailsPerIP: cfg.LoginFailsPerIP,
-	}, nil)
+	}, auth.Mail{Mailer: mail, BaseURL: cfg.PublicBaseURL, Logger: logger}, nil)
 	if err != nil {
 		logger.Error("auth setup failed", "error", err)
 		os.Exit(1)
@@ -54,6 +61,8 @@ func main() {
 		AllowedOrigins: cfg.AllowedOrigins, SecureCookie: cfg.Env != "dev", TrustProxy: cfg.TrustProxy,
 	}, logger)
 
+	go svc.RunCleanup(ctx)
+
 	bookH := yearbook.NewHandler(yearbook.NewStore(d), authH.RequireUser, cfg.AllowedOrigins, logger, nil)
 
 	srv := httpx.NewServer(cfg.HTTPAddr, httpx.NewRouter(logger, httpx.Ready(d, logger), authH.Routes, bookH.Routes))
@@ -61,5 +70,6 @@ func main() {
 		logger.Error("server stopped", "error", err)
 		os.Exit(1)
 	}
+	svc.Wait() // let reset emails already accepted go out
 	logger.Info("shutdown complete")
 }

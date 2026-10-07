@@ -98,6 +98,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/auth/verify-email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm an email address with the token from the verification email
+         * @description Tokens are 32 random bytes (base64url), stored only as SHA-256, valid 24 hours and single use. An unknown, expired, used or wrong-purpose token (a reset token, for example) is `400 invalid_token`. Registration and `verify-email/resend` send the email; the link is `SMEM_PUBLIC_BASE_URL/verify-email?token=...`.
+         */
+        post: operations["verifyEmail"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/verify-email/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send a new verification email to the signed-in user
+         * @description At most 3 per hour per user (`429 rate_limited` with `Retry-After`). Earlier links stay valid until they expire. Takes no body.
+         */
+        post: operations["resendVerificationEmail"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/forgot-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask for a password reset email
+         * @description Always `202 {}` for a well-formed address, whether or not an account exists; the email (valid link for 1 hour, in the user's `locale`) goes out in the background and only when the account exists, so neither the body nor the timing tells them apart. Limits: 5 per hour per IP and 3 per hour per address (counted for unknown addresses too). The address is trimmed, lower-cased and NFC-normalised like at login; one that is not an email at all is `400 invalid_email`.
+         */
+        post: operations["forgotPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set a new password with the token from the reset email
+         * @description The token is valid 1 hour and single use; an unknown, expired, used or wrong-purpose token is `400 invalid_token`. The password follows the registration rules (NFKC, 10-128 characters, not the email); a rejected password is `400 weak_password` and does not use up the token. On success every session of the user is deleted (sign in again), and the user's other open reset links stop working.
+         */
+        post: operations["resetPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me": {
         parameters: {
             query?: never;
@@ -307,6 +387,7 @@ export interface components {
                  * @example invalid_credentials
                  * @example unauthenticated
                  * @example rate_limited
+                 * @example invalid_token
                  * @example limit_reached
                  * @example unknown_field
                  */
@@ -616,6 +697,156 @@ export interface operations {
             };
             403: components["responses"]["CsrfOriginMismatch"];
             415: components["responses"]["UnsupportedMediaType"];
+        };
+    };
+    verifyEmail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    token: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The address is verified (`email_verified` is now true). */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `invalid_token` or `invalid_body`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            403: components["responses"]["CsrfOriginMismatch"];
+            413: components["responses"]["PayloadTooLarge"];
+            415: components["responses"]["UnsupportedMediaType"];
+        };
+    };
+    resendVerificationEmail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The address was already verified; nothing was sent. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        already_verified: true;
+                    };
+                };
+            };
+            /** @description The email was sent. A mailer failure is `500 internal_error` (and is logged without the token). */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["CsrfOriginMismatch"];
+            415: components["responses"]["UnsupportedMediaType"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    forgotPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    email: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Accepted. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description `invalid_email` or `invalid_body`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            403: components["responses"]["CsrfOriginMismatch"];
+            413: components["responses"]["PayloadTooLarge"];
+            415: components["responses"]["UnsupportedMediaType"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    resetPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    token: string;
+                    /** Format: password */
+                    password: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Password changed; all sessions are gone. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `invalid_token`, `weak_password` or `invalid_body`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            403: components["responses"]["CsrfOriginMismatch"];
+            413: components["responses"]["PayloadTooLarge"];
+            415: components["responses"]["UnsupportedMediaType"];
+            503: components["responses"]["Busy"];
         };
     };
     getMe: {

@@ -23,6 +23,7 @@ type Config struct {
 	DBConnMaxLifetime time.Duration // SMEM_DB_CONN_MAX_LIFETIME, default 5m
 
 	AllowedOrigins    []string // SMEM_ALLOWED_ORIGINS: comma-separated browser origins; required in prod, default http://localhost:5173 otherwise
+	PublicBaseURL     string   // SMEM_PUBLIC_BASE_URL: where the web app lives, used for links in emails; required in prod, default http://localhost:5173 otherwise; no trailing slash
 	TrustProxy        bool     // SMEM_TRUST_PROXY: take the client IP from the last X-Forwarded-For hop
 	MaxHashes         int      // SMEM_AUTH_MAX_CONCURRENT_HASHES, default 4
 	ArgonMemoryKiB    uint32   // SMEM_AUTH_ARGON_MEMORY_KIB, default 19456
@@ -104,6 +105,17 @@ func Load(getenv func(string) string) (Config, error) {
 	if len(cfg.AllowedOrigins) == 0 {
 		return Config{}, fmt.Errorf("SMEM_ALLOWED_ORIGINS is required in prod (e.g. https://app.example.com)")
 	}
+	base := get("SMEM_PUBLIC_BASE_URL", "")
+	if base == "" && cfg.Env != "prod" {
+		base = "http://localhost:5173"
+	}
+	if base == "" {
+		return Config{}, fmt.Errorf("SMEM_PUBLIC_BASE_URL is required in prod (e.g. https://app.example.com)")
+	}
+	if u, err := url.Parse(base); err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.RawQuery != "" || u.Fragment != "" || u.User != nil {
+		return Config{}, fmt.Errorf("SMEM_PUBLIC_BASE_URL=%q: want a URL such as https://app.example.com", base)
+	}
+	cfg.PublicBaseURL = strings.TrimRight(base, "/")
 	if cfg.TrustProxy, err = strconv.ParseBool(get("SMEM_TRUST_PROXY", "false")); err != nil {
 		return Config{}, fmt.Errorf("SMEM_TRUST_PROXY=%q: want true or false", getenv("SMEM_TRUST_PROXY"))
 	}
