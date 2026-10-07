@@ -23,21 +23,27 @@ const (
 	maxLimit     = 50
 )
 
+// Purger removes a yearbook's stored files; the media package implements it (T-009).
+type Purger interface {
+	PurgeYearbook(ctx context.Context, publicID string) error
+}
+
 // Handler serves /v1/yearbooks.
 type Handler struct {
 	store          *Store
+	purger         Purger                          // may be nil (no file storage configured, e.g. in tests)
 	requireUser    func(http.Handler) http.Handler // auth.Handler.RequireUser
 	allowedOrigins []string                        // for auth.Guard
 	logger         *slog.Logger
 	now            func() time.Time
 }
 
-// NewHandler builds the handler; now may be nil (time.Now).
-func NewHandler(store *Store, requireUser func(http.Handler) http.Handler, allowedOrigins []string, logger *slog.Logger, now func() time.Time) *Handler {
+// NewHandler builds the handler; purger and now may be nil (no file cleanup, time.Now).
+func NewHandler(store *Store, purger Purger, requireUser func(http.Handler) http.Handler, allowedOrigins []string, logger *slog.Logger, now func() time.Time) *Handler {
 	if now == nil {
 		now = time.Now
 	}
-	return &Handler{store: store, requireUser: requireUser, allowedOrigins: allowedOrigins, logger: logger, now: now}
+	return &Handler{store: store, purger: purger, requireUser: requireUser, allowedOrigins: allowedOrigins, logger: logger, now: now}
 }
 
 // Routes registers the endpoints on mux (pass to httpx.NewRouter).
@@ -81,6 +87,10 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	}
 	if in.Language == nil {
 		h.fail(w, r, ValidationError{"invalid_language"})
+		return
+	}
+	if y.CoverMediaID != nil { // a new book has no media yet
+		h.fail(w, r, ValidationError{"invalid_media"})
 		return
 	}
 	if err := h.store.create(r.Context(), owner(r), y); err != nil {
@@ -168,7 +178,20 @@ func (h *Handler) putProfile(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, bookEnvelope{y})
 }
 
+// delete removes the book's stored files first: if the store fails, nothing is deleted and the
+// caller can retry (502 storage_error).
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
+	if h.purger != nil {
+		if _, err := h.store.get(r.Context(), owner(r), r.PathValue("id")); err != nil {
+			h.fail(w, r, err)
+			return
+		}
+		if err := h.purger.PurgeYearbook(r.Context(), r.PathValue("id")); err != nil {
+			h.logger.Error("yearbook: storage purge failed", "request_id", httpx.RequestIDFrom(r.Context()), "error", err)
+			httpx.WriteError(w, r, http.StatusBadGateway, "storage_error", "object storage failed")
+			return
+		}
+	}
 	if err := h.store.delete(r.Context(), owner(r), r.PathValue("id")); err != nil {
 		h.fail(w, r, err)
 		return

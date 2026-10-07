@@ -31,6 +31,15 @@ type Config struct {
 	RegisterPerHour   int      // SMEM_RATE_REGISTER_PER_HOUR (per IP), default 5
 	LoginFailsPerPair int      // SMEM_RATE_LOGIN_FAILS_PER_EMAIL (per IP+email, 15 min), default 10
 	LoginFailsPerIP   int      // SMEM_RATE_LOGIN_FAILS_PER_IP (15 min), default 100
+
+	MediaMaxBytes      int64  // SMEM_MEDIA_MAX_BYTES: largest accepted upload, default 10 MiB
+	MediaMaxConcurrent int    // SMEM_MEDIA_MAX_CONCURRENT: images processed at once, default 4
+	S3Endpoint         string // SMEM_S3_ENDPOINT: empty for AWS S3, e.g. http://127.0.0.1:9000 for MinIO
+	S3Region           string // SMEM_S3_REGION, default us-east-1
+	S3Bucket           string // SMEM_S3_BUCKET: required in prod, default smemories-dev otherwise
+	S3AccessKey        string // SMEM_S3_ACCESS_KEY: never log
+	S3SecretKey        string // SMEM_S3_SECRET_KEY: never log
+	S3PathStyle        bool   // SMEM_S3_PATH_STYLE: true for MinIO
 }
 
 var logLevels = map[string]slog.Level{
@@ -131,6 +140,32 @@ func Load(getenv func(string) string) (Config, error) {
 	}
 	if cfg.LoginFailsPerIP, err = getInt(get, "SMEM_RATE_LOGIN_FAILS_PER_IP", "100", 1); err != nil {
 		return Config{}, err
+	}
+	n, err = getInt(get, "SMEM_MEDIA_MAX_BYTES", "10485760", 1)
+	if err != nil || n > 100<<20 {
+		return Config{}, fmt.Errorf("SMEM_MEDIA_MAX_BYTES=%q: want an integer between 1 and 104857600", get("SMEM_MEDIA_MAX_BYTES", "10485760"))
+	}
+	cfg.MediaMaxBytes = int64(n)
+	if cfg.MediaMaxConcurrent, err = getInt(get, "SMEM_MEDIA_MAX_CONCURRENT", "4", 1); err != nil {
+		return Config{}, err
+	}
+	cfg.S3Endpoint = getenv("SMEM_S3_ENDPOINT")
+	if cfg.S3Endpoint != "" {
+		if u, err := url.Parse(cfg.S3Endpoint); err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+			return Config{}, fmt.Errorf("SMEM_S3_ENDPOINT=%q: want a URL such as http://127.0.0.1:9000", cfg.S3Endpoint)
+		}
+	}
+	cfg.S3Region = get("SMEM_S3_REGION", "us-east-1")
+	cfg.S3Bucket = getenv("SMEM_S3_BUCKET")
+	if cfg.S3Bucket == "" {
+		if cfg.Env == "prod" {
+			return Config{}, fmt.Errorf("SMEM_S3_BUCKET is required in prod")
+		}
+		cfg.S3Bucket = "smemories-dev" // the bucket `make up` creates
+	}
+	cfg.S3AccessKey, cfg.S3SecretKey = getenv("SMEM_S3_ACCESS_KEY"), getenv("SMEM_S3_SECRET_KEY")
+	if cfg.S3PathStyle, err = strconv.ParseBool(get("SMEM_S3_PATH_STYLE", "false")); err != nil {
+		return Config{}, fmt.Errorf("SMEM_S3_PATH_STYLE=%q: want true or false", getenv("SMEM_S3_PATH_STYLE"))
 	}
 	return cfg, nil
 }

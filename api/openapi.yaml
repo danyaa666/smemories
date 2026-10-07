@@ -325,7 +325,9 @@ paths:
       operationId: deleteYearbook
       tags: [yearbooks]
       summary: Delete a yearbook
-      description: Hard-deletes the book and its profile.
+      description: >-
+        Hard-deletes the book, its profile and its stored photos. The photos are removed from object storage first;
+        if that fails the request answers `502 storage_error` and nothing is deleted.
       security:
         - sessionCookie: []
       responses:
@@ -333,6 +335,7 @@ paths:
         "401": {$ref: "#/components/responses/Unauthenticated"}
         "403": {$ref: "#/components/responses/CsrfOriginMismatch"}
         "404": {$ref: "#/components/responses/YearbookNotFound"}
+        "502": {$ref: "#/components/responses/StorageError"}
   /v1/yearbooks/{id}/profile:
     parameters:
       - {name: id, in: path, required: true, schema: {type: string}, description: Yearbook ULID.}
@@ -362,6 +365,126 @@ paths:
         "404": {$ref: "#/components/responses/YearbookNotFound"}
         "413": {$ref: "#/components/responses/PayloadTooLarge"}
         "415": {$ref: "#/components/responses/UnsupportedMediaType"}
+  /v1/yearbooks/{id}/media:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: string}, description: Yearbook ULID.}
+    post:
+      operationId: uploadMedia
+      tags: [media]
+      summary: Upload a photo to a yearbook
+      description: >-
+        `multipart/form-data` with the image in the part named `file`; other parts are ignored and the client file
+        name is never used. The type is decided by sniffing the content (JPEG, PNG, WebP), never by file name or
+        Content-Type. The image is decoded, rotated upright, stripped of all metadata (EXIF, GPS, ICC, comments),
+        resized to at most 3000 px on the long edge (never enlarged) and stored; a 480 px JPEG thumbnail is stored
+        too. Opaque images are stored as JPEG, images with transparency as PNG. Only the owner may upload (`404`
+        otherwise). The body cap is `SMEM_MEDIA_MAX_BYTES` (default 10 MiB). Limits: 200 photos per yearbook, 500 MiB
+        per user, 60 uploads per 10 minutes per user.
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: {type: string, format: binary}
+      responses:
+        "201":
+          description: Stored.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/MediaEnvelope"}
+        "400":
+          description: >-
+            `invalid_image` (corrupt, over 12000 px on a side or over 50 megapixels) or `invalid_body` (not multipart
+            or no `file` part).
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
+        "401": {$ref: "#/components/responses/Unauthenticated"}
+        "403": {$ref: "#/components/responses/CsrfOriginMismatch"}
+        "404": {$ref: "#/components/responses/YearbookNotFound"}
+        "409":
+          description: A storage limit is reached (`quota_exceeded`).
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
+        "413":
+          description: The file or the request body is over the cap (`payload_too_large`).
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
+        "415":
+          description: >-
+            The request is not `multipart/form-data`, or the file is not a JPEG, PNG or WebP image
+            (`unsupported_media_type`).
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
+        "429": {$ref: "#/components/responses/RateLimited"}
+        "502": {$ref: "#/components/responses/StorageError"}
+        "503":
+          description: Too many uploads in progress (`busy`); retry after the `Retry-After` seconds.
+          headers:
+            Retry-After: {schema: {type: integer}}
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
+  /v1/media/{id}/content:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: string}, description: Media ULID.}
+    get:
+      operationId: getMediaContent
+      tags: [media]
+      summary: Download a photo
+      description: >-
+        Streams the stored image to the yearbook owner only (`404` for anyone else). `Content-Type` comes from the
+        stored record. Honours `Range` and `If-None-Match`.
+      security:
+        - sessionCookie: []
+      parameters:
+        - {name: size, in: query, required: false, schema: {type: string, enum: [display, thumb], default: display}}
+      responses:
+        "200":
+          description: The image.
+          headers:
+            Cache-Control: {schema: {type: string, const: "private, max-age=3600"}}
+            X-Content-Type-Options: {schema: {type: string, const: nosniff}}
+          content:
+            image/jpeg: {schema: {type: string, format: binary}}
+            image/png: {schema: {type: string, format: binary}}
+        "206": {description: The requested byte range.}
+        "304": {description: Not modified.}
+        "400":
+          description: Unknown `size` (`invalid_size`).
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
+        "401": {$ref: "#/components/responses/Unauthenticated"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "416": {description: Range not satisfiable.}
+        "502": {$ref: "#/components/responses/StorageError"}
+  /v1/media/{id}:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: string}, description: Media ULID.}
+    delete:
+      operationId: deleteMedia
+      tags: [media]
+      summary: Delete a photo
+      description: >-
+        Removes the row and both stored objects. Idempotent: an unknown id, an already deleted one and someone
+        else's photo all answer `204` (and the last deletes nothing), so the answer never reveals whether a photo
+        exists. A cover or profile photo that pointed at it is cleared.
+      security:
+        - sessionCookie: []
+      responses:
+        "204": {description: Deleted, or nothing to delete.}
+        "401": {$ref: "#/components/responses/Unauthenticated"}
+        "403": {$ref: "#/components/responses/CsrfOriginMismatch"}
+        "502": {$ref: "#/components/responses/StorageError"}
 components:
   securitySchemes:
     sessionCookie:
@@ -391,7 +514,8 @@ components:
     YearbookInvalid:
       description: >-
         `invalid_<field>` (title, school_name, class_name, graduation_year, motto, language, page_size, full_name,
-        nickname, birthday, quote, hobbies, future_plans, limit, cursor), `unknown_field` or `invalid_body`.
+        nickname, birthday, quote, hobbies, future_plans, limit, cursor, media: a `*_media_id` that is not a photo of this
+        yearbook), `unknown_field` or `invalid_body`.
       content:
         application/json:
           schema: {$ref: "#/components/schemas/Error"}
@@ -418,6 +542,11 @@ components:
         Retry-After:
           description: Seconds until the oldest counted attempt leaves the window.
           schema: {type: integer, minimum: 1}
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/Error"}
+    StorageError:
+      description: The object store failed (`storage_error`); nothing was changed, retry later.
       content:
         application/json:
           schema: {$ref: "#/components/schemas/Error"}
@@ -467,7 +596,7 @@ components:
     Profile:
       type: object
       additionalProperties: false
-      required: [id, is_owner, full_name, nickname, birthday, quote, hobbies, future_plans]
+      required: [id, is_owner, full_name, nickname, birthday, quote, hobbies, future_plans, photo_media_id]
       properties:
         id: {type: string, description: Opaque ULID.}
         is_owner: {type: boolean}
@@ -477,10 +606,11 @@ components:
         quote: {type: string, maxLength: 500}
         hobbies: {type: string, maxLength: 300}
         future_plans: {type: string, maxLength: 300}
+        photo_media_id: {type: [string, "null"], description: A photo of this yearbook, or null.}
     Yearbook:
       type: object
       additionalProperties: false
-      required: [id, title, school_name, class_name, graduation_year, motto, language, page_size, template_id, created_at, updated_at, profile]
+      required: [id, title, school_name, class_name, graduation_year, motto, language, page_size, template_id, cover_media_id, created_at, updated_at, profile]
       properties:
         id: {type: string, description: Opaque ULID., examples: ["01J9Z3K6V8Q4M7N2P5R8T0W1XY"]}
         title: {type: string, minLength: 1, maxLength: 120}
@@ -491,6 +621,7 @@ components:
         language: {type: string, enum: [en, vi]}
         page_size: {type: string, enum: [A5, A4]}
         template_id: {type: [string, "null"], description: Null until a template is chosen.}
+        cover_media_id: {type: [string, "null"], description: A photo of this yearbook, or null.}
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
         profile: {$ref: "#/components/schemas/Profile"}
@@ -522,6 +653,7 @@ components:
         motto: {type: string, maxLength: 200}
         language: {type: string, enum: [en, vi]}
         page_size: {type: string, enum: [A5, A4]}
+        cover_media_id: {type: [string, "null"], description: A photo of this yearbook (else `400 invalid_media`); null clears it.}
     ProfileInput:
       type: object
       additionalProperties: false
@@ -533,6 +665,21 @@ components:
         quote: {type: string, maxLength: 500}
         hobbies: {type: string, maxLength: 300}
         future_plans: {type: string, maxLength: 300}
+        photo_media_id: {type: [string, "null"], description: A photo of this yearbook (else `400 invalid_media`). Like every field of this replacing PUT, omitted means cleared.}
+    Media:
+      type: object
+      additionalProperties: false
+      required: [id, width, height, bytes]
+      properties:
+        id: {type: string, description: Opaque ULID.}
+        width: {type: integer, description: Pixels, of the stored display version.}
+        height: {type: integer}
+        bytes: {type: integer, description: Size of the stored display version.}
+    MediaEnvelope:
+      type: object
+      required: [media]
+      properties:
+        media: {$ref: "#/components/schemas/Media"}
     Error:
       type: object
       description: >-
@@ -546,7 +693,7 @@ components:
           properties:
             code:
               type: string
-              examples: [not_found, method_not_allowed, payload_too_large, internal_error, not_ready, invalid_credentials, unauthenticated, rate_limited, limit_reached, unknown_field]
+              examples: [not_found, method_not_allowed, payload_too_large, internal_error, not_ready, invalid_credentials, unauthenticated, rate_limited, limit_reached, unknown_field, unsupported_media_type, invalid_image, quota_exceeded, storage_error, invalid_media]
             message:
               type: string
             request_id:

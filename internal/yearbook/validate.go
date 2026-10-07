@@ -51,13 +51,14 @@ func (o *optional[T]) UnmarshalJSON(b []byte) error {
 // optional here; create then insists on title and language. A JSON null counts as absent
 // except for graduation_year, where it clears the value.
 type bookInput struct {
-	Title          *string       `json:"title"`
-	SchoolName     *string       `json:"school_name"`
-	ClassName      *string       `json:"class_name"`
-	GraduationYear optional[int] `json:"graduation_year"`
-	Motto          *string       `json:"motto"`
-	Language       *string       `json:"language"`
-	PageSize       *string       `json:"page_size"`
+	Title          *string          `json:"title"`
+	SchoolName     *string          `json:"school_name"`
+	ClassName      *string          `json:"class_name"`
+	GraduationYear optional[int]    `json:"graduation_year"`
+	Motto          *string          `json:"motto"`
+	Language       *string          `json:"language"`
+	PageSize       *string          `json:"page_size"`
+	CoverMediaID   optional[string] `json:"cover_media_id"`
 }
 
 // text cleans *in (when present) with the shared rules and stores it in dst.
@@ -106,6 +107,9 @@ func (in bookInput) applyTo(y *Yearbook) error {
 		}
 		y.Language = *in.Language
 	}
+	if in.CoverMediaID.Set {
+		y.CoverMediaID = in.CoverMediaID.Val // existence and ownership are checked by the store
+	}
 	if in.PageSize != nil {
 		if *in.PageSize != "A5" && *in.PageSize != "A4" {
 			return ValidationError{"invalid_page_size"}
@@ -118,12 +122,13 @@ func (in bookInput) applyTo(y *Yearbook) error {
 // profileInput is the body of PUT /v1/yearbooks/{id}/profile; it replaces every field, so an
 // absent optional field is cleared.
 type profileInput struct {
-	FullName    string  `json:"full_name"`
-	Nickname    string  `json:"nickname"`
-	Birthday    *string `json:"birthday"`
-	Quote       string  `json:"quote"`
-	Hobbies     string  `json:"hobbies"`
-	FuturePlans string  `json:"future_plans"`
+	FullName     string  `json:"full_name"`
+	Nickname     string  `json:"nickname"`
+	Birthday     *string `json:"birthday"`
+	Quote        string  `json:"quote"`
+	Hobbies      string  `json:"hobbies"`
+	FuturePlans  string  `json:"future_plans"`
+	PhotoMediaID *string `json:"photo_media_id"`
 }
 
 // applyTo validates the input and writes it to p. now decides what "past" means for the birthday.
@@ -154,5 +159,6 @@ func (in profileInput) applyTo(p *Profile, now time.Time) error {
 		out.Birthday = &s
 	}
 	p.FullName, p.Nickname, p.Birthday, p.Quote, p.Hobbies, p.FuturePlans = out.FullName, out.Nickname, out.Birthday, out.Quote, out.Hobbies, out.FuturePlans
+	p.PhotoMediaID = in.PhotoMediaID
 	return nil
 }

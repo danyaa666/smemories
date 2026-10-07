@@ -24,6 +24,7 @@ type Yearbook struct {
 	Language       string    `json:"language"`
 	PageSize       string    `json:"page_size"`
 	TemplateID     *string   `json:"template_id"`
+	CoverMediaID   *string   `json:"cover_media_id"` // a media id of this yearbook (T-009)
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
 	Profile        Profile   `json:"profile"`
@@ -32,14 +33,15 @@ type Yearbook struct {
 
 // Profile is the owner's profile page information.
 type Profile struct {
-	ID          string  `json:"id"`
-	IsOwner     bool    `json:"is_owner"`
-	FullName    string  `json:"full_name"`
-	Nickname    string  `json:"nickname"`
-	Birthday    *string `json:"birthday"` // YYYY-MM-DD
-	Quote       string  `json:"quote"`
-	Hobbies     string  `json:"hobbies"`
-	FuturePlans string  `json:"future_plans"`
+	ID           string  `json:"id"`
+	IsOwner      bool    `json:"is_owner"`
+	FullName     string  `json:"full_name"`
+	Nickname     string  `json:"nickname"`
+	Birthday     *string `json:"birthday"` // YYYY-MM-DD
+	Quote        string  `json:"quote"`
+	Hobbies      string  `json:"hobbies"`
+	FuturePlans  string  `json:"future_plans"`
+	PhotoMediaID *string `json:"photo_media_id"` // a media id of this yearbook (T-009)
 }
 
 // Store persists yearbooks and profiles. Every query is parameterised and scoped by owner_id:
@@ -49,9 +51,11 @@ type Store struct{ db *sql.DB }
 func NewStore(db *sql.DB) *Store { return &Store{db: db} }
 
 const bookCols = `y.id, y.public_id, y.title, y.school_name, y.class_name, y.graduation_year, y.motto, y.language, y.page_size, y.template_id,
- y.created_at, y.updated_at, p.public_id, p.is_owner, p.full_name, p.nickname, p.birthday, p.quote, p.hobbies, p.future_plans`
+ y.created_at, y.updated_at, p.public_id, p.is_owner, p.full_name, p.nickname, p.birthday, p.quote, p.hobbies, p.future_plans,
+ mc.public_id, mp.public_id`
 
-const bookFrom = ` FROM yearbooks y JOIN profiles p ON p.yearbook_id = y.id AND p.is_owner`
+const bookFrom = ` FROM yearbooks y JOIN profiles p ON p.yearbook_id = y.id AND p.is_owner
+ LEFT JOIN media mc ON mc.id = y.cover_media_id LEFT JOIN media mp ON mp.id = p.photo_media_id`
 
 type scanner interface{ Scan(...any) error }
 
@@ -60,9 +64,10 @@ func scanBook(sc scanner) (Yearbook, error) {
 	var grad sql.Null[int]
 	var tmpl sql.NullString
 	var bday sql.NullTime
+	var cover, photo sql.NullString
 	p := &y.Profile
 	err := sc.Scan(&y.internalID, &y.ID, &y.Title, &y.SchoolName, &y.ClassName, &grad, &y.Motto, &y.Language, &y.PageSize, &tmpl,
-		&y.CreatedAt, &y.UpdatedAt, &p.ID, &p.IsOwner, &p.FullName, &p.Nickname, &bday, &p.Quote, &p.Hobbies, &p.FuturePlans)
+		&y.CreatedAt, &y.UpdatedAt, &p.ID, &p.IsOwner, &p.FullName, &p.Nickname, &bday, &p.Quote, &p.Hobbies, &p.FuturePlans, &cover, &photo)
 	if err != nil {
 		return Yearbook{}, err
 	}
@@ -71,6 +76,12 @@ func scanBook(sc scanner) (Yearbook, error) {
 	}
 	if tmpl.Valid {
 		y.TemplateID = &tmpl.String
+	}
+	if cover.Valid {
+		y.CoverMediaID = &cover.String
+	}
+	if photo.Valid {
+		p.PhotoMediaID = &photo.String
 	}
 	if bday.Valid {
 		b := bday.Time.Format(dateLayout)
@@ -179,18 +190,40 @@ func (s *Store) modify(ctx context.Context, ownerID uint64, publicID string, now
 		return Yearbook{}, err
 	}
 	y.UpdatedAt = now.UTC()
+	// A media id must belong to this very book; anything else (also another user's) is invalid_media.
+	cover, err := mediaRow(ctx, tx, y.internalID, y.CoverMediaID)
+	if err != nil {
+		return Yearbook{}, err
+	}
+	photo, err := mediaRow(ctx, tx, y.internalID, y.Profile.PhotoMediaID)
+	if err != nil {
+		return Yearbook{}, err
+	}
 	if _, err := tx.ExecContext(ctx,
-		`UPDATE yearbooks SET title=?, school_name=?, class_name=?, graduation_year=?, motto=?, language=?, page_size=?, updated_at=? WHERE id = ?`,
-		y.Title, y.SchoolName, y.ClassName, y.GraduationYear, y.Motto, y.Language, y.PageSize, y.UpdatedAt, y.internalID); err != nil {
+		`UPDATE yearbooks SET title=?, school_name=?, class_name=?, graduation_year=?, motto=?, language=?, page_size=?, cover_media_id=?, updated_at=? WHERE id = ?`,
+		y.Title, y.SchoolName, y.ClassName, y.GraduationYear, y.Motto, y.Language, y.PageSize, cover, y.UpdatedAt, y.internalID); err != nil {
 		return Yearbook{}, err
 	}
 	p := y.Profile
 	if _, err := tx.ExecContext(ctx,
-		`UPDATE profiles SET full_name=?, nickname=?, birthday=?, quote=?, hobbies=?, future_plans=? WHERE yearbook_id = ? AND is_owner`,
-		p.FullName, p.Nickname, p.Birthday, p.Quote, p.Hobbies, p.FuturePlans, y.internalID); err != nil {
+		`UPDATE profiles SET full_name=?, nickname=?, birthday=?, quote=?, hobbies=?, future_plans=?, photo_media_id=? WHERE yearbook_id = ? AND is_owner`,
+		p.FullName, p.Nickname, p.Birthday, p.Quote, p.Hobbies, p.FuturePlans, photo, y.internalID); err != nil {
 		return Yearbook{}, err
 	}
 	return y, tx.Commit()
+}
+
+// mediaRow resolves a public media id to its row id within the book; nil stays NULL.
+func mediaRow(ctx context.Context, tx *sql.Tx, bookID int64, publicID *string) (sql.NullInt64, error) {
+	if publicID == nil {
+		return sql.NullInt64{}, nil
+	}
+	var id int64
+	err := tx.QueryRowContext(ctx, `SELECT id FROM media WHERE yearbook_id = ? AND public_id = ?`, bookID, *publicID).Scan(&id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return sql.NullInt64{}, ValidationError{"invalid_media"}
+	}
+	return sql.NullInt64{Int64: id, Valid: err == nil}, err
 }
 
 func (s *Store) delete(ctx context.Context, ownerID uint64, publicID string) error {
