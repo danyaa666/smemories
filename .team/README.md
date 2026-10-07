@@ -11,15 +11,15 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 18 | T-011, T-012, T-013, T-014, T-015, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029 |
-| TODO | 9 | T-003, T-004, T-006, T-007, T-008, T-009, T-010, T-028, T-030 |
-| CHANGES_REQUESTED | 1 | T-005 |
+| TODO | 8 | T-004, T-006, T-007, T-008, T-009, T-010, T-028, T-030 |
+| IN_QA | 2 | T-003, T-005 |
 | MERGED | 2 | T-001, T-002 |
 
 **Awaiting your review (MERGED):** T-001 (Repo foundation and API skeleton); T-002 (Local stack (MySQL + MinIO), migrations and readiness)
 
 **Open questions for you:** none
 
-_Board last written 2026-10-07 03:16Z_
+_Board last written 2026-10-07 05:59Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -291,7 +291,7 @@ Bind services to loopback only. Never print the DSN. `readyz` must not leak driv
 - 2026-10-07 03:16Z · leader · merged 61dba35 (squash). Review: all 9 AC met; ports loopback-only, DSN/password never in errors or logs, /readyz hides driver errors, migration reversible, strict sql_mode, utf8mb4. For owner to check: install Docker, run make up migrate run and curl localhost:8080/readyz. Follow-ups in T-030 (compose isolation, fail-fast on auth errors, test grants) and T-029 (frozen MinIO image).
 
 ### T-003 — Web scaffold: Vite + React + TypeScript + EN/VI i18n
-- **Status:** TODO
+- **Status:** IN_QA
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M0
@@ -299,11 +299,11 @@ Bind services to loopback only. Never print the DSN. `readyz` must not leak driv
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-06 10:11Z by leader
-- **Comments-seen:** 0
+- **Assignee:** qa
+- **Branch:** task/t-003-web-scaffold-vite-react-typescript-en-vi
+- **PR:** https://github.com/danyaa666/smemories/pull/4
+- **Updated:** 2026-10-07 05:58Z by qa
+- **Comments-seen:** 1
 
 #### Description
 Create the web app skeleton: Vite + React + TypeScript with English/Vietnamese i18n from the first screen, a typed API client generated from `api/openapi.yaml`, tests, and make targets. Decisions: D-02, D-05, L-02, L-03, L-07.
@@ -337,6 +337,7 @@ Never render API-supplied strings as HTML. Do not put tokens in `localStorage` (
 - QA should probe: delete a key from `vi.json` and confirm `lint:i18n` fails; browser language `vi-VN` on first load; block `localStorage` in a private window; keyboard-only use of the switcher; API down state.
 
 #### Comments
+- 2026-10-07 05:57Z · dev · Web scaffold in web/ (PR #4). Test: make lint build test (Node 22), cd web && npm ci && npm run build/lint/typecheck/test/lint:i18n/check:api; delete a key in vi.json and lint:i18n names it; cd web && npm run dev with API on :8080 shows API: ok. Deps flagged: typescript ~5.9 and eslint ^9 (peer limits of typescript-eslint/jsx-a11y). web/go.mod is deliberate (keeps Go tooling out of node_modules). Makefile will conflict trivially with T-005 (spike target, .PHONY). Not covered: real browser visual check, CI (T-004).
 
 ### T-004 — CI pipeline (Go, web, integration, security)
 - **Status:** TODO
@@ -396,7 +397,7 @@ Least-privilege `GITHUB_TOKEN`; SHA-pinned actions (supply chain); no `pull_requ
 - 2026-10-07 02:47Z · leader · Leader note from the T-001 review: golangci-lint currently reports 2 findings on develop (errcheck at internal/httpx/server_test.go:46, ST1023 at internal/httpx/router.go:23). T-028 fixes them and now blocks this task, so the new CI starts green.
 
 ### T-005 — Spike: choose the pure-Go PDF engine
-- **Status:** CHANGES_REQUESTED
+- **Status:** IN_QA
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M0
@@ -404,11 +405,11 @@ Least-privilege `GITHUB_TOKEN`; SHA-pinned actions (supply chain); no `pull_requ
 - **Risk:** low
 - **Rework:** 2
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** qa
 - **Branch:** task/t-005-spike-choose-the-pure-go-pdf-engine
 - **PR:** https://github.com/danyaa666/smemories/pull/2
-- **Updated:** 2026-10-07 03:16Z by leader
-- **Comments-seen:** 8
+- **Updated:** 2026-10-07 05:58Z by qa
+- **Comments-seen:** 9
 
 #### Description
 Spike: decide which pure-Go PDF library SMemories uses (board D-06: the owner chose a pure-Go engine over headless Chromium). Everything in M1 depends on this verdict, so it runs first and ends with a written go/no-go backed by measurements. Candidates (both MIT): `github.com/go-pdf/fpdf` and `github.com/signintech/gopdf`. `unipdf` is excluded (AGPL/commercial licence) unless the owner approves a licence cost.
@@ -452,6 +453,7 @@ Only trusted synthetic fixtures. Photos for the benchmark must be generated, nev
 - 2026-10-07 02:50Z · dev · Rework: ISSUE 1 fixed in 48a73f5 (AllowNegativePosition via jpgCover in fpdf_test.go; fpdf-image-cover.png regenerated 286 KB, now identical to gopdf's; covered by TestQA_CoverIsFullBleed, passing for both libs). ADR C3 row + T-010 item 5 carry the pitfall. Also: TestQA_ in make spike pattern; non-blocking (a) extraction wording, (b) 'x  x' CJK demo explained, (c) fonts/README note. Merged origin/develop instead of rebasing (no force-push allowed): Makefile = union (.PHONY build test lint run spike), module path kept, main.go stays deleted; merge-tree vs develop is clean. make lint build test spike green; numbers: fpdf 0.13 s / 441 MB, gopdf 0.09 s / 534 MB (Apple M3 Pro), pdfcpu strict ok on all 10 PDFs. Squash-merge.
 - 2026-10-07 03:08Z · qa · Rework round 1 re-verified on a fresh clone of PR #2 head 48a73f5 (no CI checks configured on the branch). ISSUE 1 fixed: jpgCover passes AllowNegativePosition; TestQA_CoverIsFullBleed passes for fpdf and gopdf and now runs in make spike (pattern TestFpdf_|TestGopdf_|TestQA_); regenerated fpdf-image-cover.png (286 KB) viewed by eye: edge-to-edge, centre crop, no white strip (the dark bands top/bottom are the synthetic photo's own border); regeneration leaves git status clean (committed PNGs equal to fresh output). ADR C3 row and T-010 item 5 carry the pitfall. Makefile = union with develop (diff vs origin/develop only adds spike to .PHONY and the spike block; build/test/lint/run intact); go.mod module github.com/danyaa666/smemories, go 1.26.0; root main.go still deleted; no tracked bin/ or out/. make lint build test spike all green. Numbers re-measured (M3 Pro): fpdf 0.14 s / 437 MB, gopdf 0.10 s / 534 MB (ADR 0.13 s/441 MB and 0.09 s/534 MB: consistent, targets 10 s/512 MB: fpdf passes, gopdf RSS 534 MB is slightly over 512 MB which ADR already notes as within 2x). pdfcpu v0.16.1 --mode strict: validation ok on all 10 PDFs. AC1-AC9 evidence as in my first QA round (unchanged files). Non-blocking: PR is squash-merge only because an earlier commit contained a binary; go.mod will conflict with PR #3 (T-002 needs goose, go 1.26.0): whoever merges second must resolve go.mod/go.sum (union of requires, go mod tidy) and Makefile.
 - 2026-10-07 03:16Z · leader · No code issues: QA_PASS and leader review OK. Conflict only. T-002 merged (develop 61dba35) and conflicts with this branch in go.mod, go.sum and Makefile. 1) Merge origin/develop into the branch (no force-push). 2) Resolve as the union: go.mod = both dependency sets (goose and mysql from develop plus fpdf, gopdf, x/image, x/text, go-pdfium from here; go directive 1.26.0), then go mod tidy; Makefile = develop's targets (build/test/lint/run/up/down/migrate/test-integration, the .env include block) plus spike, with the .PHONY lines merged. 3) Re-run make lint build test spike from your task worktree and report the numbers. 4) Change nothing else, then READY_FOR_QA; QA only needs to verify the merge result.
+- 2026-10-07 05:53Z · dev · Conflict-only rework: merged origin/develop (61dba35..) into the branch (fe7f5d6, no force-push). go.mod/go.sum = develop's (goose, mysql) plus fpdf, gopdf, go-pdfium, x/image, x/text via go mod tidy (go 1.26.0; tidy also bumped x/sync to v0.23.0 as required by the spike deps). Makefile = develop's file with spike added to .PHONY and the spike block appended. Nothing else changed. From the task worktree: make lint build test spike all green; fpdf 0.15 s / 444 MB, gopdf 0.14 s / 534 MB (M3 Pro), pdfcpu strict ok on all 10 PDFs; committed PNGs unchanged. Squash-merge.
 
 ### T-006 — Email + password auth core (register, login, sessions)
 - **Status:** TODO
