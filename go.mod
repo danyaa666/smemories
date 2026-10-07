@@ -8,6 +8,7 @@ require (
 	github.com/klippa-app/go-pdfium v1.21.1
 	github.com/pressly/goose/v3 v3.28.0
 	github.com/signintech/gopdf v0.38.1
+	golang.org/x/crypto v0.57.0
 	golang.org/x/image v0.46.0
 	golang.org/x/text v0.42.0
 )
