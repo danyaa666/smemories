@@ -19,7 +19,7 @@
 
 **Open questions for you:** none
 
-_Board last written 2026-10-07 14:14Z_
+_Board last written 2026-10-07 16:59Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -308,7 +308,7 @@ Give every later task a database and object store that start locally with one co
 - **Branch:** task/t-003-web-scaffold-vite-react-typescript-en-vi
 - **PR:** https://github.com/danyaa666/smemories/pull/4
 - **Updated:** 2026-10-07 14:03Z by leader
-- **Comments-seen:** 4
+- **Comments-seen:** 7
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/03-web-scaffold-vite-react-typescript-en-vi-i18n.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -339,7 +339,7 @@ Create the web app skeleton: Vite + React + TypeScript with English/Vietnamese i
 - **Branch:** task/t-004-ci-pipeline-go-web-integration-security
 - **PR:** https://github.com/danyaa666/smemories/pull/8
 - **Updated:** 2026-10-07 14:03Z by leader
-- **Comments-seen:** 4
+- **Comments-seen:** 7
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/04-ci-pipeline-go-web-integration-security.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -539,7 +539,7 @@ Photo upload and storage for yearbook owners.
 - **Branch:** task/t-010-template-spec-and-pdf-page-renderer
 - **PR:** https://github.com/danyaa666/smemories/pull/16
 - **Updated:** 2026-10-07 14:04Z by leader
-- **Comments-seen:** 6
+- **Comments-seen:** 8
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/02-template-spec-and-pdf-page-renderer.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
