@@ -1,0 +1,62 @@
+openapi: 3.1.0
+info:
+  title: SMemories API
+  version: 0.1.0
+  description: >-
+    Hand-written contract for the SMemories API. Infrastructure routes live at the
+    root; business routes will live under /v1 (the web app reaches them as /api/v1/*).
+servers:
+  - url: http://localhost:8080
+    description: Local development
+paths:
+  /healthz:
+    get:
+      operationId: getHealth
+      summary: Liveness probe
+      responses:
+        "200":
+          description: The process is up.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    const: ok
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
+components:
+  responses:
+    MethodNotAllowed:
+      description: Wrong HTTP method for this path.
+      headers:
+        Allow:
+          description: Methods this path accepts.
+          schema:
+            type: string
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+  schemas:
+    Error:
+      type: object
+      description: >-
+        Shared error envelope. `code` is a stable snake_case contract (clients localise
+        it); `message` is English text meant for logs.
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, request_id]
+          properties:
+            code:
+              type: string
+              examples: [not_found, method_not_allowed, payload_too_large, internal_error]
+            message:
+              type: string
+            request_id:
+              type: string
+              description: Same value as the X-Request-Id response header.
