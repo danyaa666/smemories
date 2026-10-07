@@ -91,7 +91,7 @@ Structured fields for the content that goes into the book:
 
 ## Development
 
-Prerequisites: Go 1.26 (the `go` directive in `go.mod`), `make`, Docker with Compose, and golangci-lint v2 (2.8.0 was used; run `golangci-lint run` and `golangci-lint run --build-tags integration`, both must report 0 issues; CI wiring is T-004).
+Prerequisites: Go 1.26 (the `go` directive in `go.mod`), `make`, Docker with Compose, and golangci-lint v2 (2.8.0, the version CI pins; `make lint` runs it with `.golangci.yml`, which also covers the integration-tagged files; CI runs the same, see [docs/ci.md](docs/ci.md)).
 
 | Command | What it does |
 |---|---|
