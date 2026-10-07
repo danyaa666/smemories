@@ -4,6 +4,7 @@ package auth
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"database/sql"
 	"encoding/json"
@@ -413,6 +414,50 @@ func TestLogin(t *testing.T) {
 	// Garbage and injection attempts are plain credential failures.
 	for _, em := range []string{"' OR '1'='1", "alice@example.com' --", strings.Repeat("x", 5000), ""} {
 		want(t, e.login(em, testPW, ""), 401, "invalid_credentials")
+	}
+}
+
+// L-09: passwords are NFKC-normalised before the rules, hashing and verifying; display names are NFC.
+func TestUnicodeNormalisation(t *testing.T) {
+	const nfc, nfd = "M\u1eadt kh\u1ea9u ti\u1ebfng Vi\u1ec7t", "Ma\u0323\u0302t kha\u0302\u0309u tie\u0302\u0301ng Vie\u0323\u0302t"
+	if nfc == nfd || strings.Contains(nfc, "\u0323") {
+		t.Fatal("fixtures must differ in bytes")
+	}
+	e := newEnv(t, opts{})
+	// Registered with NFC, logs in with NFD.
+	want(t, e.register("nfc@example.com", nfc, "A"), 201, "")
+	want(t, e.login("nfc@example.com", nfd, ""), 200, "")
+	// Registered with NFD (NFD is longer in runes), logs in with NFC.
+	want(t, e.register("nfd@example.com", nfd, "B"), 201, "")
+	want(t, e.login("nfd@example.com", nfc, ""), 200, "")
+	// Stored hash is over the NFKC form: it verifies the NFC bytes directly.
+	var phc string
+	if err := e.db.QueryRow("SELECT password_hash FROM users WHERE email=?", "nfd@example.com").Scan(&phc); err != nil {
+		t.Fatal(err)
+	}
+	if ok, err := e.hasher.Verify(context.Background(), nfc, phc); err != nil || !ok {
+		t.Fatalf("hash not over the NFKC form: %v %v", ok, err)
+	}
+	// NFKC folds compatibility characters: full-width digits log in as ASCII.
+	want(t, e.register("fw@example.com", "pass\uff11\uff12\uff13\uff14\uff15\uff16word", "C"), 201, "")
+	want(t, e.login("fw@example.com", "pass123456word", ""), 200, "")
+	want(t, e.login("fw@example.com", "pass123456wor", ""), 401, "invalid_credentials")
+	// The 10-character minimum counts after normalisation: 15 decomposed runes are 5 characters.
+	want(t, e.register("short@example.com", strings.Repeat("e\u0323\u0302", 5), "D"), 400, "weak_password")
+	// Display name stored (and returned) as NFC.
+	rec := e.register("name@example.com", testPW, "Vie\u0323\u0302t")
+	want(t, rec, 201, "")
+	var out struct {
+		User struct {
+			DisplayName string `json:"display_name"`
+		}
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil || out.User.DisplayName != "Vi\u1ec7t" {
+		t.Fatalf("response display_name %q (%v)", out.User.DisplayName, err)
+	}
+	var name string
+	if err := e.db.QueryRow("SELECT display_name FROM users WHERE email=?", "name@example.com").Scan(&name); err != nil || name != "Vi\u1ec7t" {
+		t.Fatalf("stored display_name %q (%v)", name, err)
 	}
 }
 

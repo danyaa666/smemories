@@ -41,7 +41,7 @@ func TestNewAppliesPoolSettings(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer d.Close()
+	defer func() { _ = d.Close() }()
 	if got := d.Stats().MaxOpenConnections; got != 3 {
 		t.Fatalf("MaxOpenConnections = %d, want 3", got)
 	}
@@ -53,7 +53,7 @@ func TestOpenGivesUpWhenUnreachable(t *testing.T) {
 		t.Fatal(err)
 	}
 	addr := ln.Addr().String()
-	ln.Close()
+	_ = ln.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 1200*time.Millisecond)
 	defer cancel()
@@ -61,7 +61,7 @@ func TestOpenGivesUpWhenUnreachable(t *testing.T) {
 	cfg := config.Config{DBDSN: "u:hunter2@tcp(" + addr + ")/db", DBMaxOpen: 1, DBMaxIdle: 1, DBConnMaxLifetime: time.Minute}
 	d, err := Open(ctx, cfg, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	if err == nil {
-		d.Close()
+		_ = d.Close()
 		t.Fatal("want an error")
 	}
 	if strings.Contains(err.Error(), "hunter2") || !strings.Contains(err.Error(), "not reachable") {

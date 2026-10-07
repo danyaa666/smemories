@@ -105,6 +105,7 @@ func (s *Service) Register(ctx context.Context, ip, userAgent, email, password, 
 	if !validEmail(email) {
 		return User{}, Session{}, ValidationError{codeInvalidEmail}
 	}
+	password = normalizePassword(password)
 	if !validPassword(password, email) {
 		return User{}, Session{}, ValidationError{codeWeakPassword}
 	}
@@ -162,6 +163,7 @@ func (s *Service) Login(ctx context.Context, ip, userAgent, email, password, old
 	}
 	refund := func() { s.loginPair.Refund(pairKey); s.loginIP.Refund(ip) }
 
+	password = normalizePassword(password)
 	if n := utf8.RuneCountInString(password); n == 0 || n > maxPasswordLen { // never hash oversize input
 		return User{}, Session{}, ErrInvalidCredentials
 	}

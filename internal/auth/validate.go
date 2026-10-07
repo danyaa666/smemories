@@ -5,6 +5,8 @@ import (
 	"strings"
 	"unicode"
 	"unicode/utf8"
+
+	"golang.org/x/text/unicode/norm"
 )
 
 const (
@@ -40,16 +42,22 @@ func validEmail(e string) bool {
 	return at > 0 && strings.Contains(domain, ".") && !strings.HasPrefix(domain, ".") && !strings.HasSuffix(domain, ".")
 }
 
-// validPassword reports whether password has 10-128 characters and differs from email
+// normalizePassword applies NFKC (decision L-09) so the same password typed on different
+// devices (NFC vs NFD Vietnamese, full-width digits) hashes and verifies identically.
+// It must run before the length rules, before hashing and before verifying. Never change it
+// once users exist: stored hashes were computed over the normalised form.
+func normalizePassword(p string) string { return norm.NFKC.String(p) }
+
+// validPassword reports whether password (already normalizePassword'ed) has 10-128 characters and differs from email
 // (case-insensitively). It must run before any hashing so huge inputs never reach argon2.
 func validPassword(password, email string) bool {
 	n := utf8.RuneCountInString(password)
 	return n >= minPasswordLen && n <= maxPasswordLen && !strings.EqualFold(password, email)
 }
 
-// cleanDisplayName trims name and reports whether it has 1-100 characters and no control characters.
+// cleanDisplayName normalises name to NFC, trims it and reports whether it has 1-100 characters and no control characters.
 func cleanDisplayName(name string) (string, bool) {
-	name = strings.TrimSpace(name)
+	name = strings.TrimSpace(norm.NFC.String(name))
 	n := utf8.RuneCountInString(name)
 	if n < 1 || n > maxDisplayNameLen {
 		return "", false

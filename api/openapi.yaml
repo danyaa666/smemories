@@ -25,6 +25,8 @@ paths:
                   status:
                     type: string
                     const: ok
+        "404":
+          $ref: "#/components/responses/NotFound"
         "405":
           $ref: "#/components/responses/MethodNotAllowed"
   /readyz:
@@ -74,8 +76,19 @@ paths:
               required: [email, password, display_name]
               properties:
                 email: {type: string, maxLength: 254}
-                password: {type: string, format: password, minLength: 10, maxLength: 128}
-                display_name: {type: string, minLength: 1, maxLength: 100}
+                password:
+                  type: string
+                  format: password
+                  minLength: 10
+                  maxLength: 128
+                  description: >-
+                    Normalised to Unicode NFKC before the length rules (counted in characters after
+                    normalisation) and before hashing, so NFC and NFD forms of the same password are equal.
+                display_name:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                  description: Normalised to Unicode NFC, then trimmed; stored and returned in that form.
       responses:
         "201":
           description: Account created; the session cookie is set.
@@ -120,7 +133,10 @@ paths:
               required: [email, password]
               properties:
                 email: {type: string}
-                password: {type: string, format: password}
+                password:
+                  type: string
+                  format: password
+                  description: Normalised to Unicode NFKC before verification, exactly as at registration.
       responses:
         "200":
           description: Signed in; the session cookie is set.
@@ -238,8 +254,14 @@ components:
       content:
         application/json:
           schema: {$ref: "#/components/schemas/Error"}
+    NotFound:
+      description: No route matches this path. Error code `not_found`.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
     MethodNotAllowed:
-      description: Wrong HTTP method for this path.
+      description: Wrong HTTP method for this path. Error code `method_not_allowed`.
       headers:
         Allow:
           description: Methods this path accepts.

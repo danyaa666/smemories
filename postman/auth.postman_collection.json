@@ -29,7 +29,8 @@
               "const n = Date.now() + '-' + Math.floor(Math.random() * 1e6);",
               "pm.collectionVariables.set('email', 'newman-' + n + '@example.com');",
               "pm.collectionVariables.set('emailUpper', 'NEWMAN-' + n + '@EXAMPLE.COM');",
-              "pm.collectionVariables.set('password', 'Fake-Newman-pw-' + n);",
+              "pm.collectionVariables.set('password', 'Fake-Newman-pw-Việt-' + n); // precomposed (NFC) Vietnamese letter",
+              "pm.collectionVariables.set('passwordNfd', 'Fake-Newman-pw-Việt-'.normalize('NFD') + n); // same password, decomposed (NFD): L-09 says login must accept it",
               "pm.collectionVariables.set('displayName', 'Newman Tester Đặng 🎓');",
               "}"
             ]
@@ -176,7 +177,7 @@
           ]
         },
         {
-          "name": "5. Login (email in another case)",
+          "name": "5. Login (email in another case, password in NFD form)",
           "request": {
             "method": "POST",
             "header": [
@@ -198,7 +199,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"email\": \"{{emailUpper}}\", \"password\": \"{{password}}\"}"
+              "raw": "{\"email\": \"{{emailUpper}}\", \"password\": \"{{passwordNfd}}\"}"
             }
           },
           "event": [
@@ -211,7 +212,8 @@
                   "pm.test(\"user object is exactly the 6 documented fields\", () => { const u = pm.response.json().user; pm.expect(Object.keys(u).sort()).to.eql([\"created_at\",\"display_name\",\"email\",\"email_verified\",\"id\",\"locale\"]); pm.expect(u.id).to.match(/^[0-9A-HJKMNP-TV-Z]{26}$/); pm.expect(u.email_verified).to.eql(false); pm.expect(u.locale).to.eql(\"en\"); });",
                   "pm.test(\"no password or hash in the body\", () => pm.expect(pm.response.text().toLowerCase()).to.not.match(/password|argon|hash/));",
                   "pm.test(\"session cookie flags\", () => { const c = pm.response.headers.get(\"Set-Cookie\") || \"\"; pm.expect(c).to.include(\"smem_session=\"); pm.expect(c).to.include(\"HttpOnly\"); pm.expect(c).to.include(\"SameSite=Lax\"); pm.expect(c).to.include(\"Path=/\"); pm.expect(c).to.include(\"Max-Age=2592000\"); });",
-                  "pm.test(\"same user id\", () => pm.expect(pm.response.json().user.id).to.eql(pm.collectionVariables.get(\"userId\")));"
+                  "pm.test(\"same user id\", () => pm.expect(pm.response.json().user.id).to.eql(pm.collectionVariables.get(\"userId\")));",
+                  "pm.test(\"NFD and NFC forms of the password differ in bytes\", () => pm.expect(pm.collectionVariables.get(\"passwordNfd\")).to.not.eql(pm.collectionVariables.get(\"password\")));"
                 ]
               }
             }

@@ -84,3 +84,50 @@ func TestCleanDisplayName(t *testing.T) {
 		}
 	}
 }
+
+// Escapes keep the NFC/NFD forms visible: "Việt" typed precomposed vs. base letter + combining marks.
+const (
+	nfcViet = "Việt"   // ệ precomposed
+	nfdViet = "Việt" // e + dot below + circumflex
+)
+
+func TestNormalizePasswordNFKC(t *testing.T) {
+	if nfcViet == nfdViet {
+		t.Fatal("fixture forms must differ in bytes")
+	}
+	if normalizePassword(nfdViet) != nfcViet || normalizePassword(nfcViet) != nfcViet {
+		t.Errorf("NFC/NFD not unified: %q %q", normalizePassword(nfdViet), normalizePassword(nfcViet))
+	}
+	if got := normalizePassword("１２３abc"); got != "123abc" { // full-width digits
+		t.Errorf("NFKC compat fold: %q", got)
+	}
+}
+
+func TestValidPasswordCountsAfterNormalisation(t *testing.T) {
+	nfd := strings.Repeat("ệ", 5) // 15 runes decomposed, 5 after NFKC
+	if validPassword(normalizePassword(nfd), "x@example.com") {
+		t.Error("5 characters after normalisation must be too short")
+	}
+	nfd = strings.Repeat("ệ", 10) // 30 runes decomposed, 10 after NFKC
+	if !validPassword(normalizePassword(nfd), "x@example.com") {
+		t.Error("10 characters after normalisation must pass")
+	}
+	if validPassword(normalizePassword(strings.Repeat("ệ", 129)), "x@example.com") {
+		t.Error("129 characters after normalisation must be too long")
+	}
+	// 140 decomposed runes that normalise to 70: within the maximum once normalised.
+	if !validPassword(normalizePassword(strings.Repeat("ẹ", 70)), "x@example.com") {
+		t.Error("limits count characters after normalisation")
+	}
+}
+
+func TestCleanDisplayNameIsNFC(t *testing.T) {
+	got, ok := cleanDisplayName("  Ng" + "ử" + "ơi  ") // decomposed
+	want := "Ngửơi"
+	if !ok || got != want {
+		t.Errorf("got %q %v, want %q", got, ok, want)
+	}
+	if got, _ := cleanDisplayName("Việt"); got != nfcViet {
+		t.Errorf("display name not NFC: %q", got)
+	}
+}

@@ -91,13 +91,13 @@ Structured fields for the content that goes into the book:
 
 ## Development
 
-Prerequisites: Go 1.26 (the `go` directive in `go.mod`), `make`, Docker with Compose.
+Prerequisites: Go 1.26 (the `go` directive in `go.mod`), `make`, Docker with Compose, and golangci-lint v2 (2.8.0 was used; run `golangci-lint run` and `golangci-lint run --build-tags integration`, both must report 0 issues; CI wiring is T-004).
 
 | Command | What it does |
 |---|---|
 | `make build` | Builds the API to `bin/smemories-api` |
 | `make test` | Runs the Go tests with the race detector |
-| `make lint` | Fails if `gofmt -l .` prints anything, then runs `go vet ./...` |
+| `make lint` | Fails (listing the files) if a tracked or new Go file is not gofmt-clean, then runs `go vet` (with and without the `integration` tag) |
 | `make run` | Runs the API from source (needs the stack below: `SMEM_DB_DSN` is required) |
 | `make up` / `make down` | Start (and wait for) / stop MySQL 8.4 and MinIO; creates `.env` from `.env.example` first. Ports bind to `127.0.0.1` |
 | `make migrate` / `make migrate-down` | Apply all migrations / roll back the last one |
