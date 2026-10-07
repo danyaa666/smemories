@@ -10,16 +10,17 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 21 | T-011, T-012, T-013, T-014, T-015, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-033 |
-| TODO | 3 | T-007, T-008, T-009 |
-| IN_PROGRESS | 1 | T-010 |
+| BACKLOG | 19 | T-013, T-014, T-015, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-033 |
+| TODO | 5 | T-007, T-009, T-011, T-012, T-034 |
+| IN_PROGRESS | 1 | T-008 |
+| IN_QA | 1 | T-010 |
 | MERGED | 8 | T-001, T-002, T-003, T-004, T-005, T-006, T-028, T-030 |
 
 **Awaiting your review (MERGED):** T-001 (Repo foundation and API skeleton); T-002 (Local stack (MySQL + MinIO), migrations and readiness); T-003 (Web scaffold: Vite + React + TypeScript + EN/VI i18n); T-004 (CI pipeline (Go, web, integration, security)); T-005 (Spike: choose the pure-Go PDF engine); T-006 (Email + password auth core (register, login, sessions)); T-028 (T-001 follow-ups: log route not path, lint scope and findings, OpenAPI 404/405); T-030 (T-002 follow-ups: isolate compose stacks, fail fast on auth errors, test-DB grants)
 
-**Open questions for you:** none
+**Open questions for you:** Q-005 (CAPTCHA on the public friends' note form?)
 
-_Board last written 2026-10-07 11:16Z_
+_Board last written 2026-10-07 11:28Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -52,6 +53,13 @@ _Board last written 2026-10-07 11:16Z_
 | Next | M2 Go live on AWS and harden | Production environment, real email, observability, backups, privacy tooling | sketch only | BACKLOG |
 | Next | M3 Class yearbook | Class space, invites, roles, assembling many students' pages into one book | sketch only | BACKLOG |
 | Later | M4+ | Print-shop-ready PDF (bleed, CMYK note), under-18 support, more social providers, free-form editor, in-app print ordering | direction only | idea |
+
+**Epics** (PRDs and task specs live in `.team/epics/`; status only on the board):
+
+| Epic | PRD | Milestone | Goal | Status |
+|---|---|---|---|---|
+| E02-auth | [PRD](epics/E02-auth/PRD.md) | M1 | Accounts and sign-in: password, email verification, Google | active |
+| E04-friends-notes | [PRD](epics/E04-friends-notes/PRD.md) | M1 | Collection links, public note submission, moderation | planned |
 
 **M0 exit.** From a clean checkout: `make up && make migrate` starts MySQL and MinIO; `make build test lint` is green; `GET /healthz` is 200 and `GET /readyz` reflects the database; the web dev server shows the home page with a working EN/VI switcher and an API status badge; CI is green on a PR; the PDF engine ADR is merged with a go/no-go verdict backed by a Vietnamese-text sample, 300 DPI image test and a memory/time measurement; no secrets in the repo.
 
@@ -127,6 +135,27 @@ _Board last written 2026-10-07 11:16Z_
 **Evidence:** QA_PASS twice (adversarial testing on a throwaway DB: timing, CSRF, rate limits, spoofed headers, parallel logins, injection, session replay, log search) and my own review of the full auth path at 77924c1: no vulnerability found. NFKC passwords and NFC emails and names are in (L-09), so Vietnamese users are not locked out by different devices.
 **Known limits (acceptable now):** rate limits are per process (fine for one API task; M2 hardening T-031 moves them to the edge), registration reveals "email already registered" (a deliberate UX trade-off, bounded by the per-IP limit).
 **Recommendation:** approve (`bin/team approve T-006`). I will merge T-004 first so this PR runs through the new CI before it lands.
+
+### Q-005 — CAPTCHA on the public friends' note form?
+- **Status:** OPEN
+- **Asked:** 2026-10-07 11:28Z
+- **Blocks:** —
+- **Recommendation:** A: no CAPTCHA now, hook in place
+- **Answer:** _(pending)_
+
+**Decision needed:** Should the public note form (friends sending a message and photos through a link, no account) have a CAPTCHA?
+**Why now / what it blocks:** It does not block T-012 or T-034: the endpoint ships with a no-op verifier hook either way. It decides whether the web form (T-018) shows a challenge.
+**Constraints:** The form is used by friends on phones, often in a hurry; it accepts text and up to three photos; it is the only unauthenticated upload in the product. Protections already specified: unguessable link, per-IP and per-link rate limits, 300 notes per link, size caps, every note pending until the owner approves it, a honeypot field, a verified-email owner.
+
+| Option | Pros | Cons | Cost / effort | Risk & lock-in | Reversibility |
+|---|---|---|---|---|---|
+| A (recommended) No CAPTCHA now, hook in place | No friction for friends; nothing extra to configure; the existing limits already bound the damage to one link | A leaked link could be spammed up to the caps (the owner only has to hide or revoke) | None now | Low: worst case is junk notes on one book | Easy: switch it on later without changing the API |
+| B Cloudflare Turnstile from the start | Blocks most bots; free; mostly invisible to humans | Adds a third party that sees visitors; needs a site key and secret; can fail on some phones or privacy browsers | About one small task plus an owner setup step | Vendor dependency | Easy to remove |
+| C hCaptcha / reCAPTCHA | Familiar | More friction, more tracking, privacy concerns for a student product | Same as B | Vendor dependency | Easy to remove |
+
+**Recommendation:** Option A, because the damage from abuse is bounded (caps, pending-by-default moderation, revocable links) and friction on the contributor path is the larger product risk. Revisit with Option B the first time a link is actually spammed.
+**If undecided:** Build with the hook and no CAPTCHA (Option A).
+**Revisit when:** a collection receives spam, or the product opens to a public (non-link) submission form.
 
 <!-- questions:end -->
 
@@ -684,7 +713,7 @@ Tokens are bearer secrets: hash at rest, never log them, single use, short expir
 #### Comments
 
 ### T-008 — Yearbook CRUD and profile information
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -692,10 +721,10 @@ Tokens are bearer secrets: hash at rest, never log them, single use, short expir
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-008-yearbook-crud-and-profile-information
 - **PR:** —
-- **Updated:** 2026-10-06 10:12Z by leader
+- **Updated:** 2026-10-07 11:26Z by dev
 - **Comments-seen:** 0
 
 #### Description
@@ -835,7 +864,7 @@ Decode-bomb protection before allocation; bounded memory per request (read with 
 - 2026-10-07 02:47Z · leader · Leader note from the T-001 review: the server timeouts are ReadTimeout 15 s and WriteTimeout 30 s (global, from T-001). A 10 MiB upload over a slow phone connection, or a streamed download, can exceed them. Do not raise the global values; extend the deadline per route with http.NewResponseController(w).SetReadDeadline / SetWriteDeadline (the statusWriter already implements Unwrap) and add a test. Same applies to the PDF download in T-014.
 
 ### T-010 — Template spec and PDF page renderer
-- **Status:** IN_PROGRESS
+- **Status:** IN_QA
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -843,10 +872,10 @@ Decode-bomb protection before allocation; bounded memory per request (read with 
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** qa
 - **Branch:** task/t-010-template-spec-and-pdf-page-renderer
-- **PR:** —
-- **Updated:** 2026-10-07 11:04Z by dev
+- **PR:** https://github.com/danyaa666/smemories/pull/16
+- **Updated:** 2026-10-07 11:25Z by qa
 - **Comments-seen:** 3
 
 #### Description
@@ -911,57 +940,62 @@ Template JSON is trusted (embedded), but the validator still bounds element coun
 - 2026-10-07 06:09Z · leader · Leader: ADR 0002 is accepted (board D-12) and its section 'What T-010 must do' (9 items) is binding for this task: import codeberg.org/go-pdf/fpdf (go 1.26.0); NFC-normalise all text; split runs with the splitRuns logic and never pass a rune above U+FFFF to fpdf (emoji via toPUA aliases); ship the prepared internal/pdf/fonts/NotoEmoji-Regular.ttf (do not swap in an unmodified one); keep spaces in the primary font; cover-cropped images always use ImageOptions.AllowNegativePosition=true, pinned by a rendered-page test like TestQA_CoverIsFullBleed; keep a test pinning the non-BMP panic (TestFpdf_NonBMPRunePanics); delete internal/pdf/spike and its dev-only deps (go-pdfium, wazero, gopdf) with go mod tidy, keeping x/image and x/text. Where the ADR differs from AC5 the ADR wins: a rune found in no font is drawn as '?' and reported in Report.Warnings (code missing_glyph). Emoji are monochrome outlines by design; colour emoji is out of scope.
 - 2026-10-07 06:25Z · dev · Dev: I claimed this by mistake just before the second usage gate, which answered SLEEP (cache stale), so I did no work and stopped. Status is IN_PROGRESS but empty (a worktree exists, no commits). Leader: please reset to TODO (or reclaim). Nothing to review.
 - 2026-10-07 06:27Z · leader · Reclaimed by leader: the dev claimed it, then its second usage-gate check answered SLEEP because the usage cache had gone stale (the 5-minute freshness guard), so no work was done. Worktree is empty and will be reused. Nothing lost.
+- 2026-10-07 11:24Z · dev · All 10 ACs + ADR 0002 items 1-9. Test: go test -race ./..., make lint, samples docs/templates/*.pdf (pdfcpu strict ok). Known: (1) rendered-page cover test reads drawing commands since go-pdfium is gone, fails if AllowNegativePosition dropped; (2) fpdf orders equal-width images randomly, so byte-identical output needs distinct photo widths (docs/templates.md, ADR addendum), leader may want a follow-up; (3) extra warning code extra_photos. CI go, go-integration, web, security green.
 
 ### T-011 — Google sign-in (OIDC + PKCE, account linking)
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
-- **Depends-on:** T-006
+- **Depends-on:** T-006, T-007
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-06 10:13Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-07 11:28Z by leader
+- **Comments-seen:** 1
 
-#### Intent
-Sign in with Google via OIDC authorization-code flow with PKCE and state/nonce checks. Link to an existing account only when Google reports a verified email matching the account; otherwise create a social-only account (password_hash NULL). Tests run against a fake in-process OIDC provider so no Google credentials are needed. Owner must create the Google OAuth client for real use (M2).
+**Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/01-google-sign-in.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E02-auth · **PRD:** `.team/epics/E02-auth/PRD.md`
 
-_BACKLOG: needs a full spec (description, acceptance criteria, design, test plan) before it moves to TODO._
+Google sign-in with OIDC and PKCE and safe account linking (including the pre-hijacking defence).
 
 #### Comments
+- 2026-10-07 11:28Z · leader · Promoted: full spec written in .team/epics/E02-auth/01-google-sign-in.md (first task in the new epic-file layout).
 
-### T-012 — Notes collection links and public submit API
-- **Status:** BACKLOG
+### T-012 — Collection links (owner API and public lookup)
+- **Status:** TODO
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
-- **Depends-on:** T-008, T-009, T-028
+- **Depends-on:** T-007, T-008
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-07 02:47Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-07 11:28Z by leader
+- **Comments-seen:** 1
 
-#### Intent
-Owner creates, lists, revokes and sets a deadline on an unguessable collection link (long random token, stored hashed). Anonymous visitors submit name, relationship, message (emoji allowed, length-capped) and up to 3 photos through the T-009 pipeline; submissions start as pending. Requires a verified owner email to create a link. Abuse control: strict per-IP and per-link rate limits, size caps; decide at spec time whether to add a free CAPTCHA (for example Cloudflare Turnstile) - owner question then. Public-endpoint security review required.
+**Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/01-collection-links.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E04-friends-notes · **PRD:** `.team/epics/E04-friends-notes/PRD.md`
 
-_BACKLOG: needs a full spec (description, acceptance criteria, design, test plan) before it moves to TODO._
+Owner-created private collection links (create, list, revoke) and the public lookup the contributor form needs.
 
 #### Comments
+- 2026-10-07 11:28Z · leader · Promoted: full spec written in .team/epics/E04-friends-notes/01-collection-links.md. Needs T-007 (verified-email check) and T-008 (yearbooks); public submission is the new T-034.
 
 ### T-013 — Notes moderation API (approve, hide, reorder, delete)
 - **Status:** BACKLOG
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
-- **Depends-on:** T-012
+- **Depends-on:** T-034
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
@@ -1072,7 +1106,7 @@ _BACKLOG: needs a full spec (description, acceptance criteria, design, test plan
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
-- **Depends-on:** T-003, T-012
+- **Depends-on:** T-003, T-034
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
@@ -1482,6 +1516,29 @@ Change: cancel-in-progress: ${{ github.event_name == 'pull_request' }} in .githu
 Risk high (CI): needs owner approval to merge. Tiny change.
 
 _BACKLOG: needs a full spec before it moves to TODO (acceptance: a push to develop followed within a minute by a second push leaves both runs to finish; a superseded PR run is still cancelled)._
+
+#### Comments
+
+### T-034 — Public note submission (text and photos)
+- **Status:** TODO
+- **Priority:** P1
+- **Type:** feature
+- **Milestone:** M1
+- **Depends-on:** T-012, T-009
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-07 11:28Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/02-public-note-submission.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E04-friends-notes · **PRD:** `.team/epics/E04-friends-notes/PRD.md`
+
+Public endpoint where a friend with a collection link submits a note with text, emoji and up to three photos; stored as pending.
 
 #### Comments
 
