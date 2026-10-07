@@ -11,27 +11,47 @@ func TestNormalizeEmail(t *testing.T) {
 	}
 }
 
+func TestNormalizeEmailNFC(t *testing.T) {
+	// "\u1ec5" precomposed vs. e + dot below... any NFD spelling must collapse to the NFC one, lower-cased.
+	nfc, nfd := "nguy\u1ec5n@example.com", "nguye\u0302\u0303n@Example.com"
+	if nfc == nfd {
+		t.Fatal("fixtures must differ in bytes")
+	}
+	if a, b := normalizeEmail(nfc), normalizeEmail(" "+nfd+" "); a != nfc || b != nfc {
+		t.Errorf("%q %q, want %q", a, b, nfc)
+	}
+}
+
 func TestValidEmail(t *testing.T) {
 	long := strings.Repeat("a", 243) + "@example.com" // 255 chars
 	for e, want := range map[string]bool{
-		"a@example.com":                           true,
-		"first.last+tag@sub.example.vn":           true,
-		"đặng@example.vn":                         true,
-		strings.Repeat("a", 242) + "@example.com": true, // exactly 254
-		long:                                  false,
-		"":                                    false,
-		"plain":                               false,
-		"a@localhost":                         false, // domain needs a dot
-		"a@.example.com":                      false,
-		"a@example.com.":                      false,
-		"@example.com":                        false,
-		"Alice <a@example.com>":               false, // display name form
-		"a@example.com, b@example.com":        false,
-		"a b@example.com":                     false,
-		"a@exa mple.com":                      false,
-		"(comment)a@example.com":              false,
-		"a@example.com\r\nBcc: x@example.com": false,
-		"'; DROP TABLE users;--@example.com":  false,
+		"a@example.com":                 true,
+		"first.last+tag@sub.example.vn": true,
+		"đặng@example.vn":               true,
+		strings.Repeat("a", 64) + "@" + strings.Repeat("b", 63) + "." + strings.Repeat("b", 63) + "." + strings.Repeat("b", 57) + ".com": true, // exactly 254
+		long:                                     false,
+		"":                                       false,
+		"plain":                                  false,
+		"a@localhost":                            false, // domain needs a dot
+		"a@.example.com":                         false,
+		"a@example.com.":                         false,
+		"@example.com":                           false,
+		"Alice <a@example.com>":                  false, // display name form
+		"a@example.com, b@example.com":           false,
+		"a b@example.com":                        false,
+		"a@exa mple.com":                         false,
+		"(comment)a@example.com":                 false,
+		"a@example.com\r\nBcc: x@example.com":    false,
+		"'; DROP TABLE users;--@example.com":     false,
+		strings.Repeat("a", 64) + "@example.com": true,  // local part exactly 64 bytes
+		strings.Repeat("a", 65) + "@example.com": false, // 65 bytes
+		strings.Repeat("\u0111", 32) + "@example.com": true,  // 64 bytes (2 bytes per character)
+		strings.Repeat("\u0111", 33) + "@example.com": false, // 66 bytes
+		"a\u200bb@example.com":                        false, // Cf: zero-width space
+		"a\u202eb@example.com":                        false, // Cf: right-to-left override
+		"\ufeffa@example.com":                         false, // Cf: BOM
+		"a\x01b@example.com":                          false, // Cc
+		"a\u0085b@example.com":                        false, // Cc: C1 NEL
 	} {
 		if got := validEmail(e); got != want {
 			t.Errorf("validEmail(%q) = %v, want %v", e, got, want)
@@ -64,19 +84,30 @@ func TestValidPassword(t *testing.T) {
 
 func TestCleanDisplayName(t *testing.T) {
 	for in, want := range map[string]string{
-		"  Đặng Thị Hồng 🎓 ":     "Đặng Thị Hồng 🎓",
-		"A":                      "A",
-		strings.Repeat("x", 100): strings.Repeat("x", 100),
-		strings.Repeat("đ", 100): strings.Repeat("đ", 100),
-		"":                       "",
-		"   ":                    "",
-		strings.Repeat("x", 101): "",
-		"line\nbreak":            "",
-		"tab\there":              "",
-		"nul\x00byte":            "",
-		"esc\x1b[31m":            "",
-		"del\x7f":                "",
-		"bad\xffutf8":            "",
+		"  Đặng Thị Hồng 🎓 ":                   "Đặng Thị Hồng 🎓",
+		"A":                                    "A",
+		strings.Repeat("x", 100):               strings.Repeat("x", 100),
+		strings.Repeat("đ", 100):               strings.Repeat("đ", 100),
+		"":                                     "",
+		"   ":                                  "",
+		strings.Repeat("x", 101):               "",
+		"line\nbreak":                          "",
+		"tab\there":                            "",
+		"nul\x00byte":                          "",
+		"esc\x1b[31m":                          "",
+		"del\x7f":                              "",
+		"bad\xffutf8":                          "",
+		"Vi\u1ec7t \U0001F468\u200d\U0001F393": "Vi\u1ec7t \U0001F468\u200d\U0001F393", // ZWJ emoji sequence is fine
+		"a\u200bb":                             "",                                     // Cf: zero-width space
+		"\u200b\u200b":                         "",                                     // only invisible characters
+		"a\u202eb":                             "",                                     // Cf: right-to-left override
+		"a\u2066b\u2069":                       "",                                     // Cf: bidi isolates
+		"a\u200eb":                             "",                                     // Cf: LRM
+		"a\u200fb":                             "",                                     // Cf: RLM
+		"a\ufeffb":                             "",                                     // Cf: BOM
+		"a\u2028b":                             "",                                     // Zl: line separator
+		"a\u2029b":                             "",                                     // Zp: paragraph separator
+		"a\u0085b":                             "",                                     // Cc: C1 NEL
 	} {
 		got, ok := cleanDisplayName(in)
 		if got != want || ok != (want != "") {

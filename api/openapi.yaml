@@ -62,9 +62,10 @@ paths:
       tags: [auth]
       summary: Create an account and sign in
       description: >-
-        Email is trimmed and lower-cased; a duplicate (case-insensitive) is `409 email_taken`.
-        Password: 10-128 characters and not equal to the email. Display name: 1-100 characters
-        after trimming, no control characters. Rate limit: 5 per hour per IP (counted once the
+        Email is trimmed, lower-cased and normalised to NFC; a duplicate (case-insensitive, and
+        NFC/NFD spellings are the same address) is `409 email_taken`. Password: 10-128 characters
+        and not equal to the email. Display name: 1-100 characters after trimming, no control or
+        format characters (see the field). Rate limit: 5 per hour per IP (counted once the
         input is valid). A cookie-less request needs no Origin; one that carries a session cookie
         must satisfy the CSRF origin check.
       requestBody:
@@ -75,7 +76,14 @@ paths:
               type: object
               required: [email, password, display_name]
               properties:
-                email: {type: string, maxLength: 254}
+                email:
+                  type: string
+                  maxLength: 254
+                  description: >-
+                    Trimmed, lower-cased and normalised to Unicode NFC, so NFC and NFD spellings of one
+                    address are the same account (also at login). The local part (before the last `@`)
+                    is at most 64 bytes, and the address contains no control (Cc) or format (Cf)
+                    characters; otherwise `invalid_email`.
                 password:
                   type: string
                   format: password
@@ -88,7 +96,11 @@ paths:
                   type: string
                   minLength: 1
                   maxLength: 100
-                  description: Normalised to Unicode NFC, then trimmed; stored and returned in that form.
+                  description: >-
+                    Normalised to Unicode NFC, then trimmed; stored and returned in that form. Control
+                    characters (Cc), format characters (Cf: zero-width space, bidi overrides and isolates,
+                    LRM/RLM, BOM) except U+200D (zero-width joiner, used in emoji sequences), and line or
+                    paragraph separators (Zl, Zp) are rejected with `invalid_display_name`.
       responses:
         "201":
           description: Account created; the session cookie is set.
@@ -132,7 +144,7 @@ paths:
               type: object
               required: [email, password]
               properties:
-                email: {type: string}
+                email: {type: string, description: "Trimmed, lower-cased and NFC-normalised as at registration, so either Unicode spelling signs in."}
                 password:
                   type: string
                   format: password

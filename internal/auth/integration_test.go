@@ -461,6 +461,40 @@ func TestUnicodeNormalisation(t *testing.T) {
 	}
 }
 
+// Hardening: the NFC and NFD spellings of one address are one account.
+func TestEmailNFCvsNFD(t *testing.T) {
+	const nfc, nfd = "nguy\u1ec5n@example.com", "nguye\u0302\u0303n@example.com"
+	if nfc == nfd {
+		t.Fatal("fixtures must differ in bytes")
+	}
+	e := newEnv(t, opts{})
+	want(t, e.register(nfc, testPW, "A"), 201, "")
+	want(t, e.register(nfd, testPW, "B"), 409, "email_taken")
+	if n := e.count("SELECT COUNT(*) FROM users"); n != 1 {
+		t.Fatalf("%d users", n)
+	}
+	var stored string
+	if err := e.db.QueryRow("SELECT email FROM users").Scan(&stored); err != nil || stored != nfc {
+		t.Fatalf("stored email %q (%v)", stored, err)
+	}
+	want(t, e.login(nfc, testPW, ""), 200, "")
+	want(t, e.login(nfd, testPW, ""), 200, "")
+}
+
+// Hardening: local part over 64 bytes and control/format characters in an address are invalid_email;
+// bidi-override, zero-width and line-separator display names are invalid_display_name.
+func TestEmailAndDisplayNameHardening(t *testing.T) {
+	e := newEnv(t, opts{})
+	for _, em := range []string{strings.Repeat("a", 65) + "@example.com", "a\u200bb@example.com", "a\u202eb@example.com"} {
+		want(t, e.register(em, testPW, "A"), 400, "invalid_email")
+	}
+	want(t, e.register(strings.Repeat("a", 64)+"@example.com", testPW, "A"), 201, "")
+	for _, name := range []string{"a\u200bb", "\u200b", "a\u202eb", "a\u2066b\u2069", "a\u200eb", "a\ufeffb", "a\u2028b", "a\u2029b"} {
+		want(t, e.register("n@example.com", testPW, name), 400, "invalid_display_name")
+	}
+	want(t, e.register("n@example.com", testPW, "Vi\u1ec7t \U0001F468\u200d\U0001F393"), 201, "")
+}
+
 // AC3 timing: the unknown-email path takes a hashing slot just like a real verify.
 func TestUnknownEmailLoginDoesTheSameHashingWork(t *testing.T) {
 	e := newEnv(t, opts{maxHashes: 1, hashWait: 30 * time.Millisecond})
@@ -535,6 +569,8 @@ func TestParallelLoginsRespectTheHashCap(t *testing.T) {
 	if got[200]+got[401] == 0 || got[503] == 0 {
 		t.Errorf("expected some answered and some busy requests, got %v", got)
 	}
+	mu.Lock() // the sampler may still be running for one more tick
+	defer mu.Unlock()
 	if maxInFlight > 2 {
 		t.Errorf("%d hashes in flight, cap is 2", maxInFlight)
 	}

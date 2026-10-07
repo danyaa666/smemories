@@ -11,9 +11,11 @@ import (
 
 const (
 	maxEmailLen       = 254
+	maxEmailLocalLen  = 64 // bytes, RFC 5321
 	minPasswordLen    = 10
 	maxPasswordLen    = 128
 	maxDisplayNameLen = 100
+	zwj               = '\u200d'
 )
 
 // Validation error codes returned in the error envelope.
@@ -23,15 +25,24 @@ const (
 	codeInvalidDisplayName = "invalid_display_name"
 )
 
-// normalizeEmail trims and lower-cases an address; the result is what is stored and looked up.
-func normalizeEmail(s string) string { return strings.ToLower(strings.TrimSpace(s)) }
+// normalizeEmail trims, lower-cases and NFC-normalises an address (so the NFC and NFD spellings of
+// the same address are one account); the result is what is stored and looked up. Never change it
+// once users exist.
+func normalizeEmail(s string) string {
+	return norm.NFC.String(strings.ToLower(strings.TrimSpace(norm.NFC.String(s))))
+}
 
 // validEmail reports whether an already normalised address is acceptable: at most 254
-// characters, a bare addr-spec that net/mail parses (no display name, no comments), and
-// a domain containing a dot.
+// characters, a local part of at most 64 bytes, no control or format characters (Cc, Cf), a bare
+// addr-spec that net/mail parses (no display name, no comments), and a domain containing a dot.
 func validEmail(e string) bool {
 	if e == "" || len(e) > maxEmailLen {
 		return false
+	}
+	for _, r := range e {
+		if unicode.Is(unicode.Cc, r) || unicode.Is(unicode.Cf, r) {
+			return false
+		}
 	}
 	a, err := mail.ParseAddress(e)
 	if err != nil || a.Name != "" || a.Address != e {
@@ -39,7 +50,7 @@ func validEmail(e string) bool {
 	}
 	at := strings.LastIndexByte(e, '@')
 	domain := e[at+1:]
-	return at > 0 && strings.Contains(domain, ".") && !strings.HasPrefix(domain, ".") && !strings.HasSuffix(domain, ".")
+	return at > 0 && at <= maxEmailLocalLen && strings.Contains(domain, ".") && !strings.HasPrefix(domain, ".") && !strings.HasSuffix(domain, ".")
 }
 
 // normalizePassword applies NFKC (decision L-09) so the same password typed on different
@@ -55,7 +66,9 @@ func validPassword(password, email string) bool {
 	return n >= minPasswordLen && n <= maxPasswordLen && !strings.EqualFold(password, email)
 }
 
-// cleanDisplayName normalises name to NFC, trims it and reports whether it has 1-100 characters and no control characters.
+// cleanDisplayName normalises name to NFC, trims it and reports whether it has 1-100 characters, no
+// control characters (Cc), no format characters (Cf: zero-width space, bidi overrides/isolates, LRM/RLM,
+// BOM) except U+200D (ZWJ, used in emoji sequences), and no line/paragraph separators (Zl, Zp).
 func cleanDisplayName(name string) (string, bool) {
 	name = strings.TrimSpace(norm.NFC.String(name))
 	n := utf8.RuneCountInString(name)
@@ -63,7 +76,7 @@ func cleanDisplayName(name string) (string, bool) {
 		return "", false
 	}
 	for _, r := range name {
-		if unicode.IsControl(r) || r == utf8.RuneError {
+		if unicode.IsControl(r) || r == utf8.RuneError || unicode.In(r, unicode.Cf, unicode.Zl, unicode.Zp) && r != zwj {
 			return "", false
 		}
 	}
