@@ -91,13 +91,14 @@ Structured fields for the content that goes into the book:
 
 ## Development
 
-Prerequisites: Go 1.26 (the `go` directive in `go.mod`), `make`, Docker with Compose, and golangci-lint v2 (2.8.0 was used; run `golangci-lint run` and `golangci-lint run --build-tags integration`, both must report 0 issues; CI wiring is T-004).
+Prerequisites: Go 1.26 (the `go` directive in `go.mod`), `make`, Docker with Compose, and golangci-lint v2 (2.8.0, the version CI pins; `make lint` runs it with `.golangci.yml`, which also covers the integration-tagged files; CI runs the same, see [docs/ci.md](docs/ci.md)).
 
 | Command | What it does |
 |---|---|
-| `make build` | Builds the API to `bin/smemories-api` |
-| `make test` | Runs the Go tests with the race detector |
-| `make lint` | Fails (listing the files) if a tracked or new Go file is not gofmt-clean, then runs `go vet` (with and without the `integration` tag) |
+| `make build` | Builds the API to `bin/smemories-api` and the web app to `web/dist` |
+| `make test` | Runs the Go tests with the race detector, then the web tests (vitest) |
+| `make lint` | Fails (listing the files) if a tracked or new Go file is not gofmt-clean, runs `go vet` (with and without the `integration` tag), then the web checks (eslint, prettier, `tsc`, i18n key parity, stale API types) |
+| `make web-install` | `npm ci` in `web/` (Node 22, see `web/.nvmrc`); the other web targets do it on demand. Dev server: `cd web && npm run dev` (proxies `/api/*` to `localhost:8080`) |
 | `make run` | Runs the API from source (needs the stack below: `SMEM_DB_DSN` is required) |
 | `make up` / `make down` | Start (and wait for) / stop MySQL 8.4 and MinIO; creates `.env` from `.env.example` first. Ports bind to `127.0.0.1`. `make up` also (re)applies the `smem_test_%` grants, so it works on older MySQL volumes |
 | `make migrate` / `make migrate-down` | Apply all migrations / roll back the last one |

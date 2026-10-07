@@ -1,0 +1,28 @@
+# Weekly dependency updates, one grouped pull request per ecosystem, against develop
+# (the integration branch). Runs from the default branch's copy of this file.
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: /
+    target-branch: develop
+    schedule:
+      interval: weekly
+    groups:
+      go-dependencies:
+        patterns: ["*"]
+  - package-ecosystem: npm
+    directory: /web
+    target-branch: develop
+    schedule:
+      interval: weekly
+    groups:
+      web-dependencies:
+        patterns: ["*"]
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: develop
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns: ["*"]

@@ -1,0 +1,21 @@
+{
+  "app": {
+    "name": "SMemories",
+    "tagline": "Thiết kế, thu thập và in kỷ yếu của riêng bạn."
+  },
+  "language": {
+    "label": "Ngôn ngữ",
+    "en": "English",
+    "vi": "Tiếng Việt"
+  },
+  "api": {
+    "checking": "API: đang kiểm tra…",
+    "ok": "API: hoạt động",
+    "unreachable": "API: không kết nối được"
+  },
+  "notFound": {
+    "title": "Không tìm thấy trang",
+    "body": "Trang bạn đang tìm không tồn tại.",
+    "home": "Về trang chủ"
+  }
+}
