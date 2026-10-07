@@ -1,4 +1,4 @@
-module awesomeProject1
+module github.com/danyaa666/smemories
 
 go 1.26.0
 
