@@ -12,13 +12,13 @@
 |---|---:|---|
 | BACKLOG | 17 | T-011, T-012, T-013, T-014, T-015, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027 |
 | TODO | 8 | T-002, T-003, T-004, T-006, T-007, T-008, T-009, T-010 |
-| IN_PROGRESS | 2 | T-001, T-005 |
+| READY_FOR_QA | 2 | T-001, T-005 |
 
 **Awaiting your review (MERGED):** nothing
 
-**Open questions for you:** Q-001 (IaC tool for AWS (OpenTofu/Terraform, CDK, or CloudFormation)); Q-002 (Roadmap order after M1: go-live (M2) before class yearbook (M3)?)
+**Open questions for you:** none
 
-_Board last written 2026-10-07 02:17Z_
+_Board last written 2026-10-07 02:37Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -61,11 +61,11 @@ _Board last written 2026-10-07 02:17Z_
 <!-- questions:start -->
 
 ### Q-001 — IaC tool for AWS (OpenTofu/Terraform, CDK, or CloudFormation)
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-06 10:13Z
 - **Blocks:** T-023
 - **Recommendation:** A: OpenTofu / Terraform
-- **Answer:** _(pending)_
+- **Answer:** A
 
 **Decision needed:** Which tool defines the AWS infrastructure (Fargate, RDS MySQL, S3, CloudFront) as code?
 **Why now / what it blocks:** Only T-023 (AWS IaC and deploy pipeline, M2). M0 and M1 are unaffected, so there is no hurry; answer before M1 is nearly done.
@@ -82,11 +82,11 @@ _Board last written 2026-10-07 02:17Z_
 **Revisit when:** you adopt a platform team standard, or move off AWS.
 
 ### Q-002 — Roadmap order after M1: go-live (M2) before class yearbook (M3)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-06 10:13Z
 - **Blocks:** —
 - **Recommendation:** A: M2 go-live first, then M3 class
-- **Answer:** _(pending)_
+- **Answer:** A
 
 **Decision needed:** After M1, build "go live on AWS" (M2) first, or the class yearbook (M3) first?
 **Why now / what it blocks:** Only the order of M2 and M3. M0 and M1 are the same either way.
@@ -118,6 +118,8 @@ Owner decisions (2026-10-06, `/team-init` interview). "Rejected" lists the optio
 | D-07 | **Auth: in-house in Go.** Email+password (argon2id) and Google sign-in (OIDC, PKCE); other social providers later. | Agents must test locally with no cloud credentials; no per-user fees; no vendor lock-in. Cost: we own the security details, so every auth task is `Risk: high` and needs `bin/team approve`. | Amazon Cognito; Clerk/Auth0/Supabase; email+password only | Compliance requires a managed IdP, or MAU grows large |
 | D-08 | **Hosting: AWS (Fargate + RDS MySQL + S3 + CloudFront).** | Owner choice; provisioning is M2 and owner-assisted (account, billing, domain, Google OAuth client). Local dev is docker-compose either way. IaC tool undecided — see Q-001. | Container PaaS + R2; decide later | — |
 | D-09 | **Repository: public `github.com/danyaa666/smemories`.** | Owner choice. The board (`.team/`) and all code are public — never commit secrets, real data, or student photos. Module path `github.com/danyaa666/smemories`. | Private; owner-created repo | — |
+| D-10 | **IaC tool: OpenTofu / Terraform (HCL).** | Answered `A` on the board (2026-10-07, Q-001). State in an S3 backend with locking; deploys authenticate with GitHub OIDC (no long-lived AWS keys). Used by T-023 (M2). | AWS CDK; CloudFormation/SAM | A platform standard appears, or the project leaves AWS |
+| D-11 | **Roadmap order: M2 go-live before M3 class yearbook.** | Answered `A` on the board (2026-10-07, Q-002). Prove deployment, email, backups and deletion with a small user base before holding a whole class's data. | M3 class first | A school or class pilot gets a date |
 
 Leader decisions (low-risk, inside the approved stack):
 
@@ -160,7 +162,7 @@ Task block anatomy (leader-written; dev/qa touch only `Status`, `Branch`, `PR`, 
 <!-- tasks:start -->
 
 ### T-001 — Repo foundation and API skeleton
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P1
 - **Type:** infra
 - **Milestone:** M0
@@ -168,11 +170,11 @@ Task block anatomy (leader-written; dev/qa touch only `Status`, `Branch`, `PR`, 
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-001-repo-foundation-and-api-skeleton
-- **PR:** —
-- **Updated:** 2026-10-07 02:17Z by dev
-- **Comments-seen:** 0
+- **PR:** https://github.com/danyaa666/smemories/pull/1
+- **Updated:** 2026-10-07 02:37Z by leader (repair)
+- **Comments-seen:** 1
 
 #### Description
 Replace the GoLand "hello world" stub with the skeleton every other task builds on: module path, directory layout, an HTTP server with shared middleware and the shared error envelope, env-based config, the OpenAPI/Postman starting points and the Makefile. Nothing product-specific yet. Decisions: board §4 D-05, L-01, L-04, L-07; conventions §5.
@@ -213,6 +215,7 @@ No secrets in the repo (public). Do not log bodies, cookies or authorization hea
 - QA should probe: `X-Request-Id` containing CR/LF or 10 kB; 2 MiB POST body; `kill -TERM` while a slow request is in flight; run `make` targets from a fresh clone; run the Postman collection twice back to back.
 
 #### Comments
+- 2026-10-07 02:37Z · leader · Board repair by leader: the dev's READY_FOR_QA transition (events.jsonl 02:20:20Z) and PR link were lost from the README (a stale overwrite); restored from the event log and `gh pr view 1` (task/t-001-repo-foundation-and-api-skeleton -> develop, open, mergeable, no CI yet). Dev hand-back, relayed and NOT yet verified (QA to confirm): all 9 AC covered by tests; `make lint build test` green; live binary checked /healthz, 404/405 envelopes, SIGTERM exit 0, invalid SMEM_ENV exits 1 naming the variable; Newman collection passed twice back to back (10/10). Deviation from the design diagram: the access log wraps recover, so a recovered panic logs as 500 and security headers also appear on 500s. No new dependencies. PR #1 and PR #2 will conflict trivially on go.mod and Makefile; dev rebases the second after the first merges.
 
 ### T-002 — Local stack (MySQL + MinIO), migrations and readiness
 - **Status:** TODO
@@ -385,7 +388,7 @@ Least-privilege `GITHUB_TOKEN`; SHA-pinned actions (supply chain); no `pull_requ
 #### Comments
 
 ### T-005 — Spike: choose the pure-Go PDF engine
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M0
@@ -393,10 +396,10 @@ Least-privilege `GITHUB_TOKEN`; SHA-pinned actions (supply chain); no `pull_requ
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-005-spike-choose-the-pure-go-pdf-engine
-- **PR:** —
-- **Updated:** 2026-10-07 02:17Z by dev
+- **PR:** https://github.com/danyaa666/smemories/pull/2
+- **Updated:** 2026-10-07 02:35Z by dev
 - **Comments-seen:** 0
 
 #### Description
@@ -433,6 +436,8 @@ Only trusted synthetic fixtures. Photos for the benchmark must be generated, nev
 - QA should probe: re-run `make spike` on their machine and compare against the ADR within a reasonable margin; open each generated PDF and the PNGs and check diacritics and emoji by eye; check the licence claims against each repository.
 
 #### Comments
+- 2026-10-07 02:35Z · dev · VERDICT: GO codeberg.org/go-pdf/fpdf v0.12.0 (gopdf v0.38.1 close second). Both pass C1-C7; tie-break (text wrapping, memory 442 vs 539 MB) picks fpdf. Caveats: (1) github.com/go-pdf/fpdf is archived, the live repo is on Codeberg, go directive becomes 1.26.0; (2) fpdf panics on runes above U+FFFF, so emoji use PUA aliases in the emoji font + a rune-run splitter; see ADR 'What T-010 must do'. Full table: docs/adr/0002-pdf-engine.md, PR #2. Spike adds go.mod deps (fpdf, gopdf, x/image, x/text, go-pdfium); T-010 should delete internal/pdf/spike and tidy. PR #1 and #2 will conflict trivially on go.mod and Makefile; I can rebase the second one after the first merges.
+- 2026-10-07 02:35Z · dev · Spike done, verdict GO fpdf (ADR docs/adr/0002-pdf-engine.md). QA: run make spike, compare numbers (wall/RSS within reason), eyeball docs/adr/0002-assets/*.png and out/*.pdf, check licence claims. All spike code behind the spike build tag. Known: first commit had a stray binary, removed in the second; squash-merge please.
 
 ### T-006 — Email + password auth core (register, login, sessions)
 - **Status:** TODO
@@ -1203,3 +1208,4 @@ _BACKLOG: needs a full spec (description, acceptance criteria, design, test plan
 ## 7. Change log
 
 - 2026-10-06 — Board initialised by `/team-init`. Owner decisions D-01…D-09 recorded; M0 and M1 specified; M2/M3 sketched in BACKLOG.
+- 2026-10-07 — First dev run: T-001 and T-005 reached READY_FOR_QA (PRs #1, #2); T-005 verdict GO `codeberg.org/go-pdf/fpdf`. Q-001 and Q-002 answered `A` on the board, recorded as D-10 and D-11. T-001's READY_FOR_QA update had been lost from the board and was restored from the event log.
