@@ -16,11 +16,12 @@ test:
 	$(MAKE) web-test
 
 # gofmt checks tracked and new (not ignored) Go files, so .team/worktrees/* is never scanned.
-# golangci-lint joins this target in T-004; the web checks (eslint, tsc, i18n, API types) run via web-lint.
+# golangci-lint v2 (see .golangci.yml; CI pins the version) and the web checks (eslint, tsc, i18n, API types).
 lint:
 	@out="$$(git ls-files -co --exclude-standard '*.go' | xargs gofmt -l)"; if [ -n "$$out" ]; then echo "gofmt needed on:"; echo "$$out"; exit 1; fi
 	go vet ./...
 	go vet -tags integration ./...
+	golangci-lint run
 	$(MAKE) web-lint
 
 run:
