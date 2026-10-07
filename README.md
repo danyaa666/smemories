@@ -89,6 +89,32 @@ Structured fields for the content that goes into the book:
 - **Hosting:** AWS (Fargate, RDS MySQL, S3, CloudFront), planned for milestone M2.
 - **Local development:** Docker Compose runs MySQL and MinIO; no cloud credentials are needed.
 
+## Development
+
+Prerequisites: Go 1.26 (the `go` directive in `go.mod`), `make`.
+
+| Command | What it does |
+|---|---|
+| `make build` | Builds the API to `bin/smemories-api` |
+| `make test` | Runs the Go tests with the race detector |
+| `make lint` | Fails if `gofmt -l .` prints anything, then runs `go vet ./...` |
+| `make run` | Runs the API from source |
+
+Run the API locally:
+
+```sh
+cp .env.example .env          # optional, every variable has a default
+set -a; . ./.env; set +a      # optional
+make run
+curl -i localhost:8080/healthz   # {"status":"ok"}
+```
+
+Configuration is read from environment variables (see `.env.example`): `SMEM_HTTP_ADDR` (default `:8080`),
+`SMEM_ENV` (`dev|test|prod`, default `dev`), `SMEM_LOG_LEVEL` (`debug|info|warn|error`, default `info`).
+An invalid value stops the process with a message naming the variable. The API contract is
+`api/openapi.yaml`; the Postman collections live in `postman/` (`newman run postman/platform.postman_collection.json`
+against a running API).
+
 ## Project management
 
 Work is planned and tracked on the team board: [`.team/README.md`](.team/README.md) (vision, roadmap, decisions, tasks).
