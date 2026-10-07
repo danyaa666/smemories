@@ -47,10 +47,11 @@ Entities: `users`, `sessions` (T-006), `email_tokens` (T-007), `user_identities`
 - No open P0/P1 auth bug; every `Risk: high` task in the epic is owner-approved.
 
 ## Task index
-Specs live next to this file; **status lives only on the board** (`L list`).
+Specs live next to this file; **status lives only on the board** (`L list`), never here, so it cannot drift.
 | Task | Spec file | Depends on |
 |---|---|---|
-| T-006 Email + password auth core | legacy: spec in the board block | T-001, T-002 |
-| T-007 Email verification and password reset | legacy: spec in the board block | T-006 |
 | T-011 Google sign-in (OIDC + PKCE, account linking) | `01-google-sign-in.md` | T-006, T-007 |
-| T-031 Auth hardening for go-live | legacy intent in the board block | T-023 |
+| T-006 Email + password auth core (register, login, sessions) | `02-email-password-auth-core-register-login.md` | T-001, T-002 |
+| T-007 Email verification and password reset | `03-email-verification-and-password-reset.md` | T-006 |
+| T-015 Web: auth pages and session handling | `04-web-auth-pages-and-session-handling.md` | T-003, T-007 |
+| T-031 Auth hardening for go-live: edge rate limits, shared limiter, session purge, stored-hash caps | `05-auth-hardening-for-go-live-edge-rate-limits.md` | T-023 |

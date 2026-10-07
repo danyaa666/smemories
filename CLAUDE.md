@@ -28,3 +28,9 @@ The dev MySQL and MinIO stack runs as the compose project `awesomeproject1`, sta
 `smemories_minio-data` were kept and are unused. The `smemories` account has the `smem_test_%` grant (`make up` re-applies it), so
 `make test-integration` works with the default DSN: **no root-account workaround is needed any more**. Every compose experiment still
 uses its own project name and ports; never run `docker compose down -v` against the main checkout's project.
+
+## Where specs live
+
+Each epic has a folder `.team/epics/E##-slug/` with a `PRD.md` and one spec file per task. A task's board block (`board.py get T-xxx`) is a short
+stub that links its spec: **read the spec from the repo root (the main checkout) before you start**, and again if a comment says it was updated.
+Specs and PRDs are leader-owned: never change anything under `.team/` in a pull request.

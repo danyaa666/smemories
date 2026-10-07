@@ -74,11 +74,11 @@ stateDiagram-v2
 - Every limit in the specs is covered by a test that fails when the limit is removed; the Postman collection runs twice back to back.
 
 ## Task index
-Specs live next to this file; **status lives only on the board** (`L list`).
+Specs live next to this file; **status lives only on the board** (`L list`), never here, so it cannot drift.
 | Task | Spec file | Depends on |
 |---|---|---|
-| T-012 Collection links (owner API + public lookup) | `01-collection-links.md` | T-008, T-028 |
-| T-034 Public note submission (text + photos) | `02-public-note-submission.md` | T-012, T-009 |
-| T-013 Notes moderation API | legacy intent in the board block | T-034 |
-| T-017 Web: link management and moderation inbox | legacy intent in the board block | T-013, T-016 |
-| T-018 Web: public anonymous notes form | legacy intent in the board block | T-034 |
+| T-012 Collection links (owner API and public lookup) | `01-collection-links.md` | T-007, T-008 |
+| T-034 Public note submission (text and photos) | `02-public-note-submission.md` | T-012, T-009 |
+| T-013 Notes moderation API (approve, hide, reorder, delete) | `03-notes-moderation-api-approve-hide-reorder.md` | T-034 |
+| T-017 Web: notes link management and moderation inbox | `04-web-notes-link-management-and-moderation.md` | T-013, T-016 |
+| T-018 Web: public anonymous notes form | `05-web-public-anonymous-notes-form.md` | T-003, T-034 |
