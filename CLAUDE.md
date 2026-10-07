@@ -20,3 +20,11 @@ Rules:
 - Never invent, round up or reuse old numbers. Never change `limits` or `usage.on_unknown` in `.team/config.json`.
 - The cache is stale after 5 minutes, so refresh right before dispatching; dev and qa only run `usage_gate.py` and never refresh.
 - Not needed in a terminal session (`bin/team start`): there the statusLine in `.claude/settings.json` fills the cache.
+
+## Local stack (since 2026-10-07)
+
+The dev MySQL and MinIO stack runs as the compose project `awesomeproject1`, started with `make up` from the main checkout
+(`make migrate` applies the schema). The old shared `smemories` project was retired; its data volumes `smemories_mysql-data` and
+`smemories_minio-data` were kept and are unused. The `smemories` account has the `smem_test_%` grant (`make up` re-applies it), so
+`make test-integration` works with the default DSN: **no root-account workaround is needed any more**. Every compose experiment still
+uses its own project name and ports; never run `docker compose down -v` against the main checkout's project.
