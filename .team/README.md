@@ -10,18 +10,17 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 20 | T-013, T-014, T-015, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-033, T-035 |
+| BACKLOG | 21 | T-013, T-014, T-015, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-033, T-035, T-036 |
 | TODO | 3 | T-011, T-012, T-034 |
-| IN_PROGRESS | 1 | T-009 |
-| QA_PASS | 1 | T-007 |
+| QA_PASS | 2 | T-007, T-009 |
 | MERGED | 1 | T-010 |
 | DONE | 9 | T-001, T-002, T-003, T-004, T-005, T-006, T-008, T-028, T-030 |
 
 **Awaiting your review (MERGED):** T-010 (Template spec and PDF page renderer)
 
-**Open questions for you:** Q-007 (Approve merge of T-007 (email verification and password reset)?)
+**Open questions for you:** Q-007 (Approve merge of T-007 (email verification and password reset)?); Q-008 (Approve merge of T-009 (photo upload and storage)?)
 
-_Board last written 2026-10-07 17:13Z_
+_Board last written 2026-10-07 17:42Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -184,6 +183,15 @@ _Board last written 2026-10-07 17:13Z_
 - **Answer:** _(pending)_
 
 Leader review and QA both passed on PR #18 (head 3f6c9aa, CI green). It is high risk (auth tokens), so it needs your approval. New required prod setting: SMEM_PUBLIC_BASE_URL. Non-blocking findings are recorded in the specs of T-015, T-021 and T-031. Command: cd /Users/unisoft/GolandProjects/awesomeProject1 && /Users/unisoft/.claude/plugins/cache/claude-agent-team/agent-team/0.3.0/bin/team approve T-007
+
+### Q-008 — Approve merge of T-009 (photo upload and storage)?
+- **Status:** OPEN
+- **Asked:** 2026-10-07 17:42Z
+- **Blocks:** T-009
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+Leader review and QA both passed on PR #19 (head 21ba7aa, CI green). High risk (file uploads, personal data, CI change, new AWS S3 SDK dependency approved earlier in L-01). Merge T-007 first (migration 0005), then this one (0006). Known limit: memory use of image processing is high; follow-up T-036 fixes it before anonymous uploads (T-034). New settings: SMEM_S3_* and SMEM_MEDIA_* (copy from .env.example). Command: cd /Users/unisoft/GolandProjects/awesomeProject1 && /Users/unisoft/.claude/plugins/cache/claude-agent-team/agent-team/0.3.0/bin/team approve T-009
 
 <!-- questions:end -->
 
@@ -516,7 +524,7 @@ The yearbook itself: create, list, read, update and delete a user's yearbooks, p
 - 2026-10-07 14:03Z · leader · accepted by owner (chat, 2026-10-07: 'Accept all')
 
 ### T-009 — Photo upload and storage (MinIO/S3)
-- **Status:** IN_PROGRESS
+- **Status:** QA_PASS
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -524,11 +532,11 @@ The yearbook itself: create, list, read, update and delete a user's yearbooks, p
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** leader
 - **Branch:** task/t-009-photo-upload-and-storage-minio-s3
-- **PR:** —
-- **Updated:** 2026-10-07 17:08Z by dev
-- **Comments-seen:** 3
+- **PR:** https://github.com/danyaa666/smemories/pull/19
+- **Updated:** 2026-10-07 17:39Z by qa
+- **Comments-seen:** 6
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E03-yearbooks/02-photo-upload-and-storage-minio-s3.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -540,6 +548,23 @@ Photo upload and storage for yearbook owners.
 - 2026-10-07 02:47Z · leader · Leader note from the T-001 review: the server timeouts are ReadTimeout 15 s and WriteTimeout 30 s (global, from T-001). A 10 MiB upload over a slow phone connection, or a streamed download, can exceed them. Do not raise the global values; extend the deadline per route with http.NewResponseController(w).SetReadDeadline / SetWriteDeadline (the statusWriter already implements Unwrap) and add a test. Same applies to the PDF download in T-014.
 - 2026-10-07 14:14Z · leader · Spec updated (now in .team/epics/E03-yearbooks/02-photo-upload-and-storage-minio-s3.md): the migration file name is now '<next free number>_media.sql' instead of 0005; see the numbering note at the top of the spec.
 - 2026-10-07 17:13Z · leader · Leader: migration number. PR #18 (T-007) is about to take migrations/0005_email_tokens.sql. Use 0006 for your media migration (re-check 'ls migrations/' and git fetch before writing it); two files with the same version would stop goose at startup.
+- 2026-10-07 17:29Z · dev · PR #19, all 4 CI checks green (go-integration now runs MinIO). All 9 AC + the per-route deadline note done. Test: make up; make lint test test-integration; cd postman && newman run media.postman_collection.json --working-dir . against a local API (SMEM_S3_* from .env.example). Migration is 0006_media.sql (0005 = T-007). New deps: aws-sdk-go-v2 (aws, credentials, s3). Also added auth.GuardMultipart. Known gaps: PNG eXIf orientation ignored; an upload racing a yearbook delete can leave one orphan object; 413/quota/rate limit covered by Go integration tests only. Risk high: needs owner approval.
+- 2026-10-07 17:39Z · qa · QA_PASS T-009 (PR #19, head 21ba7aa, CI 4/4 green). Tested on a FRESH db (0001..0006 applied, migrate down/up of 0006 OK) + real MinIO + real API binary.
+  Mechanical: go build, go test -race ./..., go test -race -tags integration -count=1 ./... (incl. MinIO), gofmt, go vet (+integration tag), golangci-lint: all clean. newman media collection (44 req / 77 assertions) run 2x back to back: 0 failures; yearbooks (85/172) and auth (30/82) collections also 0 failures (regression).
+  AC1: PASS - 201 {media:{id,width,height,bytes}}; other user / unknown book -> 404; no session 401; foreign Origin 403; JSON body 415; wrong field name 400; 300 MB body -> 413 in 10 ms; 11 MiB junk -> 413; 9.6 MB valid noise JPEG -> 201.
+  AC2: PASS - renamed .html/.svg/.exe/.gif/0-byte as .jpg -> 415; polyglot JPEG+<script> -> 201 but stored bytes re-encoded (payload gone); truncated JPEG and animated WebP -> 400 invalid_image; 12000x10 PNG 201, 12001x10 400; 8000x7000 (56 MP, 54 KB file) 400, 7000x7000 (49 MP) 201.
+  AC3: PASS - 4000x3000 JPEG with EXIF (Make, Artist, GPS), ICC, COM comment, orientation 6 -> stored 2250x3000, pixels upright (red top / blue bottom), PIL shows no EXIF/ICC/comment, grep for SECRET/Exif/GPS/ICC_PROFILE in display + thumb = none; thumb 360x480 (long edge 480); small images not upscaled; RGBA PNG with alpha stays PNG, opaque PNG becomes JPEG; WebP with EXIF orientation applied; JPEG quality 92.
+  AC4: PASS - bucket listing: yearbooks/<ulid>/<ulid>.jpg|png and -thumb.jpg only; upload with filename '../../etc/x"\r\nX-Evil: 1.html' -> keys generated, no echo in any header; bucket anonymous access 403 / policy private.
+  AC5: PASS - GET display/thumb: Content-Type from DB, X-Content-Type-Options nosniff, Cache-Control private, max-age=3600, ETag; Range 0-99 -> 206 (100 B), out of range 416, thumb Range 206; owner only (other user 404, no session 401, bad size 400). DELETE: 204, objects and row gone (mc ls), repeated delete 204, other user's DELETE 204 but media untouched, garbage id 204, foreign Origin 403; cover cleared (SET NULL).
+  AC6: PASS - 199 rows seeded by SQL: 200th upload 201, 201st 409 quota_exceeded; user bytes quota: exactly 500 MiB reached -> 201, next -> 409; 64 uploads from one user: 60x201 then 429 rate_limited with Retry-After 599.
+  AC7: PASS - MinIO stopped: DELETE yearbook -> 502 storage_error, book still readable afterwards; upload with MinIO down -> 502 and afterwards objects == 2 x rows (no orphans either way); after MinIO restart DELETE yearbook -> 204, bucket lists only the other book's objects, media rows removed.
+  AC8: PASS - PATCH cover_media_id / PUT profile photo_media_id with own media 200; other book's media, unknown id, malformed id -> 400 invalid_media; number type -> 400; create with cover -> 400 invalid_media; null clears; PATCH of other fields keeps both; PUT profile omitting photo_media_id clears it (documented in OpenAPI as replacing PUT).
+  AC9: PASS - ci.yml starts MinIO and go-integration is green; storage + media integration tests pass against local MinIO; OpenAPI covers new routes/codes; postman media collection covers full flow + 24 edge entries, re-runnable.
+  Per-route deadlines: 9.6 MB upload throttled to 400 kB/s took 23.9 s (> global 15 s ReadTimeout) -> 201.
+  Load: 200 parallel uploads of a 4000x3000 JPEG: 16 accepted (201), the rest instant 503 busy; server stayed up.
+  NON-BLOCKING observations: (1) Memory ceiling is high: one 4000x3000 upload leaves RSS ~430 MB; 4 parallel 49 MP PNGs (47 KB each, within spec limits) peaked at 3.2 GB RSS (SMEM_MEDIA_MAX_CONCURRENT=4 default). Spec-compliant, but a small M2 instance could OOM: consider GOMEMLIMIT, a lower pixel cap or a 2-slot default, and a ponytail: comment. (2) Known gaps already declared by dev: PNG eXIf orientation ignored; upload racing a yearbook delete can leave an orphan object. (3) 413/quota/rate-limit are not in the postman collection (Go tests + my manual runs cover them).
+  Risk is high: owner approval needed before merge. No test files added by QA (existing coverage adequate).
+- 2026-10-07 17:42Z · leader · Leader review OK on head 21ba7aa (the commit QA tested; CI go, go-integration, web, security green). Checked in the diff, not only in the tests: type by sniffing, dimensions from the header before decode, re-encode strips all metadata, generated keys only, owner-only reads with nosniff/private cache, quota recheck under a lock on the user row, upload rate limit, in-flight cap (16) answers 503 busy, yearbook delete purges storage first and fails 502 with nothing deleted, orphans cleaned on failed upload, migration reversible, CI change adds only a MinIO container and fake credentials, no new action. Non-blocking, handled: peak memory 3.2 GB for 4 worst-case PNGs -> new task T-036 (P1, blocks T-034; also sizing note in T-022); aws modules marked '// indirect' in go.mod -> T-036 AC5; orphan sweep -> T-025 spec; PUT profile clears photo_media_id when absent -> T-016 spec. Merge order: T-007 first (its migration is 0005, this one is 0006). Awaiting owner approval.
 
 ### T-010 — Template spec and PDF page renderer
 - **Status:** MERGED
@@ -1150,14 +1175,14 @@ Evidence from the T-006/T-030 merges: the workflow's concurrency group has cance
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
-- **Depends-on:** T-012, T-009
+- **Depends-on:** T-012, T-009, T-036
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-07 11:28Z by leader
+- **Updated:** 2026-10-07 17:41Z by leader
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/02-public-note-submission.md`
@@ -1188,6 +1213,29 @@ Public endpoint where a friend with a collection link submits a note with text, 
 **Epic:** E05-templates-export · **PRD:** `.team/epics/E05-templates-export/PRD.md`
 
 From the T-010 QA notes: adding a template exactly as docs/templates.md describes fails TestListHasBuiltIns and needs a Go edit to TestSamples.
+
+#### Comments
+
+### T-036 — Bound the memory of image processing (caps, concurrency, memory limit)
+- **Status:** BACKLOG
+- **Priority:** P1
+- **Type:** feature
+- **Milestone:** M1
+- **Depends-on:** T-009
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-07 17:41Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E03-yearbooks/04-bound-the-memory-of-image-processing.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E03-yearbooks · **PRD:** `.team/epics/E03-yearbooks/PRD.md`
+
+Make the worst-case memory of the T-009 image pipeline a measured, enforced number (header-based caps, lower default concurrency, memory limit knob), before T-034 exposes it to anonymous uploads.
 
 #### Comments
 

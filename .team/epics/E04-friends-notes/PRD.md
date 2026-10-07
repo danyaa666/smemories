@@ -78,7 +78,7 @@ Specs live next to this file; **status lives only on the board** (`L list`), nev
 | Task | Spec file | Depends on |
 |---|---|---|
 | T-012 Collection links (owner API and public lookup) | `01-collection-links.md` | T-007, T-008 |
-| T-034 Public note submission (text and photos) | `02-public-note-submission.md` | T-012, T-009 |
+| T-034 Public note submission (text and photos) | `02-public-note-submission.md` | T-012, T-009, T-036 |
 | T-013 Notes moderation API (approve, hide, reorder, delete) | `03-notes-moderation-api-approve-hide-reorder.md` | T-034 |
 | T-017 Web: notes link management and moderation inbox | `04-web-notes-link-management-and-moderation.md` | T-013, T-016 |
 | T-018 Web: public anonymous notes form | `05-web-public-anonymous-notes-form.md` | T-003, T-034 |
