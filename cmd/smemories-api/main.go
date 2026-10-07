@@ -11,6 +11,7 @@ import (
 	"syscall"
 
 	"github.com/danyaa666/smemories/internal/config"
+	"github.com/danyaa666/smemories/internal/db"
 	"github.com/danyaa666/smemories/internal/httpx"
 )
 
@@ -25,6 +26,13 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
+	d, err := db.Open(ctx, cfg, logger)
+	if err != nil {
+		logger.Error("database unavailable", "error", err)
+		os.Exit(1)
+	}
+	defer d.Close()
+
 	ln, err := net.Listen("tcp", cfg.HTTPAddr)
 	if err != nil {
 		logger.Error("listen failed", "addr", cfg.HTTPAddr, "error", err)
@@ -32,7 +40,7 @@ func main() {
 	}
 	logger.Info("listening", "addr", ln.Addr().String(), "env", cfg.Env)
 
-	srv := httpx.NewServer(cfg.HTTPAddr, httpx.NewRouter(logger))
+	srv := httpx.NewServer(cfg.HTTPAddr, httpx.NewRouter(logger, httpx.Ready(d, logger)))
 	if err := httpx.Serve(ctx, srv, ln, httpx.DrainTimeout); err != nil {
 		logger.Error("server stopped", "error", err)
 		os.Exit(1)

@@ -1,0 +1,72 @@
+# Local development stack: MySQL 8.4 + MinIO (S3). Dev-only credentials come from .env
+# (copied from .env.example by `make up`). Every port binds to loopback only.
+name: smemories
+
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?copy .env.example to .env}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:?}
+      MYSQL_USER: ${MYSQL_USER:?}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --sql-mode=ONLY_FULL_GROUP_BY,STRICT_ALL_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION
+      - --default-time-zone=+00:00
+    ports:
+      - "127.0.0.1:${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      # Runs once, when the data volume is first created: lets the app user create the
+      # throwaway smem_test_* databases used by integration tests.
+      - ./docker/mysql/init-test-grants.sh:/docker-entrypoint-initdb.d/10-test-grants.sh:ro
+    healthcheck:
+      # TCP on 127.0.0.1: the entrypoint's temporary init server listens on a socket only,
+      # so this turns healthy only once the real server is up.
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 3s
+      timeout: 3s
+      retries: 40
+      start_period: 10s
+
+  minio:
+    # MinIO no longer publishes images on Docker Hub or Quay. This is a frozen Bitnami build
+    # (server + mc in one image) of 2025.4.22, the last release whose web console still works.
+    # Dev-only, loopback-only, holds no real data.
+    image: bitnamilegacy/minio:2025.4.22-debian-12-r2
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?}
+    ports:
+      - "127.0.0.1:${MINIO_PORT:-9000}:9000"
+      - "127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio-data:/bitnami/minio/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:9000/minio/health/ready"]
+      interval: 3s
+      timeout: 3s
+      retries: 40
+      start_period: 5s
+
+  minio-init:
+    image: bitnamilegacy/minio:2025.4.22-debian-12-r2
+    depends_on:
+      minio:
+        condition: service_healthy
+    restart: "no"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?}
+      S3_BUCKET: ${S3_BUCKET:?}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD" && mc mb --ignore-existing "local/$$S3_BUCKET"
+
+volumes:
+  mysql-data:
+  minio-data:

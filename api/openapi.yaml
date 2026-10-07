@@ -27,6 +27,32 @@ paths:
                     const: ok
         "405":
           $ref: "#/components/responses/MethodNotAllowed"
+  /readyz:
+    get:
+      operationId: getReady
+      summary: Readiness probe (pings the database, 1 s timeout)
+      responses:
+        "200":
+          description: The database answered.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    const: ready
+        "503":
+          description: >-
+            The database did not answer in time. Error code `not_ready`; the body never
+            carries driver error text (it is logged server-side).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
 components:
   responses:
     MethodNotAllowed:
@@ -54,7 +80,7 @@ components:
           properties:
             code:
               type: string
-              examples: [not_found, method_not_allowed, payload_too_large, internal_error]
+              examples: [not_found, method_not_allowed, payload_too_large, internal_error, not_ready]
             message:
               type: string
             request_id:

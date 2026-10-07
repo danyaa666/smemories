@@ -4,22 +4,49 @@ import (
 	"log/slog"
 	"strings"
 	"testing"
+	"time"
 )
 
 func env(m map[string]string) func(string) string { return func(k string) string { return m[k] } }
 
+const dsn = "u:p@tcp(127.0.0.1:3306)/db"
+
 func TestLoadDefaults(t *testing.T) {
-	cfg, err := Load(env(nil))
+	cfg, err := Load(env(map[string]string{"SMEM_DB_DSN": dsn}))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if cfg.HTTPAddr != ":8080" || cfg.Env != "dev" || cfg.LogLevel != slog.LevelInfo {
 		t.Fatalf("unexpected defaults: %+v", cfg)
 	}
+	if cfg.DBDSN != dsn || cfg.DBMaxOpen != 20 || cfg.DBMaxIdle != 5 || cfg.DBConnMaxLifetime != 5*time.Minute {
+		t.Fatalf("unexpected db defaults: %+v", cfg)
+	}
+}
+
+func TestLoadDSNRequiredOutsideTest(t *testing.T) {
+	for _, e := range []string{"", "dev", "prod"} {
+		if _, err := Load(env(map[string]string{"SMEM_ENV": e})); err == nil || !strings.Contains(err.Error(), "SMEM_DB_DSN") {
+			t.Errorf("SMEM_ENV=%q without DSN: want error naming SMEM_DB_DSN, got %v", e, err)
+		}
+	}
+	if _, err := Load(env(map[string]string{"SMEM_ENV": "test"})); err != nil {
+		t.Errorf("SMEM_ENV=test needs no DSN, got %v", err)
+	}
+}
+
+func TestLoadPoolSettings(t *testing.T) {
+	cfg, err := Load(env(map[string]string{"SMEM_DB_DSN": dsn, "SMEM_DB_MAX_OPEN": "7", "SMEM_DB_MAX_IDLE": "0", "SMEM_DB_CONN_MAX_LIFETIME": "90s"}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.DBMaxOpen != 7 || cfg.DBMaxIdle != 0 || cfg.DBConnMaxLifetime != 90*time.Second {
+		t.Fatalf("unexpected pool settings: %+v", cfg)
+	}
 }
 
 func TestLoadValid(t *testing.T) {
-	cfg, err := Load(env(map[string]string{"SMEM_HTTP_ADDR": "127.0.0.1:0", "SMEM_ENV": "prod", "SMEM_LOG_LEVEL": "debug"}))
+	cfg, err := Load(env(map[string]string{"SMEM_HTTP_ADDR": "127.0.0.1:0", "SMEM_ENV": "prod", "SMEM_LOG_LEVEL": "debug", "SMEM_DB_DSN": dsn}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,9 +64,14 @@ func TestLoadInvalidNamesVariable(t *testing.T) {
 		{"SMEM_ENV", "PROD"},
 		{"SMEM_LOG_LEVEL", "verbose"},
 		{"SMEM_LOG_LEVEL", "INFO"},
+		{"SMEM_DB_MAX_OPEN", "0"},
+		{"SMEM_DB_MAX_OPEN", "many"},
+		{"SMEM_DB_MAX_IDLE", "-1"},
+		{"SMEM_DB_CONN_MAX_LIFETIME", "5"},
+		{"SMEM_DB_CONN_MAX_LIFETIME", "-1m"},
 	}
 	for _, c := range cases {
-		_, err := Load(env(map[string]string{c.key: c.val}))
+		_, err := Load(env(map[string]string{c.key: c.val, "SMEM_DB_DSN": dsn}))
 		if err == nil || !strings.Contains(err.Error(), c.key) {
 			t.Errorf("%s=%q: want error naming the variable, got %v", c.key, c.val, err)
 		}

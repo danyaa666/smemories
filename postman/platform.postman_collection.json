@@ -104,6 +104,35 @@
               ]
             }
           }
+        },
+        {
+          "name": "GET /readyz",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 ready\", () => { pm.response.to.have.status(200); pm.expect(pm.response.json()).to.eql({status:\"ready\"}); });",
+                  "pm.test(\"security headers\", () => { pm.expect(pm.response.headers.get(\"X-Content-Type-Options\")).to.eql(\"nosniff\"); pm.expect(pm.response.headers.get(\"Cache-Control\")).to.eql(\"no-store\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/readyz",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "readyz"
+              ]
+            },
+            "description": "Needs the local stack: make up && make migrate, then make run."
+          }
         }
       ]
     },
@@ -168,6 +197,67 @@
                 "healthz"
               ]
             }
+          }
+        },
+        {
+          "name": "POST /readyz -> 405",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"405 method_not_allowed\", () => { pm.response.to.have.status(405); pm.expect(pm.response.json().error.code).to.eql(\"method_not_allowed\"); pm.expect(pm.response.headers.get(\"Allow\")).to.eql(\"GET, HEAD\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/readyz",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "readyz"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Manual - stop the database first",
+      "description": "Not part of an automated run (it fails while MySQL is up). `docker compose stop mysql`, send the request, then `docker compose start mysql`.",
+      "item": [
+        {
+          "name": "GET /readyz with the database stopped -> 503 (manual)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"503 not_ready without driver details\", () => { pm.response.to.have.status(503); const e = pm.response.json().error; pm.expect(e.code).to.eql(\"not_ready\"); pm.expect(e.request_id).to.eql(pm.response.headers.get(\"X-Request-Id\")); pm.expect(JSON.stringify(e)).to.not.match(/dial|tcp|mysql|sql:/i); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/readyz",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "readyz"
+              ]
+            },
+            "description": "MANUAL: run `docker compose stop mysql` first, send this request, then `docker compose start mysql`. Skip it (or expect a failure) when the database is up; it is the documented way to see the 503."
           }
         }
       ]
