@@ -17,7 +17,7 @@ type Config struct {
 	Env      string     // SMEM_ENV: dev, test or prod
 	LogLevel slog.Level // SMEM_LOG_LEVEL: debug, info, warn or error
 
-	DBDSN             string        // SMEM_DB_DSN: user:pass@tcp(host:port)/dbname; required unless Env is "test". Never log it.
+	DBDSN             string        // SMEM_DB_DSN: user:pass@tcp(host:port)/dbname; required unless Env is "test" (db.Open still rejects an empty one). Never log it.
 	DBMaxOpen         int           // SMEM_DB_MAX_OPEN, default 20
 	DBMaxIdle         int           // SMEM_DB_MAX_IDLE, default 5
 	DBConnMaxLifetime time.Duration // SMEM_DB_CONN_MAX_LIFETIME, default 5m

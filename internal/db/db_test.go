@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-sql-driver/mysql"
+
 	"github.com/danyaa666/smemories/internal/config"
 )
 
@@ -76,5 +78,45 @@ func TestOpenRejectsBadDSN(t *testing.T) {
 	_, err := Open(context.Background(), config.Config{DBDSN: "nope"}, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	if err == nil || !strings.Contains(err.Error(), "SMEM_DB_DSN") {
 		t.Fatalf("want error naming SMEM_DB_DSN, got %v", err)
+	}
+}
+
+func TestOpenRejectsEmptyDSN(t *testing.T) {
+	_, err := Open(context.Background(), config.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err == nil || !strings.Contains(err.Error(), "SMEM_DB_DSN") || !strings.Contains(err.Error(), "empty") {
+		t.Fatalf("want an empty-DSN error naming SMEM_DB_DSN, got %v", err)
+	}
+}
+
+func TestWaitReadyFailsFastOnPermanentErrors(t *testing.T) {
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	for _, num := range []uint16{1045, 1049} {
+		calls := 0
+		ping := func(context.Context) error {
+			calls++
+			return &mysql.MySQLError{Number: num, Message: "refused"}
+		}
+		start := time.Now()
+		err := waitReady(context.Background(), "db:3306", "smem", ping, log)
+		if err == nil || calls != 1 || time.Since(start) > time.Second {
+			t.Fatalf("error %d: want one attempt and an immediate error, got calls=%d err=%v after %v", num, calls, err, time.Since(start))
+		}
+		if !strings.Contains(err.Error(), "db:3306") || !strings.Contains(err.Error(), `"smem"`) {
+			t.Errorf("error %d must name address and user: %v", num, err)
+		}
+	}
+}
+
+func TestWaitReadyRetriesTransientErrors(t *testing.T) {
+	calls := 0
+	ping := func(context.Context) error {
+		calls++
+		if calls < 3 {
+			return &mysql.MySQLError{Number: 1040, Message: "too many connections"}
+		}
+		return nil
+	}
+	if err := waitReady(context.Background(), "db:3306", "smem", ping, slog.New(slog.NewTextHandler(io.Discard, nil))); err != nil || calls != 3 {
+		t.Fatalf("want success on the 3rd attempt, got calls=%d err=%v", calls, err)
 	}
 }
