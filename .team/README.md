@@ -11,15 +11,17 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 20 | T-013, T-014, T-015, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-033, T-035 |
-| TODO | 5 | T-007, T-009, T-011, T-012, T-034 |
+| TODO | 3 | T-011, T-012, T-034 |
+| IN_PROGRESS | 1 | T-009 |
+| QA_PASS | 1 | T-007 |
 | MERGED | 1 | T-010 |
 | DONE | 9 | T-001, T-002, T-003, T-004, T-005, T-006, T-008, T-028, T-030 |
 
 **Awaiting your review (MERGED):** T-010 (Template spec and PDF page renderer)
 
-**Open questions for you:** none
+**Open questions for you:** Q-007 (Approve merge of T-007 (email verification and password reset)?)
 
-_Board last written 2026-10-07 16:59Z_
+_Board last written 2026-10-07 17:13Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -173,6 +175,15 @@ _Board last written 2026-10-07 16:59Z_
 **Evidence:** QA_PASS with 16 generated PDFs checked (pdfcpu strict, 300 dpi PNGs by eye, Vietnamese text exact, emoji drawn as outlines and never panic, cover photos full-bleed, pagination for 0/1/7/60 notes, hostile inputs bounded); my own read of the text, image and entry-point code found no defect; all four CI jobs passed on the previous head and are finishing on the current one (QA added one test-only commit).
 **Known limits (accepted):** emoji print as monochrome outlines, not colour (ADR 0002); byte-identical output only when photo widths differ (documented); a book with no notes still gets one empty notes page. The export job must set a deadline because the renderer itself has no caps.
 **Recommendation:** approve. I merge only after the CI jobs on the current head are green. Approve in a terminal: `cd /Users/unisoft/GolandProjects/awesomeProject1 && /Users/unisoft/.claude/plugins/cache/claude-agent-team/agent-team/0.3.0/bin/team approve T-010`
+
+### Q-007 — Approve merge of T-007 (email verification and password reset)?
+- **Status:** OPEN
+- **Asked:** 2026-10-07 17:13Z
+- **Blocks:** T-007
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+Leader review and QA both passed on PR #18 (head 3f6c9aa, CI green). It is high risk (auth tokens), so it needs your approval. New required prod setting: SMEM_PUBLIC_BASE_URL. Non-blocking findings are recorded in the specs of T-015, T-021 and T-031. Command: cd /Users/unisoft/GolandProjects/awesomeProject1 && /Users/unisoft/.claude/plugins/cache/claude-agent-team/agent-team/0.3.0/bin/team approve T-007
 
 <!-- questions:end -->
 
@@ -437,7 +448,7 @@ The core of email+password authentication: register, login, logout, "who am I", 
 - 2026-10-07 14:03Z · leader · accepted by owner (chat, 2026-10-07: 'Accept all')
 
 ### T-007 — Email verification and password reset
-- **Status:** TODO
+- **Status:** QA_PASS
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -445,11 +456,11 @@ The core of email+password authentication: register, login, logout, "who am I", 
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-06 10:12Z by leader
-- **Comments-seen:** 2
+- **Assignee:** leader
+- **Branch:** task/t-007-email-verification-and-password-reset
+- **PR:** https://github.com/danyaa666/smemories/pull/18
+- **Updated:** 2026-10-07 17:11Z by qa
+- **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/03-email-verification-and-password-reset.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -460,6 +471,9 @@ Email verification and password reset for the in-house auth from T-006, plus the
 #### Comments
 - 2026-10-07 11:38Z · leader · Leader note: migration numbering. T-008 (PR #17) uses migration 0004, so use the NEXT FREE number at the time you write yours (0005 if T-008 has merged), not the 0003 the spec mentions: goose refuses an out-of-order lower number on databases that already applied a higher one.
 - 2026-10-07 14:14Z · leader · Spec updated (now in .team/epics/E02-auth/03-email-verification-and-password-reset.md): the migration file name is now '<next free number>_email_tokens.sql' instead of 0003; see the numbering note at the top of the spec.
+- 2026-10-07 17:07Z · dev · Implemented AC1-AC9, migration 0005_email_tokens. Test: make test-integration (new file internal/auth/verify_reset_integration_test.go), newman run postman/auth.postman_collection.json (restart API between 3rd runs: forgot is 5/h per IP). Gaps: text-only emails (no HTML part); resend mailer failure returns 500.
+- 2026-10-07 17:11Z · qa · PR #18 head 3f6c9aa, CI green (go, go-integration, security, web). Mechanical: go build, go test -race ./..., make test-integration (all ok), go vet -tags integration, golangci-lint 0 issues, make web-lint ok. Live: built API, fresh DB smem_test_qa007 + migrations (0005 applies), curl + newman. Evidence AC->result: AC1 SMEM_ENV=prod -> exit 'mailer setup failed ... no real mailer configured'; dev prints full message with link. AC2 register -> 201 + verification mail logged (mailer-failure path covered by TestRegisterSurvivesMailerFailure). AC3 resend: 202,202,202,429 (Retry-After 3600); verified user 200 {already_verified:true}; unauthenticated 401. AC4 verify -> 204, email_verified_at set; reuse/unknown/empty/garbage -> 400 invalid_token; DB token_hash == sha256(token), 32 bytes decoded, expires-created 24h by tests; a verify token used as reset -> 400 invalid_token. AC5 known vs unknown: identical 202 {} body, timing ~1.2ms both; limits: 5/h IP -> 429 on 6th, per-email 3/h (case-insensitive) -> 429 on 4th. AC6 weak password -> 400 and token NOT consumed; 8 concurrent resets of one token -> exactly 1x204 + 7x400; all 3 sessions deleted, old cookies 401; other outstanding reset links retired; only the winning password logs in; expired token (expires_at moved to past) -> 400; reset TTL = 60 min. AC7 VI user gets Vietnamese mail with /reset-password?token= link built from SMEM_PUBLIC_BASE_URL (trailing slash trimmed); EN default; TestRenderEmailBothLanguages. AC8 startup cleanup logged 'removed dead email tokens' count 4 and 7 on restarts; live tokens kept; TestCleanupRemovesExpiredAndUsedTokens. AC9 openapi has 200/202/204/400/401/429 for the 4 endpoints; newman auth collection run twice back to back: 45 requests, 110 assertions, 0 failed both times (new flow + edge entries present). No token seen in structured logs. Non-blocking: (1) resend returns 500 when mailer fails (dev-noted; maybe 502/202 + log); (2) Postman has no 429 case for new limits (needs restart between runs, noted by dev); (3) per-email forgot limit lets anyone throttle a victim's reset to 3/h (accepted by spec); (4) text-only email. Test DB dropped.
+- 2026-10-07 17:13Z · leader · Leader review OK on head 3f6c9aa (same head QA tested; CI go, go-integration, web, security green): spec ACs met by the diff; tokens 32 random bytes, SHA-256 at rest, single use via one UPDATE with row lock, wrong-purpose rejected; known and unknown forgot-password do the same work on the request path; reset deletes all sessions in one transaction; LogMailer refuses to exist outside dev/test; cleanup at startup and daily; limits swept. Non-blocking, moved to specs: resend 500 on mailer failure and register-time send on the request path (T-021), link-token handling on the web pages (T-015), per-email forgot cap can throttle a victim (T-031). Awaiting owner approval. For the owner to check: README 'Auth' paragraph (new SMEM_PUBLIC_BASE_URL, required in prod) and that registering locally prints the verification link in the API log.
 
 ### T-008 — Yearbook CRUD and profile information
 - **Status:** DONE
@@ -502,7 +516,7 @@ The yearbook itself: create, list, read, update and delete a user's yearbooks, p
 - 2026-10-07 14:03Z · leader · accepted by owner (chat, 2026-10-07: 'Accept all')
 
 ### T-009 — Photo upload and storage (MinIO/S3)
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -510,11 +524,11 @@ The yearbook itself: create, list, read, update and delete a user's yearbooks, p
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-009-photo-upload-and-storage-minio-s3
 - **PR:** —
-- **Updated:** 2026-10-06 10:12Z by leader
-- **Comments-seen:** 2
+- **Updated:** 2026-10-07 17:08Z by dev
+- **Comments-seen:** 3
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E03-yearbooks/02-photo-upload-and-storage-minio-s3.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -525,6 +539,7 @@ Photo upload and storage for yearbook owners.
 #### Comments
 - 2026-10-07 02:47Z · leader · Leader note from the T-001 review: the server timeouts are ReadTimeout 15 s and WriteTimeout 30 s (global, from T-001). A 10 MiB upload over a slow phone connection, or a streamed download, can exceed them. Do not raise the global values; extend the deadline per route with http.NewResponseController(w).SetReadDeadline / SetWriteDeadline (the statusWriter already implements Unwrap) and add a test. Same applies to the PDF download in T-014.
 - 2026-10-07 14:14Z · leader · Spec updated (now in .team/epics/E03-yearbooks/02-photo-upload-and-storage-minio-s3.md): the migration file name is now '<next free number>_media.sql' instead of 0005; see the numbering note at the top of the spec.
+- 2026-10-07 17:13Z · leader · Leader: migration number. PR #18 (T-007) is about to take migrations/0005_email_tokens.sql. Use 0006 for your media migration (re-check 'ls migrations/' and git fetch before writing it); two files with the same version would stop goose at startup.
 
 ### T-010 — Template spec and PDF page renderer
 - **Status:** MERGED
