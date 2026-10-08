@@ -10,16 +10,18 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 26 | T-013, T-014, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-039, T-040, T-041, T-042, T-044, T-046, T-049, T-050, T-052, T-053 |
-| TODO | 5 | T-034, T-047, T-048, T-051, T-054 |
-| READY_FOR_QA | 1 | T-016 |
+| BACKLOG | 25 | T-013, T-014, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-039, T-040, T-041, T-042, T-044, T-049, T-050, T-052, T-053 |
+| TODO | 4 | T-034, T-046, T-048, T-054 |
+| IN_PROGRESS | 1 | T-047 |
+| IN_QA | 1 | T-051 |
+| MERGED | 1 | T-016 |
 | DONE | 22 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-028, T-030, T-033, T-035, T-036, T-037, T-038, T-043, T-045 |
 
-**Awaiting your review (MERGED):** nothing
+**Awaiting your review (MERGED):** T-016 (Web: yearbook list, create/edit, profile and photo upload UI)
 
 **Open questions for you:** none
 
-_Board last written 2026-10-08 13:31Z_
+_Board last written 2026-10-08 14:02Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -874,7 +876,7 @@ Register, login, logout, verify-email, forgot/reset password pages; session boot
 - 2026-10-08 09:23Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-015, T-033, T-035, T-036')
 
 ### T-016 — Web: yearbook list, create/edit, profile and photo upload UI
-- **Status:** READY_FOR_QA
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -885,8 +887,8 @@ Register, login, logout, verify-email, forgot/reset password pages; session boot
 - **Assignee:** —
 - **Branch:** task/t-016-web-yearbook-list-create-edit-profile-an
 - **PR:** https://github.com/danyaa666/smemories/pull/31
-- **Updated:** 2026-10-08 09:13Z by dev
-- **Comments-seen:** 3
+- **Updated:** 2026-10-08 14:02Z by leader
+- **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E03-yearbooks/03-web-yearbook-list-create-edit-profile-and.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -898,6 +900,23 @@ Dashboard of the user's yearbooks; create/edit form for book information and the
 - 2026-10-08 09:04Z · leader · T-009 and T-015 are merged: unblocked. Spec carries leader notes (PUT profile clears photo_media_id unless sent; Letter page size selector; upload error codes).
 - 2026-10-08 09:06Z · dev · Spec gap, not blocking: the API has no way to LIST a yearbook's photos (no GET /v1/yearbooks/{id}/media, and Yearbook only carries cover_media_id and profile.photo_media_id). So after a page reload the web UI can show only the cover and profile photo; the gallery of the other photos exists only for the current session's uploads. I am building the UI so that a list endpoint plugs in with one query (items: id,width,height,bytes). Suggest a follow-up API task: GET /v1/yearbooks/{id}/media -> {media:[{id,width,height,bytes,created_at}]} (owner only, newest first), then a tiny web follow-up. Tell me if you want me to do the API part inside T-016 instead.
 - 2026-10-08 09:13Z · dev · Web UI done (list, create/edit, profile, photo upload/progress/thumbs/delete, cover and profile photo, A5/A4/Letter, en+vi). 82 vitest tests, lint/typecheck/i18n/build green. Test: npm test in web/; manual: /yearbooks. NOT verified in a real browser against a real API (private compose stack was blocked for me); QA please check 375 px, real upload through Vite proxy (CSRF Origin), thumbnails, 413/429/503 live. Known gap: API has no list-photos endpoint, so after reload only cover/profile photo show (see comment #2).
+- 2026-10-08 14:01Z · qa · Tested live in headless Google Chrome (playwright-core) against the PR head (3bc5d24, CI green: go, go-integration, security, web), real API + MySQL + MinIO (make up/migrate, API from the T-016 worktree, npm run dev, Vite proxy /api).
+  Evidence (AC -> how -> result):
+  - List with paging: 20 books via API; forced limit=5 through a browser route rewrite (UI sends none; default 20 = per-user cap so Show more is unreachable in practice) -> 5 cards, 3 "Show more" clicks -> 20 unique cards. Empty state, 375 px: no horizontal overflow (list/new/edit), buttons >=44 px. PASS
+  - Create: UI form -> book created, redirected to edit; page-size selector offers A5, A4, US Letter, Letter persisted and shown after reload. 21st book -> 409 limit_reached text (en and vi). Validation: blank title, year 1800, 20.5, zero-width char title -> field errors. PASS
+  - Edit/profile: PATCH title/page size keeps cover and profile photo; PUT profile (name, nickname, birthday) keeps photo_media_id and cover (checked via GET after each save). PASS
+  - Upload: progress bar 0.09..1.00 under 600 KB/s throttle, thumbs load via proxy with session cookie (480 px), batch of mixed good/bad files continues past a 415. PASS
+  - Cover / profile photo set, toggle off (aria-pressed), delete photo with confirm -> server clears cover; delete yearbook (cancel then confirm) -> removed from list, DB row gone, cascade OK. PASS
+  - Errors, en + vi, live language switch re-translates: 415 (txt), 400 invalid_image (corrupt PNG, 12001 px wide PNG), 413 (11 MB; real 413 seen), 409 quota_exceeded (200 rows seeded in a book), 429 (70-file batch: 1 real 429 with Retry-After 510 -> "9 min", rest of the batch stops), 503 busy (API with SMEM_MEDIA_MAX_CONCURRENT=1, 4 slow uploads hold slots: "trying again..." status, 3 retries at 2 s, then busy message; works once slots free). PASS
+  - CSRF through Vite proxy: browser flows work (Origin localhost:5173 passes). curl via :5173: bad Origin and missing Origin -> 403 csrf_origin_mismatch on upload, PATCH, PUT profile, DELETE media, DELETE book; good Origin 201/200; no cookie -> 401. PASS
+  - Mechanical: web npm test 82/82, lint (prettier+eslint), typecheck, lint:i18n, check:api, build all green. No endpoint changed, so no Postman change needed.
+  Known gap confirmed, not a defect: photos uploaded earlier vanish after reload, only cover/profile photo remain (T-046).
+  Non-blocking observations (all minor):
+  1. /yearbooks/<nonexistent id> shows "Loading..." for ~7 s before "This yearbook does not exist" (react-query retries the 404 three times); set retry:false for 404.
+  2. After "Save details" and "Save profile" both show "Saved." and neither clears when the other form is saved, so the status is ambiguous.
+  3. After a 429 every remaining file in the batch gets its own identical error row (23 rows for a 70-file batch); one summary line would read better. The 429 text says "Too many attempts" for uploads.
+  4. "Delete yearbook" button is small (<44 px) and unstyled next to the other buttons at 375 px; a 404 console error on page load (likely favicon) is pre-existing.
+- 2026-10-08 14:02Z · leader · merged de0233e (squash), QA_PASS on head 3bc5d24 (real browser run against real API and MinIO, EN and VI, 375 px, all upload error codes), CI green. Review: typed API client, React-escaped rendering, upload progress through the shared error mapper, busy retry bounded to 3, profile save always sends photo_media_id, page size A5/A4/Letter. For owner to check: run the web app, create a yearbook, upload photos, set cover and profile photo. Known: uploaded photos vanish after a reload until T-046; minor polish items listed in the QA note.
 
 ### T-017 — Web: notes link management and moderation inbox
 - **Status:** BACKLOG
@@ -1691,7 +1710,7 @@ Let the register request carry the UI language so Vietnamese students get the ve
 - 2026-10-08 09:29Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-037, T-038, T-043, T-045')
 
 ### T-046 — List a yearbook's photos (API and photo library in the web UI)
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -1702,8 +1721,8 @@ Let the register request carry the UI language so Vietnamese students get the ve
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-08 09:14Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-08 14:02Z by leader
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E03-yearbooks/05-list-a-yearbooks-photos.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1712,9 +1731,10 @@ Let the register request carry the UI language so Vietnamese students get the ve
 Owner-only list endpoint for a yearbook's photos and the web photo library that uses it, so uploaded photos survive a reload.
 
 #### Comments
+- 2026-10-08 14:02Z · leader · T-016 is merged: ready.
 
 ### T-047 — Fix the flaky concurrent Google callback: retry with jittered backoff and a stress test
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P1
 - **Type:** bug
 - **Milestone:** M1
@@ -1722,10 +1742,10 @@ Owner-only list endpoint for a yearbook's photos and the web photo library that 
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-047-fix-the-flaky-concurrent-google-callback
 - **PR:** —
-- **Updated:** 2026-10-08 09:24Z by leader
+- **Updated:** 2026-10-08 14:01Z by dev
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/07-fix-flaky-google-concurrent-callback-test.md`
@@ -1806,7 +1826,7 @@ Go-live gate: delete the dev fixed OTP and every DEV-SHORTCUT, fail CI and the d
 #### Comments
 
 ### T-051 — Redis foundation: local stack (Valkey), client, config, readiness, CI
-- **Status:** TODO
+- **Status:** IN_QA
 - **Priority:** P1
 - **Type:** infra
 - **Milestone:** M1
@@ -1814,11 +1834,11 @@ Go-live gate: delete the dev fixed OTP and every DEV-SHORTCUT, fail CI and the d
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-08 11:18Z by leader
-- **Comments-seen:** 0
+- **Assignee:** qa
+- **Branch:** task/t-051-redis-foundation-local-stack-valkey-clie
+- **PR:** https://github.com/danyaa666/smemories/pull/32
+- **Updated:** 2026-10-08 14:02Z by qa
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/11-redis-foundation.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1827,6 +1847,7 @@ Go-live gate: delete the dev fixed OTP and every DEV-SHORTCUT, fail CI and the d
 Add a Redis-protocol service (Valkey 8) to the local stack and CI, the go-redis client, SMEM_REDIS_URL, readiness and test helpers; no behaviour change (D-23).
 
 #### Comments
+- 2026-10-08 14:00Z · dev · Redis foundation done, PR #32. Test: make up (redis healthy), add SMEM_REDIS_URL from .env.example to .env, make test-integration, stop redis -> /readyz 503 and /healthz 200, restart keeps keys. CI uses docker run (not services:) for the AOF/noeviction flags, same digest. Not verified: real rediss://, maxmemory full, CI run.
 
 ### T-052 — Login sessions move to Redis (drop the sessions table)
 - **Status:** BACKLOG
