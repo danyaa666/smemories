@@ -14,14 +14,14 @@
 | TODO | 2 | T-039, T-044 |
 | READY_FOR_QA | 1 | T-016 |
 | IN_QA | 1 | T-034 |
-| MERGED | 8 | T-015, T-033, T-035, T-036, T-037, T-038, T-043, T-045 |
-| DONE | 14 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-028, T-030 |
+| MERGED | 4 | T-037, T-038, T-043, T-045 |
+| DONE | 18 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-028, T-030, T-033, T-035, T-036 |
 
-**Awaiting your review (MERGED):** T-015 (Web: auth pages and session handling); T-033 (CI: do not cancel in-progress runs on develop and main); T-035 (T-010 follow-ups: template tests iterate templates.List()); T-036 (Bound the memory of image processing (caps, concurrency, memory limit)); T-037 (US Letter page size, end to end); T-038 (Template format v2: backgrounds, static text, rotation, ellipse, font families); T-043 (Note field catalogue (internal/notefields): closed set of form fields with EN/VI labels and validation); T-045 (Register accepts a locale; verification email in the student's language)
+**Awaiting your review (MERGED):** T-037 (US Letter page size, end to end); T-038 (Template format v2: backgrounds, static text, rotation, ellipse, font families); T-043 (Note field catalogue (internal/notefields): closed set of form fields with EN/VI labels and validation); T-045 (Register accepts a locale; verification email in the student's language)
 
 **Open questions for you:** none
 
-_Board last written 2026-10-08 09:22Z_
+_Board last written 2026-10-08 09:23Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -841,7 +841,7 @@ Asynchronous export: POST creates a job (one active export per book), a bounded 
 - 2026-10-07 11:38Z · leader · Leader note from the T-010 review: pdf.Render has no caps on notes or text length (10,000 notes with three 100 KB fields took 87 s of CPU in QA's adversarial test, memory bounded). The export job must (1) run Render under a context deadline (60 s, matching the quality bar), (2) pass only approved notes (T-034 already caps a collection at 300 notes and messages at 2000 characters), (3) report warnings (low_resolution, missing_glyph, missing_image, extra_photos, text_truncated) to the owner in plain language (T-019).
 
 ### T-015 — Web: auth pages and session handling
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -852,8 +852,8 @@ Asynchronous export: POST creates a job (one active export per book), a bounded 
 - **Assignee:** —
 - **Branch:** task/t-015-web-auth-pages-and-session-handling
 - **PR:** https://github.com/danyaa666/smemories/pull/25
-- **Updated:** 2026-10-08 03:54Z by leader
-- **Comments-seen:** 8
+- **Updated:** 2026-10-08 09:23Z by leader
+- **Comments-seen:** 9
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/04-web-auth-pages-and-session-handling.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -870,6 +870,7 @@ Register, login, logout, verify-email, forgot/reset password pages; session boot
 - 2026-10-08 03:45Z · dev · Head f24eb25. (1) token: captureUrlToken() in main.tsx moves ?token= into memory via history.replaceState before React renders, so GET /v1/me (AuthNav) and the POST never see it; useUrlToken reads the stash (path-matched, cleared after first use); <meta name=referrer no-referrer> in index.html. Tests (auth.test.tsx 'token in the address bar', verify + reset under StrictMode, every fetch records location.search; plus reset test now checks all calls) fail when the capture is removed. (2) src/queryClient.ts networkMode 'always' for queries and mutations, used by main.tsx and test renderApp; 'offline' test fails with networkMode online. (3) overflow-wrap:anywhere on main and .auth-nav a, header/nav flex-wrap, min-width 0: CSS only, jsdom cannot measure; QA please recheck 100-char name at 375 px. (4) spacing: header gap, nav button padding, margin under the form before the Google button. make lint build test green, 60 vitest tests. Not run in a real browser by me.
 - 2026-10-08 03:53Z · qa · Re-test of head f24eb25 (PR #25 CI green: go, go-integration, security, web). Real API (built from worktree, fresh DB, log mailer) + headless Chrome (playwright-core), both vite dev and the production build via vite preview. Mechanical: web lint+prettier, 60 vitest, build green. (1) TOKEN, PASS: verify and reset links opened from the logged mail: first GET /api/v1/me, the POST and the follow-up GET /me all see the clean address bar (/verify-email, /reset-password) with empty Referer; only the document GET and static asset/module fetches happen while the token is in the URL (unavoidable, Referer empty thanks to the meta tag). Verify: POST sent once, account flips to verified. Reset: weak password -> 400 field error and the token is still held in memory, strong password then succeeds, new password logs in. Hard reload after removal: verify shows 'expired or already used', reset shows the same plus 'Ask for a new link', no POST fired; back/forward does not bring the token back. Link reuse -> expired message. (2) OFFLINE, PASS: context offline, submit on login -> 'Could not reach the server...' (no stuck 'Please wait'); /me aborted on /account -> retry panel, retry works. 500 html, 503 busy and 403 csrf messages ok. (3) 100-char 'W' name at 375 px (header and account): scrollWidth-clientWidth = 0, name wraps; spaced long name and long email also 0. (4) SPACING 375 px, PASS: brand no longer touches nav, links stay on one line in VI, Google button has a gap under Sign in (built with VITE_GOOGLE_SIGNIN=true, href /api/v1/auth/google/start?return_to=%2Faccount). (5) REGRESSION, PASS: register (bad email, weak pw, duplicate, empty), login wrong pw, 429 lockout 'try again in 15 min', logout, reload keeps session, RequireAuth, verify from mail (EN+VI), reuse/garbage/no token, resend 3 ok then 429 '60 min', forgot (same text), reset (EN+VI), ?error= codes incl. HTML payload escaped, EN/VI switch persisted, keyboard Enter + focus ring. Non-blocking observations: (a) reload on /reset-password BEFORE submitting loses the still-valid token (shown as 'expired or already used'; user must request a new link); acceptable consequence of the strip-first rule, a sessionStorage stash could soften it. (b) Sign out and 'Send the link again' remain default grey browser buttons (cosmetic). (c) Vietnamese UI user still gets the English verify mail: T-045. Not covered: real Google round trip, screen reader pass, Safari/Firefox.
 - 2026-10-08 03:54Z · leader · merged 66d5b80 (squash), QA_PASS on head f24eb25 after one rework, CI green. Review: token moved into memory before React renders (no request carries it, Referer empty, verified in a real browser), redirect target allow-listed, return_to URL-encoded, no raw HTML, typed API client, EN/VI parity, 60 tests. For owner to check: cd web && npm run dev with the API on :8080; register, read the verification link in the API log, open it (the token disappears from the address bar), try forgot and reset. Google button appears only with VITE_GOOGLE_SIGNIN=true. Known: reloading /reset-password before submitting loses the token (by design: ask for a new link); verification mail is English for Vietnamese users until T-045.
+- 2026-10-08 09:23Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-015, T-033, T-035, T-036')
 
 ### T-016 — Web: yearbook list, create/edit, profile and photo upload UI
 - **Status:** READY_FOR_QA
@@ -1286,7 +1287,7 @@ db.Open: treat MySQL 1044 as permanent; README warning about bare docker compose
 #### Comments
 
 ### T-033 — CI: do not cancel in-progress runs on develop and main
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** infra
 - **Milestone:** M1
@@ -1297,8 +1298,8 @@ db.Open: treat MySQL 1044 as permanent; README warning about bare docker compose
 - **Assignee:** —
 - **Branch:** task/t-033-ci-do-not-cancel-in-progress-runs-on-dev
 - **PR:** https://github.com/danyaa666/smemories/pull/22
-- **Updated:** 2026-10-08 08:34Z by leader
-- **Comments-seen:** 7
+- **Updated:** 2026-10-08 09:23Z by leader
+- **Comments-seen:** 8
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/09-ci-do-not-cancel-in-progress-runs-on-develop.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1314,6 +1315,7 @@ Evidence from the T-006/T-030 merges: the workflow's concurrency group has cance
 - 2026-10-08 03:21Z · leader · Leader review OK on head 74346f4 (QA_PASS on the same head, CI 4/4 green, actionlint clean apart from two old shellcheck notes). Concurrency group is the PR ref for pull_request events (cancel in progress) and the commit SHA for pushes (never cancelled), the documented idiom; mysql image pinned to the current manifest digest; docs/ci.md matches; no permission, secret or action change. Not verified live (QA could not push to develop): the first back-to-back develop pushes after the merge must show no cancelled run; I will check with gh run list. Note for later: the digest pin means MySQL patch updates are manual; docs/ci.md should say how to refresh it (add when T-004's follow-ups are next touched). Awaiting owner approval.
 - 2026-10-08 08:34Z · human · owner approved merge
 - 2026-10-08 08:34Z · leader · merged 96059a6 (squash), owner-approved in chat 2026-10-08, QA_PASS on head 74346f4. Pushes to develop and main now get one concurrency group per commit (never cancelled); PRs still cancel superseded runs; mysql image pinned by digest. To verify live: the next back-to-back develop pushes must show no cancelled run (gh run list --branch develop).
+- 2026-10-08 09:23Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-015, T-033, T-035, T-036')
 
 ### T-034 — Public note submission (text and photos)
 - **Status:** IN_QA
@@ -1341,7 +1343,7 @@ Public endpoint where a friend with a collection link submits a note with text, 
 - 2026-10-08 09:03Z · dev · PR #30 head e90e331. How to test: make lint build test test-integration (all green); newman from postman/ (notes collection, 71 req / 135 assertions, run twice). Decision for leader: AC7 numbers (10/hr, 40/day per IP) contradict the later leader note (class behind one IP); I used 100/hr + 300/day per IP and 60/hr per collection. Verifier sees headers only. Migration 0010; TestMigratePageSizeLetter now rolls back two migrations. Not covered by tests: real 40 MiB multipart over a socket (httptest only).
 
 ### T-035 — T-010 follow-ups: template tests iterate templates.List()
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -1352,8 +1354,8 @@ Public endpoint where a friend with a collection link submits a note with text, 
 - **Assignee:** —
 - **Branch:** task/t-035-t-010-follow-ups-template-tests-iterate-
 - **PR:** 26
-- **Updated:** 2026-10-08 03:48Z by leader
-- **Comments-seen:** 4
+- **Updated:** 2026-10-08 09:23Z by leader
+- **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/05-t-010-follow-ups-template-tests-iterate.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1366,9 +1368,10 @@ From the T-010 QA notes: adding a template exactly as docs/templates.md describe
 - 2026-10-08 03:32Z · dev · Test-only: TestListHasBuiltIns and TestSamples iterate templates.List(); built-ins asserted as minimum. Test: go test ./internal/pdf ./internal/templates.
 - 2026-10-08 03:48Z · qa · Head 15d0d97, PR #26 CI green (go, go-integration, security, web). Test-only diff (internal/pdf/book_test.go, internal/templates/templates_test.go). Evidence: go test ./internal/pdf ./internal/templates -count=1 ok; go vet and gofmt clean. Mutation check: dropped a 3rd template (zzz.json, copy of classic) into internal/templates/embed with no Go edit -> TestListHasBuiltIns, TestSamples and the whole pdf/templates packages still pass; file removed afterwards. Built-ins still asserted as minimum (classic and modern must be present; pages==6 and truncation warning pinned for them only). Non-blocking: TestRenderBothTemplatesBothSizes still hardcodes the two ids (outside this task's scope).
 - 2026-10-08 03:48Z · leader · merged a01a884 (squash), QA_PASS on the same head 15d0d97, CI green. Review: test-only; TestListHasBuiltIns and TestSamples iterate templates.List(), classic and modern stay a minimum with their exact page counts pinned; QA added a third template file without any Go edit and both tests passed. For owner to check: nothing to run.
+- 2026-10-08 09:23Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-015, T-033, T-035, T-036')
 
 ### T-036 — Bound the memory of image processing (caps, concurrency, memory limit)
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -1379,8 +1382,8 @@ From the T-010 QA notes: adding a template exactly as docs/templates.md describe
 - **Assignee:** —
 - **Branch:** task/t-036-bound-the-memory-of-image-processing-cap
 - **PR:** https://github.com/danyaa666/smemories/pull/23
-- **Updated:** 2026-10-08 03:21Z by leader
-- **Comments-seen:** 4
+- **Updated:** 2026-10-08 09:23Z by leader
+- **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E03-yearbooks/04-bound-the-memory-of-image-processing.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1393,6 +1396,7 @@ Make the worst-case memory of the T-009 image pipeline a measured, enforced numb
 - 2026-10-08 02:56Z · dev · Root cause: x/image Scale float64 scratch (dst w x src h x4 = 480MB at 50MP) -> banded resize. Header caps (PNG/WebP 25MP, JPEG 50MP, decoded est. 128MiB incl. JPEG SOF subsampling/progressive), concurrency default 2, SMEM_MEMORY_LIMIT_MIB, docs/media.md. Test: TestLimitsFromHeader, TestJPEGSamples, TestResizeBandsMatchOneShot; measure with TestMeasurePeak (see docs/media.md). Dev: 4x16-bit PNG 4096^2 at defaults = 970MB RSS. Re-run media Postman twice.
 - 2026-10-08 03:19Z · qa · QA T-036 PASS. Method: built the PR head, ran the real API (fresh process per measurement; peak RSS sampled with ps every 20ms) against MySQL+MinIO from make up; images generated by me (Go/PIL/cwebp, all under 10 MiB upload cap). NOTE .env.example in the main checkout is still the old one (concurrency 4): I loaded the PR's .env.example and also tested with the variables truly unset. AC6 (macOS arm64, defaults = concurrency 2): 4 parallel 16-bit PNG 4096x4096: peak 925-929 MiB (970-974 MB) in 3 runs, mixed 4 (16-bit PNG at cap, 25 MP 8-bit PNG, 50 MP 10000x5000 JPEG, 25 MP lossless WebP): 862/812/886 MiB. All <= 1.2 GiB (1229 MiB). Single 16-bit PNG: 478 MiB. Control with concurrency 4: 1735-1842 MiB (so the lowering is what matters). 4x each alone: 50MP JPEG 700 MiB, 6000x7456 4:4:4 JPEG at the cap 1008 MiB (highest seen), 4200x4200 progressive 4:2:0 JPEG 565 MiB, 12000x4000 JPEG 595 MiB, lossless WebP 25MP 843 MiB, lossy WebP 24MP 507 MiB, 5000x5000 8-bit PNG 850 MiB. Linux (target OS): same linux/arm64 binary in a debian container with --memory=1536m, cgroup memory.peak: 4x 16-bit PNG 905 MiB, mixed 4 855 MiB, 8 parallel mixed incl. 4:4:4 and progressive JPEG 873 MiB, no OOM kill; with SMEM_MEMORY_LIMIT_MIB=1100 4x16-bit PNG 909 MiB. AC2 caps just below/above via the API: 16-bit PNG 4096x4096 201 / 4097x4096 400; 8-bit PNG 5000x5000 201 / 5001x5000 400; JPEG 10000x5000 201 / 10001x5000 400; lossless WebP 5000x5000 201 / 5001x5000 400; 4:4:4 JPEG 6000x7456 (134208000 B) 201 / 6000x7457 400; progressive 4:2:0 4200x4200 201 / 4300x4300 400; each over-cap answer in ~8 ms before any decode. AC3: SMEM_MEDIA_MAX_CONCURRENT 0/abc/-2 and SMEM_MEMORY_LIMIT_MIB 10/63/abc/-1/1.5/1048577 all fail at startup naming the variable; limit 64, 256, 700 with the 4 mixed uploads: all 201, process alive, RSS 481/479/744 MiB (limit works, nothing crashes or is refused); startup logs 'memory limit set'. .env.example and README document both. AC1/AC4: docs/media.md exists; its numbers reproduce (970 MB for 4x 16-bit PNG; single 490 vs my 501 MB). AC5: go mod tidy leaves no diff, aws-sdk-go-v2, /credentials, /service/s3 are in the direct require block. Postman: media collection run twice via newman 6 (API restarted between runs; I did the pair twice): 44 requests, 77 assertions, 0 failures each time. Mechanical: go build, go vet, gofmt, golangci-lint (0 issues), go test -race ./... ok, go test -race -count=1 -tags integration ./... all packages ok; PR CI green (run 37720320278). Non-blocking: (a) the media Postman collection has no entry for the new caps (E11 only covers the 60000x60000 header); a tiny PNG header claiming 5001x5000 would exercise the 25 MP PNG cap cheaply; (b) the main checkout's .env.example still says concurrency 4 until merge, fine; (c) RSS on macOS never returns to baseline after a run (Go retains pages), so measure each scenario on a fresh process, as docs/media.md implies; (d) 6000x7456 4:4:4 baseline JPEG is the heaviest accepted input at ~1.0 GiB for 4 parallel, only ~18% under the 1.2 GiB target, so keep an eye on it if limits are raised.
 - 2026-10-08 03:21Z · leader · merged 7772eb7 (squash), QA_PASS on the same head c6d78ce, CI green. Review: the 480 MB scaler buffer is gone (banded resize, same picture), header-based caps by colour model and JPEG subsampling, concurrency default 2, SMEM_MEMORY_LIMIT_MIB validated (0 or 64..1048576), 4 worst-case uploads peak at about 925 MiB (was 3.2 GB). For owner to check: PNG/WebP over 25 MP, 16-bit PNG over 4096x4096 and large progressive JPEGs are now refused with 400 invalid_image; phone JPEGs up to 50 MP still pass. Follow-up: stale OpenAPI sentence (noted in T-034 spec).
+- 2026-10-08 09:23Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-015, T-033, T-035, T-036')
 
 ### T-037 — US Letter page size, end to end
 - **Status:** MERGED
