@@ -33,6 +33,22 @@ function isEnvelope(body: unknown): body is ErrorEnvelope {
   return typeof e === "object" && e !== null && "code" in e && typeof e.code === "string";
 }
 
+/** The ApiError for a failed response (shared by fetch and the XHR upload). */
+export function apiErrorFrom(
+  status: number,
+  body: unknown,
+  header: (name: string) => string | null,
+): ApiError {
+  const headerId = header("X-Request-Id") ?? undefined;
+  const retry = Number(header("Retry-After"));
+  const retryAfter = Number.isFinite(retry) && retry > 0 ? retry : undefined;
+  if (isEnvelope(body)) {
+    const { code, message, request_id } = body.error;
+    return new ApiError(status, code, message, request_id || headerId, retryAfter);
+  }
+  return new ApiError(status, "unknown_error", `HTTP ${status}`, headerId, retryAfter);
+}
+
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {
@@ -44,16 +60,7 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   const body: unknown = await res.json().catch(() => undefined);
-  if (!res.ok) {
-    const headerId = res.headers.get("X-Request-Id") ?? undefined;
-    const retry = Number(res.headers.get("Retry-After"));
-    const retryAfter = Number.isFinite(retry) && retry > 0 ? retry : undefined;
-    if (isEnvelope(body)) {
-      const { code, message, request_id } = body.error;
-      throw new ApiError(res.status, code, message, request_id || headerId, retryAfter);
-    }
-    throw new ApiError(res.status, "unknown_error", `HTTP ${res.status}`, headerId, retryAfter);
-  }
+  if (!res.ok) throw apiErrorFrom(res.status, body, (n) => res.headers.get(n));
   return body as T;
 }
 
@@ -69,6 +76,15 @@ export const getHealth = () => request<JsonOk<"getHealth">>("/healthz");
 export const postJson = <T>(path: string, body?: unknown) =>
   request<T>(path, {
     method: "POST",
+    ...(body === undefined
+      ? {}
+      : { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
+  });
+
+/** Any method with an optional JSON body (PATCH, PUT, DELETE). */
+export const sendJson = <T>(method: string, path: string, body?: unknown) =>
+  request<T>(path, {
+    method,
     ...(body === undefined
       ? {}
       : { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),

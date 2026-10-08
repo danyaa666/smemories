@@ -11,6 +11,9 @@ import { ResetPassword } from "./pages/ResetPassword";
 import { VerifyEmail } from "./pages/VerifyEmail";
 import { Home } from "./pages/Home";
 import { NotFound } from "./pages/NotFound";
+import { YearbookEdit } from "./pages/YearbookEdit";
+import { YearbookNew } from "./pages/YearbookNew";
+import { Yearbooks } from "./pages/Yearbooks";
 
 export function App() {
   const { t } = useTranslation();
@@ -31,6 +34,9 @@ export function App() {
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route element={<RequireAuth />}>
             <Route path="/account" element={<Account />} />
+            <Route path="/yearbooks" element={<Yearbooks />} />
+            <Route path="/yearbooks/new" element={<YearbookNew />} />
+            <Route path="/yearbooks/:id" element={<YearbookEdit />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

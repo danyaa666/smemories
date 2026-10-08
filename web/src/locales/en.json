@@ -28,7 +28,8 @@
     "signIn": "Sign in",
     "register": "Create account",
     "account": "My account",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "yearbooks": "My yearbooks"
   },
   "fields": {
     "email": "Email",
@@ -96,6 +97,79 @@
     "invalid_token": "This link has expired or was already used. Ask for a new one.",
     "rate_limited": "Too many attempts. Try again in {{minutes}} min.",
     "busy": "The server is busy. Try again in a moment.",
-    "unauthenticated": "Your session has ended. Sign in again."
+    "unauthenticated": "Your session has ended. Sign in again.",
+    "not_found": "We could not find that.",
+    "limit_reached": "You can have at most 20 yearbooks. Delete one to make room.",
+    "payload_too_large": "This photo is too large. The limit is 10 MB.",
+    "unsupported_media_type": "Only JPEG, PNG and WebP photos are supported.",
+    "invalid_image": "This image could not be read, or it is too large in pixels (at most 12000 px a side). Try another one.",
+    "quota_exceeded": "You have reached your photo limit (200 per yearbook, 500 MB in total). Delete some photos first.",
+    "storage_error": "Photo storage is not responding. Please try again.",
+    "invalid_media": "That photo does not belong to this yearbook.",
+    "invalid_title": "Enter a title of 1 to 120 characters without invisible or control characters.",
+    "invalid_school_name": "The school name can have at most 120 characters, without invisible or control characters.",
+    "invalid_class_name": "The class can have at most 120 characters, without invisible or control characters.",
+    "invalid_graduation_year": "Enter a year between 1950 and 2100.",
+    "invalid_motto": "The motto can have at most 200 characters, without invisible or control characters.",
+    "invalid_full_name": "Enter a name of 1 to 100 characters without invisible or control characters.",
+    "invalid_nickname": "The nickname can have at most 50 characters, without invisible or control characters.",
+    "invalid_birthday": "Enter a real date in the past, not before 1900.",
+    "invalid_quote": "The quote can have at most 500 characters, without invisible or control characters.",
+    "invalid_hobbies": "Hobbies can have at most 300 characters, without invisible or control characters.",
+    "invalid_future_plans": "Plans can have at most 300 characters, without invisible or control characters."
+  },
+  "books": {
+    "title": "My yearbooks",
+    "new": "New yearbook",
+    "newTitle": "New yearbook",
+    "create": "Create yearbook",
+    "empty": "You have no yearbooks yet. Create your first one.",
+    "more": "Show more",
+    "back": "Back to my yearbooks",
+    "notFound": "This yearbook does not exist."
+  },
+  "book": {
+    "heading": "Yearbook details",
+    "title": "Title",
+    "school": "School",
+    "class": "Class",
+    "year": "Graduation year",
+    "motto": "Motto",
+    "language": "Yearbook language",
+    "pageSize": "Page size",
+    "pageSizes": {
+      "A5": "A5 (148 × 210 mm)",
+      "A4": "A4 (210 × 297 mm)",
+      "Letter": "US Letter (8.5 × 11 in)"
+    },
+    "save": "Save details",
+    "saved": "Saved.",
+    "dangerHeading": "Delete this yearbook",
+    "deleteWarning": "This deletes the yearbook, your profile and all its photos for good.",
+    "delete": "Delete yearbook",
+    "confirmDelete": "Delete “{{title}}” and all its photos? This cannot be undone."
+  },
+  "profile": {
+    "heading": "Your profile",
+    "fullName": "Full name",
+    "nickname": "Nickname",
+    "birthday": "Birthday",
+    "quote": "Favourite quote",
+    "hobbies": "Hobbies",
+    "plans": "Plans for the future",
+    "save": "Save profile"
+  },
+  "photos": {
+    "title": "Photos",
+    "add": "Add photos",
+    "hint": "JPEG, PNG or WebP, up to 10 MB each. Photos are private to you.",
+    "empty": "No photos to show yet.",
+    "alt": "Photo {{n}}",
+    "cover": "Cover photo",
+    "profile": "Profile photo",
+    "delete": "Delete",
+    "confirmDelete": "Delete this photo? This cannot be undone.",
+    "busy": "The server is busy, trying again…",
+    "dismiss": "Dismiss"
   }
 }
