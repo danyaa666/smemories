@@ -11,7 +11,7 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 20 | T-013, T-014, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-040, T-041, T-042, T-046 |
-| TODO | 2 | T-039, T-044 |
+| TODO | 3 | T-039, T-044, T-047 |
 | READY_FOR_QA | 1 | T-016 |
 | IN_QA | 1 | T-034 |
 | MERGED | 4 | T-037, T-038, T-043, T-045 |
@@ -21,7 +21,7 @@
 
 **Open questions for you:** none
 
-_Board last written 2026-10-08 09:23Z_
+_Board last written 2026-10-08 09:24Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -1673,6 +1673,29 @@ Let the register request carry the UI language so Vietnamese students get the ve
 **Epic:** E03-yearbooks · **PRD:** `.team/epics/E03-yearbooks/PRD.md`
 
 Owner-only list endpoint for a yearbook's photos and the web photo library that uses it, so uploaded photos survive a reload.
+
+#### Comments
+
+### T-047 — Fix the flaky concurrent Google callback: retry with jittered backoff and a stress test
+- **Status:** TODO
+- **Priority:** P1
+- **Type:** bug
+- **Milestone:** M1
+- **Depends-on:** T-011
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-08 09:24Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/07-fix-flaky-google-concurrent-callback-test.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E02-auth · **PRD:** `.team/epics/E02-auth/PRD.md`
+
+CI on develop failed once on TestGoogleConcurrentCallbacksCreateOneAccount: googleUser retries only 3 times without a pause. Add bounded jittered backoff and a stress test.
 
 #### Comments
 
