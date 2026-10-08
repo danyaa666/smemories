@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -18,6 +19,7 @@ import (
 	"github.com/danyaa666/smemories/internal/auth"
 	"github.com/danyaa666/smemories/internal/db/dbtest"
 	"github.com/danyaa666/smemories/internal/httpx"
+	"github.com/danyaa666/smemories/internal/mailer"
 )
 
 const (
@@ -63,7 +65,9 @@ func newEnv(t *testing.T) *env {
 	e := &env{t: t, db: d, logs: &bytes.Buffer{}, clock: time.Date(2026, 10, 7, 12, 0, 0, 0, time.UTC)}
 	logger := slog.New(slog.NewJSONHandler(&syncWriter{w: e.logs}, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	hasher := auth.NewHasher(auth.HashParams{MemoryKiB: 64, Time: 1, Parallelism: 1}, 4, auth.HashWait)
-	svc, err := auth.NewService(auth.NewStore(d), hasher, auth.Limits{RegisterPerHour: 1000, LoginFailsPerPair: 1000, LoginFailsPerIP: 1000}, e.now)
+	mail, _ := mailer.NewLog("test", io.Discard)
+	svc, err := auth.NewService(auth.NewStore(d), hasher, auth.Limits{RegisterPerHour: 1000, LoginFailsPerPair: 1000, LoginFailsPerIP: 1000},
+		auth.Mail{Mailer: mail, BaseURL: "http://localhost:5173", Logger: logger}, e.now)
 	if err != nil {
 		t.Fatal(err)
 	}

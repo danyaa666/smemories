@@ -128,7 +128,7 @@ Configuration is read from environment variables (see `.env.example`): `SMEM_HTT
 `SMEM_DB_DSN` (`user:pass@tcp(host:port)/db`; required, in every `SMEM_ENV`, for the API binary, which exits with a clear message when it is empty), and the pool settings
 `SMEM_DB_MAX_OPEN` (20), `SMEM_DB_MAX_IDLE` (5), `SMEM_DB_CONN_MAX_LIFETIME` (5m).
 Auth (see `.env.example`): `SMEM_ALLOWED_ORIGINS` (comma-separated browser origins allowed to send cookie-carrying
-state-changing requests; required in prod, default `http://localhost:5173`), `SMEM_TRUST_PROXY` (take the client IP from the
+state-changing requests; required in prod, default `http://localhost:5173`), `SMEM_PUBLIC_BASE_URL` (web app URL for emailed links; required in prod, default `http://localhost:5173`; in dev/test emails are printed to stdout by the log mailer, and prod refuses to start until a real mailer exists), `SMEM_TRUST_PROXY` (take the client IP from the
 last `X-Forwarded-For` hop; only behind a trusted proxy), `SMEM_AUTH_MAX_CONCURRENT_HASHES` (4), `SMEM_AUTH_ARGON_MEMORY_KIB`
 (19456), `SMEM_AUTH_ARGON_TIME` (2), `SMEM_AUTH_ARGON_PARALLELISM` (1), and the rate limits `SMEM_RATE_REGISTER_PER_HOUR` (5),
 `SMEM_RATE_LOGIN_FAILS_PER_EMAIL` (10) and `SMEM_RATE_LOGIN_FAILS_PER_IP` (100). The session cookie is `Secure` unless `SMEM_ENV=dev`.

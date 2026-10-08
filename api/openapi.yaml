@@ -190,6 +190,135 @@ paths:
               schema: {type: string}
         "403": {$ref: "#/components/responses/CsrfOriginMismatch"}
         "415": {$ref: "#/components/responses/UnsupportedMediaType"}
+  /v1/auth/verify-email:
+    post:
+      operationId: verifyEmail
+      security: []
+      tags: [auth]
+      summary: Confirm an email address with the token from the verification email
+      description: >-
+        Tokens are 32 random bytes (base64url), stored only as SHA-256, valid 24 hours and single use.
+        An unknown, expired, used or wrong-purpose token (a reset token, for example) is `400 invalid_token`.
+        Registration and `verify-email/resend` send the email; the link is
+        `SMEM_PUBLIC_BASE_URL/verify-email?token=...`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: {type: string}
+      responses:
+        "204":
+          description: The address is verified (`email_verified` is now true).
+        "400":
+          description: "`invalid_token` or `invalid_body`."
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
+        "403": {$ref: "#/components/responses/CsrfOriginMismatch"}
+        "413": {$ref: "#/components/responses/PayloadTooLarge"}
+        "415": {$ref: "#/components/responses/UnsupportedMediaType"}
+  /v1/auth/verify-email/resend:
+    post:
+      operationId: resendVerificationEmail
+      tags: [auth]
+      summary: Send a new verification email to the signed-in user
+      description: >-
+        At most 3 per hour per user (`429 rate_limited` with `Retry-After`). Earlier links stay valid
+        until they expire. Takes no body.
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: The address was already verified; nothing was sent.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [already_verified]
+                properties:
+                  already_verified: {type: boolean, const: true}
+        "202":
+          description: The email was sent. A mailer failure is `500 internal_error` (and is logged without the token).
+          content:
+            application/json:
+              schema: {type: object}
+        "401": {$ref: "#/components/responses/Unauthenticated"}
+        "403": {$ref: "#/components/responses/CsrfOriginMismatch"}
+        "415": {$ref: "#/components/responses/UnsupportedMediaType"}
+        "429": {$ref: "#/components/responses/RateLimited"}
+  /v1/auth/forgot-password:
+    post:
+      operationId: forgotPassword
+      security: []
+      tags: [auth]
+      summary: Ask for a password reset email
+      description: >-
+        Always `202 {}` for a well-formed address, whether or not an account exists; the email (valid
+        link for 1 hour, in the user's `locale`) goes out in the background and only when the account
+        exists, so neither the body nor the timing tells them apart. Limits: 5 per hour per IP and 3 per
+        hour per address (counted for unknown addresses too). The address is trimmed, lower-cased and
+        NFC-normalised like at login; one that is not an email at all is `400 invalid_email`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: {type: string, maxLength: 254}
+      responses:
+        "202":
+          description: Accepted.
+          content:
+            application/json:
+              schema: {type: object}
+        "400":
+          description: "`invalid_email` or `invalid_body`."
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
+        "403": {$ref: "#/components/responses/CsrfOriginMismatch"}
+        "413": {$ref: "#/components/responses/PayloadTooLarge"}
+        "415": {$ref: "#/components/responses/UnsupportedMediaType"}
+        "429": {$ref: "#/components/responses/RateLimited"}
+  /v1/auth/reset-password:
+    post:
+      operationId: resetPassword
+      security: []
+      tags: [auth]
+      summary: Set a new password with the token from the reset email
+      description: >-
+        The token is valid 1 hour and single use; an unknown, expired, used or wrong-purpose token is
+        `400 invalid_token`. The password follows the registration rules (NFKC, 10-128 characters, not the
+        email); a rejected password is `400 weak_password` and does not use up the token. On success every
+        session of the user is deleted (sign in again), and the user's other open reset links stop working.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, password]
+              properties:
+                token: {type: string}
+                password: {type: string, format: password, minLength: 10, maxLength: 128}
+      responses:
+        "204":
+          description: Password changed; all sessions are gone.
+        "400":
+          description: "`invalid_token`, `weak_password` or `invalid_body`."
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
+        "403": {$ref: "#/components/responses/CsrfOriginMismatch"}
+        "413": {$ref: "#/components/responses/PayloadTooLarge"}
+        "415": {$ref: "#/components/responses/UnsupportedMediaType"}
+        "503": {$ref: "#/components/responses/Busy"}
   /v1/me:
     get:
       operationId: getMe
@@ -546,7 +675,7 @@ components:
           properties:
             code:
               type: string
-              examples: [not_found, method_not_allowed, payload_too_large, internal_error, not_ready, invalid_credentials, unauthenticated, rate_limited, limit_reached, unknown_field]
+              examples: [not_found, method_not_allowed, payload_too_large, internal_error, not_ready, invalid_credentials, unauthenticated, rate_limited, invalid_token, limit_reached, unknown_field]
             message:
               type: string
             request_id:

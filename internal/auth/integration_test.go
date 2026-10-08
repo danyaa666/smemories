@@ -37,6 +37,7 @@ type env struct {
 	hasher *Hasher
 	logs   *bytes.Buffer
 	clock  *testClock
+	mail   *recMailer
 }
 
 type testClock struct {
@@ -77,14 +78,15 @@ func newEnv(t *testing.T, o opts) *env {
 	d := dbtest.New(t)
 	clock := &testClock{t: time.Date(2026, 10, 7, 12, 0, 0, 0, time.UTC)}
 	hasher := NewHasher(HashParams{MemoryKiB: o.hashMemKiB, Time: 1, Parallelism: 1}, o.maxHashes, o.hashWait)
-	svc, err := NewService(NewStore(d), hasher, o.limits, clock.now)
+	logs := &bytes.Buffer{}
+	logger := slog.New(slog.NewJSONHandler(&syncWriter{w: logs}, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	rm := &recMailer{}
+	svc, err := NewService(NewStore(d), hasher, o.limits, Mail{Mailer: rm, BaseURL: testBase, Logger: logger}, clock.now)
 	if err != nil {
 		t.Fatal(err)
 	}
-	logs := &bytes.Buffer{}
-	logger := slog.New(slog.NewJSONHandler(&syncWriter{w: logs}, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	ah := NewHandler(svc, HandlerConfig{AllowedOrigins: []string{origin}, SecureCookie: o.secure, TrustProxy: o.trustProxy}, logger)
-	return &env{t: t, db: d, h: httpx.NewRouter(logger, ah.Routes), svc: svc, hasher: hasher, logs: logs, clock: clock}
+	return &env{t: t, db: d, h: httpx.NewRouter(logger, ah.Routes), svc: svc, hasher: hasher, logs: logs, clock: clock, mail: rm}
 }
 
 type syncWriter struct {
