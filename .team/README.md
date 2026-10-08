@@ -12,14 +12,14 @@
 |---|---:|---|
 | BACKLOG | 17 | T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032 |
 | TODO | 5 | T-015, T-033, T-034, T-035, T-036 |
-| MERGED | 3 | T-009, T-011, T-012 |
-| DONE | 11 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-010, T-028, T-030 |
+| MERGED | 2 | T-011, T-012 |
+| DONE | 12 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-028, T-030 |
 
-**Awaiting your review (MERGED):** T-009 (Photo upload and storage (MinIO/S3)); T-011 (Google sign-in (OIDC + PKCE, account linking)); T-012 (Collection links (owner API and public lookup))
+**Awaiting your review (MERGED):** T-011 (Google sign-in (OIDC + PKCE, account linking)); T-012 (Collection links (owner API and public lookup))
 
 **Open questions for you:** none
 
-_Board last written 2026-10-08 02:35Z_
+_Board last written 2026-10-08 02:46Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -544,7 +544,7 @@ The yearbook itself: create, list, read, update and delete a user's yearbooks, p
 - 2026-10-07 14:03Z · leader · accepted by owner (chat, 2026-10-07: 'Accept all')
 
 ### T-009 — Photo upload and storage (MinIO/S3)
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -555,8 +555,8 @@ The yearbook itself: create, list, read, update and delete a user's yearbooks, p
 - **Assignee:** —
 - **Branch:** task/t-009-photo-upload-and-storage-minio-s3
 - **PR:** https://github.com/danyaa666/smemories/pull/19
-- **Updated:** 2026-10-08 01:59Z by leader
-- **Comments-seen:** 11
+- **Updated:** 2026-10-08 02:46Z by leader
+- **Comments-seen:** 12
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E03-yearbooks/02-photo-upload-and-storage-minio-s3.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -595,6 +595,7 @@ Photo upload and storage for yearbook owners.
   Earlier QA findings re-checked on the merged build (manual script, real MinIO): EXIF/comment JPEG (orientation 6) -> 201, display 300x400 upright with no EXIF and no SECRET bytes; Content-Type image/jpeg, nosniff, private max-age=3600; thumb 200; other user 404, anon 401; HTML renamed .jpg 415; foreign Origin 403; 11 MiB body 413; cover set own 200 / other user's yearbook 404; other user DELETE 204 but media untouched, owner DELETE 204 then 404; yearbook delete 204 purges. 502-on-storage-failure paths are covered by internal/media integration tests (green); I did not stop the shared MinIO again. Registration, login and email routes still work with media wiring (auth collection).
   Non-blocking: unchanged from the first QA note (memory ceiling with 4 parallel 49 MP PNGs -> T-036). No test files added.
 - 2026-10-08 01:59Z · leader · merged d46aec5 (squash), owner-approved 2026-10-08, QA re-verified the merge of develop (head 7d8cfe8); I checked that T-007's mailer, cleanup, Wait and email routes survived the conflict resolution. For owner to check: copy the SMEM_S3_* and SMEM_MEDIA_* variables from .env.example into .env, run make up migrate, upload a photo with curl or the Postman media collection and open it back. Follow-ups: T-036 (memory bound), notes in T-016, T-022, T-025.
+- 2026-10-08 02:46Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-009')
 
 ### T-010 — Template spec and PDF page renderer
 - **Status:** DONE
