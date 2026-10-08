@@ -20,6 +20,15 @@ const CookieName = "smem_session"
 // allowed holds lower-case origins such as "https://app.example.com" (config
 // SMEM_ALLOWED_ORIGINS). Wrap every mutating route with it.
 func Guard(allowed []string, next http.Handler) http.Handler {
+	return guard(allowed, "application/json", next)
+}
+
+// GuardMultipart is Guard for upload routes: the body must be multipart/form-data instead of JSON.
+func GuardMultipart(allowed []string, next http.Handler) http.Handler {
+	return guard(allowed, "multipart/form-data", next)
+}
+
+func guard(allowed []string, bodyType string, next http.Handler) http.Handler {
 	set := make(map[string]bool, len(allowed))
 	for _, o := range allowed {
 		set[o] = true
@@ -31,8 +40,8 @@ func Guard(allowed []string, next http.Handler) http.Handler {
 				httpx.WriteError(w, r, http.StatusForbidden, "csrf_origin_mismatch", "origin not allowed")
 				return
 			}
-			if r.ContentLength != 0 && !isJSON(r.Header.Get("Content-Type")) {
-				httpx.WriteError(w, r, http.StatusUnsupportedMediaType, "unsupported_media_type", "Content-Type must be application/json")
+			if r.ContentLength != 0 && !hasMediaType(r.Header.Get("Content-Type"), bodyType) {
+				httpx.WriteError(w, r, http.StatusUnsupportedMediaType, "unsupported_media_type", "Content-Type must be "+bodyType)
 				return
 			}
 		}
@@ -54,7 +63,7 @@ func requestOrigin(r *http.Request) string {
 	return strings.ToLower(u.Scheme + "://" + u.Host)
 }
 
-func isJSON(contentType string) bool {
+func hasMediaType(contentType, want string) bool {
 	mt, _, err := mime.ParseMediaType(contentType)
-	return err == nil && mt == "application/json"
+	return err == nil && mt == want
 }

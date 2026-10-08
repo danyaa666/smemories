@@ -72,7 +72,7 @@ func newEnv(t *testing.T) *env {
 		t.Fatal(err)
 	}
 	ah := auth.NewHandler(svc, auth.HandlerConfig{AllowedOrigins: []string{origin}}, logger)
-	yh := NewHandler(NewStore(d), ah.RequireUser, []string{origin}, logger, e.now)
+	yh := NewHandler(NewStore(d), nil, ah.RequireUser, []string{origin}, logger, e.now)
 	e.h = httpx.NewRouter(logger, ah.Routes, yh.Routes)
 	return e
 }
@@ -373,7 +373,7 @@ func TestPatchAndProfile(t *testing.T) {
 		`{"full_name":"a","quote":"` + strings.Repeat("x", 501) + `"}`:   "invalid_quote",
 		`{"full_name":"a","is_owner":false}`:                             "unknown_field",
 		`{"full_name":"a","yearbook_id":2}`:                              "unknown_field",
-		`{"full_name":"a","photo_media_id":2}`:                           "unknown_field",
+		`{"full_name":"a","photo_media_id":2}`:                           "invalid_body", // a known field since T-009, but not a string
 	} {
 		e.do(alice, "PUT", "/v1/yearbooks/"+id+"/profile", body).status(400, code)
 	}

@@ -134,3 +134,26 @@ func TestClientIP(t *testing.T) {
 		}
 	}
 }
+
+func TestGuardMultipart(t *testing.T) {
+	h := GuardMultipart([]string{"http://localhost:5173"}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNoContent) }))
+	for _, c := range []struct {
+		name, contentType, origin string
+		want                      int
+	}{
+		{"multipart", "multipart/form-data; boundary=x", "http://localhost:5173", 204},
+		{"json is not an upload", "application/json", "http://localhost:5173", 415},
+		{"no type", "", "http://localhost:5173", 415},
+		{"bad origin", "multipart/form-data; boundary=x", "https://evil.example.com", 403},
+	} {
+		r := httptest.NewRequest("POST", "/v1/x", strings.NewReader("body"))
+		r.Header.Set("Content-Type", c.contentType)
+		r.Header.Set("Origin", c.origin)
+		r.AddCookie(&http.Cookie{Name: CookieName, Value: "t"})
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, r)
+		if rec.Code != c.want {
+			t.Errorf("%s: status %d, want %d", c.name, rec.Code, c.want)
+		}
+	}
+}

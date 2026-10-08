@@ -241,7 +241,7 @@ export interface paths {
         post?: never;
         /**
          * Delete a yearbook
-         * @description Hard-deletes the book and its profile.
+         * @description Hard-deletes the book, its profile and its stored photos. The photos are removed from object storage first; if that fails the request answers `502 storage_error` and nothing is deleted.
          */
         delete: operations["deleteYearbook"];
         options?: never;
@@ -271,6 +271,75 @@ export interface paths {
         put: operations["replaceYearbookProfile"];
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/yearbooks/{id}/media": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Yearbook ULID. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload a photo to a yearbook
+         * @description `multipart/form-data` with the image in the part named `file`; other parts are ignored and the client file name is never used. The type is decided by sniffing the content (JPEG, PNG, WebP), never by file name or Content-Type. The image is decoded, rotated upright, stripped of all metadata (EXIF, GPS, ICC, comments), resized to at most 3000 px on the long edge (never enlarged) and stored; a 480 px JPEG thumbnail is stored too. Opaque images are stored as JPEG, images with transparency as PNG. Only the owner may upload (`404` otherwise). The body cap is `SMEM_MEDIA_MAX_BYTES` (default 10 MiB). Limits: 200 photos per yearbook, 500 MiB per user, 60 uploads per 10 minutes per user.
+         */
+        post: operations["uploadMedia"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/media/{id}/content": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Media ULID. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Download a photo
+         * @description Streams the stored image to the yearbook owner only (`404` for anyone else). `Content-Type` comes from the stored record. Honours `Range` and `If-None-Match`.
+         */
+        get: operations["getMediaContent"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/media/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Media ULID. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a photo
+         * @description Removes the row and both stored objects. Idempotent: an unknown id, an already deleted one and someone else's photo all answer `204` (and the last deletes nothing), so the answer never reveals whether a photo exists. A cover or profile photo that pointed at it is cleared.
+         */
+        delete: operations["deleteMedia"];
         options?: never;
         head?: never;
         patch?: never;
@@ -309,6 +378,8 @@ export interface components {
             quote: string;
             hobbies: string;
             future_plans: string;
+            /** @description A photo of this yearbook */
+            photo_media_id: string | null;
         };
         Yearbook: {
             /**
@@ -329,6 +400,8 @@ export interface components {
             page_size: "A5" | "A4";
             /** @description Null until a template is chosen. */
             template_id: string | null;
+            /** @description A photo of this yearbook */
+            cover_media_id: string | null;
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
@@ -362,6 +435,8 @@ export interface components {
             language?: "en" | "vi";
             /** @enum {string} */
             page_size?: "A5" | "A4";
+            /** @description A photo of this yearbook (else `400 invalid_media`); null clears it. */
+            cover_media_id?: string | null;
         };
         ProfileInput: {
             full_name: string;
@@ -374,6 +449,20 @@ export interface components {
             quote?: string;
             hobbies?: string;
             future_plans?: string;
+            /** @description A photo of this yearbook (else `400 invalid_media`). Like every field of this replacing PUT */
+            photo_media_id?: string | null;
+        };
+        Media: {
+            /** @description Opaque ULID. */
+            id: string;
+            /** @description Pixels */
+            width: number;
+            height: number;
+            /** @description Size of the stored display version. */
+            bytes: number;
+        };
+        MediaEnvelope: {
+            media: components["schemas"]["Media"];
         };
         /** @description Shared error envelope. `code` is a stable snake_case contract (clients localise it); `message` is English text meant for logs. */
         Error: {
@@ -390,6 +479,11 @@ export interface components {
                  * @example invalid_token
                  * @example limit_reached
                  * @example unknown_field
+                 * @example unsupported_media_type
+                 * @example invalid_image
+                 * @example quota_exceeded
+                 * @example storage_error
+                 * @example invalid_media
                  */
                 code: string;
                 message: string;
@@ -417,7 +511,7 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
-        /** @description `invalid_<field>` (title, school_name, class_name, graduation_year, motto, language, page_size, full_name, nickname, birthday, quote, hobbies, future_plans, limit, cursor), `unknown_field` or `invalid_body`. */
+        /** @description `invalid_<field>` (title, school_name, class_name, graduation_year, motto, language, page_size, full_name, nickname, birthday, quote, hobbies, future_plans, limit, cursor, media: a `*_media_id` that is not a photo of this yearbook), `unknown_field` or `invalid_body`. */
         YearbookInvalid: {
             headers: {
                 [name: string]: unknown;
@@ -458,6 +552,15 @@ export interface components {
             headers: {
                 /** @description Seconds until the oldest counted attempt leaves the window. */
                 "Retry-After"?: number;
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description The object store failed (`storage_error`); nothing was changed, retry later. */
+        StorageError: {
+            headers: {
                 [name: string]: unknown;
             };
             content: {
@@ -995,6 +1098,7 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["CsrfOriginMismatch"];
             404: components["responses"]["YearbookNotFound"];
+            502: components["responses"]["StorageError"];
         };
     };
     updateYearbook: {
@@ -1061,6 +1165,172 @@ export interface operations {
             404: components["responses"]["YearbookNotFound"];
             413: components["responses"]["PayloadTooLarge"];
             415: components["responses"]["UnsupportedMediaType"];
+        };
+    };
+    uploadMedia: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Yearbook ULID. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Stored. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaEnvelope"];
+                };
+            };
+            /** @description `invalid_image` (corrupt, over 12000 px on a side or over 50 megapixels) or `invalid_body` (not multipart or no `file` part). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["CsrfOriginMismatch"];
+            404: components["responses"]["YearbookNotFound"];
+            /** @description A storage limit is reached (`quota_exceeded`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The file or the request body is over the cap (`payload_too_large`). */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The request is not `multipart/form-data`, or the file is not a JPEG, PNG or WebP image (`unsupported_media_type`). */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            429: components["responses"]["RateLimited"];
+            502: components["responses"]["StorageError"];
+            /** @description Too many uploads in progress (`busy`); retry after the `Retry-After` seconds. */
+            503: {
+                headers: {
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getMediaContent: {
+        parameters: {
+            query?: {
+                size?: "display" | "thumb";
+            };
+            header?: never;
+            path: {
+                /** @description Media ULID. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The image. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "private, max-age=3600";
+                    "X-Content-Type-Options"?: "nosniff";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/jpeg": string;
+                    "image/png": string;
+                };
+            };
+            /** @description The requested byte range. */
+            206: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not modified. */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unknown `size` (`invalid_size`). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            /** @description Range not satisfiable. */
+            416: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            502: components["responses"]["StorageError"];
+        };
+    };
+    deleteMedia: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Media ULID. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["CsrfOriginMismatch"];
+            502: components["responses"]["StorageError"];
         };
     };
 }
