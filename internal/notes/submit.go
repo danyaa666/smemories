@@ -26,7 +26,8 @@ const (
 	maxParts        = 12 // answers, website, photos and a few strays; more is hostile
 	maxHoneypot     = 1 << 10
 
-	// Slow phone uploads: this route extends its own deadlines instead of raising the global ones.
+	// Slow phone uploads: this route extends its own deadlines instead of raising the global ones. A body that
+	// delivers nothing for submitIdleTimeout is dropped, so a stalled upload cannot hold a slot for the whole 120 s.
 	submitReadTimeout  = 120 * time.Second
 	submitWriteTimeout = 120 * time.Second
 
@@ -37,6 +38,9 @@ const (
 	submitPerCollectionHour = 60
 )
 
+// submitIdleTimeout is a variable only so that a test can shorten it.
+var submitIdleTimeout = 10 * time.Second
+
 // plainID matches the ids worth echoing back in an error; an unknown id chosen by the client is not echoed otherwise.
 var plainID = regexp.MustCompile(`^[a-z_]{1,40}$`)
 
@@ -46,7 +50,9 @@ type submission struct {
 	hasAnswers bool
 	honeypot   bool
 	photos     [][]byte
-	held       bool // an inflight slot is taken
+	clean      map[string]string // validated answers, set before the first photo is read
+	held       bool              // an inflight slot is taken
+	ip         string
 }
 
 // submit stores a friend's note as pending. Order matters: the link is checked before the body is read, text is
@@ -64,15 +70,12 @@ func (h *Handler) submit(w http.ResponseWriter, r *http.Request) {
 		h.fail(w, r, cmp.Or(err, ErrFull))
 		return
 	}
-	httpx.ExtendDeadlines(w, submitReadTimeout, submitWriteTimeout)
+	httpx.ExtendDeadlines(w, 0, submitWriteTimeout)
+	httpx.IdleBody(w, r, submitIdleTimeout, submitReadTimeout)
 
-	sub := &submission{}
-	defer func() {
-		if sub.held {
-			<-h.inflight
-		}
-	}()
-	if !h.readParts(w, r, sub) {
+	sub := &submission{ip: h.clientIP(r)}
+	defer h.release(sub)
+	if !h.readParts(w, r, p, sub) {
 		return
 	}
 	now := h.now().UTC()
@@ -85,11 +88,13 @@ func (h *Handler) submit(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, http.StatusForbidden, "verification_failed", "verification failed")
 		return
 	}
-	clean, ok := h.validate(w, r, p, sub)
-	if !ok {
-		return
+	if sub.clean == nil { // no photos: nothing was held while waiting for the answers
+		var ok bool
+		if sub.clean, ok = h.validate(w, r, p, sub); !ok {
+			return
+		}
 	}
-	if ok, wait := h.takeSubmit(h.clientIP(r), strconv.FormatUint(p.CollectionID, 10)); !ok {
+	if ok, wait := h.takeSubmit(sub.ip, strconv.FormatUint(p.CollectionID, 10)); !ok {
 		tooMany(w, r, wait)
 		return
 	}
@@ -112,7 +117,7 @@ func (h *Handler) submit(w http.ResponseWriter, r *http.Request) {
 		stored = append(stored, m)
 		rows = append(rows, m.RowID)
 	}
-	answers, err := json.Marshal(clean)
+	answers, err := json.Marshal(sub.clean)
 	if err == nil {
 		err = h.store.insertNote(r.Context(), newNote{ID: id, Answers: answers, MediaRows: rows, CreatedAt: now, Collection: p.CollectionID, Yearbook: p.YearbookID})
 	}
@@ -134,7 +139,7 @@ func writeCreated(w http.ResponseWriter, id string) {
 
 // readParts reads the multipart body into sub. It answers the error itself and returns false on failure.
 // A filled honeypot field stops the read early with sub.honeypot set.
-func (h *Handler) readParts(w http.ResponseWriter, r *http.Request, sub *submission) bool {
+func (h *Handler) readParts(w http.ResponseWriter, r *http.Request, p Public, sub *submission) bool {
 	// The multipart parser does not always wrap a body-cap error, so remember what the body returned.
 	body := &errRecorder{r: r.Body}
 	r.Body = io.NopCloser(body)
@@ -189,11 +194,17 @@ func (h *Handler) readParts(w http.ResponseWriter, r *http.Request, sub *submiss
 				}
 				continue
 			}
+			if sub.clean == nil { // a request that will be rejected must not occupy a slot, so the text is checked first
+				if !sub.hasAnswers {
+					return invalid("send the answers part before the photos")
+				}
+				var ok bool
+				if sub.clean, ok = h.validate(w, r, p, sub); !ok {
+					return false
+				}
+			}
 			if !sub.held {
-				select {
-				case h.inflight <- struct{}{}:
-					sub.held = true
-				default:
+				if !h.acquire(sub) {
 					w.Header().Set("Retry-After", "2")
 					httpx.WriteError(w, r, http.StatusServiceUnavailable, "busy", "too many uploads in progress, retry shortly")
 					return false
@@ -218,6 +229,39 @@ func (h *Handler) readParts(w http.ResponseWriter, r *http.Request, sub *submiss
 		return invalid("missing form field \"answers\"")
 	}
 	return true
+}
+
+// acquire takes an upload slot for sub: one of the global slots (they bound the photo bytes held in memory) and
+// one of the client IP's own, so a single address cannot hold the whole pool. The per-IP share is at most half
+// of the pool, otherwise a limit above the pool size would protect nothing. It never waits.
+func (h *Handler) acquire(sub *submission) bool {
+	h.upMu.Lock()
+	defer h.upMu.Unlock()
+	if h.upIP[sub.ip] >= max(1, min(h.upPerIP, cap(h.inflight)/2)) {
+		return false
+	}
+	select {
+	case h.inflight <- struct{}{}:
+	default:
+		return false
+	}
+	h.upIP[sub.ip]++
+	sub.held = true
+	return true
+}
+
+// release gives back what acquire took; it is safe to call when nothing was taken.
+func (h *Handler) release(sub *submission) {
+	if !sub.held {
+		return
+	}
+	sub.held = false
+	h.upMu.Lock()
+	defer h.upMu.Unlock()
+	<-h.inflight
+	if h.upIP[sub.ip]--; h.upIP[sub.ip] <= 0 {
+		delete(h.upIP, sub.ip)
+	}
 }
 
 // validate parses the answers part and checks it against the form's fields. It returns the cleaned answers.

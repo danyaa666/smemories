@@ -3,6 +3,7 @@
 package notes
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -11,7 +12,9 @@ import (
 	"image"
 	"image/color"
 	"image/jpeg"
+	"io"
 	"mime/multipart"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/textproto"
@@ -216,11 +219,11 @@ func TestSubmitTextAndEmojiRoundTrip(t *testing.T) {
 	}
 }
 
-// AC1, AC3: photos go through the pipeline as contributor uploads, in order; the part order of the form does not matter.
+// AC1, AC3: photos go through the pipeline as contributor uploads, in order, after the answers part.
 func TestSubmitWithPhotos(t *testing.T) {
 	e := newEnv(t)
 	l := e.newOpenLink()
-	rec := e.post(l.token, photoPart(jpegOf(t, 10)), answers("An", "hello"), photoPart(jpegOf(t, 200))).status(201, "")
+	rec := e.post(l.token, answers("An", "hello"), photoPart(jpegOf(t, 10)), photoPart(jpegOf(t, 200))).status(201, "")
 	id := rec.json()["note"].(map[string]any)["id"].(string)
 	if n := e.count(`SELECT COUNT(*) FROM media WHERE uploader_kind = 'contributor'`); n != 2 {
 		t.Fatalf("%d contributor media", n)
@@ -357,14 +360,16 @@ func TestSubmitCompensation(t *testing.T) {
 		}
 		e.postFrom(ctx, "192.0.2.1", l.token, answers("A", "m"), photoPart(jpegOf(t, 1)), photoPart(jpegOf(t, 2)))
 		e.nothingKept()
+		noErrorLogged(t, e)
 	})
 	t.Run("client gone before anything", func(t *testing.T) {
 		e := newEnv(t)
 		l := e.newOpenLink()
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
-		e.postFrom(ctx, "192.0.2.1", l.token, answers("A", "m"), photoPart(jpegOf(t, 1)))
+		e.postFrom(ctx, "192.0.2.1", l.token, answers("A", "m"), photoPart(jpegOf(t, 1))).status(499, "client_closed")
 		e.nothingKept()
+		noErrorLogged(t, e)
 	})
 }
 
@@ -619,5 +624,189 @@ func TestYearbookDeleteRemovesNotes(t *testing.T) {
 	}
 	if e.st.count() != 0 {
 		t.Fatalf("%d objects left", e.st.count())
+	}
+}
+
+func noErrorLogged(t *testing.T, e *env) {
+	t.Helper()
+	if strings.Contains(e.logs.String(), `"level":"ERROR"`) {
+		t.Fatalf("a client that went away was logged as an error:\n%s", e.logs.String())
+	}
+}
+
+// stalled is a submission whose photos part never finishes: the answers and the first bytes of a photo arrive, then nothing.
+type stalled struct {
+	rec     *httptest.ResponseRecorder
+	done    chan struct{}
+	release func()
+}
+
+// stall starts a stalled submission from ip. It returns at once; callers wait for that with waitFor or the done channel.
+func (e *env) stall(token, ip string) *stalled {
+	e.t.Helper()
+	pr, pw := io.Pipe()
+	mw := multipart.NewWriter(pw)
+	go func() {
+		a := answers("A", "m")
+		w, _ := mw.CreateFormField("answers")
+		_, _ = w.Write(a.data)
+		h := textproto.MIMEHeader{}
+		h.Set("Content-Disposition", `form-data; name="photos"; filename="a.jpg"`)
+		w, _ = mw.CreatePart(h)
+		_, _ = w.Write([]byte{0xff, 0xd8, 0xff})
+		_, _ = w.Write(make([]byte, 1<<20)) // blocks: the handler is not reading, or the test never lets it finish
+	}()
+	r := httptest.NewRequest("POST", "/v1/public/collect/"+token+"/notes", pr)
+	r.Header.Set("Content-Type", mw.FormDataContentType())
+	r.RemoteAddr = ip + ":4000"
+	s := &stalled{rec: httptest.NewRecorder(), done: make(chan struct{}), release: func() { _ = pw.CloseWithError(io.ErrUnexpectedEOF) }}
+	go func() {
+		defer close(s.done)
+		e.h.ServeHTTP(s.rec, r)
+	}()
+	e.t.Cleanup(s.release)
+	return s
+}
+
+func (e *env) waitFor(what string, ok func() bool) {
+	e.t.Helper()
+	for range 500 {
+		if ok() {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	e.t.Fatalf("timed out waiting for %s", what)
+}
+
+func finished(all []*stalled) (out []*stalled) {
+	for _, s := range all {
+		select {
+		case <-s.done:
+			out = append(out, s)
+		default:
+		}
+	}
+	return out
+}
+
+func (e *env) held() int {
+	e.nh.upMu.Lock()
+	defer e.nh.upMu.Unlock()
+	return len(e.nh.inflight)
+}
+
+// The slow-upload attack: stalled uploads from one address cannot take the slots of everybody else.
+func TestStalledUploadsDoNotBlockOthers(t *testing.T) {
+	e := newEnv(t)
+	l := e.newOpenLink()
+	var all []*stalled
+	for range 4 { // QA's repro: four half-open uploads from one address
+		all = append(all, e.stall(l.token, "198.51.100.1"))
+	}
+	e.waitFor("two slots held and two refused", func() bool { return e.held() == 2 && len(finished(all)) == 2 })
+	for _, s := range finished(all) { // the address' share is half of the 4 slots; the others were refused at once
+		if s.rec.Code != 503 || s.rec.Header().Get("Retry-After") == "" {
+			t.Fatalf("a refused stalled upload: %d", s.rec.Code)
+		}
+	}
+	// a normal submission with three photos from another address succeeds while the attacker is still connected
+	e.postFrom(context.Background(), "203.0.113.7", l.token, answers("Real", "hi"), photoPart(jpegOf(t, 1)), photoPart(jpegOf(t, 2)), photoPart(jpegOf(t, 3))).status(201, "")
+	// text-only never needs a slot, also from the attacker's address
+	e.postFrom(context.Background(), "198.51.100.1", l.token, answers("A", "m")).status(201, "")
+	// the attacker's address has used its share, so its next photo upload is refused immediately
+	e.postFrom(context.Background(), "198.51.100.1", l.token, answers("A", "m"), photoPart(jpegOf(t, 4))).status(503, "busy")
+
+	for _, s := range all {
+		s.release()
+		<-s.done
+	}
+	e.waitFor("slots released", func() bool { return e.held() == 0 })
+	e.postFrom(context.Background(), "198.51.100.1", l.token, answers("A", "m"), photoPart(jpegOf(t, 5))).status(201, "")
+	if len(e.nh.upIP) != 0 {
+		t.Fatalf("per-IP counters left: %v", e.nh.upIP)
+	}
+	if n := e.noteCount(); n != 3 {
+		t.Fatalf("%d notes, want 3 (the stalled ones keep nothing)", n)
+	}
+}
+
+// Many addresses can still fill the pool (that is the edge's job, T-031), and the config value is honoured below half.
+func TestUploadsPerIPLimit(t *testing.T) {
+	e := newEnv(t)
+	l := e.newOpenLink()
+	e.nh.SetUploadsPerIP(1)
+	a := e.stall(l.token, "198.51.100.1")
+	e.waitFor("one slot", func() bool { return e.held() == 1 })
+	e.postFrom(context.Background(), "198.51.100.1", l.token, answers("A", "m"), photoPart(jpegOf(t, 1))).status(503, "busy")
+	e.postFrom(context.Background(), "198.51.100.2", l.token, answers("A", "m"), photoPart(jpegOf(t, 1))).status(201, "")
+	a.release()
+	<-a.done
+}
+
+// The text is checked before a slot is taken: with every slot busy, a request that would be rejected anyway gets its own error.
+func TestRejectedRequestsDoNotNeedASlot(t *testing.T) {
+	e := newEnv(t)
+	l := e.newOpenLink()
+	for range cap(e.nh.inflight) {
+		e.nh.inflight <- struct{}{}
+	}
+	e.post(l.token, text("answers", `{"name":"A"}`), photoPart(jpegOf(t, 1))).status(400, "missing_answer")
+	e.post(l.token, text("answers", `{"name":"A","message":"m","x":"y"}`), photoPart(jpegOf(t, 1))).status(400, "unknown_field")
+	e.post(l.token, photoPart(jpegOf(t, 1)), answers("A", "m")).status(400, "invalid_body") // answers must come first
+	for range cap(e.nh.inflight) {
+		<-e.nh.inflight
+	}
+	e.nothingKept()
+}
+
+// A class behind one address: 40 students each send a photo, one after the other; every slot is given back.
+func TestFortyStudentsWithPhotos(t *testing.T) {
+	e := newEnv(t)
+	l := e.newOpenLink()
+	for i := range 40 {
+		e.post(l.token, answers("Student", "hi"), photoPart(jpegOf(t, uint8(i)))).status(201, "")
+	}
+	if e.held() != 0 || len(e.nh.upIP) != 0 {
+		t.Fatal("slots not released")
+	}
+}
+
+// A body that stops arriving is dropped after the idle timeout (real socket, the deadline is the connection's):
+// 408, no note, no object, slot free again.
+func TestIdleBodyIsDropped(t *testing.T) {
+	old := submitIdleTimeout
+	submitIdleTimeout = 300 * time.Millisecond
+	t.Cleanup(func() { submitIdleTimeout = old })
+	e := newEnv(t)
+	l := e.newOpenLink()
+	srv := httptest.NewServer(e.h)
+	defer srv.Close()
+
+	conn, err := net.Dial("tcp", srv.Listener.Addr().String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	body, ct := multipartOf(answers("A", "m"), photoPart(jpegOf(t, 1)))
+	head := body.Bytes()[:body.Len()-200] // the photo is cut short; Content-Length promises the rest
+	fmt.Fprintf(conn, "POST /v1/public/collect/%s/notes HTTP/1.1\r\nHost: x\r\nContent-Type: %s\r\nContent-Length: %d\r\n\r\n", l.token, ct, body.Len())
+	_, _ = conn.Write(head)
+	e.waitFor("slot taken", func() bool { return e.held() == 1 })
+
+	start := time.Now()
+	_ = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+	res, err := http.ReadResponse(bufio.NewReader(conn), nil)
+	if err != nil {
+		t.Fatalf("no answer to a stalled upload: %v", err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != 408 || time.Since(start) > 3*time.Second {
+		t.Fatalf("status %d after %v, want 408 within the idle window", res.StatusCode, time.Since(start))
+	}
+	e.waitFor("slot released", func() bool { return e.held() == 0 })
+	e.nothingKept()
+	if n := e.noteCount(); n != 0 {
+		t.Fatalf("%d notes", n)
 	}
 }

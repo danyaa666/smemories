@@ -23,7 +23,9 @@ whose SOF cannot be read counts as progressive 4:4:4. Largest accepted: 4096 x 4
 
 Photos sent through a collection link (`media.Service.UploadContributor`, T-034) use the same processing slots and limits. A submission with
 photos holds its raw bytes (at most 3 x `SMEM_MEDIA_MAX_BYTES`) in memory until each photo is processed, one at a time; at most 2 x the slot
-count of such submissions are in flight (`503 busy`), and a photo that finds no free processing slot for 5 seconds also answers `503 busy`.
+count of such submissions are in flight and one client IP holds at most `SMEM_PUBLIC_UPLOAD_CONCURRENT_PER_IP` of them, never more than half
+of all (`503 busy` at once, `Retry-After: 2`). The slot is taken only after the text is validated, and a body that sends nothing for 10 s is dropped
+(`408`), so a stalled upload frees its slot quickly. And a photo that finds no free processing slot for 5 seconds also answers `503 busy`.
 
 ## What was wrong, and the fix
 

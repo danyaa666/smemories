@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/danyaa666/smemories/internal/auth"
@@ -26,6 +27,8 @@ const (
 	missesPerWindow = 60
 	allPerWindow    = 600
 	publicWindow    = 15 * time.Minute
+
+	defaultUploadsPerIP = 8
 )
 
 // Handler serves the owner endpoints for collection links and the public lookup.
@@ -43,6 +46,9 @@ type Handler struct {
 	verifier                   Verifier
 	inflight                   chan struct{}      // submissions holding photo bytes in memory
 	subIPHr, subIPDay, subColl *ratelimit.Limiter // submissions per IP per hour and day, per collection per hour
+	upMu                       sync.Mutex
+	upIP                       map[string]int // photo-bearing submissions in progress per client IP
+	upPerIP                    int
 }
 
 // NewHandler builds the handler; now may be nil (time.Now). svc stores the photos of submissions, each at
@@ -56,8 +62,12 @@ func NewHandler(store *Store, svc *media.Service, maxPhoto int64, requireUser fu
 		logger: logger, now: now,
 		media: svc, maxPhoto: maxPhoto, verifier: allowAll{}, inflight: make(chan struct{}, 2*svc.Slots()),
 		subIPHr: ratelimit.New(submitPerIPHour, time.Hour, now), subIPDay: ratelimit.New(submitPerIPDay, 24*time.Hour, now),
-		subColl: ratelimit.New(submitPerCollectionHour, time.Hour, now)}
+		subColl: ratelimit.New(submitPerCollectionHour, time.Hour, now),
+		upIP:    map[string]int{}, upPerIP: defaultUploadsPerIP}
 }
+
+// SetUploadsPerIP sets how many submissions with photos one client IP may have in progress (default 8).
+func (h *Handler) SetUploadsPerIP(n int) { h.upPerIP = n }
 
 // SetVerifier plugs in an abuse check (CAPTCHA) for submissions; the default lets everything pass.
 func (h *Handler) SetVerifier(v Verifier) { h.verifier = v }
@@ -220,6 +230,11 @@ func (h *Handler) lookup(w http.ResponseWriter, r *http.Request) {
 
 // fail maps a store error to the shared envelope; anything else is logged (never with the token) and answers 500.
 func (h *Handler) fail(w http.ResponseWriter, r *http.Request, err error) {
+	if r.Context().Err() != nil { // the client went away: nobody reads the answer and nothing is wrong on our side
+		h.logger.Debug("notes: client gone", "request_id", httpx.RequestIDFrom(r.Context()), "error", err)
+		httpx.WriteError(w, r, 499, "client_closed", "client closed the request")
+		return
+	}
 	if status, code, msg, ok := mediaStatus(err); ok {
 		if status == http.StatusServiceUnavailable {
 			w.Header().Set("Retry-After", "2")

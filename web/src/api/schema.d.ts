@@ -472,8 +472,8 @@ export interface paths {
         put?: never;
         /**
          * Submit a note through a collection link (public)
-         * @description A friend sends answers to the form fields (`fields` of the lookup) and up to three photos, without an account. The note is stored as `pending` for the owner to moderate; nothing about it is returned except its id. No session is read, no cookie is set, no CORS headers are sent, and neither the client IP nor the user agent is stored. The link is checked before the body is read (`404 not_found` for an unknown, malformed or revoked token, `410 collection_closed` after the deadline). Parts may come in any order; unknown parts are ignored.
-         *     Answers are validated against the set of fields in force at submission time (text rules of `docs/note-fields.md`: NFC, trimmed, control and format characters rejected except ZWJ and variation selectors, limits in characters). Each photo goes through the same pipeline as owner uploads (content sniffing, decode limits, metadata stripped, display and thumbnail versions); a rejected photo rejects the whole submission and nothing is stored. Photos are processed one at a time; when no processing slot frees up within a few seconds the answer is `503 busy` with `Retry-After`.
+         * @description A friend sends answers to the form fields (`fields` of the lookup) and up to three photos, without an account. The note is stored as `pending` for the owner to moderate; nothing about it is returned except its id. No session is read, no cookie is set, no CORS headers are sent, and neither the client IP nor the user agent is stored. The link is checked before the body is read (`404 not_found` for an unknown, malformed or revoked token, `410 collection_closed` after the deadline). Send `answers` before the first `photos` part: it is validated before any photo byte is read (otherwise `400 invalid_body`). Unknown parts are ignored. A body that delivers no byte for 10 seconds is dropped (`408 request_timeout`, nothing stored); the whole upload may take 120 seconds.
+         *     Answers are validated against the set of fields in force at submission time (text rules of `docs/note-fields.md`: NFC, trimmed, control and format characters rejected except ZWJ and variation selectors, limits in characters). Each photo goes through the same pipeline as owner uploads (content sniffing, decode limits, metadata stripped, display and thumbnail versions); a rejected photo rejects the whole submission and nothing is stored. Photos are processed one at a time. A submission with photos needs an upload slot, taken when its first photo starts to arrive: when none is free, or the client IP already has its share (`SMEM_PUBLIC_UPLOAD_CONCURRENT_PER_IP`, at most half of all slots), the answer is `503 busy` immediately with `Retry-After: 2`; the client retries. Text-only submissions need no slot.
          *     Limits: request body 32 MiB, each photo `SMEM_MEDIA_MAX_BYTES` (default 10 MiB), `answers` 16 KiB, 300 notes per link in any status, the yearbook's photo quota. Submissions that passed text validation are counted per client IP (100 per hour, 300 per day) and per link (60 per hour): `429 rate_limited` with `Retry-After`. A non-empty `website` field is a honeypot: the answer is a normal `201` and nothing is stored.
          */
         post: operations["submitNote"];
@@ -697,6 +697,7 @@ export interface components {
                  * @example collection_closed
                  * @example verification_failed
                  * @example busy
+                 * @example request_timeout
                  */
                 code: string;
                 message: string;
@@ -1803,6 +1804,15 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            /** @description No body byte arrived for 10 seconds, or the upload took over 120 seconds (`request_timeout`); nothing was stored. */
+            408: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description The link holds 300 notes (`collection_full`) or the yearbook's photo quota is reached (`quota_exceeded`). */
             409: {
                 headers: {
