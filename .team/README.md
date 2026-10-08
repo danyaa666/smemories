@@ -11,16 +11,17 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 22 | T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-039, T-040, T-041, T-042, T-044 |
-| TODO | 3 | T-034, T-038, T-045 |
-| QA_PASS | 3 | T-033, T-037, T-043 |
-| MERGED | 3 | T-015, T-035, T-036 |
+| TODO | 2 | T-034, T-045 |
+| READY_FOR_QA | 1 | T-038 |
+| QA_PASS | 2 | T-037, T-043 |
+| MERGED | 4 | T-015, T-033, T-035, T-036 |
 | DONE | 14 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-028, T-030 |
 
-**Awaiting your review (MERGED):** T-015 (Web: auth pages and session handling); T-035 (T-010 follow-ups: template tests iterate templates.List()); T-036 (Bound the memory of image processing (caps, concurrency, memory limit))
+**Awaiting your review (MERGED):** T-015 (Web: auth pages and session handling); T-033 (CI: do not cancel in-progress runs on develop and main); T-035 (T-010 follow-ups: template tests iterate templates.List()); T-036 (Bound the memory of image processing (caps, concurrency, memory limit))
 
-**Open questions for you:** Q-011 (Approve merge of T-033 (CI: do not cancel runs on develop and main)?); Q-012 (Vietnamese labels for the friends' note form (T-043): OK to merge?); Q-013 (Approve merge of T-037 (US Letter page size)?)
+**Open questions for you:** Q-012 (Vietnamese labels for the friends' note form (T-043): OK to merge?); Q-013 (Approve merge of T-037 (US Letter page size)?)
 
-_Board last written 2026-10-08 03:54Z_
+_Board last written 2026-10-08 08:34Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -216,7 +217,7 @@ QA passed and my review is clean (head 7ffdb68, CI green). High risk (sign-in, a
 QA passed and my review is clean (head 231955e, CI green); it already merges cleanly into develop (T-011 is in). High risk: a public endpoint backed by a bearer-secret link (192-bit token, only its SHA-256 stored, shown once, revocable, rate-limited). Notes themselves come later (T-034). Command: cd /Users/unisoft/GolandProjects/awesomeProject1 && /Users/unisoft/.claude/plugins/cache/claude-agent-team/agent-team/0.3.0/bin/team approve T-012
 
 ### Q-011 — Approve merge of T-033 (CI: do not cancel runs on develop and main)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-08 03:21Z
 - **Blocks:** T-033
 - **Recommendation:** approve
@@ -1273,19 +1274,19 @@ db.Open: treat MySQL 1044 as permanent; README warning about bare docker compose
 #### Comments
 
 ### T-033 — CI: do not cancel in-progress runs on develop and main
-- **Status:** QA_PASS
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** infra
 - **Milestone:** M1
 - **Depends-on:** T-004
 - **Risk:** high
 - **Rework:** 0
-- **Owner-approved:** —
-- **Assignee:** leader
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-033-ci-do-not-cancel-in-progress-runs-on-dev
 - **PR:** https://github.com/danyaa666/smemories/pull/22
-- **Updated:** 2026-10-08 03:19Z by qa
-- **Comments-seen:** 5
+- **Updated:** 2026-10-08 08:34Z by leader
+- **Comments-seen:** 7
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/09-ci-do-not-cancel-in-progress-runs-on-develop.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1299,6 +1300,8 @@ Evidence from the T-006/T-030 merges: the workflow's concurrency group has cance
 - 2026-10-08 02:47Z · dev · ci.yml: cancel-in-progress only for pull_request; push events group by sha so each merge commit runs fully; mysql digest-pinned; docs/ci.md sentence. Test: PR CI green; push twice to develop and check both runs finish. Needs owner approval (risk high).
 - 2026-10-08 03:19Z · qa · QA T-033 PASS (one gap, see 4). Evidence: 1) PR #22 CI run 37719629443 on head: go, go-integration, security, web all green; go-integration pulled the digest-pinned mysql image and passed. 2) actionlint (rhysd/actionlint:latest via docker) on ci.yml: no syntax/expression errors; only 2 pre-existing shellcheck SC2034 warnings (unused loop var i) in the wait loops at ci.yml:89/106, not from this change. 3) Pin check: docker buildx imagetools inspect mysql:8.4 digest = sha256:6ea90827...b242, identical to the pinned digest (multi-arch index digest, fine). Concurrency block read: pull_request -> group ci-<refs/pull/N/merge>, cancel true (unchanged behaviour for PRs); push (develop/main) -> group ci-<sha>, cancel false; github.ref is non-empty on PRs so the && || ternary cannot fall to sha there. Only triggers are pull_request and push [develop, main], no other event can hit the sha branch oddly. Old behaviour confirmed in gh run list --branch develop: 8 of the last 15 develop push runs were conclusion=cancelled (e.g. 7360aa7, 4db0533, 8b027a2, d209266), which is exactly the defect. 4) NOT verified live: a real double push to develop (I may not push develop, and creating a scratch GitHub repo to replay the workflow was denied by the permission system). So the 'two pushes within a minute both finish' AC rests on the expression + GitHub semantics, not on an observed run. Suggest the leader checks the first two back-to-back develop pushes after the merge (gh run list --branch develop: none cancelled). 5) docs/ci.md matches the workflow (sentence says PR runs cancel, develop/main never; no other doc mentions cancel/concurrency/mysql tag). Non-blocking: that docs sentence is one very long line (docs/ci.md:4); the workflow comment says 'a queued run' dropped in a shared group, correct per GitHub semantics (one pending per group). Risk high: needs owner approval before merge.
 - 2026-10-08 03:21Z · leader · Leader review OK on head 74346f4 (QA_PASS on the same head, CI 4/4 green, actionlint clean apart from two old shellcheck notes). Concurrency group is the PR ref for pull_request events (cancel in progress) and the commit SHA for pushes (never cancelled), the documented idiom; mysql image pinned to the current manifest digest; docs/ci.md matches; no permission, secret or action change. Not verified live (QA could not push to develop): the first back-to-back develop pushes after the merge must show no cancelled run; I will check with gh run list. Note for later: the digest pin means MySQL patch updates are manual; docs/ci.md should say how to refresh it (add when T-004's follow-ups are next touched). Awaiting owner approval.
+- 2026-10-08 08:34Z · human · owner approved merge
+- 2026-10-08 08:34Z · leader · merged 96059a6 (squash), owner-approved in chat 2026-10-08, QA_PASS on head 74346f4. Pushes to develop and main now get one concurrency group per commit (never cancelled); PRs still cancel superseded runs; mysql image pinned by digest. To verify live: the next back-to-back develop pushes must show no cancelled run (gh run list --branch develop).
 
 ### T-034 — Public note submission (text and photos)
 - **Status:** TODO
@@ -1413,7 +1416,7 @@ Add Letter (215.9 x 279.4 mm) as a third yearbook page size: migration, API, Ope
 - 2026-10-08 03:49Z · leader · Leader review OK on head 9546d3b (QA_PASS on the same head, CI 4/4 green; the PR merges cleanly into develop after T-035). Migration 0009 is additive (enum value appended, metadata-only in MySQL) and its Down turns Letter books into A5 before restoring the enum; QA ran up, down, up on real data. Validation is a fixed list, the aspect-ratio rule (1% tolerance) keeps Letter apart from A5/A4, ForPageSize and the render guard stop a template from being used on a size it does not declare, MediaBox is 612x792 pt for Letter. Non-blocking, moved to the T-038 spec: exported mutable Dims map, double error for an invalid reference; Postman has no create-with-LETTER entry (patch is covered, create tested by hand). Awaiting owner approval.
 
 ### T-038 — Template format v2: backgrounds, static text, rotation, ellipse, font families
-- **Status:** TODO
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
@@ -1422,9 +1425,9 @@ Add Letter (215.9 x 279.4 mm) as a third yearbook page size: migration, API, Ope
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-08 03:08Z by leader
+- **Branch:** task/t-038-template-format-v2-backgrounds-static-te
+- **PR:** 28
+- **Updated:** 2026-10-08 04:05Z by dev
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E08-designer-templates/02-template-format-v2-backgrounds-static-text.md`
@@ -1434,6 +1437,7 @@ Add Letter (215.9 x 279.4 mm) as a third yearbook page size: migration, API, Ope
 Extend the template JSON and renderer with page background images, localised static text, rotation, ellipse photo masks and several embedded font families.
 
 #### Comments
+- 2026-10-08 04:05Z · dev · PR #28, stacked on T-037 (#27, merged into the branch; T-038 is commit 6e810cf). All AC + the two T-037 review notes (PageDims, single invalid-reference error). Test: go test -race ./internal/templates ./internal/pdf ./internal/pdf/fonts; budget: go test ./internal/pdf -run '^$' -bench LetterBook -benchtime 1x. Gaps: PNG backgrounds checked for placement/order only (JPEG byte-identical probe); 8 MiB total rule unreachable with 4 page kinds, unit-tested on the validator.
 
 ### T-039 — Design import tool (dev only): canvas page to template draft
 - **Status:** BACKLOG
