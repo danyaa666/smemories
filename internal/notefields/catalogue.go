@@ -40,7 +40,7 @@ var fields = []Field{
 		Text{"Your message", "Lời nhắn"},
 		Text{"Write something they will enjoy reading years from now", "Viết điều gì đó để bạn ấy đọc lại sau nhiều năm nữa"}},
 	{"how_we_met", LongText, 500,
-		Text{"How we met", "Chúng ta quen nhau thế nào"},
+		Text{"How we met", "Chúng mình quen nhau thế nào"},
 		Text{"Tell the story of how you became friends", "Kể lại chuyện hai bạn đã thân nhau như thế nào"}},
 	{"first_impression", LongText, 500,
 		Text{"First impression", "Ấn tượng đầu tiên"},
