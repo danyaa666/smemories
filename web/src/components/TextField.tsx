@@ -1,8 +1,9 @@
-import { useId } from "react";
+import { useId, type ChangeEvent } from "react";
 
 type Props = {
   label: string;
-  type?: "text" | "email" | "password";
+  type?: "text" | "email" | "password" | "date" | "number";
+  multiline?: boolean;
   value: string;
   onChange: (v: string) => void;
   autoComplete: string;
@@ -14,6 +15,7 @@ type Props = {
 export function TextField({
   label,
   type = "text",
+  multiline,
   value,
   onChange,
   autoComplete,
@@ -22,18 +24,21 @@ export function TextField({
 }: Props) {
   const id = useId();
   const describedBy = [hint && `${id}-hint`, error && `${id}-error`].filter(Boolean).join(" ");
+  const shared = {
+    value,
+    autoComplete,
+    "aria-invalid": error ? true : undefined,
+    "aria-describedby": describedBy || undefined,
+    onChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => onChange(e.target.value),
+  };
   return (
     <div className="field">
       <label htmlFor={id}>{label}</label>
-      <input
-        id={id}
-        type={type}
-        value={value}
-        autoComplete={autoComplete}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={describedBy || undefined}
-        onChange={(e) => onChange(e.target.value)}
-      />
+      {multiline ? (
+        <textarea id={id} rows={3} {...shared} />
+      ) : (
+        <input id={id} type={type} {...shared} />
+      )}
       {hint && <small id={`${id}-hint`}>{hint}</small>}
       {error && (
         <p id={`${id}-error`} role="alert" className="error">
