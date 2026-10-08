@@ -11,9 +11,8 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 20 | T-013, T-014, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-040, T-041, T-042, T-046 |
-| TODO | 3 | T-039, T-044, T-047 |
+| TODO | 4 | T-034, T-039, T-044, T-047 |
 | READY_FOR_QA | 1 | T-016 |
-| IN_QA | 1 | T-034 |
 | MERGED | 4 | T-037, T-038, T-043, T-045 |
 | DONE | 18 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-028, T-030, T-033, T-035, T-036 |
 
@@ -1318,7 +1317,7 @@ Evidence from the T-006/T-030 merges: the workflow's concurrency group has cance
 - 2026-10-08 09:23Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-015, T-033, T-035, T-036')
 
 ### T-034 — Public note submission (text and photos)
-- **Status:** IN_QA
+- **Status:** TODO
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -1326,11 +1325,11 @@ Evidence from the T-006/T-030 merges: the workflow's concurrency group has cance
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** —
 - **Branch:** task/t-034-public-note-submission-text-and-photos
 - **PR:** 30
-- **Updated:** 2026-10-08 09:07Z by qa
-- **Comments-seen:** 2
+- **Updated:** 2026-10-08 09:24Z by leader
+- **Comments-seen:** 4
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/02-public-note-submission.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1341,6 +1340,33 @@ Public endpoint where a friend with a collection link submits a note with text, 
 #### Comments
 - 2026-10-08 08:44Z · leader · Leader: T-043 is merged (0032e6f), you are unblocked. First commit: change the Vietnamese label of field how_we_met from 'Chúng ta quen nhau thế nào' to 'Chúng mình quen nhau thế nào' in internal/notefields (owner-approved wording). Spec updated with the template-driven answers design; read it again.
 - 2026-10-08 09:03Z · dev · PR #30 head e90e331. How to test: make lint build test test-integration (all green); newman from postman/ (notes collection, 71 req / 135 assertions, run twice). Decision for leader: AC7 numbers (10/hr, 40/day per IP) contradict the later leader note (class behind one IP); I used 100/hr + 300/day per IP and 60/hr per collection. Verifier sees headers only. Migration 0010; TestMigratePageSizeLetter now rolls back two migrations. Not covered by tests: real 40 MiB multipart over a socket (httptest only).
+- 2026-10-08 09:24Z · qa · PR #30 head e90e331, CI green (go, go-integration, security, web). Everything else passed, one major finding.
+  ISSUES
+  1. [MAJOR, availability, cross-tenant] Four stalled uploads switch off photo submissions for the whole API. Repro: SMEM_ENV=dev API with default SMEM_MEDIA_MAX_CONCURRENT=2 (inflight cap = 2*slots = 4). Open 4 TCP connections to POST /v1/public/collect/{token}/notes (any valid link; anyone can register and create their own), send the headers, a valid answers part and the start of a photos part (head + 3 bytes of a JPEG) with Content-Length 5000000, then send nothing. A legit request with 1 photo then answers 503 busy (Retry-After 2) and still does 26 s later; text-only notes still work; photos work again only when the stalled sockets close (the route deadline is 120 s, and the attacker reopens them). No rate limit applies (counted only after validation) and the slot pool is global, not per IP or collection. Expected: one hostile client cannot take all slots. Suspected area: internal/notes/submit.go readParts (slot taken at the first photos part, held during the slow read, up to 120 s). Suggested fix: rolling idle deadline per read (e.g. 10-15 s without progress via http.NewResponseController, still 120 s overall) and a per-IP cap on concurrent photo uploads (e.g. 2); or take the global slot only once the part is fully read and bound the pending bytes another way. Add a test that 4 stalled readers from one IP do not block a fifth client.
+  2. [MINOR, doc drift] api/openapi.yaml (submitNote) and the T-034 leader note say 503 busy comes when no slot frees up 'within a few seconds'. Actual: 503 is immediate when 4 submissions already hold photo bytes (12 parallel 3-photo submissions: 4 x 201, 8 x 503 in 0.6 s). Either wait a few seconds in readParts or reword the doc; the web form (T-018) must retry on 503 honouring Retry-After.
+  3. [MINOR] A client that disconnects while its photos are processed is logged at ERROR 'notes: storage failed ... context canceled' and counted as 502/500 (no data problem, no orphan, only alert noise). Treat a cancelled request context as a client abort (debug log).
+  EVIDENCE (all real, API binary from the branch against MySQL 8.4 and MinIO, own DB and bucket, removed afterwards)
+  - Mechanical: make build, make lint (exit 0), go vet, gofmt, go test -race ./... and make test-integration all pass. Migration 0010: up (v10), down (v9, notes and note_photos gone), up again OK; no IP or user-agent column in notes or media.
+  - AC1: 201 {note:{id}}, row status pending. Errors: unknown_field (id echoed only if [a-z_]{1,40}; '<script>' id not echoed), missing_answer (also blank and null), invalid_answer (message names the field, never the value), invalid_body (array, string, number/nested values, not JSON, invalid UTF-8, BOM, empty, answers twice, >16 KiB, no answers part), 415 for JSON, urlencoded, multipart/mixed, 400 for a missing boundary, empty and truncated bodies, 400 too_many_photos with 4 photos, 405 (Allow: POST) for GET/PUT/DELETE. how_we_met is unknown_field under the default set.
+  - AC2: boundaries 1/60/61 (name) and 2000/2001 (message) pass, 2000 emoji counted as characters; control, NUL, newline-in-name, RLO and zero-width space rejected, ZWJ allowed. Emoji, ZWJ family sequence, flags, skin tone and Vietnamese round trip byte-identical (hex of the JSON_UNQUOTE value equals the sent UTF-8); NFD input stored as NFC. SQLi and HTML strings stored verbatim and harmless.
+  - AC3: 1 and 3 photos (JPEG+PNG+JPEG), contributor rows, display+thumb objects; EXIF Make/Artist tags absent from the stored object. Rejected whole: html named .jpg, svg, GIF, empty file, truncated JPEG, PNG bomb 30000x30000 and 12001 px, JPEG with forged 60000x60000 SOF, good+bad and good,good,bad: 0 rows and 0 objects each time. A photo 1 byte over 10 MiB is 413 payload_too_large; just under is accepted.
+  - AC4: real failure injection: RENAME TABLE note_photos (and notes) away so the insert fails after 3 photos were stored: 500, media rows and S3 objects unchanged; bucket missing: 502 storage_error, no rows; text-only still 201 with storage down. Dev's tests (store fails on 2nd photo, thumbnail of last, dropped table, client gone) read and are meaningful.
+  - AC5: revoked, unknown, malformed, 10 KB token: 404; expired: 410; the link is checked before content type (revoked+JSON = 404). Revoked or expired between the first byte and the last: 404/410, 0 notes, 0 media, 0 objects.
+  - AC6: 40 MiB over a real socket: 413 in 0.5 s, RSS 53 -> 77 MB, sender stopped at 37 MiB. 40 MiB to an unknown token: 404 after 1 MiB. 31 MiB junk part under the cap: 201 (see note). 3 x 6.7 MiB photos: 201 in 2.1 s, peak RSS 158 MB; 12 parallel such submissions: 4 x 201, 8 x 503, peak RSS 407 MB. 30 s trickle upload (past the 15 s global read timeout): 201, so ExtendDeadlines works. 200 media rows: 201st photo is 409 quota_exceeded, nothing stored. 300-note cap: 296 pre-filled + 30 parallel (text and photo): exactly 4 x 201 and 26 x 409, collection holds exactly 300, owner list says 300; 299 pre-filled + 4 parallel 2-photo submissions: 1 x 201, 3 x 409, media +2 and objects +4 only (the losers' photos were removed), 0 orphan contributor media; 301st 409 for text and photo.
+  - AC7: one IP, 40 students each lookup+submit: 40 x 200 + 40 x 201. 30 invalid requests do not count. Then 20 more OK, 61st on that collection 429 + Retry-After 3600; on a second collection 40 more OK then 429 (IP 100/h); a third collection from the same IP is 429, lookups stay 200. SMEM_TRUST_PROXY=false: X-Forwarded-For is ignored. true: last hop counts (spoofed first hop does not help), other IPs unaffected. 60 misses from one IP lock that IP out of lookups for 15 min including a valid token (same pattern as the login limiter, see notes); 150 valid lookups from one IP all 200 (hits do not count). Daily 300 is covered only by dev's fake-clock unit test.
+  - AC8: honeypot (also with invalid or garbage answers, and when the website part comes after the photos): 201 and 0 rows/objects; empty website is a real note; verifier covered by dev's test.
+  - AC9: no Set-Cookie, no Access-Control-* (foreign Origin + junk cookie and a real owner session cookie ignored), OPTIONS is 405; grep of the API log for the token, message text, file names, 'script', cookie names: 0 hits; route logged as the pattern.
+  - AC10: OpenAPI endpoint documented with the T-036 invalid_image wording fixed for both upload endpoints (web schema regenerated, check:api ok). Newman: notes collection 71 req / 135 assertions, 0 failures, three runs (after verifying users with SQL; run 3 after an API restart); media collection 44 req / 77 assertions, 0 failures, twice with an API restart in between.
+  - AC11: public lookup returns fields in notefields.Info shape (id, kind, label en/vi, hint, required, max_length), default set name/relationship/message.
+  - Client disconnect: 4 truncated uploads and 10 'send everything then close' at 0-2 s delays: 0 notes, 0 media, 0 objects, 0 orphans.
+  NON-BLOCKING NOTES
+  a) Ignored multipart parts still cost bandwidth: a 31 MiB junk part with valid answers is accepted as a normal note and invalid requests are not rate limited beyond the 600/15 min per-IP cost guard.
+  b) answers is capped at 16 KiB of raw JSON: a client that escapes non-BMP characters as surrogate pairs (Python ensure_ascii) cannot send 2000 emoji (24 KB); JSON.stringify in browsers does not escape them.
+  c) Contributor photos count toward the owner's 200 photo quota by spec, so a link holder can fill it (owner uploads then get quota_exceeded).
+  d) 60 misses from a shared campus IP block valid links for that IP for 15 min (by the leader's design).
+  e) Retry-After on the submit 429 is 3600 (window length), not the time until the next slot.
+  Re-test after fix: rerun the 4-stalled-connections repro and the 12-parallel run; everything else above is unaffected unless submit.go changes.
+- 2026-10-08 09:24Z · leader · Leader: QA_FAIL accepted. Fix in the same PR #30 (branch and worktree are reused), then READY_FOR_QA. The required changes are in the spec file, section 'Leader notes from the T-034 QA failure': (1) rolling 10 s idle read deadline with the 120 s total cap, (2) per-IP cap of concurrent photo-bearing submissions (default 8, configurable), (3) validate token, link state, cap and answers before reading photo bytes, (4) tests including QA's stalled-connection repro (4 half-open uploads must not block a normal submission), (5) OpenAPI wording of the 503 and no ERROR log for client disconnects. Everything else QA checked held: keep it unchanged.
 
 ### T-035 — T-010 follow-ups: template tests iterate templates.List()
 - **Status:** DONE
