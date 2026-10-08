@@ -10,9 +10,9 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 22 | T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-039, T-040, T-041, T-042, T-044 |
-| IN_PROGRESS | 1 | T-034 |
-| READY_FOR_QA | 1 | T-038 |
+| BACKLOG | 21 | T-013, T-014, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-039, T-040, T-041, T-042, T-044 |
+| TODO | 1 | T-016 |
+| READY_FOR_QA | 2 | T-034, T-038 |
 | QA_PASS | 1 | T-045 |
 | MERGED | 6 | T-015, T-033, T-035, T-036, T-037, T-043 |
 | DONE | 14 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-028, T-030 |
@@ -21,7 +21,7 @@
 
 **Open questions for you:** Q-014 (Approve merge of T-045 (register accepts a locale)?)
 
-_Board last written 2026-10-08 08:52Z_
+_Board last written 2026-10-08 09:04Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -872,7 +872,7 @@ Register, login, logout, verify-email, forgot/reset password pages; session boot
 - 2026-10-08 03:54Z · leader · merged 66d5b80 (squash), QA_PASS on head f24eb25 after one rework, CI green. Review: token moved into memory before React renders (no request carries it, Referer empty, verified in a real browser), redirect target allow-listed, return_to URL-encoded, no raw HTML, typed API client, EN/VI parity, 60 tests. For owner to check: cd web && npm run dev with the API on :8080; register, read the verification link in the API log, open it (the token disappears from the address bar), try forgot and reset. Google button appears only with VITE_GOOGLE_SIGNIN=true. Known: reloading /reset-password before submitting loses the token (by design: ask for a new link); verification mail is English for Vietnamese users until T-045.
 
 ### T-016 — Web: yearbook list, create/edit, profile and photo upload UI
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -883,8 +883,8 @@ Register, login, logout, verify-email, forgot/reset password pages; session boot
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-06 10:13Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-08 09:04Z by leader
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E03-yearbooks/03-web-yearbook-list-create-edit-profile-and.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -893,6 +893,7 @@ Register, login, logout, verify-email, forgot/reset password pages; session boot
 Dashboard of the user's yearbooks; create/edit form for book information and the owner profile; photo upload with progress, thumbnails and delete; set cover and profile photo.
 
 #### Comments
+- 2026-10-08 09:04Z · leader · T-009 and T-015 are merged: unblocked. Spec carries leader notes (PUT profile clears photo_media_id unless sent; Letter page size selector; upload error codes).
 
 ### T-017 — Web: notes link management and moderation inbox
 - **Status:** BACKLOG
@@ -1313,7 +1314,7 @@ Evidence from the T-006/T-030 merges: the workflow's concurrency group has cance
 - 2026-10-08 08:34Z · leader · merged 96059a6 (squash), owner-approved in chat 2026-10-08, QA_PASS on head 74346f4. Pushes to develop and main now get one concurrency group per commit (never cancelled); PRs still cancel superseded runs; mysql image pinned by digest. To verify live: the next back-to-back develop pushes must show no cancelled run (gh run list --branch develop).
 
 ### T-034 — Public note submission (text and photos)
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -1321,10 +1322,10 @@ Evidence from the T-006/T-030 merges: the workflow's concurrency group has cance
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-034-public-note-submission-text-and-photos
-- **PR:** —
-- **Updated:** 2026-10-08 08:48Z by dev
+- **PR:** 30
+- **Updated:** 2026-10-08 09:03Z by dev
 - **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/02-public-note-submission.md`
@@ -1335,6 +1336,7 @@ Public endpoint where a friend with a collection link submits a note with text, 
 
 #### Comments
 - 2026-10-08 08:44Z · leader · Leader: T-043 is merged (0032e6f), you are unblocked. First commit: change the Vietnamese label of field how_we_met from 'Chúng ta quen nhau thế nào' to 'Chúng mình quen nhau thế nào' in internal/notefields (owner-approved wording). Spec updated with the template-driven answers design; read it again.
+- 2026-10-08 09:03Z · dev · PR #30 head e90e331. How to test: make lint build test test-integration (all green); newman from postman/ (notes collection, 71 req / 135 assertions, run twice). Decision for leader: AC7 numbers (10/hr, 40/day per IP) contradict the later leader note (class behind one IP); I used 100/hr + 300/day per IP and 60/hr per collection. Verifier sees headers only. Migration 0010; TestMigratePageSizeLetter now rolls back two migrations. Not covered by tests: real 40 MiB multipart over a socket (httptest only).
 
 ### T-035 — T-010 follow-ups: template tests iterate templates.List()
 - **Status:** MERGED
