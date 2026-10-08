@@ -10,8 +10,8 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 20 | T-013, T-014, T-015, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-033, T-035 |
-| TODO | 2 | T-034, T-036 |
+| BACKLOG | 17 | T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032 |
+| TODO | 5 | T-015, T-033, T-034, T-035, T-036 |
 | QA_PASS | 1 | T-012 |
 | MERGED | 3 | T-007, T-009, T-011 |
 | DONE | 10 | T-001, T-002, T-003, T-004, T-005, T-006, T-008, T-010, T-028, T-030 |
@@ -786,7 +786,7 @@ Asynchronous export: POST creates a job (one active export per book), a bounded 
 - 2026-10-07 11:38Z · leader · Leader note from the T-010 review: pdf.Render has no caps on notes or text length (10,000 notes with three 100 KB fields took 87 s of CPU in QA's adversarial test, memory bounded). The export job must (1) run Render under a context deadline (60 s, matching the quality bar), (2) pass only approved notes (T-034 already caps a collection at 300 notes and messages at 2000 characters), (3) report warnings (low_resolution, missing_glyph, missing_image, extra_photos, text_truncated) to the owner in plain language (T-019).
 
 ### T-015 — Web: auth pages and session handling
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -797,8 +797,8 @@ Asynchronous export: POST creates a job (one active export per book), a bounded 
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-06 10:13Z by leader
-- **Comments-seen:** 1
+- **Updated:** 2026-10-08 02:24Z by leader
+- **Comments-seen:** 2
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/04-web-auth-pages-and-session-handling.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -808,6 +808,7 @@ Register, login, logout, verify-email, forgot/reset password pages; session boot
 
 #### Comments
 - 2026-10-07 06:10Z · leader · Leader note from the T-003 review (non-blocking, do with this task): the language buttons show only EN/VI. Give each an accessible name from the existing language.en / language.vi locale keys (aria-label), which are unused today; update the LanguageSwitcher test accordingly. Also pass Headers instances safely in api/client.ts (spreading a Headers object drops its entries).
+- 2026-10-08 02:24Z · leader · T-007 is merged: unblocked. Spec updated with leader notes from the T-007 and T-011 reviews (token handling on verify/reset pages, Google button and error codes).
 
 ### T-016 — Web: yearbook list, create/edit, profile and photo upload UI
 - **Status:** BACKLOG
@@ -1221,7 +1222,7 @@ db.Open: treat MySQL 1044 as permanent; README warning about bare docker compose
 #### Comments
 
 ### T-033 — CI: do not cancel in-progress runs on develop and main
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** infra
 - **Milestone:** M1
@@ -1232,8 +1233,8 @@ db.Open: treat MySQL 1044 as permanent; README warning about bare docker compose
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-07 11:16Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-08 02:24Z by leader
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/09-ci-do-not-cancel-in-progress-runs-on-develop.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1242,6 +1243,7 @@ db.Open: treat MySQL 1044 as permanent; README warning about bare docker compose
 Evidence from the T-006/T-030 merges: the workflow's concurrency group has cancel-in-progress: true for every event, so a push to develop cancels the still-running CI of the previous push (the leader's board-sync commits do this right after each merge).
 
 #### Comments
+- 2026-10-08 02:24Z · leader · Merge-commit CI runs on develop keep getting cancelled by board-sync pushes; ready.
 
 ### T-034 — Public note submission (text and photos)
 - **Status:** TODO
@@ -1267,7 +1269,7 @@ Public endpoint where a friend with a collection link submits a note with text, 
 #### Comments
 
 ### T-035 — T-010 follow-ups: template tests iterate templates.List()
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -1278,8 +1280,8 @@ Public endpoint where a friend with a collection link submits a note with text, 
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-07 11:38Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-08 02:24Z by leader
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/05-t-010-follow-ups-template-tests-iterate.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1288,6 +1290,7 @@ Public endpoint where a friend with a collection link submits a note with text, 
 From the T-010 QA notes: adding a template exactly as docs/templates.md describes fails TestListHasBuiltIns and needs a Go edit to TestSamples.
 
 #### Comments
+- 2026-10-08 02:24Z · leader · T-010 is accepted: small follow-up, ready.
 
 ### T-036 — Bound the memory of image processing (caps, concurrency, memory limit)
 - **Status:** TODO
