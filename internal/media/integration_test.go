@@ -24,6 +24,7 @@ import (
 	"github.com/danyaa666/smemories/internal/auth"
 	"github.com/danyaa666/smemories/internal/db/dbtest"
 	"github.com/danyaa666/smemories/internal/httpx"
+	"github.com/danyaa666/smemories/internal/mailer"
 	"github.com/danyaa666/smemories/internal/ratelimit"
 	"github.com/danyaa666/smemories/internal/storage"
 	"github.com/danyaa666/smemories/internal/storage/storagetest"
@@ -134,8 +135,10 @@ func newEnv(t *testing.T) *env {
 	d := dbtest.New(t)
 	e := &env{t: t, db: d, st: &flaky{Storage: storagetest.New(t), keys: map[string]bool{}}}
 	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
+	mail, _ := mailer.NewLog("test", io.Discard)
 	hasher := auth.NewHasher(auth.HashParams{MemoryKiB: 64, Time: 1, Parallelism: 1}, 4, auth.HashWait)
-	as, err := auth.NewService(auth.NewStore(d), hasher, auth.Limits{RegisterPerHour: 1000, LoginFailsPerPair: 1000, LoginFailsPerIP: 1000}, nil)
+	as, err := auth.NewService(auth.NewStore(d), hasher, auth.Limits{RegisterPerHour: 1000, LoginFailsPerPair: 1000, LoginFailsPerIP: 1000},
+		auth.Mail{Mailer: mail, BaseURL: "http://localhost:5173", Logger: logger}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
