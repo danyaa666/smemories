@@ -17,7 +17,19 @@ function renderAt(path: string) {
   );
 }
 
-const respond = (res: () => Promise<Response>) => vi.stubGlobal("fetch", vi.fn(res));
+// Everything except the session probe gets `res`; the probe says "signed out".
+const respond = (res: () => Promise<Response>) =>
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string) =>
+      url === "/api/v1/me"
+        ? Response.json(
+            { error: { code: "unauthenticated", message: "", request_id: "" } },
+            { status: 401 },
+          )
+        : res(),
+    ),
+  );
 
 describe("App", () => {
   it("shows header and main landmarks, the app name and the tagline", async () => {

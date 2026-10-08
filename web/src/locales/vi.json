@@ -17,5 +17,85 @@
     "title": "Không tìm thấy trang",
     "body": "Trang bạn đang tìm không tồn tại.",
     "home": "Về trang chủ"
+  },
+  "auth": {
+    "loading": "Đang tải…",
+    "retry": "Thử lại",
+    "working": "Vui lòng chờ…"
+  },
+  "nav": {
+    "label": "Tài khoản",
+    "signIn": "Đăng nhập",
+    "register": "Tạo tài khoản",
+    "account": "Tài khoản của tôi",
+    "signOut": "Đăng xuất"
+  },
+  "fields": {
+    "email": "Email",
+    "password": "Mật khẩu",
+    "displayName": "Tên của bạn",
+    "newPassword": "Mật khẩu mới",
+    "passwordHint": "Ít nhất 10 ký tự."
+  },
+  "login": {
+    "title": "Đăng nhập",
+    "submit": "Đăng nhập",
+    "forgot": "Quên mật khẩu?",
+    "noAccount": "Chưa có tài khoản? Tạo tài khoản",
+    "google": "Đăng nhập bằng Google",
+    "oidc": {
+      "oidc_state": "Phiên đăng nhập đã hết hạn hoặc được mở ở trình duyệt khác. Vui lòng thử lại.",
+      "oidc_denied": "Bạn đã huỷ đăng nhập bằng Google.",
+      "oidc_failed": "Đăng nhập bằng Google không thành công. Vui lòng thử lại.",
+      "email_unverified": "Google chưa xác nhận địa chỉ email của bạn nên chúng tôi không thể đăng nhập bằng email này.",
+      "unknown": "Đăng nhập không thành công. Vui lòng thử lại."
+    }
+  },
+  "register": {
+    "title": "Tạo tài khoản",
+    "submit": "Tạo tài khoản",
+    "haveAccount": "Đã có tài khoản? Đăng nhập",
+    "google": "Đăng ký bằng Google"
+  },
+  "forgot": {
+    "title": "Quên mật khẩu?",
+    "intro": "Nhập email của bạn, chúng tôi sẽ gửi liên kết để đặt mật khẩu mới. Nếu bạn đăng ký bằng Google, đây cũng là cách để đặt mật khẩu.",
+    "submit": "Gửi liên kết đặt lại",
+    "sent": "Nếu địa chỉ này có tài khoản, chúng tôi đã gửi một liên kết. Liên kết có hiệu lực trong 1 giờ.",
+    "back": "Quay lại đăng nhập"
+  },
+  "reset": {
+    "title": "Đặt mật khẩu mới",
+    "submit": "Đổi mật khẩu",
+    "done": "Mật khẩu đã được đổi. Hãy đăng nhập bằng mật khẩu mới.",
+    "requestNew": "Yêu cầu liên kết mới"
+  },
+  "verify": {
+    "title": "Xác minh email",
+    "working": "Đang xác minh email…",
+    "done": "Email của bạn đã được xác minh.",
+    "continue": "Tiếp tục"
+  },
+  "account": {
+    "title": "Tài khoản của tôi",
+    "verified": "Email đã xác minh",
+    "notVerified": "Email chưa được xác minh. Hãy kiểm tra hộp thư của bạn.",
+    "resend": "Gửi lại liên kết",
+    "resendSent": "Chúng tôi đã gửi liên kết mới.",
+    "resendAlready": "Email của bạn đã được xác minh.",
+    "resendLimit": "Bạn có thể yêu cầu tối đa 3 email mỗi giờ."
+  },
+  "errors": {
+    "generic": "Đã xảy ra lỗi. Vui lòng thử lại.",
+    "network_error": "Không kết nối được với máy chủ. Hãy kiểm tra mạng và thử lại.",
+    "invalid_email": "Hãy nhập địa chỉ email hợp lệ.",
+    "weak_password": "Hãy chọn mật khẩu từ 10 đến 128 ký tự và không trùng với email.",
+    "invalid_display_name": "Hãy nhập tên từ 1 đến 100 ký tự, không chứa ký tự ẩn hoặc ký tự điều khiển.",
+    "email_taken": "Email này đã được đăng ký. Hãy thử đăng nhập.",
+    "invalid_credentials": "Email hoặc mật khẩu không đúng.",
+    "invalid_token": "Liên kết đã hết hạn hoặc đã được sử dụng. Hãy yêu cầu liên kết mới.",
+    "rate_limited": "Bạn thử quá nhiều lần. Hãy thử lại sau {{minutes}} phút.",
+    "busy": "Máy chủ đang bận. Hãy thử lại sau giây lát.",
+    "unauthenticated": "Phiên đăng nhập đã hết. Hãy đăng nhập lại."
   }
 }

@@ -17,5 +17,85 @@
     "title": "Page not found",
     "body": "The page you are looking for does not exist.",
     "home": "Back to the home page"
+  },
+  "auth": {
+    "loading": "Loading…",
+    "retry": "Try again",
+    "working": "Please wait…"
+  },
+  "nav": {
+    "label": "Account",
+    "signIn": "Sign in",
+    "register": "Create account",
+    "account": "My account",
+    "signOut": "Sign out"
+  },
+  "fields": {
+    "email": "Email",
+    "password": "Password",
+    "displayName": "Your name",
+    "newPassword": "New password",
+    "passwordHint": "At least 10 characters."
+  },
+  "login": {
+    "title": "Sign in",
+    "submit": "Sign in",
+    "forgot": "Forgot your password?",
+    "noAccount": "New here? Create an account",
+    "google": "Sign in with Google",
+    "oidc": {
+      "oidc_state": "The sign-in took too long or was opened in another browser. Please try again.",
+      "oidc_denied": "Google sign-in was cancelled.",
+      "oidc_failed": "Google sign-in failed. Please try again.",
+      "email_unverified": "Google could not confirm your email address, so we cannot sign you in with it.",
+      "unknown": "Sign-in failed. Please try again."
+    }
+  },
+  "register": {
+    "title": "Create your account",
+    "submit": "Create account",
+    "haveAccount": "Already have an account? Sign in",
+    "google": "Sign up with Google"
+  },
+  "forgot": {
+    "title": "Forgot your password?",
+    "intro": "Enter your email and we will send you a link to set a new password. If you signed up with Google, this is also how you set a password.",
+    "submit": "Send reset link",
+    "sent": "If an account exists for that address, we have sent a link. It works for 1 hour.",
+    "back": "Back to sign in"
+  },
+  "reset": {
+    "title": "Set a new password",
+    "submit": "Change password",
+    "done": "Your password has been changed. Sign in with your new password.",
+    "requestNew": "Ask for a new link"
+  },
+  "verify": {
+    "title": "Verify your email",
+    "working": "Verifying your email…",
+    "done": "Your email address is verified.",
+    "continue": "Continue"
+  },
+  "account": {
+    "title": "My account",
+    "verified": "Email verified",
+    "notVerified": "Email not verified yet. Check your inbox for the link.",
+    "resend": "Send the link again",
+    "resendSent": "We sent a new link.",
+    "resendAlready": "Your email is already verified.",
+    "resendLimit": "You can request up to 3 emails per hour."
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "network_error": "Could not reach the server. Check your connection and try again.",
+    "invalid_email": "Enter a valid email address.",
+    "weak_password": "Choose a password of 10 to 128 characters that is not your email address.",
+    "invalid_display_name": "Enter a name of 1 to 100 characters without invisible or control characters.",
+    "email_taken": "This email is already registered. Try signing in.",
+    "invalid_credentials": "Wrong email or password.",
+    "invalid_token": "This link has expired or was already used. Ask for a new one.",
+    "rate_limited": "Too many attempts. Try again in {{minutes}} min.",
+    "busy": "The server is busy. Try again in a moment.",
+    "unauthenticated": "Your session has ended. Sign in again."
   }
 }
