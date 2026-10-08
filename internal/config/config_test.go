@@ -46,7 +46,7 @@ func TestLoadPoolSettings(t *testing.T) {
 }
 
 func TestLoadValid(t *testing.T) {
-	cfg, err := Load(env(map[string]string{"SMEM_HTTP_ADDR": "127.0.0.1:0", "SMEM_ENV": "prod", "SMEM_LOG_LEVEL": "debug", "SMEM_DB_DSN": dsn, "SMEM_ALLOWED_ORIGINS": "https://app.example.com", "SMEM_PUBLIC_BASE_URL": "https://app.example.com/"}))
+	cfg, err := Load(env(map[string]string{"SMEM_HTTP_ADDR": "127.0.0.1:0", "SMEM_ENV": "prod", "SMEM_LOG_LEVEL": "debug", "SMEM_DB_DSN": dsn, "SMEM_ALLOWED_ORIGINS": "https://app.example.com", "SMEM_PUBLIC_BASE_URL": "https://app.example.com/", "SMEM_S3_BUCKET": "b"}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,7 +91,7 @@ func TestLoadAuthDefaults(t *testing.T) {
 }
 
 func TestLoadAllowedOrigins(t *testing.T) {
-	cfg, err := Load(env(map[string]string{"SMEM_DB_DSN": dsn, "SMEM_ENV": "prod", "SMEM_PUBLIC_BASE_URL": "https://app.example.com", "SMEM_ALLOWED_ORIGINS": " https://App.Example.com , http://localhost:5173 ", "SMEM_TRUST_PROXY": "true"}))
+	cfg, err := Load(env(map[string]string{"SMEM_DB_DSN": dsn, "SMEM_ENV": "prod", "SMEM_PUBLIC_BASE_URL": "https://app.example.com", "SMEM_ALLOWED_ORIGINS": " https://App.Example.com , http://localhost:5173 ", "SMEM_TRUST_PROXY": "true", "SMEM_S3_BUCKET": "b"}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -113,6 +113,31 @@ func TestLoadAllowedOrigins(t *testing.T) {
 	}
 }
 
+func TestLoadMediaAndS3(t *testing.T) {
+	cfg, err := Load(env(map[string]string{"SMEM_DB_DSN": dsn}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.MediaMaxBytes != 10<<20 || cfg.MediaMaxConcurrent != 4 || cfg.S3Bucket != "smemories-dev" || cfg.S3Region != "us-east-1" || cfg.S3PathStyle {
+		t.Fatalf("unexpected defaults: %+v", cfg)
+	}
+	cfg, err = Load(env(map[string]string{"SMEM_DB_DSN": dsn, "SMEM_MEDIA_MAX_BYTES": "2048", "SMEM_S3_ENDPOINT": "http://127.0.0.1:9000", "SMEM_S3_PATH_STYLE": "true", "SMEM_S3_BUCKET": "b"}))
+	if err != nil || cfg.MediaMaxBytes != 2048 || cfg.S3Endpoint != "http://127.0.0.1:9000" || !cfg.S3PathStyle || cfg.S3Bucket != "b" {
+		t.Fatalf("got %+v, %v", cfg, err)
+	}
+	for _, c := range []struct{ key, val string }{
+		{"SMEM_MEDIA_MAX_BYTES", "0"}, {"SMEM_MEDIA_MAX_BYTES", "999999999999"}, {"SMEM_MEDIA_MAX_CONCURRENT", "0"},
+		{"SMEM_S3_ENDPOINT", "minio:9000"}, {"SMEM_S3_PATH_STYLE", "maybe"},
+	} {
+		if _, err := Load(env(map[string]string{"SMEM_DB_DSN": dsn, c.key: c.val})); err == nil || !strings.Contains(err.Error(), c.key) {
+			t.Errorf("%s=%q: want error naming the variable, got %v", c.key, c.val, err)
+		}
+	}
+	if _, err := Load(env(map[string]string{"SMEM_ENV": "prod", "SMEM_DB_DSN": dsn, "SMEM_ALLOWED_ORIGINS": "https://a.example.com", "SMEM_PUBLIC_BASE_URL": "https://a.example.com"})); err == nil || !strings.Contains(err.Error(), "SMEM_S3_BUCKET") {
+		t.Errorf("prod without bucket: got %v", err)
+	}
+}
+
 func TestLoadPublicBaseURL(t *testing.T) {
 	cfg, err := Load(env(map[string]string{"SMEM_DB_DSN": dsn}))
 	if err != nil || cfg.PublicBaseURL != "http://localhost:5173" {
@@ -122,7 +147,7 @@ func TestLoadPublicBaseURL(t *testing.T) {
 	if err != nil || cfg.PublicBaseURL != "https://app.example.com" {
 		t.Fatalf("trailing slash must be trimmed: %q, %v", cfg.PublicBaseURL, err)
 	}
-	prod := map[string]string{"SMEM_DB_DSN": dsn, "SMEM_ENV": "prod", "SMEM_ALLOWED_ORIGINS": "https://app.example.com"}
+	prod := map[string]string{"SMEM_DB_DSN": dsn, "SMEM_ENV": "prod", "SMEM_ALLOWED_ORIGINS": "https://app.example.com", "SMEM_S3_BUCKET": "b"}
 	if _, err := Load(env(prod)); err == nil || !strings.Contains(err.Error(), "SMEM_PUBLIC_BASE_URL") {
 		t.Errorf("prod without it: want error naming SMEM_PUBLIC_BASE_URL, got %v", err)
 	}

@@ -12,3 +12,8 @@ _BACKLOG: needs a full spec before it moves to TODO._
 #### Leader notes from the T-007 review (2026-10-08)
 The forgot-password limit of 3 per hour per email address (required by T-007 AC5) lets anyone block a victim's password reset for an hour by requesting it three times.
 Accepted for M1; when the shared limiter lands, decide whether to keep it, to key it on (IP, email), or to answer with the same 202 but silently not send past the cap.
+
+#### Leader notes from the T-011 review (2026-10-08)
+The Google start and callback limits (30 per 15 minutes per client IP, T-011 AC8) and the per-IP register/login limits are per source address. Students on one campus network often share a single public IP
+(NAT): a class signing in together could hit 429. Before go-live, make these limits configurable, measure against a realistic burst (for example 60 students in 5 minutes) and decide whether to key on IP + user agent
+class or move the first line of defence to the edge (WAF rate rules). Also: the OIDC discovery fetch holds a lock for up to 5 s (ponytail in `discover`); use singleflight so a Google outage cannot queue requests.

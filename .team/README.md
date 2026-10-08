@@ -10,17 +10,17 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 21 | T-013, T-014, T-015, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-033, T-035, T-036 |
-| TODO | 3 | T-011, T-012, T-034 |
-| IN_PROGRESS | 1 | T-009 |
-| MERGED | 1 | T-007 |
+| BACKLOG | 20 | T-013, T-014, T-015, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-033, T-035 |
+| TODO | 3 | T-012, T-034, T-036 |
+| CHANGES_REQUESTED | 1 | T-011 |
+| MERGED | 2 | T-007, T-009 |
 | DONE | 10 | T-001, T-002, T-003, T-004, T-005, T-006, T-008, T-010, T-028, T-030 |
 
-**Awaiting your review (MERGED):** T-007 (Email verification and password reset)
+**Awaiting your review (MERGED):** T-007 (Email verification and password reset); T-009 (Photo upload and storage (MinIO/S3))
 
-**Open questions for you:** none
+**Open questions for you:** Q-009 (Approve merge of T-011 (Google sign-in)?)
 
-_Board last written 2026-10-08 01:32Z_
+_Board last written 2026-10-08 02:00Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -192,6 +192,15 @@ Leader review and QA both passed on PR #18 (head 3f6c9aa, CI green). It is high 
 - **Answer:** _(pending)_
 
 Leader review and QA both passed on PR #19 (head 21ba7aa, CI green). High risk (file uploads, personal data, CI change, new AWS S3 SDK dependency approved earlier in L-01). Merge T-007 first (migration 0005), then this one (0006). Known limit: memory use of image processing is high; follow-up T-036 fixes it before anonymous uploads (T-034). New settings: SMEM_S3_* and SMEM_MEDIA_* (copy from .env.example). Command: cd /Users/unisoft/GolandProjects/awesomeProject1 && /Users/unisoft/.claude/plugins/cache/claude-agent-team/agent-team/0.3.0/bin/team approve T-009
+
+### Q-009 — Approve merge of T-011 (Google sign-in)?
+- **Status:** OPEN
+- **Asked:** 2026-10-08 02:00Z
+- **Blocks:** T-011
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+QA passed and my review is clean (head 7ffdb68, CI green). High risk (sign-in, account linking, new libraries go-oidc and oauth2, approved in the spec). It is being sent back to dev only to merge develop (T-009 landed); your approval stays valid unless the code changes beyond the merge. Google is optional and off by default: nothing changes until SMEM_GOOGLE_* is configured (real Google credentials are a later owner step). Command: cd /Users/unisoft/GolandProjects/awesomeProject1 && /Users/unisoft/.claude/plugins/cache/claude-agent-team/agent-team/0.3.0/bin/team approve T-011
 
 <!-- questions:end -->
 
@@ -526,7 +535,7 @@ The yearbook itself: create, list, read, update and delete a user's yearbooks, p
 - 2026-10-07 14:03Z · leader · accepted by owner (chat, 2026-10-07: 'Accept all')
 
 ### T-009 — Photo upload and storage (MinIO/S3)
-- **Status:** IN_PROGRESS
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -534,11 +543,11 @@ The yearbook itself: create, list, read, update and delete a user's yearbooks, p
 - **Risk:** high
 - **Rework:** 1
 - **Owner-approved:** yes
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-009-photo-upload-and-storage-minio-s3
 - **PR:** https://github.com/danyaa666/smemories/pull/19
-- **Updated:** 2026-10-08 01:32Z by dev
-- **Comments-seen:** 6
+- **Updated:** 2026-10-08 01:59Z by leader
+- **Comments-seen:** 11
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E03-yearbooks/02-photo-upload-and-storage-minio-s3.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -569,6 +578,14 @@ Photo upload and storage for yearbook owners.
 - 2026-10-07 17:42Z · leader · Leader review OK on head 21ba7aa (the commit QA tested; CI go, go-integration, web, security green). Checked in the diff, not only in the tests: type by sniffing, dimensions from the header before decode, re-encode strips all metadata, generated keys only, owner-only reads with nosniff/private cache, quota recheck under a lock on the user row, upload rate limit, in-flight cap (16) answers 503 busy, yearbook delete purges storage first and fails 502 with nothing deleted, orphans cleaned on failed upload, migration reversible, CI change adds only a MinIO container and fake credentials, no new action. Non-blocking, handled: peak memory 3.2 GB for 4 worst-case PNGs -> new task T-036 (P1, blocks T-034; also sizing note in T-022); aws modules marked '// indirect' in go.mod -> T-036 AC5; orphan sweep -> T-025 spec; PUT profile clears photo_media_id when absent -> T-016 spec. Merge order: T-007 first (its migration is 0005, this one is 0006). Awaiting owner approval.
 - 2026-10-08 01:30Z · human · owner approved merge
 - 2026-10-08 01:32Z · leader · Leader: T-007 merged to develop (186ac52) and PR #19 now conflicts (api/openapi.yaml, cmd/smemories-api/main.go, internal/config/config_test.go; schema.d.ts merges textually but is stale). No code defect. Please: (1) git fetch; merge origin/develop into the task branch (do not rebase a pushed branch); (2) resolve keeping BOTH sides: T-007's auth/mailer wiring, SMEM_PUBLIC_BASE_URL and email routes, and T-009's media/storage wiring, SMEM_S3_*/SMEM_MEDIA_* and routes; the NewHandler for yearbooks keeps T-009's purger argument; (3) cd web && npm run gen:api and commit schema.d.ts (check:api must pass); (4) ls migrations/ must show 0005_email_tokens.sql and 0006_media.sql; test a fresh DB and one that already applied 0005; (5) make lint build test test-integration, run the auth, yearbooks and media Postman collections twice; (6) push and mark READY_FOR_QA with the merge-commit SHA. Nothing else in scope changes.
+- 2026-10-08 01:35Z · dev · Rework done: merged origin/develop (T-007) into the branch, merge commit 845b4c5, head 7d8cfe8 (extra fix: media integration test now passes auth.Mail to NewService). Conflicts resolved keeping both sides (main.go: mailer + media/storage wiring, go svc.RunCleanup, yearbook handler keeps media purger; openapi error code examples include invalid_token + media codes; config tests set SMEM_PUBLIC_BASE_URL and SMEM_S3_BUCKET where prod is used). web: npm run gen:api gives no diff vs merged schema.d.ts, check:api ok. migrations: 0005_email_tokens.sql + 0006_media.sql; tested a DB with 0005 applied (develop) then up/down/up of 0006 OK; fresh DBs via integration tests. make lint build test test-integration green. newman auth (45/110), yearbooks (85/172), media (44/77) each run twice against the merged API: 0 failures. No .team files in PR diff.
+- 2026-10-08 01:52Z · qa · QA_PASS T-009 re-verify after merge of develop (T-007); head 7d8cfe8 (merge 845b4c5), PR #19 CI 4/4 green (go, go-integration, web, security). Diff vs develop is only T-009 content, no .team files.
+  Mechanical (in worktree, local MySQL+MinIO): make lint build test = green (gofmt, vet, golangci-lint, web lint/typecheck/i18n/check:api, go test -race, vitest 25/25); make test-integration = all packages ok (auth, media, storage, mailer, yearbook, ...).
+  Migrations: ls migrations = 0001,0002,0004,0005_email_tokens,0006_media. DB A: develop binary applied up to 0005, then branch 'migrate up' applied 0006, down (0006 removed), up again, status shows 0001..0006. DB B fresh: up applies 0001..0006. No version clash.
+  Postman against the merged API binary (SMEM_ENV=dev, fresh DB B), each run twice back to back: auth 45 req/110 assertions 0 failures x2; yearbooks 85/172 0 failures x2; media 44/77 0 failures x2. Note: the register/forgot-password limits (5/h per IP, documented in the collections) make a 3rd auth run within the hour 429; I restarted the API and set SMEM_RATE_REGISTER_PER_HOUR=1000 for the runs, as the collection descriptions say.
+  Earlier QA findings re-checked on the merged build (manual script, real MinIO): EXIF/comment JPEG (orientation 6) -> 201, display 300x400 upright with no EXIF and no SECRET bytes; Content-Type image/jpeg, nosniff, private max-age=3600; thumb 200; other user 404, anon 401; HTML renamed .jpg 415; foreign Origin 403; 11 MiB body 413; cover set own 200 / other user's yearbook 404; other user DELETE 204 but media untouched, owner DELETE 204 then 404; yearbook delete 204 purges. 502-on-storage-failure paths are covered by internal/media integration tests (green); I did not stop the shared MinIO again. Registration, login and email routes still work with media wiring (auth collection).
+  Non-blocking: unchanged from the first QA note (memory ceiling with 4 parallel 49 MP PNGs -> T-036). No test files added.
+- 2026-10-08 01:59Z · leader · merged d46aec5 (squash), owner-approved 2026-10-08, QA re-verified the merge of develop (head 7d8cfe8); I checked that T-007's mailer, cleanup, Wait and email routes survived the conflict resolution. For owner to check: copy the SMEM_S3_* and SMEM_MEDIA_* variables from .env.example into .env, run make up migrate, upload a photo with curl or the Postman media collection and open it back. Follow-ups: T-036 (memory bound), notes in T-016, T-022, T-025.
 
 ### T-010 — Template spec and PDF page renderer
 - **Status:** DONE
@@ -623,19 +640,19 @@ The template system and the PDF page renderer, built on the library chosen in T-
 - 2026-10-08 01:30Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-010')
 
 ### T-011 — Google sign-in (OIDC + PKCE, account linking)
-- **Status:** TODO
+- **Status:** CHANGES_REQUESTED
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
 - **Depends-on:** T-006, T-007
 - **Risk:** high
-- **Rework:** 0
+- **Rework:** 1
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-07 11:28Z by leader
-- **Comments-seen:** 1
+- **Branch:** task/t-011-google-sign-in-oidc-pkce-account-linking
+- **PR:** https://github.com/danyaa666/smemories/pull/20
+- **Updated:** 2026-10-08 02:00Z by leader
+- **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/01-google-sign-in.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -645,6 +662,22 @@ Google sign-in with OIDC and PKCE and safe account linking (including the pre-hi
 
 #### Comments
 - 2026-10-07 11:28Z · leader · Promoted: full spec written in .team/epics/E02-auth/01-google-sign-in.md (first task in the new epic-file layout).
+- 2026-10-08 01:48Z · dev · PR #20, head 7ffdb68. All 10 AC done. Test: make up; make lint build test test-integration (green); Go tests use an in-process fake OIDC provider (internal/auth/oidctest), no Google credentials needed. Newman: start API with SMEM_GOOGLE_CLIENT_ID/SECRET, SMEM_PUBLIC_BASE_URL, SMEM_OIDC_COOKIE_KEY (README 'Google sign-in setup'), run postman/auth.postman_collection.json (folder 'Google sign-in' needs network to accounts.google.com for the start redirect; forgot-password limit still means restart after 2 runs). Migration is 0007_user_identities.sql because T-009 takes 0006: merge T-009 first; go.mod/go.sum/README/.env.example/openapi/schema.d.ts/config_test will conflict textually with T-009 (keep both). New deps (approved in spec): go-oidc/v3, oauth2 (+ go-jose/v4 indirect). Known gaps: no unlinking, no web button (T-015), discovery lock held during the 5 s fetch (ponytail comment). Found and fixed while testing: base64 decoding ignores spare bits, so cookie signature is compared in encoded form. Risk high: owner approval needed.
+- 2026-10-08 01:58Z · qa · QA_PASS T-011 (PR #20, head 7ffdb68, CI 4/4 green: go, go-integration, web, security; PR mergeable into develop).
+  Mechanical: make lint build test green; go test -race -tags integration ./... all ok; internal/auth + config integration 3x back to back, no flake. Runtime: real API binary + real MySQL, fresh DB (0001..0005,0007; migrate down/up of 0007 OK) against a standalone copy of the repo's fake OIDC provider (temporary harness, removed, not committed) driven by my own python client.
+  AC1 PASS: start -> 302 to provider with response_type=code, scope 'openid email profile', state, nonce, code_challenge S256, redirect_uri=<base>/api/v1/auth/google/callback; cookie smem_oidc Max-Age=600, HttpOnly, SameSite=Lax, Path=/, not Secure in dev (Secure in prod covered by Go test with secure true/false); cookie content matches URL (Go test). Against the real default issuer (network up) Location is https://accounts.google.com/o/oauth2/v2/auth.
+  AC2 PASS: all redirect to /login?error=<code>, no user/identity/session created: no cookie, payload flipped, signature flipped/truncated/empty/no dot/spare-bit last char -> oidc_state; state differs/missing/another flow's state -> oidc_state; error=access_denied (+ description not echoed) -> oidc_denied (without valid cookie -> oidc_state); bad/missing code, no id_token, empty email -> oidc_failed; bad signature, wrong iss, wrong aud, expired, wrong nonce, empty nonce -> oidc_failed; email_verified false, string 'true', number 1 -> email_unverified. Replay of a used code+state (cookie replayed by hand) -> oidc_failed; replay without cookie -> oidc_state; cookie cleared after callback. Expired-cookie case only via Go test (cannot wait 10 min). A failed callback leaves an existing session alive. Logs: reason + error text only, no code, tokens, state, cookie, client secret or key (grepped).
+  AC3 PASS: second sign-in with known sub -> 302 return_to, same user, old session cookie 401 afterwards, new one 200; same sub with a changed email at Google -> still the same user.
+  AC4 PASS: verified local account (email given in different case by Google) -> linked, user count unchanged, password login still works.
+  AC5 PASS: victim registered with password + live session, then Google sign-in same email: user is password_hash NULL and verified, old password login 401, old session 401, one fresh session.
+  AC6 PASS: unknown email -> user with NULL hash, verified, name from claim (Vietnamese diacritics kept), locale vi for 'vi-VN', en for 'fr'/'en-US'; empty or control-char name -> local part of the email; social-only password login gives the same status/body as an unknown account; Forgot password -> reset (log mailer link) -> password login works -> Google sign-in still works.
+  AC7 PASS: 15 return_to cases: //evil, https://evil, /\evil, javascript:, relative 'books', empty, CRLF, tab, DEL, U+202E, 200+ chars -> '/'; '/books', '/ok?next=https://evil.example', 199-char path kept; start without return_to OK.
+  AC8 PASS: start and callback each 30x302 then 429 rate_limited with Retry-After 900; token/code never logged; an existing session is ignored until success. Concurrency: 6 parallel callbacks for one new email -> 6x302, 1 user, 1 identity; same for an unverified local account; no 500.
+  AC9 PASS: no SMEM_GOOGLE_CLIENT_ID -> start and callback 404 not_found, /healthz 200. With it: missing secret, missing/empty PUBLIC_BASE_URL, missing key, 5-byte key, ftp:// issuer, http issuer in prod -> startup 'config error' naming the variable.
+  AC10 PASS: openapi documents both routes (302s, codes, 404/429), README 'Google sign-in setup' present with redirect URI and variables, .env.example updated; newman auth collection (52 req/134 assertions, incl. 7-request Google folder) run twice against the API with Google enabled: 0 failures both runs.
+  NON-BLOCKING: (1) Migration order: a dev DB that already applied 0007 (this branch) cannot take T-009's 0006 afterwards: 'migrate up failed: detected 1 missing (out-of-order) migration lower than database version (7): version 6'. Fresh DBs and CI are fine; merge T-009 first (as dev noted) and anyone who ran this branch must recreate or manually apply 0006. (2) A second Google sub with the same verified email links to the same account (2 identities): consistent with the spec's table. (3) Postman Google folder needs outbound access to accounts.google.com (documented). No test files added; existing Go coverage is thorough. Risk high: owner approval needed before merge.
+- 2026-10-08 02:00Z · leader · Leader review OK on head 7ffdb68 (the commit QA tested, CI 4/4 green): flow matches the spec: state, nonce and S256 PKCE, signed 10-minute HttpOnly SameSite=Lax cookie compared in constant time and in encoded form, ID token verified by go-oidc (signature, iss, aud, exp) plus nonce, email_verified must be the boolean true, return_to allow-list, no tokens or codes in logs, identity and user creation in one transaction with FOR UPDATE and a retry on duplicate key or deadlock, pre-hijacking defence clears password and sessions before linking. Not blocking, recorded: campus NAT vs per-IP 30/15 min and a discovery lock held during the fetch (T-031 spec), web button and error codes (T-015 spec). One thing left: PR #20 conflicts with develop now that T-009 merged (d46aec5). Sending back only for the merge, no code defect.
+- 2026-10-08 02:00Z · leader · Leader: merge develop (T-009 is in, d46aec5) into the task branch; no rebase of a pushed branch. Expected conflicts: go.mod, go.sum, README.md, .env.example, api/openapi.yaml, web/src/api/schema.d.ts, internal/config/config_test.go (keep both sides), possibly cmd/smemories-api/main.go. Then: (1) cd web && npm run gen:api, commit schema.d.ts, npm run check:api passes; (2) ls migrations/ shows 0005, 0006 and 0007_user_identities.sql in that order; test migrate on a fresh DB and on one that already applied 0006; (3) make lint build test test-integration; auth, yearbooks, media Postman collections twice (restart the API between runs: forgot-password is limited to 5 per hour per IP); (4) push, mark READY_FOR_QA with the merge-commit SHA. Nothing else in scope changes.
 
 ### T-012 — Collection links (owner API and public lookup)
 - **Status:** TODO
@@ -1222,7 +1255,7 @@ From the T-010 QA notes: adding a template exactly as docs/templates.md describe
 #### Comments
 
 ### T-036 — Bound the memory of image processing (caps, concurrency, memory limit)
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -1233,8 +1266,8 @@ From the T-010 QA notes: adding a template exactly as docs/templates.md describe
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-07 17:41Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-08 01:59Z by leader
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E03-yearbooks/04-bound-the-memory-of-image-processing.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1243,6 +1276,7 @@ From the T-010 QA notes: adding a template exactly as docs/templates.md describe
 Make the worst-case memory of the T-009 image pipeline a measured, enforced number (header-based caps, lower default concurrency, memory limit knob), before T-034 exposes it to anonymous uploads.
 
 #### Comments
+- 2026-10-08 01:59Z · leader · T-009 is merged: ready for dev. It must land before T-034.
 
 <!-- tasks:end -->
 
