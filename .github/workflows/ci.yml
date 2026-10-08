@@ -13,10 +13,12 @@ on:
 permissions:
   contents: read
 
-# A newer push to the same ref supersedes the run in progress.
+# A newer push to the same pull request supersedes its run in progress. Pushes to develop and main
+# get one group per commit, so every merge commit gets a complete run (a shared group would also drop
+# a queued run when a third push arrives).
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   go:
@@ -87,7 +89,7 @@ jobs:
         run: |
           docker run -d --name mysql -p 127.0.0.1:3306:3306 \
             -e MYSQL_ROOT_PASSWORD=ci-only-fake-root-pw -e MYSQL_DATABASE=smemories \
-            mysql:8.4 \
+            mysql:8.4@sha256:6ea90827b1100f8f2ae306a539f86d2c264a26ed435a2a9f75551dd5c3aeb242 \
             --character-set-server=utf8mb4 --collation-server=utf8mb4_0900_ai_ci \
             --sql-mode=ONLY_FULL_GROUP_BY,STRICT_ALL_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION \
             --default-time-zone=+00:00

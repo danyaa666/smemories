@@ -1,7 +1,7 @@
 # Continuous integration
 
 Workflow: [`.github/workflows/ci.yml`](../.github/workflows/ci.yml). It runs on every pull request (any base branch)
-and on pushes to `develop` and `main`; a newer push to the same ref cancels the run in progress. The token is
+and on pushes to `develop` and `main`; a newer push to the same pull request cancels its run in progress, but runs on `develop` and `main` are never cancelled (each merge commit gets a complete run). The token is
 read-only (`contents: read`), no job uses a repository secret, and every third-party action is pinned to a full
 commit SHA with the version in a comment (Dependabot keeps them current, see below).
 
