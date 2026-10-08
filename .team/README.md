@@ -13,14 +13,13 @@
 | BACKLOG | 21 | T-013, T-014, T-015, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-033, T-035, T-036 |
 | TODO | 3 | T-011, T-012, T-034 |
 | QA_PASS | 2 | T-007, T-009 |
-| MERGED | 1 | T-010 |
-| DONE | 9 | T-001, T-002, T-003, T-004, T-005, T-006, T-008, T-028, T-030 |
+| DONE | 10 | T-001, T-002, T-003, T-004, T-005, T-006, T-008, T-010, T-028, T-030 |
 
-**Awaiting your review (MERGED):** T-010 (Template spec and PDF page renderer)
+**Awaiting your review (MERGED):** nothing
 
 **Open questions for you:** Q-007 (Approve merge of T-007 (email verification and password reset)?); Q-008 (Approve merge of T-009 (photo upload and storage)?)
 
-_Board last written 2026-10-07 17:42Z_
+_Board last written 2026-10-08 01:30Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -567,7 +566,7 @@ Photo upload and storage for yearbook owners.
 - 2026-10-07 17:42Z · leader · Leader review OK on head 21ba7aa (the commit QA tested; CI go, go-integration, web, security green). Checked in the diff, not only in the tests: type by sniffing, dimensions from the header before decode, re-encode strips all metadata, generated keys only, owner-only reads with nosniff/private cache, quota recheck under a lock on the user row, upload rate limit, in-flight cap (16) answers 503 busy, yearbook delete purges storage first and fails 502 with nothing deleted, orphans cleaned on failed upload, migration reversible, CI change adds only a MinIO container and fake credentials, no new action. Non-blocking, handled: peak memory 3.2 GB for 4 worst-case PNGs -> new task T-036 (P1, blocks T-034; also sizing note in T-022); aws modules marked '// indirect' in go.mod -> T-036 AC5; orphan sweep -> T-025 spec; PUT profile clears photo_media_id when absent -> T-016 spec. Merge order: T-007 first (its migration is 0005, this one is 0006). Awaiting owner approval.
 
 ### T-010 — Template spec and PDF page renderer
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -578,8 +577,8 @@ Photo upload and storage for yearbook owners.
 - **Assignee:** —
 - **Branch:** task/t-010-template-spec-and-pdf-page-renderer
 - **PR:** https://github.com/danyaa666/smemories/pull/16
-- **Updated:** 2026-10-07 14:04Z by leader
-- **Comments-seen:** 8
+- **Updated:** 2026-10-08 01:30Z by leader
+- **Comments-seen:** 9
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/02-template-spec-and-pdf-page-renderer.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -616,6 +615,7 @@ The template system and the PDF page renderer, built on the library chosen in T-
 - 2026-10-07 11:38Z · leader · Leader review OK at 5d542cd (QA_PASS; the only commit since the dev's cdced0e is QA's own test-only hostile_test.go). I read text.go, image.go and the render entry point in full plus the validator and ADR addendum summaries: wrapping always makes progress (no loop on a box narrower than a glyph), photo dimensions are checked before any allocation with no integer overflow, a bad photo costs only a placeholder, fpdf's sticky error is cleared, cover images use AllowNegativePosition, fpdf panics are recovered into an error. Awaiting owner approval (Risk: high) and green CI on this head. Accepted limits: byte-identical output only for distinct photo widths (documented); one empty notes page for a book with 0 notes (pinned by a test). Follow-ups: T-035 (template tests iterate List()); the export job T-014 MUST set a context deadline and use only approved notes (Render itself has no caps; T-034 caps notes at 300 and messages at 2000).
 - 2026-10-07 14:03Z · human · owner approved merge
 - 2026-10-07 14:04Z · leader · merged 357e78a (squash), owner-approved in chat 2026-10-07. Review: wrapping always makes progress, photo dimensions checked before allocation, a bad photo costs only a placeholder, fpdf panics recovered into errors, cover photos use AllowNegativePosition, spike code and dev-only dependencies removed. For owner to check: open docs/templates/classic.pdf and modern.pdf (synthetic photos). Accepted limits: emoji print as monochrome outlines; byte-identical output only for distinct photo widths; one empty notes page for a book with 0 notes. The export job (T-014) must set a context deadline.
+- 2026-10-08 01:30Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-010')
 
 ### T-011 — Google sign-in (OIDC + PKCE, account linking)
 - **Status:** TODO
