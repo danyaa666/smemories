@@ -68,6 +68,7 @@ Specs live next to this file; **status lives only on the board** (`L list`), nev
 | T-037 US Letter page size, end to end | `01-us-letter-page-size-end-to-end.md` | — |
 | T-038 Template format v2: backgrounds, static text, rotation, ellipse, font families | `02-template-format-v2-backgrounds-static-text.md` | T-035 |
 | T-039 Design import tool (dev only) | `03-design-import-tool-dev-only.md` | T-038 |
-| T-040 Template "memory-book" from temp1 | `04-template-memory-book-from-temp1.md` | T-037, T-038, T-039, T-035 |
-| T-041 Template "navy-classic" from temp2 | `05-template-navy-classic-from-temp2.md` | T-037, T-038, T-039, T-035 |
+| T-040 Template "memory-book" from temp1 | `04-template-memory-book-from-temp1.md` | T-037, T-038, T-039, T-035, T-044 |
+| T-041 Template "navy-classic" from temp2 | `05-template-navy-classic-from-temp2.md` | T-037, T-038, T-039, T-035, T-044 |
+| T-044 Templates declare note fields (format v2.1) | `07-templates-declare-note-fields.md` | T-038, T-043 |
 | T-042 Roll out designs temp3 to temp8 | `06-roll-out-designs-temp3-to-temp8.md` | T-040, T-041 |

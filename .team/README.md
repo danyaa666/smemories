@@ -10,16 +10,16 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 21 | T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-039, T-040, T-041, T-042 |
-| TODO | 5 | T-015, T-034, T-035, T-037, T-038 |
-| IN_QA | 2 | T-033, T-036 |
+| BACKLOG | 22 | T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-039, T-040, T-041, T-042, T-044 |
+| TODO | 6 | T-015, T-034, T-035, T-037, T-038, T-043 |
+| QA_PASS | 2 | T-033, T-036 |
 | DONE | 14 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-028, T-030 |
 
 **Awaiting your review (MERGED):** nothing
 
 **Open questions for you:** none
 
-_Board last written 2026-10-08 03:08Z_
+_Board last written 2026-10-08 03:19Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -28,7 +28,7 @@ _Board last written 2026-10-08 03:08Z_
 
 **Users.** Primary: university/college students aged 18+ who own a yearbook. Contributors: friends, teachers, family — anonymous, link-based. Later: class admins (teacher or class monitor). School-age (under 18) account holders are a deliberate later milestone (consent, photo rules).
 
-**Non-goals (until the owner says otherwise).** Ordering printed books in-app; payments; under-18 account holders; free-form drag-and-drop canvas editor; video/audio messages; native mobile apps; AI layout.
+**Non-goals (until the owner says otherwise).** Ordering printed books in-app; payments; under-18 account holders; free-form drag-and-drop canvas editor in M1 (staged: guided customisation M1b, full editor M4, D-19); video/audio messages; native mobile apps; AI layout.
 
 **Hard constraints.**
 - Public GitHub repo (`danyaa666/smemories`): no secrets, ever. `.env*` is git-ignored; only `.env.example` with dev-only values is committed.
@@ -51,7 +51,9 @@ _Board last written 2026-10-08 03:08Z_
 | Now | M1 Personal yearbook, end to end | One student creates a yearbook, collects friends' notes, picks a template, exports a PDF | see M1 exit below | planned (specified) |
 | Next | M2 Go live on AWS and harden | Production environment, real email, observability, backups, privacy tooling | sketch only | BACKLOG |
 | Next | M3 Class yearbook | Class space, invites, roles, assembling many students' pages into one book | sketch only | BACKLOG |
-| Later | M4+ | Print-shop-ready PDF (bleed, CMYK note), under-18 support, more social providers, free-form editor, in-app print ordering | direction only | idea |
+| Next | M1b Template-driven forms and guided customisation | Forms generated from template fields (started in M1: T-043, T-034, T-044); per-book design copy with colours, fonts, page order and visibility, PDF preview (E09 stage 1) | sketch only | idea (starts when M1 is stable) |
+| Later | M4 Free-layout editor | Canva-style editor on the template document: add, remove, move, resize, rotate, replace, assets, undo/redo (E09 stage 2); order against M3 decided at the M2 retrospective | sketch only | idea (D-19) |
+| Later | M5+ | Print-shop-ready PDF (bleed, CMYK note), under-18 support, more social providers, in-app print ordering | direction only | idea |
 
 **Epics** (PRDs and task specs live in `.team/epics/`; status only on the board):
 
@@ -65,6 +67,7 @@ _Board last written 2026-10-08 03:08Z_
 | E06-go-live | [PRD](epics/E06-go-live/PRD.md) | M2 | Go live on AWS and harden | planned |
 | E07-class-yearbook | [PRD](epics/E07-class-yearbook/PRD.md) | M3 | Class spaces, roles, invites and assembly | planned |
 | E08-designer-templates | [PRD](epics/E08-designer-templates/PRD.md) | M1 | Claude Design canvases become system templates (US Letter, pilot of two, then six more) | planned |
+| E09-customisation-editor | [PRD](epics/E09-customisation-editor/PRD.md) | M1b, M4 | Guided customisation and the Canva-style editor (staged, D-19) | planned (sketch) |
 
 **M0 exit.** From a clean checkout: `make up && make migrate` starts MySQL and MinIO; `make build test lint` is green; `GET /healthz` is 200 and `GET /readyz` reflects the database; the web dev server shows the home page with a working EN/VI switcher and an API status badge; CI is green on a PR; the PDF engine ADR is merged with a go/no-go verdict backed by a Vietnamese-text sample, 300 DPI image test and a memory/time measurement; no secrets in the repo.
 
@@ -237,6 +240,9 @@ Owner decisions (2026-10-06, `/team-init` interview). "Rejected" lists the optio
 | D-16 | **Add US Letter (215.9 x 279.4 mm) as a third page size** next to A5 and A4. | Owner answer in chat 2026-10-08, against the leader's recommendation (re-export the designs at A5/A4, because Vietnamese print shops use A4). The designs stay US Letter; a Letter template prints only on Letter (different aspect ratio than A5/A4). Consequence: the DB enum `page_size` and the API grow a value (T-037); A4 users cannot use the designer templates until the designs are re-exported at A5/A4 and the import pipeline is rerun. | Re-export at A5/A4; scale Letter onto A4 with a margin | An A4 user needs the designer templates (then re-export and rerun the pipeline), or the first print shop asks for A4 |
 | D-17 | **Designer templates cover our four page kinds only** (cover, profile, friends' notes, back). | Owner answer in chat 2026-10-08. The designs' other pages (class portraits grid, class awards, friend quiz, year in review, letters, galleries, contacts) need new data fields and UI; they wait for the class yearbook (E07) or a later product decision. Mapping per design is in the E08 PRD. | Add new page kinds now | A page kind is requested, or E07 starts |
 | D-18 | **Fonts: swap non-Vietnamese designer fonts for open-licence lookalikes that support Vietnamese** and bundle them. | Owner answer in chat 2026-10-08. The canvas CSS shows every design uses at least one font without a Vietnamese subset (Fredoka, Gaegu, Jost, Caveat, Karla, DM Sans, Shrikhand, Bebas Neue, Courier Prime, Instrument Sans/Serif, DM Serif Display); only temp4 is fully covered. A registry test refuses any family that lacks Vietnamese letters. Licences (OFL) are kept next to the files. | Keep designer fonts (Vietnamese would fall back or print `?`); ship only temp4 | A design needs a font with no Vietnamese-capable lookalike |
+| D-19 | **Editing is staged: guided customisation after M1 (M1b), the free-layout editor as its own milestone after go-live (M4).** | Owner answer in chat 2026-10-08 (Canva-style request). Stage 0 (M1): system templates with template-driven forms. Stage 1 (M1b): per-book design copy with guided changes. Stage 2 (M4): free-layout editor (add, remove, move, resize, replace), order against the class yearbook M3 decided at the M2 retrospective. The document model is the template JSON (format v2); the Go renderer stays the single source of truth (L-12, D-12). Epic E09. | Full editor right after M1; fixed templates only | Stage 1 is stable, or the owner brings the editor forward |
+| D-20 | **Each yearbook owner edits their own copy of a template; users do not publish templates to others.** | Owner answer in chat 2026-10-08. System templates are starting points curated through the import pipeline (E08); a student's edits belong to their book only, so there is no moderation, copyright or abuse surface for shared designs. | Template gallery where users publish; admin-only template editor | Students ask to share designs |
+| D-21 | **Friends' notes are template-driven from the start: answers keyed by field id from a closed catalogue, form generated from the template's fields.** | Owner answer in chat 2026-10-08 (the designs need richer forms: how we met, first impression, best memory, wish). `internal/notefields` (T-043) defines fields with limits and EN/VI labels; T-034 stores `notes.answers` JSON validated against it; the public lookup returns the form's `fields`; templates declare `note_fields` (T-044). Answers survive a template change. The catalogue has no personal-data fields beyond a name (D-01 data minimisation). | Fixed columns in M1, migrate later (rewrite of tables, form, moderation, export); fixed fields forever | A field needs a type the catalogue lacks (rating, choice), or contributors must give contact data |
 
 Leader decisions (low-risk, inside the approved stack):
 
@@ -1233,7 +1239,7 @@ db.Open: treat MySQL 1044 as permanent; README warning about bare docker compose
 #### Comments
 
 ### T-033 — CI: do not cancel in-progress runs on develop and main
-- **Status:** IN_QA
+- **Status:** QA_PASS
 - **Priority:** P1
 - **Type:** infra
 - **Milestone:** M1
@@ -1241,10 +1247,10 @@ db.Open: treat MySQL 1044 as permanent; README warning about bare docker compose
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** leader
 - **Branch:** task/t-033-ci-do-not-cancel-in-progress-runs-on-dev
 - **PR:** https://github.com/danyaa666/smemories/pull/22
-- **Updated:** 2026-10-08 03:05Z by qa
+- **Updated:** 2026-10-08 03:19Z by qa
 - **Comments-seen:** 2
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/09-ci-do-not-cancel-in-progress-runs-on-develop.md`
@@ -1257,20 +1263,21 @@ Evidence from the T-006/T-030 merges: the workflow's concurrency group has cance
 - 2026-10-08 02:24Z · leader · Merge-commit CI runs on develop keep getting cancelled by board-sync pushes; ready.
 - 2026-10-08 02:47Z · leader · Leader: raised to P1. Merge commits on develop (d209266 T-011) were cancelled by later board-sync pushes, so develop is not getting a full CI pass per merge. Do this first.
 - 2026-10-08 02:47Z · dev · ci.yml: cancel-in-progress only for pull_request; push events group by sha so each merge commit runs fully; mysql digest-pinned; docs/ci.md sentence. Test: PR CI green; push twice to develop and check both runs finish. Needs owner approval (risk high).
+- 2026-10-08 03:19Z · qa · QA T-033 PASS (one gap, see 4). Evidence: 1) PR #22 CI run 37719629443 on head: go, go-integration, security, web all green; go-integration pulled the digest-pinned mysql image and passed. 2) actionlint (rhysd/actionlint:latest via docker) on ci.yml: no syntax/expression errors; only 2 pre-existing shellcheck SC2034 warnings (unused loop var i) in the wait loops at ci.yml:89/106, not from this change. 3) Pin check: docker buildx imagetools inspect mysql:8.4 digest = sha256:6ea90827...b242, identical to the pinned digest (multi-arch index digest, fine). Concurrency block read: pull_request -> group ci-<refs/pull/N/merge>, cancel true (unchanged behaviour for PRs); push (develop/main) -> group ci-<sha>, cancel false; github.ref is non-empty on PRs so the && || ternary cannot fall to sha there. Only triggers are pull_request and push [develop, main], no other event can hit the sha branch oddly. Old behaviour confirmed in gh run list --branch develop: 8 of the last 15 develop push runs were conclusion=cancelled (e.g. 7360aa7, 4db0533, 8b027a2, d209266), which is exactly the defect. 4) NOT verified live: a real double push to develop (I may not push develop, and creating a scratch GitHub repo to replay the workflow was denied by the permission system). So the 'two pushes within a minute both finish' AC rests on the expression + GitHub semantics, not on an observed run. Suggest the leader checks the first two back-to-back develop pushes after the merge (gh run list --branch develop: none cancelled). 5) docs/ci.md matches the workflow (sentence says PR runs cancel, develop/main never; no other doc mentions cancel/concurrency/mysql tag). Non-blocking: that docs sentence is one very long line (docs/ci.md:4); the workflow comment says 'a queued run' dropped in a shared group, correct per GitHub semantics (one pending per group). Risk high: needs owner approval before merge.
 
 ### T-034 — Public note submission (text and photos)
 - **Status:** TODO
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
-- **Depends-on:** T-012, T-009, T-036
+- **Depends-on:** T-012, T-009, T-036, T-043
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-07 17:41Z by leader
+- **Updated:** 2026-10-08 03:19Z by leader
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/02-public-note-submission.md`
@@ -1306,7 +1313,7 @@ From the T-010 QA notes: adding a template exactly as docs/templates.md describe
 - 2026-10-08 02:24Z · leader · T-010 is accepted: small follow-up, ready.
 
 ### T-036 — Bound the memory of image processing (caps, concurrency, memory limit)
-- **Status:** IN_QA
+- **Status:** QA_PASS
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -1314,10 +1321,10 @@ From the T-010 QA notes: adding a template exactly as docs/templates.md describe
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** leader
 - **Branch:** task/t-036-bound-the-memory-of-image-processing-cap
 - **PR:** https://github.com/danyaa666/smemories/pull/23
-- **Updated:** 2026-10-08 03:05Z by qa
+- **Updated:** 2026-10-08 03:19Z by qa
 - **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E03-yearbooks/04-bound-the-memory-of-image-processing.md`
@@ -1329,6 +1336,7 @@ Make the worst-case memory of the T-009 image pipeline a measured, enforced numb
 #### Comments
 - 2026-10-08 01:59Z · leader · T-009 is merged: ready for dev. It must land before T-034.
 - 2026-10-08 02:56Z · dev · Root cause: x/image Scale float64 scratch (dst w x src h x4 = 480MB at 50MP) -> banded resize. Header caps (PNG/WebP 25MP, JPEG 50MP, decoded est. 128MiB incl. JPEG SOF subsampling/progressive), concurrency default 2, SMEM_MEMORY_LIMIT_MIB, docs/media.md. Test: TestLimitsFromHeader, TestJPEGSamples, TestResizeBandsMatchOneShot; measure with TestMeasurePeak (see docs/media.md). Dev: 4x16-bit PNG 4096^2 at defaults = 970MB RSS. Re-run media Postman twice.
+- 2026-10-08 03:19Z · qa · QA T-036 PASS. Method: built the PR head, ran the real API (fresh process per measurement; peak RSS sampled with ps every 20ms) against MySQL+MinIO from make up; images generated by me (Go/PIL/cwebp, all under 10 MiB upload cap). NOTE .env.example in the main checkout is still the old one (concurrency 4): I loaded the PR's .env.example and also tested with the variables truly unset. AC6 (macOS arm64, defaults = concurrency 2): 4 parallel 16-bit PNG 4096x4096: peak 925-929 MiB (970-974 MB) in 3 runs, mixed 4 (16-bit PNG at cap, 25 MP 8-bit PNG, 50 MP 10000x5000 JPEG, 25 MP lossless WebP): 862/812/886 MiB. All <= 1.2 GiB (1229 MiB). Single 16-bit PNG: 478 MiB. Control with concurrency 4: 1735-1842 MiB (so the lowering is what matters). 4x each alone: 50MP JPEG 700 MiB, 6000x7456 4:4:4 JPEG at the cap 1008 MiB (highest seen), 4200x4200 progressive 4:2:0 JPEG 565 MiB, 12000x4000 JPEG 595 MiB, lossless WebP 25MP 843 MiB, lossy WebP 24MP 507 MiB, 5000x5000 8-bit PNG 850 MiB. Linux (target OS): same linux/arm64 binary in a debian container with --memory=1536m, cgroup memory.peak: 4x 16-bit PNG 905 MiB, mixed 4 855 MiB, 8 parallel mixed incl. 4:4:4 and progressive JPEG 873 MiB, no OOM kill; with SMEM_MEMORY_LIMIT_MIB=1100 4x16-bit PNG 909 MiB. AC2 caps just below/above via the API: 16-bit PNG 4096x4096 201 / 4097x4096 400; 8-bit PNG 5000x5000 201 / 5001x5000 400; JPEG 10000x5000 201 / 10001x5000 400; lossless WebP 5000x5000 201 / 5001x5000 400; 4:4:4 JPEG 6000x7456 (134208000 B) 201 / 6000x7457 400; progressive 4:2:0 4200x4200 201 / 4300x4300 400; each over-cap answer in ~8 ms before any decode. AC3: SMEM_MEDIA_MAX_CONCURRENT 0/abc/-2 and SMEM_MEMORY_LIMIT_MIB 10/63/abc/-1/1.5/1048577 all fail at startup naming the variable; limit 64, 256, 700 with the 4 mixed uploads: all 201, process alive, RSS 481/479/744 MiB (limit works, nothing crashes or is refused); startup logs 'memory limit set'. .env.example and README document both. AC1/AC4: docs/media.md exists; its numbers reproduce (970 MB for 4x 16-bit PNG; single 490 vs my 501 MB). AC5: go mod tidy leaves no diff, aws-sdk-go-v2, /credentials, /service/s3 are in the direct require block. Postman: media collection run twice via newman 6 (API restarted between runs; I did the pair twice): 44 requests, 77 assertions, 0 failures each time. Mechanical: go build, go vet, gofmt, golangci-lint (0 issues), go test -race ./... ok, go test -race -count=1 -tags integration ./... all packages ok; PR CI green (run 37720320278). Non-blocking: (a) the media Postman collection has no entry for the new caps (E11 only covers the 60000x60000 header); a tiny PNG header claiming 5001x5000 would exercise the 25 MP PNG cap cheaply; (b) the main checkout's .env.example still says concurrency 4 until merge, fine; (c) RSS on macOS never returns to baseline after a run (Go retains pages), so measure each scenario on a fresh process, as docs/media.md implies; (d) 6000x7456 4:4:4 baseline JPEG is the heaviest accepted input at ~1.0 GiB for 4 parallel, only ~18% under the 1.2 GiB target, so keep an eye on it if limits are raised.
 
 ### T-037 — US Letter page size, end to end
 - **Status:** TODO
@@ -1404,14 +1412,14 @@ Dev-only Node/Playwright command that renders decoration backgrounds and reads s
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
-- **Depends-on:** T-037, T-038, T-039, T-035
+- **Depends-on:** T-037, T-038, T-039, T-035, T-044
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-08 03:08Z by leader
+- **Updated:** 2026-10-08 03:19Z by leader
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E08-designer-templates/04-template-memory-book-from-temp1.md`
@@ -1427,14 +1435,14 @@ Pilot 1: the pastel Memory Book design as a system template with four page kinds
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
-- **Depends-on:** T-037, T-038, T-039, T-035
+- **Depends-on:** T-037, T-038, T-039, T-035, T-044
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-08 03:08Z by leader
+- **Updated:** 2026-10-08 03:19Z by leader
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E08-designer-templates/05-template-navy-classic-from-temp2.md`
@@ -1468,6 +1476,52 @@ Planning placeholder: after the owner reviews the pilots, split into one task pe
 
 #### Comments
 
+### T-043 — Note field catalogue (internal/notefields): closed set of form fields with EN/VI labels and validation
+- **Status:** TODO
+- **Priority:** P1
+- **Type:** feature
+- **Milestone:** M1
+- **Depends-on:** —
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-08 03:19Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/06-note-field-catalogue.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E04-friends-notes · **PRD:** `.team/epics/E04-friends-notes/PRD.md`
+
+Closed catalogue of note form fields (name, relationship, message, how we met, ...) with limits, EN/VI labels and a validator, so forms and notes can be template-driven (D-21).
+
+#### Comments
+
+### T-044 — Templates declare note fields (format v2.1): note_fields, note_field slot, NoteFields helper
+- **Status:** BACKLOG
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M1
+- **Depends-on:** T-038, T-043
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-08 03:19Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E08-designer-templates/07-templates-declare-note-fields.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E08-designer-templates · **PRD:** `.team/epics/E08-designer-templates/PRD.md`
+
+A template lists which note fields its friend pages ask for and where each answer prints; the API reads the list for the public form.
+
+#### Comments
+
 <!-- tasks:end -->
 
 ## 7. Change log
@@ -1484,3 +1538,4 @@ Planning placeholder: after the owner reviews the pilots, split into one task pe
 - 2026-10-07 — Owner approved the migration: all 35 task specs moved out of the README into epic files (`.team/epics/E01..E07`, one PRD per epic); board blocks keep status, dependencies, comments and a stub that links the spec. README 200 KB -> 156 KB. Skills updated earlier to write new work this way.
 - 2026-10-08 — T-010 accepted (DONE). T-007 reviewed, owner-approved and merged (186ac52). T-009 passed QA and review; awaiting owner approval, merges after T-007 (migration 0006). Follow-up T-036 (memory bound of image processing) created and made a prerequisite of T-034.
 - 2026-10-08 — T-009 (photo upload, d46aec5), T-011 (Google sign-in, d209266) and T-012 (collection links) merged, each owner-approved after QA and leader review; T-007 and T-009 and T-011 await owner acceptance. T-010 accepted. Promoted T-015, T-033, T-035 to TODO; T-036 (memory bound) is queued ahead of T-034.
+- 2026-10-08 — Owner asked for a Canva-style editor. Decisions D-19 (staged editing), D-20 (each owner edits their own copy), D-21 (template-driven note fields, now). New epic E09 (sketch), tasks T-043 (field catalogue, P1, before T-034) and T-044 (templates declare fields); T-034's spec was rewritten for answers by field id. Epic E08 (designer templates, D-15..D-18, L-12) created earlier today with T-037..T-042.
