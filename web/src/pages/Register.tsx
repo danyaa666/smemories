@@ -9,14 +9,15 @@ import { fieldError, formError } from "../auth/errors";
 import { ME_KEY, useMe } from "../auth/useMe";
 
 export function Register() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const qc = useQueryClient();
   const { data: user } = useMe();
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const m = useMutation({
-    mutationFn: () => register(email, password, displayName),
+    mutationFn: () =>
+      register(email, password, displayName, i18n.resolvedLanguage === "vi" ? "vi" : "en"),
     onSuccess: (u) => qc.setQueryData(ME_KEY, u),
   });
   if (user) return <Navigate to="/account" replace />;

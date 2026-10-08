@@ -110,8 +110,11 @@ func hashToken(token string) []byte {
 	return h[:]
 }
 
-// Register validates the input, creates the account and signs it in.
-func (s *Service) Register(ctx context.Context, ip, userAgent, email, password, displayName string) (User, Session, error) {
+// Register validates the input (locale is "en" or "vi"), creates the account and signs it in.
+func (s *Service) Register(ctx context.Context, ip, userAgent, email, password, displayName, locale string) (User, Session, error) {
+	if locale != "en" && locale != "vi" {
+		return User{}, Session{}, ValidationError{codeInvalidLocale}
+	}
 	email = normalizeEmail(email)
 	if !validEmail(email) {
 		return User{}, Session{}, ValidationError{codeInvalidEmail}
@@ -133,7 +136,7 @@ func (s *Service) Register(ctx context.Context, ip, userAgent, email, password, 
 		return User{}, Session{}, err
 	}
 	now := s.now().UTC()
-	u := User{ID: ulid.New(now), Email: email, DisplayName: name, Locale: "en", CreatedAt: now}
+	u := User{ID: ulid.New(now), Email: email, DisplayName: name, Locale: locale, CreatedAt: now}
 	sess, row, err := s.newSession(now, userAgent)
 	if err != nil {
 		return User{}, Session{}, err

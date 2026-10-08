@@ -840,6 +840,12 @@ export interface operations {
                     password: string;
                     /** @description Normalised to Unicode NFC, then trimmed; stored and returned in that form. Control characters (Cc), format characters (Cf: zero-width space, bidi overrides and isolates, LRM/RLM, BOM) except U+200D (zero-width joiner, used in emoji sequences), and line or paragraph separators (Zl, Zp) are rejected with `invalid_display_name`. */
                     display_name: string;
+                    /**
+                     * @description The student's UI language; it becomes `users.locale` and selects the language of the verification email. Absent or `null` means `en`; any other value (including another case such as `VI`, or a non-string) is `400 invalid_locale` and nothing is created.
+                     * @default en
+                     * @enum {string|null}
+                     */
+                    locale?: "en" | "vi" | null;
                 };
             };
         };
@@ -854,7 +860,7 @@ export interface operations {
                     "application/json": components["schemas"]["UserEnvelope"];
                 };
             };
-            /** @description `invalid_email`, `weak_password`, `invalid_display_name` or `invalid_body`. */
+            /** @description `invalid_email`, `weak_password`, `invalid_display_name`, `invalid_locale` or `invalid_body`. */
             400: {
                 headers: {
                     [name: string]: unknown;

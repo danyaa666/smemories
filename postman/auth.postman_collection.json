@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "SMemories - auth",
-    "description": "Email + password auth core (T-006): register, login, logout, /v1/me, plus (T-007) verification-email resend, forgot/reset password and verify-email. Run against an API started with SMEM_ENV=dev (the session cookie is not Secure there, so Newman's cookie jar sends it over http). Register is limited to 5 per hour per IP and each run makes 2 counted attempts (the register and the duplicate), so a third run within the hour gets 429: restart the API (in-memory limits) or set SMEM_RATE_REGISTER_PER_HOUR higher. Forgot-password is limited to 5 per hour per IP and each run makes 2 counted calls, so a third run within the hour gets 429 (restart the API to reset). The emailed tokens only appear in the API's stdout (log mailer), so Newman cannot follow a real verify or reset link: those happy paths, token expiry, single use, session removal and the 429/503 paths are covered by the Go integration tests, not here. Google sign-in (T-011): the last folder needs the API started with the SMEM_GOOGLE_* variables (README, 'Google sign-in setup'); requests there do not follow redirects.",
+    "description": "Email + password auth core (T-006): register, login, logout, /v1/me, plus (T-007) verification-email resend, forgot/reset password and verify-email. Run against an API started with SMEM_ENV=dev (the session cookie is not Secure there, so Newman's cookie jar sends it over http). Step 1 registers with locale vi (T-045: the stored locale is returned; the default en and the vi verification email are covered by the Go integration tests). Register is limited to 5 per hour per IP and each run makes 2 counted attempts (the register and the duplicate), so a third run within the hour gets 429: restart the API (in-memory limits) or set SMEM_RATE_REGISTER_PER_HOUR higher. Forgot-password is limited to 5 per hour per IP and each run makes 2 counted calls, so a third run within the hour gets 429 (restart the API to reset). The emailed tokens only appear in the API's stdout (log mailer), so Newman cannot follow a real verify or reset link: those happy paths, token expiry, single use, session removal and the 429/503 paths are covered by the Go integration tests, not here. Google sign-in (T-011): the last folder needs the API started with the SMEM_GOOGLE_* variables (README, 'Google sign-in setup'); requests there do not follow redirects.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -44,7 +44,7 @@
       ],
       "item": [
         {
-          "name": "1. Register",
+          "name": "1. Register (locale vi)",
           "request": {
             "method": "POST",
             "header": [
@@ -66,7 +66,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"email\": \"{{email}}\", \"password\": \"{{password}}\", \"display_name\": \"{{displayName}}\"}"
+              "raw": "{\"email\": \"{{email}}\", \"password\": \"{{password}}\", \"display_name\": \"{{displayName}}\", \"locale\": \"vi\"}"
             }
           },
           "event": [
@@ -76,7 +76,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
-                  "pm.test(\"user object is exactly the 6 documented fields\", () => { const u = pm.response.json().user; pm.expect(Object.keys(u).sort()).to.eql([\"created_at\",\"display_name\",\"email\",\"email_verified\",\"id\",\"locale\"]); pm.expect(u.id).to.match(/^[0-9A-HJKMNP-TV-Z]{26}$/); pm.expect(u.email_verified).to.eql(false); pm.expect(u.locale).to.eql(\"en\"); });",
+                  "pm.test(\"user object is exactly the 6 documented fields\", () => { const u = pm.response.json().user; pm.expect(Object.keys(u).sort()).to.eql([\"created_at\",\"display_name\",\"email\",\"email_verified\",\"id\",\"locale\"]); pm.expect(u.id).to.match(/^[0-9A-HJKMNP-TV-Z]{26}$/); pm.expect(u.email_verified).to.eql(false); pm.expect(u.locale).to.eql(\"vi\"); });",
                   "pm.test(\"no password or hash in the body\", () => pm.expect(pm.response.text().toLowerCase()).to.not.match(/password|argon|hash/));",
                   "pm.test(\"session cookie flags\", () => { const c = pm.response.headers.get(\"Set-Cookie\") || \"\"; pm.expect(c).to.include(\"smem_session=\"); pm.expect(c).to.include(\"HttpOnly\"); pm.expect(c).to.include(\"SameSite=Lax\"); pm.expect(c).to.include(\"Path=/\"); pm.expect(c).to.include(\"Max-Age=2592000\"); });",
                   "pm.test(\"email and display name\", () => { const u = pm.response.json().user; pm.expect(u.email).to.eql(pm.collectionVariables.get(\"email\")); pm.expect(u.display_name).to.eql(pm.collectionVariables.get(\"displayName\")); });",
@@ -109,7 +109,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"user object is exactly the 6 documented fields\", () => { const u = pm.response.json().user; pm.expect(Object.keys(u).sort()).to.eql([\"created_at\",\"display_name\",\"email\",\"email_verified\",\"id\",\"locale\"]); pm.expect(u.id).to.match(/^[0-9A-HJKMNP-TV-Z]{26}$/); pm.expect(u.email_verified).to.eql(false); pm.expect(u.locale).to.eql(\"en\"); });",
+                  "pm.test(\"user object is exactly the 6 documented fields\", () => { const u = pm.response.json().user; pm.expect(Object.keys(u).sort()).to.eql([\"created_at\",\"display_name\",\"email\",\"email_verified\",\"id\",\"locale\"]); pm.expect(u.id).to.match(/^[0-9A-HJKMNP-TV-Z]{26}$/); pm.expect(u.email_verified).to.eql(false); pm.expect(u.locale).to.eql(\"vi\"); });",
                   "pm.test(\"same user\", () => pm.expect(pm.response.json().user.id).to.eql(pm.collectionVariables.get(\"userId\")));"
                 ]
               }
@@ -214,7 +214,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"user object is exactly the 6 documented fields\", () => { const u = pm.response.json().user; pm.expect(Object.keys(u).sort()).to.eql([\"created_at\",\"display_name\",\"email\",\"email_verified\",\"id\",\"locale\"]); pm.expect(u.id).to.match(/^[0-9A-HJKMNP-TV-Z]{26}$/); pm.expect(u.email_verified).to.eql(false); pm.expect(u.locale).to.eql(\"en\"); });",
+                  "pm.test(\"user object is exactly the 6 documented fields\", () => { const u = pm.response.json().user; pm.expect(Object.keys(u).sort()).to.eql([\"created_at\",\"display_name\",\"email\",\"email_verified\",\"id\",\"locale\"]); pm.expect(u.id).to.match(/^[0-9A-HJKMNP-TV-Z]{26}$/); pm.expect(u.email_verified).to.eql(false); pm.expect(u.locale).to.eql(\"vi\"); });",
                   "pm.test(\"no password or hash in the body\", () => pm.expect(pm.response.text().toLowerCase()).to.not.match(/password|argon|hash/));",
                   "pm.test(\"session cookie flags\", () => { const c = pm.response.headers.get(\"Set-Cookie\") || \"\"; pm.expect(c).to.include(\"smem_session=\"); pm.expect(c).to.include(\"HttpOnly\"); pm.expect(c).to.include(\"SameSite=Lax\"); pm.expect(c).to.include(\"Path=/\"); pm.expect(c).to.include(\"Max-Age=2592000\"); });",
                   "pm.test(\"same user id\", () => pm.expect(pm.response.json().user.id).to.eql(pm.collectionVariables.get(\"userId\")));",
@@ -247,7 +247,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"user object is exactly the 6 documented fields\", () => { const u = pm.response.json().user; pm.expect(Object.keys(u).sort()).to.eql([\"created_at\",\"display_name\",\"email\",\"email_verified\",\"id\",\"locale\"]); pm.expect(u.id).to.match(/^[0-9A-HJKMNP-TV-Z]{26}$/); pm.expect(u.email_verified).to.eql(false); pm.expect(u.locale).to.eql(\"en\"); });"
+                  "pm.test(\"user object is exactly the 6 documented fields\", () => { const u = pm.response.json().user; pm.expect(Object.keys(u).sort()).to.eql([\"created_at\",\"display_name\",\"email\",\"email_verified\",\"id\",\"locale\"]); pm.expect(u.id).to.match(/^[0-9A-HJKMNP-TV-Z]{26}$/); pm.expect(u.email_verified).to.eql(false); pm.expect(u.locale).to.eql(\"vi\"); });"
                 ]
               }
             }
@@ -1058,6 +1058,123 @@
                   "pm.test(\"status 409\", () => pm.response.to.have.status(409));",
                   "pm.test(\"error code email_taken\", () => pm.expect(pm.response.json().error.code).to.eql(\"email_taken\"));",
                   "pm.test(\"error envelope with request id\", () => { const e = pm.response.json().error; pm.expect(e.code).to.be.a(\"string\"); pm.expect(e.request_id).to.eql(pm.response.headers.get(\"X-Request-Id\")); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register - locale fr - 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"locale-{{email}}\", \"password\": \"{{password}}\", \"display_name\": \"A\", \"locale\": \"fr\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"error code invalid_locale\", () => pm.expect(pm.response.json().error.code).to.eql(\"invalid_locale\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register - locale in another case (VI) - 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"locale-{{email}}\", \"password\": \"{{password}}\", \"display_name\": \"A\", \"locale\": \"VI\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"error code invalid_locale\", () => pm.expect(pm.response.json().error.code).to.eql(\"invalid_locale\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register - locale not a string - 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"locale-{{email}}\", \"password\": \"{{password}}\", \"display_name\": \"A\", \"locale\": 1}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"error code invalid_locale\", () => pm.expect(pm.response.json().error.code).to.eql(\"invalid_locale\"));"
                 ]
               }
             }

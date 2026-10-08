@@ -24,6 +24,7 @@ const (
 	codeInvalidEmail       = "invalid_email"
 	codeWeakPassword       = "weak_password"
 	codeInvalidDisplayName = "invalid_display_name"
+	codeInvalidLocale      = "invalid_locale"
 )
 
 // normalizeEmail trims, lower-cases and NFC-normalises an address (so the NFC and NFD spellings of

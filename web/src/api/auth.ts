@@ -16,8 +16,12 @@ export async function getMe(): Promise<User | null> {
 const user = async (path: string, body: unknown) =>
   (await postJson<components["schemas"]["UserEnvelope"]>(path, body)).user;
 
-export const register = (email: string, password: string, display_name: string) =>
-  user("/v1/auth/register", { email, password, display_name });
+export const register = (
+  email: string,
+  password: string,
+  display_name: string,
+  locale: "en" | "vi",
+) => user("/v1/auth/register", { email, password, display_name, locale });
 export const login = (email: string, password: string) =>
   user("/v1/auth/login", { email, password });
 export const logout = () => postJson<void>("/v1/auth/logout");

@@ -382,3 +382,59 @@ func TestCleanupRemovesExpiredAndUsedTokens(t *testing.T) {
 	cancel()
 	<-done
 }
+
+// T-045 AC1, AC2: register stores the locale; absent or null means en; the verification mail follows it.
+func TestRegisterLocale(t *testing.T) {
+	e := newEnv(t, opts{})
+	reg := func(email, locale string) *httptest.ResponseRecorder {
+		return e.do(req{method: "POST", path: "/v1/auth/register", body: fmt.Sprintf(`{"email":%q,"password":%q,"display_name":"A"%s}`, email, testPW, locale)})
+	}
+	for i, c := range []struct{ field, stored string }{
+		{``, "en"}, {`,"locale":null`, "en"}, {`,"locale":"en"`, "en"}, {`,"locale":"vi"`, "vi"},
+	} {
+		mail := fmt.Sprintf("ok%d@example.com", i)
+		rec := reg(mail, c.field)
+		want(t, rec, 201, "")
+		if !strings.Contains(rec.Body.String(), `"locale":"`+c.stored+`"`) {
+			t.Errorf("%q: response %s, want locale %s", c.field, rec.Body.String(), c.stored)
+		}
+		if n := e.count("SELECT COUNT(*) FROM users WHERE email = ? AND locale = ?", mail, c.stored); n != 1 {
+			t.Errorf("%q: stored locale is not %s", c.field, c.stored)
+		}
+		me := e.do(req{method: "GET", path: "/v1/me", cookie: sessionCookie(t, rec).Value})
+		if !strings.Contains(me.Body.String(), `"locale":"`+c.stored+`"`) {
+			t.Errorf("%q: /v1/me %s", c.field, me.Body.String())
+		}
+	}
+	// The Vietnamese mail has the Vietnamese subject and the verify link.
+	e.svc.Wait()
+	var vi, en mailer.Message
+	for _, m := range e.mail.all() {
+		switch m.To {
+		case "ok3@example.com":
+			vi = m
+		case "ok2@example.com":
+			en = m
+		}
+	}
+	if !strings.Contains(vi.Subject, "Xác nhận") || !strings.Contains(vi.Text, testBase+"/verify-email?token=") {
+		t.Errorf("vi mail: %q\n%s", vi.Subject, vi.Text)
+	}
+	if strings.Contains(en.Subject, "Xác nhận") || en.Subject == "" {
+		t.Errorf("en mail subject %q", en.Subject)
+	}
+
+	before := e.count("SELECT COUNT(*) FROM users")
+	for name, f := range map[string]string{
+		"fr": `,"locale":"fr"`, "upper case": `,"locale":"VI"`, "empty": `,"locale":""`,
+		"number": `,"locale":1`, "bool": `,"locale":false`, "object": `,"locale":{}`, "array": `,"locale":["vi"]`,
+	} {
+		rec := reg("bad@example.com", f)
+		if rec.Code != 400 || errCode(t, rec) != "invalid_locale" || rec.Header().Get("Set-Cookie") != "" {
+			t.Errorf("%s: %d %s", name, rec.Code, rec.Body.String())
+		}
+	}
+	if n := e.count("SELECT COUNT(*) FROM users"); n != before || e.mailCount("bad@example.com") != 0 {
+		t.Fatal("rejected locale created a user or sent mail")
+	}
+}
