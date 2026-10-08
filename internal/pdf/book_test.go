@@ -11,6 +11,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/danyaa666/smemories/internal/templates"
 )
 
 var writeSamples = flag.Bool("write-samples", false, "write the sample PDFs to docs/templates/ (synthetic photos only)")
@@ -51,9 +53,15 @@ func sampleBook(t testing.TB) (Book, mapSource) {
 //	go test ./internal/pdf -run TestSamples -write-samples
 func TestSamples(t *testing.T) {
 	b, src := sampleBook(t)
-	for _, id := range []string{"classic", "modern"} {
+	for _, info := range templates.List() {
+		id := info.ID
 		out, rep := render(t, id, b, src, Options{Lang: "vi"})
-		if rep.Pages != 6 || !rep.Has(WarnTextTruncated) {
+		// Every template: cover, profile, at least one notes page and a back page. The exact count and the
+		// truncation warning depend on the layout, so they are pinned for the built-ins only.
+		if rep.Pages < 4 {
+			t.Errorf("%s: pages=%d warnings=%s", id, rep.Pages, codes(rep))
+		}
+		if (id == "classic" || id == "modern") && (rep.Pages != 6 || !rep.Has(WarnTextTruncated)) {
 			t.Errorf("%s: pages=%d warnings=%s", id, rep.Pages, codes(rep))
 		}
 		if *writeSamples {
