@@ -47,6 +47,7 @@ func NewHandler(svc *Service, maxBytes int64, requireUser func(http.Handler) htt
 func (h *Handler) Routes(mux *http.ServeMux) {
 	mux.Handle("POST /v1/yearbooks/{id}/media", auth.GuardMultipart(h.allowedOrigins, h.requireUser(
 		httpx.WithBodyLimit(h.maxBytes+multipartOverhead, http.HandlerFunc(h.upload)))))
+	mux.Handle("GET /v1/yearbooks/{id}/media", h.requireUser(http.HandlerFunc(h.list)))
 	mux.Handle("GET /v1/media/{id}/content", h.requireUser(http.HandlerFunc(h.content)))
 	mux.Handle("DELETE /v1/media/{id}", auth.Guard(h.allowedOrigins, h.requireUser(http.HandlerFunc(h.delete))))
 }
@@ -86,6 +87,44 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.WriteJSON(w, http.StatusCreated, map[string]any{"media": map[string]any{"id": m.ID, "width": m.Width, "height": m.Height, "bytes": m.Bytes}})
+}
+
+func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	limit := DefaultListLimit
+	if s := q.Get("limit"); s != "" {
+		n, err := strconv.Atoi(s)
+		if err != nil || n < 1 || n > MaxListLimit {
+			h.fail(w, r, ValidationError{"invalid_limit"})
+			return
+		}
+		limit = n
+	}
+	items, next, err := h.svc.List(r.Context(), owner(r), r.PathValue("id"), q.Get("uploader"), limit, q.Get("cursor"))
+	if err != nil {
+		h.fail(w, r, err)
+		return
+	}
+	type item struct {
+		ID           string    `json:"id"`
+		Width        int       `json:"width"`
+		Height       int       `json:"height"`
+		Bytes        int       `json:"bytes"`
+		UploaderKind string    `json:"uploader_kind"`
+		CreatedAt    time.Time `json:"created_at"`
+	}
+	out := make([]item, len(items))
+	for i, m := range items {
+		out[i] = item{m.ID, m.Width, m.Height, m.Bytes, m.UploaderKind, m.CreatedAt}
+	}
+	var nc *string
+	if next != "" {
+		nc = &next
+	}
+	httpx.WriteJSON(w, http.StatusOK, struct {
+		Media      []item  `json:"media"`
+		NextCursor *string `json:"next_cursor"`
+	}{out, nc})
 }
 
 // readFile streams the multipart body (nothing spills to disk) and returns the content of the part
@@ -182,7 +221,10 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) fail(w http.ResponseWriter, r *http.Request, err error) {
 	var rl RateLimitedError
 	var se StorageError
+	var ve ValidationError
 	switch {
+	case errors.As(err, &ve):
+		httpx.WriteError(w, r, http.StatusBadRequest, ve.Code, "invalid query parameter")
 	case errors.Is(err, ErrNotFound):
 		httpx.WriteError(w, r, http.StatusNotFound, "not_found", "not found")
 	case errors.Is(err, ErrUnsupported):

@@ -326,7 +326,11 @@ export interface paths {
             };
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List a yearbook's photos
+         * @description Owner only (a missing book and someone else's both answer `404 not_found`). Newest first, keyset paginated on the photo id, so uploads and deletes between pages never repeat or skip a photo that stays. Pass `next_cursor` back as `cursor`; it is null on the last page. By default only the owner's own uploads are listed (`uploader=owner`). The response never contains storage keys, hashes or URLs: fetch the image with `GET /v1/media/{id}/content`.
+         */
+        get: operations["listMedia"];
         put?: never;
         /**
          * Upload a photo to a yearbook
@@ -573,6 +577,17 @@ export interface components {
             height: number;
             /** @description Size of the stored display version. */
             bytes: number;
+        };
+        MediaItem: {
+            /** @description Opaque ULID. */
+            id: string;
+            width: number;
+            height: number;
+            bytes: number;
+            /** @enum {string} */
+            uploader_kind: "owner" | "contributor";
+            /** Format: date-time */
+            created_at: string;
         };
         MediaEnvelope: {
             media: components["schemas"]["Media"];
@@ -1378,6 +1393,50 @@ export interface operations {
             404: components["responses"]["YearbookNotFound"];
             413: components["responses"]["PayloadTooLarge"];
             415: components["responses"]["UnsupportedMediaType"];
+        };
+    };
+    listMedia: {
+        parameters: {
+            query?: {
+                /** @description Out of range or not a number: `400 invalid_limit`. */
+                limit?: number;
+                /** @description Opaque token from a previous page; a malformed one is `400 invalid_cursor`. */
+                cursor?: string;
+                /** @description Anything else: `400 invalid_uploader`. */
+                uploader?: "owner" | "contributor" | "all";
+            };
+            header?: never;
+            path: {
+                /** @description Yearbook ULID. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of photos. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        media: components["schemas"]["MediaItem"][];
+                        next_cursor: string | null;
+                    };
+                };
+            };
+            /** @description `invalid_limit`, `invalid_cursor` or `invalid_uploader`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["YearbookNotFound"];
         };
     };
     uploadMedia: {
