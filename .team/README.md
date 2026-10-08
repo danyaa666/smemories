@@ -12,15 +12,14 @@
 |---|---:|---|
 | BACKLOG | 17 | T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032 |
 | TODO | 5 | T-015, T-033, T-034, T-035, T-036 |
-| QA_PASS | 1 | T-012 |
-| MERGED | 3 | T-007, T-009, T-011 |
+| MERGED | 4 | T-007, T-009, T-011, T-012 |
 | DONE | 10 | T-001, T-002, T-003, T-004, T-005, T-006, T-008, T-010, T-028, T-030 |
 
-**Awaiting your review (MERGED):** T-007 (Email verification and password reset); T-009 (Photo upload and storage (MinIO/S3)); T-011 (Google sign-in (OIDC + PKCE, account linking))
+**Awaiting your review (MERGED):** T-007 (Email verification and password reset); T-009 (Photo upload and storage (MinIO/S3)); T-011 (Google sign-in (OIDC + PKCE, account linking)); T-012 (Collection links (owner API and public lookup))
 
-**Open questions for you:** Q-010 (Approve merge of T-012 (collection links)?)
+**Open questions for you:** none
 
-_Board last written 2026-10-08 02:24Z_
+_Board last written 2026-10-08 02:34Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -203,7 +202,7 @@ Leader review and QA both passed on PR #19 (head 21ba7aa, CI green). High risk (
 QA passed and my review is clean (head 7ffdb68, CI green). High risk (sign-in, account linking, new libraries go-oidc and oauth2, approved in the spec). It is being sent back to dev only to merge develop (T-009 landed); your approval stays valid unless the code changes beyond the merge. Google is optional and off by default: nothing changes until SMEM_GOOGLE_* is configured (real Google credentials are a later owner step). Command: cd /Users/unisoft/GolandProjects/awesomeProject1 && /Users/unisoft/.claude/plugins/cache/claude-agent-team/agent-team/0.3.0/bin/team approve T-011
 
 ### Q-010 — Approve merge of T-012 (collection links)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-08 02:24Z
 - **Blocks:** T-012
 - **Recommendation:** approve
@@ -699,19 +698,19 @@ Google sign-in with OIDC and PKCE and safe account linking (including the pre-hi
 - 2026-10-08 02:23Z · leader · merged d209266 (squash), owner-approved in chat 2026-10-08, QA re-verified the merge result (head 4109b7b). Review: ID token verified by go-oidc plus nonce, state and S256 PKCE, signed 10-minute cookie compared in encoded form, email_verified must be boolean true, return_to allow-list, pre-hijacking defence in one transaction, no tokens in logs. For owner to check: Google is OFF until SMEM_GOOGLE_CLIENT_ID is set; README section 'Google sign-in setup' lists the Google Cloud steps (real credentials are a later owner step). Follow-ups in T-015 and T-031 specs.
 
 ### T-012 — Collection links (owner API and public lookup)
-- **Status:** QA_PASS
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
 - **Depends-on:** T-007, T-008
 - **Risk:** high
 - **Rework:** 0
-- **Owner-approved:** —
-- **Assignee:** leader
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-012-collection-links-owner-api-and-public-lo
 - **PR:** https://github.com/danyaa666/smemories/pull/21
-- **Updated:** 2026-10-08 02:22Z by qa
-- **Comments-seen:** 5
+- **Updated:** 2026-10-08 02:34Z by leader
+- **Comments-seen:** 7
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/01-collection-links.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -737,6 +736,8 @@ Owner-created private collection links (create, list, revoke) and the public loo
   AC8 PASS: openapi.yaml documents the four endpoints with the error codes; `make lint` includes check:api; Postman as above.
   NON-BLOCKING: (1) POST create with no body at all -> 400 invalid_body; spec shows both fields optional, `{}` works (consistent with other create endpoints, documented behaviour in the collection). (2) An unverified user who is not the owner gets 403 email_not_verified instead of 404 on someone else's yearbook (no information leak; the dev noted the check is create-only; unverified users can still list/revoke their own, which are empty). (3) Postman does not cover the public 429 (60 per 15 min impractical); covered by Go tests and my manual run. (4) note_count is always 0 until T-034, as documented. Risk high: owner approval needed before merge.
 - 2026-10-08 02:24Z · leader · Leader review OK on head 231955e (QA_PASS on the same head, CI 4/4 green). After T-011 merged (d209266) I tested the real merge result in a scratch worktree: merges without conflicts, go build, go vet (also with the integration tag), go test ./... and web check:api all pass, migrations 0005..0008 in order. So no dev round is needed. Non-blocking, recorded: public lookup limiter should count only misses (T-034 and T-031 specs). Awaiting owner approval; merge right after.
+- 2026-10-08 02:34Z · human · owner approved merge
+- 2026-10-08 02:34Z · leader · merged 7ca8137 (squash), owner-approved in chat 2026-10-08, QA_PASS on the same head, and I verified the merge result with T-011 in a scratch worktree (build, vet, unit tests, schema check). Review: 192-bit token hashed at rest and shown once, one indexed lookup, owner queries scoped through the yearbook, row lock keeps the 5-link limit under concurrency, revoke idempotent. For owner to check: after make up migrate, create a link with the Postman notes collection (README in postman/): the token appears only in the create response. Follow-up: public lookup limiter counts only misses (T-034 and T-031 specs).
 
 ### T-013 — Notes moderation API (approve, hide, reorder, delete)
 - **Status:** BACKLOG
@@ -1331,3 +1332,4 @@ Make the worst-case memory of the T-009 image pipeline a measured, enforced numb
 - 2026-10-07 — Branch protection enabled on develop and main (D-14).
 - 2026-10-07 — Owner approved the migration: all 35 task specs moved out of the README into epic files (`.team/epics/E01..E07`, one PRD per epic); board blocks keep status, dependencies, comments and a stub that links the spec. README 200 KB -> 156 KB. Skills updated earlier to write new work this way.
 - 2026-10-08 — T-010 accepted (DONE). T-007 reviewed, owner-approved and merged (186ac52). T-009 passed QA and review; awaiting owner approval, merges after T-007 (migration 0006). Follow-up T-036 (memory bound of image processing) created and made a prerequisite of T-034.
+- 2026-10-08 — T-009 (photo upload, d46aec5), T-011 (Google sign-in, d209266) and T-012 (collection links) merged, each owner-approved after QA and leader review; T-007 and T-009 and T-011 await owner acceptance. T-010 accepted. Promoted T-015, T-033, T-035 to TODO; T-036 (memory bound) is queued ahead of T-034.
