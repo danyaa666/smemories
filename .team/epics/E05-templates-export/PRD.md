@@ -50,3 +50,4 @@ Specs live next to this file; **status lives only on the board** (`L list`), nev
 | T-014 Export job: assemble book, render PDF, store, download | `03-export-job-assemble-book-render-pdf-store.md` | T-009, T-010, T-013 |
 | T-019 Web: template picker, PDF preview (pdf.js) and export/download | `04-web-template-picker-pdf-preview-pdf-js-and.md` | T-014, T-016 |
 | T-035 T-010 follow-ups: template tests iterate templates.List() | `05-t-010-follow-ups-template-tests-iterate.md` | T-010 |
+| T-054 Spike: HTML templates and browser print-to-PDF | `06-spike-browser-print-to-pdf.md` | — |

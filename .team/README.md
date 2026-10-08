@@ -10,8 +10,8 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 24 | T-013, T-014, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-040, T-041, T-042, T-046, T-049, T-050, T-052, T-053 |
-| TODO | 6 | T-034, T-039, T-044, T-047, T-048, T-051 |
+| BACKLOG | 26 | T-013, T-014, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-039, T-040, T-041, T-042, T-044, T-046, T-049, T-050, T-052, T-053 |
+| TODO | 5 | T-034, T-047, T-048, T-051, T-054 |
 | READY_FOR_QA | 1 | T-016 |
 | DONE | 22 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-028, T-030, T-033, T-035, T-036, T-037, T-038, T-043, T-045 |
 
@@ -19,7 +19,7 @@
 
 **Open questions for you:** none
 
-_Board last written 2026-10-08 11:18Z_
+_Board last written 2026-10-08 13:31Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -829,7 +829,7 @@ Owner lists pending/approved/hidden notes per yearbook, approves or hides them, 
 - **Branch:** —
 - **PR:** —
 - **Updated:** 2026-10-06 10:13Z by leader
-- **Comments-seen:** 1
+- **Comments-seen:** 2
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/03-export-job-assemble-book-render-pdf-store.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -839,6 +839,7 @@ Asynchronous export: POST creates a job (one active export per book), a bounded 
 
 #### Comments
 - 2026-10-07 11:38Z · leader · Leader note from the T-010 review: pdf.Render has no caps on notes or text length (10,000 notes with three 100 KB fields took 87 s of CPU in QA's adversarial test, memory bounded). The export job must (1) run Render under a context deadline (60 s, matching the quality bar), (2) pass only approved notes (T-034 already caps a collection at 300 notes and messages at 2000 characters), (3) report warnings (low_resolution, missing_glyph, missing_image, extra_photos, text_truncated) to the owner in plain language (T-019).
+- 2026-10-08 13:31Z · leader · On hold for planning: the export job may be replaced by browser print-to-PDF; spike T-054 decides. Do not promote until D-24.
 
 ### T-015 — Web: auth pages and session handling
 - **Status:** DONE
@@ -957,7 +958,7 @@ Mobile-first public page opened from the shared link: name, relationship, messag
 - **Branch:** —
 - **PR:** —
 - **Updated:** 2026-10-06 10:13Z by leader
-- **Comments-seen:** 0
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/04-web-template-picker-pdf-preview-pdf-js-and.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -966,6 +967,7 @@ Mobile-first public page opened from the shared link: name, relationship, messag
 Choose a template (thumbnails from sample renders), trigger export, show progress, preview the real PDF with pdf.js (works on phones), download.
 
 #### Comments
+- 2026-10-08 13:31Z · leader · On hold for planning: the preview and export UI depend on the spike T-054 outcome (D-24). Do not promote until then.
 
 ### T-020 — End-to-end smoke test of the M1 journey in CI (Playwright)
 - **Status:** BACKLOG
@@ -1503,7 +1505,7 @@ Extend the template JSON and renderer with page background images, localised sta
 - 2026-10-08 09:29Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-037, T-038, T-043, T-045')
 
 ### T-039 — Design import tool (dev only): canvas page to template draft
-- **Status:** TODO
+- **Status:** BACKLOG
 - **Priority:** P2
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -1514,8 +1516,8 @@ Extend the template JSON and renderer with page background images, localised sta
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-08 09:14Z by leader
-- **Comments-seen:** 1
+- **Updated:** 2026-10-08 13:31Z by leader
+- **Comments-seen:** 2
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E08-designer-templates/03-design-import-tool-dev-only.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1525,6 +1527,7 @@ Dev-only Node/Playwright command that renders decoration backgrounds and reads s
 
 #### Comments
 - 2026-10-08 09:14Z · leader · T-038 is merged: the import tool can target the v2 format. Spec: .team/epics/E08-designer-templates/03-design-import-tool-dev-only.md.
+- 2026-10-08 13:31Z · leader · On hold: owner proposed browser print-to-PDF (HTML templates). Spike T-054 decides; resume or retire after ADR 0003 / D-24.
 
 ### T-040 — Template memory-book from design temp1 (pilot 1)
 - **Status:** BACKLOG
@@ -1539,7 +1542,7 @@ Dev-only Node/Playwright command that renders decoration backgrounds and reads s
 - **Branch:** —
 - **PR:** —
 - **Updated:** 2026-10-08 03:19Z by leader
-- **Comments-seen:** 0
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E08-designer-templates/04-template-memory-book-from-temp1.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1548,6 +1551,7 @@ Dev-only Node/Playwright command that renders decoration backgrounds and reads s
 Pilot 1: the pastel Memory Book design as a system template with four page kinds in English and Vietnamese.
 
 #### Comments
+- 2026-10-08 13:31Z · leader · On hold pending spike T-054 (browser print-to-PDF); see the E08 PRD note.
 
 ### T-041 — Template navy-classic from design temp2 (pilot 2)
 - **Status:** BACKLOG
@@ -1562,7 +1566,7 @@ Pilot 1: the pastel Memory Book design as a system template with four page kinds
 - **Branch:** —
 - **PR:** —
 - **Updated:** 2026-10-08 03:19Z by leader
-- **Comments-seen:** 0
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E08-designer-templates/05-template-navy-classic-from-temp2.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1571,6 +1575,7 @@ Pilot 1: the pastel Memory Book design as a system template with four page kinds
 Pilot 2: the navy and gold classic design as a system template with four page kinds in English and Vietnamese.
 
 #### Comments
+- 2026-10-08 13:31Z · leader · On hold pending spike T-054 (browser print-to-PDF); see the E08 PRD note.
 
 ### T-042 — Plan the rollout of designs temp3 to temp8 after the pilots
 - **Status:** BACKLOG
@@ -1624,7 +1629,7 @@ Closed catalogue of note form fields (name, relationship, message, how we met, .
 - 2026-10-08 09:29Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-037, T-038, T-043, T-045')
 
 ### T-044 — Templates declare note fields (format v2.1): note_fields, note_field slot, NoteFields helper
-- **Status:** TODO
+- **Status:** BACKLOG
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
@@ -1635,8 +1640,8 @@ Closed catalogue of note form fields (name, relationship, message, how we met, .
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-08 09:14Z by leader
-- **Comments-seen:** 1
+- **Updated:** 2026-10-08 13:31Z by leader
+- **Comments-seen:** 2
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E08-designer-templates/07-templates-declare-note-fields.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1646,6 +1651,7 @@ A template lists which note fields its friend pages ask for and where each answe
 
 #### Comments
 - 2026-10-08 09:14Z · leader · T-038 and T-043 are merged: ready.
+- 2026-10-08 13:31Z · leader · On hold: owner proposed browser print-to-PDF (HTML templates). Spike T-054 decides; resume or retire after ADR 0003 / D-24.
 
 ### T-045 — Register accepts a locale; verification email in the student's language
 - **Status:** DONE
@@ -1865,6 +1871,29 @@ Sessions with native expiry in Redis, per-user index for delete-all, fail-closed
 **Epic:** E02-auth · **PRD:** `.team/epics/E02-auth/PRD.md`
 
 Redis sliding-window limiter with Take and Refund replacing the in-memory one everywhere, fail-open except OTP and login lockouts (D-23).
+
+#### Comments
+
+### T-054 — Spike: HTML templates and browser print-to-PDF instead of server rendering
+- **Status:** TODO
+- **Priority:** P1
+- **Type:** spike
+- **Milestone:** M1
+- **Depends-on:** —
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-08 13:31Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/06-spike-browser-print-to-pdf.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E05-templates-export · **PRD:** `.team/epics/E05-templates-export/PRD.md`
+
+Prototype two designs as HTML/CSS pages printed through the browser (Save as PDF), test across browsers and phones, and write ADR 0003 with a go/no-go recommendation.
 
 #### Comments
 

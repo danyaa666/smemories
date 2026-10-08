@@ -1,5 +1,7 @@
 # E08 — Designer templates (Claude Design canvases become system templates)
 
+> **On hold (2026-10-08):** the owner proposed browser print-to-PDF from HTML templates instead of server rendering. Spike T-054 decides (ADR 0003, then D-24). Do not start the tasks of this epic that build on the Go renderer path until then; finished work stays.
+
 **Status:** planned   **Milestone(s):** M1 (pilot of two designs), later rollout   **Owner decisions:** D-15, D-16, D-17, D-18, L-12 (README §4)
 
 ## Problem and users
