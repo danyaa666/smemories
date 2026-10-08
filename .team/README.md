@@ -18,9 +18,9 @@
 
 **Awaiting your review (MERGED):** T-007 (Email verification and password reset); T-009 (Photo upload and storage (MinIO/S3))
 
-**Open questions for you:** Q-009 (Approve merge of T-011 (Google sign-in)?)
+**Open questions for you:** none
 
-_Board last written 2026-10-08 02:14Z_
+_Board last written 2026-10-08 02:15Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -194,7 +194,7 @@ Leader review and QA both passed on PR #18 (head 3f6c9aa, CI green). It is high 
 Leader review and QA both passed on PR #19 (head 21ba7aa, CI green). High risk (file uploads, personal data, CI change, new AWS S3 SDK dependency approved earlier in L-01). Merge T-007 first (migration 0005), then this one (0006). Known limit: memory use of image processing is high; follow-up T-036 fixes it before anonymous uploads (T-034). New settings: SMEM_S3_* and SMEM_MEDIA_* (copy from .env.example). Command: cd /Users/unisoft/GolandProjects/awesomeProject1 && /Users/unisoft/.claude/plugins/cache/claude-agent-team/agent-team/0.3.0/bin/team approve T-009
 
 ### Q-009 — Approve merge of T-011 (Google sign-in)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-08 02:00Z
 - **Blocks:** T-011
 - **Recommendation:** approve
@@ -647,7 +647,7 @@ The template system and the PDF page renderer, built on the library chosen in T-
 - **Depends-on:** T-006, T-007
 - **Risk:** high
 - **Rework:** 1
-- **Owner-approved:** —
+- **Owner-approved:** yes
 - **Assignee:** qa
 - **Branch:** task/t-011-google-sign-in-oidc-pkce-account-linking
 - **PR:** https://github.com/danyaa666/smemories/pull/20
@@ -679,6 +679,8 @@ Google sign-in with OIDC and PKCE and safe account linking (including the pre-hi
 - 2026-10-08 02:00Z · leader · Leader review OK on head 7ffdb68 (the commit QA tested, CI 4/4 green): flow matches the spec: state, nonce and S256 PKCE, signed 10-minute HttpOnly SameSite=Lax cookie compared in constant time and in encoded form, ID token verified by go-oidc (signature, iss, aud, exp) plus nonce, email_verified must be the boolean true, return_to allow-list, no tokens or codes in logs, identity and user creation in one transaction with FOR UPDATE and a retry on duplicate key or deadlock, pre-hijacking defence clears password and sessions before linking. Not blocking, recorded: campus NAT vs per-IP 30/15 min and a discovery lock held during the fetch (T-031 spec), web button and error codes (T-015 spec). One thing left: PR #20 conflicts with develop now that T-009 merged (d46aec5). Sending back only for the merge, no code defect.
 - 2026-10-08 02:00Z · leader · Leader: merge develop (T-009 is in, d46aec5) into the task branch; no rebase of a pushed branch. Expected conflicts: go.mod, go.sum, README.md, .env.example, api/openapi.yaml, web/src/api/schema.d.ts, internal/config/config_test.go (keep both sides), possibly cmd/smemories-api/main.go. Then: (1) cd web && npm run gen:api, commit schema.d.ts, npm run check:api passes; (2) ls migrations/ shows 0005, 0006 and 0007_user_identities.sql in that order; test migrate on a fresh DB and on one that already applied 0006; (3) make lint build test test-integration; auth, yearbooks, media Postman collections twice (restart the API between runs: forgot-password is limited to 5 per hour per IP); (4) push, mark READY_FOR_QA with the merge-commit SHA. Nothing else in scope changes.
 - 2026-10-08 02:04Z · dev · Merge commit 4109b7b (origin/develop incl. T-009 merged into the branch, pushed to PR #20). Conflicts kept both sides in .env.example, go.mod, go.sum (go mod tidy), internal/config/config.go; other files auto-merged. (1) npm run gen:api produced no diff to schema.d.ts, check:api ok. (2) migrations/ 0005, 0006_media, 0007_user_identities in order; fresh DB up OK; DB built by develop binary (0001-0006) then branch up applies only 0007; 0007 down/up OK. (3) make lint build test test-integration green; newman auth (52/134), yearbooks (85/172), media (44/77) twice each, API restarted before every collection (register limit): 0 failures. No other code change.
+- 2026-10-08 02:15Z · human · owner approved merge
+- 2026-10-08 02:15Z · leader · Owner approved the merge in chat (2026-10-08: 'team approve T-011'). Merge as soon as QA passes the merge result and CI is green on the unchanged head.
 
 ### T-012 — Collection links (owner API and public lookup)
 - **Status:** IN_QA
