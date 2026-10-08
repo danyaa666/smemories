@@ -12,14 +12,14 @@
 |---|---:|---|
 | BACKLOG | 17 | T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032 |
 | TODO | 5 | T-015, T-033, T-034, T-035, T-036 |
-| MERGED | 4 | T-007, T-009, T-011, T-012 |
-| DONE | 10 | T-001, T-002, T-003, T-004, T-005, T-006, T-008, T-010, T-028, T-030 |
+| MERGED | 3 | T-009, T-011, T-012 |
+| DONE | 11 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-010, T-028, T-030 |
 
-**Awaiting your review (MERGED):** T-007 (Email verification and password reset); T-009 (Photo upload and storage (MinIO/S3)); T-011 (Google sign-in (OIDC + PKCE, account linking)); T-012 (Collection links (owner API and public lookup))
+**Awaiting your review (MERGED):** T-009 (Photo upload and storage (MinIO/S3)); T-011 (Google sign-in (OIDC + PKCE, account linking)); T-012 (Collection links (owner API and public lookup))
 
 **Open questions for you:** none
 
-_Board last written 2026-10-08 02:34Z_
+_Board last written 2026-10-08 02:35Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -473,7 +473,7 @@ The core of email+password authentication: register, login, logout, "who am I", 
 - 2026-10-07 14:03Z · leader · accepted by owner (chat, 2026-10-07: 'Accept all')
 
 ### T-007 — Email verification and password reset
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -484,7 +484,7 @@ The core of email+password authentication: register, login, logout, "who am I", 
 - **Assignee:** —
 - **Branch:** task/t-007-email-verification-and-password-reset
 - **PR:** https://github.com/danyaa666/smemories/pull/18
-- **Updated:** 2026-10-08 01:31Z by leader
+- **Updated:** 2026-10-08 02:35Z by leader
 - **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/03-email-verification-and-password-reset.md`
@@ -501,6 +501,7 @@ Email verification and password reset for the in-house auth from T-006, plus the
 - 2026-10-07 17:13Z · leader · Leader review OK on head 3f6c9aa (same head QA tested; CI go, go-integration, web, security green): spec ACs met by the diff; tokens 32 random bytes, SHA-256 at rest, single use via one UPDATE with row lock, wrong-purpose rejected; known and unknown forgot-password do the same work on the request path; reset deletes all sessions in one transaction; LogMailer refuses to exist outside dev/test; cleanup at startup and daily; limits swept. Non-blocking, moved to specs: resend 500 on mailer failure and register-time send on the request path (T-021), link-token handling on the web pages (T-015), per-email forgot cap can throttle a victim (T-031). Awaiting owner approval. For the owner to check: README 'Auth' paragraph (new SMEM_PUBLIC_BASE_URL, required in prod) and that registering locally prints the verification link in the API log.
 - 2026-10-08 01:30Z · human · owner approved merge
 - 2026-10-08 01:31Z · leader · merged 186ac52 (squash), owner-approved in chat 2026-10-08. Review: tokens are 32 random bytes hashed at rest and single use (one UPDATE with row lock), forgot-password does the same work for known and unknown emails, reset deletes all sessions in one transaction, LogMailer cannot start outside dev/test. For owner to check: register locally and read the verification link in the API log; SMEM_PUBLIC_BASE_URL is required in prod. Follow-ups recorded in T-015, T-021, T-031 specs.
+- 2026-10-08 02:35Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-007')
 
 ### T-008 — Yearbook CRUD and profile information
 - **Status:** DONE
