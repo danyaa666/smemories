@@ -163,6 +163,7 @@
     "title": "Ảnh",
     "add": "Thêm ảnh",
     "hint": "JPEG, PNG hoặc WebP, tối đa 10 MB mỗi ảnh. Ảnh chỉ mình bạn xem được.",
+    "more": "Xem thêm ảnh",
     "empty": "Chưa có ảnh nào để hiển thị.",
     "alt": "Ảnh {{n}}",
     "cover": "Ảnh bìa",

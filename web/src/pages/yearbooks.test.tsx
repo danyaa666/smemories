@@ -158,6 +158,7 @@ describe("edit", () => {
       [`PUT /v1/yearbooks/${ID}/profile`]: (c) =>
         book(yb({}, { ...(c.body as object), photo_media_id: PHOTO })),
       "GET /v1/yearbooks": Response.json({ yearbooks: [], next_cursor: null }),
+      [MEDIA]: mediaPage([PHOTO]),
     });
     renderApp(`/yearbooks/${ID}`);
     const name = await screen.findByLabelText("Full name");
@@ -186,6 +187,7 @@ describe("edit", () => {
       [`PATCH /v1/yearbooks/${ID}`]: (c) =>
         book(yb({ ...(c.body as object), cover_media_id: PHOTO })),
       "GET /v1/yearbooks": Response.json({ yearbooks: [], next_cursor: null }),
+      [MEDIA]: mediaPage([PHOTO]),
     });
     renderApp(`/yearbooks/${ID}`);
     await userEvent.clear(await screen.findByLabelText("Graduation year"));
@@ -268,6 +270,17 @@ class FakeXhr {
 const apiErr = (code: string) => ({ error: { code, message: code, request_id: "r1" } });
 const png = (name = "a.png") => new File([new Uint8Array([1, 2, 3])], name, { type: "image/png" });
 const created = { media: { id: PHOTO, width: 800, height: 600, bytes: 3 } };
+const item = (id: string) => ({
+  id,
+  width: 800,
+  height: 600,
+  bytes: 3,
+  uploader_kind: "owner",
+  created_at: "2026-10-02T00:00:00Z",
+});
+const MEDIA = `GET /v1/yearbooks/${ID}/media`;
+const mediaPage = (ids: string[], next: string | null = null) =>
+  Response.json({ media: ids.map(item), next_cursor: next });
 
 async function openEditor(extra: Record<string, Response | ((c: Call) => Response)> = {}) {
   FakeXhr.all = [];
@@ -276,6 +289,7 @@ async function openEditor(extra: Record<string, Response | ((c: Call) => Respons
     "GET /v1/me": me,
     [`GET /v1/yearbooks/${ID}`]: book(yb()),
     "GET /v1/yearbooks": Response.json({ yearbooks: [], next_cursor: null }),
+    [MEDIA]: mediaPage([]),
     ...extra,
   });
   const { container } = renderApp(`/yearbooks/${ID}`);
@@ -286,7 +300,8 @@ async function openEditor(extra: Record<string, Response | ((c: Call) => Respons
 
 describe("photos", () => {
   it("uploads the file in the multipart field `file`, shows progress, then a thumbnail", async () => {
-    const { input } = await openEditor();
+    let uploaded = false;
+    const { input } = await openEditor({ [MEDIA]: () => mediaPage(uploaded ? [PHOTO] : []) });
     await userEvent.upload(input, png("holiday.png"));
     await waitFor(() => expect(FakeXhr.all).toHaveLength(1));
     const x = FakeXhr.all[0]!;
@@ -294,6 +309,7 @@ describe("photos", () => {
     expect((x.form!.get("file") as File).name).toBe("holiday.png");
     x.progress(0.5);
     expect(screen.getByRole("progressbar", { name: "holiday.png" })).toHaveValue(0.5);
+    uploaded = true;
     x.reply(201, created);
     const img = await screen.findByRole("img", { name: "Photo 1" });
     expect(img).toHaveAttribute("src", `/api/v1/media/${PHOTO}/content?size=thumb`);
@@ -332,12 +348,14 @@ describe("photos", () => {
       if (ms === 2000) delays.push(ms);
       return real(fn, ms === 2000 ? 0 : ms);
     }) as typeof setTimeout);
-    const { input } = await openEditor();
+    let uploaded = false;
+    const { input } = await openEditor({ [MEDIA]: () => mediaPage(uploaded ? [PHOTO] : []) });
     await userEvent.upload(input, png());
     await waitFor(() => expect(FakeXhr.all).toHaveLength(1));
     FakeXhr.all[0]!.reply(503, apiErr("busy"));
     await waitFor(() => expect(FakeXhr.all).toHaveLength(2));
     expect(delays).toEqual([2000]);
+    uploaded = true;
     FakeXhr.all[1]!.reply(201, created);
     expect(await screen.findByRole("img", { name: "Photo 1" })).toBeInTheDocument();
   });
@@ -355,6 +373,7 @@ describe("photos", () => {
     const withCover = yb({ cover_media_id: PHOTO }, { photo_media_id: PHOTO });
     const { calls } = await openEditor({
       [`GET /v1/yearbooks/${ID}`]: book(yb({ cover_media_id: PHOTO }, { photo_media_id: PHOTO })),
+      [MEDIA]: mediaPage([PHOTO]),
       [`PATCH /v1/yearbooks/${ID}`]: (c) => book({ ...withCover, ...(c.body as object) }),
       [`PUT /v1/yearbooks/${ID}/profile`]: book(yb()),
     });
@@ -379,6 +398,7 @@ describe("photos", () => {
     let gone = false;
     const { calls } = await openEditor({
       [`GET /v1/yearbooks/${ID}`]: () => book(yb({ cover_media_id: gone ? null : PHOTO })),
+      [MEDIA]: () => mediaPage(gone ? [] : [PHOTO]),
       [`DELETE /v1/media/${PHOTO}`]: () => {
         gone = true;
         return new Response(null, { status: 204 });
@@ -388,5 +408,49 @@ describe("photos", () => {
     await waitFor(() => expect(screen.queryByRole("img")).not.toBeInTheDocument());
     expect(screen.getByText("No photos to show yet.")).toBeInTheDocument();
     expect(calls.some((c) => c.method === "DELETE" && c.path === `/v1/media/${PHOTO}`)).toBe(true);
+  });
+
+  it("lists the stored photos after a reload and pages with the cursor", async () => {
+    const { calls } = await openEditor({
+      [MEDIA]: mediaPage([PHOTO], "c2"),
+      [`${MEDIA}?cursor=c2`]: mediaPage([OTHER]),
+    });
+    const first = await screen.findByRole("img", { name: "Photo 1" });
+    expect(first).toHaveAttribute("src", `/api/v1/media/${PHOTO}/content?size=thumb`);
+    await userEvent.click(screen.getByRole("button", { name: "Show more photos" }));
+    expect(await screen.findByRole("img", { name: "Photo 2" })).toHaveAttribute(
+      "src",
+      `/api/v1/media/${OTHER}/content?size=thumb`,
+    );
+    expect(screen.queryByRole("button", { name: "Show more photos" })).not.toBeInTheDocument();
+    expect(calls.at(-1)?.path).toBe(`/v1/yearbooks/${ID}/media?cursor=c2`);
+  });
+
+  it("shows a translated error with a retry when the list fails", async () => {
+    let fail = true;
+    await openEditor({ [MEDIA]: () => (fail ? err(502, "storage_error") : mediaPage([PHOTO])) });
+    expect(await screen.findByText(/Photo storage is not responding/)).toBeInTheDocument();
+    expect(screen.queryByText("No photos to show yet.")).not.toBeInTheDocument();
+    fail = false;
+    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(await screen.findByRole("img", { name: "Photo 1" })).toBeInTheDocument();
+  });
+
+  it("deleting one of two photos refreshes the list without a page reload", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    let gone = false;
+    await openEditor({
+      [MEDIA]: () => mediaPage(gone ? [OTHER] : [PHOTO, OTHER]),
+      [`DELETE /v1/media/${PHOTO}`]: () => {
+        gone = true;
+        return new Response(null, { status: 204 });
+      },
+    });
+    await userEvent.click((await screen.findAllByRole("button", { name: "Delete" }))[0]!);
+    await waitFor(() => expect(screen.getAllByRole("img")).toHaveLength(1));
+    expect(screen.getByRole("img")).toHaveAttribute(
+      "src",
+      `/api/v1/media/${OTHER}/content?size=thumb`,
+    );
   });
 });
