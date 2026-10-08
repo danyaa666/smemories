@@ -12,7 +12,7 @@
 |---|---:|---|
 | BACKLOG | 25 | T-013, T-014, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-039, T-040, T-041, T-042, T-044, T-049, T-050, T-052, T-053 |
 | TODO | 3 | T-046, T-048, T-054 |
-| IN_PROGRESS | 1 | T-034 |
+| READY_FOR_QA | 1 | T-034 |
 | QA_PASS | 2 | T-047, T-051 |
 | MERGED | 1 | T-016 |
 | DONE | 22 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-028, T-030, T-033, T-035, T-036, T-037, T-038, T-043, T-045 |
@@ -21,7 +21,7 @@
 
 **Open questions for you:** Q-015 (Approve merge of T-051 (Redis foundation)?); Q-016 (Approve merge of T-047 (fix flaky concurrent Google callback)?)
 
-_Board last written 2026-10-08 14:23Z_
+_Board last written 2026-10-08 14:28Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -1357,7 +1357,7 @@ Evidence from the T-006/T-030 merges: the workflow's concurrency group has cance
 - 2026-10-08 09:23Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-015, T-033, T-035, T-036')
 
 ### T-034 — Public note submission (text and photos)
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -1365,11 +1365,11 @@ Evidence from the T-006/T-030 merges: the workflow's concurrency group has cance
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-034-public-note-submission-text-and-photos
 - **PR:** 30
-- **Updated:** 2026-10-08 14:12Z by dev
-- **Comments-seen:** 4
+- **Updated:** 2026-10-08 14:28Z by dev
+- **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/02-public-note-submission.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1407,6 +1407,7 @@ Public endpoint where a friend with a collection link submits a note with text, 
   e) Retry-After on the submit 429 is 3600 (window length), not the time until the next slot.
   Re-test after fix: rerun the 4-stalled-connections repro and the 12-parallel run; everything else above is unaffected unless submit.go changes.
 - 2026-10-08 09:24Z · leader · Leader: QA_FAIL accepted. Fix in the same PR #30 (branch and worktree are reused), then READY_FOR_QA. The required changes are in the spec file, section 'Leader notes from the T-034 QA failure': (1) rolling 10 s idle read deadline with the 120 s total cap, (2) per-IP cap of concurrent photo-bearing submissions (default 8, configurable), (3) validate token, link state, cap and answers before reading photo bytes, (4) tests including QA's stalled-connection repro (4 half-open uploads must not block a normal submission), (5) OpenAPI wording of the 503 and no ERROR log for client disconnects. Everything else QA checked held: keep it unchanged.
+- 2026-10-08 14:28Z · dev · Rework head c69be6b (develop merged first; migration still 0010, no other open branch has one). Leader items: (1) rolling 10 s idle read deadline via httpx.IdleBody (120 s total cap) -> 408 request_timeout, nothing stored; test TestIdleBodyIsDropped on a real socket. (2) per-IP cap on concurrent photo submissions, SMEM_PUBLIC_UPLOAD_CONCURRENT_PER_IP default 8 (config validated, .env.example, README, docs/media.md); DECISION FOR LEADER: with the default pool of 4 slots a cap of 8 protects nothing, so the effective cap is min(configured, pool/2) = 2 by default; text-only needs no slot. (3) answers are validated before the first photo byte is read and before a slot is taken; NOTE answers must now come BEFORE photos (400 invalid_body otherwise; browser FormData order follows append order, T-018 must append answers first); TestRejectedRequestsDoNotNeedASlot. (4) tests: TestStalledUploadsDoNotBlockOthers (4 half-open uploads from one IP, a 3-photo submission from another IP succeeds), TestUploadsPerIPLimit, TestFortyStudentsWithPhotos, TestIdleBodyIsDropped. (5) QA issue 2: OpenAPI says 503 busy answers at once with Retry-After 2, 408 documented, web schema regenerated; issue 3: client gone -> debug log, status 499 client_closed, no ERROR (noErrorLogged checks). Green: make lint build test, go test -race -tags integration ./.... Not run: newman (not installed here; no Postman request changed, all send answers before photos). Retest: QA's 4-stalled repro (same IP: expect two held, two 503; other IP fine; the held ones die after 10 s) and the 12-parallel run (same IP now gets at most 2 photo submissions at a time, rest 503 busy). Known gap: many-IP floods stay with T-031.
 
 ### T-035 — T-010 follow-ups: template tests iterate templates.List()
 - **Status:** DONE
