@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"slices"
 	"strings"
 	"time"
 
@@ -39,12 +38,10 @@ type Note struct {
 
 // Options tune a render. The zero value means A5, English labels and the current time.
 type Options struct {
-	PageSize string    // A5 (default) or A4; must be one the template declares
+	PageSize string    // A5 (default), A4 or Letter; must be one the template declares
 	Lang     string    // en (default) or vi: picks element labels
 	Now      time.Time // PDF creation date; fix it for byte-identical output
 }
-
-var pageDims = map[string][2]float64{"A5": {templates.RefW, templates.RefH}, "A4": {210, 297}}
 
 type renderer struct {
 	tmpl   *templates.Template
@@ -57,7 +54,7 @@ type renderer struct {
 	imgs   map[string]*imgInfo
 	lowRes map[string]bool
 	report Report
-	// sx, sy scale reference (A5) millimetres to the page; ss scales font sizes and radii.
+	// sx, sy scale reference-page millimetres to the page; ss scales font sizes and radii.
 	sx, sy, ss float64
 }
 
@@ -74,20 +71,21 @@ func Render(ctx context.Context, tmpl *templates.Template, book Book, images Ima
 	if opts.PageSize == "" {
 		opts.PageSize = "A5"
 	}
-	dims, ok := pageDims[opts.PageSize]
-	if !ok || !slices.Contains(tmpl.PageSizes, opts.PageSize) {
+	dims, ok := templates.Dims[opts.PageSize]
+	if !ok || !tmpl.Supports(opts.PageSize) {
 		return Report{}, fmt.Errorf("template %q does not support page size %q", tmpl.ID, opts.PageSize)
 	}
 	if opts.Lang == "" {
 		opts.Lang = "en"
 	}
+	rw, rh := tmpl.RefDims()
 	g, err := newGlyphs()
 	if err != nil {
 		return Report{}, err
 	}
 	r := &renderer{tmpl: tmpl, book: book, src: images, lang: opts.Lang, glyphs: g,
 		widths: map[widthKey]float64{}, imgs: map[string]*imgInfo{}, lowRes: map[string]bool{},
-		sx: dims[0] / templates.RefW, sy: dims[1] / templates.RefH}
+		sx: dims[0] / rw, sy: dims[1] / rh}
 	r.ss = r.sx
 
 	// fpdf can panic on input it does not expect; the caller must get an error, not a crash.

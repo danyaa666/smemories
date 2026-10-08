@@ -81,3 +81,15 @@ func Get(id string) (*Template, bool) {
 	t, ok := registry[id]
 	return t, ok
 }
+
+// ForPageSize returns the built-in templates that declare support for size, ordered by id. Use it for the
+// template picker and the export check: a template that does not list a book's size must not be used for it.
+func ForPageSize(size string) []Info {
+	var out []Info
+	for _, i := range List() {
+		if registry[i.ID].Supports(size) {
+			out = append(out, i)
+		}
+	}
+	return out
+}

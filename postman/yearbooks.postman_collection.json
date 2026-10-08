@@ -52,6 +52,10 @@
     {
       "key": "cursor",
       "value": ""
+    },
+    {
+      "key": "bookIdLetter",
+      "value": ""
     }
   ],
   "item": [
@@ -942,6 +946,191 @@
               }
             }
           ]
+        },
+        {
+          "name": "21. A creates a Letter yearbook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"Letter book\",\"language\":\"en\",\"page_size\":\"Letter\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "const b = pm.response.json().yearbook;",
+                  "pm.test('page_size is Letter', () => pm.expect(b.page_size).to.eql('Letter'));",
+                  "pm.collectionVariables.set('bookIdLetter', b.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "22. A patches the Letter book to A4",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks/{{bookIdLetter}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks",
+                "{{bookIdLetter}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"page_size\":\"A4\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('page_size is A4', () => pm.expect(pm.response.json().yearbook.page_size).to.eql('A4'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "23. A patches the Letter book to Letter",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks/{{bookIdLetter}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks",
+                "{{bookIdLetter}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"page_size\":\"Letter\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('page_size is Letter', () => pm.expect(pm.response.json().yearbook.page_size).to.eql('Letter'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "24. A reads the Letter book back",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks/{{bookIdLetter}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks",
+                "{{bookIdLetter}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('still Letter', () => pm.expect(pm.response.json().yearbook.page_size).to.eql('Letter'));"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
@@ -1516,6 +1705,148 @@
             "body": {
               "mode": "raw",
               "raw": "{\"title\":\"x\",\"language\":\"en\",\"page_size\":\"A3\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code invalid_page_size', () => pm.expect(pm.response.json().error.code).to.eql('invalid_page_size'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create - page size Legal - 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"x\",\"language\":\"en\",\"page_size\":\"Legal\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code invalid_page_size', () => pm.expect(pm.response.json().error.code).to.eql('invalid_page_size'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create - page size letter (wrong case) - 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"x\",\"language\":\"en\",\"page_size\":\"letter\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code invalid_page_size', () => pm.expect(pm.response.json().error.code).to.eql('invalid_page_size'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Patch - page size LETTER (wrong case) - 400",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks",
+                "{{bookId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"page_size\":\"LETTER\"}"
             }
           },
           "event": [

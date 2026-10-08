@@ -2,6 +2,7 @@ package yearbook
 
 import (
 	"encoding/json"
+	"slices"
 	"time"
 
 	"github.com/danyaa666/smemories/internal/textx"
@@ -24,6 +25,9 @@ const (
 	dateLayout    = "2006-01-02"
 	maxBooksOwned = 20
 )
+
+// pageSizes are the accepted page_size values (the yearbooks.page_size enum).
+var pageSizes = []string{"A5", "A4", "Letter"}
 
 // ValidationError carries the stable API error code (invalid_<field>) for a rejected input.
 type ValidationError struct{ Code string }
@@ -111,7 +115,7 @@ func (in bookInput) applyTo(y *Yearbook) error {
 		y.CoverMediaID = in.CoverMediaID.Val // existence and ownership are checked by the store
 	}
 	if in.PageSize != nil {
-		if *in.PageSize != "A5" && *in.PageSize != "A4" {
+		if !slices.Contains(pageSizes, *in.PageSize) {
 			return ValidationError{"invalid_page_size"}
 		}
 		y.PageSize = *in.PageSize

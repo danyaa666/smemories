@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"math"
 	"strings"
 	"testing"
@@ -491,6 +492,40 @@ func TestEmptyBookRenders(t *testing.T) {
 	for _, id := range []string{"classic", "modern"} {
 		if _, rep := render(t, id, Book{}, nil, Options{}); rep.Pages != 4 || len(rep.Warnings) != 0 {
 			t.Errorf("%s: %+v", id, rep)
+		}
+	}
+}
+
+// T-037 AC3: the MediaBox of each page size, and a Letter-reference template renders on Letter only.
+func TestPageBoxes(t *testing.T) {
+	for size, want := range map[string][2]float64{"A5": {419.53, 595.28}, "A4": {595.28, 841.89}, "Letter": {612, 792}} {
+		t.Run(size, func(t *testing.T) {
+			tt := *tmpl(t, "classic")
+			tt.ID = "box-test"
+			tt.PageSizes = []string{size}
+			if size == "Letter" { // classic's A5 coordinates also lie inside the Letter page
+				tt.Reference = "Letter"
+			}
+			if err := templates.Validate(&tt); err != nil {
+				t.Fatal(err)
+			}
+			var buf bytes.Buffer
+			if _, err := Render(context.Background(), &tt, Book{Title: "T"}, nil, &buf, Options{PageSize: size, Now: fixedNow}); err != nil {
+				t.Fatal(err)
+			}
+			w, h := mediaBox(t, buf.Bytes())
+			if math.Abs(w-want[0]) > 0.5 || math.Abs(h-want[1]) > 0.5 {
+				t.Errorf("MediaBox %.2f x %.2f, want %.2f x %.2f", w, h, want[0], want[1])
+			}
+		})
+	}
+}
+
+func TestRenderRefusesUnsupportedSize(t *testing.T) {
+	for _, id := range []string{"classic", "modern"} {
+		_, err := Render(context.Background(), tmpl(t, id), Book{}, nil, io.Discard, Options{PageSize: "Letter"})
+		if err == nil || !strings.Contains(err.Error(), "does not support page size") {
+			t.Errorf("%s on Letter: err = %v", id, err)
 		}
 	}
 }

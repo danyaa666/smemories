@@ -926,7 +926,7 @@ components:
         graduation_year: {type: [integer, "null"], minimum: 1950, maximum: 2100}
         motto: {type: string, maxLength: 200}
         language: {type: string, enum: [en, vi]}
-        page_size: {type: string, enum: [A5, A4]}
+        page_size: {type: string, enum: [A5, A4, Letter]}
         template_id: {type: [string, "null"], description: Null until a template is chosen.}
         cover_media_id: {type: [string, "null"], description: A photo of this yearbook, or null.}
         created_at: {type: string, format: date-time}
@@ -948,7 +948,7 @@ components:
         graduation_year: {type: [integer, "null"], minimum: 1950, maximum: 2100}
         motto: {type: string, maxLength: 200}
         language: {type: string, enum: [en, vi]}
-        page_size: {type: string, enum: [A5, A4], default: A5}
+        page_size: {type: string, enum: [A5, A4, Letter], default: A5}
     YearbookPatch:
       type: object
       additionalProperties: false
@@ -959,7 +959,7 @@ components:
         graduation_year: {type: [integer, "null"], minimum: 1950, maximum: 2100}
         motto: {type: string, maxLength: 200}
         language: {type: string, enum: [en, vi]}
-        page_size: {type: string, enum: [A5, A4]}
+        page_size: {type: string, enum: [A5, A4, Letter]}
         cover_media_id: {type: [string, "null"], description: A photo of this yearbook (else `400 invalid_media`); null clears it.}
     ProfileInput:
       type: object
