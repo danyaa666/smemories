@@ -39,3 +39,6 @@ Assets are validated at test time and again at load; a bad asset must fail the b
 #### Test plan
 - Dev: validator table tests for each rule above; renderer tests per feature; coverage test over the registry; a benchmark or test for the export budget with backgrounds.
 - QA should probe: a background with the wrong ratio, a 5 MiB file, a JPEG renamed to .png (accepted by content), a path with `..`; static text with a very long string in a tiny box (truncation warning, no crash); rotation at ±45°; the same template rendered in `en` and `vi`.
+
+#### Leader notes from the T-037 review (2026-10-08)
+Two small clean-ups to include here since you touch the same validator and spec code: (1) `templates.Dims` is an exported mutable map; make it unexported behind a function (for example `templates.PageDims(size) ([2]float64, bool)`) and update the callers in `internal/pdf` and `internal/yearbook` if any; (2) a lower-case `"reference": "letter"` currently produces a second, misleading aspect-ratio error next to the correct "invalid reference" one: stop checking `page_sizes` against the reference when the reference itself is invalid.

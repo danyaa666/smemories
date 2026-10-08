@@ -11,17 +11,17 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 23 | T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-039, T-040, T-041, T-042, T-044, T-045 |
-| TODO | 3 | T-015, T-034, T-038 |
-| IN_QA | 2 | T-035, T-037 |
-| QA_PASS | 2 | T-033, T-043 |
-| MERGED | 1 | T-036 |
+| TODO | 2 | T-034, T-038 |
+| IN_QA | 1 | T-015 |
+| QA_PASS | 3 | T-033, T-037, T-043 |
+| MERGED | 2 | T-035, T-036 |
 | DONE | 14 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-028, T-030 |
 
-**Awaiting your review (MERGED):** T-036 (Bound the memory of image processing (caps, concurrency, memory limit))
+**Awaiting your review (MERGED):** T-035 (T-010 follow-ups: template tests iterate templates.List()); T-036 (Bound the memory of image processing (caps, concurrency, memory limit))
 
-**Open questions for you:** Q-011 (Approve merge of T-033 (CI: do not cancel runs on develop and main)?); Q-012 (Vietnamese labels for the friends' note form (T-043): OK to merge?)
+**Open questions for you:** Q-011 (Approve merge of T-033 (CI: do not cancel runs on develop and main)?); Q-012 (Vietnamese labels for the friends' note form (T-043): OK to merge?); Q-013 (Approve merge of T-037 (US Letter page size)?)
 
-_Board last written 2026-10-08 03:43Z_
+_Board last written 2026-10-08 03:49Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -233,6 +233,15 @@ QA passed and my review is clean (head 74346f4, CI green). High risk because it 
 - **Answer:** _(pending)_
 
 The table of EN/VI labels and hints is in the description of https://github.com/danyaa666/smemories/pull/24 (9 fields). Please reply with 'OK' or the wording you want; labels are plain text in code, so they can be changed any time without touching stored notes (field ids never change). Merging T-043 unblocks the public notes submission (T-034).
+
+### Q-013 — Approve merge of T-037 (US Letter page size)?
+- **Status:** OPEN
+- **Asked:** 2026-10-08 03:49Z
+- **Blocks:** T-037
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+QA passed and my review is clean (head 9546d3b, CI green, merges cleanly). High risk because it includes a database migration (0009): it adds Letter to the yearbook page_size enum; existing books are untouched, and rolling back turns Letter books into A5. Nothing in the web UI offers Letter yet (the yearbook form comes with T-016). Command: cd /Users/unisoft/GolandProjects/awesomeProject1 && /Users/unisoft/.claude/plugins/cache/claude-agent-team/agent-team/0.3.0/bin/team approve T-037
 
 <!-- questions:end -->
 
@@ -823,7 +832,7 @@ Asynchronous export: POST creates a job (one active export per book), a bounded 
 - 2026-10-07 11:38Z · leader · Leader note from the T-010 review: pdf.Render has no caps on notes or text length (10,000 notes with three 100 KB fields took 87 s of CPU in QA's adversarial test, memory bounded). The export job must (1) run Render under a context deadline (60 s, matching the quality bar), (2) pass only approved notes (T-034 already caps a collection at 300 notes and messages at 2000 characters), (3) report warnings (low_resolution, missing_glyph, missing_image, extra_photos, text_truncated) to the owner in plain language (T-019).
 
 ### T-015 — Web: auth pages and session handling
-- **Status:** TODO
+- **Status:** IN_QA
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -831,11 +840,11 @@ Asynchronous export: POST creates a job (one active export per book), a bounded 
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** qa
 - **Branch:** task/t-015-web-auth-pages-and-session-handling
 - **PR:** https://github.com/danyaa666/smemories/pull/25
-- **Updated:** 2026-10-08 03:43Z by leader
-- **Comments-seen:** 5
+- **Updated:** 2026-10-08 03:48Z by qa
+- **Comments-seen:** 6
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/04-web-auth-pages-and-session-handling.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -849,6 +858,7 @@ Register, login, logout, verify-email, forgot/reset password pages; session boot
 - 2026-10-08 03:30Z · dev · Auth pages + session bootstrap + RequireAuth + Google link (VITE_GOOGLE_SIGNIN) + leader notes from T-003/T-007/T-011 done. make lint build test green, 56 vitest tests. QA: run web against the API (make up, make run, npm run dev) incl. real email links, Vietnamese strings, keyboard/screen-reader pass. Spec had no numbered AC; checklist in PR. Known: not run in a real browser by me.
 - 2026-10-08 03:42Z · qa · Tested against a real API (make up, migrate, API built from the task worktree, vite dev, headless Chrome via playwright-core; mail from the log mailer) in EN and VI and at 375 px. Passing: register (field error aria-invalid/aria-describedby, email_taken, weak_password, empty submit), login (wrong pw, 429 lockout 'try again in 15 min' from Retry-After), logout (nav, redirect), session bootstrap (reload keeps session, 401 -> signed out, API unreachable -> RequireAuth shows retry, retry works), RequireAuth round trip (/account?tab=1 -> /login -> back to /account?tab=1), signed-in /login and /register redirect, verify-email from the logged mail link (exactly one POST under StrictMode, account flips to Email verified without reload, reuse/garbage/no token -> expired message), forgot password (identical text for unknown and known address, bad email field error), reset from the logged link (weak password field error, success, link reuse -> expired + ask for new, old password rejected, new works), resend limit (3 ok, 4th 429 'try again in 60 min'), ?error= oidc_state/oidc_denied/oidc_failed/email_unverified/unknown/HTML payload (translated, escaped), Google button hidden by default and shown with VITE_GOOGLE_SIGNIN=true with href /api/v1/auth/google/start?return_to=<encoded path>, EN/VI switch (html lang, persisted), keyboard tab order and Enter submit, :focus-visible ring, no horizontal overflow at 375 px for normal names. web: lint, typecheck, i18n, check:api, 56 vitest x3 and build all green; PR CI green on head 31c2546. ISSUES: 1 (major, violates leader note 'removes the token before any other work or network call') the first GET /api/v1/me (session bootstrap from AuthNav) is sent while the address bar still holds the token and its Referer is the full /verify-email?token=... (same for /reset-password). Repro: playwright request log shows 'GET /api/v1/me | page url at request: /reset-password?token=MktbKs4V...| referer: http://localhost:5173/reset-password?token=...'; only the later POST sees the clean URL. Cause: AuthNav (earlier in the tree) fires useMe in its effect before useUrlToken's effect in the page runs. Fix options: strip ?token synchronously before React mounts (e.g. in main.tsx/index.html inline script, keeping it in a module variable for the page), and/or add <meta name="referrer" content="no-referrer"> to web/index.html; add a test that no request is issued while location.search holds the token. 2 (minor) offline: with the browser offline, submit on login stays on 'Please wait…' with a disabled button and no message (TanStack default networkMode 'online' pauses the mutation, then fires it automatically when the network returns). Repro: open /login, context offline, submit. Expected: the network_error text. Fix: new QueryClient({defaultOptions:{queries:{networkMode:'always'},mutations:{networkMode:'always'}}}) in web/src/main.tsx; same pause applies to the useMe bootstrap (stuck 'Loading' instead of the retry panel). 3 (minor) at 375 px a 100-character display name without spaces (allowed by the API) makes the page 1391 px wide (header link does not wrap/shrink). Repro: register with 'W' x 100, open /account at 375 px. Expected no horizontal scroll (min-width:0 / overflow-wrap:anywhere on .auth-nav a). 4 (minor, cosmetic) at 375 px the brand touches the nav links, nav links wrap to two lines ('Đăng nhập', 'Create account') and the Google button sits flush under the submit button; Sign out and 'Send the link again' use unstyled default buttons. Observation for the leader, not T-015: a Vietnamese-UI user receives the English verification email because POST /v1/auth/register has no locale input (users.locale defaults to en); consider a locale field or Accept-Language in T-006/T-007. Not checked: real Google round trip (API had no Google config, /google/start answers 404), screen reader (VoiceOver/NVDA) pass, Safari/Firefox/real phone, vite preview production build, CSRF behaviour on a non-allowed origin (403 csrf_origin_mismatch falls back to the generic message).
 - 2026-10-08 03:43Z · leader · Leader: QA_FAIL accepted; fix in the same PR (branch and worktree are reused), then READY_FOR_QA. (1) MAJOR, spec requirement: on /verify-email and /reset-password the token must leave the address bar before ANY network call; today AuthNav's effect fires GET /api/v1/me while the URL still holds the token and the Referer carries it. Fix: strip the token synchronously before anything that can fetch mounts (read it into memory, history.replaceState before AuthNav mounts, or hold the /me query until the token is stripped); add a test that fails if any request is made while location.search still contains a token. Also add <meta name=referrer content=no-referrer> to index.html as defence in depth. (2) networkMode 'always' for the mutations (and queries where it matters) so an offline submit shows the network-error message instead of 'Please wait'. (3) A 100-character display name with no spaces makes the page 1391 px wide at 375 px: wrap with overflow-wrap:anywhere wherever the name is shown, with a test or note. (4) Minor spacing at 375 px: fix if cheap. Not in this PR: the English verification email for Vietnamese users is the API register endpoint (new task T-045). The generic message for 403 csrf_origin_mismatch is acceptable.
+- 2026-10-08 03:45Z · dev · Head f24eb25. (1) token: captureUrlToken() in main.tsx moves ?token= into memory via history.replaceState before React renders, so GET /v1/me (AuthNav) and the POST never see it; useUrlToken reads the stash (path-matched, cleared after first use); <meta name=referrer no-referrer> in index.html. Tests (auth.test.tsx 'token in the address bar', verify + reset under StrictMode, every fetch records location.search; plus reset test now checks all calls) fail when the capture is removed. (2) src/queryClient.ts networkMode 'always' for queries and mutations, used by main.tsx and test renderApp; 'offline' test fails with networkMode online. (3) overflow-wrap:anywhere on main and .auth-nav a, header/nav flex-wrap, min-width 0: CSS only, jsdom cannot measure; QA please recheck 100-char name at 375 px. (4) spacing: header gap, nav button padding, margin under the form before the Google button. make lint build test green, 60 vitest tests. Not run in a real browser by me.
 
 ### T-016 — Web: yearbook list, create/edit, profile and photo upload UI
 - **Status:** BACKLOG
@@ -1313,7 +1323,7 @@ Public endpoint where a friend with a collection link submits a note with text, 
 #### Comments
 
 ### T-035 — T-010 follow-ups: template tests iterate templates.List()
-- **Status:** IN_QA
+- **Status:** MERGED
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -1321,11 +1331,11 @@ Public endpoint where a friend with a collection link submits a note with text, 
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** —
 - **Branch:** task/t-035-t-010-follow-ups-template-tests-iterate-
 - **PR:** 26
-- **Updated:** 2026-10-08 03:43Z by qa
-- **Comments-seen:** 1
+- **Updated:** 2026-10-08 03:48Z by leader
+- **Comments-seen:** 4
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/05-t-010-follow-ups-template-tests-iterate.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1336,6 +1346,8 @@ From the T-010 QA notes: adding a template exactly as docs/templates.md describe
 #### Comments
 - 2026-10-08 02:24Z · leader · T-010 is accepted: small follow-up, ready.
 - 2026-10-08 03:32Z · dev · Test-only: TestListHasBuiltIns and TestSamples iterate templates.List(); built-ins asserted as minimum. Test: go test ./internal/pdf ./internal/templates.
+- 2026-10-08 03:48Z · qa · Head 15d0d97, PR #26 CI green (go, go-integration, security, web). Test-only diff (internal/pdf/book_test.go, internal/templates/templates_test.go). Evidence: go test ./internal/pdf ./internal/templates -count=1 ok; go vet and gofmt clean. Mutation check: dropped a 3rd template (zzz.json, copy of classic) into internal/templates/embed with no Go edit -> TestListHasBuiltIns, TestSamples and the whole pdf/templates packages still pass; file removed afterwards. Built-ins still asserted as minimum (classic and modern must be present; pages==6 and truncation warning pinned for them only). Non-blocking: TestRenderBothTemplatesBothSizes still hardcodes the two ids (outside this task's scope).
+- 2026-10-08 03:48Z · leader · merged a01a884 (squash), QA_PASS on the same head 15d0d97, CI green. Review: test-only; TestListHasBuiltIns and TestSamples iterate templates.List(), classic and modern stay a minimum with their exact page counts pinned; QA added a third template file without any Go edit and both tests passed. For owner to check: nothing to run.
 
 ### T-036 — Bound the memory of image processing (caps, concurrency, memory limit)
 - **Status:** MERGED
@@ -1365,7 +1377,7 @@ Make the worst-case memory of the T-009 image pipeline a measured, enforced numb
 - 2026-10-08 03:21Z · leader · merged 7772eb7 (squash), QA_PASS on the same head c6d78ce, CI green. Review: the 480 MB scaler buffer is gone (banded resize, same picture), header-based caps by colour model and JPEG subsampling, concurrency default 2, SMEM_MEMORY_LIMIT_MIB validated (0 or 64..1048576), 4 worst-case uploads peak at about 925 MiB (was 3.2 GB). For owner to check: PNG/WebP over 25 MP, 16-bit PNG over 4096x4096 and large progressive JPEGs are now refused with 400 invalid_image; phone JPEGs up to 50 MP still pass. Follow-up: stale OpenAPI sentence (noted in T-034 spec).
 
 ### T-037 — US Letter page size, end to end
-- **Status:** IN_QA
+- **Status:** QA_PASS
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
@@ -1373,11 +1385,11 @@ Make the worst-case memory of the T-009 image pipeline a measured, enforced numb
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** leader
 - **Branch:** task/t-037-us-letter-page-size-end-to-end
 - **PR:** 27
-- **Updated:** 2026-10-08 03:43Z by qa
-- **Comments-seen:** 0
+- **Updated:** 2026-10-08 03:48Z by qa
+- **Comments-seen:** 3
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E08-designer-templates/01-us-letter-page-size-end-to-end.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1387,6 +1399,17 @@ Add Letter (215.9 x 279.4 mm) as a third yearbook page size: migration, API, Ope
 
 #### Comments
 - 2026-10-08 03:38Z · dev · Letter end to end: migration 0009 (up/down tested on A5/A4/Letter books), API+OpenAPI+schema.d.ts, templates.Dims/reference/ForPageSize, pdf MediaBox 612x792, docs, Postman yearbooks (steps 21-24 + 3 edge cases, newman x2 green). Test: go test -tags integration ./...; newman. Gap: npm check:api not run locally (CI).
+- 2026-10-08 03:48Z · qa · Head 9546d3b = PR #27 head; CI green on it (go, go-integration, security, web).
+  AC1 migration: real smemories-migrate binary on scratch DB smem_test_qa37 (dropped after): up, down (enum A5,A4), insert A5+A4 books, up (enum A5,A4,Letter), insert Letter book, down -> Letter row became A5, A4/A5 untouched, enum restored to ('A5','A4'); up again -> enum with Letter, rows intact; status shows 0009 applied. Dev's TestMigratePageSizeLetter also passes.
+  AC2 API (real API on :18080, curl): create Letter/A4/A5 = 201; missing page_size defaults A5; 'letter','LETTER','Legal','',' Letter','Letter ' = 400 invalid_page_size on create AND patch; number -> 400 invalid_body. PATCH A4->Letter->A4->Letter->A5 all 200 and persisted; GET/list show Letter; patching title keeps size. openapi.yaml + schema.d.ts updated. npm run check:api (main checkout web/node_modules, PR-head openapi.yaml and schema.d.ts copied to a scratch dir, nothing in main touched): 'api schema ok'; negative control with a stale schema fails as it should. web has no page_size usage, so nothing else breaks.
+  Postman: newman run postman/yearbooks.postman_collection.json (baseUrl :18080), run 1: 92 requests, 189 assertions, 0 failed; API restarted; run 2: 92/189/0 failed. Collection has steps 21-24 (Letter create/patch) and edge cases Legal, 'letter', 'LETTER'(patch). Note: no create-with-'LETTER' entry, only patch (covered manually above, non-blocking).
+  AC3 PDF: go test TestPageBoxes ok; independent check with pdfinfo on full 6-page PDFs rendered at each size: every page A5 419.53x595.28, A4 595.28x841.89, Letter 612x792 (pdfinfo says 'letter').
+  AC4 validator: dev table tests pass (A5 ref+Letter fails, Letter ref+A5/A4 fail, bad reference, coordinate outside Letter page). My probes via templates.Parse: A5 ref+A4 ok, Letter ref+Letter ok, A5 ref+[A4,Letter] fails naming template classic, 'Legal' unknown size, reference 'letter' rejected, reference number rejected, element x=100,w=120 on Letter ref rejected as outside 215.9x279.4; classic/modern unchanged and pass.
+  AC5: TestForPageSize ok; Letter yields neither classic nor modern; A5/A4 yield both; A3 none; Render with Letter on classic/modern errors 'does not support page size' (TestRenderRefusesUnsupportedSize).
+  AC6: docs/templates.md documents reference, the three sizes with MediaBox table, and the aspect rule.
+  Mechanical: go build, go vet (+integration tag), gofmt, golangci-lint 0 issues, go test -race ./... and go test -race -tags integration ./... all ok.
+  Non-blocking observations: (a) reference 'letter' (lower case) yields a second misleading error 'different aspect ratio than the letter reference page' besides the correct 'invalid reference' one; (b) templates.Dims is an exported mutable map; (c) duplicate entries in page_sizes are accepted (pre-existing); (d) explicit reference empty string is accepted as the A5 default. RISK:HIGH: owner approves the merge.
+- 2026-10-08 03:49Z · leader · Leader review OK on head 9546d3b (QA_PASS on the same head, CI 4/4 green; the PR merges cleanly into develop after T-035). Migration 0009 is additive (enum value appended, metadata-only in MySQL) and its Down turns Letter books into A5 before restoring the enum; QA ran up, down, up on real data. Validation is a fixed list, the aspect-ratio rule (1% tolerance) keeps Letter apart from A5/A4, ForPageSize and the render guard stop a template from being used on a size it does not declare, MediaBox is 612x792 pt for Letter. Non-blocking, moved to the T-038 spec: exported mutable Dims map, double error for an invalid reference; Postman has no create-with-LETTER entry (patch is covered, create tested by hand). Awaiting owner approval.
 
 ### T-038 — Template format v2: backgrounds, static text, rotation, ellipse, font families
 - **Status:** TODO
