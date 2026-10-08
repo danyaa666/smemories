@@ -13,6 +13,8 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"golang.org/x/image/draw"
 )
 
 // quad returns a w x h image that is white except for a red 16x16 block in the top-left corner.
@@ -308,5 +310,107 @@ func TestExifParsersSurviveTruncation(t *testing.T) {
 	bad := jpegWith(t, quad(16, 16, false), []byte{0xFF, 0xE1, 0xFF, 0xFF}) // segment length past the end
 	if jpegOrientation(bad) != 1 {
 		t.Fatal("malformed segment should read as upright")
+	}
+}
+
+// sofJPEG is the header of a JPEG that has only a SOF segment: enough for jpegSamples.
+func sofJPEG(marker byte, hv ...byte) []byte {
+	seg := []byte{8, 0, 1, 0, 1, byte(len(hv))}
+	for i, b := range hv {
+		seg = append(seg, byte(i+1), b, 0)
+	}
+	return append([]byte{0xFF, 0xD8, 0xFF, marker, 0, byte(len(seg) + 2)}, seg...)
+}
+
+func TestJPEGSamples(t *testing.T) {
+	for name, c := range map[string]struct {
+		in         []byte
+		num, den   int
+		progressiv bool
+	}{
+		"baseline 4:2:0":    {sofJPEG(0xC0, 0x22, 0x11, 0x11), 6, 4, false},
+		"baseline 4:4:4":    {sofJPEG(0xC0, 0x11, 0x11, 0x11), 3, 1, false},
+		"baseline 4:2:2":    {sofJPEG(0xC0, 0x21, 0x11, 0x11), 4, 2, false},
+		"gray":              {sofJPEG(0xC0, 0x11), 1, 1, false},
+		"cmyk":              {sofJPEG(0xC0, 0x11, 0x11, 0x11, 0x11), 4, 1, false},
+		"progressive 4:2:0": {sofJPEG(0xC2, 0x22, 0x11, 0x11), 6, 4, true},
+		"no SOF":            {[]byte{0xFF, 0xD8, 0xFF, 0xD9}, 3, 1, true},
+		"truncated SOF":     {sofJPEG(0xC0, 0x11, 0x11, 0x11)[:12], 3, 1, true},
+	} {
+		if num, den, prog := jpegSamples(c.in); num != c.num || den != c.den || prog != c.progressiv {
+			t.Errorf("%s: got %d/%d progressive=%v, want %d/%d %v", name, num, den, prog, c.num, c.den, c.progressiv)
+		}
+	}
+	if num, den, prog := jpegSamples(jpegWith(t, quad(64, 32, false))); num != 6 || den != 4 || prog {
+		t.Errorf("Go-encoded JPEG: got %d/%d progressive=%v, want 6/4 false", num, den, prog)
+	}
+}
+
+// TestLimitsFromHeader checks every cap just below and just above, from the header alone.
+func TestLimitsFromHeader(t *testing.T) {
+	const mib = 1 << 20
+	type c struct {
+		name    string
+		format  string
+		model   color.Model
+		w, h    int
+		sof     []byte // JPEG only
+		allowed bool
+	}
+	cfg := func(c c) image.Config { return image.Config{ColorModel: c.model, Width: c.w, Height: c.h} }
+	for _, tc := range []c{
+		{"side 12000", "png", color.GrayModel, 12000, 2, nil, true},
+		{"side 12001", "png", color.GrayModel, 12001, 2, nil, false},
+		{"PNG 25 MP", "png", color.RGBAModel, 5000, 5000, nil, true},
+		{"PNG 25 MP + 1", "png", color.RGBAModel, 5000, 5001, nil, false},
+		{"WebP 25 MP + 1", "webp", color.NRGBAModel, 5000, 5001, nil, false},
+		{"gray PNG over 25 MP", "png", color.GrayModel, 6000, 4200, nil, false},
+		{"16-bit PNG 128 MiB", "png", color.RGBA64Model, 4096, 4096, nil, true},
+		{"16-bit PNG 128 MiB + 1 row", "png", color.RGBA64Model, 4096, 4097, nil, false},
+		{"16-bit NRGBA PNG over", "png", color.NRGBA64Model, 4096, 4097, nil, false},
+		{"gray16 PNG 25 MP", "png", color.Gray16Model, 5000, 5000, nil, true},
+		{"palette PNG 25 MP", "png", color.Palette{color.Black}, 5000, 5000, nil, true},
+		{"8-bit RGBA PNG 25 MP", "png", color.NRGBAModel, 5000, 5000, nil, true},
+		{"lossy WebP 25 MP", "webp", color.YCbCrModel, 5000, 5000, nil, true},
+		{"lossy WebP with alpha 25 MP", "webp", color.NYCbCrAModel, 5000, 5000, nil, true},
+		{"JPEG 50 MP 4:2:0", "jpeg", color.YCbCrModel, 10000, 5000, sofJPEG(0xC0, 0x22, 0x11, 0x11), true},
+		{"JPEG 50 MP + 1 row", "jpeg", color.YCbCrModel, 10000, 5001, sofJPEG(0xC0, 0x22, 0x11, 0x11), false},
+		{"JPEG 4:4:4 128 MiB", "jpeg", color.YCbCrModel, 6000, 7456, sofJPEG(0xC0, 0x11, 0x11, 0x11), true},
+		{"JPEG 4:4:4 128 MiB + 1 row", "jpeg", color.YCbCrModel, 6000, 7457, sofJPEG(0xC0, 0x11, 0x11, 0x11), false},
+		{"progressive JPEG 4:2:0 128 MiB", "jpeg", color.YCbCrModel, 4000, 4473, sofJPEG(0xC2, 0x22, 0x11, 0x11), true},
+		{"progressive JPEG 4:2:0 + 1 row", "jpeg", color.YCbCrModel, 4000, 4474, sofJPEG(0xC2, 0x22, 0x11, 0x11), false},
+		{"progressive JPEG, unreadable SOF, 13 MP", "jpeg", color.YCbCrModel, 4000, 3300, []byte{0xFF, 0xD8}, false},
+	} {
+		if got := withinLimits(tc.sof, cfg(tc), tc.format); got != tc.allowed {
+			t.Errorf("%s: allowed=%v, want %v (estimate %d MiB)", tc.name, got, tc.allowed, decodedBytes(tc.sof, cfg(tc), tc.format)/mib)
+		}
+	}
+}
+
+// A header over the cap is refused with invalid_image before any pixel buffer is allocated.
+func TestProcessRefusesOverCapHeaders(t *testing.T) {
+	if _, err := process(pngHeaderClaiming(t, 5000, 5001)); !errors.Is(err, ErrInvalidImage) {
+		t.Errorf("got %v, want ErrInvalidImage", err)
+	}
+}
+
+// resize scales in bands to save memory; the picture must match a single Scale call.
+func TestResizeBandsMatchOneShot(t *testing.T) {
+	src := image.NewNRGBA(image.Rect(0, 0, 700, 500))
+	for i := range src.Pix {
+		src.Pix[i] = byte(i*31 + i/7)
+	}
+	for name, img := range map[string]*image.NRGBA{
+		"zero origin": src,
+		"sub-image":   src.SubImage(image.Rect(13, 21, 683, 489)).(*image.NRGBA),
+	} {
+		got := resize(img, 200)
+		want := image.NewNRGBA(got.Bounds())
+		draw.CatmullRom.Scale(want, want.Bounds(), img, img.Bounds(), draw.Src, nil)
+		for i := range got.Pix {
+			if d := int(got.Pix[i]) - int(want.Pix[i]); d < -2 || d > 2 {
+				t.Fatalf("%s: byte %d differs by %d", name, i, d)
+			}
+		}
 	}
 }

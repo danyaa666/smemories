@@ -22,12 +22,15 @@ var (
 )
 
 const (
-	maxSide        = 12000
-	maxPixels      = 50_000_000
-	displayEdge    = 3000
-	thumbEdge      = 480
-	displayQuality = 92
-	thumbQuality   = 80
+	maxSide          = 12000
+	maxPixels        = 50_000_000 // JPEG; PNG and WebP are capped lower (maxPixelsPNGWebP) because they decode to more bytes per pixel
+	maxDecodedMiB    = 128        // estimated bytes of the decoded image, from the header; see docs/media.md
+	bandSize         = 128        // rows or columns scaled at once, bounds the scaler's float64 scratch buffer
+	maxPixelsPNGWebP = 25_000_000
+	displayEdge      = 3000
+	thumbEdge        = 480
+	displayQuality   = 92
+	thumbQuality     = 80
 )
 
 // processed is the normalised result of an upload: metadata-free display and thumbnail encodings.
@@ -47,7 +50,7 @@ func process(data []byte) (processed, error) {
 	}
 	// Dimensions come from the header, before any pixel buffer exists (decompression-bomb guard).
 	cfg, format, err := image.DecodeConfig(bytes.NewReader(data))
-	if err != nil || cfg.Width <= 0 || cfg.Height <= 0 || cfg.Width > maxSide || cfg.Height > maxSide || cfg.Width*cfg.Height > maxPixels {
+	if err != nil || !withinLimits(data, cfg, format) {
 		return processed{}, ErrInvalidImage
 	}
 	img, _, err := image.Decode(bytes.NewReader(data))
@@ -56,11 +59,13 @@ func process(data []byte) (processed, error) {
 	}
 
 	// Scale first, orient second: the rotation then runs on at most 3000 px, not on the original.
+	// img is not used after resize, so the decoded pixels can be collected while the rest runs.
+	alpha := hasAlpha(img)
 	disp := orient(resize(img, displayEdge), exifOrientation(data, format))
 	out := processed{width: disp.Rect.Dx(), height: disp.Rect.Dy()}
 
 	var buf bytes.Buffer
-	if hasAlpha(img) {
+	if alpha {
 		out.contentType, out.ext = "image/png", "png"
 		err = png.Encode(&buf, disp)
 	} else {
@@ -107,10 +112,98 @@ func resize(img image.Image, edge int) *image.NRGBA {
 	dst := image.NewNRGBA(image.Rect(0, 0, w, h))
 	if w == b.Dx() && h == b.Dy() {
 		draw.Draw(dst, dst.Bounds(), img, b.Min, draw.Src)
-	} else {
-		draw.CatmullRom.Scale(dst, dst.Bounds(), img, b, draw.Src, nil)
+		return dst
+	}
+	// Scaling in one call makes x/image allocate a float64 buffer of dst width x SOURCE height x 4
+	// (480 MB for a 50 MP photo), more than the picture itself. Scale the width in bands of source
+	// rows and then the height in bands of columns instead: each pass leaves the other axis at scale 1
+	// (an exact identity for CatmullRom), so the result is the same picture and the buffer stays small.
+	mid := image.NewNRGBA(image.Rect(0, 0, w, b.Dy()))
+	for y := 0; y < b.Dy(); y += bandSize {
+		y1 := min(y+bandSize, b.Dy())
+		draw.CatmullRom.Scale(mid, image.Rect(0, y, w, y1), img, image.Rect(b.Min.X, b.Min.Y+y, b.Max.X, b.Min.Y+y1), draw.Src, nil)
+	}
+	for x := 0; x < w; x += bandSize {
+		x1 := min(x+bandSize, w)
+		draw.CatmullRom.Scale(dst, image.Rect(x, 0, x1, h), mid, image.Rect(x, 0, x1, b.Dy()), draw.Src, nil)
 	}
 	return dst
+}
+
+// withinLimits checks the header's size and the memory the decode would need before any pixel buffer exists.
+func withinLimits(data []byte, cfg image.Config, format string) bool {
+	if cfg.Width <= 0 || cfg.Height <= 0 || cfg.Width > maxSide || cfg.Height > maxSide {
+		return false
+	}
+	px := cfg.Width * cfg.Height
+	if px > maxPixels || (format != "jpeg" && px > maxPixelsPNGWebP) {
+		return false
+	}
+	return decodedBytes(data, cfg, format) <= maxDecodedMiB<<20
+}
+
+// decodedBytes estimates what image.Decode allocates for a header-valid image. Bytes per pixel come
+// from the colour model (8 for 16-bit RGBA, 4 for 8-bit RGBA, 1 for 8-bit gray or palette, ...). For
+// JPEG the model is always YCbCr, so the chroma subsampling comes from the SOF segment, and a progressive
+// file also keeps its coefficients (4 bytes per sample) until the last scan.
+func decodedBytes(data []byte, cfg image.Config, format string) int {
+	px := cfg.Width * cfg.Height
+	switch cm := cfg.ColorModel; {
+	case format == "jpeg":
+		num, den, progressive := jpegSamples(data)
+		if progressive {
+			num *= 5
+		}
+		return px * num / den
+	case cm == color.GrayModel:
+		return px
+	case cm == color.Gray16Model:
+		return px * 2
+	case cm == color.YCbCrModel || cm == color.NYCbCrAModel: // lossy WebP: 4:2:0, plus alpha
+		return px * 5 / 2
+	case cm == color.RGBAModel || cm == color.NRGBAModel || cm == color.CMYKModel:
+		return px * 4
+	}
+	if _, ok := cfg.ColorModel.(color.Palette); ok {
+		return px
+	}
+	return px * 8 // RGBA64, NRGBA64 and anything unknown: assume the worst
+}
+
+// jpegSamples returns the samples per pixel as a fraction (1.5 for 4:2:0, 3 for 4:4:4, 1 for gray) and
+// whether the file is progressive, read from the SOF segment. Unreadable: the worst case, progressive 4:4:4.
+func jpegSamples(d []byte) (num, den int, progressive bool) {
+	for i := 2; i+4 <= len(d) && d[i] == 0xFF; {
+		m := d[i+1]
+		if m == 0xFF {
+			i++
+			continue
+		}
+		if m == 0x01 || (m >= 0xD0 && m <= 0xD8) {
+			i += 2
+			continue
+		}
+		n := int(binary.BigEndian.Uint16(d[i+2:]))
+		if n < 2 || i+2+n > len(d) {
+			break
+		}
+		if seg := d[i+4 : i+2+n]; m >= 0xC0 && m <= 0xCF && m != 0xC4 && m != 0xC8 && m != 0xCC { // a SOF marker
+			if len(seg) < 6 || len(seg) < 6+3*int(seg[5]) || seg[5] == 0 {
+				break
+			}
+			hmax, vmax, sum := 1, 1, 0
+			for c := range int(seg[5]) {
+				hv := seg[6+3*c+1]
+				hmax, vmax, sum = max(hmax, int(hv>>4)), max(vmax, int(hv&15)), sum+int(hv>>4)*int(hv&15)
+			}
+			if sum == 0 {
+				break
+			}
+			return sum, hmax * vmax, m == 0xC2 || m == 0xC6 || m == 0xCA || m == 0xCE
+		}
+		i += 2 + n
+	}
+	return 3, 1, true
 }
 
 // orient applies EXIF orientation o (1-8) so the pixels are upright.
