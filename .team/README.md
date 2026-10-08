@@ -12,13 +12,13 @@
 |---|---:|---|
 | BACKLOG | 21 | T-013, T-014, T-015, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-033, T-035, T-036 |
 | TODO | 3 | T-011, T-012, T-034 |
-| CHANGES_REQUESTED | 1 | T-009 |
+| IN_PROGRESS | 1 | T-009 |
 | MERGED | 1 | T-007 |
 | DONE | 10 | T-001, T-002, T-003, T-004, T-005, T-006, T-008, T-010, T-028, T-030 |
 
 **Awaiting your review (MERGED):** T-007 (Email verification and password reset)
 
-**Open questions for you:** Q-008 (Approve merge of T-009 (photo upload and storage)?)
+**Open questions for you:** none
 
 _Board last written 2026-10-08 01:32Z_
 <!-- summary:end -->
@@ -185,7 +185,7 @@ _Board last written 2026-10-08 01:32Z_
 Leader review and QA both passed on PR #18 (head 3f6c9aa, CI green). It is high risk (auth tokens), so it needs your approval. New required prod setting: SMEM_PUBLIC_BASE_URL. Non-blocking findings are recorded in the specs of T-015, T-021 and T-031. Command: cd /Users/unisoft/GolandProjects/awesomeProject1 && /Users/unisoft/.claude/plugins/cache/claude-agent-team/agent-team/0.3.0/bin/team approve T-007
 
 ### Q-008 — Approve merge of T-009 (photo upload and storage)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-07 17:42Z
 - **Blocks:** T-009
 - **Recommendation:** approve
@@ -526,7 +526,7 @@ The yearbook itself: create, list, read, update and delete a user's yearbooks, p
 - 2026-10-07 14:03Z · leader · accepted by owner (chat, 2026-10-07: 'Accept all')
 
 ### T-009 — Photo upload and storage (MinIO/S3)
-- **Status:** CHANGES_REQUESTED
+- **Status:** IN_PROGRESS
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -534,10 +534,10 @@ The yearbook itself: create, list, read, update and delete a user's yearbooks, p
 - **Risk:** high
 - **Rework:** 1
 - **Owner-approved:** yes
-- **Assignee:** —
+- **Assignee:** dev
 - **Branch:** task/t-009-photo-upload-and-storage-minio-s3
 - **PR:** https://github.com/danyaa666/smemories/pull/19
-- **Updated:** 2026-10-08 01:32Z by leader
+- **Updated:** 2026-10-08 01:32Z by dev
 - **Comments-seen:** 6
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E03-yearbooks/02-photo-upload-and-storage-minio-s3.md`
