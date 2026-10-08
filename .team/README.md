@@ -10,18 +10,17 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 23 | T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-039, T-040, T-041, T-042, T-044, T-045 |
-| TODO | 2 | T-034, T-038 |
-| IN_QA | 1 | T-015 |
+| BACKLOG | 22 | T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-039, T-040, T-041, T-042, T-044 |
+| TODO | 3 | T-034, T-038, T-045 |
 | QA_PASS | 3 | T-033, T-037, T-043 |
-| MERGED | 2 | T-035, T-036 |
+| MERGED | 3 | T-015, T-035, T-036 |
 | DONE | 14 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-028, T-030 |
 
-**Awaiting your review (MERGED):** T-035 (T-010 follow-ups: template tests iterate templates.List()); T-036 (Bound the memory of image processing (caps, concurrency, memory limit))
+**Awaiting your review (MERGED):** T-015 (Web: auth pages and session handling); T-035 (T-010 follow-ups: template tests iterate templates.List()); T-036 (Bound the memory of image processing (caps, concurrency, memory limit))
 
 **Open questions for you:** Q-011 (Approve merge of T-033 (CI: do not cancel runs on develop and main)?); Q-012 (Vietnamese labels for the friends' note form (T-043): OK to merge?); Q-013 (Approve merge of T-037 (US Letter page size)?)
 
-_Board last written 2026-10-08 03:49Z_
+_Board last written 2026-10-08 03:54Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -832,7 +831,7 @@ Asynchronous export: POST creates a job (one active export per book), a bounded 
 - 2026-10-07 11:38Z · leader · Leader note from the T-010 review: pdf.Render has no caps on notes or text length (10,000 notes with three 100 KB fields took 87 s of CPU in QA's adversarial test, memory bounded). The export job must (1) run Render under a context deadline (60 s, matching the quality bar), (2) pass only approved notes (T-034 already caps a collection at 300 notes and messages at 2000 characters), (3) report warnings (low_resolution, missing_glyph, missing_image, extra_photos, text_truncated) to the owner in plain language (T-019).
 
 ### T-015 — Web: auth pages and session handling
-- **Status:** IN_QA
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -840,11 +839,11 @@ Asynchronous export: POST creates a job (one active export per book), a bounded 
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** —
 - **Branch:** task/t-015-web-auth-pages-and-session-handling
 - **PR:** https://github.com/danyaa666/smemories/pull/25
-- **Updated:** 2026-10-08 03:48Z by qa
-- **Comments-seen:** 6
+- **Updated:** 2026-10-08 03:54Z by leader
+- **Comments-seen:** 8
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/04-web-auth-pages-and-session-handling.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -859,6 +858,8 @@ Register, login, logout, verify-email, forgot/reset password pages; session boot
 - 2026-10-08 03:42Z · qa · Tested against a real API (make up, migrate, API built from the task worktree, vite dev, headless Chrome via playwright-core; mail from the log mailer) in EN and VI and at 375 px. Passing: register (field error aria-invalid/aria-describedby, email_taken, weak_password, empty submit), login (wrong pw, 429 lockout 'try again in 15 min' from Retry-After), logout (nav, redirect), session bootstrap (reload keeps session, 401 -> signed out, API unreachable -> RequireAuth shows retry, retry works), RequireAuth round trip (/account?tab=1 -> /login -> back to /account?tab=1), signed-in /login and /register redirect, verify-email from the logged mail link (exactly one POST under StrictMode, account flips to Email verified without reload, reuse/garbage/no token -> expired message), forgot password (identical text for unknown and known address, bad email field error), reset from the logged link (weak password field error, success, link reuse -> expired + ask for new, old password rejected, new works), resend limit (3 ok, 4th 429 'try again in 60 min'), ?error= oidc_state/oidc_denied/oidc_failed/email_unverified/unknown/HTML payload (translated, escaped), Google button hidden by default and shown with VITE_GOOGLE_SIGNIN=true with href /api/v1/auth/google/start?return_to=<encoded path>, EN/VI switch (html lang, persisted), keyboard tab order and Enter submit, :focus-visible ring, no horizontal overflow at 375 px for normal names. web: lint, typecheck, i18n, check:api, 56 vitest x3 and build all green; PR CI green on head 31c2546. ISSUES: 1 (major, violates leader note 'removes the token before any other work or network call') the first GET /api/v1/me (session bootstrap from AuthNav) is sent while the address bar still holds the token and its Referer is the full /verify-email?token=... (same for /reset-password). Repro: playwright request log shows 'GET /api/v1/me | page url at request: /reset-password?token=MktbKs4V...| referer: http://localhost:5173/reset-password?token=...'; only the later POST sees the clean URL. Cause: AuthNav (earlier in the tree) fires useMe in its effect before useUrlToken's effect in the page runs. Fix options: strip ?token synchronously before React mounts (e.g. in main.tsx/index.html inline script, keeping it in a module variable for the page), and/or add <meta name="referrer" content="no-referrer"> to web/index.html; add a test that no request is issued while location.search holds the token. 2 (minor) offline: with the browser offline, submit on login stays on 'Please wait…' with a disabled button and no message (TanStack default networkMode 'online' pauses the mutation, then fires it automatically when the network returns). Repro: open /login, context offline, submit. Expected: the network_error text. Fix: new QueryClient({defaultOptions:{queries:{networkMode:'always'},mutations:{networkMode:'always'}}}) in web/src/main.tsx; same pause applies to the useMe bootstrap (stuck 'Loading' instead of the retry panel). 3 (minor) at 375 px a 100-character display name without spaces (allowed by the API) makes the page 1391 px wide (header link does not wrap/shrink). Repro: register with 'W' x 100, open /account at 375 px. Expected no horizontal scroll (min-width:0 / overflow-wrap:anywhere on .auth-nav a). 4 (minor, cosmetic) at 375 px the brand touches the nav links, nav links wrap to two lines ('Đăng nhập', 'Create account') and the Google button sits flush under the submit button; Sign out and 'Send the link again' use unstyled default buttons. Observation for the leader, not T-015: a Vietnamese-UI user receives the English verification email because POST /v1/auth/register has no locale input (users.locale defaults to en); consider a locale field or Accept-Language in T-006/T-007. Not checked: real Google round trip (API had no Google config, /google/start answers 404), screen reader (VoiceOver/NVDA) pass, Safari/Firefox/real phone, vite preview production build, CSRF behaviour on a non-allowed origin (403 csrf_origin_mismatch falls back to the generic message).
 - 2026-10-08 03:43Z · leader · Leader: QA_FAIL accepted; fix in the same PR (branch and worktree are reused), then READY_FOR_QA. (1) MAJOR, spec requirement: on /verify-email and /reset-password the token must leave the address bar before ANY network call; today AuthNav's effect fires GET /api/v1/me while the URL still holds the token and the Referer carries it. Fix: strip the token synchronously before anything that can fetch mounts (read it into memory, history.replaceState before AuthNav mounts, or hold the /me query until the token is stripped); add a test that fails if any request is made while location.search still contains a token. Also add <meta name=referrer content=no-referrer> to index.html as defence in depth. (2) networkMode 'always' for the mutations (and queries where it matters) so an offline submit shows the network-error message instead of 'Please wait'. (3) A 100-character display name with no spaces makes the page 1391 px wide at 375 px: wrap with overflow-wrap:anywhere wherever the name is shown, with a test or note. (4) Minor spacing at 375 px: fix if cheap. Not in this PR: the English verification email for Vietnamese users is the API register endpoint (new task T-045). The generic message for 403 csrf_origin_mismatch is acceptable.
 - 2026-10-08 03:45Z · dev · Head f24eb25. (1) token: captureUrlToken() in main.tsx moves ?token= into memory via history.replaceState before React renders, so GET /v1/me (AuthNav) and the POST never see it; useUrlToken reads the stash (path-matched, cleared after first use); <meta name=referrer no-referrer> in index.html. Tests (auth.test.tsx 'token in the address bar', verify + reset under StrictMode, every fetch records location.search; plus reset test now checks all calls) fail when the capture is removed. (2) src/queryClient.ts networkMode 'always' for queries and mutations, used by main.tsx and test renderApp; 'offline' test fails with networkMode online. (3) overflow-wrap:anywhere on main and .auth-nav a, header/nav flex-wrap, min-width 0: CSS only, jsdom cannot measure; QA please recheck 100-char name at 375 px. (4) spacing: header gap, nav button padding, margin under the form before the Google button. make lint build test green, 60 vitest tests. Not run in a real browser by me.
+- 2026-10-08 03:53Z · qa · Re-test of head f24eb25 (PR #25 CI green: go, go-integration, security, web). Real API (built from worktree, fresh DB, log mailer) + headless Chrome (playwright-core), both vite dev and the production build via vite preview. Mechanical: web lint+prettier, 60 vitest, build green. (1) TOKEN, PASS: verify and reset links opened from the logged mail: first GET /api/v1/me, the POST and the follow-up GET /me all see the clean address bar (/verify-email, /reset-password) with empty Referer; only the document GET and static asset/module fetches happen while the token is in the URL (unavoidable, Referer empty thanks to the meta tag). Verify: POST sent once, account flips to verified. Reset: weak password -> 400 field error and the token is still held in memory, strong password then succeeds, new password logs in. Hard reload after removal: verify shows 'expired or already used', reset shows the same plus 'Ask for a new link', no POST fired; back/forward does not bring the token back. Link reuse -> expired message. (2) OFFLINE, PASS: context offline, submit on login -> 'Could not reach the server...' (no stuck 'Please wait'); /me aborted on /account -> retry panel, retry works. 500 html, 503 busy and 403 csrf messages ok. (3) 100-char 'W' name at 375 px (header and account): scrollWidth-clientWidth = 0, name wraps; spaced long name and long email also 0. (4) SPACING 375 px, PASS: brand no longer touches nav, links stay on one line in VI, Google button has a gap under Sign in (built with VITE_GOOGLE_SIGNIN=true, href /api/v1/auth/google/start?return_to=%2Faccount). (5) REGRESSION, PASS: register (bad email, weak pw, duplicate, empty), login wrong pw, 429 lockout 'try again in 15 min', logout, reload keeps session, RequireAuth, verify from mail (EN+VI), reuse/garbage/no token, resend 3 ok then 429 '60 min', forgot (same text), reset (EN+VI), ?error= codes incl. HTML payload escaped, EN/VI switch persisted, keyboard Enter + focus ring. Non-blocking observations: (a) reload on /reset-password BEFORE submitting loses the still-valid token (shown as 'expired or already used'; user must request a new link); acceptable consequence of the strip-first rule, a sessionStorage stash could soften it. (b) Sign out and 'Send the link again' remain default grey browser buttons (cosmetic). (c) Vietnamese UI user still gets the English verify mail: T-045. Not covered: real Google round trip, screen reader pass, Safari/Firefox.
+- 2026-10-08 03:54Z · leader · merged 66d5b80 (squash), QA_PASS on head f24eb25 after one rework, CI green. Review: token moved into memory before React renders (no request carries it, Referer empty, verified in a real browser), redirect target allow-listed, return_to URL-encoded, no raw HTML, typed API client, EN/VI parity, 60 tests. For owner to check: cd web && npm run dev with the API on :8080; register, read the verification link in the API log, open it (the token disappears from the address bar), try forgot and reset. Google button appears only with VITE_GOOGLE_SIGNIN=true. Known: reloading /reset-password before submitting loses the token (by design: ask for a new link); verification mail is English for Vietnamese users until T-045.
 
 ### T-016 — Web: yearbook list, create/edit, profile and photo upload UI
 - **Status:** BACKLOG
@@ -1576,7 +1577,7 @@ A template lists which note fields its friend pages ask for and where each answe
 #### Comments
 
 ### T-045 — Register accepts a locale; verification email in the student's language
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -1587,8 +1588,8 @@ A template lists which note fields its friend pages ask for and where each answe
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-08 03:43Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-08 03:54Z by leader
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/06-register-accepts-locale.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1597,6 +1598,7 @@ A template lists which note fields its friend pages ask for and where each answe
 Let the register request carry the UI language so Vietnamese students get the verification email in Vietnamese and a correct stored locale.
 
 #### Comments
+- 2026-10-08 03:54Z · leader · T-015 merged: ready.
 
 <!-- tasks:end -->
 
