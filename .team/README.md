@@ -11,17 +11,17 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 22 | T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-039, T-040, T-041, T-042, T-044 |
-| TODO | 1 | T-034 |
-| READY_FOR_QA | 1 | T-045 |
-| QA_PASS | 1 | T-038 |
+| IN_PROGRESS | 1 | T-034 |
+| READY_FOR_QA | 1 | T-038 |
+| QA_PASS | 1 | T-045 |
 | MERGED | 6 | T-015, T-033, T-035, T-036, T-037, T-043 |
 | DONE | 14 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-028, T-030 |
 
 **Awaiting your review (MERGED):** T-015 (Web: auth pages and session handling); T-033 (CI: do not cancel in-progress runs on develop and main); T-035 (T-010 follow-ups: template tests iterate templates.List()); T-036 (Bound the memory of image processing (caps, concurrency, memory limit)); T-037 (US Letter page size, end to end); T-043 (Note field catalogue (internal/notefields): closed set of form fields with EN/VI labels and validation)
 
-**Open questions for you:** none
+**Open questions for you:** Q-014 (Approve merge of T-045 (register accepts a locale)?)
 
-_Board last written 2026-10-08 08:44Z_
+_Board last written 2026-10-08 08:52Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -242,6 +242,15 @@ The table of EN/VI labels and hints is in the description of https://github.com/
 - **Answer:** _OK_
 
 QA passed and my review is clean (head 9546d3b, CI green, merges cleanly). High risk because it includes a database migration (0009): it adds Letter to the yearbook page_size enum; existing books are untouched, and rolling back turns Letter books into A5. Nothing in the web UI offers Letter yet (the yearbook form comes with T-016). Command: cd /Users/unisoft/GolandProjects/awesomeProject1 && /Users/unisoft/.claude/plugins/cache/claude-agent-team/agent-team/0.3.0/bin/team approve T-037
+
+### Q-014 — Approve merge of T-045 (register accepts a locale)?
+- **Status:** OPEN
+- **Asked:** 2026-10-08 08:52Z
+- **Blocks:** T-045
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+QA passed and my review is clean (head 8a9cafb, CI green). High risk only because it touches the register endpoint contract (one optional field 'locale', en or vi, default en). Fixes the Vietnamese UI sending an English verification email. Command: cd /Users/unisoft/GolandProjects/awesomeProject1 && /Users/unisoft/.claude/plugins/cache/claude-agent-team/agent-team/0.3.0/bin/team approve T-045
 
 <!-- questions:end -->
 
@@ -1304,7 +1313,7 @@ Evidence from the T-006/T-030 merges: the workflow's concurrency group has cance
 - 2026-10-08 08:34Z · leader · merged 96059a6 (squash), owner-approved in chat 2026-10-08, QA_PASS on head 74346f4. Pushes to develop and main now get one concurrency group per commit (never cancelled); PRs still cancel superseded runs; mysql image pinned by digest. To verify live: the next back-to-back develop pushes must show no cancelled run (gh run list --branch develop).
 
 ### T-034 — Public note submission (text and photos)
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -1312,10 +1321,10 @@ Evidence from the T-006/T-030 merges: the workflow's concurrency group has cance
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-034-public-note-submission-text-and-photos
 - **PR:** —
-- **Updated:** 2026-10-08 03:19Z by leader
+- **Updated:** 2026-10-08 08:48Z by dev
 - **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/02-public-note-submission.md`
@@ -1419,19 +1428,19 @@ Add Letter (215.9 x 279.4 mm) as a third yearbook page size: migration, API, Ope
 - 2026-10-08 08:44Z · leader · merged 6044ea3 (squash), owner-approved ('OK' to Q-013), QA_PASS on head 9546d3b, CI green. Review: migration 0009 additive (Letter appended to the enum, Down turns Letter books into A5), aspect-ratio rule keeps Letter apart from A5/A4, ForPageSize and the render guard prevent a template on a size it does not declare, MediaBox 612x792 pt. For owner to check: nothing to run yet (no UI for Letter until T-016).
 
 ### T-038 — Template format v2: backgrounds, static text, rotation, ellipse, font families
-- **Status:** QA_PASS
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
 - **Depends-on:** T-035
 - **Risk:** low
-- **Rework:** 0
+- **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** leader
+- **Assignee:** —
 - **Branch:** task/t-038-template-format-v2-backgrounds-static-te
 - **PR:** 28
-- **Updated:** 2026-10-08 08:42Z by qa
-- **Comments-seen:** 2
+- **Updated:** 2026-10-08 08:48Z by dev
+- **Comments-seen:** 3
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E08-designer-templates/02-template-format-v2-backgrounds-static-text.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1451,6 +1460,8 @@ Extend the template JSON and renderer with page background images, localised sta
   Budget: 24 pages, 30 photos, Letter, backgrounds: benchmark 14 ms, 52 MB peak heap, 7.3 MB PDF. My worst case, 4 distinct 3400x4400 (400 DPI) RGBA PNG backgrounds of 1.4-1.5 MiB each, same book: 0.72 s, 295-358 MB peak heap, 324 MB RSS: inside 60 s / 512 MB but the closest to the limit; RGB or JPEG backgrounds are far cheaper (docs already warn).
   Added test: internal/pdf/background_formats_test.go (rgb, nrgba, gray, gray16, rgba64, palette PNG backgrounds validate and render).
   Non-blocking: (1) an Adam7-interlaced PNG passes the validator (DecodeConfig only) but Render fails with 'interlacing not supported in PNG buffer'; build tests that render every template would catch a real asset, but rejecting interlace (IHDR byte 12 != 0) in templates/validate.go would honour 'bad asset fails the tests, not the request'. (2) Static text is not checked for glyph coverage at validation; a missing glyph only shows as a missing_glyph warning at render. (3) T-037 parts: no regression seen.
+- 2026-10-08 08:44Z · leader · Leader: T-037 is merged to develop (6044ea3, squash) so PR #28 now conflicts in docs/templates.md, internal/pdf/render.go, internal/templates/spec.go and internal/templates/validate.go (your branch carries T-037's original commits plus your T-038-on-top edits such as PageDims). Merge origin/develop into the task branch (no rebase of a pushed branch), resolve keeping the T-038 versions of the lines you changed on top of T-037 and develop's version of everything else, re-run make lint build test test-integration, regenerate the samples (classic.pdf and modern.pdf must stay byte-identical), push, READY_FOR_QA with the merge-commit SHA. Also in this round (QA finding, small): the validator must reject an interlaced (Adam7) PNG background, because Render fails on it; add a test with an interlaced fixture generated in the test. Static-text glyph coverage at validation stays out of scope.
+- 2026-10-08 08:48Z · dev · Merge commit b356781 (origin/develop merged, conflicts in docs/templates.md, pdf/render.go, templates/spec.go+validate.go resolved to the T-038 lines on top of T-037 incl. PageDims; kept render.go slices import). QA finding 1: validator rejects interlaced PNG (IHDR interlace byte), test TestBackgroundRejected case 'interlaced PNG' with a fixture built in the test, documented in docs/templates.md. classic.pdf/modern.pdf regenerated: unchanged. make lint build test test-integration all green.
 
 ### T-039 — Design import tool (dev only): canvas page to template draft
 - **Status:** BACKLOG
@@ -1595,7 +1606,7 @@ A template lists which note fields its friend pages ask for and where each answe
 #### Comments
 
 ### T-045 — Register accepts a locale; verification email in the student's language
-- **Status:** READY_FOR_QA
+- **Status:** QA_PASS
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -1603,11 +1614,11 @@ A template lists which note fields its friend pages ask for and where each answe
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** leader
 - **Branch:** task/t-045-register-accepts-a-locale-verification-e
 - **PR:** https://github.com/danyaa666/smemories/pull/29
-- **Updated:** 2026-10-08 08:42Z by dev
-- **Comments-seen:** 2
+- **Updated:** 2026-10-08 08:51Z by qa
+- **Comments-seen:** 4
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/06-register-accepts-locale.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1618,6 +1629,15 @@ Let the register request carry the UI language so Vietnamese students get the ve
 #### Comments
 - 2026-10-08 03:54Z · leader · T-015 merged: ready.
 - 2026-10-08 08:42Z · dev · Register accepts optional locale en|vi (else 400 invalid_locale); stored + verification mail follows it; web form sends i18n language; openapi/schema/Postman updated (newman x2 green, step 1 now registers with vi). Tests: TestRegisterLocale (integration), auth.test.tsx. Integration tests need make up + migrate.
+- 2026-10-08 08:51Z · qa · PR head 8a9cafb; CI green (go, go-integration, web, security). Evidence (all produced by me, real API on MySQL, own DB):
+  AC1 curl against running API: absent/null/en -> 201 locale en; vi -> 201 locale vi; 400 invalid_locale for VI, En, fr, '', 1, 1.5, true, false, [], {}, 'vi ', 'vi-VN'; malformed JSON -> invalid_body. DB users.locale matches; GET /v1/me with session cookie shows en/vi. Bad locales create nothing (no user row, no Set-Cookie). Rate limit: 14 bad-locale calls then 5 valid registers still all 201, the 6th valid is 429, and a bad locale after that is still 400 invalid_locale (locale checked before the limiter, as dev claimed). JSON-escaped 'vi' (\u0076\u0069) is accepted as vi, correct.
+  AC2 API log: locale vi -> 'Subject: Xac nhan dia chi email SMemories cua ban' (Vietnamese) with /verify-email?token= link; en/absent/null -> 'Confirm your SMemories email address'. Forgot-password for a vi user -> Vietnamese reset subject. Go test TestRegisterLocale asserts vi subject+link.
+  AC3 real Chrome (headless, CDP, vite dev proxy to API): UI en via switcher -> POST /api/v1/auth/register body locale:en, /v1/me en; UI vi via switcher (h1 'Tao tai khoan') -> body locale:vi, /v1/me vi; browser Accept-Language vi-VN with no click -> locale vi; default browser en -> locale en. Vitest has en and vi request-body tests.
+  AC4 openapi/schema/postman updated; npm run check:api ok. newman auth collection (Full flow + Edge cases) run twice back to back with an API restart between: 48 requests/116 assertions, 0 failed both times. Full collection incl. Google folder with dummy SMEM_GOOGLE_* config, twice with restart: 55 req/140 assertions, 0 failed. (Without Google env the Google folder fails by design, 404.)
+  Mechanical: go build/vet, go test -race ./... , integration tests for internal/auth and internal/db (-tags integration, TestRegisterLocale x3), gofmt, web vitest 61/61, eslint+prettier, tsc, lint:i18n, check:api: all green.
+  Google sign-in unaffected: no google/oidc file in the diff; all Google integration tests pass (incl. TestGoogleNameAndLocaleFallbacks). Real Google round trip not run (no credentials), covered by the fake-provider tests.
+  Non-blocking: unknown extra JSON fields and a differently-cased key (LOCALE) are accepted by the decoder (pre-existing Go encoding/json behaviour, value still validated). Risk high: owner approves the merge.
+- 2026-10-08 08:52Z · leader · Leader review OK on head 8a9cafb (QA_PASS on the same head, CI 4/4 green). A two-value allow-list (en, vi), anything else including non-strings is invalid_locale before any rate-limit token or hash is spent, nothing is created on error, the stored locale drives the verification and reset emails, the web form sends i18n.resolvedLanguage limited to en/vi. Non-blocking: unknown JSON fields and a differently-cased key are accepted by the shared decoder (pre-existing behaviour). Awaiting owner approval.
 
 <!-- tasks:end -->
 
