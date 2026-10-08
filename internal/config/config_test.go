@@ -2,6 +2,7 @@ package config
 
 import (
 	"log/slog"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -118,15 +119,21 @@ func TestLoadMediaAndS3(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.MediaMaxBytes != 10<<20 || cfg.MediaMaxConcurrent != 4 || cfg.S3Bucket != "smemories-dev" || cfg.S3Region != "us-east-1" || cfg.S3PathStyle {
+	if cfg.MediaMaxBytes != 10<<20 || cfg.MediaMaxConcurrent != 2 || cfg.MemoryLimitMiB != 0 || cfg.S3Bucket != "smemories-dev" || cfg.S3Region != "us-east-1" || cfg.S3PathStyle {
 		t.Fatalf("unexpected defaults: %+v", cfg)
 	}
 	cfg, err = Load(env(map[string]string{"SMEM_DB_DSN": dsn, "SMEM_MEDIA_MAX_BYTES": "2048", "SMEM_S3_ENDPOINT": "http://127.0.0.1:9000", "SMEM_S3_PATH_STYLE": "true", "SMEM_S3_BUCKET": "b"}))
 	if err != nil || cfg.MediaMaxBytes != 2048 || cfg.S3Endpoint != "http://127.0.0.1:9000" || !cfg.S3PathStyle || cfg.S3Bucket != "b" {
 		t.Fatalf("got %+v, %v", cfg, err)
 	}
+	for _, v := range []string{"64", "1536", "1048576"} {
+		if cfg, err = Load(env(map[string]string{"SMEM_DB_DSN": dsn, "SMEM_MEMORY_LIMIT_MIB": v})); err != nil || strconv.Itoa(cfg.MemoryLimitMiB) != v {
+			t.Errorf("SMEM_MEMORY_LIMIT_MIB=%s: got %d, %v", v, cfg.MemoryLimitMiB, err)
+		}
+	}
 	for _, c := range []struct{ key, val string }{
 		{"SMEM_MEDIA_MAX_BYTES", "0"}, {"SMEM_MEDIA_MAX_BYTES", "999999999999"}, {"SMEM_MEDIA_MAX_CONCURRENT", "0"},
+		{"SMEM_MEMORY_LIMIT_MIB", "-1"}, {"SMEM_MEMORY_LIMIT_MIB", "63"}, {"SMEM_MEMORY_LIMIT_MIB", "1048577"}, {"SMEM_MEMORY_LIMIT_MIB", "1g"},
 		{"SMEM_S3_ENDPOINT", "minio:9000"}, {"SMEM_S3_PATH_STYLE", "maybe"},
 	} {
 		if _, err := Load(env(map[string]string{"SMEM_DB_DSN": dsn, c.key: c.val})); err == nil || !strings.Contains(err.Error(), c.key) {

@@ -38,7 +38,8 @@ type Config struct {
 	GoogleIssuer       string // SMEM_GOOGLE_ISSUER, default https://accounts.google.com (tests point it at a fake)
 	OIDCCookieKey      []byte // SMEM_OIDC_COOKIE_KEY: HMAC key for the smem_oidc cookie, at least 32 bytes; required with a client id. Never log it.
 	MediaMaxBytes      int64  // SMEM_MEDIA_MAX_BYTES: largest accepted upload, default 10 MiB
-	MediaMaxConcurrent int    // SMEM_MEDIA_MAX_CONCURRENT: images processed at once, default 4
+	MediaMaxConcurrent int    // SMEM_MEDIA_MAX_CONCURRENT: images processed at once, default 2 (see docs/media.md)
+	MemoryLimitMiB     int    // SMEM_MEMORY_LIMIT_MIB: soft memory limit of the Go runtime in MiB, 0 = unset
 	S3Endpoint         string // SMEM_S3_ENDPOINT: empty for AWS S3, e.g. http://127.0.0.1:9000 for MinIO
 	S3Region           string // SMEM_S3_REGION, default us-east-1
 	S3Bucket           string // SMEM_S3_BUCKET: required in prod, default smemories-dev otherwise
@@ -167,8 +168,12 @@ func Load(getenv func(string) string) (Config, error) {
 		return Config{}, fmt.Errorf("SMEM_MEDIA_MAX_BYTES=%q: want an integer between 1 and 104857600", get("SMEM_MEDIA_MAX_BYTES", "10485760"))
 	}
 	cfg.MediaMaxBytes = int64(n)
-	if cfg.MediaMaxConcurrent, err = getInt(get, "SMEM_MEDIA_MAX_CONCURRENT", "4", 1); err != nil {
+	if cfg.MediaMaxConcurrent, err = getInt(get, "SMEM_MEDIA_MAX_CONCURRENT", "2", 1); err != nil {
 		return Config{}, err
+	}
+	// Below 64 MiB the collector would run almost continuously, so such a value is a typo, not a limit.
+	if cfg.MemoryLimitMiB, err = getInt(get, "SMEM_MEMORY_LIMIT_MIB", "0", 0); err != nil || cfg.MemoryLimitMiB > 1<<20 || (cfg.MemoryLimitMiB != 0 && cfg.MemoryLimitMiB < 64) {
+		return Config{}, fmt.Errorf("SMEM_MEMORY_LIMIT_MIB=%q: want 0 (unset) or an integer between 64 and 1048576", get("SMEM_MEMORY_LIMIT_MIB", "0"))
 	}
 	cfg.S3Endpoint = getenv("SMEM_S3_ENDPOINT")
 	if cfg.S3Endpoint != "" {

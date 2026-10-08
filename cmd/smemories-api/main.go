@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"syscall"
 
 	"github.com/danyaa666/smemories/internal/auth"
@@ -28,6 +29,10 @@ func main() {
 		os.Exit(1)
 	}
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: cfg.LogLevel}))
+	if cfg.MemoryLimitMiB > 0 {
+		debug.SetMemoryLimit(int64(cfg.MemoryLimitMiB) << 20) // soft: the collector works harder near it, nothing is refused
+		logger.Info("memory limit set", "mib", cfg.MemoryLimitMiB)
+	}
 
 	mail, err := mailer.NewLog(cfg.Env, os.Stdout) // ponytail: the only mailer; a real provider is chosen here in M2
 	if err != nil {

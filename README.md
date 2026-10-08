@@ -134,7 +134,7 @@ last `X-Forwarded-For` hop; only behind a trusted proxy), `SMEM_AUTH_MAX_CONCURR
 `SMEM_RATE_LOGIN_FAILS_PER_EMAIL` (10) and `SMEM_RATE_LOGIN_FAILS_PER_IP` (100). The session cookie is `Secure` unless `SMEM_ENV=dev`.
 Photos (see `.env.example`): `SMEM_S3_ENDPOINT` (empty for AWS S3, `http://127.0.0.1:9000` for the local MinIO), `SMEM_S3_REGION`,
 `SMEM_S3_BUCKET` (required in prod, default `smemories-dev`), `SMEM_S3_ACCESS_KEY`, `SMEM_S3_SECRET_KEY`, `SMEM_S3_PATH_STYLE` (true
-for MinIO), `SMEM_MEDIA_MAX_BYTES` (10 MiB upload cap) and `SMEM_MEDIA_MAX_CONCURRENT` (4 images processed at once).
+for MinIO), `SMEM_MEDIA_MAX_BYTES` (10 MiB upload cap) and `SMEM_MEDIA_MAX_CONCURRENT` (2 images processed at once; memory budget in `docs/media.md`) and `SMEM_MEMORY_LIMIT_MIB` (soft Go memory limit, 0 = unset; about 75% of the container memory).
 An invalid value stops the process with a message naming the variable. The API contract is
 `api/openapi.yaml`; the Postman collections live in `postman/` (`newman run postman/platform.postman_collection.json`
 against a running API; the media collection uploads files, so run it from `postman/` with `--working-dir .`; the notes collection needs verified test accounts: see its description and `make verify-newman-users`).
