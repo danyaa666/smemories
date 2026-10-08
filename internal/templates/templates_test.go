@@ -3,6 +3,7 @@ package templates
 import (
 	"encoding/json"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -109,6 +110,18 @@ func TestValidateErrors(t *testing.T) {
 			p["elements"] = e
 		}, []string{"page 1 (cover)", "exceeds 64"}},
 		{"circle needs a square", func(r map[string]any) { el(r, 1, 0)["shape"] = "circle" }, []string{"a circle needs w == h"}},
+		{"A5 reference with Letter", func(r map[string]any) { r["page_sizes"] = []any{"A5", "Letter"} },
+			[]string{`template "classic"`, `page size "Letter"`, "aspect ratio", "A5 reference"}},
+		{"Letter reference with A5", func(r map[string]any) { r["reference"] = "Letter"; r["page_sizes"] = []any{"Letter", "A5"} },
+			[]string{`template "classic"`, `page size "A5"`, "Letter reference"}},
+		{"Letter reference with A4", func(r map[string]any) { r["reference"] = "Letter"; r["page_sizes"] = []any{"A4"} },
+			[]string{`page size "A4"`, "aspect ratio"}},
+		{"bad reference", func(r map[string]any) { r["reference"] = "A4" }, []string{`invalid reference "A4"`}},
+		{"outside the Letter reference page", func(r map[string]any) {
+			r["reference"] = "Letter"
+			r["page_sizes"] = []any{"Letter"}
+			el(r, 0, 2)["x"] = 215
+		}, []string{"element 3", "outside the 215.9 x 279.4 mm area"}},
 		{"unknown field", func(r map[string]any) { el(r, 0, 2)["colour"] = "ink" }, []string{"unknown field"}},
 	}
 	for _, tc := range tests {
@@ -160,5 +173,53 @@ func TestTextBoxMustFitOneLine(t *testing.T) {
 	_, err := Parse(mutate(t, func(r map[string]any) { el(r, 0, 2)["h"] = 3 }))
 	if err == nil || !strings.Contains(err.Error(), "too short for one line") {
 		t.Errorf("err = %v", err)
+	}
+}
+
+// T-037 AC4: a Letter-reference template may use the whole Letter page and declares only Letter.
+func TestLetterReference(t *testing.T) {
+	tt, err := Parse(mutate(t, func(r map[string]any) {
+		r["id"] = "letter-test"
+		r["reference"] = "Letter"
+		r["page_sizes"] = []any{"Letter"}
+		el(r, 0, 2)["x"] = 90 // w=120: outside A5 (148 wide), inside Letter
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if w, h := tt.RefDims(); w != 215.9 || h != 279.4 {
+		t.Errorf("RefDims = %g x %g", w, h)
+	}
+	c, _ := Get("classic")
+	if w, h := c.RefDims(); w != 148 || h != 210 || c.Reference != "" {
+		t.Errorf("classic reference = %q %g x %g, want the A5 default", c.Reference, w, h)
+	}
+}
+
+// T-037 AC5: the export and picker helper returns only templates that declare the size.
+func TestForPageSize(t *testing.T) {
+	ids := func(size string) []string {
+		var out []string
+		for _, i := range ForPageSize(size) {
+			out = append(out, i.ID)
+		}
+		return out
+	}
+	for _, size := range []string{"A5", "A4"} {
+		got := ids(size)
+		if !slices.Contains(got, "classic") || !slices.Contains(got, "modern") {
+			t.Errorf("ForPageSize(%s) = %v, want the built-ins", size, got)
+		}
+	}
+	for _, id := range ids("Letter") {
+		if id == "classic" || id == "modern" {
+			t.Errorf("ForPageSize(Letter) offers %q, which does not declare Letter", id)
+		}
+		if tt, _ := Get(id); !tt.Supports("Letter") {
+			t.Errorf("ForPageSize(Letter) offers %q without Letter", id)
+		}
+	}
+	if got := ids("A3"); len(got) != 0 {
+		t.Errorf("ForPageSize(A3) = %v", got)
 	}
 }
