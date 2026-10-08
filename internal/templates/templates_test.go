@@ -9,8 +9,15 @@ import (
 
 func TestListHasBuiltIns(t *testing.T) {
 	l := List()
-	if len(l) != 2 || l[0].ID != "classic" || l[1].ID != "modern" {
-		t.Fatalf("List() = %+v", l)
+	have := map[string]bool{}
+	for _, i := range l {
+		have[i.ID] = true
+	}
+	// The built-ins are a minimum: a new template dropped into embed/ must not need a test edit.
+	for _, id := range []string{"classic", "modern"} {
+		if !have[id] {
+			t.Fatalf("List() lacks built-in %q: %+v", id, l)
+		}
 	}
 	for _, i := range l {
 		if i.Name["en"] == "" || i.Name["vi"] == "" {
