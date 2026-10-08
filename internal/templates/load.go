@@ -11,13 +11,30 @@ import (
 	"strings"
 )
 
-//go:embed embed/*.json
+// The JSON files sit directly in embed/; background assets live in embed/<template id>/.
+//
+//go:embed embed
 var embedded embed.FS
+
+// assetRoot is embed/ as a file system, the base of every asset path in a spec.
+var assetRoot = mustSub(embedded, "embed")
+
+func mustSub(f fs.FS, dir string) fs.FS {
+	s, err := fs.Sub(f, dir)
+	if err != nil {
+		panic(err)
+	}
+	return s
+}
 
 const maxSpecBytes = 256 << 10
 
-// Parse decodes and validates one template. Unknown JSON fields are errors, so typos are caught.
-func Parse(data []byte) (*Template, error) {
+// Parse decodes and validates one template against the embedded assets. Unknown JSON fields are errors,
+// so typos are caught.
+func Parse(data []byte) (*Template, error) { return ParseFS(data, assetRoot) }
+
+// ParseFS is Parse with the background assets read from assets (paths in the spec are relative to it).
+func ParseFS(data []byte, assets fs.FS) (*Template, error) {
 	if len(data) > maxSpecBytes {
 		return nil, fmt.Errorf("template spec is %d bytes, the limit is %d", len(data), maxSpecBytes)
 	}
@@ -30,6 +47,7 @@ func Parse(data []byte) (*Template, error) {
 	if _, err := dec.Token(); err != io.EOF {
 		return nil, fmt.Errorf("template spec: unexpected data after the JSON object")
 	}
+	t.assets = assets
 	if err := Validate(&t); err != nil {
 		return nil, err
 	}

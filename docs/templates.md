@@ -44,8 +44,9 @@ other value is rejected.
   not the A series' 0.707, so a Letter design prints on Letter only). Anything else fails validation naming the
   template. A template can only be used for a book whose page size it lists (`templates.ForPageSize`); the
   renderer refuses any other size.
-- `theme.font`: the font family. The only one embedded is `BeVietnamPro` (SIL OFL, regular and bold, full
-  Vietnamese coverage). Emoji come from a bundled monochrome fallback font automatically.
+- `theme.font`: the body font family; `theme.fonts` maps the roles `body` and `display` to families (see
+  [Font families](#font-families)). Set `font`, `fonts.body` or both (they must then agree); `display` defaults to
+  the body family. Emoji come from a bundled monochrome fallback font automatically.
 - `theme.colors`: named colours as `#rrggbb`. `ink` (default text), `accent` and `paper` (page background) are
   required; add any others (for example `tint`) and refer to them by name from elements.
 - `pages`: exactly one page of each kind, in the order they appear in the book: `cover`, `profile`, `notes`,
@@ -58,11 +59,84 @@ note elements). Fields that do not belong to the type are rejected.
 
 | `type` | Fields | Notes |
 |---|---|---|
-| `text` | `slot`, `size`, `min_size`, `align`, `bold`, `color`, `line_height`, `label` | See fitting rules below. `color` is a theme colour name (default `ink`). `align` is `left` (default), `center` or `right`. `line_height` is a multiple of the font size (1 to 3, default 1.3). `label` maps `en`/`vi` to a prefix such as `"Hobbies: "`, drawn only when the slot has text. |
-| `image` | `slot`, `fit`, `shape`, `radius` | `fit` is `cover` (the only value): the photo is scaled to cover the box, centred, the overflow clipped. `shape` is `rect` (default), `rounded` (needs `radius`, at most half the shorter side) or `circle` (needs `w` equal to `h`). |
-| `rect` | `fill`, `radius` | A filled decoration, no slot. `fill` is a theme colour name; `radius` rounds the corners. |
+| `text` | `slot` or `text`, `size`, `min_size`, `align`, `bold`, `color`, `line_height`, `label`, `font`, `rotate` | See fitting rules below. Exactly one of `slot` and `text` ([static text](#static-text)). `color` is a theme colour name (default `ink`). `align` is `left` (default), `center` or `right`. `line_height` is a multiple of the font size (1 to 3, default 1.3). `label` maps `en`/`vi` to a prefix such as `"Hobbies: "`, drawn only when the slot has text (not allowed with `text`). `font` is the role `body` (default) or `display`. |
+| `image` | `slot`, `fit`, `shape`, `radius`, `rotate` | `fit` is `cover` (the only value): the photo is scaled to cover the box, centred, the overflow clipped. `shape` is `rect` (default), `rounded` (needs `radius`, at most half the shorter side), `circle` (needs `w` equal to `h`) or `ellipse` (the oval inscribed in the box, a circle when `w == h`; `radius` is rejected). |
+| `rect` | `fill`, `radius`, `rotate` | A filled decoration, no slot. `fill` is a theme colour name; `radius` rounds the corners. |
+| `background` | `asset` | A page-level image that fills the whole page, see [Backgrounds](#backgrounds). Takes no box. |
 
-Elements are drawn in order, later ones on top. The page is first filled with the `paper` colour.
+Elements are drawn in order, later ones on top. The page is first filled with the `paper` colour, then the
+page's `background` (wherever it stands in the list) is drawn, then the other elements.
+
+## Backgrounds
+
+```json
+{"type": "background", "asset": "memory-book/cover.png"}
+```
+
+A decoration image behind everything else on a page (gradients, shadows and borders live in the image, not
+in elements). At most one per page; not allowed inside a notes `flow`. On the notes page it repeats on every
+copy of the page. `asset` is `<template id>/<file>`: a file in the template's own folder
+`internal/templates/embed/<id>/` (embedded with `go:embed`), a plain file name ending in `.png`, `.jpg` or
+`.jpeg`, no sub-folders, no `..`. The same file may be used on several pages; it is stored once in the PDF.
+Vector (SVG/PDF) backgrounds are not supported.
+
+The validator checks every asset when the templates load and the tests check it again (a bad asset fails the
+tests, never a request). Each rule names the template, page and file:
+
+| Rule | Limit |
+|---|---|
+| The file exists in `embed/<id>/` | |
+| Content is PNG or JPEG (the content decides, not the extension; a JPEG named `.png` is accepted); a PNG must not be interlaced (Adam7), the renderer cannot read it | |
+| File size | at most 1.5 MiB |
+| Pixel shape | width / height equal to the reference page's within 1 % |
+| Effective resolution on the reference page | 150 to 400 DPI (A5 reference: about 874 to 2331 px wide; Letter: 1275 to 3400 px) |
+| All assets of one template together | at most 8 MiB |
+
+Prefer RGB PNGs without transparency: a PNG with an alpha channel is decoded in memory by the PDF library
+(about 170 MB at the largest allowed size), an opaque PNG or a JPEG is copied through.
+
+## Static text
+
+```json
+{"type": "text", "text": {"en": "All About Me", "vi": "Về mình"}, "x": 20, "y": 18, "w": 90, "h": 14,
+ "size": 22, "font": "display", "color": "accent", "rotate": -2}
+```
+
+Fixed wording that does not come from the book, in both languages (`en` and `vi`, both required, each 1 to 500
+characters, no control characters, so no line breaks). It is drawn in the yearbook's language (`Options.Lang`;
+English when the language is unknown) and follows the same fitting rules as slot text. It is not a slot, so it
+is never skipped for missing data. Text that does not fit still ends with `…` and reports `text_truncated` (with
+no `slot`), and a character in no font reports `missing_glyph`.
+
+## Rotation
+
+`rotate` (degrees, -45 to 45, default 0, **clockwise**) turns a `text`, `image` or `rect` around the centre of
+its box. The box is placed, wrapped and fitted as if it were not rotated, and must lie inside the page that
+way; an image's clip (`rounded`, `circle`, `ellipse`) rotates with it. The rotated corners may extend past
+the page edge by the amount the rotation implies.
+
+```json
+{"type": "image", "slot": "photo", "x": 30, "y": 40, "w": 60, "h": 60, "shape": "ellipse", "rotate": 3}
+```
+
+## Font families
+
+The embedded families live in a registry in `internal/pdf/fonts` (`fonts.Register`, called from `init`): a name
+and the TTF data of the regular and the bold face (a family may have only one; the renderer then uses it for
+both weights). `theme.fonts` maps roles to family names:
+
+```json
+"theme": {"fonts": {"body": "BeVietnamPro", "display": "BeVietnamPro"}, "colors": {...}}
+```
+
+A text element picks a role with `"font": "display"` (default `body`). `theme.font` keeps meaning "the `body`
+family", so `{"font": "BeVietnamPro"}` is still valid. An unknown family or role fails validation. A family is
+embedded in the PDF only when an element uses it. Registered today: `BeVietnamPro` (SIL OFL, regular and bold).
+
+`Register` refuses (panics) a family that is not a valid TTF or lacks any Vietnamese letter with each of the five
+tone marks, upper and lower case; a test checks the whole registry as well. Emoji work with every family
+through the bundled fallback font. A new family also needs its licence text next to the font file and an entry
+in `THIRD_PARTY_NOTICES.md`.
 
 ## Slots
 
@@ -108,7 +182,7 @@ A text box must be tall enough for one line at its smallest size (the validator 
 
 ## Fonts and characters
 
-Be Vietnam Pro is used first. Characters it lacks (emoji, some symbols) come from the bundled monochrome emoji
+The element's font family is used first. Characters it lacks (emoji, some symbols) come from the bundled monochrome emoji
 font; emoji are outlines in the text colour, never colour pictures. A character found in no font is drawn as `?`
 and reported as `missing_glyph` with the character and where it was.
 
@@ -122,7 +196,7 @@ grey placeholder plus `missing_image` when a photo cannot be fetched or decoded.
 
 `pdf.Render` returns a `Report` whose `Warnings` carry a `Code`, the 1-based `Page`, and as applicable `Slot`,
 `NoteID`, `MediaID`, `Rune`: `missing_glyph`, `text_truncated`, `low_resolution`, `missing_image`,
-`extra_photos`. None of them fails the render.
+`extra_photos`. None of them fails the render. Warnings of static text carry no `slot`.
 
 ## Deterministic output
 
@@ -133,7 +207,8 @@ identical). Text, layout and fonts are always stable.
 
 ## Adding a template
 
-1. Copy `internal/templates/embed/classic.json` to a new file and change `id`, `name` and the layout.
+1. Copy `internal/templates/embed/classic.json` to a new file and change `id`, `name` and the layout. Put its
+   background images in `internal/templates/embed/<id>/`.
 2. Run `go test ./internal/templates ./internal/pdf`: the validator reports any bad element by page and number.
 3. Run `go test ./internal/pdf -run TestSamples -write-samples` and open `docs/templates/<id>.pdf` (add the new id to
    the loop in `TestSamples` first).
