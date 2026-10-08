@@ -1,10 +1,11 @@
-import { useMutation } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState, type ChangeEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { ApiError } from "../api/client";
 import {
   deleteMedia,
   getYearbook,
+  listMedia,
   mediaUrl,
   profileInput,
   replaceProfile,
@@ -38,11 +39,7 @@ async function uploadWithRetry(
   }
 }
 
-/**
- * Upload, thumbnails, delete, cover and profile photo.
- * ponytail: the API cannot list a book's photos yet, so the grid holds this session's uploads plus the
- * cover and profile photo the book already points at; swap `session` for a list query when that endpoint exists.
- */
+/** The photo library: upload, list (newest first, "show more"), thumbnails, delete, cover and profile photo. */
 export function Photos({
   yearbook,
   onChanged,
@@ -51,12 +48,20 @@ export function Photos({
   onChanged: (y: Yearbook) => void;
 }) {
   const { t } = useTranslation();
-  const [session, setSession] = useState<string[]>([]);
   const [uploads, setUploads] = useState<Upload[]>([]);
   const nextKey = useRef(0);
   const cover = yearbook.cover_media_id;
   const profilePhoto = yearbook.profile.photo_media_id;
-  const ids = [...new Set([...session, cover, profilePhoto].filter((x): x is string => !!x))];
+  const qc = useQueryClient();
+  const listKey = ["media", yearbook.id];
+  const list = useInfiniteQuery({
+    queryKey: listKey,
+    queryFn: ({ pageParam }) => listMedia(yearbook.id, pageParam),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last) => last.next_cursor ?? undefined,
+  });
+  const ids = list.data?.pages.flatMap((p) => p.media.map((m) => m.id)) ?? [];
+  const refresh = () => void qc.invalidateQueries({ queryKey: listKey });
 
   const act = useMutation({
     mutationFn: (job: () => Promise<Yearbook>) => job(),
@@ -79,13 +84,13 @@ export function Photos({
         continue;
       }
       try {
-        const m = await uploadWithRetry(
+        await uploadWithRetry(
           yearbook.id,
           file,
           (progress) => patch(key, { progress, busy: false }),
           () => patch(key, { busy: true }),
         );
-        setSession((s) => [...s, m.id]);
+        refresh();
         setUploads((u) => u.filter((x) => x.key !== key));
       } catch (err) {
         patch(key, { error: err, busy: false });
@@ -109,7 +114,7 @@ export function Photos({
     if (!window.confirm(t("photos.confirmDelete"))) return;
     act.mutate(async () => {
       await deleteMedia(id);
-      setSession((s) => s.filter((x) => x !== id));
+      refresh();
       return getYearbook(yearbook.id); // the server clears a cover or profile photo that pointed at it
     });
   };
@@ -163,9 +168,17 @@ export function Photos({
           {errorText(t, act.error)}
         </p>
       )}
-      {ids.length === 0 ? (
-        <p>{t("photos.empty")}</p>
-      ) : (
+      {list.isError && (
+        <p role="alert" className="error">
+          {errorText(t, list.error)}{" "}
+          <button type="button" onClick={() => void list.refetch()}>
+            {t("auth.retry")}
+          </button>
+        </p>
+      )}
+      {list.isPending && <p role="status">{t("auth.loading")}</p>}
+      {list.isSuccess && ids.length === 0 && <p>{t("photos.empty")}</p>}
+      {ids.length > 0 && (
         <ul className="photo-grid">
           {ids.map((id, n) => (
             <li key={id}>
@@ -194,6 +207,17 @@ export function Photos({
             </li>
           ))}
         </ul>
+      )}
+      {list.hasNextPage && (
+        <p>
+          <button
+            type="button"
+            disabled={list.isFetchingNextPage}
+            onClick={() => void list.fetchNextPage()}
+          >
+            {t("photos.more")}
+          </button>
+        </p>
       )}
     </section>
   );

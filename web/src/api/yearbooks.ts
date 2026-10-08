@@ -5,6 +5,7 @@ type S = components["schemas"];
 export type Yearbook = S["Yearbook"];
 export type Profile = S["Profile"];
 export type Media = S["Media"];
+export type MediaItem = S["MediaItem"];
 export type YearbookCreate = S["YearbookCreate"];
 export type YearbookPatch = S["YearbookPatch"];
 export type ProfileInput = S["ProfileInput"];
@@ -41,6 +42,12 @@ export const profileInput = (p: Profile): ProfileInput => ({
 });
 
 export const deleteYearbook = (id: string) => sendJson<void>("DELETE", book(id));
+/** One page of the owner's own photos, newest first. */
+export const listMedia = (id: string, cursor?: string) =>
+  request<{ media: MediaItem[]; next_cursor: string | null }>(
+    `${book(id)}/media${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`,
+  );
+
 export const deleteMedia = (id: string) =>
   sendJson<void>("DELETE", `/v1/media/${encodeURIComponent(id)}`);
 

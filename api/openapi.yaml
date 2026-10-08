@@ -628,6 +628,42 @@ paths:
           content:
             application/json:
               schema: {$ref: "#/components/schemas/Error"}
+    get:
+      operationId: listMedia
+      tags: [media]
+      summary: List a yearbook's photos
+      description: >-
+        Owner only (a missing book and someone else's both answer `404 not_found`). Newest first, keyset
+        paginated on the photo id, so uploads and deletes between pages never repeat or skip a photo that stays.
+        Pass `next_cursor` back as `cursor`; it is null on the last page. By default only the owner's own uploads
+        are listed (`uploader=owner`). The response never contains storage keys, hashes or URLs: fetch the image
+        with `GET /v1/media/{id}/content`.
+      security:
+        - sessionCookie: []
+      parameters:
+        - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100, default: 50}, description: "Out of range or not a number: `400 invalid_limit`."}
+        - {name: cursor, in: query, required: false, schema: {type: string}, description: "Opaque token from a previous page; a malformed one is `400 invalid_cursor`."}
+        - {name: uploader, in: query, required: false, schema: {type: string, enum: [owner, contributor, all], default: owner}, description: "Anything else: `400 invalid_uploader`."}
+      responses:
+        "200":
+          description: A page of photos.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [media, next_cursor]
+                properties:
+                  media:
+                    type: array
+                    items: {$ref: "#/components/schemas/MediaItem"}
+                  next_cursor: {type: [string, "null"]}
+        "400":
+          description: "`invalid_limit`, `invalid_cursor` or `invalid_uploader`."
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
+        "401": {$ref: "#/components/responses/Unauthenticated"}
+        "404": {$ref: "#/components/responses/YearbookNotFound"}
   /v1/media/{id}/content:
     parameters:
       - {name: id, in: path, required: true, schema: {type: string}, description: Media ULID.}
@@ -990,6 +1026,17 @@ components:
         width: {type: integer, description: Pixels, of the stored display version.}
         height: {type: integer}
         bytes: {type: integer, description: Size of the stored display version.}
+    MediaItem:
+      type: object
+      additionalProperties: false
+      required: [id, width, height, bytes, uploader_kind, created_at]
+      properties:
+        id: {type: string, description: Opaque ULID.}
+        width: {type: integer}
+        height: {type: integer}
+        bytes: {type: integer}
+        uploader_kind: {type: string, enum: [owner, contributor]}
+        created_at: {type: string, format: date-time}
     MediaEnvelope:
       type: object
       required: [media]

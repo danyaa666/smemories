@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"strings"
 	"time"
 )
 
@@ -31,6 +32,9 @@ type Media struct {
 	Height      int
 	SHA256      string
 	CreatedAt   time.Time
+	// Set by list only.
+	UploaderKind string
+	seq          uint64 // the database id, the keyset cursor position; never leaves the package
 }
 
 // Store persists media rows. Every query is parameterised and scoped by the owner of the yearbook.
@@ -118,4 +122,36 @@ func (s *Store) owned(ctx context.Context, ownerID uint64, publicID string) (Med
 func (s *Store) remove(ctx context.Context, publicID string) error {
 	_, err := s.db.ExecContext(ctx, `DELETE FROM media WHERE public_id = ?`, publicID)
 	return err
+}
+
+// list returns up to limit photos of a yearbook, newest first (id descending), with id < before when before > 0.
+// kinds is the set of uploader_kind values to include. The (yearbook_id) index carries the primary key, so the
+// read is an index range scan in id order with no sort. FORCE INDEX because, on a big table, the optimizer is
+// tempted by a reverse primary-key scan for ORDER BY id DESC LIMIT n, which walks every yearbook's rows.
+func (s *Store) list(ctx context.Context, yearbookID uint64, kinds []string, before uint64, limit int) ([]Media, error) {
+	q := `SELECT id, public_id, uploader_kind, bytes, width, height, created_at FROM media FORCE INDEX (ix_media_yearbook) WHERE yearbook_id = ? AND uploader_kind IN (?` +
+		strings.Repeat(",?", len(kinds)-1) + `)`
+	args := []any{yearbookID}
+	for _, k := range kinds {
+		args = append(args, k)
+	}
+	if before > 0 {
+		q += ` AND id < ?`
+		args = append(args, before)
+	}
+	rows, err := s.db.QueryContext(ctx, q+` ORDER BY id DESC LIMIT ?`, append(args, limit)...)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	var out []Media
+	for rows.Next() {
+		var m Media
+		if err := rows.Scan(&m.seq, &m.ID, &m.UploaderKind, &m.Bytes, &m.Width, &m.Height, &m.CreatedAt); err != nil {
+			return nil, err
+		}
+		m.CreatedAt = m.CreatedAt.UTC()
+		out = append(out, m)
+	}
+	return out, rows.Err()
 }
