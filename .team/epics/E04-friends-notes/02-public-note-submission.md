@@ -89,3 +89,9 @@ Everything a contributor sends is hostile: validate before processing files, pro
 #### Leader notes from the T-009 review (2026-10-08)
 This task now depends on T-036 (memory bound of the image pipeline). A submission carries up to three photos and 32 MiB: decode them one at a time through the shared processing slots
 (`media.Service` semaphore), never in parallel inside one request, and reject the whole submission with `503 busy` + `Retry-After` when no slot frees up within a few seconds, instead of queueing unbounded.
+
+#### Leader notes from the T-012 review (2026-10-08)
+Rate limits on the public routes must work for a whole class behind one campus network address. T-012's public lookup counts **every** request per IP (60 per 15 minutes), so about 60 students opening
+the same link in a quarter of an hour would lock the rest out. In this task, change the lookup so that only **misses** (unknown, malformed or revoked token) count against the IP limit
+(`Take` first, `Refund` on a hit, the pattern the login limiter already uses) and keep a much higher cap for all requests (for example 600 per 15 minutes per IP) as a cost guard. Size the submission limits the same way
+(per collection and per IP, with the per-collection cap as the real brake) and test "40 different students from one IP each submit once".

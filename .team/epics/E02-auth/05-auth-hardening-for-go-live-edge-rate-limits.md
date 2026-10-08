@@ -17,3 +17,5 @@ Accepted for M1; when the shared limiter lands, decide whether to keep it, to ke
 The Google start and callback limits (30 per 15 minutes per client IP, T-011 AC8) and the per-IP register/login limits are per source address. Students on one campus network often share a single public IP
 (NAT): a class signing in together could hit 429. Before go-live, make these limits configurable, measure against a realistic burst (for example 60 students in 5 minutes) and decide whether to key on IP + user agent
 class or move the first line of defence to the edge (WAF rate rules). Also: the OIDC discovery fetch holds a lock for up to 5 s (ponytail in `discover`); use singleflight so a Google outage cannot queue requests.
+
+The same shared-address concern applies to the public collection lookup (T-012, 60 per 15 minutes per IP): see the T-034 notes; include it in the burst measurement.

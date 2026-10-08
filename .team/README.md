@@ -11,8 +11,8 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 20 | T-013, T-014, T-015, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-033, T-035 |
-| TODO | 3 | T-012, T-034, T-036 |
-| CHANGES_REQUESTED | 1 | T-011 |
+| TODO | 2 | T-034, T-036 |
+| IN_QA | 2 | T-011, T-012 |
 | MERGED | 2 | T-007, T-009 |
 | DONE | 10 | T-001, T-002, T-003, T-004, T-005, T-006, T-008, T-010, T-028, T-030 |
 
@@ -20,7 +20,7 @@
 
 **Open questions for you:** Q-009 (Approve merge of T-011 (Google sign-in)?)
 
-_Board last written 2026-10-08 02:00Z_
+_Board last written 2026-10-08 02:14Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -640,7 +640,7 @@ The template system and the PDF page renderer, built on the library chosen in T-
 - 2026-10-08 01:30Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-010')
 
 ### T-011 — Google sign-in (OIDC + PKCE, account linking)
-- **Status:** CHANGES_REQUESTED
+- **Status:** IN_QA
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -648,10 +648,10 @@ The template system and the PDF page renderer, built on the library chosen in T-
 - **Risk:** high
 - **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** qa
 - **Branch:** task/t-011-google-sign-in-oidc-pkce-account-linking
 - **PR:** https://github.com/danyaa666/smemories/pull/20
-- **Updated:** 2026-10-08 02:00Z by leader
+- **Updated:** 2026-10-08 02:14Z by qa
 - **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/01-google-sign-in.md`
@@ -678,9 +678,10 @@ Google sign-in with OIDC and PKCE and safe account linking (including the pre-hi
   NON-BLOCKING: (1) Migration order: a dev DB that already applied 0007 (this branch) cannot take T-009's 0006 afterwards: 'migrate up failed: detected 1 missing (out-of-order) migration lower than database version (7): version 6'. Fresh DBs and CI are fine; merge T-009 first (as dev noted) and anyone who ran this branch must recreate or manually apply 0006. (2) A second Google sub with the same verified email links to the same account (2 identities): consistent with the spec's table. (3) Postman Google folder needs outbound access to accounts.google.com (documented). No test files added; existing Go coverage is thorough. Risk high: owner approval needed before merge.
 - 2026-10-08 02:00Z · leader · Leader review OK on head 7ffdb68 (the commit QA tested, CI 4/4 green): flow matches the spec: state, nonce and S256 PKCE, signed 10-minute HttpOnly SameSite=Lax cookie compared in constant time and in encoded form, ID token verified by go-oidc (signature, iss, aud, exp) plus nonce, email_verified must be the boolean true, return_to allow-list, no tokens or codes in logs, identity and user creation in one transaction with FOR UPDATE and a retry on duplicate key or deadlock, pre-hijacking defence clears password and sessions before linking. Not blocking, recorded: campus NAT vs per-IP 30/15 min and a discovery lock held during the fetch (T-031 spec), web button and error codes (T-015 spec). One thing left: PR #20 conflicts with develop now that T-009 merged (d46aec5). Sending back only for the merge, no code defect.
 - 2026-10-08 02:00Z · leader · Leader: merge develop (T-009 is in, d46aec5) into the task branch; no rebase of a pushed branch. Expected conflicts: go.mod, go.sum, README.md, .env.example, api/openapi.yaml, web/src/api/schema.d.ts, internal/config/config_test.go (keep both sides), possibly cmd/smemories-api/main.go. Then: (1) cd web && npm run gen:api, commit schema.d.ts, npm run check:api passes; (2) ls migrations/ shows 0005, 0006 and 0007_user_identities.sql in that order; test migrate on a fresh DB and on one that already applied 0006; (3) make lint build test test-integration; auth, yearbooks, media Postman collections twice (restart the API between runs: forgot-password is limited to 5 per hour per IP); (4) push, mark READY_FOR_QA with the merge-commit SHA. Nothing else in scope changes.
+- 2026-10-08 02:04Z · dev · Merge commit 4109b7b (origin/develop incl. T-009 merged into the branch, pushed to PR #20). Conflicts kept both sides in .env.example, go.mod, go.sum (go mod tidy), internal/config/config.go; other files auto-merged. (1) npm run gen:api produced no diff to schema.d.ts, check:api ok. (2) migrations/ 0005, 0006_media, 0007_user_identities in order; fresh DB up OK; DB built by develop binary (0001-0006) then branch up applies only 0007; 0007 down/up OK. (3) make lint build test test-integration green; newman auth (52/134), yearbooks (85/172), media (44/77) twice each, API restarted before every collection (register limit): 0 failures. No other code change.
 
 ### T-012 — Collection links (owner API and public lookup)
-- **Status:** TODO
+- **Status:** IN_QA
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -688,10 +689,10 @@ Google sign-in with OIDC and PKCE and safe account linking (including the pre-hi
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-07 11:28Z by leader
+- **Assignee:** qa
+- **Branch:** task/t-012-collection-links-owner-api-and-public-lo
+- **PR:** https://github.com/danyaa666/smemories/pull/21
+- **Updated:** 2026-10-08 02:14Z by qa
 - **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/01-collection-links.md`
@@ -702,6 +703,8 @@ Owner-created private collection links (create, list, revoke) and the public loo
 
 #### Comments
 - 2026-10-07 11:28Z · leader · Promoted: full spec written in .team/epics/E04-friends-notes/01-collection-links.md. Needs T-007 (verified-email check) and T-008 (yearbooks); public submission is the new T-034.
+- 2026-10-08 02:14Z · dev · PR #21, head 231955e. All 8 AC. Test: make up; make lint build test test-integration (green). Newman notes collection needs verified accounts (dev mail only in API stdout): run --folder 'Setup (once per database)', then 'make verify-newman-users' (or the UPDATE in the collection description for a scratch DB), then the whole collection (I ran it 3x back to back, 0 failures). Migration 0008_note_collections.sql (0007 is T-011): a DB that applied 0008 first cannot take 0007 later (out-of-order), merge T-011 first or recreate. Decisions: email_not_verified on create only; note_count is 0 until T-034; auth.Handler.ClientIP exported for the public limiter; Makefile target verify-newman-users added. Risk high: owner approval needed.
+- 2026-10-08 02:14Z · leader · Leader pre-review of head 231955e (QA still running, CI pending): code is sound. 192-bit token hashed with SHA-256 and shown once, tokenHash rejects wrong length/alphabet before the database, lookup is one indexed query, every owner query is scoped through yearbooks.owner_id, create takes FOR UPDATE on the book row so the 5-link limit holds under concurrency, revoke is idempotent, public route reads no cookie and the global headers (no-store, no-referrer) apply. Not blocking: the public lookup limiter counts every request per IP (60/15 min), which a class on one campus network would hit; fix recorded in the T-034 and T-031 specs (count misses only). Merge order: T-011 first (migration 0007), then this one (0008); it will need a develop merge after T-011 lands.
 
 ### T-013 — Notes moderation API (approve, hide, reorder, delete)
 - **Status:** BACKLOG
