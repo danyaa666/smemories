@@ -1,6 +1,8 @@
 package pdf
 
 import (
+	"cmp"
+	"fmt"
 	"strings"
 	"unicode/utf8"
 
@@ -17,8 +19,7 @@ const (
 )
 
 const (
-	famPrimary = "bvp"
-	famEmoji   = "emoji"
+	famEmoji = "emoji"
 	// maxTextRunes bounds the text laid out per element (book text is untrusted).
 	maxTextRunes = 20000
 	puaBase      = 0xE000
@@ -26,11 +27,15 @@ const (
 	emojiHi      = 0x1FAFF
 )
 
-// glyphs knows which bundled font has a glyph for a rune. Not safe for concurrent use.
+// glyphs knows which font of one family (then the emoji fallback) has a glyph for a rune. Not safe for
+// concurrent use.
 type glyphs struct {
-	fonts [2]*sfnt.Font
-	buf   sfnt.Buffer
-	memo  map[rune]glyph
+	name   string // registry name of the primary family
+	fam    fonts.Family
+	pdfFam string // family name registered with fpdf
+	fonts  [2]*sfnt.Font
+	buf    sfnt.Buffer
+	memo   map[rune]glyph
 }
 
 // glyph is how one input rune is drawn: draw is the rune handed to fpdf (never above U+FFFF), font the
@@ -41,10 +46,15 @@ type glyph struct {
 	ok   bool
 }
 
-func newGlyphs() (*glyphs, error) {
-	g := &glyphs{memo: map[rune]glyph{}}
+func newGlyphs(name string) (*glyphs, error) {
+	fam, ok := fonts.Lookup(name)
+	if !ok {
+		return nil, fmt.Errorf("font family %q is not registered", name)
+	}
+	g := &glyphs{name: name, fam: fam, pdfFam: cmp.Or(fam.Key, "f-"+name), memo: map[rune]glyph{}}
+	data, _ := fam.Face(false) // coverage is judged on the regular face (the other face passed the same check)
 	var err error
-	if g.fonts[fontPrimary], err = sfnt.Parse(fonts.Regular); err != nil {
+	if g.fonts[fontPrimary], err = sfnt.Parse(data); err != nil {
 		return nil, err
 	}
 	if g.fonts[fontEmoji], err = sfnt.Parse(fonts.Emoji); err != nil {

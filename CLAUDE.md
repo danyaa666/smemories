@@ -34,3 +34,13 @@ uses its own project name and ports; never run `docker compose down -v` against 
 Each epic has a folder `.team/epics/E##-slug/` with a `PRD.md` and one spec file per task. A task's board block (`board.py get T-xxx`) is a short
 stub that links its spec: **read the spec from the repo root (the main checkout) before you start**, and again if a comment says it was updated.
 Specs and PRDs are leader-owned: never change anything under `.team/` in a pull request.
+
+## Dev-only shortcuts (owner rule, 2026-10-08)
+
+A dev-only shortcut is code that exists only to make development and testing easier and would be a backdoor in production. The first one is the fixed email code `123123` (`SMEM_DEV_FIXED_OTP`, T-048).
+Rules for every agent:
+- A shortcut must be switched on by an environment variable that is unset by default, honoured only when `SMEM_ENV` is `dev` or `test`, and the API must **refuse to start** if the variable is set in any other environment.
+- Tag every line of it with the comment `DEV-SHORTCUT(<name>)` and register it in `docs/dev-shortcuts.md` (what, where, guard, how to remove). Never ship a shortcut that is not registered.
+- **Delete all shortcuts before going to production.** T-050 does it and adds `scripts/check-no-dev-shortcuts.sh` to CI and to the deploy pipeline; it is a prerequisite of the first deploy (T-023). The leader checks `docs/dev-shortcuts.md` at every go-live review, and nobody sets a shortcut variable in a production configuration or in infrastructure code.
+- Never log, print or commit a real code, key or token, and never reuse the dev code value for anything else.
+

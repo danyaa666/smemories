@@ -2,9 +2,11 @@
 package pdf
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"io"
+	"slices"
 	"strings"
 	"time"
 
@@ -49,7 +51,8 @@ type renderer struct {
 	src    ImageSource
 	lang   string
 	pdf    *fpdf.Fpdf
-	glyphs *glyphs
+	faces  map[string]*glyphs // by registry family name: the families this template uses
+	bgs    map[string]string  // background assets registered with fpdf: asset path -> image type
 	widths map[widthKey]float64
 	imgs   map[string]*imgInfo
 	lowRes map[string]bool
@@ -71,7 +74,7 @@ func Render(ctx context.Context, tmpl *templates.Template, book Book, images Ima
 	if opts.PageSize == "" {
 		opts.PageSize = "A5"
 	}
-	dims, ok := templates.Dims[opts.PageSize]
+	dims, ok := templates.PageDims(opts.PageSize)
 	if !ok || !tmpl.Supports(opts.PageSize) {
 		return Report{}, fmt.Errorf("template %q does not support page size %q", tmpl.ID, opts.PageSize)
 	}
@@ -79,14 +82,13 @@ func Render(ctx context.Context, tmpl *templates.Template, book Book, images Ima
 		opts.Lang = "en"
 	}
 	rw, rh := tmpl.RefDims()
-	g, err := newGlyphs()
-	if err != nil {
-		return Report{}, err
-	}
-	r := &renderer{tmpl: tmpl, book: book, src: images, lang: opts.Lang, glyphs: g,
+	r := &renderer{tmpl: tmpl, book: book, src: images, lang: opts.Lang, faces: map[string]*glyphs{}, bgs: map[string]string{},
 		widths: map[widthKey]float64{}, imgs: map[string]*imgInfo{}, lowRes: map[string]bool{},
 		sx: dims[0] / rw, sy: dims[1] / rh}
 	r.ss = r.sx
+	if err := r.loadFaces(); err != nil {
+		return Report{}, err
+	}
 
 	// fpdf can panic on input it does not expect; the caller must get an error, not a crash.
 	defer func() {
@@ -110,8 +112,15 @@ func (r *renderer) newDoc(dims [2]float64, now time.Time) *fpdf.Fpdf {
 	pdf := fpdf.NewCustom(&fpdf.InitType{OrientationStr: "P", UnitStr: "mm", Size: fpdf.SizeType{Wd: dims[0], Ht: dims[1]}})
 	pdf.SetAutoPageBreak(false, 0)
 	pdf.SetMargins(0, 0, 0)
-	pdf.AddUTF8FontFromBytes(famPrimary, "", fonts.Regular)
-	pdf.AddUTF8FontFromBytes(famPrimary, "B", fonts.Bold)
+	for _, name := range sortedFaces(r.faces) {
+		g := r.faces[name]
+		if g.fam.Regular != nil {
+			pdf.AddUTF8FontFromBytes(g.pdfFam, "", g.fam.Regular)
+		}
+		if g.fam.Bold != nil {
+			pdf.AddUTF8FontFromBytes(g.pdfFam, "B", g.fam.Bold)
+		}
+	}
 	pdf.AddUTF8FontFromBytes(famEmoji, "", fonts.Emoji)
 	pdf.SetCatalogSort(true) // stable resource order, so identical input gives identical bytes
 	if now.IsZero() {
@@ -123,6 +132,47 @@ func (r *renderer) newDoc(dims [2]float64, now time.Time) *fpdf.Fpdf {
 	title, _ := prepareText(r.book.Title)
 	pdf.SetTitle(strings.ReplaceAll(title, "\n", " "), true)
 	return pdf
+}
+
+// loadFaces prepares the font families the template uses: the body family and, when an element asks for
+// it, the display family.
+func (r *renderer) loadFaces() error {
+	names := []string{r.tmpl.Family(templates.RoleBody)}
+	if r.usesRole(templates.RoleDisplay) {
+		names = append(names, r.tmpl.Family(templates.RoleDisplay))
+	}
+	for _, n := range names {
+		if r.faces[n] != nil {
+			continue
+		}
+		g, err := newGlyphs(n)
+		if err != nil {
+			return fmt.Errorf("render pdf: %w", err)
+		}
+		r.faces[n] = g
+	}
+	return nil
+}
+
+func (r *renderer) usesRole(role string) bool {
+	uses := func(els []templates.Element) bool {
+		return slices.ContainsFunc(els, func(e templates.Element) bool { return e.Type == templates.TypeText && e.Font == role })
+	}
+	for _, p := range r.tmpl.Pages {
+		if uses(p.Elements) || (p.Flow != nil && uses(p.Flow.Elements)) {
+			return true
+		}
+	}
+	return false
+}
+
+func sortedFaces(m map[string]*glyphs) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	slices.Sort(keys)
+	return keys
 }
 
 func (r *renderer) build(ctx context.Context) error {
@@ -145,18 +195,27 @@ func (r *renderer) build(ctx context.Context) error {
 	return nil
 }
 
-func (r *renderer) newPage() {
+// newPage starts a page: the paper fill, then the background image if els has one, below everything else.
+func (r *renderer) newPage(els []templates.Element) error {
 	r.pdf.AddPage()
 	pw, ph := r.pdf.GetPageSize()
 	r.setFill("paper")
 	r.pdf.Rect(0, 0, pw, ph, "F")
+	for _, e := range els {
+		if e.Type == templates.TypeBackground {
+			return r.drawBackground(e.Asset, pw, ph)
+		}
+	}
+	return nil
 }
 
 func (r *renderer) page(ctx context.Context, els []templates.Element, d *slotData) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	r.newPage()
+	if err := r.newPage(els); err != nil {
+		return err
+	}
 	return r.elements(ctx, els, 0, 0, d)
 }
 
@@ -173,7 +232,9 @@ func (r *renderer) notesPages(ctx context.Context, p *templates.Page) error {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		r.newPage()
+		if err := r.newPage(p.Elements); err != nil {
+			return err
+		}
 		if err := r.elements(ctx, p.Elements, 0, 0, &slotData{}); err != nil {
 			return err
 		}
@@ -229,9 +290,21 @@ func (r *renderer) elements(ctx context.Context, els []templates.Element, ox, oy
 	return nil
 }
 
+// rotated turns the drawing around the centre of the box by the element's rotate (degrees, clockwise) and
+// returns the function that ends it. Defer that function so a panic cannot leave a transform open.
+func (r *renderer) rotated(e templates.Element, x, y, w, h float64) func() {
+	if e.Rotate == 0 {
+		return func() {}
+	}
+	r.pdf.TransformBegin()
+	r.pdf.TransformRotate(-e.Rotate, x+w/2, y+h/2) // fpdf rotates counter-clockwise
+	return r.pdf.TransformEnd
+}
+
 func (r *renderer) drawRect(e templates.Element, ox, oy float64) {
 	r.setFill(e.Fill)
 	x, y, w, h := (ox+e.X)*r.sx, (oy+e.Y)*r.sy, e.W*r.sx, e.H*r.sy
+	defer r.rotated(e, x, y, w, h)()
 	if e.Radius > 0 {
 		r.pdf.RoundedRect(x, y, w, h, e.Radius*r.ss, "1234", "F")
 		return
@@ -240,12 +313,18 @@ func (r *renderer) drawRect(e templates.Element, ox, oy float64) {
 }
 
 func (r *renderer) drawText(e templates.Element, ox, oy float64, d *slotData) {
-	val := strings.TrimSpace(d.text[e.Slot])
-	if val == "" {
+	var val, label string
+	if e.Static != nil { // fixed text: never "missing data"; the other warnings still apply
+		val = cmp.Or(e.Static[r.lang], e.Static["en"])
+	} else {
+		val, label = d.text[e.Slot], e.Label[r.lang]
+	}
+	if val = strings.TrimSpace(val); val == "" {
 		return
 	}
-	txt, cut := prepareText(e.Label[r.lang] + val)
-	us, missing := r.toUnits(txt, e.Bold)
+	face := r.faces[r.tmpl.Family(e.Font)]
+	txt, cut := prepareText(label + val)
+	us, missing := r.toUnits(face, txt, e.Bold)
 	for _, m := range missing {
 		r.warn(Warning{Code: WarnMissingGlyph, Slot: e.Slot, NoteID: d.noteID, Rune: string(m)})
 	}
@@ -257,12 +336,14 @@ func (r *renderer) drawText(e templates.Element, ox, oy float64, d *slotData) {
 	if minSize == 0 {
 		minSize = e.Size
 	}
-	box := textBox{w: e.W * r.sx, h: e.H * r.sy, size: e.Size * r.ss, minSize: minSize * r.ss, lineH: lh, bold: e.Bold}
+	box := textBox{face: face, w: e.W * r.sx, h: e.H * r.sy, size: e.Size * r.ss, minSize: minSize * r.ss, lineH: lh, bold: e.Bold}
 	lay := r.fit(us, box, cut)
 	if lay.truncated {
 		r.warn(Warning{Code: WarnTextTruncated, Slot: e.Slot, NoteID: d.noteID})
 	}
-	r.drawLines(lay, box, (ox+e.X)*r.sx, (oy+e.Y)*r.sy, e)
+	x, y := (ox+e.X)*r.sx, (oy+e.Y)*r.sy
+	defer r.rotated(e, x, y, box.w, box.h)() // wrapping and fitting above happened in the unrotated box
+	r.drawLines(lay, box, x, y, e)
 }
 
 // drawLines writes the fitted lines, one Text call per run of the same font.
@@ -286,7 +367,7 @@ func (r *renderer) drawLines(l layout, b textBox, x, y float64, e templates.Elem
 				sb.WriteRune(ln.units[k].draw)
 				runEm += ln.units[k].em
 			}
-			fam, style := r.fontFor(ln.units[j].font, b.bold)
+			fam, style := fontFor(b.face, ln.units[j].font, b.bold)
 			r.pdf.SetFont(fam, style, l.size)
 			r.pdf.Text(lx, base, sb.String())
 			lx += runEm * em

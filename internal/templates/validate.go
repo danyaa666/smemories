@@ -1,14 +1,27 @@
 package templates
 
 import (
+	"bytes"
 	"cmp"
 	"errors"
 	"fmt"
+	"image"
+	_ "image/jpeg" // registers the JPEG decoder for DecodeConfig
+	_ "image/png"  // registers the PNG decoder for DecodeConfig
+	"io/fs"
 	"math"
+	"path"
+	"reflect"
 	"regexp"
 	"slices"
 	"strings"
+	"unicode"
+
+	"github.com/danyaa666/smemories/internal/pdf/fonts"
 )
+
+// pngInterlaceOffset is where the interlace method sits in a PNG: 8 signature bytes, 8 chunk header bytes, 12 into IHDR.
+const pngInterlaceOffset = 8 + 8 + 12
 
 // Bounds that keep a (future, user-supplied) template from exhausting memory.
 const (
@@ -21,6 +34,16 @@ const (
 	eps           = 1e-6
 	maxLabelLen   = 40
 	ptMM          = 25.4 / 72 // one point in millimetres
+	maxRotate     = 45.0      // degrees
+	maxStaticLen  = 500       // characters per language of a static text
+
+	// Limits of a background asset: file size, total per template, and the effective resolution on the
+	// reference page. The aspect ratio must match the reference page within ratioTol.
+	maxAssetBytes  = 3 << 19 // 1.5 MiB
+	maxAssetsTotal = 8 << 20
+	minAssetDPI    = 150
+	maxAssetDPI    = 400
+	dpiTol         = 0.5 // DPI: rounding of the pixel size of a design exported at exactly 150 or 400
 )
 
 // Slots is the closed set of slot names, by page kind (or "note" for the items of a notes flow), and the
@@ -37,21 +60,23 @@ var Slots = map[string]map[string]string{
 }
 
 var (
-	idRe    = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,31}$`)
-	colorRe = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
-	langs   = []string{"en", "vi"}
+	assetFileRe = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$`)
+	idRe        = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,31}$`)
+	colorRe     = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
+	langs       = []string{"en", "vi"}
 )
 
 // Validate checks t and returns every problem found, each naming the template, page and element.
 func Validate(t *Template) error {
-	v := &validator{t: t}
+	v := &validator{t: t, assetSize: map[string]int64{}}
 	v.template()
 	return errors.Join(v.errs...)
 }
 
 type validator struct {
-	t    *Template
-	errs []error
+	t         *Template
+	errs      []error
+	assetSize map[string]int64 // distinct background files seen, for the per-template total
 }
 
 func (v *validator) errf(where string, format string, args ...any) {
@@ -71,7 +96,10 @@ func (v *validator) template() {
 	if t.Unit != "mm" {
 		v.errf("", "invalid unit %q: only \"mm\" is supported", t.Unit)
 	}
-	if t.Reference != "" && t.Reference != "A5" && t.Reference != "Letter" {
+	// With an invalid reference the page sizes are not compared to it: that would only add a second,
+	// misleading error next to the right one.
+	refOK := t.Reference == "" || t.Reference == "A5" || t.Reference == "Letter"
+	if !refOK {
 		v.errf("", "invalid reference %q: only \"A5\" or \"Letter\"", t.Reference)
 	}
 	if len(t.PageSizes) == 0 {
@@ -79,17 +107,15 @@ func (v *validator) template() {
 	}
 	rw, rh := t.RefDims()
 	for _, s := range t.PageSizes {
-		d, ok := Dims[s]
+		d, ok := dims[s]
 		switch {
 		case !ok:
 			v.errf("", "unknown page size %q", s)
-		case math.Abs((d[0]/d[1])/(rw/rh)-1) > ratioTol:
+		case refOK && math.Abs((d[0]/d[1])/(rw/rh)-1) > ratioTol:
 			v.errf("", "page size %q has a different aspect ratio than the %s reference page", s, cmp.Or(t.Reference, DefaultReference))
 		}
 	}
-	if !KnownFonts[t.Theme.Font] {
-		v.errf("", "missing font %q (known: %s)", t.Theme.Font, strings.Join(sortedKeys(KnownFonts), ", "))
-	}
+	v.fonts()
 	for name, c := range t.Theme.Colors {
 		if !colorRe.MatchString(c) {
 			v.errf("", "colour %q: %q is not #rrggbb", name, c)
@@ -112,6 +138,44 @@ func (v *validator) template() {
 			v.errf("", "no %q page (every template needs one page of each kind)", k)
 		}
 	}
+	v.assetTotal()
+}
+
+// assetTotal checks the size of all distinct background files together.
+func (v *validator) assetTotal() {
+	var total int64
+	for _, n := range v.assetSize {
+		total += n
+	}
+	if total > maxAssetsTotal {
+		v.errf("", "background assets total %d bytes, the limit is %d", total, maxAssetsTotal)
+	}
+}
+
+// fonts checks theme.font (the body family, kept for older files) and theme.fonts (role -> family).
+func (v *validator) fonts() {
+	th := v.t.Theme
+	known := func(where, name string) {
+		if _, ok := fonts.Lookup(name); !ok {
+			v.errf("", "%s: missing font %q (known: %s)", where, name, strings.Join(fonts.Names(), ", "))
+		}
+	}
+	for _, role := range sortedKeys(th.Fonts) {
+		if role != RoleBody && role != RoleDisplay {
+			v.errf("", "unknown font role %q (use %s or %s)", role, RoleBody, RoleDisplay)
+			continue
+		}
+		known("fonts."+role, th.Fonts[role])
+	}
+	if th.Font != "" {
+		known("font", th.Font)
+	}
+	switch body := th.Fonts[RoleBody]; {
+	case th.Font == "" && body == "":
+		v.errf("", "missing font \"\": set theme.font or theme.fonts.body (known: %s)", strings.Join(fonts.Names(), ", "))
+	case th.Font != "" && body != "" && th.Font != body:
+		v.errf("", "theme.font %q and theme.fonts.body %q differ", th.Font, body)
+	}
 }
 
 func (v *validator) page(i int, p *Page, seen map[string]bool) {
@@ -126,7 +190,7 @@ func (v *validator) page(i int, p *Page, seen map[string]bool) {
 	}
 	seen[p.Kind] = true
 	rw, rh := v.t.RefDims()
-	v.elements(where, p.Elements, slots, rw, rh)
+	v.elements(where, p.Elements, slots, rw, rh, true)
 	if p.Kind != KindNotes {
 		if p.Flow != nil {
 			v.errf(where, "flow is only allowed on notes pages")
@@ -147,7 +211,7 @@ func (v *validator) page(i int, p *Page, seen map[string]bool) {
 	if n := f.PerPage(); n > maxPerPage {
 		v.errf(fw, "%d items per page exceeds %d", n, maxPerPage)
 	}
-	v.elements(fw, f.Elements, Slots["note"], f.W, f.ItemH)
+	v.elements(fw, f.Elements, Slots["note"], f.W, f.ItemH, false)
 }
 
 // box checks an area lies inside a w x h region and has a positive size.
@@ -157,15 +221,32 @@ func (v *validator) box(where string, x, y, w, h, maxW, maxH float64) {
 	}
 }
 
-func (v *validator) elements(where string, els []Element, slots map[string]string, maxW, maxH float64) {
+// elements checks one list of elements; onPage is false inside a notes flow, where a background is not allowed.
+func (v *validator) elements(where string, els []Element, slots map[string]string, maxW, maxH float64, onPage bool) {
 	if len(els) > maxElements {
 		v.errf(where, "%d elements exceeds %d", len(els), maxElements)
 		return
 	}
+	backgrounds := 0
 	for i := range els {
 		e := &els[i]
-		ew := fmt.Sprintf("%s, element %d (%s %q)", where, i+1, e.Type, e.Slot)
+		ew := fmt.Sprintf("%s, element %d (%s %q)", where, i+1, e.Type, cmp.Or(e.Slot, e.Asset))
+		if e.Type == TypeBackground {
+			backgrounds++
+			switch {
+			case !onPage:
+				v.errf(ew, "a background is only allowed on a page, not in a notes flow")
+			case backgrounds > 1:
+				v.errf(ew, "more than one background on this page")
+			default:
+				v.background(ew, e)
+			}
+			continue
+		}
 		v.box(ew, e.X, e.Y, e.W, e.H, maxW, maxH)
+		if math.Abs(e.Rotate) > maxRotate {
+			v.errf(ew, "rotate %g must be in -%g..%g degrees", e.Rotate, maxRotate, maxRotate)
+		}
 		switch e.Type {
 		case TypeText:
 			v.text(ew, e, slots)
@@ -185,6 +266,58 @@ func (v *validator) elements(where string, els []Element, slots map[string]strin
 	}
 }
 
+// background checks a page background: only type and asset may be set, and the file must be a sound image.
+func (v *validator) background(where string, e *Element) {
+	z := *e
+	z.Type, z.Asset = "", ""
+	if !reflect.ValueOf(z).IsZero() {
+		v.errf(where, "a background takes only type and asset (it always fills the page)")
+	}
+	file, ok := strings.CutPrefix(e.Asset, v.t.ID+"/")
+	ext := strings.ToLower(path.Ext(file))
+	if !ok || !assetFileRe.MatchString(file) || strings.Contains(file, "..") || !slices.Contains([]string{".png", ".jpg", ".jpeg"}, ext) {
+		v.errf(where, "asset %q must be %q followed by a plain file name ending in .png, .jpg or .jpeg (no folders, no \"..\")", e.Asset, v.t.ID+"/")
+		return
+	}
+	if v.t.assets == nil {
+		v.errf(where, "asset %q cannot be checked: the template has no asset folder", e.Asset)
+		return
+	}
+	st, err := fs.Stat(v.t.assets, e.Asset)
+	if err != nil || !st.Mode().IsRegular() {
+		v.errf(where, "asset %q does not exist in the template's embed folder", e.Asset)
+		return
+	}
+	v.assetSize[e.Asset] = st.Size()
+	if st.Size() > maxAssetBytes {
+		v.errf(where, "asset %q is %d bytes, the limit is %d", e.Asset, st.Size(), maxAssetBytes)
+		return
+	}
+	data, err := fs.ReadFile(v.t.assets, e.Asset) // at most maxAssetBytes, checked above
+	if err != nil {
+		v.errf(where, "asset %q cannot be opened: %v", e.Asset, err)
+		return
+	}
+	cfg, format, err := image.DecodeConfig(bytes.NewReader(data)) // by content, not by extension
+	if err != nil || (format != "png" && format != "jpeg") {
+		v.errf(where, "asset %q is not a PNG or JPEG image", e.Asset)
+		return
+	}
+	// The PNG decoder behind the renderer cannot read Adam7 interlacing; byte 12 of the IHDR data is the interlace method.
+	if format == "png" && len(data) > pngInterlaceOffset && data[pngInterlaceOffset] != 0 {
+		v.errf(where, "asset %q is an interlaced PNG, which is not supported: save it without interlacing", e.Asset)
+		return
+	}
+	rw, rh := v.t.RefDims()
+	if cfg.Width <= 0 || cfg.Height <= 0 || math.Abs((float64(cfg.Width)/float64(cfg.Height))/(rw/rh)-1) > ratioTol {
+		v.errf(where, "asset %q is %d x %d px: its aspect ratio must match the %g x %g mm reference page within 1 %%", e.Asset, cfg.Width, cfg.Height, rw, rh)
+		return
+	}
+	if dpi := float64(cfg.Width) / (rw / 25.4); dpi < minAssetDPI-dpiTol || dpi > maxAssetDPI+dpiTol {
+		v.errf(where, "asset %q is %d x %d px: %.0f DPI on the reference page, it must be %d..%d", e.Asset, cfg.Width, cfg.Height, dpi, minAssetDPI, maxAssetDPI)
+	}
+}
+
 func (v *validator) slot(where string, e *Element, slots map[string]string) {
 	want, ok := slots[e.Slot]
 	switch {
@@ -196,7 +329,19 @@ func (v *validator) slot(where string, e *Element, slots map[string]string) {
 }
 
 func (v *validator) text(where string, e *Element, slots map[string]string) {
-	v.slot(where, e, slots)
+	switch {
+	case e.Static != nil && e.Slot != "":
+		v.errf(where, "a text element has either a slot or a text object, not both")
+	case e.Static != nil:
+		v.static(where, e)
+	case e.Slot == "":
+		v.errf(where, "a text element needs a slot or a text object")
+	default:
+		v.slot(where, e, slots)
+	}
+	if !slices.Contains([]string{"", RoleBody, RoleDisplay}, e.Font) {
+		v.errf(where, "unknown font role %q (use %s or %s)", e.Font, RoleBody, RoleDisplay)
+	}
 	if e.Size < minFontSize || e.Size > maxFontSize {
 		v.errf(where, "size %g must be in %g..%g pt", e.Size, minFontSize, maxFontSize)
 	}
@@ -224,6 +369,29 @@ func (v *validator) text(where string, e *Element, slots map[string]string) {
 	}
 }
 
+// static checks fixed text: both languages, none other, each non-blank, short and free of control characters.
+func (v *validator) static(where string, e *Element) {
+	for l := range e.Static {
+		if !slices.Contains(langs, l) {
+			v.errf(where, "text has unknown language %q (use en and vi)", l)
+		}
+	}
+	for _, l := range langs {
+		s := e.Static[l]
+		switch {
+		case strings.TrimSpace(s) == "":
+			v.errf(where, "text is missing the %q language", l)
+		case len([]rune(s)) > maxStaticLen:
+			v.errf(where, "text %q is longer than %d characters", l, maxStaticLen)
+		case strings.IndexFunc(s, unicode.IsControl) >= 0:
+			v.errf(where, "text %q contains a control character", l)
+		}
+	}
+	if len(e.Label) > 0 {
+		v.errf(where, "label only applies to slot text")
+	}
+}
+
 func (v *validator) image(where string, e *Element, slots map[string]string) {
 	v.slot(where, e, slots)
 	if e.Fit != "" && e.Fit != "cover" {
@@ -238,6 +406,10 @@ func (v *validator) image(where string, e *Element, slots map[string]string) {
 	case "circle":
 		if e.W != e.H {
 			v.errf(where, "a circle needs w == h")
+		}
+	case "ellipse":
+		if e.Radius != 0 {
+			v.errf(where, "radius is not allowed for an ellipse")
 		}
 	default:
 		v.errf(where, "unknown shape %q", e.Shape)

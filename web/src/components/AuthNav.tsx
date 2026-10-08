@@ -23,6 +23,7 @@ export function AuthNav() {
     <nav aria-label={t("nav.label")} className="auth-nav">
       {user ? (
         <>
+          <Link to="/yearbooks">{t("nav.yearbooks")}</Link>
           <Link to="/account">{user.display_name}</Link>
           <button type="button" disabled={out.isPending} onClick={() => out.mutate()}>
             {t("nav.signOut")}

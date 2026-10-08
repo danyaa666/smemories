@@ -6,6 +6,22 @@ const FIELD_OF: Record<string, string> = {
   invalid_email: "email",
   weak_password: "password",
   invalid_display_name: "display_name",
+  // yearbook and profile forms: the field is named like the code
+  ...Object.fromEntries(
+    [
+      "title",
+      "school_name",
+      "class_name",
+      "graduation_year",
+      "motto",
+      "full_name",
+      "nickname",
+      "birthday",
+      "quote",
+      "hobbies",
+      "future_plans",
+    ].map((f) => [`invalid_${f}`, f]),
+  ),
 };
 
 export function errorText(t: TFunction, e: unknown): string {

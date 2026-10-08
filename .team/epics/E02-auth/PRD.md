@@ -56,3 +56,8 @@ Specs live next to this file; **status lives only on the board** (`L list`), nev
 | T-015 Web: auth pages and session handling | `04-web-auth-pages-and-session-handling.md` | T-003, T-007 |
 | T-031 Auth hardening for go-live: edge rate limits, shared limiter, session purge, stored-hash caps | `05-auth-hardening-for-go-live-edge-rate-limits.md` | T-023 |
 | T-045 Register accepts a locale; verification email in the student's language | `06-register-accepts-locale.md` | T-015 |
+| T-047 Fix the flaky concurrent Google callback (retry with backoff) | `07-fix-flaky-google-concurrent-callback-test.md` | T-011 |
+| T-048 Email one-time codes replace verification and reset links (API) | `08-email-otp-codes-replace-links-api.md` | T-045 |
+| T-049 Web: code entry screens for verification and reset | `09-web-email-code-screens.md` | T-048 |
+| T-052 Login sessions move to Redis | `10-sessions-in-redis.md` | T-051 |
+| T-053 Rate limiters move to Redis (shared limiter) | `11-rate-limiters-in-redis.md` | T-051 |

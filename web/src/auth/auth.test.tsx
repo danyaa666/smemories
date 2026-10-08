@@ -176,7 +176,20 @@ describe("register", () => {
       email: "lan@example.com",
       password: "correct horse",
       display_name: "Lan Nguyễn",
+      locale: "en",
     });
+  });
+
+  it("sends the active UI language as locale", async () => {
+    await i18n.changeLanguage("vi");
+    const calls = mockApi({ "GET /v1/me": signedOut, "POST /v1/auth/register": me });
+    renderApp("/register");
+    await userEvent.type(await screen.findByLabelText("Tên của bạn"), "Lan");
+    await userEvent.type(screen.getByLabelText("Email"), "lan@example.com");
+    await userEvent.type(screen.getByLabelText("Mật khẩu"), "correct horse");
+    await userEvent.click(screen.getByRole("button", { name: "Tạo tài khoản" }));
+    await waitFor(() => expect(calls.some((c) => c.path === "/v1/auth/register")).toBe(true));
+    expect(calls.find((c) => c.path === "/v1/auth/register")?.body).toMatchObject({ locale: "vi" });
   });
 });
 

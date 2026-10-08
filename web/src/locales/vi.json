@@ -28,7 +28,8 @@
     "signIn": "Đăng nhập",
     "register": "Tạo tài khoản",
     "account": "Tài khoản của tôi",
-    "signOut": "Đăng xuất"
+    "signOut": "Đăng xuất",
+    "yearbooks": "Kỷ yếu của tôi"
   },
   "fields": {
     "email": "Email",
@@ -96,6 +97,79 @@
     "invalid_token": "Liên kết đã hết hạn hoặc đã được sử dụng. Hãy yêu cầu liên kết mới.",
     "rate_limited": "Bạn thử quá nhiều lần. Hãy thử lại sau {{minutes}} phút.",
     "busy": "Máy chủ đang bận. Hãy thử lại sau giây lát.",
-    "unauthenticated": "Phiên đăng nhập đã hết. Hãy đăng nhập lại."
+    "unauthenticated": "Phiên đăng nhập đã hết. Hãy đăng nhập lại.",
+    "not_found": "Không tìm thấy nội dung này.",
+    "limit_reached": "Bạn chỉ có thể có tối đa 20 kỷ yếu. Hãy xóa bớt một cuốn.",
+    "payload_too_large": "Ảnh này quá lớn. Giới hạn là 10 MB.",
+    "unsupported_media_type": "Chỉ hỗ trợ ảnh JPEG, PNG và WebP.",
+    "invalid_image": "Không đọc được ảnh này, hoặc ảnh quá lớn về số điểm ảnh (tối đa 12000 px mỗi cạnh). Hãy thử ảnh khác.",
+    "quota_exceeded": "Bạn đã đạt giới hạn ảnh (200 ảnh mỗi kỷ yếu, tổng cộng 500 MB). Hãy xóa bớt ảnh trước.",
+    "storage_error": "Kho lưu ảnh không phản hồi. Vui lòng thử lại.",
+    "invalid_media": "Ảnh đó không thuộc kỷ yếu này.",
+    "invalid_title": "Nhập tiêu đề từ 1 đến 120 ký tự, không chứa ký tự ẩn hoặc ký tự điều khiển.",
+    "invalid_school_name": "Tên trường tối đa 120 ký tự, không chứa ký tự ẩn hoặc ký tự điều khiển.",
+    "invalid_class_name": "Tên lớp tối đa 120 ký tự, không chứa ký tự ẩn hoặc ký tự điều khiển.",
+    "invalid_graduation_year": "Nhập một năm từ 1950 đến 2100.",
+    "invalid_motto": "Phương châm tối đa 200 ký tự, không chứa ký tự ẩn hoặc ký tự điều khiển.",
+    "invalid_full_name": "Nhập họ tên từ 1 đến 100 ký tự, không chứa ký tự ẩn hoặc ký tự điều khiển.",
+    "invalid_nickname": "Biệt danh tối đa 50 ký tự, không chứa ký tự ẩn hoặc ký tự điều khiển.",
+    "invalid_birthday": "Nhập một ngày có thật trong quá khứ, không sớm hơn năm 1900.",
+    "invalid_quote": "Câu nói tối đa 500 ký tự, không chứa ký tự ẩn hoặc ký tự điều khiển.",
+    "invalid_hobbies": "Sở thích tối đa 300 ký tự, không chứa ký tự ẩn hoặc ký tự điều khiển.",
+    "invalid_future_plans": "Dự định tối đa 300 ký tự, không chứa ký tự ẩn hoặc ký tự điều khiển."
+  },
+  "books": {
+    "title": "Kỷ yếu của tôi",
+    "new": "Kỷ yếu mới",
+    "newTitle": "Kỷ yếu mới",
+    "create": "Tạo kỷ yếu",
+    "empty": "Bạn chưa có kỷ yếu nào. Hãy tạo cuốn đầu tiên.",
+    "more": "Xem thêm",
+    "back": "Về danh sách kỷ yếu",
+    "notFound": "Kỷ yếu này không tồn tại."
+  },
+  "book": {
+    "heading": "Thông tin kỷ yếu",
+    "title": "Tiêu đề",
+    "school": "Trường",
+    "class": "Lớp",
+    "year": "Năm tốt nghiệp",
+    "motto": "Phương châm",
+    "language": "Ngôn ngữ của kỷ yếu",
+    "pageSize": "Khổ giấy",
+    "pageSizes": {
+      "A5": "A5 (148 × 210 mm)",
+      "A4": "A4 (210 × 297 mm)",
+      "Letter": "US Letter (8,5 × 11 inch)"
+    },
+    "save": "Lưu thông tin",
+    "saved": "Đã lưu.",
+    "dangerHeading": "Xóa kỷ yếu này",
+    "deleteWarning": "Thao tác này xóa vĩnh viễn kỷ yếu, trang giới thiệu của bạn và toàn bộ ảnh.",
+    "delete": "Xóa kỷ yếu",
+    "confirmDelete": "Xóa “{{title}}” cùng toàn bộ ảnh? Không thể hoàn tác."
+  },
+  "profile": {
+    "heading": "Giới thiệu về bạn",
+    "fullName": "Họ và tên",
+    "nickname": "Biệt danh",
+    "birthday": "Ngày sinh",
+    "quote": "Câu nói yêu thích",
+    "hobbies": "Sở thích",
+    "plans": "Dự định tương lai",
+    "save": "Lưu giới thiệu"
+  },
+  "photos": {
+    "title": "Ảnh",
+    "add": "Thêm ảnh",
+    "hint": "JPEG, PNG hoặc WebP, tối đa 10 MB mỗi ảnh. Ảnh chỉ mình bạn xem được.",
+    "empty": "Chưa có ảnh nào để hiển thị.",
+    "alt": "Ảnh {{n}}",
+    "cover": "Ảnh bìa",
+    "profile": "Ảnh đại diện",
+    "delete": "Xóa",
+    "confirmDelete": "Xóa ảnh này? Không thể hoàn tác.",
+    "busy": "Máy chủ đang bận, đang thử lại…",
+    "dismiss": "Đóng"
   }
 }

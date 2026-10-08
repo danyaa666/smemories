@@ -3,6 +3,7 @@ package pdf
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"image"
 	_ "image/jpeg" // registers the JPEG decoder for DecodeConfig
 	_ "image/png"  // registers the PNG decoder for DecodeConfig
@@ -90,6 +91,8 @@ func (r *renderer) clip(e templates.Element, x, y, w, h float64) func() {
 		r.pdf.ClipRoundedRect(x, y, w, h, e.Radius*r.ss, false)
 	case "circle":
 		r.pdf.ClipCircle(x+w/2, y+h/2, w/2, false)
+	case "ellipse":
+		r.pdf.ClipEllipse(x+w/2, y+h/2, w/2, h/2, false)
 	default:
 		r.pdf.ClipRect(x, y, w, h, false)
 	}
@@ -107,6 +110,7 @@ func (r *renderer) drawImage(ctx context.Context, e templates.Element, ox, oy fl
 		return err
 	}
 	x, y, w, h := (ox+e.X)*r.sx, (oy+e.Y)*r.sy, e.W*r.sx, e.H*r.sy
+	defer r.rotated(e, x, y, w, h)() // deferred first, so it ends after the clip does
 	end := r.clip(e, x, y, w, h)
 	defer end()
 	if !info.ok {
@@ -123,5 +127,30 @@ func (r *renderer) drawImage(ctx context.Context, e templates.Element, ox, oy fl
 	// AllowNegativePosition is mandatory: a cover crop starts at a negative x or y and fpdf otherwise
 	// silently draws the image at the margin (ADR 0002, pinned by TestCoverImageIsPlacedAtNegativeOffset).
 	r.pdf.ImageOptions(id, ix, iy, iw, ih, false, fpdf.ImageOptions{ImageType: info.ptype, AllowNegativePosition: true}, 0, "")
+	return nil
+}
+
+// drawBackground places a page background over the whole page. An asset is registered with fpdf once and
+// reused by every page that names it; the templates package has already checked its type, size and ratio.
+func (r *renderer) drawBackground(asset string, pw, ph float64) error {
+	key := "bg:" + asset
+	ptype, ok := r.bgs[asset]
+	if !ok {
+		data, err := r.tmpl.Asset(asset)
+		if err != nil {
+			return fmt.Errorf("render pdf: background: %w", err)
+		}
+		_, format, err := image.DecodeConfig(bytes.NewReader(data))
+		if err != nil {
+			return fmt.Errorf("render pdf: background %q: %w", asset, err)
+		}
+		ptype = map[string]string{"jpeg": "JPG", "png": "PNG"}[format]
+		r.pdf.RegisterImageOptionsReader(key, fpdf.ImageOptions{ImageType: ptype}, bytes.NewReader(data))
+		if err := r.pdf.Error(); err != nil {
+			return fmt.Errorf("render pdf: background %q: %w", asset, err)
+		}
+		r.bgs[asset] = ptype
+	}
+	r.pdf.ImageOptions(key, 0, 0, pw, ph, false, fpdf.ImageOptions{ImageType: ptype}, 0, "")
 	return nil
 }

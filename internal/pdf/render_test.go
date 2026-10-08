@@ -167,7 +167,7 @@ func TestFpdf_NonBMPRunePanics(t *testing.T) {
 }
 
 func TestClassify(t *testing.T) {
-	g, err := newGlyphs()
+	g, err := newGlyphs("BeVietnamPro")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -206,11 +206,11 @@ func TestPrepareText(t *testing.T) {
 
 func testRenderer(t *testing.T) *renderer {
 	t.Helper()
-	g, err := newGlyphs()
+	g, err := newGlyphs("BeVietnamPro")
 	if err != nil {
 		t.Fatal(err)
 	}
-	r := &renderer{tmpl: tmpl(t, "classic"), glyphs: g, widths: map[widthKey]float64{}}
+	r := &renderer{tmpl: tmpl(t, "classic"), faces: map[string]*glyphs{"BeVietnamPro": g}, widths: map[widthKey]float64{}}
 	r.pdf = r.newDoc([2]float64{148, 210}, fixedNow)
 	r.pdf.AddPage()
 	return r
@@ -218,7 +218,10 @@ func testRenderer(t *testing.T) *renderer {
 
 func (r *renderer) fitText(text string, b textBox) layout {
 	t, cut := prepareText(text)
-	us, _ := r.toUnits(t, b.bold)
+	if b.face == nil {
+		b.face = r.faces["BeVietnamPro"]
+	}
+	us, _ := r.toUnits(b.face, t, b.bold)
 	return r.fit(us, b, cut)
 }
 

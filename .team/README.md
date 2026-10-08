@@ -10,18 +10,18 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 22 | T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-039, T-040, T-041, T-042, T-044 |
-| TODO | 1 | T-034 |
-| READY_FOR_QA | 1 | T-045 |
-| QA_PASS | 1 | T-038 |
-| MERGED | 6 | T-015, T-033, T-035, T-036, T-037, T-043 |
-| DONE | 14 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-028, T-030 |
+| BACKLOG | 25 | T-013, T-014, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-039, T-040, T-041, T-042, T-044, T-049, T-050, T-052, T-053 |
+| TODO | 4 | T-034, T-046, T-048, T-054 |
+| IN_PROGRESS | 1 | T-047 |
+| IN_QA | 1 | T-051 |
+| MERGED | 1 | T-016 |
+| DONE | 22 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-028, T-030, T-033, T-035, T-036, T-037, T-038, T-043, T-045 |
 
-**Awaiting your review (MERGED):** T-015 (Web: auth pages and session handling); T-033 (CI: do not cancel in-progress runs on develop and main); T-035 (T-010 follow-ups: template tests iterate templates.List()); T-036 (Bound the memory of image processing (caps, concurrency, memory limit)); T-037 (US Letter page size, end to end); T-043 (Note field catalogue (internal/notefields): closed set of form fields with EN/VI labels and validation)
+**Awaiting your review (MERGED):** T-016 (Web: yearbook list, create/edit, profile and photo upload UI)
 
 **Open questions for you:** none
 
-_Board last written 2026-10-08 08:44Z_
+_Board last written 2026-10-08 14:02Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -243,6 +243,15 @@ The table of EN/VI labels and hints is in the description of https://github.com/
 
 QA passed and my review is clean (head 9546d3b, CI green, merges cleanly). High risk because it includes a database migration (0009): it adds Letter to the yearbook page_size enum; existing books are untouched, and rolling back turns Letter books into A5. Nothing in the web UI offers Letter yet (the yearbook form comes with T-016). Command: cd /Users/unisoft/GolandProjects/awesomeProject1 && /Users/unisoft/.claude/plugins/cache/claude-agent-team/agent-team/0.3.0/bin/team approve T-037
 
+### Q-014 — Approve merge of T-045 (register accepts a locale)?
+- **Status:** RESOLVED
+- **Asked:** 2026-10-08 08:52Z
+- **Blocks:** T-045
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+QA passed and my review is clean (head 8a9cafb, CI green). High risk only because it touches the register endpoint contract (one optional field 'locale', en or vi, default en). Fixes the Vietnamese UI sending an English verification email. Command: cd /Users/unisoft/GolandProjects/awesomeProject1 && /Users/unisoft/.claude/plugins/cache/claude-agent-team/agent-team/0.3.0/bin/team approve T-045
+
 <!-- questions:end -->
 
 ## 4. Architecture & decision log
@@ -272,6 +281,8 @@ Owner decisions (2026-10-06, `/team-init` interview). "Rejected" lists the optio
 | D-19 | **Editing is staged: guided customisation after M1 (M1b), the free-layout editor as its own milestone after go-live (M4).** | Owner answer in chat 2026-10-08 (Canva-style request). Stage 0 (M1): system templates with template-driven forms. Stage 1 (M1b): per-book design copy with guided changes. Stage 2 (M4): free-layout editor (add, remove, move, resize, replace), order against the class yearbook M3 decided at the M2 retrospective. The document model is the template JSON (format v2); the Go renderer stays the single source of truth (L-12, D-12). Epic E09. | Full editor right after M1; fixed templates only | Stage 1 is stable, or the owner brings the editor forward |
 | D-20 | **Each yearbook owner edits their own copy of a template; users do not publish templates to others.** | Owner answer in chat 2026-10-08. System templates are starting points curated through the import pipeline (E08); a student's edits belong to their book only, so there is no moderation, copyright or abuse surface for shared designs. | Template gallery where users publish; admin-only template editor | Students ask to share designs |
 | D-21 | **Friends' notes are template-driven from the start: answers keyed by field id from a closed catalogue, form generated from the template's fields.** | Owner answer in chat 2026-10-08 (the designs need richer forms: how we met, first impression, best memory, wish). `internal/notefields` (T-043) defines fields with limits and EN/VI labels; T-034 stores `notes.answers` JSON validated against it; the public lookup returns the form's `fields`; templates declare `note_fields` (T-044). Answers survive a template change. The catalogue has no personal-data fields beyond a name (D-01 data minimisation). | Fixed columns in M1, migrate later (rewrite of tables, form, moderation, export); fixed fields forever | A field needs a type the catalogue lacks (rating, choice), or contributors must give contact data |
+| D-22 | **Email verification and password reset use 6-digit one-time codes typed by the student, not emailed links; a dev-only fixed code `123123` exists and must be deleted before production.** | Owner answers in chat 2026-10-08. Replaces the link design of T-007 (nothing is in production). Codes are stored as HMAC-SHA256 with a server key, valid 30 min (verify) or 15 min (reset), 5 wrong attempts lock a code, plus per-user and per-IP limits (T-048, web T-049). The dev code is `SMEM_DEV_FIXED_OTP=123123`, honoured only when `SMEM_ENV` is `dev` or `test`; the API refuses to start otherwise if it is set. Every such shortcut is tagged `DEV-SHORTCUT`, listed in `docs/dev-shortcuts.md`, and removed by T-050, a prerequisite of the first deploy (T-023); the rule is in CLAUDE.md. | Keep links with a dev shortcut; links and codes together | Phones prove awkward with codes, or a provider needs links (then add magic links beside codes) |
+| D-23 | **All time-limited data lives in Redis (Valkey locally; Redis-protocol compatible): login sessions, the 6-digit email codes with their attempt counters, and every rate limiter.** | Owner request in chat 2026-10-08. Native expiry replaces purge jobs; limiters become correct across several API tasks. MySQL keeps everything durable (users, identities, yearbooks, notes, media metadata, collection links). Local and CI run Valkey 8 pinned by digest (BSD licence; the code uses only the Redis protocol, client `github.com/redis/go-redis/v9`). Policy: sessions and OTP attempts fail closed (503) when Redis is down; other limiters fail open with an ERROR log; Redis runs with `noeviction` and AOF `everysec` so memory pressure fails writes loudly and a restart keeps sessions. Nothing is in production, so no data migration: the `sessions` table and the planned `email_codes` table are not kept. Tasks T-051 (foundation), T-052 (sessions), T-053 (limiters); T-048 writes codes straight to Redis. AWS: ElastiCache (Valkey or Redis OSS) with a cost estimate agreed with the owner in T-023. | Keep MySQL tables with purge jobs; Redis only for rate limits | Sessions must be queryable (device list) beyond a simple index, or the ElastiCache cost is unacceptable |
 
 Leader decisions (low-risk, inside the approved stack):
 
@@ -820,7 +831,7 @@ Owner lists pending/approved/hidden notes per yearbook, approves or hides them, 
 - **Branch:** —
 - **PR:** —
 - **Updated:** 2026-10-06 10:13Z by leader
-- **Comments-seen:** 1
+- **Comments-seen:** 2
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/03-export-job-assemble-book-render-pdf-store.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -830,9 +841,10 @@ Asynchronous export: POST creates a job (one active export per book), a bounded 
 
 #### Comments
 - 2026-10-07 11:38Z · leader · Leader note from the T-010 review: pdf.Render has no caps on notes or text length (10,000 notes with three 100 KB fields took 87 s of CPU in QA's adversarial test, memory bounded). The export job must (1) run Render under a context deadline (60 s, matching the quality bar), (2) pass only approved notes (T-034 already caps a collection at 300 notes and messages at 2000 characters), (3) report warnings (low_resolution, missing_glyph, missing_image, extra_photos, text_truncated) to the owner in plain language (T-019).
+- 2026-10-08 13:31Z · leader · On hold for planning: the export job may be replaced by browser print-to-PDF; spike T-054 decides. Do not promote until D-24.
 
 ### T-015 — Web: auth pages and session handling
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -843,8 +855,8 @@ Asynchronous export: POST creates a job (one active export per book), a bounded 
 - **Assignee:** —
 - **Branch:** task/t-015-web-auth-pages-and-session-handling
 - **PR:** https://github.com/danyaa666/smemories/pull/25
-- **Updated:** 2026-10-08 03:54Z by leader
-- **Comments-seen:** 8
+- **Updated:** 2026-10-08 09:23Z by leader
+- **Comments-seen:** 9
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/04-web-auth-pages-and-session-handling.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -861,9 +873,10 @@ Register, login, logout, verify-email, forgot/reset password pages; session boot
 - 2026-10-08 03:45Z · dev · Head f24eb25. (1) token: captureUrlToken() in main.tsx moves ?token= into memory via history.replaceState before React renders, so GET /v1/me (AuthNav) and the POST never see it; useUrlToken reads the stash (path-matched, cleared after first use); <meta name=referrer no-referrer> in index.html. Tests (auth.test.tsx 'token in the address bar', verify + reset under StrictMode, every fetch records location.search; plus reset test now checks all calls) fail when the capture is removed. (2) src/queryClient.ts networkMode 'always' for queries and mutations, used by main.tsx and test renderApp; 'offline' test fails with networkMode online. (3) overflow-wrap:anywhere on main and .auth-nav a, header/nav flex-wrap, min-width 0: CSS only, jsdom cannot measure; QA please recheck 100-char name at 375 px. (4) spacing: header gap, nav button padding, margin under the form before the Google button. make lint build test green, 60 vitest tests. Not run in a real browser by me.
 - 2026-10-08 03:53Z · qa · Re-test of head f24eb25 (PR #25 CI green: go, go-integration, security, web). Real API (built from worktree, fresh DB, log mailer) + headless Chrome (playwright-core), both vite dev and the production build via vite preview. Mechanical: web lint+prettier, 60 vitest, build green. (1) TOKEN, PASS: verify and reset links opened from the logged mail: first GET /api/v1/me, the POST and the follow-up GET /me all see the clean address bar (/verify-email, /reset-password) with empty Referer; only the document GET and static asset/module fetches happen while the token is in the URL (unavoidable, Referer empty thanks to the meta tag). Verify: POST sent once, account flips to verified. Reset: weak password -> 400 field error and the token is still held in memory, strong password then succeeds, new password logs in. Hard reload after removal: verify shows 'expired or already used', reset shows the same plus 'Ask for a new link', no POST fired; back/forward does not bring the token back. Link reuse -> expired message. (2) OFFLINE, PASS: context offline, submit on login -> 'Could not reach the server...' (no stuck 'Please wait'); /me aborted on /account -> retry panel, retry works. 500 html, 503 busy and 403 csrf messages ok. (3) 100-char 'W' name at 375 px (header and account): scrollWidth-clientWidth = 0, name wraps; spaced long name and long email also 0. (4) SPACING 375 px, PASS: brand no longer touches nav, links stay on one line in VI, Google button has a gap under Sign in (built with VITE_GOOGLE_SIGNIN=true, href /api/v1/auth/google/start?return_to=%2Faccount). (5) REGRESSION, PASS: register (bad email, weak pw, duplicate, empty), login wrong pw, 429 lockout 'try again in 15 min', logout, reload keeps session, RequireAuth, verify from mail (EN+VI), reuse/garbage/no token, resend 3 ok then 429 '60 min', forgot (same text), reset (EN+VI), ?error= codes incl. HTML payload escaped, EN/VI switch persisted, keyboard Enter + focus ring. Non-blocking observations: (a) reload on /reset-password BEFORE submitting loses the still-valid token (shown as 'expired or already used'; user must request a new link); acceptable consequence of the strip-first rule, a sessionStorage stash could soften it. (b) Sign out and 'Send the link again' remain default grey browser buttons (cosmetic). (c) Vietnamese UI user still gets the English verify mail: T-045. Not covered: real Google round trip, screen reader pass, Safari/Firefox.
 - 2026-10-08 03:54Z · leader · merged 66d5b80 (squash), QA_PASS on head f24eb25 after one rework, CI green. Review: token moved into memory before React renders (no request carries it, Referer empty, verified in a real browser), redirect target allow-listed, return_to URL-encoded, no raw HTML, typed API client, EN/VI parity, 60 tests. For owner to check: cd web && npm run dev with the API on :8080; register, read the verification link in the API log, open it (the token disappears from the address bar), try forgot and reset. Google button appears only with VITE_GOOGLE_SIGNIN=true. Known: reloading /reset-password before submitting loses the token (by design: ask for a new link); verification mail is English for Vietnamese users until T-045.
+- 2026-10-08 09:23Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-015, T-033, T-035, T-036')
 
 ### T-016 — Web: yearbook list, create/edit, profile and photo upload UI
-- **Status:** BACKLOG
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -872,10 +885,10 @@ Register, login, logout, verify-email, forgot/reset password pages; session boot
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-06 10:13Z by leader
-- **Comments-seen:** 0
+- **Branch:** task/t-016-web-yearbook-list-create-edit-profile-an
+- **PR:** https://github.com/danyaa666/smemories/pull/31
+- **Updated:** 2026-10-08 14:02Z by leader
+- **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E03-yearbooks/03-web-yearbook-list-create-edit-profile-and.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -884,6 +897,26 @@ Register, login, logout, verify-email, forgot/reset password pages; session boot
 Dashboard of the user's yearbooks; create/edit form for book information and the owner profile; photo upload with progress, thumbnails and delete; set cover and profile photo.
 
 #### Comments
+- 2026-10-08 09:04Z · leader · T-009 and T-015 are merged: unblocked. Spec carries leader notes (PUT profile clears photo_media_id unless sent; Letter page size selector; upload error codes).
+- 2026-10-08 09:06Z · dev · Spec gap, not blocking: the API has no way to LIST a yearbook's photos (no GET /v1/yearbooks/{id}/media, and Yearbook only carries cover_media_id and profile.photo_media_id). So after a page reload the web UI can show only the cover and profile photo; the gallery of the other photos exists only for the current session's uploads. I am building the UI so that a list endpoint plugs in with one query (items: id,width,height,bytes). Suggest a follow-up API task: GET /v1/yearbooks/{id}/media -> {media:[{id,width,height,bytes,created_at}]} (owner only, newest first), then a tiny web follow-up. Tell me if you want me to do the API part inside T-016 instead.
+- 2026-10-08 09:13Z · dev · Web UI done (list, create/edit, profile, photo upload/progress/thumbs/delete, cover and profile photo, A5/A4/Letter, en+vi). 82 vitest tests, lint/typecheck/i18n/build green. Test: npm test in web/; manual: /yearbooks. NOT verified in a real browser against a real API (private compose stack was blocked for me); QA please check 375 px, real upload through Vite proxy (CSRF Origin), thumbnails, 413/429/503 live. Known gap: API has no list-photos endpoint, so after reload only cover/profile photo show (see comment #2).
+- 2026-10-08 14:01Z · qa · Tested live in headless Google Chrome (playwright-core) against the PR head (3bc5d24, CI green: go, go-integration, security, web), real API + MySQL + MinIO (make up/migrate, API from the T-016 worktree, npm run dev, Vite proxy /api).
+  Evidence (AC -> how -> result):
+  - List with paging: 20 books via API; forced limit=5 through a browser route rewrite (UI sends none; default 20 = per-user cap so Show more is unreachable in practice) -> 5 cards, 3 "Show more" clicks -> 20 unique cards. Empty state, 375 px: no horizontal overflow (list/new/edit), buttons >=44 px. PASS
+  - Create: UI form -> book created, redirected to edit; page-size selector offers A5, A4, US Letter, Letter persisted and shown after reload. 21st book -> 409 limit_reached text (en and vi). Validation: blank title, year 1800, 20.5, zero-width char title -> field errors. PASS
+  - Edit/profile: PATCH title/page size keeps cover and profile photo; PUT profile (name, nickname, birthday) keeps photo_media_id and cover (checked via GET after each save). PASS
+  - Upload: progress bar 0.09..1.00 under 600 KB/s throttle, thumbs load via proxy with session cookie (480 px), batch of mixed good/bad files continues past a 415. PASS
+  - Cover / profile photo set, toggle off (aria-pressed), delete photo with confirm -> server clears cover; delete yearbook (cancel then confirm) -> removed from list, DB row gone, cascade OK. PASS
+  - Errors, en + vi, live language switch re-translates: 415 (txt), 400 invalid_image (corrupt PNG, 12001 px wide PNG), 413 (11 MB; real 413 seen), 409 quota_exceeded (200 rows seeded in a book), 429 (70-file batch: 1 real 429 with Retry-After 510 -> "9 min", rest of the batch stops), 503 busy (API with SMEM_MEDIA_MAX_CONCURRENT=1, 4 slow uploads hold slots: "trying again..." status, 3 retries at 2 s, then busy message; works once slots free). PASS
+  - CSRF through Vite proxy: browser flows work (Origin localhost:5173 passes). curl via :5173: bad Origin and missing Origin -> 403 csrf_origin_mismatch on upload, PATCH, PUT profile, DELETE media, DELETE book; good Origin 201/200; no cookie -> 401. PASS
+  - Mechanical: web npm test 82/82, lint (prettier+eslint), typecheck, lint:i18n, check:api, build all green. No endpoint changed, so no Postman change needed.
+  Known gap confirmed, not a defect: photos uploaded earlier vanish after reload, only cover/profile photo remain (T-046).
+  Non-blocking observations (all minor):
+  1. /yearbooks/<nonexistent id> shows "Loading..." for ~7 s before "This yearbook does not exist" (react-query retries the 404 three times); set retry:false for 404.
+  2. After "Save details" and "Save profile" both show "Saved." and neither clears when the other form is saved, so the status is ambiguous.
+  3. After a 429 every remaining file in the batch gets its own identical error row (23 rows for a 70-file batch); one summary line would read better. The 429 text says "Too many attempts" for uploads.
+  4. "Delete yearbook" button is small (<44 px) and unstyled next to the other buttons at 375 px; a 404 console error on page load (likely favicon) is pre-existing.
+- 2026-10-08 14:02Z · leader · merged de0233e (squash), QA_PASS on head 3bc5d24 (real browser run against real API and MinIO, EN and VI, 375 px, all upload error codes), CI green. Review: typed API client, React-escaped rendering, upload progress through the shared error mapper, busy retry bounded to 3, profile save always sends photo_media_id, page size A5/A4/Letter. For owner to check: run the web app, create a yearbook, upload photos, set cover and profile photo. Known: uploaded photos vanish after a reload until T-046; minor polish items listed in the QA note.
 
 ### T-017 — Web: notes link management and moderation inbox
 - **Status:** BACKLOG
@@ -944,7 +977,7 @@ Mobile-first public page opened from the shared link: name, relationship, messag
 - **Branch:** —
 - **PR:** —
 - **Updated:** 2026-10-06 10:13Z by leader
-- **Comments-seen:** 0
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/04-web-template-picker-pdf-preview-pdf-js-and.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -953,6 +986,7 @@ Mobile-first public page opened from the shared link: name, relationship, messag
 Choose a template (thumbnails from sample renders), trigger export, show progress, preview the real PDF with pdf.js (works on phones), download.
 
 #### Comments
+- 2026-10-08 13:31Z · leader · On hold for planning: the preview and export UI depend on the spike T-054 outcome (D-24). Do not promote until then.
 
 ### T-020 — End-to-end smoke test of the M1 journey in CI (Playwright)
 - **Status:** BACKLOG
@@ -1029,14 +1063,14 @@ Multi-stage Dockerfile (distroless or alpine, non-root), production config valid
 - **Priority:** P2
 - **Type:** infra
 - **Milestone:** M2
-- **Depends-on:** T-022
+- **Depends-on:** T-022, T-050
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-06 10:13Z by leader
+- **Updated:** 2026-10-08 11:09Z by leader
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E06-go-live/03-aws-infrastructure-as-code-and-deploy.md`
@@ -1274,7 +1308,7 @@ db.Open: treat MySQL 1044 as permanent; README warning about bare docker compose
 #### Comments
 
 ### T-033 — CI: do not cancel in-progress runs on develop and main
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** infra
 - **Milestone:** M1
@@ -1285,8 +1319,8 @@ db.Open: treat MySQL 1044 as permanent; README warning about bare docker compose
 - **Assignee:** —
 - **Branch:** task/t-033-ci-do-not-cancel-in-progress-runs-on-dev
 - **PR:** https://github.com/danyaa666/smemories/pull/22
-- **Updated:** 2026-10-08 08:34Z by leader
-- **Comments-seen:** 7
+- **Updated:** 2026-10-08 09:23Z by leader
+- **Comments-seen:** 8
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/09-ci-do-not-cancel-in-progress-runs-on-develop.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1302,6 +1336,7 @@ Evidence from the T-006/T-030 merges: the workflow's concurrency group has cance
 - 2026-10-08 03:21Z · leader · Leader review OK on head 74346f4 (QA_PASS on the same head, CI 4/4 green, actionlint clean apart from two old shellcheck notes). Concurrency group is the PR ref for pull_request events (cancel in progress) and the commit SHA for pushes (never cancelled), the documented idiom; mysql image pinned to the current manifest digest; docs/ci.md matches; no permission, secret or action change. Not verified live (QA could not push to develop): the first back-to-back develop pushes after the merge must show no cancelled run; I will check with gh run list. Note for later: the digest pin means MySQL patch updates are manual; docs/ci.md should say how to refresh it (add when T-004's follow-ups are next touched). Awaiting owner approval.
 - 2026-10-08 08:34Z · human · owner approved merge
 - 2026-10-08 08:34Z · leader · merged 96059a6 (squash), owner-approved in chat 2026-10-08, QA_PASS on head 74346f4. Pushes to develop and main now get one concurrency group per commit (never cancelled); PRs still cancel superseded runs; mysql image pinned by digest. To verify live: the next back-to-back develop pushes must show no cancelled run (gh run list --branch develop).
+- 2026-10-08 09:23Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-015, T-033, T-035, T-036')
 
 ### T-034 — Public note submission (text and photos)
 - **Status:** TODO
@@ -1313,10 +1348,10 @@ Evidence from the T-006/T-030 merges: the workflow's concurrency group has cance
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-08 03:19Z by leader
-- **Comments-seen:** 1
+- **Branch:** task/t-034-public-note-submission-text-and-photos
+- **PR:** 30
+- **Updated:** 2026-10-08 09:24Z by leader
+- **Comments-seen:** 4
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/02-public-note-submission.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1326,9 +1361,37 @@ Public endpoint where a friend with a collection link submits a note with text, 
 
 #### Comments
 - 2026-10-08 08:44Z · leader · Leader: T-043 is merged (0032e6f), you are unblocked. First commit: change the Vietnamese label of field how_we_met from 'Chúng ta quen nhau thế nào' to 'Chúng mình quen nhau thế nào' in internal/notefields (owner-approved wording). Spec updated with the template-driven answers design; read it again.
+- 2026-10-08 09:03Z · dev · PR #30 head e90e331. How to test: make lint build test test-integration (all green); newman from postman/ (notes collection, 71 req / 135 assertions, run twice). Decision for leader: AC7 numbers (10/hr, 40/day per IP) contradict the later leader note (class behind one IP); I used 100/hr + 300/day per IP and 60/hr per collection. Verifier sees headers only. Migration 0010; TestMigratePageSizeLetter now rolls back two migrations. Not covered by tests: real 40 MiB multipart over a socket (httptest only).
+- 2026-10-08 09:24Z · qa · PR #30 head e90e331, CI green (go, go-integration, security, web). Everything else passed, one major finding.
+  ISSUES
+  1. [MAJOR, availability, cross-tenant] Four stalled uploads switch off photo submissions for the whole API. Repro: SMEM_ENV=dev API with default SMEM_MEDIA_MAX_CONCURRENT=2 (inflight cap = 2*slots = 4). Open 4 TCP connections to POST /v1/public/collect/{token}/notes (any valid link; anyone can register and create their own), send the headers, a valid answers part and the start of a photos part (head + 3 bytes of a JPEG) with Content-Length 5000000, then send nothing. A legit request with 1 photo then answers 503 busy (Retry-After 2) and still does 26 s later; text-only notes still work; photos work again only when the stalled sockets close (the route deadline is 120 s, and the attacker reopens them). No rate limit applies (counted only after validation) and the slot pool is global, not per IP or collection. Expected: one hostile client cannot take all slots. Suspected area: internal/notes/submit.go readParts (slot taken at the first photos part, held during the slow read, up to 120 s). Suggested fix: rolling idle deadline per read (e.g. 10-15 s without progress via http.NewResponseController, still 120 s overall) and a per-IP cap on concurrent photo uploads (e.g. 2); or take the global slot only once the part is fully read and bound the pending bytes another way. Add a test that 4 stalled readers from one IP do not block a fifth client.
+  2. [MINOR, doc drift] api/openapi.yaml (submitNote) and the T-034 leader note say 503 busy comes when no slot frees up 'within a few seconds'. Actual: 503 is immediate when 4 submissions already hold photo bytes (12 parallel 3-photo submissions: 4 x 201, 8 x 503 in 0.6 s). Either wait a few seconds in readParts or reword the doc; the web form (T-018) must retry on 503 honouring Retry-After.
+  3. [MINOR] A client that disconnects while its photos are processed is logged at ERROR 'notes: storage failed ... context canceled' and counted as 502/500 (no data problem, no orphan, only alert noise). Treat a cancelled request context as a client abort (debug log).
+  EVIDENCE (all real, API binary from the branch against MySQL 8.4 and MinIO, own DB and bucket, removed afterwards)
+  - Mechanical: make build, make lint (exit 0), go vet, gofmt, go test -race ./... and make test-integration all pass. Migration 0010: up (v10), down (v9, notes and note_photos gone), up again OK; no IP or user-agent column in notes or media.
+  - AC1: 201 {note:{id}}, row status pending. Errors: unknown_field (id echoed only if [a-z_]{1,40}; '<script>' id not echoed), missing_answer (also blank and null), invalid_answer (message names the field, never the value), invalid_body (array, string, number/nested values, not JSON, invalid UTF-8, BOM, empty, answers twice, >16 KiB, no answers part), 415 for JSON, urlencoded, multipart/mixed, 400 for a missing boundary, empty and truncated bodies, 400 too_many_photos with 4 photos, 405 (Allow: POST) for GET/PUT/DELETE. how_we_met is unknown_field under the default set.
+  - AC2: boundaries 1/60/61 (name) and 2000/2001 (message) pass, 2000 emoji counted as characters; control, NUL, newline-in-name, RLO and zero-width space rejected, ZWJ allowed. Emoji, ZWJ family sequence, flags, skin tone and Vietnamese round trip byte-identical (hex of the JSON_UNQUOTE value equals the sent UTF-8); NFD input stored as NFC. SQLi and HTML strings stored verbatim and harmless.
+  - AC3: 1 and 3 photos (JPEG+PNG+JPEG), contributor rows, display+thumb objects; EXIF Make/Artist tags absent from the stored object. Rejected whole: html named .jpg, svg, GIF, empty file, truncated JPEG, PNG bomb 30000x30000 and 12001 px, JPEG with forged 60000x60000 SOF, good+bad and good,good,bad: 0 rows and 0 objects each time. A photo 1 byte over 10 MiB is 413 payload_too_large; just under is accepted.
+  - AC4: real failure injection: RENAME TABLE note_photos (and notes) away so the insert fails after 3 photos were stored: 500, media rows and S3 objects unchanged; bucket missing: 502 storage_error, no rows; text-only still 201 with storage down. Dev's tests (store fails on 2nd photo, thumbnail of last, dropped table, client gone) read and are meaningful.
+  - AC5: revoked, unknown, malformed, 10 KB token: 404; expired: 410; the link is checked before content type (revoked+JSON = 404). Revoked or expired between the first byte and the last: 404/410, 0 notes, 0 media, 0 objects.
+  - AC6: 40 MiB over a real socket: 413 in 0.5 s, RSS 53 -> 77 MB, sender stopped at 37 MiB. 40 MiB to an unknown token: 404 after 1 MiB. 31 MiB junk part under the cap: 201 (see note). 3 x 6.7 MiB photos: 201 in 2.1 s, peak RSS 158 MB; 12 parallel such submissions: 4 x 201, 8 x 503, peak RSS 407 MB. 30 s trickle upload (past the 15 s global read timeout): 201, so ExtendDeadlines works. 200 media rows: 201st photo is 409 quota_exceeded, nothing stored. 300-note cap: 296 pre-filled + 30 parallel (text and photo): exactly 4 x 201 and 26 x 409, collection holds exactly 300, owner list says 300; 299 pre-filled + 4 parallel 2-photo submissions: 1 x 201, 3 x 409, media +2 and objects +4 only (the losers' photos were removed), 0 orphan contributor media; 301st 409 for text and photo.
+  - AC7: one IP, 40 students each lookup+submit: 40 x 200 + 40 x 201. 30 invalid requests do not count. Then 20 more OK, 61st on that collection 429 + Retry-After 3600; on a second collection 40 more OK then 429 (IP 100/h); a third collection from the same IP is 429, lookups stay 200. SMEM_TRUST_PROXY=false: X-Forwarded-For is ignored. true: last hop counts (spoofed first hop does not help), other IPs unaffected. 60 misses from one IP lock that IP out of lookups for 15 min including a valid token (same pattern as the login limiter, see notes); 150 valid lookups from one IP all 200 (hits do not count). Daily 300 is covered only by dev's fake-clock unit test.
+  - AC8: honeypot (also with invalid or garbage answers, and when the website part comes after the photos): 201 and 0 rows/objects; empty website is a real note; verifier covered by dev's test.
+  - AC9: no Set-Cookie, no Access-Control-* (foreign Origin + junk cookie and a real owner session cookie ignored), OPTIONS is 405; grep of the API log for the token, message text, file names, 'script', cookie names: 0 hits; route logged as the pattern.
+  - AC10: OpenAPI endpoint documented with the T-036 invalid_image wording fixed for both upload endpoints (web schema regenerated, check:api ok). Newman: notes collection 71 req / 135 assertions, 0 failures, three runs (after verifying users with SQL; run 3 after an API restart); media collection 44 req / 77 assertions, 0 failures, twice with an API restart in between.
+  - AC11: public lookup returns fields in notefields.Info shape (id, kind, label en/vi, hint, required, max_length), default set name/relationship/message.
+  - Client disconnect: 4 truncated uploads and 10 'send everything then close' at 0-2 s delays: 0 notes, 0 media, 0 objects, 0 orphans.
+  NON-BLOCKING NOTES
+  a) Ignored multipart parts still cost bandwidth: a 31 MiB junk part with valid answers is accepted as a normal note and invalid requests are not rate limited beyond the 600/15 min per-IP cost guard.
+  b) answers is capped at 16 KiB of raw JSON: a client that escapes non-BMP characters as surrogate pairs (Python ensure_ascii) cannot send 2000 emoji (24 KB); JSON.stringify in browsers does not escape them.
+  c) Contributor photos count toward the owner's 200 photo quota by spec, so a link holder can fill it (owner uploads then get quota_exceeded).
+  d) 60 misses from a shared campus IP block valid links for that IP for 15 min (by the leader's design).
+  e) Retry-After on the submit 429 is 3600 (window length), not the time until the next slot.
+  Re-test after fix: rerun the 4-stalled-connections repro and the 12-parallel run; everything else above is unaffected unless submit.go changes.
+- 2026-10-08 09:24Z · leader · Leader: QA_FAIL accepted. Fix in the same PR #30 (branch and worktree are reused), then READY_FOR_QA. The required changes are in the spec file, section 'Leader notes from the T-034 QA failure': (1) rolling 10 s idle read deadline with the 120 s total cap, (2) per-IP cap of concurrent photo-bearing submissions (default 8, configurable), (3) validate token, link state, cap and answers before reading photo bytes, (4) tests including QA's stalled-connection repro (4 half-open uploads must not block a normal submission), (5) OpenAPI wording of the 503 and no ERROR log for client disconnects. Everything else QA checked held: keep it unchanged.
 
 ### T-035 — T-010 follow-ups: template tests iterate templates.List()
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -1339,8 +1402,8 @@ Public endpoint where a friend with a collection link submits a note with text, 
 - **Assignee:** —
 - **Branch:** task/t-035-t-010-follow-ups-template-tests-iterate-
 - **PR:** 26
-- **Updated:** 2026-10-08 03:48Z by leader
-- **Comments-seen:** 4
+- **Updated:** 2026-10-08 09:23Z by leader
+- **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/05-t-010-follow-ups-template-tests-iterate.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1353,9 +1416,10 @@ From the T-010 QA notes: adding a template exactly as docs/templates.md describe
 - 2026-10-08 03:32Z · dev · Test-only: TestListHasBuiltIns and TestSamples iterate templates.List(); built-ins asserted as minimum. Test: go test ./internal/pdf ./internal/templates.
 - 2026-10-08 03:48Z · qa · Head 15d0d97, PR #26 CI green (go, go-integration, security, web). Test-only diff (internal/pdf/book_test.go, internal/templates/templates_test.go). Evidence: go test ./internal/pdf ./internal/templates -count=1 ok; go vet and gofmt clean. Mutation check: dropped a 3rd template (zzz.json, copy of classic) into internal/templates/embed with no Go edit -> TestListHasBuiltIns, TestSamples and the whole pdf/templates packages still pass; file removed afterwards. Built-ins still asserted as minimum (classic and modern must be present; pages==6 and truncation warning pinned for them only). Non-blocking: TestRenderBothTemplatesBothSizes still hardcodes the two ids (outside this task's scope).
 - 2026-10-08 03:48Z · leader · merged a01a884 (squash), QA_PASS on the same head 15d0d97, CI green. Review: test-only; TestListHasBuiltIns and TestSamples iterate templates.List(), classic and modern stay a minimum with their exact page counts pinned; QA added a third template file without any Go edit and both tests passed. For owner to check: nothing to run.
+- 2026-10-08 09:23Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-015, T-033, T-035, T-036')
 
 ### T-036 — Bound the memory of image processing (caps, concurrency, memory limit)
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -1366,8 +1430,8 @@ From the T-010 QA notes: adding a template exactly as docs/templates.md describe
 - **Assignee:** —
 - **Branch:** task/t-036-bound-the-memory-of-image-processing-cap
 - **PR:** https://github.com/danyaa666/smemories/pull/23
-- **Updated:** 2026-10-08 03:21Z by leader
-- **Comments-seen:** 4
+- **Updated:** 2026-10-08 09:23Z by leader
+- **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E03-yearbooks/04-bound-the-memory-of-image-processing.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1380,9 +1444,10 @@ Make the worst-case memory of the T-009 image pipeline a measured, enforced numb
 - 2026-10-08 02:56Z · dev · Root cause: x/image Scale float64 scratch (dst w x src h x4 = 480MB at 50MP) -> banded resize. Header caps (PNG/WebP 25MP, JPEG 50MP, decoded est. 128MiB incl. JPEG SOF subsampling/progressive), concurrency default 2, SMEM_MEMORY_LIMIT_MIB, docs/media.md. Test: TestLimitsFromHeader, TestJPEGSamples, TestResizeBandsMatchOneShot; measure with TestMeasurePeak (see docs/media.md). Dev: 4x16-bit PNG 4096^2 at defaults = 970MB RSS. Re-run media Postman twice.
 - 2026-10-08 03:19Z · qa · QA T-036 PASS. Method: built the PR head, ran the real API (fresh process per measurement; peak RSS sampled with ps every 20ms) against MySQL+MinIO from make up; images generated by me (Go/PIL/cwebp, all under 10 MiB upload cap). NOTE .env.example in the main checkout is still the old one (concurrency 4): I loaded the PR's .env.example and also tested with the variables truly unset. AC6 (macOS arm64, defaults = concurrency 2): 4 parallel 16-bit PNG 4096x4096: peak 925-929 MiB (970-974 MB) in 3 runs, mixed 4 (16-bit PNG at cap, 25 MP 8-bit PNG, 50 MP 10000x5000 JPEG, 25 MP lossless WebP): 862/812/886 MiB. All <= 1.2 GiB (1229 MiB). Single 16-bit PNG: 478 MiB. Control with concurrency 4: 1735-1842 MiB (so the lowering is what matters). 4x each alone: 50MP JPEG 700 MiB, 6000x7456 4:4:4 JPEG at the cap 1008 MiB (highest seen), 4200x4200 progressive 4:2:0 JPEG 565 MiB, 12000x4000 JPEG 595 MiB, lossless WebP 25MP 843 MiB, lossy WebP 24MP 507 MiB, 5000x5000 8-bit PNG 850 MiB. Linux (target OS): same linux/arm64 binary in a debian container with --memory=1536m, cgroup memory.peak: 4x 16-bit PNG 905 MiB, mixed 4 855 MiB, 8 parallel mixed incl. 4:4:4 and progressive JPEG 873 MiB, no OOM kill; with SMEM_MEMORY_LIMIT_MIB=1100 4x16-bit PNG 909 MiB. AC2 caps just below/above via the API: 16-bit PNG 4096x4096 201 / 4097x4096 400; 8-bit PNG 5000x5000 201 / 5001x5000 400; JPEG 10000x5000 201 / 10001x5000 400; lossless WebP 5000x5000 201 / 5001x5000 400; 4:4:4 JPEG 6000x7456 (134208000 B) 201 / 6000x7457 400; progressive 4:2:0 4200x4200 201 / 4300x4300 400; each over-cap answer in ~8 ms before any decode. AC3: SMEM_MEDIA_MAX_CONCURRENT 0/abc/-2 and SMEM_MEMORY_LIMIT_MIB 10/63/abc/-1/1.5/1048577 all fail at startup naming the variable; limit 64, 256, 700 with the 4 mixed uploads: all 201, process alive, RSS 481/479/744 MiB (limit works, nothing crashes or is refused); startup logs 'memory limit set'. .env.example and README document both. AC1/AC4: docs/media.md exists; its numbers reproduce (970 MB for 4x 16-bit PNG; single 490 vs my 501 MB). AC5: go mod tidy leaves no diff, aws-sdk-go-v2, /credentials, /service/s3 are in the direct require block. Postman: media collection run twice via newman 6 (API restarted between runs; I did the pair twice): 44 requests, 77 assertions, 0 failures each time. Mechanical: go build, go vet, gofmt, golangci-lint (0 issues), go test -race ./... ok, go test -race -count=1 -tags integration ./... all packages ok; PR CI green (run 37720320278). Non-blocking: (a) the media Postman collection has no entry for the new caps (E11 only covers the 60000x60000 header); a tiny PNG header claiming 5001x5000 would exercise the 25 MP PNG cap cheaply; (b) the main checkout's .env.example still says concurrency 4 until merge, fine; (c) RSS on macOS never returns to baseline after a run (Go retains pages), so measure each scenario on a fresh process, as docs/media.md implies; (d) 6000x7456 4:4:4 baseline JPEG is the heaviest accepted input at ~1.0 GiB for 4 parallel, only ~18% under the 1.2 GiB target, so keep an eye on it if limits are raised.
 - 2026-10-08 03:21Z · leader · merged 7772eb7 (squash), QA_PASS on the same head c6d78ce, CI green. Review: the 480 MB scaler buffer is gone (banded resize, same picture), header-based caps by colour model and JPEG subsampling, concurrency default 2, SMEM_MEMORY_LIMIT_MIB validated (0 or 64..1048576), 4 worst-case uploads peak at about 925 MiB (was 3.2 GB). For owner to check: PNG/WebP over 25 MP, 16-bit PNG over 4096x4096 and large progressive JPEGs are now refused with 400 invalid_image; phone JPEGs up to 50 MP still pass. Follow-up: stale OpenAPI sentence (noted in T-034 spec).
+- 2026-10-08 09:23Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-015, T-033, T-035, T-036')
 
 ### T-037 — US Letter page size, end to end
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
@@ -1393,8 +1458,8 @@ Make the worst-case memory of the T-009 image pipeline a measured, enforced numb
 - **Assignee:** —
 - **Branch:** task/t-037-us-letter-page-size-end-to-end
 - **PR:** 27
-- **Updated:** 2026-10-08 08:44Z by leader
-- **Comments-seen:** 5
+- **Updated:** 2026-10-08 09:29Z by leader
+- **Comments-seen:** 6
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E08-designer-templates/01-us-letter-page-size-end-to-end.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1417,21 +1482,22 @@ Add Letter (215.9 x 279.4 mm) as a third yearbook page size: migration, API, Ope
 - 2026-10-08 03:49Z · leader · Leader review OK on head 9546d3b (QA_PASS on the same head, CI 4/4 green; the PR merges cleanly into develop after T-035). Migration 0009 is additive (enum value appended, metadata-only in MySQL) and its Down turns Letter books into A5 before restoring the enum; QA ran up, down, up on real data. Validation is a fixed list, the aspect-ratio rule (1% tolerance) keeps Letter apart from A5/A4, ForPageSize and the render guard stop a template from being used on a size it does not declare, MediaBox is 612x792 pt for Letter. Non-blocking, moved to the T-038 spec: exported mutable Dims map, double error for an invalid reference; Postman has no create-with-LETTER entry (patch is covered, create tested by hand). Awaiting owner approval.
 - 2026-10-08 08:43Z · human · owner approved merge
 - 2026-10-08 08:44Z · leader · merged 6044ea3 (squash), owner-approved ('OK' to Q-013), QA_PASS on head 9546d3b, CI green. Review: migration 0009 additive (Letter appended to the enum, Down turns Letter books into A5), aspect-ratio rule keeps Letter apart from A5/A4, ForPageSize and the render guard prevent a template on a size it does not declare, MediaBox 612x792 pt. For owner to check: nothing to run yet (no UI for Letter until T-016).
+- 2026-10-08 09:29Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-037, T-038, T-043, T-045')
 
 ### T-038 — Template format v2: backgrounds, static text, rotation, ellipse, font families
-- **Status:** QA_PASS
+- **Status:** DONE
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
 - **Depends-on:** T-035
 - **Risk:** low
-- **Rework:** 0
+- **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** leader
+- **Assignee:** —
 - **Branch:** task/t-038-template-format-v2-backgrounds-static-te
 - **PR:** 28
-- **Updated:** 2026-10-08 08:42Z by qa
-- **Comments-seen:** 2
+- **Updated:** 2026-10-08 09:29Z by leader
+- **Comments-seen:** 7
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E08-designer-templates/02-template-format-v2-backgrounds-static-text.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1451,6 +1517,11 @@ Extend the template JSON and renderer with page background images, localised sta
   Budget: 24 pages, 30 photos, Letter, backgrounds: benchmark 14 ms, 52 MB peak heap, 7.3 MB PDF. My worst case, 4 distinct 3400x4400 (400 DPI) RGBA PNG backgrounds of 1.4-1.5 MiB each, same book: 0.72 s, 295-358 MB peak heap, 324 MB RSS: inside 60 s / 512 MB but the closest to the limit; RGB or JPEG backgrounds are far cheaper (docs already warn).
   Added test: internal/pdf/background_formats_test.go (rgb, nrgba, gray, gray16, rgba64, palette PNG backgrounds validate and render).
   Non-blocking: (1) an Adam7-interlaced PNG passes the validator (DecodeConfig only) but Render fails with 'interlacing not supported in PNG buffer'; build tests that render every template would catch a real asset, but rejecting interlace (IHDR byte 12 != 0) in templates/validate.go would honour 'bad asset fails the tests, not the request'. (2) Static text is not checked for glyph coverage at validation; a missing glyph only shows as a missing_glyph warning at render. (3) T-037 parts: no regression seen.
+- 2026-10-08 08:44Z · leader · Leader: T-037 is merged to develop (6044ea3, squash) so PR #28 now conflicts in docs/templates.md, internal/pdf/render.go, internal/templates/spec.go and internal/templates/validate.go (your branch carries T-037's original commits plus your T-038-on-top edits such as PageDims). Merge origin/develop into the task branch (no rebase of a pushed branch), resolve keeping the T-038 versions of the lines you changed on top of T-037 and develop's version of everything else, re-run make lint build test test-integration, regenerate the samples (classic.pdf and modern.pdf must stay byte-identical), push, READY_FOR_QA with the merge-commit SHA. Also in this round (QA finding, small): the validator must reject an interlaced (Adam7) PNG background, because Render fails on it; add a test with an interlaced fixture generated in the test. Static-text glyph coverage at validation stays out of scope.
+- 2026-10-08 08:48Z · dev · Merge commit b356781 (origin/develop merged, conflicts in docs/templates.md, pdf/render.go, templates/spec.go+validate.go resolved to the T-038 lines on top of T-037 incl. PageDims; kept render.go slices import). QA finding 1: validator rejects interlaced PNG (IHDR interlace byte), test TestBackgroundRejected case 'interlaced PNG' with a fixture built in the test, documented in docs/templates.md. classic.pdf/modern.pdf regenerated: unchanged. make lint build test test-integration all green.
+- 2026-10-08 09:07Z · qa · Re-verify of merge result b356781 (origin/develop merged, interlace rejection added). CI on b356781: go, go-integration, security, web all pass. Local in worktree: make build, make lint (exit 0), gofmt, go vet, go test -race ./... pass; templates/pdf/fonts/yearbook -race -count=2 pass; make test-integration pass. New rule: validator reads IHDR interlace byte (offset 28) and rejects with 'interlaced PNG' error (TestBackgroundRejected case 'interlaced PNG', fixture built in test; offset checked by hand: 8 sig + 8 chunk header + 12 into IHDR data = interlace byte); documented in docs/templates.md line 89. Samples: go test ./internal/pdf -run TestSamples -write-samples, git status clean, shasum classic.pdf 6a63214e..., modern.pdf cedd1c22... identical to origin/develop. My earlier test internal/pdf/background_formats_test.go still passes; all earlier AC evidence (AC1-AC7) stands, merge changed nothing in those paths other than the interlace check. Non-blocking: interlace test uses a flagged-but-not-really-Adam7 fixture (only the IHDR byte matters to the check; Go cannot encode Adam7, so fine); static-text glyph coverage out of scope per leader.
+- 2026-10-08 09:14Z · leader · merged eb6abef (squash), QA_PASS on head b356781 after one rework (merge with develop, interlaced PNG rejection), CI green. Review: background drawn right after the paper fill and registered once per asset, rotation and clipping closed by deferred ends, font families loaded per template with a Vietnamese coverage gate, validator checks backgrounds by content (type, 1.5 MiB, ratio, DPI 150..400, no interlacing, 8 MiB per template), static text needs both languages, classic and modern samples byte-identical, 24-page Letter book with full-page backgrounds: 14 ms and 52 MB heap (worst case 0.72 s and 358 MB). For owner to check: docs/templates.md section on format v2.
+- 2026-10-08 09:29Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-037, T-038, T-043, T-045')
 
 ### T-039 — Design import tool (dev only): canvas page to template draft
 - **Status:** BACKLOG
@@ -1464,8 +1535,8 @@ Extend the template JSON and renderer with page background images, localised sta
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-08 03:08Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-08 13:31Z by leader
+- **Comments-seen:** 2
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E08-designer-templates/03-design-import-tool-dev-only.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1474,6 +1545,8 @@ Extend the template JSON and renderer with page background images, localised sta
 Dev-only Node/Playwright command that renders decoration backgrounds and reads slot and text boxes from a Claude Design canvas into a draft template.
 
 #### Comments
+- 2026-10-08 09:14Z · leader · T-038 is merged: the import tool can target the v2 format. Spec: .team/epics/E08-designer-templates/03-design-import-tool-dev-only.md.
+- 2026-10-08 13:31Z · leader · On hold: owner proposed browser print-to-PDF (HTML templates). Spike T-054 decides; resume or retire after ADR 0003 / D-24.
 
 ### T-040 — Template memory-book from design temp1 (pilot 1)
 - **Status:** BACKLOG
@@ -1488,7 +1561,7 @@ Dev-only Node/Playwright command that renders decoration backgrounds and reads s
 - **Branch:** —
 - **PR:** —
 - **Updated:** 2026-10-08 03:19Z by leader
-- **Comments-seen:** 0
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E08-designer-templates/04-template-memory-book-from-temp1.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1497,6 +1570,7 @@ Dev-only Node/Playwright command that renders decoration backgrounds and reads s
 Pilot 1: the pastel Memory Book design as a system template with four page kinds in English and Vietnamese.
 
 #### Comments
+- 2026-10-08 13:31Z · leader · On hold pending spike T-054 (browser print-to-PDF); see the E08 PRD note.
 
 ### T-041 — Template navy-classic from design temp2 (pilot 2)
 - **Status:** BACKLOG
@@ -1511,7 +1585,7 @@ Pilot 1: the pastel Memory Book design as a system template with four page kinds
 - **Branch:** —
 - **PR:** —
 - **Updated:** 2026-10-08 03:19Z by leader
-- **Comments-seen:** 0
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E08-designer-templates/05-template-navy-classic-from-temp2.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1520,6 +1594,7 @@ Pilot 1: the pastel Memory Book design as a system template with four page kinds
 Pilot 2: the navy and gold classic design as a system template with four page kinds in English and Vietnamese.
 
 #### Comments
+- 2026-10-08 13:31Z · leader · On hold pending spike T-054 (browser print-to-PDF); see the E08 PRD note.
 
 ### T-042 — Plan the rollout of designs temp3 to temp8 after the pilots
 - **Status:** BACKLOG
@@ -1545,7 +1620,7 @@ Planning placeholder: after the owner reviews the pilots, split into one task pe
 #### Comments
 
 ### T-043 — Note field catalogue (internal/notefields): closed set of form fields with EN/VI labels and validation
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -1556,8 +1631,8 @@ Planning placeholder: after the owner reviews the pilots, split into one task pe
 - **Assignee:** —
 - **Branch:** task/t-043-note-field-catalogue-internal-notefields
 - **PR:** https://github.com/danyaa666/smemories/pull/24
-- **Updated:** 2026-10-08 08:44Z by leader
-- **Comments-seen:** 4
+- **Updated:** 2026-10-08 09:29Z by leader
+- **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/06-note-field-catalogue.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1570,6 +1645,7 @@ Closed catalogue of note form fields (name, relationship, message, how we met, .
 - 2026-10-08 03:42Z · qa · AC1 catalogue ids/kinds/limits: TestCatalogueGuard (dev) + my read of catalogue.go -> OK. AC2 EN/VI labels+hints present, NFC, PR table matches code; owner must still review VI table before merge (not mine to approve). AC3 Validate: my probes (internal/notefields/qa_probe_test.go, pushed, CI green on PR head): NFD Vie+U+0302+U+0323 -> composed NFC; limit and limit+1 counted in characters (60 'Đ' ok, 61 rejected; 500/501 wish); CRLF -> LF counts as 1 char; rejected in name and message and at edges: U+202A-202E, U+2066-2069, LRM/RLM, ALM, ZWSP, ZWNJ, WJ, BOM, soft hyphen, U+180E, invisible times, tag char U+E0041, U+0085/2028/2029 inside, DEL, ESC, NUL, invalid UTF-8 (\xff, overlong, surrogate, truncated); accepted unchanged: ZWJ emoji and family emoji, skin tone, VS15/VS16, NBSP inside, Thai combining; whitespace-only (space, \n, NBSP, U+3000, CRLF mix) -> missing_answer for required, dropped for optional; short-text inner \n/\r\n -> invalid_answer; 10 MB ASCII in name/message/wish, 10 MB NFD and 10 MB NUL -> invalid_answer, all five in well under 1 s (byte guard before NFC); unknown answer ids reported in sorted order before missing; input map not mutated; Default()/Info() results do not alias the catalogue; Info(nil) is non-nil. Duplicate refs and unknown/empty/wrong-case ref ids -> error (unknown ids are FieldError unknown_field, errors.Is ErrUnknownField). AC4 Default() test + mine. AC5 Info JSON fixed by TestInfoJSON. AC6 guard tests present. AC7 docs/note-fields.md read: fields + add-a-field rule, matches catalogue. Commands: go test -race -count=3 ./internal/notefields ./internal/textx; go vet; gofmt -l (clean); golangci-lint run on both pkgs (0 issues); go test -race ./... all ok; gh pr checks 24 all pass. Non-blocking observations: (a) spec-mandated byte guard 4*limit before NFC rejects extreme decomposed text (60 x e+U+0302+U+0323 = 300 bytes > 240) even though it is 60 chars after NFC; 48 of them pass; documented in the PR. (b) duplicate-ref error is a plain error, not *FieldError, so errors.As callers (T-034/T-044) must treat any non-FieldError as a template bug. (c) a trailing newline in a short-text value is trimmed, not rejected (OK per trimming rule). (d) a literal U+FFFD in text is rejected (same rule as invalid UTF-8) and tag characters (subdivision-flag emoji) are rejected as Cf per spec.
 - 2026-10-08 03:43Z · leader · Leader review OK on head 9b9b08a (QA_PASS; the head includes QA's probe test commit; CI 4/4 green). Pure package with no input surface of its own: the catalogue ids are fixed by a guard test, Validate resolves refs first (unknown or duplicate ref = template bug), rejects unknown answer ids before anything else, applies textx (NFC, no control or format characters except ZWJ and variation selectors; long text allows only \n), and bounds work with a 4-bytes-per-character pre-check. Non-blocking: the byte pre-check rejects extreme all-decomposed text (more than 4 bytes per character), normal Vietnamese in NFD is far below it; a duplicate ref returns a plain error rather than a FieldError (intended). Waiting only for the owner's review of the Vietnamese label table (AC2), then I merge.
 - 2026-10-08 08:44Z · leader · merged 0032e6f (squash), owner OK on the Vietnamese labels (Q-012), QA_PASS on head 9b9b08a, CI green. Review: closed catalogue with fixed ids, Validate rejects unknown ids first and bounds work by bytes, textx rules (NFC, no control or format chars except ZWJ and variation selectors). Owner said OK to my recommendation, which included one wording change: 'Chúng ta quen nhau thế nào' becomes 'Chúng mình quen nhau thế nào' (done in T-034, first commit). For owner to check: docs/note-fields.md.
+- 2026-10-08 09:29Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-037, T-038, T-043, T-045')
 
 ### T-044 — Templates declare note fields (format v2.1): note_fields, note_field slot, NoteFields helper
 - **Status:** BACKLOG
@@ -1583,8 +1659,8 @@ Closed catalogue of note form fields (name, relationship, message, how we met, .
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-08 03:19Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-08 13:31Z by leader
+- **Comments-seen:** 2
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E08-designer-templates/07-templates-declare-note-fields.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1593,21 +1669,23 @@ Closed catalogue of note form fields (name, relationship, message, how we met, .
 A template lists which note fields its friend pages ask for and where each answer prints; the API reads the list for the public form.
 
 #### Comments
+- 2026-10-08 09:14Z · leader · T-038 and T-043 are merged: ready.
+- 2026-10-08 13:31Z · leader · On hold: owner proposed browser print-to-PDF (HTML templates). Spike T-054 decides; resume or retire after ADR 0003 / D-24.
 
 ### T-045 — Register accepts a locale; verification email in the student's language
-- **Status:** READY_FOR_QA
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
 - **Depends-on:** T-015
 - **Risk:** high
 - **Rework:** 0
-- **Owner-approved:** —
+- **Owner-approved:** yes
 - **Assignee:** —
 - **Branch:** task/t-045-register-accepts-a-locale-verification-e
 - **PR:** https://github.com/danyaa666/smemories/pull/29
-- **Updated:** 2026-10-08 08:42Z by dev
-- **Comments-seen:** 2
+- **Updated:** 2026-10-08 09:29Z by leader
+- **Comments-seen:** 7
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/06-register-accepts-locale.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1618,6 +1696,227 @@ Let the register request carry the UI language so Vietnamese students get the ve
 #### Comments
 - 2026-10-08 03:54Z · leader · T-015 merged: ready.
 - 2026-10-08 08:42Z · dev · Register accepts optional locale en|vi (else 400 invalid_locale); stored + verification mail follows it; web form sends i18n language; openapi/schema/Postman updated (newman x2 green, step 1 now registers with vi). Tests: TestRegisterLocale (integration), auth.test.tsx. Integration tests need make up + migrate.
+- 2026-10-08 08:51Z · qa · PR head 8a9cafb; CI green (go, go-integration, web, security). Evidence (all produced by me, real API on MySQL, own DB):
+  AC1 curl against running API: absent/null/en -> 201 locale en; vi -> 201 locale vi; 400 invalid_locale for VI, En, fr, '', 1, 1.5, true, false, [], {}, 'vi ', 'vi-VN'; malformed JSON -> invalid_body. DB users.locale matches; GET /v1/me with session cookie shows en/vi. Bad locales create nothing (no user row, no Set-Cookie). Rate limit: 14 bad-locale calls then 5 valid registers still all 201, the 6th valid is 429, and a bad locale after that is still 400 invalid_locale (locale checked before the limiter, as dev claimed). JSON-escaped 'vi' (\u0076\u0069) is accepted as vi, correct.
+  AC2 API log: locale vi -> 'Subject: Xac nhan dia chi email SMemories cua ban' (Vietnamese) with /verify-email?token= link; en/absent/null -> 'Confirm your SMemories email address'. Forgot-password for a vi user -> Vietnamese reset subject. Go test TestRegisterLocale asserts vi subject+link.
+  AC3 real Chrome (headless, CDP, vite dev proxy to API): UI en via switcher -> POST /api/v1/auth/register body locale:en, /v1/me en; UI vi via switcher (h1 'Tao tai khoan') -> body locale:vi, /v1/me vi; browser Accept-Language vi-VN with no click -> locale vi; default browser en -> locale en. Vitest has en and vi request-body tests.
+  AC4 openapi/schema/postman updated; npm run check:api ok. newman auth collection (Full flow + Edge cases) run twice back to back with an API restart between: 48 requests/116 assertions, 0 failed both times. Full collection incl. Google folder with dummy SMEM_GOOGLE_* config, twice with restart: 55 req/140 assertions, 0 failed. (Without Google env the Google folder fails by design, 404.)
+  Mechanical: go build/vet, go test -race ./... , integration tests for internal/auth and internal/db (-tags integration, TestRegisterLocale x3), gofmt, web vitest 61/61, eslint+prettier, tsc, lint:i18n, check:api: all green.
+  Google sign-in unaffected: no google/oidc file in the diff; all Google integration tests pass (incl. TestGoogleNameAndLocaleFallbacks). Real Google round trip not run (no credentials), covered by the fake-provider tests.
+  Non-blocking: unknown extra JSON fields and a differently-cased key (LOCALE) are accepted by the decoder (pre-existing Go encoding/json behaviour, value still validated). Risk high: owner approves the merge.
+- 2026-10-08 08:52Z · leader · Leader review OK on head 8a9cafb (QA_PASS on the same head, CI 4/4 green). A two-value allow-list (en, vi), anything else including non-strings is invalid_locale before any rate-limit token or hash is spent, nothing is created on error, the stored locale drives the verification and reset emails, the web form sends i18n.resolvedLanguage limited to en/vi. Non-blocking: unknown JSON fields and a differently-cased key are accepted by the shared decoder (pre-existing behaviour). Awaiting owner approval.
+- 2026-10-08 09:22Z · human · owner approved merge
+- 2026-10-08 09:22Z · leader · merged a49d988 (squash), owner-approved in chat 2026-10-08, QA_PASS on head 8a9cafb, CI green. Review: locale allow-list (en, vi), invalid_locale before any rate-limit token or hash is spent, nothing created on error, stored locale drives verification and reset emails, web form sends the UI language. For owner to check: register in the Vietnamese UI and read the Vietnamese verification email in the API log.
+- 2026-10-08 09:29Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-037, T-038, T-043, T-045')
+
+### T-046 — List a yearbook's photos (API and photo library in the web UI)
+- **Status:** TODO
+- **Priority:** P1
+- **Type:** feature
+- **Milestone:** M1
+- **Depends-on:** T-016
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-08 14:02Z by leader
+- **Comments-seen:** 1
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E03-yearbooks/05-list-a-yearbooks-photos.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E03-yearbooks · **PRD:** `.team/epics/E03-yearbooks/PRD.md`
+
+Owner-only list endpoint for a yearbook's photos and the web photo library that uses it, so uploaded photos survive a reload.
+
+#### Comments
+- 2026-10-08 14:02Z · leader · T-016 is merged: ready.
+
+### T-047 — Fix the flaky concurrent Google callback: retry with jittered backoff and a stress test
+- **Status:** IN_PROGRESS
+- **Priority:** P1
+- **Type:** bug
+- **Milestone:** M1
+- **Depends-on:** T-011
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** dev
+- **Branch:** task/t-047-fix-the-flaky-concurrent-google-callback
+- **PR:** —
+- **Updated:** 2026-10-08 14:01Z by dev
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/07-fix-flaky-google-concurrent-callback-test.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E02-auth · **PRD:** `.team/epics/E02-auth/PRD.md`
+
+CI on develop failed once on TestGoogleConcurrentCallbacksCreateOneAccount: googleUser retries only 3 times without a pause. Add bounded jittered backoff and a stress test.
+
+#### Comments
+
+### T-048 — Email one-time codes replace verification and reset links (API) with a dev-only fixed code
+- **Status:** TODO
+- **Priority:** P1
+- **Type:** feature
+- **Milestone:** M1
+- **Depends-on:** T-045, T-051
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-08 11:18Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/08-email-otp-codes-replace-links-api.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E02-auth · **PRD:** `.team/epics/E02-auth/PRD.md`
+
+6-digit email codes with attempt limits replace the link tokens of T-007; dev-only fixed code 123123 behind SMEM_DEV_FIXED_OTP, refused in prod (D-22).
+
+#### Comments
+
+### T-049 — Web: code entry screens for email verification and password reset
+- **Status:** BACKLOG
+- **Priority:** P1
+- **Type:** feature
+- **Milestone:** M1
+- **Depends-on:** T-048
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-08 11:09Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/09-web-email-code-screens.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E02-auth · **PRD:** `.team/epics/E02-auth/PRD.md`
+
+Code input screens (paste, auto-submit, resend cooldown) replacing the link pages of T-015.
+
+#### Comments
+
+### T-050 — Remove dev-only shortcuts before production (delete the fixed OTP) and add a pipeline check
+- **Status:** BACKLOG
+- **Priority:** P1
+- **Type:** security
+- **Milestone:** M2
+- **Depends-on:** T-048, T-022
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-08 11:09Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E06-go-live/06-remove-dev-shortcuts-before-production.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E06-go-live · **PRD:** `.team/epics/E06-go-live/PRD.md`
+
+Go-live gate: delete the dev fixed OTP and every DEV-SHORTCUT, fail CI and the deploy pipeline if one returns.
+
+#### Comments
+
+### T-051 — Redis foundation: local stack (Valkey), client, config, readiness, CI
+- **Status:** IN_QA
+- **Priority:** P1
+- **Type:** infra
+- **Milestone:** M1
+- **Depends-on:** T-030
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** qa
+- **Branch:** task/t-051-redis-foundation-local-stack-valkey-clie
+- **PR:** https://github.com/danyaa666/smemories/pull/32
+- **Updated:** 2026-10-08 14:02Z by qa
+- **Comments-seen:** 1
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/11-redis-foundation.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E01-foundation · **PRD:** `.team/epics/E01-foundation/PRD.md`
+
+Add a Redis-protocol service (Valkey 8) to the local stack and CI, the go-redis client, SMEM_REDIS_URL, readiness and test helpers; no behaviour change (D-23).
+
+#### Comments
+- 2026-10-08 14:00Z · dev · Redis foundation done, PR #32. Test: make up (redis healthy), add SMEM_REDIS_URL from .env.example to .env, make test-integration, stop redis -> /readyz 503 and /healthz 200, restart keeps keys. CI uses docker run (not services:) for the AOF/noeviction flags, same digest. Not verified: real rediss://, maxmemory full, CI run.
+
+### T-052 — Login sessions move to Redis (drop the sessions table)
+- **Status:** BACKLOG
+- **Priority:** P1
+- **Type:** tech-debt
+- **Milestone:** M1
+- **Depends-on:** T-051
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-08 11:18Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/10-sessions-in-redis.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E02-auth · **PRD:** `.team/epics/E02-auth/PRD.md`
+
+Sessions with native expiry in Redis, per-user index for delete-all, fail-closed policy, sessions table dropped (D-23).
+
+#### Comments
+
+### T-053 — Rate limiters move to Redis (shared limiter for all endpoints)
+- **Status:** BACKLOG
+- **Priority:** P1
+- **Type:** tech-debt
+- **Milestone:** M1
+- **Depends-on:** T-051
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-08 11:18Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/11-rate-limiters-in-redis.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E02-auth · **PRD:** `.team/epics/E02-auth/PRD.md`
+
+Redis sliding-window limiter with Take and Refund replacing the in-memory one everywhere, fail-open except OTP and login lockouts (D-23).
+
+#### Comments
+
+### T-054 — Spike: HTML templates and browser print-to-PDF instead of server rendering
+- **Status:** TODO
+- **Priority:** P1
+- **Type:** spike
+- **Milestone:** M1
+- **Depends-on:** —
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-08 13:31Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/06-spike-browser-print-to-pdf.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E05-templates-export · **PRD:** `.team/epics/E05-templates-export/PRD.md`
+
+Prototype two designs as HTML/CSS pages printed through the browser (Save as PDF), test across browsers and phones, and write ADR 0003 with a go/no-go recommendation.
+
+#### Comments
 
 <!-- tasks:end -->
 

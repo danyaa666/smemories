@@ -26,3 +26,10 @@ PY
 The modified file keeps the name "Noto Emoji" (allowed: the OFL text declares no Reserved Font Name); it is not the upstream file.
 
 The original supplementary-plane mappings stay in the file, so other engines still work with the real code points.
+
+## Registry
+
+`fonts.go` also keeps the registry of families a template may name (`Register`, `Lookup`, `Names`). To add a family:
+put the TTF files and the licence text here, embed them, call `Register` from `init`, and add them to
+`/THIRD_PARTY_NOTICES.md`. `Register` panics unless every face passes the Vietnamese coverage check (all letters
+with every tone mark, upper and lower case), and `TestRegistryCoversVietnamese` repeats it for the whole registry.
