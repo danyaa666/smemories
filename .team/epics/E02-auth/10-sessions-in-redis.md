@@ -44,3 +44,6 @@ Same secrecy as before: only the SHA-256 is a key. One round trip per authentica
 #### Test plan
 - Dev: store tests on real Redis (create, authenticate, extend, expire with a small TTL, delete-all, race), the failure policy with Redis stopped, full auth suite.
 - QA should probe: Redis restart (AOF) keeps users logged in; flush Redis (everyone logged out, no 500); two browsers; logout in one; reset password logs out all; a 1000-session user delete-all time; cookie replay after logout.
+
+#### Leader notes from the T-051 review (2026-10-08): small clean-ups to include in this task
+(1) `smemories-migrate` must not need Redis: make `SMEM_REDIS_URL` required only for the API binary (the production migration task of T-022 has no Redis access). (2) Validate the port range of `SMEM_REDIS_URL` at startup (`redis://host:99999/0` passes today and fails only at the first ping). (3) A `rediss://` URL against a plain server ends after 5 s with "context deadline exceeded"; add a startup hint that names TLS ("is the server TLS-enabled?") when a `rediss://` dial or handshake fails. (4) go-redis writes its own unstructured line to stderr beside the JSON log; route it into slog (`redis.SetLogger`). (5) `/readyz` stays 200 when Redis is full (writes fail, reads work): add a cheap write probe (SET with a short expiry on a probe key) to readiness, or document why not.

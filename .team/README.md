@@ -11,17 +11,17 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 25 | T-013, T-014, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-039, T-040, T-041, T-042, T-044, T-049, T-050, T-052, T-053 |
-| TODO | 4 | T-034, T-046, T-048, T-054 |
-| IN_PROGRESS | 1 | T-047 |
-| IN_QA | 1 | T-051 |
+| TODO | 3 | T-046, T-048, T-054 |
+| IN_PROGRESS | 1 | T-034 |
+| QA_PASS | 2 | T-047, T-051 |
 | MERGED | 1 | T-016 |
 | DONE | 22 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-028, T-030, T-033, T-035, T-036, T-037, T-038, T-043, T-045 |
 
 **Awaiting your review (MERGED):** T-016 (Web: yearbook list, create/edit, profile and photo upload UI)
 
-**Open questions for you:** none
+**Open questions for you:** Q-015 (Approve merge of T-051 (Redis foundation)?); Q-016 (Approve merge of T-047 (fix flaky concurrent Google callback)?)
 
-_Board last written 2026-10-08 14:02Z_
+_Board last written 2026-10-08 14:23Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -251,6 +251,24 @@ QA passed and my review is clean (head 9546d3b, CI green, merges cleanly). High 
 - **Answer:** _(pending)_
 
 QA passed and my review is clean (head 8a9cafb, CI green). High risk only because it touches the register endpoint contract (one optional field 'locale', en or vi, default en). Fixes the Vietnamese UI sending an English verification email. Command: cd /Users/unisoft/GolandProjects/awesomeProject1 && /Users/unisoft/.claude/plugins/cache/claude-agent-team/agent-team/0.3.0/bin/team approve T-045
+
+### Q-015 — Approve merge of T-051 (Redis foundation)?
+- **Status:** OPEN
+- **Asked:** 2026-10-08 14:13Z
+- **Blocks:** T-051
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+QA passed and my review is clean (head a59f2c5, CI green). High risk because it adds infrastructure and a dependency (go-redis, BSD-2) and changes CI; no behaviour change. After merging, the API and smemories-migrate need SMEM_REDIS_URL in .env (see .env.example) and make up starts Valkey. Command: cd /Users/unisoft/GolandProjects/awesomeProject1 && /Users/unisoft/.claude/plugins/cache/claude-agent-team/agent-team/0.3.0/bin/team approve T-051
+
+### Q-016 — Approve merge of T-047 (fix flaky concurrent Google callback)?
+- **Status:** OPEN
+- **Asked:** 2026-10-08 14:23Z
+- **Blocks:** T-047
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+QA passed and my review is clean (head ef6bee0, CI green). High risk only because it is in the sign-in path; the change is a bounded retry with jittered waits and no behaviour change. It removes the intermittent red CI on develop and a real failure a student could see when signing in twice quickly. Command: cd /Users/unisoft/GolandProjects/awesomeProject1 && /Users/unisoft/.claude/plugins/cache/claude-agent-team/agent-team/0.3.0/bin/team approve T-047
 
 <!-- questions:end -->
 
@@ -1339,7 +1357,7 @@ Evidence from the T-006/T-030 merges: the workflow's concurrency group has cance
 - 2026-10-08 09:23Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-015, T-033, T-035, T-036')
 
 ### T-034 — Public note submission (text and photos)
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -1347,10 +1365,10 @@ Evidence from the T-006/T-030 merges: the workflow's concurrency group has cance
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** dev
 - **Branch:** task/t-034-public-note-submission-text-and-photos
 - **PR:** 30
-- **Updated:** 2026-10-08 09:24Z by leader
+- **Updated:** 2026-10-08 14:12Z by dev
 - **Comments-seen:** 4
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/02-public-note-submission.md`
@@ -1734,7 +1752,7 @@ Owner-only list endpoint for a yearbook's photos and the web photo library that 
 - 2026-10-08 14:02Z · leader · T-016 is merged: ready.
 
 ### T-047 — Fix the flaky concurrent Google callback: retry with jittered backoff and a stress test
-- **Status:** IN_PROGRESS
+- **Status:** QA_PASS
 - **Priority:** P1
 - **Type:** bug
 - **Milestone:** M1
@@ -1742,11 +1760,11 @@ Owner-only list endpoint for a yearbook's photos and the web photo library that 
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** leader
 - **Branch:** task/t-047-fix-the-flaky-concurrent-google-callback
-- **PR:** —
-- **Updated:** 2026-10-08 14:01Z by dev
-- **Comments-seen:** 0
+- **PR:** 33
+- **Updated:** 2026-10-08 14:23Z by qa
+- **Comments-seen:** 3
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/07-fix-flaky-google-concurrent-callback-test.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1755,6 +1773,15 @@ Owner-only list endpoint for a yearbook's photos and the web photo library that 
 CI on develop failed once on TestGoogleConcurrentCallbacksCreateOneAccount: googleUser retries only 3 times without a pause. Add bounded jittered backoff and a stress test.
 
 #### Comments
+- 2026-10-08 14:11Z · dev · retryTx in internal/auth/store.go (6 attempts, jittered doubling 5-25..80-200ms, ctx-aware, +1205); TestRetryTx unit; TestGoogleConcurrentCallbacksStress (30x both scenarios, fresh DB each). GOMAXPROCS=2 -race -count=20: all passed. lint/build/test/test-integration green; newman auth x2 green (Google folder needs dummy SMEM_GOOGLE_* env). Other auth txs have no such pattern, not widened.
+- 2026-10-08 14:23Z · qa · PR head ef6bee0, CI green on that head (go, go-integration, security, web). Evidence (all mine):
+  AC1 retry loop: code read (6 attempts = 1 + 5 retries, waits lo=5ms<<i, hi=min(5*lo,200ms): 5-25,10-50,20-100,40-200,80-200; ctx-aware sleepCtx; returns last error). TestRetryTx (fake sleeper) checks every window and 6 calls. Cancelled ctx: store.googleUser returns context canceled in 16us, no rows; HTTP callback with cancelled ctx = 302 /login?error=oidc_failed (same as before), 0 users; 8 callbacks cancelled mid-flight at 3-24 ms: no hang, users==identities<=1.
+  AC2: 1213/1205/1062 retried, 1146 returned at once with 1 call, no sleep (TestRetryTx).
+  AC3 flake repro: old develop code (89b9bfb), 6 parallel test processes x -count=30, GOMAXPROCS=1, -race: 4 of 6 processes failed with 'callback N: 302 /login?error=oidc_failed' (the original flake). PR head, same load, 2 rounds = 12 processes x 30: 0 failures. Unloaded, -count=30 at GOMAXPROCS=1 and 2 passes on both old and new (old does not flake idle). TestGoogleConcurrentCallbacksStress (30x create+link) -race: 13.0 s at GOMAXPROCS=1, 12.7 s at GOMAXPROCS=2 (<30 s); -count=3 at GOMAXPROCS=2 passes (35 s total).
+  Real API: built bin/smemories-api from the PR, fake OIDC provider (oidctest) as SMEM_GOOGLE_ISSUER, 12 parallel callbacks for one new email over HTTP, GOMAXPROCS=1, 10 repetitions on fresh DBs: every callback 302 /, always 1 user + 1 identity. (Old binary also passed this idle; not a differentiator.)
+  AC4: make lint build test test-integration exit 0 (31 packages ok); Google integration tests pass; newman postman/auth.postman_collection.json twice with API restarted between runs (dummy SMEM_GOOGLE_*, real Google discovery): 55 requests, 140 assertions, 0 failures both runs. Diff of internal/ vs base touches only store.go retry loop + tests: no handler, status or error-code change. Scratch tests I used were not committed.
+  Non-blocking: when the wait is cancelled retryTx returns the last MySQL error (not ctx.Err()); callers still map to oidc_failed, fine. Other auth transactions not given the retry (dev checked; I did not audit).
+- 2026-10-08 14:23Z · leader · Leader review OK on head ef6bee0 (QA_PASS on the same head, CI 4/4 green). A 30-line change in internal/auth/store.go: 6 attempts, jittered doubling waits (5-25 ms up to 80-200 ms), retries only MySQL 1213, 1205 and 1062, stops at once when the context ends, no change to responses or error codes. QA reproduced the flake on the old code (4 of 6 loaded test processes failed with oidc_failed) and saw 0 failures in 24 loaded runs on the fix; 12 parallel callbacks against the real binary gave one user and one identity. Non-blocking: after a cancelled wait it returns the last MySQL error instead of the context error (callers map both to oidc_failed). Awaiting owner approval.
 
 ### T-048 — Email one-time codes replace verification and reset links (API) with a dev-only fixed code
 - **Status:** TODO
@@ -1826,7 +1853,7 @@ Go-live gate: delete the dev fixed OTP and every DEV-SHORTCUT, fail CI and the d
 #### Comments
 
 ### T-051 — Redis foundation: local stack (Valkey), client, config, readiness, CI
-- **Status:** IN_QA
+- **Status:** QA_PASS
 - **Priority:** P1
 - **Type:** infra
 - **Milestone:** M1
@@ -1834,11 +1861,11 @@ Go-live gate: delete the dev fixed OTP and every DEV-SHORTCUT, fail CI and the d
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** leader
 - **Branch:** task/t-051-redis-foundation-local-stack-valkey-clie
 - **PR:** https://github.com/danyaa666/smemories/pull/32
-- **Updated:** 2026-10-08 14:02Z by qa
-- **Comments-seen:** 1
+- **Updated:** 2026-10-08 14:13Z by qa
+- **Comments-seen:** 3
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/11-redis-foundation.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1848,6 +1875,23 @@ Add a Redis-protocol service (Valkey 8) to the local stack and CI, the go-redis 
 
 #### Comments
 - 2026-10-08 14:00Z · dev · Redis foundation done, PR #32. Test: make up (redis healthy), add SMEM_REDIS_URL from .env.example to .env, make test-integration, stop redis -> /readyz 503 and /healthz 200, restart keeps keys. CI uses docker run (not services:) for the AOF/noeviction flags, same digest. Not verified: real rediss://, maxmemory full, CI run.
+- 2026-10-08 14:13Z · qa · QA_PASS T-051 at head a59f2c5 (dev c5406fc + my test commit a59f2c5). CI on that head: go, go-integration, security, web all green (the first run's go job failed on a proxy.golang.org stream error while downloading x/text, an infra flake; passed on re-run). Isolated stack (compose project qa051, ports 13306/16379/19000, main stack untouched, torn down after).
+  EVIDENCE
+  AC1 stack: make up twice from clean worktree OK, redis healthy. CONFIG GET: appendonly yes, appendfsync everysec, save "", maxmemory 268435456, policy noeviction. Container image = pinned digest 640c5e62... (same string once in docker-compose.yml and once in ci.yml). PortBindings 127.0.0.1:16379 only; nc to LAN IP 192.168.1.11:16379 closed. Named volume qa051_redis-data. Keys survive docker restart and stop+rm+up (get restartkey -> hello). Filled to 263 MB: further SET and EVAL give "OOM command not allowed", evicted_keys:0, 210 existing keys kept; via go client Set returns the OOM reply error, Ping still ok, cleanup DEL works.
+  AC2 config: missing/empty SMEM_REDIS_URL -> "config error: SMEM_REDIS_URL is required (e.g. redis://127.0.0.1:6379/0)" for BOTH smemories-api and smemories-migrate (old .env without the variable = same message, exit 1). Bad scheme, no scheme, empty host, db 16, db abc, db -1, bad port, query string, bad %-escape -> "SMEM_REDIS_URL: want redis://[:password@]host:port/db or rediss://..., db 0-15". Bad/zero/negative timeouts and pool size 0/x/-3 name the variable and the value. Password never appears in any output (checked with passwords in URL). Wrong password, missing password (NOAUTH), SMEM_REDIS_PASSWORD right/wrong all behave correctly; fail-fast at startup, exit 1.
+  AC3 wrapper: Classify tested by dev unit tests; real behaviour: refused/blackhole/timeout -> "redis unavailable: ..." (ErrUnavailable), OOM and Lua error returned unclassified (tests). govulnchecking not available; go-redis v9.23.0 LICENSE is BSD-2-Clause, xxhash/v2 MIT, go.uber.org/atomic MIT, matches THIRD_PARTY_NOTICES entry (Valkey BSD-3, not shipped).
+  AC4 readyz: Redis stopped -> /readyz 503 not_ready in 0.41 s x3, /healthz 200 in 0.5 ms; restart -> 200 within 4 s without restarting the API; docker pause (hung server) -> 503 in 1.00 s, healthz 200, unpause -> 200. Startup log "redis connected" addr=127.0.0.1:16379, no password.
+  AC5 helper: go test -tags integration -race -count=3 ./internal/redis ok. I added internal/redis/isolation_qa_test.go (20 parallel tests writing the same logical key and an INCR counter, prefix scan, cleanup check). Mutation check: forcing a fixed prefix makes both dev's and my tests fail; restored. Full make test-integration equivalent (race, all packages, MySQL+Valkey+MinIO) green; unit tests, vet, gofmt, golangci-lint 0 issues. CI log shows "Start Valkey 8" step with the pinned digest and internal/redis tests ok.
+  AC6 docs: README, docs/redis.md, .env.example, docs/ci.md, openapi readyz text present and consistent with behaviour.
+  DISCLOSED DEPARTURES: docker run instead of services: AGREE (services: cannot pass server args; same pattern as the existing mysql/minio steps, same digest). --protected-mode no AGREE for dev/CI: verified the host port is loopback-only (LAN address refused); only side effect is other containers on the compose network reach it without auth, harmless in dev. Never use it in prod config (docs already say so).
+  NON-BLOCKING OBSERVATIONS (for dev or leader, none violates an AC)
+  1. rediss:// against the plain server: API exits after 5 s with "redis unavailable: context deadline exceeded", no hint about TLS. Spec asked for a clear error; suggest adding a hint when the scheme is rediss (e.g. "TLS handshake failed or timed out, is the server TLS?"). Same text for a blackhole host.
+  2. A port above 65535 (redis://host:99999/0) passes config validation and only fails at the startup ping ("invalid port"); could be caught in loadRedis.
+  3. smemories-migrate now needs SMEM_REDIS_URL though it never uses Redis, so an old .env breaks make migrate too (message is clear). Acceptable, but consider skipping the Redis check there.
+  4. go-redis writes its own unstructured line to stderr ("pool.go: failed to dial after 5 attempts") next to the slog JSON line.
+  5. /readyz stays 200 when Redis is at maxmemory (writes fail with OOM); by design, but worth an alert/metric later.
+  6. API exits at startup if Redis is unreachable (documented in docs/redis.md, not in the AC): fail fast, fine.
+- 2026-10-08 14:13Z · leader · Leader review OK on head a59f2c5 (QA_PASS on the same head, includes QA's isolation test commit; CI 4/4 green). Thin wrapper with no business logic: one attempt per command (a dead Redis cannot cost seconds per request), TLS 1.2 minimum, errors never carry the password, network failures classified as ErrUnavailable so callers pick fail-open or fail-closed, namespaced keys. Valkey pinned by digest, AOF everysec, noeviction (QA filled it to maxmemory: writes fail with OOM, nothing evicted), loopback-only port, restart and recreate keep keys, readiness 503 in 0.4 s with Redis stopped and 1.0 s when hung. Both disclosed departures accepted. Five minor findings moved to the T-052 spec (migrate should not need Redis, port range check, TLS hint, go-redis stderr logger, readiness write probe). Awaiting owner approval.
 
 ### T-052 — Login sessions move to Redis (drop the sessions table)
 - **Status:** BACKLOG
