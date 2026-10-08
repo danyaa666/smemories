@@ -1,0 +1,13 @@
+{
+  "name": "print-spike",
+  "private": true,
+  "type": "module",
+  "description": "Throwaway tooling for spike T-054 (browser print-to-PDF). Not part of the app, CI or web/package.json.",
+  "scripts": {
+    "measure": "node measure.mjs",
+    "test": "node --test check.test.mjs"
+  },
+  "dependencies": {
+    "playwright": "1.64.0"
+  }
+}
