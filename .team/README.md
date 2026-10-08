@@ -11,14 +11,15 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 17 | T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032 |
-| TODO | 5 | T-015, T-033, T-034, T-035, T-036 |
+| TODO | 4 | T-015, T-034, T-035, T-036 |
+| IN_PROGRESS | 1 | T-033 |
 | DONE | 14 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-028, T-030 |
 
 **Awaiting your review (MERGED):** nothing
 
 **Open questions for you:** none
 
-_Board last written 2026-10-08 02:46Z_
+_Board last written 2026-10-08 02:47Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -1226,19 +1227,19 @@ db.Open: treat MySQL 1044 as permanent; README warning about bare docker compose
 #### Comments
 
 ### T-033 — CI: do not cancel in-progress runs on develop and main
-- **Status:** TODO
-- **Priority:** P2
+- **Status:** IN_PROGRESS
+- **Priority:** P1
 - **Type:** infra
 - **Milestone:** M1
 - **Depends-on:** T-004
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-033-ci-do-not-cancel-in-progress-runs-on-dev
 - **PR:** —
-- **Updated:** 2026-10-08 02:24Z by leader
-- **Comments-seen:** 1
+- **Updated:** 2026-10-08 02:47Z by dev
+- **Comments-seen:** 2
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/09-ci-do-not-cancel-in-progress-runs-on-develop.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1248,6 +1249,7 @@ Evidence from the T-006/T-030 merges: the workflow's concurrency group has cance
 
 #### Comments
 - 2026-10-08 02:24Z · leader · Merge-commit CI runs on develop keep getting cancelled by board-sync pushes; ready.
+- 2026-10-08 02:47Z · leader · Leader: raised to P1. Merge commits on develop (d209266 T-011) were cancelled by later board-sync pushes, so develop is not getting a full CI pass per merge. Do this first.
 
 ### T-034 — Public note submission (text and photos)
 - **Status:** TODO
