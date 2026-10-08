@@ -80,12 +80,21 @@ type credentials struct {
 	DisplayName string `json:"display_name"`
 }
 
+type registerRequest struct {
+	credentials
+	Locale any `json:"locale"` // absent or null: "en"; anything but a string is invalid_locale
+}
+
 func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
-	var in credentials
+	var in registerRequest
 	if !decode(w, r, &in) {
 		return
 	}
-	u, sess, err := h.svc.Register(r.Context(), h.clientIP(r), r.UserAgent(), in.Email, in.Password, in.DisplayName)
+	locale := "en"
+	if in.Locale != nil {
+		locale, _ = in.Locale.(string) // a non-string leaves "", which Register rejects
+	}
+	u, sess, err := h.svc.Register(r.Context(), h.clientIP(r), r.UserAgent(), in.Email, in.Password, in.DisplayName, locale)
 	if err != nil {
 		h.fail(w, r, err)
 		return

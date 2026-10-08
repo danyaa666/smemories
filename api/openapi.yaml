@@ -101,6 +101,14 @@ paths:
                     characters (Cc), format characters (Cf: zero-width space, bidi overrides and isolates,
                     LRM/RLM, BOM) except U+200D (zero-width joiner, used in emoji sequences), and line or
                     paragraph separators (Zl, Zp) are rejected with `invalid_display_name`.
+                locale:
+                  type: [string, "null"]
+                  enum: [en, vi, null]
+                  default: en
+                  description: >-
+                    The student's UI language; it becomes `users.locale` and selects the language of the
+                    verification email. Absent or `null` means `en`; any other value (including another
+                    case such as `VI`, or a non-string) is `400 invalid_locale` and nothing is created.
       responses:
         "201":
           description: Account created; the session cookie is set.
@@ -111,7 +119,7 @@ paths:
               schema: {$ref: "#/components/schemas/UserEnvelope"}
         "400":
           description: >-
-            `invalid_email`, `weak_password`, `invalid_display_name` or `invalid_body`.
+            `invalid_email`, `weak_password`, `invalid_display_name`, `invalid_locale` or `invalid_body`.
           content:
             application/json:
               schema: {$ref: "#/components/schemas/Error"}
