@@ -12,10 +12,9 @@
 |---|---:|---|
 | BACKLOG | 17 | T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032 |
 | TODO | 5 | T-015, T-033, T-034, T-035, T-036 |
-| MERGED | 2 | T-011, T-012 |
-| DONE | 12 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-028, T-030 |
+| DONE | 14 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-028, T-030 |
 
-**Awaiting your review (MERGED):** T-011 (Google sign-in (OIDC + PKCE, account linking)); T-012 (Collection links (owner API and public lookup))
+**Awaiting your review (MERGED):** nothing
 
 **Open questions for you:** none
 
@@ -650,7 +649,7 @@ The template system and the PDF page renderer, built on the library chosen in T-
 - 2026-10-08 01:30Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-010')
 
 ### T-011 — Google sign-in (OIDC + PKCE, account linking)
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -661,8 +660,8 @@ The template system and the PDF page renderer, built on the library chosen in T-
 - **Assignee:** —
 - **Branch:** task/t-011-google-sign-in-oidc-pkce-account-linking
 - **PR:** https://github.com/danyaa666/smemories/pull/20
-- **Updated:** 2026-10-08 02:23Z by leader
-- **Comments-seen:** 10
+- **Updated:** 2026-10-08 02:46Z by leader
+- **Comments-seen:** 11
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/01-google-sign-in.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -698,9 +697,10 @@ Google sign-in with OIDC and PKCE and safe account linking (including the pre-hi
   Google findings on the merged build: runtime check with real binary: start -> 302 to accounts.google.com with S256 challenge/state/nonce, redirect_uri=<base>/api/v1/auth/google/callback, smem_oidc Max-Age=600 HttpOnly SameSite=Lax; callback without cookie -> /login?error=oidc_state and cookie cleared; callback rate limit 30x302 then 429 Retry-After 900; no SMEM_GOOGLE_CLIENT_ID -> start 404, /healthz ok. Provider-dependent cases (pre-hijacking, linking, replay, ID-token claim rejections, return_to, concurrency, log secrecy) are the 20 Go tests TestGoogle* in internal/auth, which pass; my earlier runtime proof of them is unaffected because the merge diff vs 7ffdb68 touches only csrf.go (T-009 media), config, main.go wiring and go.mod, not google.go.
   NON-BLOCKING: out-of-order migration risk from earlier note still stands for anyone who applied 0007 before 0006; fresh/CI fine. Risk high: owner approval needed before merge.
 - 2026-10-08 02:23Z · leader · merged d209266 (squash), owner-approved in chat 2026-10-08, QA re-verified the merge result (head 4109b7b). Review: ID token verified by go-oidc plus nonce, state and S256 PKCE, signed 10-minute cookie compared in encoded form, email_verified must be boolean true, return_to allow-list, pre-hijacking defence in one transaction, no tokens in logs. For owner to check: Google is OFF until SMEM_GOOGLE_CLIENT_ID is set; README section 'Google sign-in setup' lists the Google Cloud steps (real credentials are a later owner step). Follow-ups in T-015 and T-031 specs.
+- 2026-10-08 02:46Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-011, T-012')
 
 ### T-012 — Collection links (owner API and public lookup)
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -711,8 +711,8 @@ Google sign-in with OIDC and PKCE and safe account linking (including the pre-hi
 - **Assignee:** —
 - **Branch:** task/t-012-collection-links-owner-api-and-public-lo
 - **PR:** https://github.com/danyaa666/smemories/pull/21
-- **Updated:** 2026-10-08 02:34Z by leader
-- **Comments-seen:** 7
+- **Updated:** 2026-10-08 02:46Z by leader
+- **Comments-seen:** 8
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/01-collection-links.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -740,6 +740,7 @@ Owner-created private collection links (create, list, revoke) and the public loo
 - 2026-10-08 02:24Z · leader · Leader review OK on head 231955e (QA_PASS on the same head, CI 4/4 green). After T-011 merged (d209266) I tested the real merge result in a scratch worktree: merges without conflicts, go build, go vet (also with the integration tag), go test ./... and web check:api all pass, migrations 0005..0008 in order. So no dev round is needed. Non-blocking, recorded: public lookup limiter should count only misses (T-034 and T-031 specs). Awaiting owner approval; merge right after.
 - 2026-10-08 02:34Z · human · owner approved merge
 - 2026-10-08 02:34Z · leader · merged 7ca8137 (squash), owner-approved in chat 2026-10-08, QA_PASS on the same head, and I verified the merge result with T-011 in a scratch worktree (build, vet, unit tests, schema check). Review: 192-bit token hashed at rest and shown once, one indexed lookup, owner queries scoped through the yearbook, row lock keeps the 5-link limit under concurrency, revoke idempotent. For owner to check: after make up migrate, create a link with the Postman notes collection (README in postman/): the token appears only in the create response. Follow-up: public lookup limiter counts only misses (T-034 and T-031 specs).
+- 2026-10-08 02:46Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-011, T-012')
 
 ### T-013 — Notes moderation API (approve, hide, reorder, delete)
 - **Status:** BACKLOG
