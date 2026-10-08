@@ -73,3 +73,8 @@ migrate-down:
 # Needs `make up` first.
 test-integration:
 	go test -race -count=1 -tags integration ./...
+
+# Marks the Newman test accounts A and B of postman/notes.postman_collection.json as email-verified (the dev mail only goes to the API's stdout).
+.PHONY: verify-newman-users
+verify-newman-users:
+	docker compose exec -T mysql sh -c 'mysql -u"$$MYSQL_USER" -p"$$MYSQL_PASSWORD" "$$MYSQL_DATABASE" -e "UPDATE users SET email_verified_at = NOW(6) WHERE email IN (\"newman-notes-a@example.com\",\"newman-notes-b@example.com\") AND email_verified_at IS NULL"'
