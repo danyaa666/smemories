@@ -53,15 +53,15 @@ export function Photos({
   const cover = yearbook.cover_media_id;
   const profilePhoto = yearbook.profile.photo_media_id;
   const qc = useQueryClient();
-  const key = ["media", yearbook.id];
+  const listKey = ["media", yearbook.id];
   const list = useInfiniteQuery({
-    queryKey: key,
+    queryKey: listKey,
     queryFn: ({ pageParam }) => listMedia(yearbook.id, pageParam),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last) => last.next_cursor ?? undefined,
   });
   const ids = list.data?.pages.flatMap((p) => p.media.map((m) => m.id)) ?? [];
-  const refresh = () => void qc.invalidateQueries({ queryKey: key });
+  const refresh = () => void qc.invalidateQueries({ queryKey: listKey });
 
   const act = useMutation({
     mutationFn: (job: () => Promise<Yearbook>) => job(),
