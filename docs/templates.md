@@ -86,7 +86,7 @@ tests, never a request). Each rule names the template, page and file:
 | Rule | Limit |
 |---|---|
 | The file exists in `embed/<id>/` | |
-| Content is PNG or JPEG (the content decides, not the extension; a JPEG named `.png` is accepted) | |
+| Content is PNG or JPEG (the content decides, not the extension; a JPEG named `.png` is accepted); a PNG must not be interlaced (Adam7), the renderer cannot read it | |
 | File size | at most 1.5 MiB |
 | Pixel shape | width / height equal to the reference page's within 1 % |
 | Effective resolution on the reference page | 150 to 400 DPI (A5 reference: about 874 to 2331 px wide; Letter: 1275 to 3400 px) |

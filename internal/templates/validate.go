@@ -1,6 +1,7 @@
 package templates
 
 import (
+	"bytes"
 	"cmp"
 	"errors"
 	"fmt"
@@ -18,6 +19,9 @@ import (
 
 	"github.com/danyaa666/smemories/internal/pdf/fonts"
 )
+
+// pngInterlaceOffset is where the interlace method sits in a PNG: 8 signature bytes, 8 chunk header bytes, 12 into IHDR.
+const pngInterlaceOffset = 8 + 8 + 12
 
 // Bounds that keep a (future, user-supplied) template from exhausting memory.
 const (
@@ -289,15 +293,19 @@ func (v *validator) background(where string, e *Element) {
 		v.errf(where, "asset %q is %d bytes, the limit is %d", e.Asset, st.Size(), maxAssetBytes)
 		return
 	}
-	f, err := v.t.assets.Open(e.Asset)
+	data, err := fs.ReadFile(v.t.assets, e.Asset) // at most maxAssetBytes, checked above
 	if err != nil {
 		v.errf(where, "asset %q cannot be opened: %v", e.Asset, err)
 		return
 	}
-	defer f.Close()
-	cfg, format, err := image.DecodeConfig(f) // by content, not by extension
+	cfg, format, err := image.DecodeConfig(bytes.NewReader(data)) // by content, not by extension
 	if err != nil || (format != "png" && format != "jpeg") {
 		v.errf(where, "asset %q is not a PNG or JPEG image", e.Asset)
+		return
+	}
+	// The PNG decoder behind the renderer cannot read Adam7 interlacing; byte 12 of the IHDR data is the interlace method.
+	if format == "png" && len(data) > pngInterlaceOffset && data[pngInterlaceOffset] != 0 {
+		v.errf(where, "asset %q is an interlaced PNG, which is not supported: save it without interlacing", e.Asset)
 		return
 	}
 	rw, rh := v.t.RefDims()

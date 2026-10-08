@@ -2,7 +2,9 @@ package templates
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
+	"hash/crc32"
 	"image"
 	"image/jpeg"
 	"image/png"
@@ -31,6 +33,16 @@ func pngBytes(t testing.TB, w, h int) []byte {
 		t.Fatal(err)
 	}
 	return b.Bytes()
+}
+
+// interlacedPNG marks a PNG as Adam7-interlaced by setting the IHDR interlace byte and fixing the chunk CRC.
+// The header is all the validator reads, so the pixel data does not have to be re-encoded.
+func interlacedPNG(t testing.TB, w, h int) []byte {
+	t.Helper()
+	b := pngBytes(t, w, h)
+	b[pngInterlaceOffset] = 1
+	binary.BigEndian.PutUint32(b[29:33], crc32.ChecksumIEEE(b[12:29])) // CRC covers the chunk type and its 13 data bytes
+	return b
 }
 
 func jpegBytes(t testing.TB, w, h int) []byte {
@@ -89,6 +101,7 @@ func TestBackgroundRejected(t *testing.T) {
 		"classic/high.png":  {Data: pngBytes(t, 2340, 3320)},
 		"classic/big.png":   {Data: big},
 		"classic/text.png":  {Data: []byte("not an image")},
+		"classic/adam7.png": {Data: interlacedPNG(t, 1240, 1760)},
 		"classic/empty.png": {Data: nil},
 		"classic/a.gif":     {Data: good(t)},
 		"classic/sub/x.png": {Data: good(t)},
@@ -105,6 +118,7 @@ func TestBackgroundRejected(t *testing.T) {
 		{"above 400 DPI", "classic/high.png", []string{"150..400"}},
 		{"over 1.5 MiB", "classic/big.png", []string{"1572864"}},
 		{"not an image", "classic/text.png", []string{"not a PNG or JPEG"}},
+		{"interlaced PNG", "classic/adam7.png", []string{"interlaced"}},
 		{"empty file", "classic/empty.png", []string{"not a PNG or JPEG"}},
 		{"extension", "classic/a.gif", []string{"ending in .png, .jpg or .jpeg"}},
 		{"parent folder", "classic/../other/ok.png", []string{"no folders", `".."`}},

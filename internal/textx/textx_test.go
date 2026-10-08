@@ -37,3 +37,25 @@ func TestClean(t *testing.T) {
 		}
 	}
 }
+
+func TestCleanMultiline(t *testing.T) {
+	tests := []struct {
+		name, in, want string
+		ok             bool
+	}{
+		{"keeps newline", "a\nb", "a\nb", true},
+		{"crlf to lf", "a\r\nb", "a\nb", true},
+		{"trims outer newlines", "\n a \r\n", "a", true},
+		{"lone cr", "a\rb", "", false},
+		{"tab", "a\tb", "", false},
+		{"nul", "a\x00b", "", false},
+		{"bidi override", "a\u202eb", "", false},
+		{"zwj kept", "👩\u200d🎓\nx", "👩\u200d🎓\nx", true},
+	}
+	for _, tc := range tests {
+		got, ok := CleanMultiline(tc.in, 1, 20)
+		if ok != tc.ok || got != tc.want {
+			t.Errorf("%s: CleanMultiline(%q) = %q, %v; want %q, %v", tc.name, tc.in, got, ok, tc.want, tc.ok)
+		}
+	}
+}
