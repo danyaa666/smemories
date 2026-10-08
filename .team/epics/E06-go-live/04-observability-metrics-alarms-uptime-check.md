@@ -8,3 +8,6 @@
 RED metrics and DB/pool/export-queue gauges, CloudWatch alarms (5xx rate, p95 latency, export failures, RDS CPU/storage), external uptime check on /readyz, log retention and PII-free log review.
 
 _BACKLOG: needs a full spec (description, acceptance criteria, design, test plan) before it moves to TODO._
+
+#### Leader note from decision D-23 (2026-10-08)
+Add Redis alarms: memory use above 70%, evictions above zero (should be impossible with noeviction), rejected writes, connection count, replication lag if Multi-AZ, and a count of `503 session_store_unavailable` / `code_store_unavailable` / `limiter_unavailable` responses.

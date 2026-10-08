@@ -10,8 +10,8 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 22 | T-013, T-014, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-040, T-041, T-042, T-046, T-049, T-050 |
-| TODO | 5 | T-034, T-039, T-044, T-047, T-048 |
+| BACKLOG | 24 | T-013, T-014, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-040, T-041, T-042, T-046, T-049, T-050, T-052, T-053 |
+| TODO | 6 | T-034, T-039, T-044, T-047, T-048, T-051 |
 | READY_FOR_QA | 1 | T-016 |
 | DONE | 22 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-028, T-030, T-033, T-035, T-036, T-037, T-038, T-043, T-045 |
 
@@ -19,7 +19,7 @@
 
 **Open questions for you:** none
 
-_Board last written 2026-10-08 11:09Z_
+_Board last written 2026-10-08 11:18Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -280,6 +280,7 @@ Owner decisions (2026-10-06, `/team-init` interview). "Rejected" lists the optio
 | D-20 | **Each yearbook owner edits their own copy of a template; users do not publish templates to others.** | Owner answer in chat 2026-10-08. System templates are starting points curated through the import pipeline (E08); a student's edits belong to their book only, so there is no moderation, copyright or abuse surface for shared designs. | Template gallery where users publish; admin-only template editor | Students ask to share designs |
 | D-21 | **Friends' notes are template-driven from the start: answers keyed by field id from a closed catalogue, form generated from the template's fields.** | Owner answer in chat 2026-10-08 (the designs need richer forms: how we met, first impression, best memory, wish). `internal/notefields` (T-043) defines fields with limits and EN/VI labels; T-034 stores `notes.answers` JSON validated against it; the public lookup returns the form's `fields`; templates declare `note_fields` (T-044). Answers survive a template change. The catalogue has no personal-data fields beyond a name (D-01 data minimisation). | Fixed columns in M1, migrate later (rewrite of tables, form, moderation, export); fixed fields forever | A field needs a type the catalogue lacks (rating, choice), or contributors must give contact data |
 | D-22 | **Email verification and password reset use 6-digit one-time codes typed by the student, not emailed links; a dev-only fixed code `123123` exists and must be deleted before production.** | Owner answers in chat 2026-10-08. Replaces the link design of T-007 (nothing is in production). Codes are stored as HMAC-SHA256 with a server key, valid 30 min (verify) or 15 min (reset), 5 wrong attempts lock a code, plus per-user and per-IP limits (T-048, web T-049). The dev code is `SMEM_DEV_FIXED_OTP=123123`, honoured only when `SMEM_ENV` is `dev` or `test`; the API refuses to start otherwise if it is set. Every such shortcut is tagged `DEV-SHORTCUT`, listed in `docs/dev-shortcuts.md`, and removed by T-050, a prerequisite of the first deploy (T-023); the rule is in CLAUDE.md. | Keep links with a dev shortcut; links and codes together | Phones prove awkward with codes, or a provider needs links (then add magic links beside codes) |
+| D-23 | **All time-limited data lives in Redis (Valkey locally; Redis-protocol compatible): login sessions, the 6-digit email codes with their attempt counters, and every rate limiter.** | Owner request in chat 2026-10-08. Native expiry replaces purge jobs; limiters become correct across several API tasks. MySQL keeps everything durable (users, identities, yearbooks, notes, media metadata, collection links). Local and CI run Valkey 8 pinned by digest (BSD licence; the code uses only the Redis protocol, client `github.com/redis/go-redis/v9`). Policy: sessions and OTP attempts fail closed (503) when Redis is down; other limiters fail open with an ERROR log; Redis runs with `noeviction` and AOF `everysec` so memory pressure fails writes loudly and a restart keeps sessions. Nothing is in production, so no data migration: the `sessions` table and the planned `email_codes` table are not kept. Tasks T-051 (foundation), T-052 (sessions), T-053 (limiters); T-048 writes codes straight to Redis. AWS: ElastiCache (Valkey or Redis OSS) with a cost estimate agreed with the owner in T-023. | Keep MySQL tables with purge jobs; Redis only for rate limits | Sessions must be queryable (device list) beyond a simple index, or the ElastiCache cost is unacceptable |
 
 Leader decisions (low-risk, inside the approved stack):
 
@@ -1734,14 +1735,14 @@ CI on develop failed once on TestGoogleConcurrentCallbacksCreateOneAccount: goog
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
-- **Depends-on:** T-045
+- **Depends-on:** T-045, T-051
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-08 11:09Z by leader
+- **Updated:** 2026-10-08 11:18Z by leader
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/08-email-otp-codes-replace-links-api.md`
@@ -1795,6 +1796,75 @@ Code input screens (paste, auto-submit, resend cooldown) replacing the link page
 **Epic:** E06-go-live · **PRD:** `.team/epics/E06-go-live/PRD.md`
 
 Go-live gate: delete the dev fixed OTP and every DEV-SHORTCUT, fail CI and the deploy pipeline if one returns.
+
+#### Comments
+
+### T-051 — Redis foundation: local stack (Valkey), client, config, readiness, CI
+- **Status:** TODO
+- **Priority:** P1
+- **Type:** infra
+- **Milestone:** M1
+- **Depends-on:** T-030
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-08 11:18Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/11-redis-foundation.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E01-foundation · **PRD:** `.team/epics/E01-foundation/PRD.md`
+
+Add a Redis-protocol service (Valkey 8) to the local stack and CI, the go-redis client, SMEM_REDIS_URL, readiness and test helpers; no behaviour change (D-23).
+
+#### Comments
+
+### T-052 — Login sessions move to Redis (drop the sessions table)
+- **Status:** BACKLOG
+- **Priority:** P1
+- **Type:** tech-debt
+- **Milestone:** M1
+- **Depends-on:** T-051
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-08 11:18Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/10-sessions-in-redis.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E02-auth · **PRD:** `.team/epics/E02-auth/PRD.md`
+
+Sessions with native expiry in Redis, per-user index for delete-all, fail-closed policy, sessions table dropped (D-23).
+
+#### Comments
+
+### T-053 — Rate limiters move to Redis (shared limiter for all endpoints)
+- **Status:** BACKLOG
+- **Priority:** P1
+- **Type:** tech-debt
+- **Milestone:** M1
+- **Depends-on:** T-051
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-08 11:18Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/11-rate-limiters-in-redis.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E02-auth · **PRD:** `.team/epics/E02-auth/PRD.md`
+
+Redis sliding-window limiter with Take and Refund replacing the in-memory one everywhere, fail-open except OTP and login lockouts (D-23).
 
 #### Comments
 

@@ -21,3 +21,6 @@ class or move the first line of defence to the edge (WAF rate rules). Also: the 
 The same shared-address concern applies to the public collection lookup (T-012, 60 per 15 minutes per IP): see the T-034 notes; include it in the burst measurement.
 
 The public note submission (T-034) limits per client IP are 100 per hour and 300 per day, and 60 submissions per collection per hour (constants in `internal/notes/submit.go`). A class link posted in a group chat can see more than 60 real submissions in its first hour (a collection holds at most 300 notes in total); in the burst measurement decide whether to raise the per-collection hourly limit to about 150.
+
+#### Leader note from decision D-23 (2026-10-08)
+The "shared limiter" and "session purge" items of this task are done by T-053 and T-052 (Redis); drop them from this task's scope when it is promoted. Remaining: edge limits, stored-hash caps, the limit-tuning measurements above.

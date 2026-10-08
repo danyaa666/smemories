@@ -12,3 +12,6 @@ _BACKLOG: needs a full spec (description, acceptance criteria, design, test plan
 #### Leader notes from the T-009 review (2026-10-08)
 Image processing is memory hungry (see T-036): size the container for it (2 GiB minimum unless T-036 documents otherwise), set `SMEM_MEMORY_LIMIT_MIB` to about 80% of the container memory,
 and add the `SMEM_S3_*` and `SMEM_MEDIA_*` variables to the production configuration; storage credentials come from the task role, not static keys (the S3 client currently supports static keys only: extend it to the default credential chain when SMEM_S3_ACCESS_KEY is empty).
+
+#### Leader note from decision D-23 (2026-10-08)
+Production configuration also needs `SMEM_REDIS_URL` (a `rediss://` URL with the auth token from Secrets Manager), `SMEM_OTP_KEY` and `SMEM_OIDC_COOKIE_KEY`; the API must not start in prod without them. `/readyz` includes Redis, so the container health check and the load balancer target group must tolerate a Redis outage only as "not ready", not as a crash loop.
