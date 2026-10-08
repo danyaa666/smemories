@@ -10,19 +10,18 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 21 | T-013, T-014, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-040, T-041, T-042, T-044, T-046 |
-| TODO | 1 | T-039 |
+| BACKLOG | 20 | T-013, T-014, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-040, T-041, T-042, T-046 |
+| TODO | 2 | T-039, T-044 |
 | READY_FOR_QA | 1 | T-016 |
 | IN_QA | 1 | T-034 |
-| QA_PASS | 1 | T-045 |
-| MERGED | 7 | T-015, T-033, T-035, T-036, T-037, T-038, T-043 |
+| MERGED | 8 | T-015, T-033, T-035, T-036, T-037, T-038, T-043, T-045 |
 | DONE | 14 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-028, T-030 |
 
-**Awaiting your review (MERGED):** T-015 (Web: auth pages and session handling); T-033 (CI: do not cancel in-progress runs on develop and main); T-035 (T-010 follow-ups: template tests iterate templates.List()); T-036 (Bound the memory of image processing (caps, concurrency, memory limit)); T-037 (US Letter page size, end to end); T-038 (Template format v2: backgrounds, static text, rotation, ellipse, font families); T-043 (Note field catalogue (internal/notefields): closed set of form fields with EN/VI labels and validation)
+**Awaiting your review (MERGED):** T-015 (Web: auth pages and session handling); T-033 (CI: do not cancel in-progress runs on develop and main); T-035 (T-010 follow-ups: template tests iterate templates.List()); T-036 (Bound the memory of image processing (caps, concurrency, memory limit)); T-037 (US Letter page size, end to end); T-038 (Template format v2: backgrounds, static text, rotation, ellipse, font families); T-043 (Note field catalogue (internal/notefields): closed set of form fields with EN/VI labels and validation); T-045 (Register accepts a locale; verification email in the student's language)
 
-**Open questions for you:** Q-014 (Approve merge of T-045 (register accepts a locale)?)
+**Open questions for you:** none
 
-_Board last written 2026-10-08 09:14Z_
+_Board last written 2026-10-08 09:22Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -245,7 +244,7 @@ The table of EN/VI labels and hints is in the description of https://github.com/
 QA passed and my review is clean (head 9546d3b, CI green, merges cleanly). High risk because it includes a database migration (0009): it adds Letter to the yearbook page_size enum; existing books are untouched, and rolling back turns Letter books into A5. Nothing in the web UI offers Letter yet (the yearbook form comes with T-016). Command: cd /Users/unisoft/GolandProjects/awesomeProject1 && /Users/unisoft/.claude/plugins/cache/claude-agent-team/agent-team/0.3.0/bin/team approve T-037
 
 ### Q-014 — Approve merge of T-045 (register accepts a locale)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-08 08:52Z
 - **Blocks:** T-045
 - **Recommendation:** approve
@@ -1591,7 +1590,7 @@ Closed catalogue of note form fields (name, relationship, message, how we met, .
 - 2026-10-08 08:44Z · leader · merged 0032e6f (squash), owner OK on the Vietnamese labels (Q-012), QA_PASS on head 9b9b08a, CI green. Review: closed catalogue with fixed ids, Validate rejects unknown ids first and bounds work by bytes, textx rules (NFC, no control or format chars except ZWJ and variation selectors). Owner said OK to my recommendation, which included one wording change: 'Chúng ta quen nhau thế nào' becomes 'Chúng mình quen nhau thế nào' (done in T-034, first commit). For owner to check: docs/note-fields.md.
 
 ### T-044 — Templates declare note fields (format v2.1): note_fields, note_field slot, NoteFields helper
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
@@ -1602,8 +1601,8 @@ Closed catalogue of note form fields (name, relationship, message, how we met, .
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-08 03:19Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-08 09:14Z by leader
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E08-designer-templates/07-templates-declare-note-fields.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1612,21 +1611,22 @@ Closed catalogue of note form fields (name, relationship, message, how we met, .
 A template lists which note fields its friend pages ask for and where each answer prints; the API reads the list for the public form.
 
 #### Comments
+- 2026-10-08 09:14Z · leader · T-038 and T-043 are merged: ready.
 
 ### T-045 — Register accepts a locale; verification email in the student's language
-- **Status:** QA_PASS
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
 - **Depends-on:** T-015
 - **Risk:** high
 - **Rework:** 0
-- **Owner-approved:** —
-- **Assignee:** leader
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-045-register-accepts-a-locale-verification-e
 - **PR:** https://github.com/danyaa666/smemories/pull/29
-- **Updated:** 2026-10-08 08:51Z by qa
-- **Comments-seen:** 4
+- **Updated:** 2026-10-08 09:22Z by leader
+- **Comments-seen:** 6
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/06-register-accepts-locale.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1646,6 +1646,8 @@ Let the register request carry the UI language so Vietnamese students get the ve
   Google sign-in unaffected: no google/oidc file in the diff; all Google integration tests pass (incl. TestGoogleNameAndLocaleFallbacks). Real Google round trip not run (no credentials), covered by the fake-provider tests.
   Non-blocking: unknown extra JSON fields and a differently-cased key (LOCALE) are accepted by the decoder (pre-existing Go encoding/json behaviour, value still validated). Risk high: owner approves the merge.
 - 2026-10-08 08:52Z · leader · Leader review OK on head 8a9cafb (QA_PASS on the same head, CI 4/4 green). A two-value allow-list (en, vi), anything else including non-strings is invalid_locale before any rate-limit token or hash is spent, nothing is created on error, the stored locale drives the verification and reset emails, the web form sends i18n.resolvedLanguage limited to en/vi. Non-blocking: unknown JSON fields and a differently-cased key are accepted by the shared decoder (pre-existing behaviour). Awaiting owner approval.
+- 2026-10-08 09:22Z · human · owner approved merge
+- 2026-10-08 09:22Z · leader · merged a49d988 (squash), owner-approved in chat 2026-10-08, QA_PASS on head 8a9cafb, CI green. Review: locale allow-list (en, vi), invalid_locale before any rate-limit token or hash is spent, nothing created on error, stored locale drives verification and reset emails, web form sends the UI language. For owner to check: register in the Vietnamese UI and read the Vietnamese verification email in the API log.
 
 ### T-046 — List a yearbook's photos (API and photo library in the web UI)
 - **Status:** BACKLOG
