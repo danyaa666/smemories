@@ -11,8 +11,9 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 25 | T-013, T-014, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-039, T-040, T-041, T-042, T-044, T-049, T-050, T-052, T-053 |
-| TODO | 3 | T-046, T-048, T-054 |
-| READY_FOR_QA | 1 | T-034 |
+| TODO | 2 | T-034, T-048 |
+| IN_PROGRESS | 1 | T-054 |
+| READY_FOR_QA | 1 | T-046 |
 | QA_PASS | 2 | T-047, T-051 |
 | MERGED | 1 | T-016 |
 | DONE | 22 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-028, T-030, T-033, T-035, T-036, T-037, T-038, T-043, T-045 |
@@ -21,7 +22,7 @@
 
 **Open questions for you:** Q-015 (Approve merge of T-051 (Redis foundation)?); Q-016 (Approve merge of T-047 (fix flaky concurrent Google callback)?)
 
-_Board last written 2026-10-08 14:28Z_
+_Board last written 2026-10-08 14:51Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -1357,7 +1358,7 @@ Evidence from the T-006/T-030 merges: the workflow's concurrency group has cance
 - 2026-10-08 09:23Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-015, T-033, T-035, T-036')
 
 ### T-034 — Public note submission (text and photos)
-- **Status:** READY_FOR_QA
+- **Status:** TODO
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -1368,8 +1369,8 @@ Evidence from the T-006/T-030 merges: the workflow's concurrency group has cance
 - **Assignee:** —
 - **Branch:** task/t-034-public-note-submission-text-and-photos
 - **PR:** 30
-- **Updated:** 2026-10-08 14:28Z by dev
-- **Comments-seen:** 5
+- **Updated:** 2026-10-08 14:51Z by leader
+- **Comments-seen:** 7
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/02-public-note-submission.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1408,6 +1409,24 @@ Public endpoint where a friend with a collection link submits a note with text, 
   Re-test after fix: rerun the 4-stalled-connections repro and the 12-parallel run; everything else above is unaffected unless submit.go changes.
 - 2026-10-08 09:24Z · leader · Leader: QA_FAIL accepted. Fix in the same PR #30 (branch and worktree are reused), then READY_FOR_QA. The required changes are in the spec file, section 'Leader notes from the T-034 QA failure': (1) rolling 10 s idle read deadline with the 120 s total cap, (2) per-IP cap of concurrent photo-bearing submissions (default 8, configurable), (3) validate token, link state, cap and answers before reading photo bytes, (4) tests including QA's stalled-connection repro (4 half-open uploads must not block a normal submission), (5) OpenAPI wording of the 503 and no ERROR log for client disconnects. Everything else QA checked held: keep it unchanged.
 - 2026-10-08 14:28Z · dev · Rework head c69be6b (develop merged first; migration still 0010, no other open branch has one). Leader items: (1) rolling 10 s idle read deadline via httpx.IdleBody (120 s total cap) -> 408 request_timeout, nothing stored; test TestIdleBodyIsDropped on a real socket. (2) per-IP cap on concurrent photo submissions, SMEM_PUBLIC_UPLOAD_CONCURRENT_PER_IP default 8 (config validated, .env.example, README, docs/media.md); DECISION FOR LEADER: with the default pool of 4 slots a cap of 8 protects nothing, so the effective cap is min(configured, pool/2) = 2 by default; text-only needs no slot. (3) answers are validated before the first photo byte is read and before a slot is taken; NOTE answers must now come BEFORE photos (400 invalid_body otherwise; browser FormData order follows append order, T-018 must append answers first); TestRejectedRequestsDoNotNeedASlot. (4) tests: TestStalledUploadsDoNotBlockOthers (4 half-open uploads from one IP, a 3-photo submission from another IP succeeds), TestUploadsPerIPLimit, TestFortyStudentsWithPhotos, TestIdleBodyIsDropped. (5) QA issue 2: OpenAPI says 503 busy answers at once with Retry-After 2, 408 documented, web schema regenerated; issue 3: client gone -> debug log, status 499 client_closed, no ERROR (noErrorLogged checks). Green: make lint build test, go test -race -tags integration ./.... Not run: newman (not installed here; no Postman request changed, all send answers before photos). Retest: QA's 4-stalled repro (same IP: expect two held, two 503; other IP fine; the held ones die after 10 s) and the 12-parallel run (same IP now gets at most 2 photo submissions at a time, rest 503 busy). Known gap: many-IP floods stay with T-031.
+- 2026-10-08 14:50Z · qa · Re-test of PR #30 head c69be6b, CI green (go, go-integration, security, web). The slow-upload fix itself works and nothing regressed, but the retry flow the leader relies on for "40 students behind one IP" breaks on realistic upload speeds (issue 1), and the fix is still defeated by two source addresses (issue 2).
+  ISSUES
+  1. [MAJOR, availability, the 40-students requirement] The 503 busy retries are counted by the per-IP cost guard (allPerWindow = 600 requests per 15 min, internal/notes/handler.go) and lock the whole class out with 429 rate_limited for about 14 minutes (Retry-After 833; public lookups too). Repro (SMEM_TRUST_PROXY=true, defaults, 40 students from X-Forwarded-For 10.70.0.1, each = GET lookup + POST with answers first and 3 PNG photos of 1.23 MB, retrying on 503 after Retry-After + 0-1 s jitter, give up after 400 s): upload speed per student 3 MB/s: 40/40 get 201 in 43 s (tries med 9, max 17); 2 MB/s: 40/40 in 53 s (med 11, max 22); 1 MB/s: only 26/40 get 201, 14 students end on 429 after 23 tries, and a fresh submit or lookup from that IP is 429 for 833 s. With real phone photos (3 x 3-5 MB over a mobile uplink, 5-10 s per submission, 2 upload slots per IP) a class needs 100+ s and 50+ tries each, so this will happen in practice, and a web client with a finite retry count fails earlier. The fast case (all four dev tests, 0.3 s per upload) hides it. Expected: 40 students from one IP with photos get through. Suggested fix (any one, or a mix): refund the cost-guard token when the answer is 503 busy (the busy answer costs nothing: no body was read, no image decoded); and/or give 503 a longer or jittered Retry-After (5-10 s) so a class does not poll at 13 req/s; and/or wait up to a few seconds for a slot before answering 503 (waiting before the body is read holds no memory). Add a test: 40 submitters whose uploads take 2-3 s each, retrying on 503, all end with 201 and none with 429.
+  2. [MAJOR or defer to T-031 (leader decides), availability] The per-IP cap of pool/2 = 2 means two source addresses hold all 4 slots, and the rolling 10 s idle deadline is beaten by sending 1 byte every 7 s (held until the 120 s total cap, then reconnect). Repro (SMEM_TRUST_PROXY=true): 2 sockets from X-Forwarded-For 10.80.0.1 and 2 from 10.80.0.2, each sends headers, a valid answers part, the head of a photos part (Content-Length 5000000) and then 1 byte every 7 s. A normal 1-photo submission from 10.80.0.3 gets 503 busy at t=5, 35, 70 and 100 s. Text-only still works. Same cross-tenant effect as the original finding, now needs 2 addresses instead of 1 (IPv6 or a cheap proxy pool defeats it). Suggested: a minimum-progress rule on top of the idle deadline (for example abort when the average rate is under 4-8 KB/s after the first 15 s, or total cap that scales with Content-Length), and/or per-IP cap 1 while the pool is 4, and a larger pool via SMEM_MEDIA_MAX_CONCURRENT in production.
+  3. [MINOR, Postman rule] postman/notes.postman_collection.json has no edge-case entry for the changed contract: answers part after (or without) the photos part must answer 400 invalid_body ("send the answers part before the photos"). Dev said no request changed, but the behaviour of existing requests with reordered parts changed. Add one request (photos first, then answers) with the 400 assertions. 408 and 503 cannot be produced by newman and are covered by the Go tests.
+  4. [MINOR, for T-018] An early 503 or 400 is sent before the body is read, and the server closes the connection. A python client uploading 2.2 MB saw the socket broken before it finished in 67 of ~130 attempts (response still readable when the client reads after the failure); curl uploading 9 MB got the 503 6 times out of 6. A browser fetch may surface this as a network error instead of the status, so the web form must retry on a network error exactly like on 503 and keep the same answers and files. Put this in the T-018 spec.
+  EVIDENCE (real API binary from c69be6b, MySQL 8.4, MinIO, own database and bucket, removed afterwards)
+  - Mechanical: make lint (exit 0), make build, go test -race ./... and make test-integration all pass. CI on c69be6b green. Migration 0010 up (v10), down (v9, notes and note_photos gone), up again OK; no ip or user-agent column in notes, note_photos, media.
+  - (1) Stalled repro, SMEM_TRUST_PROXY=true so I can use several client IPs: 4 half-open uploads from 10.0.0.1 (valid answers, head of a photos part, then silence): 2 hold a slot, 2 get 503; a 3-photo submission (2.4 MB each) from 10.0.0.2 in the same second: 201 in 0.27 s; text-only from 10.0.0.1: 201; the same IP with 1 photo: 503 Retry-After 2 (the attacker's own address only); the held sockets answer 408 request_timeout at 10.0 s; media rows, note_photos and objects unchanged by all of them. Idle drop at exactly 10.0 s with 408 and nothing stored for: headers only, stop in the middle of answers, complete answers then silence, photo head then silence. Trickle of 1 byte per 5 s: dropped at the 120 s total cap (log: 408 after 120003 ms). With one address only (SMEM_TRUST_PROXY=false) a hostile user and a student on the same address share the 2 slots, expected by design.
+  - (2) Per-IP cap = min(configured, pool/2) = 2 confirmed (2 held, rest 503, other IPs unaffected). 40 students from one IP, 3 photos, retrying: see issue 1 for the numbers; fast uploads (no throttle, 0.75 MB x 3): 40/40 201 in 11.6 s, max 5 tries; staggered over 30 s: 40/40 on the first try.
+  - (3) With the 2 slots of 10.3.0.1 held: invalid_answer, missing_answer, unknown_field, answers not JSON, duplicate answers, answers over 16 KiB, no answers, each followed by a photo head and silence, are answered at once (0.00 s) with their own 400, never 503 and never after 10 s; only valid answers get 503. Expired, revoked, unknown token and expired + photo: 410/404 before any slot.
+  - (4) Answers after photos, or no answers with photos: 400 invalid_body "send the answers part before the photos", immediately. Text-only with website part first or last still works; honeypot filled (also with garbage answers): 201 and 0 rows, 0 objects; empty website field is a real note.
+  - (5) OpenAPI submitNote text and the 408 response read and match the behaviour (503 immediate, Retry-After 2; check:api passes in make lint). Client disconnect: 6 uploads closed at 0-0.5 s: 4 x 499 client_closed logged at DEBUG "notes: client gone" (request line INFO status 499), 2 completed as notes, 0 ERROR lines, 0 orphan media rows, objects = 2 x media rows.
+  - (6) Regression: lookup returns fields (id, kind, label en/vi, hint, ...); no Set-Cookie and no Access-Control-* with a foreign Origin and a junk cookie, OPTIONS 405; emoji, ZWJ family, flag, skin tone and Vietnamese round trip byte-identical (hex compare), 2000 emoji message 201, 2001 emoji 400; rate limits: 30 invalid not counted, 60 per collection then 429 Retry-After 3600, IP 100/h across 3 collections then 429, lookups 200, other IP unaffected; 300-note cap: 296 prefilled + 30 parallel = 4 x 201, 15 x 409, 11 x 503 (pool), collection exactly 300, 301st text and photo 409, 0 orphans; 299 + 4 parallel 2-photo = 1 x 201, 3 x 409, media +2; failure injection: note_photos renamed away after 3 photos stored: 500, media rows and objects unchanged; notes renamed away: 500, unchanged; bucket missing: photo 502 storage_error, text-only 201; 40 MiB: photo part 413 in 0.51 s (RSS 76 MB before and after), 40 MiB junk part 413 in 0.53 s after 34 MiB sent, 40 MiB to an unknown token 404 after 1 MiB; API log grep for names, message text, client IPs, cookie names: 0 hits.
+  - Newman (installed in scratch space, API restarted between runs): notes collection 71 requests / 135 assertions 0 failures, twice (plus a third run); media collection 44 requests / 77 assertions 0 failures, twice.
+  NON-BLOCKING NOTES: a) answers JSON escaped as surrogate pairs (python ensure_ascii) is 6 bytes per emoji and hits the 16 KiB cap; browsers send raw UTF-8. b) My test API process was stopped twice by something outside my scripts (graceful shutdown in the log); not related to the product.
+  Re-test after fix: rerun the throttled 40-student run at 1 MB/s (script in QA scratch space; any client that uploads 3 x 1.2 MB at 1 MB/s with retry on 503 works) and the 2-address trickle.
+- 2026-10-08 14:51Z · leader · Leader: QA_FAIL round 2 accepted; the design needed to change, not only the code. See the spec section 'Leader notes, round 2': spool the body to disk so the network phase holds no processing slot, cheap connection caps (48 global, 8 per IP) instead of the pool-based cap, 503 busy not counted against the IP request cap and jittered Retry-After, minimum throughput rule, drain the body before an early error so browsers show it, and the tests listed there (40 students at 1 MB/s must all succeed). Keep everything QA already passed. Same PR #30, same branch and worktree.
 
 ### T-035 — T-010 follow-ups: template tests iterate templates.List()
 - **Status:** DONE
@@ -1729,7 +1748,7 @@ Let the register request carry the UI language so Vietnamese students get the ve
 - 2026-10-08 09:29Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-037, T-038, T-043, T-045')
 
 ### T-046 — List a yearbook's photos (API and photo library in the web UI)
-- **Status:** TODO
+- **Status:** READY_FOR_QA
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -1738,9 +1757,9 @@ Let the register request carry the UI language so Vietnamese students get the ve
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-08 14:02Z by leader
+- **Branch:** task/t-046-list-a-yearbook-s-photos-api-and-photo-l
+- **PR:** https://github.com/danyaa666/smemories/pull/34
+- **Updated:** 2026-10-08 14:40Z by dev
 - **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E03-yearbooks/05-list-a-yearbooks-photos.md`
@@ -1751,6 +1770,7 @@ Owner-only list endpoint for a yearbook's photos and the web photo library that 
 
 #### Comments
 - 2026-10-08 14:02Z · leader · T-016 is merged: ready.
+- 2026-10-08 14:40Z · dev · GET /v1/yearbooks/{id}/media (owner-only keyset list, FORCE INDEX ix_media_yearbook, no migration) + Photos.tsx infinite list. Test: make lint/test/test-integration green; newman media collection x2 green (needs API with SMEM_S3_* from .env.example). Gap: no 375px visual check.
 
 ### T-047 — Fix the flaky concurrent Google callback: retry with jittered backoff and a stress test
 - **Status:** QA_PASS
@@ -1941,7 +1961,7 @@ Redis sliding-window limiter with Take and Refund replacing the in-memory one ev
 #### Comments
 
 ### T-054 — Spike: HTML templates and browser print-to-PDF instead of server rendering
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P1
 - **Type:** spike
 - **Milestone:** M1
@@ -1949,10 +1969,10 @@ Redis sliding-window limiter with Take and Refund replacing the in-memory one ev
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-054-spike-html-templates-and-browser-print-t
 - **PR:** —
-- **Updated:** 2026-10-08 13:31Z by leader
+- **Updated:** 2026-10-08 14:40Z by dev
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/06-spike-browser-print-to-pdf.md`
