@@ -12,14 +12,15 @@
 |---|---:|---|
 | BACKLOG | 22 | T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-039, T-040, T-041, T-042, T-044 |
 | TODO | 6 | T-015, T-034, T-035, T-037, T-038, T-043 |
-| QA_PASS | 2 | T-033, T-036 |
+| QA_PASS | 1 | T-033 |
+| MERGED | 1 | T-036 |
 | DONE | 14 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-028, T-030 |
 
-**Awaiting your review (MERGED):** nothing
+**Awaiting your review (MERGED):** T-036 (Bound the memory of image processing (caps, concurrency, memory limit))
 
-**Open questions for you:** none
+**Open questions for you:** Q-011 (Approve merge of T-033 (CI: do not cancel runs on develop and main)?)
 
-_Board last written 2026-10-08 03:19Z_
+_Board last written 2026-10-08 03:21Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -213,6 +214,15 @@ QA passed and my review is clean (head 7ffdb68, CI green). High risk (sign-in, a
 - **Answer:** _(pending)_
 
 QA passed and my review is clean (head 231955e, CI green); it already merges cleanly into develop (T-011 is in). High risk: a public endpoint backed by a bearer-secret link (192-bit token, only its SHA-256 stored, shown once, revocable, rate-limited). Notes themselves come later (T-034). Command: cd /Users/unisoft/GolandProjects/awesomeProject1 && /Users/unisoft/.claude/plugins/cache/claude-agent-team/agent-team/0.3.0/bin/team approve T-012
+
+### Q-011 — Approve merge of T-033 (CI: do not cancel runs on develop and main)?
+- **Status:** OPEN
+- **Asked:** 2026-10-08 03:21Z
+- **Blocks:** T-033
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+QA passed and my review is clean (head 74346f4, CI green). High risk because it changes the CI workflow, but the change is small: pushes to develop and main get one concurrency group per commit (never cancelled), pull requests keep cancelling superseded runs, and the integration job's mysql:8.4 image is pinned to its digest. Today 8 of the last 15 develop runs were cancelled, so merge commits are not getting full CI. One caveat: nobody could test a real double push; I will verify with the first pushes after merge. Command: cd /Users/unisoft/GolandProjects/awesomeProject1 && /Users/unisoft/.claude/plugins/cache/claude-agent-team/agent-team/0.3.0/bin/team approve T-033
 
 <!-- questions:end -->
 
@@ -1251,7 +1261,7 @@ db.Open: treat MySQL 1044 as permanent; README warning about bare docker compose
 - **Branch:** task/t-033-ci-do-not-cancel-in-progress-runs-on-dev
 - **PR:** https://github.com/danyaa666/smemories/pull/22
 - **Updated:** 2026-10-08 03:19Z by qa
-- **Comments-seen:** 2
+- **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/09-ci-do-not-cancel-in-progress-runs-on-develop.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1264,6 +1274,7 @@ Evidence from the T-006/T-030 merges: the workflow's concurrency group has cance
 - 2026-10-08 02:47Z · leader · Leader: raised to P1. Merge commits on develop (d209266 T-011) were cancelled by later board-sync pushes, so develop is not getting a full CI pass per merge. Do this first.
 - 2026-10-08 02:47Z · dev · ci.yml: cancel-in-progress only for pull_request; push events group by sha so each merge commit runs fully; mysql digest-pinned; docs/ci.md sentence. Test: PR CI green; push twice to develop and check both runs finish. Needs owner approval (risk high).
 - 2026-10-08 03:19Z · qa · QA T-033 PASS (one gap, see 4). Evidence: 1) PR #22 CI run 37719629443 on head: go, go-integration, security, web all green; go-integration pulled the digest-pinned mysql image and passed. 2) actionlint (rhysd/actionlint:latest via docker) on ci.yml: no syntax/expression errors; only 2 pre-existing shellcheck SC2034 warnings (unused loop var i) in the wait loops at ci.yml:89/106, not from this change. 3) Pin check: docker buildx imagetools inspect mysql:8.4 digest = sha256:6ea90827...b242, identical to the pinned digest (multi-arch index digest, fine). Concurrency block read: pull_request -> group ci-<refs/pull/N/merge>, cancel true (unchanged behaviour for PRs); push (develop/main) -> group ci-<sha>, cancel false; github.ref is non-empty on PRs so the && || ternary cannot fall to sha there. Only triggers are pull_request and push [develop, main], no other event can hit the sha branch oddly. Old behaviour confirmed in gh run list --branch develop: 8 of the last 15 develop push runs were conclusion=cancelled (e.g. 7360aa7, 4db0533, 8b027a2, d209266), which is exactly the defect. 4) NOT verified live: a real double push to develop (I may not push develop, and creating a scratch GitHub repo to replay the workflow was denied by the permission system). So the 'two pushes within a minute both finish' AC rests on the expression + GitHub semantics, not on an observed run. Suggest the leader checks the first two back-to-back develop pushes after the merge (gh run list --branch develop: none cancelled). 5) docs/ci.md matches the workflow (sentence says PR runs cancel, develop/main never; no other doc mentions cancel/concurrency/mysql tag). Non-blocking: that docs sentence is one very long line (docs/ci.md:4); the workflow comment says 'a queued run' dropped in a shared group, correct per GitHub semantics (one pending per group). Risk high: needs owner approval before merge.
+- 2026-10-08 03:21Z · leader · Leader review OK on head 74346f4 (QA_PASS on the same head, CI 4/4 green, actionlint clean apart from two old shellcheck notes). Concurrency group is the PR ref for pull_request events (cancel in progress) and the commit SHA for pushes (never cancelled), the documented idiom; mysql image pinned to the current manifest digest; docs/ci.md matches; no permission, secret or action change. Not verified live (QA could not push to develop): the first back-to-back develop pushes after the merge must show no cancelled run; I will check with gh run list. Note for later: the digest pin means MySQL patch updates are manual; docs/ci.md should say how to refresh it (add when T-004's follow-ups are next touched). Awaiting owner approval.
 
 ### T-034 — Public note submission (text and photos)
 - **Status:** TODO
@@ -1313,7 +1324,7 @@ From the T-010 QA notes: adding a template exactly as docs/templates.md describe
 - 2026-10-08 02:24Z · leader · T-010 is accepted: small follow-up, ready.
 
 ### T-036 — Bound the memory of image processing (caps, concurrency, memory limit)
-- **Status:** QA_PASS
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -1321,11 +1332,11 @@ From the T-010 QA notes: adding a template exactly as docs/templates.md describe
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** leader
+- **Assignee:** —
 - **Branch:** task/t-036-bound-the-memory-of-image-processing-cap
 - **PR:** https://github.com/danyaa666/smemories/pull/23
-- **Updated:** 2026-10-08 03:19Z by qa
-- **Comments-seen:** 1
+- **Updated:** 2026-10-08 03:21Z by leader
+- **Comments-seen:** 4
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E03-yearbooks/04-bound-the-memory-of-image-processing.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1337,6 +1348,7 @@ Make the worst-case memory of the T-009 image pipeline a measured, enforced numb
 - 2026-10-08 01:59Z · leader · T-009 is merged: ready for dev. It must land before T-034.
 - 2026-10-08 02:56Z · dev · Root cause: x/image Scale float64 scratch (dst w x src h x4 = 480MB at 50MP) -> banded resize. Header caps (PNG/WebP 25MP, JPEG 50MP, decoded est. 128MiB incl. JPEG SOF subsampling/progressive), concurrency default 2, SMEM_MEMORY_LIMIT_MIB, docs/media.md. Test: TestLimitsFromHeader, TestJPEGSamples, TestResizeBandsMatchOneShot; measure with TestMeasurePeak (see docs/media.md). Dev: 4x16-bit PNG 4096^2 at defaults = 970MB RSS. Re-run media Postman twice.
 - 2026-10-08 03:19Z · qa · QA T-036 PASS. Method: built the PR head, ran the real API (fresh process per measurement; peak RSS sampled with ps every 20ms) against MySQL+MinIO from make up; images generated by me (Go/PIL/cwebp, all under 10 MiB upload cap). NOTE .env.example in the main checkout is still the old one (concurrency 4): I loaded the PR's .env.example and also tested with the variables truly unset. AC6 (macOS arm64, defaults = concurrency 2): 4 parallel 16-bit PNG 4096x4096: peak 925-929 MiB (970-974 MB) in 3 runs, mixed 4 (16-bit PNG at cap, 25 MP 8-bit PNG, 50 MP 10000x5000 JPEG, 25 MP lossless WebP): 862/812/886 MiB. All <= 1.2 GiB (1229 MiB). Single 16-bit PNG: 478 MiB. Control with concurrency 4: 1735-1842 MiB (so the lowering is what matters). 4x each alone: 50MP JPEG 700 MiB, 6000x7456 4:4:4 JPEG at the cap 1008 MiB (highest seen), 4200x4200 progressive 4:2:0 JPEG 565 MiB, 12000x4000 JPEG 595 MiB, lossless WebP 25MP 843 MiB, lossy WebP 24MP 507 MiB, 5000x5000 8-bit PNG 850 MiB. Linux (target OS): same linux/arm64 binary in a debian container with --memory=1536m, cgroup memory.peak: 4x 16-bit PNG 905 MiB, mixed 4 855 MiB, 8 parallel mixed incl. 4:4:4 and progressive JPEG 873 MiB, no OOM kill; with SMEM_MEMORY_LIMIT_MIB=1100 4x16-bit PNG 909 MiB. AC2 caps just below/above via the API: 16-bit PNG 4096x4096 201 / 4097x4096 400; 8-bit PNG 5000x5000 201 / 5001x5000 400; JPEG 10000x5000 201 / 10001x5000 400; lossless WebP 5000x5000 201 / 5001x5000 400; 4:4:4 JPEG 6000x7456 (134208000 B) 201 / 6000x7457 400; progressive 4:2:0 4200x4200 201 / 4300x4300 400; each over-cap answer in ~8 ms before any decode. AC3: SMEM_MEDIA_MAX_CONCURRENT 0/abc/-2 and SMEM_MEMORY_LIMIT_MIB 10/63/abc/-1/1.5/1048577 all fail at startup naming the variable; limit 64, 256, 700 with the 4 mixed uploads: all 201, process alive, RSS 481/479/744 MiB (limit works, nothing crashes or is refused); startup logs 'memory limit set'. .env.example and README document both. AC1/AC4: docs/media.md exists; its numbers reproduce (970 MB for 4x 16-bit PNG; single 490 vs my 501 MB). AC5: go mod tidy leaves no diff, aws-sdk-go-v2, /credentials, /service/s3 are in the direct require block. Postman: media collection run twice via newman 6 (API restarted between runs; I did the pair twice): 44 requests, 77 assertions, 0 failures each time. Mechanical: go build, go vet, gofmt, golangci-lint (0 issues), go test -race ./... ok, go test -race -count=1 -tags integration ./... all packages ok; PR CI green (run 37720320278). Non-blocking: (a) the media Postman collection has no entry for the new caps (E11 only covers the 60000x60000 header); a tiny PNG header claiming 5001x5000 would exercise the 25 MP PNG cap cheaply; (b) the main checkout's .env.example still says concurrency 4 until merge, fine; (c) RSS on macOS never returns to baseline after a run (Go retains pages), so measure each scenario on a fresh process, as docs/media.md implies; (d) 6000x7456 4:4:4 baseline JPEG is the heaviest accepted input at ~1.0 GiB for 4 parallel, only ~18% under the 1.2 GiB target, so keep an eye on it if limits are raised.
+- 2026-10-08 03:21Z · leader · merged 7772eb7 (squash), QA_PASS on the same head c6d78ce, CI green. Review: the 480 MB scaler buffer is gone (banded resize, same picture), header-based caps by colour model and JPEG subsampling, concurrency default 2, SMEM_MEMORY_LIMIT_MIB validated (0 or 64..1048576), 4 worst-case uploads peak at about 925 MiB (was 3.2 GB). For owner to check: PNG/WebP over 25 MP, 16-bit PNG over 4096x4096 and large progressive JPEGs are now refused with 400 invalid_image; phone JPEGs up to 50 MP still pass. Follow-up: stale OpenAPI sentence (noted in T-034 spec).
 
 ### T-037 — US Letter page size, end to end
 - **Status:** TODO

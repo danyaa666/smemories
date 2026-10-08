@@ -98,3 +98,6 @@ the same link in a quarter of an hour would lock the rest out. In this task, cha
 #### Leader notes from decision D-21 (2026-10-08)
 Notes are template-driven from the start: do not add `author_name`, `relationship` or `message` columns; the moderation list reads the display name from `answers.name` (the default set always has it; if a template drops `name`, show "Anonymous" or the first answer).
 Keep the JSON column small and bounded: AC1 caps the request part at 16 KiB and each field is limited by the catalogue. T-013 (moderation), T-014 (export), T-017 and T-018 (web) read and show answers by field id; their specs carry the matching notes.
+
+#### Leader note from the T-036 review (2026-10-08)
+`api/openapi.yaml` still says `invalid_image` means "over 50 megapixels" (media upload, `POST /v1/yearbooks/{id}/media`). After T-036 the rule is: 12000 px per side, JPEG up to 50 MP, PNG and WebP up to 25 MP, and an estimated decoded size of at most 128 MiB (docs/media.md). While you edit the OpenAPI file in this task, correct that description for both upload endpoints and regenerate the web schema.
