@@ -12,15 +12,15 @@
 |---|---:|---|
 | BACKLOG | 20 | T-013, T-014, T-015, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-033, T-035 |
 | TODO | 2 | T-034, T-036 |
-| IN_QA | 2 | T-011, T-012 |
-| MERGED | 2 | T-007, T-009 |
+| QA_PASS | 1 | T-012 |
+| MERGED | 3 | T-007, T-009, T-011 |
 | DONE | 10 | T-001, T-002, T-003, T-004, T-005, T-006, T-008, T-010, T-028, T-030 |
 
-**Awaiting your review (MERGED):** T-007 (Email verification and password reset); T-009 (Photo upload and storage (MinIO/S3))
+**Awaiting your review (MERGED):** T-007 (Email verification and password reset); T-009 (Photo upload and storage (MinIO/S3)); T-011 (Google sign-in (OIDC + PKCE, account linking))
 
-**Open questions for you:** none
+**Open questions for you:** Q-010 (Approve merge of T-012 (collection links)?)
 
-_Board last written 2026-10-08 02:15Z_
+_Board last written 2026-10-08 02:24Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -201,6 +201,15 @@ Leader review and QA both passed on PR #19 (head 21ba7aa, CI green). High risk (
 - **Answer:** _(pending)_
 
 QA passed and my review is clean (head 7ffdb68, CI green). High risk (sign-in, account linking, new libraries go-oidc and oauth2, approved in the spec). It is being sent back to dev only to merge develop (T-009 landed); your approval stays valid unless the code changes beyond the merge. Google is optional and off by default: nothing changes until SMEM_GOOGLE_* is configured (real Google credentials are a later owner step). Command: cd /Users/unisoft/GolandProjects/awesomeProject1 && /Users/unisoft/.claude/plugins/cache/claude-agent-team/agent-team/0.3.0/bin/team approve T-011
+
+### Q-010 — Approve merge of T-012 (collection links)?
+- **Status:** OPEN
+- **Asked:** 2026-10-08 02:24Z
+- **Blocks:** T-012
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+QA passed and my review is clean (head 231955e, CI green); it already merges cleanly into develop (T-011 is in). High risk: a public endpoint backed by a bearer-secret link (192-bit token, only its SHA-256 stored, shown once, revocable, rate-limited). Notes themselves come later (T-034). Command: cd /Users/unisoft/GolandProjects/awesomeProject1 && /Users/unisoft/.claude/plugins/cache/claude-agent-team/agent-team/0.3.0/bin/team approve T-012
 
 <!-- questions:end -->
 
@@ -640,7 +649,7 @@ The template system and the PDF page renderer, built on the library chosen in T-
 - 2026-10-08 01:30Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-010')
 
 ### T-011 — Google sign-in (OIDC + PKCE, account linking)
-- **Status:** IN_QA
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -648,11 +657,11 @@ The template system and the PDF page renderer, built on the library chosen in T-
 - **Risk:** high
 - **Rework:** 1
 - **Owner-approved:** yes
-- **Assignee:** qa
+- **Assignee:** —
 - **Branch:** task/t-011-google-sign-in-oidc-pkce-account-linking
 - **PR:** https://github.com/danyaa666/smemories/pull/20
-- **Updated:** 2026-10-08 02:14Z by qa
-- **Comments-seen:** 5
+- **Updated:** 2026-10-08 02:23Z by leader
+- **Comments-seen:** 10
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/01-google-sign-in.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -681,9 +690,16 @@ Google sign-in with OIDC and PKCE and safe account linking (including the pre-hi
 - 2026-10-08 02:04Z · dev · Merge commit 4109b7b (origin/develop incl. T-009 merged into the branch, pushed to PR #20). Conflicts kept both sides in .env.example, go.mod, go.sum (go mod tidy), internal/config/config.go; other files auto-merged. (1) npm run gen:api produced no diff to schema.d.ts, check:api ok. (2) migrations/ 0005, 0006_media, 0007_user_identities in order; fresh DB up OK; DB built by develop binary (0001-0006) then branch up applies only 0007; 0007 down/up OK. (3) make lint build test test-integration green; newman auth (52/134), yearbooks (85/172), media (44/77) twice each, API restarted before every collection (register limit): 0 failures. No other code change.
 - 2026-10-08 02:15Z · human · owner approved merge
 - 2026-10-08 02:15Z · leader · Owner approved the merge in chat (2026-10-08: 'team approve T-011'). Merge as soon as QA passes the merge result and CI is green on the unchanged head.
+- 2026-10-08 02:22Z · qa · QA_PASS T-011 re-verification of merge 4109b7b (PR #20, CI 4/4 green on that head).
+  Migrations: fresh scratch DB -> 0001,0002,0004,0005,0006,0007 applied; DB built by develop (0001..0006) then branch up applies only 0007; 0007 down/up OK; user_identities schema as spec (unique provider+subject, FK cascade).
+  Mechanical (T-011 worktree): make lint build test green; make test-integration green (auth, config, db, httpx, media, yearbook ...); go test -race -tags integration ./internal/auth -run Google 3x back to back, all ok; npm run gen:api leaves no diff.
+  Newman, API restarted before every run (Google enabled, real issuer): auth 52 req/134 assertions, yearbooks 85/172, media 44/77, each run twice: 0 failures.
+  Google findings on the merged build: runtime check with real binary: start -> 302 to accounts.google.com with S256 challenge/state/nonce, redirect_uri=<base>/api/v1/auth/google/callback, smem_oidc Max-Age=600 HttpOnly SameSite=Lax; callback without cookie -> /login?error=oidc_state and cookie cleared; callback rate limit 30x302 then 429 Retry-After 900; no SMEM_GOOGLE_CLIENT_ID -> start 404, /healthz ok. Provider-dependent cases (pre-hijacking, linking, replay, ID-token claim rejections, return_to, concurrency, log secrecy) are the 20 Go tests TestGoogle* in internal/auth, which pass; my earlier runtime proof of them is unaffected because the merge diff vs 7ffdb68 touches only csrf.go (T-009 media), config, main.go wiring and go.mod, not google.go.
+  NON-BLOCKING: out-of-order migration risk from earlier note still stands for anyone who applied 0007 before 0006; fresh/CI fine. Risk high: owner approval needed before merge.
+- 2026-10-08 02:23Z · leader · merged d209266 (squash), owner-approved in chat 2026-10-08, QA re-verified the merge result (head 4109b7b). Review: ID token verified by go-oidc plus nonce, state and S256 PKCE, signed 10-minute cookie compared in encoded form, email_verified must be boolean true, return_to allow-list, pre-hijacking defence in one transaction, no tokens in logs. For owner to check: Google is OFF until SMEM_GOOGLE_CLIENT_ID is set; README section 'Google sign-in setup' lists the Google Cloud steps (real credentials are a later owner step). Follow-ups in T-015 and T-031 specs.
 
 ### T-012 — Collection links (owner API and public lookup)
-- **Status:** IN_QA
+- **Status:** QA_PASS
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -691,11 +707,11 @@ Google sign-in with OIDC and PKCE and safe account linking (including the pre-hi
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** leader
 - **Branch:** task/t-012-collection-links-owner-api-and-public-lo
 - **PR:** https://github.com/danyaa666/smemories/pull/21
-- **Updated:** 2026-10-08 02:14Z by qa
-- **Comments-seen:** 1
+- **Updated:** 2026-10-08 02:22Z by qa
+- **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/01-collection-links.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -707,6 +723,20 @@ Owner-created private collection links (create, list, revoke) and the public loo
 - 2026-10-07 11:28Z · leader · Promoted: full spec written in .team/epics/E04-friends-notes/01-collection-links.md. Needs T-007 (verified-email check) and T-008 (yearbooks); public submission is the new T-034.
 - 2026-10-08 02:14Z · dev · PR #21, head 231955e. All 8 AC. Test: make up; make lint build test test-integration (green). Newman notes collection needs verified accounts (dev mail only in API stdout): run --folder 'Setup (once per database)', then 'make verify-newman-users' (or the UPDATE in the collection description for a scratch DB), then the whole collection (I ran it 3x back to back, 0 failures). Migration 0008_note_collections.sql (0007 is T-011): a DB that applied 0008 first cannot take 0007 later (out-of-order), merge T-011 first or recreate. Decisions: email_not_verified on create only; note_count is 0 until T-034; auth.Handler.ClientIP exported for the public limiter; Makefile target verify-newman-users added. Risk high: owner approval needed.
 - 2026-10-08 02:14Z · leader · Leader pre-review of head 231955e (QA still running, CI pending): code is sound. 192-bit token hashed with SHA-256 and shown once, tokenHash rejects wrong length/alphabet before the database, lookup is one indexed query, every owner query is scoped through yearbooks.owner_id, create takes FOR UPDATE on the book row so the 5-link limit holds under concurrency, revoke is idempotent, public route reads no cookie and the global headers (no-store, no-referrer) apply. Not blocking: the public lookup limiter counts every request per IP (60/15 min), which a class on one campus network would hit; fix recorded in the T-034 and T-031 specs (count misses only). Merge order: T-011 first (migration 0007), then this one (0008); it will need a develop merge after T-011 lands.
+- 2026-10-08 02:22Z · qa · QA_PASS T-012 (PR #21, head 231955e, CI 4/4 green: go, go-integration, web, security).
+  Mechanical (T-012 worktree): make lint build test green; make test-integration green (notes 6.5s, all packages ok). Migration 0008 tested on a fresh DB without 0007 (0001..0006,0008; down/up OK) and on a DB built by the T-011 branch (0001..0007) then 0008 applied. The number gap is not a defect. Note: on the DB that has both 7 and 8, `migrate down` from the T-012 binary says 'version not found' because that binary does not contain 0007; disappears once T-011 is merged.
+  Postman notes collection (Setup folder, SQL verify of users A/B, then whole collection) run 3x back to back: 49 req/89 assertions, 0 failures each time; covers create, list, revoke, lookup active/revoked/expired/garbage, cross-user 404.
+  Evidence table (own python client + curl against the real binary and real MySQL):
+  AC1 PASS: 201 with exactly {id,label,deadline_at,created_at,token}; token 32 chars base64url (24 bytes); DB token_hash = sha256(token) (compared hex), token not stored. Label: 60 ok, 61 -> invalid_label, 60 emoji ok, 61 emoji bad, zero-width, RLO, newline -> invalid_label, ' Cafe+U+0301 class ' -> NFC 'Café class' trimmed, whitespace-only/empty/null -> '', number/array -> invalid_body. Deadline: now, now-1s, +1y+1min, +1y+2d, 2100, date only, no tz, empty, 0000 -> 400 invalid_deadline; +1s, +364d, +1y-1min, +07:00 offset (stored/returned UTC) -> 201. Wrong Origin or none -> 403 csrf_origin_mismatch; no session -> 401.
+  AC2 PASS: B/non-owner and nonexistent book -> 404 for create, list and revoke (identical); unverified owner create -> 403 email_not_verified; 5 active then 6th -> 409 limit_reached; 12 concurrent creates at an empty book -> exactly 5x201 + 7x409, 5 active in DB; revoke then create frees a slot and the new token differs.
+  AC3 PASS: list newest first with id,label,deadline_at,created_at,revoked_at,note_count (0); token and hash absent (searched whole body).
+  AC4 PASS: DELETE 204, repeat 204 (revoked_at unchanged), B -> 404, garbage id / yearbook id as collection id -> 404; revoked token stays 404.
+  AC5 PASS: 200 {"yearbook":{"title"},"owner":{"display_name"},"deadline_at","open":true} only; revoked and never-valid token give byte-identical 404 (apart from request_id) and the same headers; deadline passed -> 410 collection_closed (2s deadline: 200 before, 410 after); expired-then-revoked -> 404. Odd tokens (10 KB, 64 KB, unicode, %00, %2F, space, SQL quote, wrong length, wrong case, '=' padding) -> 404; '..' -> 307 from the Go mux, harmless.
+  AC6 PASS: no Set-Cookie, no Access-Control-* (also with an allowed Origin; OPTIONS 405); a valid owner session cookie sent along is ignored; 60/15min per IP: 40 answered after the earlier ~20 then 429 with Retry-After 880; garbage tokens also 429, owner endpoints unaffected; X-Forwarded-For ignored with TRUST_PROXY=false. Access log lines carry route 'GET /v1/public/collect/{token}', also for 404/405 unmatched variants with a marker token; grep of the whole API log for every token and the session cookie: 0 hits. The link token as session cookie / Bearer -> 401.
+  AC7 PASS: deleted a yearbook with 5 collections -> 204, 0 orphan rows, list afterwards 404.
+  AC8 PASS: openapi.yaml documents the four endpoints with the error codes; `make lint` includes check:api; Postman as above.
+  NON-BLOCKING: (1) POST create with no body at all -> 400 invalid_body; spec shows both fields optional, `{}` works (consistent with other create endpoints, documented behaviour in the collection). (2) An unverified user who is not the owner gets 403 email_not_verified instead of 404 on someone else's yearbook (no information leak; the dev noted the check is create-only; unverified users can still list/revoke their own, which are empty). (3) Postman does not cover the public 429 (60 per 15 min impractical); covered by Go tests and my manual run. (4) note_count is always 0 until T-034, as documented. Risk high: owner approval needed before merge.
+- 2026-10-08 02:24Z · leader · Leader review OK on head 231955e (QA_PASS on the same head, CI 4/4 green). After T-011 merged (d209266) I tested the real merge result in a scratch worktree: merges without conflicts, go build, go vet (also with the integration tag), go test ./... and web check:api all pass, migrations 0005..0008 in order. So no dev round is needed. Non-blocking, recorded: public lookup limiter should count only misses (T-034 and T-031 specs). Awaiting owner approval; merge right after.
 
 ### T-013 — Notes moderation API (approve, hide, reorder, delete)
 - **Status:** BACKLOG
