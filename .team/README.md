@@ -10,18 +10,19 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 21 | T-013, T-014, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-039, T-040, T-041, T-042, T-044 |
-| TODO | 1 | T-016 |
-| READY_FOR_QA | 2 | T-034, T-038 |
+| BACKLOG | 21 | T-013, T-014, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-040, T-041, T-042, T-044, T-046 |
+| TODO | 1 | T-039 |
+| READY_FOR_QA | 1 | T-016 |
+| IN_QA | 1 | T-034 |
 | QA_PASS | 1 | T-045 |
-| MERGED | 6 | T-015, T-033, T-035, T-036, T-037, T-043 |
+| MERGED | 7 | T-015, T-033, T-035, T-036, T-037, T-038, T-043 |
 | DONE | 14 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-028, T-030 |
 
-**Awaiting your review (MERGED):** T-015 (Web: auth pages and session handling); T-033 (CI: do not cancel in-progress runs on develop and main); T-035 (T-010 follow-ups: template tests iterate templates.List()); T-036 (Bound the memory of image processing (caps, concurrency, memory limit)); T-037 (US Letter page size, end to end); T-043 (Note field catalogue (internal/notefields): closed set of form fields with EN/VI labels and validation)
+**Awaiting your review (MERGED):** T-015 (Web: auth pages and session handling); T-033 (CI: do not cancel in-progress runs on develop and main); T-035 (T-010 follow-ups: template tests iterate templates.List()); T-036 (Bound the memory of image processing (caps, concurrency, memory limit)); T-037 (US Letter page size, end to end); T-038 (Template format v2: backgrounds, static text, rotation, ellipse, font families); T-043 (Note field catalogue (internal/notefields): closed set of form fields with EN/VI labels and validation)
 
 **Open questions for you:** Q-014 (Approve merge of T-045 (register accepts a locale)?)
 
-_Board last written 2026-10-08 09:04Z_
+_Board last written 2026-10-08 09:14Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -872,7 +873,7 @@ Register, login, logout, verify-email, forgot/reset password pages; session boot
 - 2026-10-08 03:54Z · leader · merged 66d5b80 (squash), QA_PASS on head f24eb25 after one rework, CI green. Review: token moved into memory before React renders (no request carries it, Referer empty, verified in a real browser), redirect target allow-listed, return_to URL-encoded, no raw HTML, typed API client, EN/VI parity, 60 tests. For owner to check: cd web && npm run dev with the API on :8080; register, read the verification link in the API log, open it (the token disappears from the address bar), try forgot and reset. Google button appears only with VITE_GOOGLE_SIGNIN=true. Known: reloading /reset-password before submitting loses the token (by design: ask for a new link); verification mail is English for Vietnamese users until T-045.
 
 ### T-016 — Web: yearbook list, create/edit, profile and photo upload UI
-- **Status:** TODO
+- **Status:** READY_FOR_QA
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -881,10 +882,10 @@ Register, login, logout, verify-email, forgot/reset password pages; session boot
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-08 09:04Z by leader
-- **Comments-seen:** 1
+- **Branch:** task/t-016-web-yearbook-list-create-edit-profile-an
+- **PR:** https://github.com/danyaa666/smemories/pull/31
+- **Updated:** 2026-10-08 09:13Z by dev
+- **Comments-seen:** 3
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E03-yearbooks/03-web-yearbook-list-create-edit-profile-and.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -894,6 +895,8 @@ Dashboard of the user's yearbooks; create/edit form for book information and the
 
 #### Comments
 - 2026-10-08 09:04Z · leader · T-009 and T-015 are merged: unblocked. Spec carries leader notes (PUT profile clears photo_media_id unless sent; Letter page size selector; upload error codes).
+- 2026-10-08 09:06Z · dev · Spec gap, not blocking: the API has no way to LIST a yearbook's photos (no GET /v1/yearbooks/{id}/media, and Yearbook only carries cover_media_id and profile.photo_media_id). So after a page reload the web UI can show only the cover and profile photo; the gallery of the other photos exists only for the current session's uploads. I am building the UI so that a list endpoint plugs in with one query (items: id,width,height,bytes). Suggest a follow-up API task: GET /v1/yearbooks/{id}/media -> {media:[{id,width,height,bytes,created_at}]} (owner only, newest first), then a tiny web follow-up. Tell me if you want me to do the API part inside T-016 instead.
+- 2026-10-08 09:13Z · dev · Web UI done (list, create/edit, profile, photo upload/progress/thumbs/delete, cover and profile photo, A5/A4/Letter, en+vi). 82 vitest tests, lint/typecheck/i18n/build green. Test: npm test in web/; manual: /yearbooks. NOT verified in a real browser against a real API (private compose stack was blocked for me); QA please check 375 px, real upload through Vite proxy (CSRF Origin), thumbnails, 413/429/503 live. Known gap: API has no list-photos endpoint, so after reload only cover/profile photo show (see comment #2).
 
 ### T-017 — Web: notes link management and moderation inbox
 - **Status:** BACKLOG
@@ -1314,7 +1317,7 @@ Evidence from the T-006/T-030 merges: the workflow's concurrency group has cance
 - 2026-10-08 08:34Z · leader · merged 96059a6 (squash), owner-approved in chat 2026-10-08, QA_PASS on head 74346f4. Pushes to develop and main now get one concurrency group per commit (never cancelled); PRs still cancel superseded runs; mysql image pinned by digest. To verify live: the next back-to-back develop pushes must show no cancelled run (gh run list --branch develop).
 
 ### T-034 — Public note submission (text and photos)
-- **Status:** READY_FOR_QA
+- **Status:** IN_QA
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -1322,11 +1325,11 @@ Evidence from the T-006/T-030 merges: the workflow's concurrency group has cance
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** qa
 - **Branch:** task/t-034-public-note-submission-text-and-photos
 - **PR:** 30
-- **Updated:** 2026-10-08 09:03Z by dev
-- **Comments-seen:** 1
+- **Updated:** 2026-10-08 09:07Z by qa
+- **Comments-seen:** 2
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/02-public-note-submission.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1430,7 +1433,7 @@ Add Letter (215.9 x 279.4 mm) as a third yearbook page size: migration, API, Ope
 - 2026-10-08 08:44Z · leader · merged 6044ea3 (squash), owner-approved ('OK' to Q-013), QA_PASS on head 9546d3b, CI green. Review: migration 0009 additive (Letter appended to the enum, Down turns Letter books into A5), aspect-ratio rule keeps Letter apart from A5/A4, ForPageSize and the render guard prevent a template on a size it does not declare, MediaBox 612x792 pt. For owner to check: nothing to run yet (no UI for Letter until T-016).
 
 ### T-038 — Template format v2: backgrounds, static text, rotation, ellipse, font families
-- **Status:** READY_FOR_QA
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
@@ -1441,8 +1444,8 @@ Add Letter (215.9 x 279.4 mm) as a third yearbook page size: migration, API, Ope
 - **Assignee:** —
 - **Branch:** task/t-038-template-format-v2-backgrounds-static-te
 - **PR:** 28
-- **Updated:** 2026-10-08 08:48Z by dev
-- **Comments-seen:** 3
+- **Updated:** 2026-10-08 09:14Z by leader
+- **Comments-seen:** 6
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E08-designer-templates/02-template-format-v2-backgrounds-static-text.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1464,9 +1467,11 @@ Extend the template JSON and renderer with page background images, localised sta
   Non-blocking: (1) an Adam7-interlaced PNG passes the validator (DecodeConfig only) but Render fails with 'interlacing not supported in PNG buffer'; build tests that render every template would catch a real asset, but rejecting interlace (IHDR byte 12 != 0) in templates/validate.go would honour 'bad asset fails the tests, not the request'. (2) Static text is not checked for glyph coverage at validation; a missing glyph only shows as a missing_glyph warning at render. (3) T-037 parts: no regression seen.
 - 2026-10-08 08:44Z · leader · Leader: T-037 is merged to develop (6044ea3, squash) so PR #28 now conflicts in docs/templates.md, internal/pdf/render.go, internal/templates/spec.go and internal/templates/validate.go (your branch carries T-037's original commits plus your T-038-on-top edits such as PageDims). Merge origin/develop into the task branch (no rebase of a pushed branch), resolve keeping the T-038 versions of the lines you changed on top of T-037 and develop's version of everything else, re-run make lint build test test-integration, regenerate the samples (classic.pdf and modern.pdf must stay byte-identical), push, READY_FOR_QA with the merge-commit SHA. Also in this round (QA finding, small): the validator must reject an interlaced (Adam7) PNG background, because Render fails on it; add a test with an interlaced fixture generated in the test. Static-text glyph coverage at validation stays out of scope.
 - 2026-10-08 08:48Z · dev · Merge commit b356781 (origin/develop merged, conflicts in docs/templates.md, pdf/render.go, templates/spec.go+validate.go resolved to the T-038 lines on top of T-037 incl. PageDims; kept render.go slices import). QA finding 1: validator rejects interlaced PNG (IHDR interlace byte), test TestBackgroundRejected case 'interlaced PNG' with a fixture built in the test, documented in docs/templates.md. classic.pdf/modern.pdf regenerated: unchanged. make lint build test test-integration all green.
+- 2026-10-08 09:07Z · qa · Re-verify of merge result b356781 (origin/develop merged, interlace rejection added). CI on b356781: go, go-integration, security, web all pass. Local in worktree: make build, make lint (exit 0), gofmt, go vet, go test -race ./... pass; templates/pdf/fonts/yearbook -race -count=2 pass; make test-integration pass. New rule: validator reads IHDR interlace byte (offset 28) and rejects with 'interlaced PNG' error (TestBackgroundRejected case 'interlaced PNG', fixture built in test; offset checked by hand: 8 sig + 8 chunk header + 12 into IHDR data = interlace byte); documented in docs/templates.md line 89. Samples: go test ./internal/pdf -run TestSamples -write-samples, git status clean, shasum classic.pdf 6a63214e..., modern.pdf cedd1c22... identical to origin/develop. My earlier test internal/pdf/background_formats_test.go still passes; all earlier AC evidence (AC1-AC7) stands, merge changed nothing in those paths other than the interlace check. Non-blocking: interlace test uses a flagged-but-not-really-Adam7 fixture (only the IHDR byte matters to the check; Go cannot encode Adam7, so fine); static-text glyph coverage out of scope per leader.
+- 2026-10-08 09:14Z · leader · merged eb6abef (squash), QA_PASS on head b356781 after one rework (merge with develop, interlaced PNG rejection), CI green. Review: background drawn right after the paper fill and registered once per asset, rotation and clipping closed by deferred ends, font families loaded per template with a Vietnamese coverage gate, validator checks backgrounds by content (type, 1.5 MiB, ratio, DPI 150..400, no interlacing, 8 MiB per template), static text needs both languages, classic and modern samples byte-identical, 24-page Letter book with full-page backgrounds: 14 ms and 52 MB heap (worst case 0.72 s and 358 MB). For owner to check: docs/templates.md section on format v2.
 
 ### T-039 — Design import tool (dev only): canvas page to template draft
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -1477,8 +1482,8 @@ Extend the template JSON and renderer with page background images, localised sta
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-08 03:08Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-08 09:14Z by leader
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E08-designer-templates/03-design-import-tool-dev-only.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1487,6 +1492,7 @@ Extend the template JSON and renderer with page background images, localised sta
 Dev-only Node/Playwright command that renders decoration backgrounds and reads slot and text boxes from a Claude Design canvas into a draft template.
 
 #### Comments
+- 2026-10-08 09:14Z · leader · T-038 is merged: the import tool can target the v2 format. Spec: .team/epics/E08-designer-templates/03-design-import-tool-dev-only.md.
 
 ### T-040 — Template memory-book from design temp1 (pilot 1)
 - **Status:** BACKLOG
@@ -1640,6 +1646,29 @@ Let the register request carry the UI language so Vietnamese students get the ve
   Google sign-in unaffected: no google/oidc file in the diff; all Google integration tests pass (incl. TestGoogleNameAndLocaleFallbacks). Real Google round trip not run (no credentials), covered by the fake-provider tests.
   Non-blocking: unknown extra JSON fields and a differently-cased key (LOCALE) are accepted by the decoder (pre-existing Go encoding/json behaviour, value still validated). Risk high: owner approves the merge.
 - 2026-10-08 08:52Z · leader · Leader review OK on head 8a9cafb (QA_PASS on the same head, CI 4/4 green). A two-value allow-list (en, vi), anything else including non-strings is invalid_locale before any rate-limit token or hash is spent, nothing is created on error, the stored locale drives the verification and reset emails, the web form sends i18n.resolvedLanguage limited to en/vi. Non-blocking: unknown JSON fields and a differently-cased key are accepted by the shared decoder (pre-existing behaviour). Awaiting owner approval.
+
+### T-046 — List a yearbook's photos (API and photo library in the web UI)
+- **Status:** BACKLOG
+- **Priority:** P1
+- **Type:** feature
+- **Milestone:** M1
+- **Depends-on:** T-016
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-08 09:14Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E03-yearbooks/05-list-a-yearbooks-photos.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E03-yearbooks · **PRD:** `.team/epics/E03-yearbooks/PRD.md`
+
+Owner-only list endpoint for a yearbook's photos and the web photo library that uses it, so uploaded photos survive a reload.
+
+#### Comments
 
 <!-- tasks:end -->
 
