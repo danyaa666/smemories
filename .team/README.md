@@ -10,16 +10,17 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 20 | T-013, T-014, T-015, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-033, T-035 |
-| TODO | 5 | T-007, T-009, T-011, T-012, T-034 |
-| MERGED | 1 | T-010 |
-| DONE | 9 | T-001, T-002, T-003, T-004, T-005, T-006, T-008, T-028, T-030 |
+| BACKLOG | 21 | T-013, T-014, T-015, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-033, T-035, T-036 |
+| TODO | 3 | T-011, T-012, T-034 |
+| IN_PROGRESS | 1 | T-009 |
+| MERGED | 1 | T-007 |
+| DONE | 10 | T-001, T-002, T-003, T-004, T-005, T-006, T-008, T-010, T-028, T-030 |
 
-**Awaiting your review (MERGED):** T-010 (Template spec and PDF page renderer)
+**Awaiting your review (MERGED):** T-007 (Email verification and password reset)
 
 **Open questions for you:** none
 
-_Board last written 2026-10-07 16:59Z_
+_Board last written 2026-10-08 01:32Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -173,6 +174,24 @@ _Board last written 2026-10-07 16:59Z_
 **Evidence:** QA_PASS with 16 generated PDFs checked (pdfcpu strict, 300 dpi PNGs by eye, Vietnamese text exact, emoji drawn as outlines and never panic, cover photos full-bleed, pagination for 0/1/7/60 notes, hostile inputs bounded); my own read of the text, image and entry-point code found no defect; all four CI jobs passed on the previous head and are finishing on the current one (QA added one test-only commit).
 **Known limits (accepted):** emoji print as monochrome outlines, not colour (ADR 0002); byte-identical output only when photo widths differ (documented); a book with no notes still gets one empty notes page. The export job must set a deadline because the renderer itself has no caps.
 **Recommendation:** approve. I merge only after the CI jobs on the current head are green. Approve in a terminal: `cd /Users/unisoft/GolandProjects/awesomeProject1 && /Users/unisoft/.claude/plugins/cache/claude-agent-team/agent-team/0.3.0/bin/team approve T-010`
+
+### Q-007 — Approve merge of T-007 (email verification and password reset)?
+- **Status:** RESOLVED
+- **Asked:** 2026-10-07 17:13Z
+- **Blocks:** T-007
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+Leader review and QA both passed on PR #18 (head 3f6c9aa, CI green). It is high risk (auth tokens), so it needs your approval. New required prod setting: SMEM_PUBLIC_BASE_URL. Non-blocking findings are recorded in the specs of T-015, T-021 and T-031. Command: cd /Users/unisoft/GolandProjects/awesomeProject1 && /Users/unisoft/.claude/plugins/cache/claude-agent-team/agent-team/0.3.0/bin/team approve T-007
+
+### Q-008 — Approve merge of T-009 (photo upload and storage)?
+- **Status:** RESOLVED
+- **Asked:** 2026-10-07 17:42Z
+- **Blocks:** T-009
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+Leader review and QA both passed on PR #19 (head 21ba7aa, CI green). High risk (file uploads, personal data, CI change, new AWS S3 SDK dependency approved earlier in L-01). Merge T-007 first (migration 0005), then this one (0006). Known limit: memory use of image processing is high; follow-up T-036 fixes it before anonymous uploads (T-034). New settings: SMEM_S3_* and SMEM_MEDIA_* (copy from .env.example). Command: cd /Users/unisoft/GolandProjects/awesomeProject1 && /Users/unisoft/.claude/plugins/cache/claude-agent-team/agent-team/0.3.0/bin/team approve T-009
 
 <!-- questions:end -->
 
@@ -437,19 +456,19 @@ The core of email+password authentication: register, login, logout, "who am I", 
 - 2026-10-07 14:03Z · leader · accepted by owner (chat, 2026-10-07: 'Accept all')
 
 ### T-007 — Email verification and password reset
-- **Status:** TODO
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
 - **Depends-on:** T-006
 - **Risk:** high
 - **Rework:** 0
-- **Owner-approved:** —
+- **Owner-approved:** yes
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-06 10:12Z by leader
-- **Comments-seen:** 2
+- **Branch:** task/t-007-email-verification-and-password-reset
+- **PR:** https://github.com/danyaa666/smemories/pull/18
+- **Updated:** 2026-10-08 01:31Z by leader
+- **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/03-email-verification-and-password-reset.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -460,6 +479,11 @@ Email verification and password reset for the in-house auth from T-006, plus the
 #### Comments
 - 2026-10-07 11:38Z · leader · Leader note: migration numbering. T-008 (PR #17) uses migration 0004, so use the NEXT FREE number at the time you write yours (0005 if T-008 has merged), not the 0003 the spec mentions: goose refuses an out-of-order lower number on databases that already applied a higher one.
 - 2026-10-07 14:14Z · leader · Spec updated (now in .team/epics/E02-auth/03-email-verification-and-password-reset.md): the migration file name is now '<next free number>_email_tokens.sql' instead of 0003; see the numbering note at the top of the spec.
+- 2026-10-07 17:07Z · dev · Implemented AC1-AC9, migration 0005_email_tokens. Test: make test-integration (new file internal/auth/verify_reset_integration_test.go), newman run postman/auth.postman_collection.json (restart API between 3rd runs: forgot is 5/h per IP). Gaps: text-only emails (no HTML part); resend mailer failure returns 500.
+- 2026-10-07 17:11Z · qa · PR #18 head 3f6c9aa, CI green (go, go-integration, security, web). Mechanical: go build, go test -race ./..., make test-integration (all ok), go vet -tags integration, golangci-lint 0 issues, make web-lint ok. Live: built API, fresh DB smem_test_qa007 + migrations (0005 applies), curl + newman. Evidence AC->result: AC1 SMEM_ENV=prod -> exit 'mailer setup failed ... no real mailer configured'; dev prints full message with link. AC2 register -> 201 + verification mail logged (mailer-failure path covered by TestRegisterSurvivesMailerFailure). AC3 resend: 202,202,202,429 (Retry-After 3600); verified user 200 {already_verified:true}; unauthenticated 401. AC4 verify -> 204, email_verified_at set; reuse/unknown/empty/garbage -> 400 invalid_token; DB token_hash == sha256(token), 32 bytes decoded, expires-created 24h by tests; a verify token used as reset -> 400 invalid_token. AC5 known vs unknown: identical 202 {} body, timing ~1.2ms both; limits: 5/h IP -> 429 on 6th, per-email 3/h (case-insensitive) -> 429 on 4th. AC6 weak password -> 400 and token NOT consumed; 8 concurrent resets of one token -> exactly 1x204 + 7x400; all 3 sessions deleted, old cookies 401; other outstanding reset links retired; only the winning password logs in; expired token (expires_at moved to past) -> 400; reset TTL = 60 min. AC7 VI user gets Vietnamese mail with /reset-password?token= link built from SMEM_PUBLIC_BASE_URL (trailing slash trimmed); EN default; TestRenderEmailBothLanguages. AC8 startup cleanup logged 'removed dead email tokens' count 4 and 7 on restarts; live tokens kept; TestCleanupRemovesExpiredAndUsedTokens. AC9 openapi has 200/202/204/400/401/429 for the 4 endpoints; newman auth collection run twice back to back: 45 requests, 110 assertions, 0 failed both times (new flow + edge entries present). No token seen in structured logs. Non-blocking: (1) resend returns 500 when mailer fails (dev-noted; maybe 502/202 + log); (2) Postman has no 429 case for new limits (needs restart between runs, noted by dev); (3) per-email forgot limit lets anyone throttle a victim's reset to 3/h (accepted by spec); (4) text-only email. Test DB dropped.
+- 2026-10-07 17:13Z · leader · Leader review OK on head 3f6c9aa (same head QA tested; CI go, go-integration, web, security green): spec ACs met by the diff; tokens 32 random bytes, SHA-256 at rest, single use via one UPDATE with row lock, wrong-purpose rejected; known and unknown forgot-password do the same work on the request path; reset deletes all sessions in one transaction; LogMailer refuses to exist outside dev/test; cleanup at startup and daily; limits swept. Non-blocking, moved to specs: resend 500 on mailer failure and register-time send on the request path (T-021), link-token handling on the web pages (T-015), per-email forgot cap can throttle a victim (T-031). Awaiting owner approval. For the owner to check: README 'Auth' paragraph (new SMEM_PUBLIC_BASE_URL, required in prod) and that registering locally prints the verification link in the API log.
+- 2026-10-08 01:30Z · human · owner approved merge
+- 2026-10-08 01:31Z · leader · merged 186ac52 (squash), owner-approved in chat 2026-10-08. Review: tokens are 32 random bytes hashed at rest and single use (one UPDATE with row lock), forgot-password does the same work for known and unknown emails, reset deletes all sessions in one transaction, LogMailer cannot start outside dev/test. For owner to check: register locally and read the verification link in the API log; SMEM_PUBLIC_BASE_URL is required in prod. Follow-ups recorded in T-015, T-021, T-031 specs.
 
 ### T-008 — Yearbook CRUD and profile information
 - **Status:** DONE
@@ -502,19 +526,19 @@ The yearbook itself: create, list, read, update and delete a user's yearbooks, p
 - 2026-10-07 14:03Z · leader · accepted by owner (chat, 2026-10-07: 'Accept all')
 
 ### T-009 — Photo upload and storage (MinIO/S3)
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
 - **Depends-on:** T-004, T-008
 - **Risk:** high
-- **Rework:** 0
-- **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-06 10:12Z by leader
-- **Comments-seen:** 2
+- **Rework:** 1
+- **Owner-approved:** yes
+- **Assignee:** dev
+- **Branch:** task/t-009-photo-upload-and-storage-minio-s3
+- **PR:** https://github.com/danyaa666/smemories/pull/19
+- **Updated:** 2026-10-08 01:32Z by dev
+- **Comments-seen:** 6
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E03-yearbooks/02-photo-upload-and-storage-minio-s3.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -525,9 +549,29 @@ Photo upload and storage for yearbook owners.
 #### Comments
 - 2026-10-07 02:47Z · leader · Leader note from the T-001 review: the server timeouts are ReadTimeout 15 s and WriteTimeout 30 s (global, from T-001). A 10 MiB upload over a slow phone connection, or a streamed download, can exceed them. Do not raise the global values; extend the deadline per route with http.NewResponseController(w).SetReadDeadline / SetWriteDeadline (the statusWriter already implements Unwrap) and add a test. Same applies to the PDF download in T-014.
 - 2026-10-07 14:14Z · leader · Spec updated (now in .team/epics/E03-yearbooks/02-photo-upload-and-storage-minio-s3.md): the migration file name is now '<next free number>_media.sql' instead of 0005; see the numbering note at the top of the spec.
+- 2026-10-07 17:13Z · leader · Leader: migration number. PR #18 (T-007) is about to take migrations/0005_email_tokens.sql. Use 0006 for your media migration (re-check 'ls migrations/' and git fetch before writing it); two files with the same version would stop goose at startup.
+- 2026-10-07 17:29Z · dev · PR #19, all 4 CI checks green (go-integration now runs MinIO). All 9 AC + the per-route deadline note done. Test: make up; make lint test test-integration; cd postman && newman run media.postman_collection.json --working-dir . against a local API (SMEM_S3_* from .env.example). Migration is 0006_media.sql (0005 = T-007). New deps: aws-sdk-go-v2 (aws, credentials, s3). Also added auth.GuardMultipart. Known gaps: PNG eXIf orientation ignored; an upload racing a yearbook delete can leave one orphan object; 413/quota/rate limit covered by Go integration tests only. Risk high: needs owner approval.
+- 2026-10-07 17:39Z · qa · QA_PASS T-009 (PR #19, head 21ba7aa, CI 4/4 green). Tested on a FRESH db (0001..0006 applied, migrate down/up of 0006 OK) + real MinIO + real API binary.
+  Mechanical: go build, go test -race ./..., go test -race -tags integration -count=1 ./... (incl. MinIO), gofmt, go vet (+integration tag), golangci-lint: all clean. newman media collection (44 req / 77 assertions) run 2x back to back: 0 failures; yearbooks (85/172) and auth (30/82) collections also 0 failures (regression).
+  AC1: PASS - 201 {media:{id,width,height,bytes}}; other user / unknown book -> 404; no session 401; foreign Origin 403; JSON body 415; wrong field name 400; 300 MB body -> 413 in 10 ms; 11 MiB junk -> 413; 9.6 MB valid noise JPEG -> 201.
+  AC2: PASS - renamed .html/.svg/.exe/.gif/0-byte as .jpg -> 415; polyglot JPEG+<script> -> 201 but stored bytes re-encoded (payload gone); truncated JPEG and animated WebP -> 400 invalid_image; 12000x10 PNG 201, 12001x10 400; 8000x7000 (56 MP, 54 KB file) 400, 7000x7000 (49 MP) 201.
+  AC3: PASS - 4000x3000 JPEG with EXIF (Make, Artist, GPS), ICC, COM comment, orientation 6 -> stored 2250x3000, pixels upright (red top / blue bottom), PIL shows no EXIF/ICC/comment, grep for SECRET/Exif/GPS/ICC_PROFILE in display + thumb = none; thumb 360x480 (long edge 480); small images not upscaled; RGBA PNG with alpha stays PNG, opaque PNG becomes JPEG; WebP with EXIF orientation applied; JPEG quality 92.
+  AC4: PASS - bucket listing: yearbooks/<ulid>/<ulid>.jpg|png and -thumb.jpg only; upload with filename '../../etc/x"\r\nX-Evil: 1.html' -> keys generated, no echo in any header; bucket anonymous access 403 / policy private.
+  AC5: PASS - GET display/thumb: Content-Type from DB, X-Content-Type-Options nosniff, Cache-Control private, max-age=3600, ETag; Range 0-99 -> 206 (100 B), out of range 416, thumb Range 206; owner only (other user 404, no session 401, bad size 400). DELETE: 204, objects and row gone (mc ls), repeated delete 204, other user's DELETE 204 but media untouched, garbage id 204, foreign Origin 403; cover cleared (SET NULL).
+  AC6: PASS - 199 rows seeded by SQL: 200th upload 201, 201st 409 quota_exceeded; user bytes quota: exactly 500 MiB reached -> 201, next -> 409; 64 uploads from one user: 60x201 then 429 rate_limited with Retry-After 599.
+  AC7: PASS - MinIO stopped: DELETE yearbook -> 502 storage_error, book still readable afterwards; upload with MinIO down -> 502 and afterwards objects == 2 x rows (no orphans either way); after MinIO restart DELETE yearbook -> 204, bucket lists only the other book's objects, media rows removed.
+  AC8: PASS - PATCH cover_media_id / PUT profile photo_media_id with own media 200; other book's media, unknown id, malformed id -> 400 invalid_media; number type -> 400; create with cover -> 400 invalid_media; null clears; PATCH of other fields keeps both; PUT profile omitting photo_media_id clears it (documented in OpenAPI as replacing PUT).
+  AC9: PASS - ci.yml starts MinIO and go-integration is green; storage + media integration tests pass against local MinIO; OpenAPI covers new routes/codes; postman media collection covers full flow + 24 edge entries, re-runnable.
+  Per-route deadlines: 9.6 MB upload throttled to 400 kB/s took 23.9 s (> global 15 s ReadTimeout) -> 201.
+  Load: 200 parallel uploads of a 4000x3000 JPEG: 16 accepted (201), the rest instant 503 busy; server stayed up.
+  NON-BLOCKING observations: (1) Memory ceiling is high: one 4000x3000 upload leaves RSS ~430 MB; 4 parallel 49 MP PNGs (47 KB each, within spec limits) peaked at 3.2 GB RSS (SMEM_MEDIA_MAX_CONCURRENT=4 default). Spec-compliant, but a small M2 instance could OOM: consider GOMEMLIMIT, a lower pixel cap or a 2-slot default, and a ponytail: comment. (2) Known gaps already declared by dev: PNG eXIf orientation ignored; upload racing a yearbook delete can leave an orphan object. (3) 413/quota/rate-limit are not in the postman collection (Go tests + my manual runs cover them).
+  Risk is high: owner approval needed before merge. No test files added by QA (existing coverage adequate).
+- 2026-10-07 17:42Z · leader · Leader review OK on head 21ba7aa (the commit QA tested; CI go, go-integration, web, security green). Checked in the diff, not only in the tests: type by sniffing, dimensions from the header before decode, re-encode strips all metadata, generated keys only, owner-only reads with nosniff/private cache, quota recheck under a lock on the user row, upload rate limit, in-flight cap (16) answers 503 busy, yearbook delete purges storage first and fails 502 with nothing deleted, orphans cleaned on failed upload, migration reversible, CI change adds only a MinIO container and fake credentials, no new action. Non-blocking, handled: peak memory 3.2 GB for 4 worst-case PNGs -> new task T-036 (P1, blocks T-034; also sizing note in T-022); aws modules marked '// indirect' in go.mod -> T-036 AC5; orphan sweep -> T-025 spec; PUT profile clears photo_media_id when absent -> T-016 spec. Merge order: T-007 first (its migration is 0005, this one is 0006). Awaiting owner approval.
+- 2026-10-08 01:30Z · human · owner approved merge
+- 2026-10-08 01:32Z · leader · Leader: T-007 merged to develop (186ac52) and PR #19 now conflicts (api/openapi.yaml, cmd/smemories-api/main.go, internal/config/config_test.go; schema.d.ts merges textually but is stale). No code defect. Please: (1) git fetch; merge origin/develop into the task branch (do not rebase a pushed branch); (2) resolve keeping BOTH sides: T-007's auth/mailer wiring, SMEM_PUBLIC_BASE_URL and email routes, and T-009's media/storage wiring, SMEM_S3_*/SMEM_MEDIA_* and routes; the NewHandler for yearbooks keeps T-009's purger argument; (3) cd web && npm run gen:api and commit schema.d.ts (check:api must pass); (4) ls migrations/ must show 0005_email_tokens.sql and 0006_media.sql; test a fresh DB and one that already applied 0005; (5) make lint build test test-integration, run the auth, yearbooks and media Postman collections twice; (6) push and mark READY_FOR_QA with the merge-commit SHA. Nothing else in scope changes.
 
 ### T-010 — Template spec and PDF page renderer
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -538,8 +582,8 @@ Photo upload and storage for yearbook owners.
 - **Assignee:** —
 - **Branch:** task/t-010-template-spec-and-pdf-page-renderer
 - **PR:** https://github.com/danyaa666/smemories/pull/16
-- **Updated:** 2026-10-07 14:04Z by leader
-- **Comments-seen:** 8
+- **Updated:** 2026-10-08 01:30Z by leader
+- **Comments-seen:** 9
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/02-template-spec-and-pdf-page-renderer.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -576,6 +620,7 @@ The template system and the PDF page renderer, built on the library chosen in T-
 - 2026-10-07 11:38Z · leader · Leader review OK at 5d542cd (QA_PASS; the only commit since the dev's cdced0e is QA's own test-only hostile_test.go). I read text.go, image.go and the render entry point in full plus the validator and ADR addendum summaries: wrapping always makes progress (no loop on a box narrower than a glyph), photo dimensions are checked before any allocation with no integer overflow, a bad photo costs only a placeholder, fpdf's sticky error is cleared, cover images use AllowNegativePosition, fpdf panics are recovered into an error. Awaiting owner approval (Risk: high) and green CI on this head. Accepted limits: byte-identical output only for distinct photo widths (documented); one empty notes page for a book with 0 notes (pinned by a test). Follow-ups: T-035 (template tests iterate List()); the export job T-014 MUST set a context deadline and use only approved notes (Render itself has no caps; T-034 caps notes at 300 and messages at 2000).
 - 2026-10-07 14:03Z · human · owner approved merge
 - 2026-10-07 14:04Z · leader · merged 357e78a (squash), owner-approved in chat 2026-10-07. Review: wrapping always makes progress, photo dimensions checked before allocation, a bad photo costs only a placeholder, fpdf panics recovered into errors, cover photos use AllowNegativePosition, spike code and dev-only dependencies removed. For owner to check: open docs/templates/classic.pdf and modern.pdf (synthetic photos). Accepted limits: emoji print as monochrome outlines; byte-identical output only for distinct photo widths; one empty notes page for a book with 0 notes. The export job (T-014) must set a context deadline.
+- 2026-10-08 01:30Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-010')
 
 ### T-011 — Google sign-in (OIDC + PKCE, account linking)
 - **Status:** TODO
@@ -1135,14 +1180,14 @@ Evidence from the T-006/T-030 merges: the workflow's concurrency group has cance
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
-- **Depends-on:** T-012, T-009
+- **Depends-on:** T-012, T-009, T-036
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-07 11:28Z by leader
+- **Updated:** 2026-10-07 17:41Z by leader
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/02-public-note-submission.md`
@@ -1176,6 +1221,29 @@ From the T-010 QA notes: adding a template exactly as docs/templates.md describe
 
 #### Comments
 
+### T-036 — Bound the memory of image processing (caps, concurrency, memory limit)
+- **Status:** BACKLOG
+- **Priority:** P1
+- **Type:** feature
+- **Milestone:** M1
+- **Depends-on:** T-009
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-07 17:41Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E03-yearbooks/04-bound-the-memory-of-image-processing.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E03-yearbooks · **PRD:** `.team/epics/E03-yearbooks/PRD.md`
+
+Make the worst-case memory of the T-009 image pipeline a measured, enforced number (header-based caps, lower default concurrency, memory limit knob), before T-034 exposes it to anonymous uploads.
+
+#### Comments
+
 <!-- tasks:end -->
 
 ## 7. Change log
@@ -1190,3 +1258,4 @@ From the T-010 QA notes: adding a template exactly as docs/templates.md describe
 - 2026-10-07 — Owner answers in chat: T-010 approved and merged (357e78a); Q-005 decided (D-13, no CAPTCHA); all merged tasks T-001..T-006, T-008, T-028, T-030 accepted (DONE). Branch protection and replacing the old shared dev stack were authorised and follow.
 - 2026-10-07 — Branch protection enabled on develop and main (D-14).
 - 2026-10-07 — Owner approved the migration: all 35 task specs moved out of the README into epic files (`.team/epics/E01..E07`, one PRD per epic); board blocks keep status, dependencies, comments and a stub that links the spec. README 200 KB -> 156 KB. Skills updated earlier to write new work this way.
+- 2026-10-08 — T-010 accepted (DONE). T-007 reviewed, owner-approved and merged (186ac52). T-009 passed QA and review; awaiting owner approval, merges after T-007 (migration 0006). Follow-up T-036 (memory bound of image processing) created and made a prerequisite of T-034.

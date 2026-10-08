@@ -8,3 +8,7 @@
 Automated RDS and S3 backups with a documented and tested restore drill; user-initiated export and deletion of account and yearbooks including media and contributor submissions; retention policy written down (owner decision on retention periods).
 
 _BACKLOG: needs a full spec (description, acceptance criteria, design, test plan) before it moves to TODO._
+
+#### Leader notes from the T-009 review (2026-10-08)
+Include an orphan sweep for photo storage: an upload racing a yearbook delete can leave one object without a database row (`media.Service.PurgeYearbook`). A periodic job lists
+`yearbooks/<id>/` keys older than a day that have no `media` row and deletes them (log the count). Also cover the bucket in the restore drill (versioning or replication decision goes to the owner with the cost).

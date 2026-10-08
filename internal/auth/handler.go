@@ -37,6 +37,10 @@ func (h *Handler) Routes(mux *http.ServeMux) {
 	mux.Handle("POST /v1/auth/register", guard(h.register))
 	mux.Handle("POST /v1/auth/login", guard(h.login))
 	mux.Handle("POST /v1/auth/logout", guard(h.logout))
+	mux.Handle("POST /v1/auth/verify-email", guard(h.verifyEmail))
+	mux.Handle("POST /v1/auth/verify-email/resend", Guard(h.cfg.AllowedOrigins, h.RequireUser(http.HandlerFunc(h.resendVerification))))
+	mux.Handle("POST /v1/auth/forgot-password", guard(h.forgotPassword))
+	mux.Handle("POST /v1/auth/reset-password", guard(h.resetPassword))
 	mux.Handle("GET /v1/me", h.RequireUser(http.HandlerFunc(h.me)))
 }
 
@@ -108,6 +112,63 @@ func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (h *Handler) verifyEmail(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Token string `json:"token"`
+	}
+	if !decode(w, r, &in) {
+		return
+	}
+	if err := h.svc.VerifyEmail(r.Context(), in.Token); err != nil {
+		h.fail(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) resendVerification(w http.ResponseWriter, r *http.Request) {
+	u, _ := UserFrom(r.Context())
+	already, err := h.svc.ResendVerification(r.Context(), u)
+	if err != nil {
+		h.fail(w, r, err)
+		return
+	}
+	if already {
+		httpx.WriteJSON(w, http.StatusOK, map[string]bool{"already_verified": true})
+		return
+	}
+	httpx.WriteJSON(w, http.StatusAccepted, struct{}{})
+}
+
+func (h *Handler) forgotPassword(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Email string `json:"email"`
+	}
+	if !decode(w, r, &in) {
+		return
+	}
+	if err := h.svc.ForgotPassword(r.Context(), h.clientIP(r), in.Email); err != nil {
+		h.fail(w, r, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusAccepted, struct{}{})
+}
+
+func (h *Handler) resetPassword(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Token    string `json:"token"`
+		Password string `json:"password"`
+	}
+	if !decode(w, r, &in) {
+		return
+	}
+	if err := h.svc.ResetPassword(r.Context(), in.Token, in.Password); err != nil {
+		h.fail(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (h *Handler) me(w http.ResponseWriter, r *http.Request) {
 	u, _ := UserFrom(r.Context())
 	httpx.WriteJSON(w, http.StatusOK, map[string]User{"user": u})
@@ -127,6 +188,8 @@ func (h *Handler) fail(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.As(err, &ve):
 		httpx.WriteError(w, r, http.StatusBadRequest, ve.Code, "invalid input: "+ve.Code)
+	case errors.Is(err, ErrInvalidToken):
+		httpx.WriteError(w, r, http.StatusBadRequest, "invalid_token", "invalid, expired or used token")
 	case errors.Is(err, ErrEmailTaken):
 		httpx.WriteError(w, r, http.StatusConflict, "email_taken", "email already registered")
 	case errors.Is(err, ErrInvalidCredentials):

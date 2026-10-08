@@ -1,0 +1,18 @@
+{{define "vi.verify.subject"}}Xác nhận địa chỉ email SMemories của bạn{{end}}
+{{define "vi.verify.text"}}Chào {{.Name}},
+
+Chào mừng bạn đến với SMemories! Hãy xác nhận địa chỉ email bằng cách mở liên kết sau (có hiệu lực trong 24 giờ):
+
+{{.Link}}
+
+Nếu bạn không tạo tài khoản này, hãy bỏ qua email này.
+{{end}}
+{{define "vi.reset.subject"}}Đặt lại mật khẩu SMemories của bạn{{end}}
+{{define "vi.reset.text"}}Chào {{.Name}},
+
+Có người đã yêu cầu đặt lại mật khẩu cho tài khoản SMemories của bạn. Mở liên kết sau để chọn mật khẩu mới (có hiệu lực trong 1 giờ):
+
+{{.Link}}
+
+Sau đó bạn sẽ cần đăng nhập lại trên tất cả thiết bị. Nếu không phải bạn, hãy bỏ qua email này: mật khẩu của bạn không thay đổi.
+{{end}}
