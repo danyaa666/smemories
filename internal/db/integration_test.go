@@ -139,3 +139,47 @@ func TestSessionTimesAreUTC(t *testing.T) {
 		t.Fatalf("time = %v, want 01:02:03 UTC", ts)
 	}
 }
+
+// T-037: migration 0009 adds the Letter page size; its Down turns Letter books into A5 and keeps the others.
+func TestMigratePageSizeLetter(t *testing.T) {
+	ctx := context.Background()
+	d := dbtest.New(t)
+	mustExec := func(q string, args ...any) {
+		t.Helper()
+		if _, err := d.ExecContext(ctx, q, args...); err != nil {
+			t.Fatalf("%s: %v", q, err)
+		}
+	}
+	mustExec(`INSERT INTO users (public_id, email, display_name, created_at, updated_at) VALUES ('U1', 'a@example.com', 'A', NOW(6), NOW(6))`)
+	for i, size := range []string{"A5", "A4", "Letter"} {
+		mustExec(`INSERT INTO yearbooks (public_id, owner_id, title, language, page_size, created_at, updated_at)
+			SELECT ?, id, ?, 'en', ?, NOW(6), NOW(6) FROM users WHERE public_id = 'U1'`, "Y"+string(rune('1'+i)), size, size)
+	}
+	sizes := func() string {
+		t.Helper()
+		var s string
+		if err := d.QueryRowContext(ctx, `SELECT GROUP_CONCAT(page_size ORDER BY public_id) FROM yearbooks`).Scan(&s); err != nil {
+			t.Fatal(err)
+		}
+		return s
+	}
+	if got := sizes(); got != "A5,A4,Letter" {
+		t.Fatalf("before down: %s", got)
+	}
+	if err := db.MigrateDown(ctx, d); err != nil { // 0009 is the latest migration
+		t.Fatalf("down: %v", err)
+	}
+	if got := sizes(); got != "A5,A4,A5" {
+		t.Fatalf("after down: %s, want A5,A4,A5", got)
+	}
+	if _, err := d.ExecContext(ctx, `UPDATE yearbooks SET page_size = 'Letter' WHERE public_id = 'Y1'`); err == nil {
+		t.Fatal("old enum should reject Letter")
+	}
+	if err := db.MigrateUp(ctx, d); err != nil {
+		t.Fatalf("up: %v", err)
+	}
+	mustExec(`UPDATE yearbooks SET page_size = 'Letter' WHERE public_id = 'Y1'`)
+	if got := sizes(); got != "Letter,A4,A5" {
+		t.Fatalf("after up: %s", got)
+	}
+}

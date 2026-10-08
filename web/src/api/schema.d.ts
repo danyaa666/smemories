@@ -510,7 +510,7 @@ export interface components {
             /** @enum {string} */
             language: "en" | "vi";
             /** @enum {string} */
-            page_size: "A5" | "A4";
+            page_size: "A5" | "A4" | "Letter";
             /** @description Null until a template is chosen. */
             template_id: string | null;
             /** @description A photo of this yearbook */
@@ -536,7 +536,7 @@ export interface components {
              * @default A5
              * @enum {string}
              */
-            page_size: "A5" | "A4";
+            page_size: "A5" | "A4" | "Letter";
         };
         YearbookPatch: {
             title?: string;
@@ -547,7 +547,7 @@ export interface components {
             /** @enum {string} */
             language?: "en" | "vi";
             /** @enum {string} */
-            page_size?: "A5" | "A4";
+            page_size?: "A5" | "A4" | "Letter";
             /** @description A photo of this yearbook (else `400 invalid_media`); null clears it. */
             cover_media_id?: string | null;
         };

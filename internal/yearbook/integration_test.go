@@ -195,6 +195,32 @@ func TestCreateAndGet(t *testing.T) {
 	}
 }
 
+// T-037 AC2: a book can be created as Letter, moved between sizes and back; bad values change nothing.
+func TestPageSizeLetter(t *testing.T) {
+	e := newEnv(t)
+	alice := e.register("alice@example.com", "Alice")
+	b := e.do(alice, "POST", "/v1/yearbooks", `{"title":"L","language":"en","page_size":"Letter"}`).status(201, "").book()
+	if b["page_size"] != "Letter" {
+		t.Fatalf("created %v", b)
+	}
+	id := e.create(alice, "A5 book")
+	for _, size := range []string{"Letter", "A4", "Letter", "A5"} {
+		got := e.do(alice, "PATCH", "/v1/yearbooks/"+id, `{"page_size":"`+size+`"}`).status(200, "").book()
+		if got["page_size"] != size {
+			t.Fatalf("patched to %s: %v", size, got)
+		}
+		if g := e.do(alice, "GET", "/v1/yearbooks/"+id, "").book(); g["page_size"] != size {
+			t.Fatalf("read back %s: %v", size, g)
+		}
+	}
+	for _, bad := range []string{"letter", "LETTER", "Legal"} {
+		e.do(alice, "PATCH", "/v1/yearbooks/"+id, `{"page_size":"`+bad+`"}`).status(400, "invalid_page_size")
+	}
+	if g := e.do(alice, "GET", "/v1/yearbooks/"+id, "").book(); g["page_size"] != "A5" {
+		t.Fatalf("rejected patch applied: %v", g)
+	}
+}
+
 // AC4, AC5: create validation over HTTP, including mass assignment.
 func TestCreateValidation(t *testing.T) {
 	e := newEnv(t)
@@ -214,6 +240,10 @@ func TestCreateValidation(t *testing.T) {
 		{`{"title":"x"}`, 400, "invalid_language", "missing language"},
 		{`{"title":"x","language":"de"}`, 400, "invalid_language", "bad language"},
 		{`{"title":"x","language":"en","page_size":"A3"}`, 400, "invalid_page_size", "bad page size"},
+		{`{"title":"x","language":"en","page_size":"letter"}`, 400, "invalid_page_size", "lower case Letter"},
+		{`{"title":"x","language":"en","page_size":"LETTER"}`, 400, "invalid_page_size", "upper case Letter"},
+		{`{"title":"x","language":"en","page_size":"Legal"}`, 400, "invalid_page_size", "Legal"},
+		{`{"title":"x","language":"en","page_size":"Letter"}`, 201, "", "Letter"},
 		{`{"title":"x","language":"en","graduation_year":1949}`, 400, "invalid_graduation_year", "year low"},
 		{`{"title":"x","language":"en","graduation_year":2101}`, 400, "invalid_graduation_year", "year high"},
 		{`{"title":"x","language":"en","graduation_year":"2020"}`, 400, "invalid_body", "year as string"},

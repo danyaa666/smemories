@@ -62,6 +62,9 @@ func TestBookEnumsAndYear(t *testing.T) {
 		{`{"language":"fr"}`, "invalid_language"},
 		{`{"language":""}`, "invalid_language"},
 		{`{"page_size":"A3"}`, "invalid_page_size"},
+		{`{"page_size":"letter"}`, "invalid_page_size"},
+		{`{"page_size":"LETTER"}`, "invalid_page_size"},
+		{`{"page_size":"Legal"}`, "invalid_page_size"},
 		{`{"graduation_year":1949}`, "invalid_graduation_year"},
 		{`{"graduation_year":2101}`, "invalid_graduation_year"},
 	}
@@ -70,7 +73,7 @@ func TestBookEnumsAndYear(t *testing.T) {
 			t.Errorf("%s: %q, want %q", tc.js, got, tc.want)
 		}
 	}
-	for _, js := range []string{`{"graduation_year":1950}`, `{"graduation_year":2100}`, `{"language":"vi","page_size":"A4"}`} {
+	for _, js := range []string{`{"graduation_year":1950}`, `{"graduation_year":2100}`, `{"language":"vi","page_size":"A4"}`, `{"page_size":"Letter"}`} {
 		if err := parseBook(t, js).applyTo(&Yearbook{}); err != nil {
 			t.Errorf("%s: %v", js, err)
 		}

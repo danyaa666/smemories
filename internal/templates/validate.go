@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"errors"
 	"fmt"
+	"math"
 	"regexp"
 	"slices"
 	"strings"
@@ -70,12 +71,20 @@ func (v *validator) template() {
 	if t.Unit != "mm" {
 		v.errf("", "invalid unit %q: only \"mm\" is supported", t.Unit)
 	}
+	if t.Reference != "" && t.Reference != "A5" && t.Reference != "Letter" {
+		v.errf("", "invalid reference %q: only \"A5\" or \"Letter\"", t.Reference)
+	}
 	if len(t.PageSizes) == 0 {
 		v.errf("", "page_sizes is empty")
 	}
+	rw, rh := t.RefDims()
 	for _, s := range t.PageSizes {
-		if !PageSizes[s] {
+		d, ok := Dims[s]
+		switch {
+		case !ok:
 			v.errf("", "unknown page size %q", s)
+		case math.Abs((d[0]/d[1])/(rw/rh)-1) > ratioTol:
+			v.errf("", "page size %q has a different aspect ratio than the %s reference page", s, cmp.Or(t.Reference, DefaultReference))
 		}
 	}
 	if !KnownFonts[t.Theme.Font] {
@@ -116,7 +125,8 @@ func (v *validator) page(i int, p *Page, seen map[string]bool) {
 		v.errf(where, "more than one %q page", p.Kind)
 	}
 	seen[p.Kind] = true
-	v.elements(where, p.Elements, slots, RefW, RefH)
+	rw, rh := v.t.RefDims()
+	v.elements(where, p.Elements, slots, rw, rh)
 	if p.Kind != KindNotes {
 		if p.Flow != nil {
 			v.errf(where, "flow is only allowed on notes pages")
@@ -129,7 +139,7 @@ func (v *validator) page(i int, p *Page, seen map[string]bool) {
 		return
 	}
 	fw := where + ", flow"
-	v.box(fw, f.X, f.Y, f.W, f.H, RefW, RefH)
+	v.box(fw, f.X, f.Y, f.W, f.H, rw, rh)
 	if f.Gap < 0 || f.ItemH <= 0 || f.ItemH > f.H+eps {
 		v.errf(fw, "item_h must be in (0, flow h] and gap >= 0")
 		return

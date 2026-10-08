@@ -9,10 +9,17 @@ Sample output for review (synthetic photos and invented names only): [classic.pd
 
 ## Units and coordinates
 
-All numbers are **millimetres** on an **A5 reference page** (148 x 210 mm), origin at the top-left, `y` growing
-down. Font sizes are points. The renderer scales positions and sizes to the requested page size (A4 is
-210 x 297 mm), so one spec serves every size listed in `page_sizes`. `"unit": "mm"` is required; any other
-value is rejected.
+All numbers are **millimetres** on the template's **reference page**, origin at the top-left, `y` growing
+down. Font sizes are points. The reference page is `A5` (148 x 210 mm, the default) or `Letter` (US Letter,
+215.9 x 279.4 mm); see `reference` below. The renderer scales positions and sizes to the requested page size
+(A4 is 210 x 297 mm), so one spec serves every size listed in `page_sizes`. `"unit": "mm"` is required; any
+other value is rejected.
+
+| Page size | Width x height | PDF MediaBox (pt) |
+|---|---|---|
+| `A5` | 148 x 210 mm | 419.5 x 595.3 |
+| `A4` | 210 x 297 mm | 595.3 x 841.9 |
+| `Letter` | 215.9 x 279.4 mm | 612 x 792 |
 
 ## File layout
 
@@ -21,6 +28,7 @@ value is rejected.
   "id": "classic",
   "name": {"en": "Classic", "vi": "Cổ điển"},
   "unit": "mm",
+  "reference": "A5",
   "page_sizes": ["A5", "A4"],
   "theme": {"font": "BeVietnamPro", "colors": {"ink": "#1b1b1b", "accent": "#7a2e2e", "paper": "#fffdf8"}},
   "pages": [ ... ]
@@ -29,7 +37,13 @@ value is rejected.
 
 - `id`: lower case letters, digits, `-` and `_`, at most 32 characters; also the file's logical name.
 - `name`: display name for both `en` and `vi`.
-- `page_sizes`: any of `A5`, `A4`.
+- `reference`: the page the millimetre coordinates refer to, `A5` (default, may be left out) or `Letter`. Every
+  element must lie inside the reference page.
+- `page_sizes`: any of `A5`, `A4`, `Letter`, but only sizes with the same aspect ratio as the reference (within
+  1 %): an `A5` reference allows `A5` and `A4`; a `Letter` reference allows `Letter` only (its ratio, 0.773, is
+  not the A series' 0.707, so a Letter design prints on Letter only). Anything else fails validation naming the
+  template. A template can only be used for a book whose page size it lists (`templates.ForPageSize`); the
+  renderer refuses any other size.
 - `theme.font`: the font family. The only one embedded is `BeVietnamPro` (SIL OFL, regular and bold, full
   Vietnamese coverage). Emoji come from a bundled monochrome fallback font automatically.
 - `theme.colors`: named colours as `#rrggbb`. `ink` (default text), `accent` and `paper` (page background) are
