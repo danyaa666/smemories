@@ -10,6 +10,7 @@ export function LanguageSwitcher() {
           key={lng}
           type="button"
           lang={lng}
+          aria-label={t(`language.${lng}`)}
           aria-pressed={i18n.language === lng}
           onClick={() => void setLanguage(lng)}
         >

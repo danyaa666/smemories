@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { ApiError, getHealth } from "./client";
+import { ApiError, getHealth, postJson, request } from "./client";
 
 function stubFetch(impl: (...args: unknown[]) => Promise<Response>) {
   const fn = vi.fn(impl);
@@ -54,5 +54,28 @@ describe("api client", () => {
       throw new TypeError("Failed to fetch");
     });
     await expect(getHealth()).rejects.toMatchObject({ status: 0, code: "network_error" });
+  });
+
+  it("keeps the entries of a Headers instance and adds Accept", async () => {
+    const fetchMock = stubFetch(async () => json({}));
+    await request("/x", { headers: new Headers({ "X-Test": "1" }) });
+    const sent = new Headers((fetchMock.mock.calls[0]?.[1] as RequestInit).headers);
+    expect(sent.get("X-Test")).toBe("1");
+    expect(sent.get("Accept")).toBe("application/json");
+  });
+
+  it("reads Retry-After into the error", async () => {
+    stubFetch(async () => new Response("{}", { status: 429, headers: { "Retry-After": "120" } }));
+    await expect(getHealth()).rejects.toMatchObject({ status: 429, retryAfter: 120 });
+  });
+
+  it("postJson sends a JSON body, none without one", async () => {
+    const fetchMock = stubFetch(async () => new Response(null, { status: 204 }));
+    await postJson("/a", { k: 1 });
+    await postJson("/b");
+    const [a, b] = fetchMock.mock.calls.map((c) => c[1] as RequestInit);
+    expect(a).toMatchObject({ method: "POST", body: '{"k":1}' });
+    expect(new Headers(a?.headers).get("Content-Type")).toBe("application/json");
+    expect(b?.body).toBeUndefined();
   });
 });
