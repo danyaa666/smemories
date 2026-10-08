@@ -137,7 +137,7 @@ Photos (see `.env.example`): `SMEM_S3_ENDPOINT` (empty for AWS S3, `http://127.0
 for MinIO), `SMEM_MEDIA_MAX_BYTES` (10 MiB upload cap) and `SMEM_MEDIA_MAX_CONCURRENT` (4 images processed at once).
 An invalid value stops the process with a message naming the variable. The API contract is
 `api/openapi.yaml`; the Postman collections live in `postman/` (`newman run postman/platform.postman_collection.json`
-against a running API; the media collection uploads files, so run it from `postman/` with `--working-dir .`).
+against a running API; the media collection uploads files, so run it from `postman/` with `--working-dir .`; the notes collection needs verified test accounts: see its description and `make verify-newman-users`).
 
 ## Project management
 

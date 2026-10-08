@@ -345,6 +345,79 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/yearbooks/{id}/collections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Yearbook ULID. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * List a yearbook's collection links
+         * @description Newest first, revoked ones included (`revoked_at` set). Never contains a token or a token hash. `note_count` counts notes in any status; it is 0 until notes can be submitted.
+         */
+        get: operations["listCollections"];
+        put?: never;
+        /**
+         * Create a collection link for a yearbook
+         * @description Creates a private link friends can use to leave notes. The body is a JSON object (send `{}` for no options). The response carries the link `token` once; only its SHA-256 is stored and it can never be shown again (revoke the link and create a new one instead). The token is a bearer secret of 192 random bits (32 base64url characters); the web link is `<app>/c/<token>`. `label` is optional, at most 60 characters, NFC and trimmed (`invalid_label` for control or format characters). `deadline_at` is optional, RFC 3339, in the future and at most one year ahead (`invalid_deadline`). Unknown fields are `400 unknown_field`. Needs a verified email (`403 email_not_verified`). A missing book and one owned by someone else both answer `404 not_found`. At most 5 active (not revoked) links per book (`409 limit_reached`).
+         */
+        post: operations["createCollection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/collections/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Collection ULID. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Revoke a collection link
+         * @description Sets `revoked_at`; the link stops working at once and never becomes active again. Repeating it is `204` as well. A missing link and someone else's both answer `404 not_found`.
+         */
+        delete: operations["revokeCollection"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/collect/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The link token */
+                token: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Look up a collection link (public)
+         * @description For the contributor form. No session is needed and none is read; no cookie is set and no CORS headers are sent. An unknown, malformed or revoked token all answer the same `404 not_found`. Once the deadline has passed the answer is `410 collection_closed`. Limited to 60 requests per client IP per 15 minutes (`429 rate_limited`, with `Retry-After`), valid or not. The token never appears in logs.
+         */
+        get: operations["lookupCollection"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -463,6 +536,48 @@ export interface components {
         };
         MediaEnvelope: {
             media: components["schemas"]["Media"];
+        };
+        CollectionCreate: {
+            label?: string;
+            /**
+             * Format: date-time
+             * @description In the future
+             */
+            deadline_at?: string;
+        };
+        CollectionCreated: {
+            /** @description Collection ULID. */
+            id: string;
+            label: string;
+            /** Format: date-time */
+            deadline_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** @description Shown only in this response. */
+            token: string;
+        };
+        Collection: {
+            id: string;
+            label: string;
+            /** Format: date-time */
+            deadline_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            revoked_at: string | null;
+            note_count: number;
+        };
+        CollectionPublic: {
+            yearbook: {
+                title: string;
+            };
+            owner: {
+                display_name: string;
+            };
+            /** Format: date-time */
+            deadline_at: string | null;
+            /** @constant */
+            open: true;
         };
         /** @description Shared error envelope. `code` is a stable snake_case contract (clients localise it); `message` is English text meant for logs. */
         Error: {
@@ -1331,6 +1446,151 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["CsrfOriginMismatch"];
             502: components["responses"]["StorageError"];
+        };
+    };
+    listCollections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Yearbook ULID. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The links. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        collections: components["schemas"]["Collection"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["YearbookNotFound"];
+        };
+    };
+    createCollection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Yearbook ULID. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CollectionCreate"];
+            };
+        };
+        responses: {
+            /** @description Created. The only response that ever contains the token. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        collection: components["schemas"]["CollectionCreated"];
+                    };
+                };
+            };
+            /** @description `invalid_label`, `invalid_deadline`, `unknown_field` or `invalid_body`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            /** @description `email_not_verified` (the owner's email is not verified) or `csrf_origin_mismatch` (the request carries the session cookie but its Origin is not allowed). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            404: components["responses"]["YearbookNotFound"];
+            /** @description The book already has 5 active links (`limit_reached`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            413: components["responses"]["PayloadTooLarge"];
+            415: components["responses"]["UnsupportedMediaType"];
+        };
+    };
+    revokeCollection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Collection ULID. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Revoked (or already revoked). */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["CsrfOriginMismatch"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    lookupCollection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The link token */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The link is active. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionPublic"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            /** @description The deadline has passed (`collection_closed`). */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            429: components["responses"]["RateLimited"];
         };
     };
 }

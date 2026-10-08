@@ -16,6 +16,7 @@ import (
 	"github.com/danyaa666/smemories/internal/httpx"
 	"github.com/danyaa666/smemories/internal/mailer"
 	"github.com/danyaa666/smemories/internal/media"
+	"github.com/danyaa666/smemories/internal/notes"
 	"github.com/danyaa666/smemories/internal/storage"
 	"github.com/danyaa666/smemories/internal/yearbook"
 )
@@ -71,8 +72,9 @@ func main() {
 	}), cfg.MediaMaxConcurrent, nil)
 	mediaH := media.NewHandler(mediaSvc, cfg.MediaMaxBytes, authH.RequireUser, cfg.AllowedOrigins, logger)
 	bookH := yearbook.NewHandler(yearbook.NewStore(d), mediaSvc, authH.RequireUser, cfg.AllowedOrigins, logger, nil)
+	notesH := notes.NewHandler(notes.NewStore(d), authH.RequireUser, cfg.AllowedOrigins, authH.ClientIP, logger, nil)
 
-	srv := httpx.NewServer(cfg.HTTPAddr, httpx.NewRouter(logger, httpx.Ready(d, logger), authH.Routes, bookH.Routes, mediaH.Routes))
+	srv := httpx.NewServer(cfg.HTTPAddr, httpx.NewRouter(logger, httpx.Ready(d, logger), authH.Routes, bookH.Routes, mediaH.Routes, notesH.Routes))
 	if err := httpx.Serve(ctx, srv, ln, httpx.DrainTimeout); err != nil {
 		logger.Error("server stopped", "error", err)
 		os.Exit(1)

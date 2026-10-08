@@ -614,6 +614,126 @@ paths:
         "401": {$ref: "#/components/responses/Unauthenticated"}
         "403": {$ref: "#/components/responses/CsrfOriginMismatch"}
         "502": {$ref: "#/components/responses/StorageError"}
+  /v1/yearbooks/{id}/collections:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: string}, description: Yearbook ULID.}
+    post:
+      operationId: createCollection
+      tags: [notes]
+      summary: Create a collection link for a yearbook
+      description: >-
+        Creates a private link friends can use to leave notes. The body is a JSON object (send `{}` for no options).
+        The response carries the link `token` once; only its SHA-256 is stored and it can never be shown again
+        (revoke the link and create a new one instead). The token is a bearer secret of 192 random bits (32 base64url
+        characters); the web link is `<app>/c/<token>`. `label` is optional, at most 60 characters, NFC and trimmed
+        (`invalid_label` for control or format characters). `deadline_at` is optional, RFC 3339, in the future and at
+        most one year ahead (`invalid_deadline`). Unknown fields are `400 unknown_field`. Needs a verified email
+        (`403 email_not_verified`). A missing book and one owned by someone else both answer `404 not_found`.
+        At most 5 active (not revoked) links per book (`409 limit_reached`).
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/CollectionCreate"}
+      responses:
+        "201":
+          description: Created. The only response that ever contains the token.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [collection]
+                properties:
+                  collection: {$ref: "#/components/schemas/CollectionCreated"}
+        "400":
+          description: "`invalid_label`, `invalid_deadline`, `unknown_field` or `invalid_body`."
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
+        "401": {$ref: "#/components/responses/Unauthenticated"}
+        "403":
+          description: >-
+            `email_not_verified` (the owner's email is not verified) or `csrf_origin_mismatch` (the request carries
+            the session cookie but its Origin is not allowed).
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
+        "404": {$ref: "#/components/responses/YearbookNotFound"}
+        "409":
+          description: The book already has 5 active links (`limit_reached`).
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
+        "413": {$ref: "#/components/responses/PayloadTooLarge"}
+        "415": {$ref: "#/components/responses/UnsupportedMediaType"}
+    get:
+      operationId: listCollections
+      tags: [notes]
+      summary: List a yearbook's collection links
+      description: >-
+        Newest first, revoked ones included (`revoked_at` set). Never contains a token or a token hash.
+        `note_count` counts notes in any status; it is 0 until notes can be submitted.
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: The links.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [collections]
+                properties:
+                  collections:
+                    type: array
+                    items: {$ref: "#/components/schemas/Collection"}
+        "401": {$ref: "#/components/responses/Unauthenticated"}
+        "404": {$ref: "#/components/responses/YearbookNotFound"}
+  /v1/collections/{id}:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: string}, description: Collection ULID.}
+    delete:
+      operationId: revokeCollection
+      tags: [notes]
+      summary: Revoke a collection link
+      description: >-
+        Sets `revoked_at`; the link stops working at once and never becomes active again. Repeating it is `204` as
+        well. A missing link and someone else's both answer `404 not_found`.
+      security:
+        - sessionCookie: []
+      responses:
+        "204": {description: Revoked (or already revoked).}
+        "401": {$ref: "#/components/responses/Unauthenticated"}
+        "403": {$ref: "#/components/responses/CsrfOriginMismatch"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /v1/public/collect/{token}:
+    parameters:
+      - {name: token, in: path, required: true, schema: {type: string}, description: The link token, a bearer secret.}
+    get:
+      operationId: lookupCollection
+      tags: [notes]
+      summary: Look up a collection link (public)
+      description: >-
+        For the contributor form. No session is needed and none is read; no cookie is set and no CORS headers are
+        sent. An unknown, malformed or revoked token all answer the same `404 not_found`. Once the deadline has
+        passed the answer is `410 collection_closed`. Limited to 60 requests per client IP per 15 minutes
+        (`429 rate_limited`, with `Retry-After`), valid or not. The token never appears in logs.
+      security: []
+      responses:
+        "200":
+          description: The link is active.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/CollectionPublic"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "410":
+          description: The deadline has passed (`collection_closed`).
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
+        "429": {$ref: "#/components/responses/RateLimited"}
 components:
   securitySchemes:
     sessionCookie:
@@ -809,6 +929,47 @@ components:
       required: [media]
       properties:
         media: {$ref: "#/components/schemas/Media"}
+    CollectionCreate:
+      type: object
+      additionalProperties: false
+      properties:
+        label: {type: string, maxLength: 60}
+        deadline_at: {type: string, format: date-time, description: In the future, at most one year ahead.}
+    CollectionCreated:
+      type: object
+      required: [id, label, deadline_at, created_at, token]
+      properties:
+        id: {type: string, description: Collection ULID.}
+        label: {type: string}
+        deadline_at: {type: [string, "null"], format: date-time}
+        created_at: {type: string, format: date-time}
+        token: {type: string, description: Shown only in this response.}
+    Collection:
+      type: object
+      required: [id, label, deadline_at, created_at, revoked_at, note_count]
+      properties:
+        id: {type: string}
+        label: {type: string}
+        deadline_at: {type: [string, "null"], format: date-time}
+        created_at: {type: string, format: date-time}
+        revoked_at: {type: [string, "null"], format: date-time}
+        note_count: {type: integer, minimum: 0}
+    CollectionPublic:
+      type: object
+      required: [yearbook, owner, deadline_at, open]
+      properties:
+        yearbook:
+          type: object
+          required: [title]
+          properties:
+            title: {type: string}
+        owner:
+          type: object
+          required: [display_name]
+          properties:
+            display_name: {type: string}
+        deadline_at: {type: [string, "null"], format: date-time}
+        open: {type: boolean, const: true}
     Error:
       type: object
       description: >-

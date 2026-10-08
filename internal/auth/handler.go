@@ -230,6 +230,9 @@ func (h *Handler) cookie(w http.ResponseWriter, value string, maxAge int, expire
 	})
 }
 
+// ClientIP lets other packages key their own rate limits the same way auth does.
+func (h *Handler) ClientIP(r *http.Request) string { return h.clientIP(r) }
+
 // clientIP is RemoteAddr's host, or with TrustProxy the last X-Forwarded-For hop (the one
 // our own proxy appended; earlier hops are client-controlled).
 func (h *Handler) clientIP(r *http.Request) string {
