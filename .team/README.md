@@ -10,8 +10,8 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 20 | T-013, T-014, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-040, T-041, T-042, T-046 |
-| TODO | 4 | T-034, T-039, T-044, T-047 |
+| BACKLOG | 22 | T-013, T-014, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-040, T-041, T-042, T-046, T-049, T-050 |
+| TODO | 5 | T-034, T-039, T-044, T-047, T-048 |
 | READY_FOR_QA | 1 | T-016 |
 | DONE | 22 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-028, T-030, T-033, T-035, T-036, T-037, T-038, T-043, T-045 |
 
@@ -19,7 +19,7 @@
 
 **Open questions for you:** none
 
-_Board last written 2026-10-08 09:29Z_
+_Board last written 2026-10-08 11:09Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -279,6 +279,7 @@ Owner decisions (2026-10-06, `/team-init` interview). "Rejected" lists the optio
 | D-19 | **Editing is staged: guided customisation after M1 (M1b), the free-layout editor as its own milestone after go-live (M4).** | Owner answer in chat 2026-10-08 (Canva-style request). Stage 0 (M1): system templates with template-driven forms. Stage 1 (M1b): per-book design copy with guided changes. Stage 2 (M4): free-layout editor (add, remove, move, resize, replace), order against the class yearbook M3 decided at the M2 retrospective. The document model is the template JSON (format v2); the Go renderer stays the single source of truth (L-12, D-12). Epic E09. | Full editor right after M1; fixed templates only | Stage 1 is stable, or the owner brings the editor forward |
 | D-20 | **Each yearbook owner edits their own copy of a template; users do not publish templates to others.** | Owner answer in chat 2026-10-08. System templates are starting points curated through the import pipeline (E08); a student's edits belong to their book only, so there is no moderation, copyright or abuse surface for shared designs. | Template gallery where users publish; admin-only template editor | Students ask to share designs |
 | D-21 | **Friends' notes are template-driven from the start: answers keyed by field id from a closed catalogue, form generated from the template's fields.** | Owner answer in chat 2026-10-08 (the designs need richer forms: how we met, first impression, best memory, wish). `internal/notefields` (T-043) defines fields with limits and EN/VI labels; T-034 stores `notes.answers` JSON validated against it; the public lookup returns the form's `fields`; templates declare `note_fields` (T-044). Answers survive a template change. The catalogue has no personal-data fields beyond a name (D-01 data minimisation). | Fixed columns in M1, migrate later (rewrite of tables, form, moderation, export); fixed fields forever | A field needs a type the catalogue lacks (rating, choice), or contributors must give contact data |
+| D-22 | **Email verification and password reset use 6-digit one-time codes typed by the student, not emailed links; a dev-only fixed code `123123` exists and must be deleted before production.** | Owner answers in chat 2026-10-08. Replaces the link design of T-007 (nothing is in production). Codes are stored as HMAC-SHA256 with a server key, valid 30 min (verify) or 15 min (reset), 5 wrong attempts lock a code, plus per-user and per-IP limits (T-048, web T-049). The dev code is `SMEM_DEV_FIXED_OTP=123123`, honoured only when `SMEM_ENV` is `dev` or `test`; the API refuses to start otherwise if it is set. Every such shortcut is tagged `DEV-SHORTCUT`, listed in `docs/dev-shortcuts.md`, and removed by T-050, a prerequisite of the first deploy (T-023); the rule is in CLAUDE.md. | Keep links with a dev shortcut; links and codes together | Phones prove awkward with codes, or a provider needs links (then add magic links beside codes) |
 
 Leader decisions (low-risk, inside the approved stack):
 
@@ -1040,14 +1041,14 @@ Multi-stage Dockerfile (distroless or alpine, non-root), production config valid
 - **Priority:** P2
 - **Type:** infra
 - **Milestone:** M2
-- **Depends-on:** T-022
+- **Depends-on:** T-022, T-050
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-06 10:13Z by leader
+- **Updated:** 2026-10-08 11:09Z by leader
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E06-go-live/03-aws-infrastructure-as-code-and-deploy.md`
@@ -1725,6 +1726,75 @@ Owner-only list endpoint for a yearbook's photos and the web photo library that 
 **Epic:** E02-auth · **PRD:** `.team/epics/E02-auth/PRD.md`
 
 CI on develop failed once on TestGoogleConcurrentCallbacksCreateOneAccount: googleUser retries only 3 times without a pause. Add bounded jittered backoff and a stress test.
+
+#### Comments
+
+### T-048 — Email one-time codes replace verification and reset links (API) with a dev-only fixed code
+- **Status:** TODO
+- **Priority:** P1
+- **Type:** feature
+- **Milestone:** M1
+- **Depends-on:** T-045
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-08 11:09Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/08-email-otp-codes-replace-links-api.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E02-auth · **PRD:** `.team/epics/E02-auth/PRD.md`
+
+6-digit email codes with attempt limits replace the link tokens of T-007; dev-only fixed code 123123 behind SMEM_DEV_FIXED_OTP, refused in prod (D-22).
+
+#### Comments
+
+### T-049 — Web: code entry screens for email verification and password reset
+- **Status:** BACKLOG
+- **Priority:** P1
+- **Type:** feature
+- **Milestone:** M1
+- **Depends-on:** T-048
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-08 11:09Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/09-web-email-code-screens.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E02-auth · **PRD:** `.team/epics/E02-auth/PRD.md`
+
+Code input screens (paste, auto-submit, resend cooldown) replacing the link pages of T-015.
+
+#### Comments
+
+### T-050 — Remove dev-only shortcuts before production (delete the fixed OTP) and add a pipeline check
+- **Status:** BACKLOG
+- **Priority:** P1
+- **Type:** security
+- **Milestone:** M2
+- **Depends-on:** T-048, T-022
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-08 11:09Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E06-go-live/06-remove-dev-shortcuts-before-production.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E06-go-live · **PRD:** `.team/epics/E06-go-live/PRD.md`
+
+Go-live gate: delete the dev fixed OTP and every DEV-SHORTCUT, fail CI and the deploy pipeline if one returns.
 
 #### Comments
 

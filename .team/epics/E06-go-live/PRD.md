@@ -51,3 +51,4 @@ Specs live next to this file; **status lives only on the board** (`L list`), nev
 | T-023 AWS infrastructure as code and deploy pipeline | `03-aws-infrastructure-as-code-and-deploy.md` | T-022 |
 | T-024 Observability: metrics, alarms, uptime check, log retention | `04-observability-metrics-alarms-uptime-check.md` | T-023 |
 | T-025 Backups, restore drill, and user data export/deletion | `05-backups-restore-drill-and-user-data-export.md` | T-023 |
+| T-050 Remove dev-only shortcuts before production (delete the fixed OTP) | `06-remove-dev-shortcuts-before-production.md` | T-048, T-022 |
