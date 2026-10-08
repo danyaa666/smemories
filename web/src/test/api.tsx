@@ -1,9 +1,11 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { render } from "@testing-library/react";
 import { StrictMode, type ReactNode } from "react";
 import { BrowserRouter, MemoryRouter, useLocation } from "react-router-dom";
 import { vi } from "vitest";
 import { App } from "../App";
+import { captureUrlToken } from "../auth/useUrlToken";
+import { makeQueryClient } from "../queryClient";
 
 export type Call = { method: string; path: string; body: unknown; search: string };
 type Handler = Response | ((call: Call) => Response);
@@ -49,12 +51,13 @@ function Where() {
 
 export function renderApp(path: string, opts: { strict?: boolean; browser?: boolean } = {}) {
   // browser: a real window.history, so a test can see what the address bar holds when fetch runs
-  if (opts.browser) window.history.replaceState(null, "", path);
+  if (opts.browser) {
+    window.history.replaceState(null, "", path);
+    captureUrlToken(); // as main.tsx does before render
+  }
   const Router = opts.browser ? BrowserRouter : MemoryRouter;
   const tree: ReactNode = (
-    <QueryClientProvider
-      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
-    >
+    <QueryClientProvider client={makeQueryClient()}>
       <Router {...(opts.browser ? {} : { initialEntries: [path] })}>
         <App />
         <Where />

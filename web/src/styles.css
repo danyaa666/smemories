@@ -21,11 +21,14 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
   padding: 0.75rem 1rem;
   border-bottom: 1px solid #c8c8c8;
 }
 
 main {
+  overflow-wrap: anywhere; /* a long unbroken display name or email must not widen the page */
   padding: 1rem;
   max-width: 40rem;
   margin: 0 auto;
@@ -86,7 +89,14 @@ a {
 .auth-nav {
   display: inline-flex;
   align-items: center;
-  gap: 0.75rem;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  min-width: 0;
+}
+
+.auth-nav a {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .field {
@@ -128,4 +138,17 @@ button[type="submit"],
 button:disabled {
   opacity: 0.6;
   cursor: progress;
+}
+
+form + .button {
+  margin-top: 0.75rem;
+}
+
+.auth-nav button {
+  font: inherit;
+  padding: 0.25rem 0.5rem;
+}
+
+.app-header strong {
+  margin-right: 0.5rem;
 }

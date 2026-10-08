@@ -1,6 +1,7 @@
-import { screen, waitFor } from "@testing-library/react";
+import { onlineManager } from "@tanstack/react-query";
+import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, onTestFinished, vi } from "vitest";
 import i18n from "../i18n";
 import { err, mockApi, renderApp, user } from "../test/api";
 import { safePath } from "./errors";
@@ -214,6 +215,45 @@ describe("forgot password", () => {
   });
 });
 
+describe("token in the address bar", () => {
+  it.each(["/verify-email", "/reset-password"])(
+    "%s: no request is made while the URL still holds the token",
+    async (path) => {
+      const calls = mockApi({
+        "GET /v1/me": signedOut,
+        "POST /v1/auth/verify-email": new Response(null, { status: 204 }),
+        "POST /v1/auth/reset-password": new Response(null, { status: 204 }),
+      });
+      renderApp(`${path}?token=secret_tok`, { browser: true, strict: true });
+      await waitFor(() => expect(calls.some((c) => c.path === "/v1/me")).toBe(true));
+      expect(calls.filter((c) => c.search.includes("token"))).toEqual([]);
+      expect(window.location.href).not.toContain("secret_tok");
+    },
+  );
+
+  it("does not offer a used token to a later visit without one", async () => {
+    mockApi({ "GET /v1/me": signedOut });
+    renderApp("/reset-password?token=t1", { browser: true });
+    expect(await screen.findByLabelText("New password")).toBeInTheDocument();
+    cleanup();
+    renderApp("/reset-password", { browser: true });
+    expect(await screen.findByText(/expired or was already used/)).toBeInTheDocument();
+  });
+});
+
+describe("offline", () => {
+  it("shows the network error at once instead of waiting for the network", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("offline")));
+    onlineManager.setOnline(false);
+    onTestFinished(() => onlineManager.setOnline(true));
+    renderApp("/login");
+    await fill("Email", "a@b.co");
+    await fill("Password", "pw");
+    await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(await screen.findByText(/Could not reach the server/)).toBeInTheDocument();
+  });
+});
+
 describe("reset password", () => {
   it("removes the token from the address bar before the request, then sets the password", async () => {
     const calls = mockApi({
@@ -228,6 +268,8 @@ describe("reset password", () => {
     const post = calls.find((c) => c.path === "/v1/auth/reset-password");
     expect(post?.body).toEqual({ token: "abc_DEF-123", password: "a new password" });
     expect(post?.search).toBe("");
+    // the session bootstrap in the nav must not see the token either (it would go out as a Referer)
+    expect(calls.map((c) => c.search)).toEqual(calls.map(() => ""));
   });
 
   it("keeps the form after a weak password and offers a new link after invalid_token", async () => {
