@@ -22,6 +22,7 @@ type line struct {
 
 // textBox is one text element to lay out, in page millimetres and points.
 type textBox struct {
+	face          *glyphs
 	w, h          float64 // mm
 	size, minSize float64 // pt
 	lineH         float64 // multiple of the font size
@@ -38,17 +39,17 @@ type layout struct {
 func (b textBox) lineMM(size float64) float64 { return size * ptMM * b.lineH }
 
 // toUnits classifies and measures text. missing returns the runes found in no font (once each, in order).
-func (r *renderer) toUnits(text string, bold bool) (us []unit, missing []rune) {
+func (r *renderer) toUnits(face *glyphs, text string, bold bool) (us []unit, missing []rune) {
 	seen := map[rune]bool{}
 	for _, c := range text {
-		g := r.glyphs.classify(c)
+		g := face.classify(c)
 		if !g.ok && !seen[c] {
 			seen[c] = true
 			missing = append(missing, c)
 		}
 		u := unit{glyph: g}
 		if c != '\n' {
-			u.em = r.emWidth(g, bold)
+			u.em = r.emWidth(face, g, bold)
 		}
 		us = append(us, u)
 	}
@@ -56,12 +57,12 @@ func (r *renderer) toUnits(text string, bold bool) (us []unit, missing []rune) {
 }
 
 // emWidth is the advance of a glyph in em, measured by fpdf itself so fitting matches drawing.
-func (r *renderer) emWidth(g glyph, bold bool) float64 {
-	k := widthKey{g.draw, g.font, bold && g.font == fontPrimary}
+func (r *renderer) emWidth(face *glyphs, g glyph, bold bool) float64 {
+	k := widthKey{face.name, g.draw, g.font, bold && g.font == fontPrimary}
 	if w, ok := r.widths[k]; ok {
 		return w
 	}
-	fam, style := r.fontFor(g.font, bold)
+	fam, style := fontFor(face, g.font, bold)
 	r.pdf.SetFont(fam, style, 10)
 	w := float64(r.pdf.GetStringSymbolWidth(string(g.draw))) / 1000
 	r.widths[k] = w
@@ -69,19 +70,22 @@ func (r *renderer) emWidth(g glyph, bold bool) float64 {
 }
 
 type widthKey struct {
-	draw rune
-	font int
-	bold bool
+	family string
+	draw   rune
+	font   int
+	bold   bool
 }
 
-func (r *renderer) fontFor(font int, bold bool) (family, style string) {
+// fontFor is the fpdf family and style that draw a glyph of the given font index. A family with a single
+// face is registered under that face's style only, so the weight asked for does not matter then.
+func fontFor(face *glyphs, font int, bold bool) (family, style string) {
 	if font == fontEmoji {
 		return famEmoji, ""
 	}
-	if bold {
-		return famPrimary, "B"
+	if _, isBold := face.fam.Face(bold); isBold {
+		return face.pdfFam, "B"
 	}
-	return famPrimary, ""
+	return face.pdfFam, ""
 }
 
 // wrap breaks units into lines no wider than maxEm: by words, and by character for words wider than a line.
@@ -165,8 +169,8 @@ func (r *renderer) truncate(lines []line, b textBox, size float64) layout {
 	}
 	maxEm := b.w / (size * ptMM)
 	last := lines[len(lines)-1]
-	dots := unit{glyph: r.glyphs.classify(ellipsis)}
-	dots.em = r.emWidth(dots.glyph, b.bold)
+	dots := unit{glyph: b.face.classify(ellipsis)}
+	dots.em = r.emWidth(b.face, dots.glyph, b.bold)
 	us := last.units
 	em := last.em
 	for len(us) > 0 && (em+dots.em > maxEm || us[len(us)-1].draw == ' ') {
