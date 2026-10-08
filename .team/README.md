@@ -10,16 +10,16 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 17 | T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032 |
-| TODO | 4 | T-015, T-034, T-035, T-036 |
-| IN_PROGRESS | 1 | T-033 |
+| BACKLOG | 21 | T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-039, T-040, T-041, T-042 |
+| TODO | 5 | T-015, T-034, T-035, T-037, T-038 |
+| IN_QA | 2 | T-033, T-036 |
 | DONE | 14 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-028, T-030 |
 
 **Awaiting your review (MERGED):** nothing
 
 **Open questions for you:** none
 
-_Board last written 2026-10-08 02:47Z_
+_Board last written 2026-10-08 03:08Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -64,6 +64,7 @@ _Board last written 2026-10-08 02:47Z_
 | E05-templates-export | [PRD](epics/E05-templates-export/PRD.md) | M0, M1 | Templates, PDF renderer, export job and preview | active |
 | E06-go-live | [PRD](epics/E06-go-live/PRD.md) | M2 | Go live on AWS and harden | planned |
 | E07-class-yearbook | [PRD](epics/E07-class-yearbook/PRD.md) | M3 | Class spaces, roles, invites and assembly | planned |
+| E08-designer-templates | [PRD](epics/E08-designer-templates/PRD.md) | M1 | Claude Design canvases become system templates (US Letter, pilot of two, then six more) | planned |
 
 **M0 exit.** From a clean checkout: `make up && make migrate` starts MySQL and MinIO; `make build test lint` is green; `GET /healthz` is 200 and `GET /readyz` reflects the database; the web dev server shows the home page with a working EN/VI switcher and an API status badge; CI is green on a PR; the PDF engine ADR is merged with a go/no-go verdict backed by a Vietnamese-text sample, 300 DPI image test and a memory/time measurement; no secrets in the repo.
 
@@ -232,6 +233,10 @@ Owner decisions (2026-10-06, `/team-init` interview). "Rejected" lists the optio
 | D-12 | **PDF library: `codeberg.org/go-pdf/fpdf` v0.12.0** (spike T-005, ADR 0002). | Accepted by merging the ADR; `signintech/gopdf` is the fallback. Both libraries passed all criteria; fpdf wins on text wrapping and memory. Consequences: import the Codeberg path (the GitHub repo is archived); fpdf panics on runes above U+FFFF, handled with PUA aliases and a run splitter in T-010; **emoji print as monochrome outlines, colour emoji is out of scope**; small community (single-digit maintainers), so watch release health. | `gopdf`; `unipdf` (AGPL or commercial); Chromium | fpdf has no release for a year, or a template needs colour emoji, complex-script shaping or CMYK/bleed |
 | D-13 | **No CAPTCHA on the public friends' note form for now; a verifier hook stays in place.** | Answered by the owner in chat 2026-10-07 (Q-005, option A). Abuse is bounded by an unguessable revocable link, per-IP and per-link rate limits, a 300-note cap, size limits, a honeypot field, a verified-email owner and pending-by-default moderation; friction for friends on phones is the larger risk. | Cloudflare Turnstile from the start; hCaptcha/reCAPTCHA | A link is actually spammed, or a public (non-link) form is added |
 | D-14 | **Branch protection on `develop` and `main` (set 2026-10-07 at the owner's request).** | Required checks `go`, `go-integration`, `web`, `security`; pull request required with 0 approvals; force-push and deletion blocked; administrators NOT enforced, so the owner can promote develop to main and the leader's board-sync pushes to develop still work. A PR with failing checks cannot be merged without `--admin`. | Require approvals; enforce for admins | A second human contributor joins (then require 1 approval and enforce admins) |
+| D-15 | **Designer templates: pilot two designs first.** | Owner answer in chat 2026-10-08: pilot temp1 (Memory Book) and temp2 (navy classic) of the eight Claude Design canvases in `design/canvas/`, then roll out the other six after the owner reviews the pilots. Epic E08. | All eight at once; only temp1 | The pilots are reviewed |
+| D-16 | **Add US Letter (215.9 x 279.4 mm) as a third page size** next to A5 and A4. | Owner answer in chat 2026-10-08, against the leader's recommendation (re-export the designs at A5/A4, because Vietnamese print shops use A4). The designs stay US Letter; a Letter template prints only on Letter (different aspect ratio than A5/A4). Consequence: the DB enum `page_size` and the API grow a value (T-037); A4 users cannot use the designer templates until the designs are re-exported at A5/A4 and the import pipeline is rerun. | Re-export at A5/A4; scale Letter onto A4 with a margin | An A4 user needs the designer templates (then re-export and rerun the pipeline), or the first print shop asks for A4 |
+| D-17 | **Designer templates cover our four page kinds only** (cover, profile, friends' notes, back). | Owner answer in chat 2026-10-08. The designs' other pages (class portraits grid, class awards, friend quiz, year in review, letters, galleries, contacts) need new data fields and UI; they wait for the class yearbook (E07) or a later product decision. Mapping per design is in the E08 PRD. | Add new page kinds now | A page kind is requested, or E07 starts |
+| D-18 | **Fonts: swap non-Vietnamese designer fonts for open-licence lookalikes that support Vietnamese** and bundle them. | Owner answer in chat 2026-10-08. The canvas CSS shows every design uses at least one font without a Vietnamese subset (Fredoka, Gaegu, Jost, Caveat, Karla, DM Sans, Shrikhand, Bebas Neue, Courier Prime, Instrument Sans/Serif, DM Serif Display); only temp4 is fully covered. A registry test refuses any family that lacks Vietnamese letters. Licences (OFL) are kept next to the files. | Keep designer fonts (Vietnamese would fall back or print `?`); ship only temp4 | A design needs a font with no Vietnamese-capable lookalike |
 
 Leader decisions (low-risk, inside the approved stack):
 
@@ -248,6 +253,7 @@ Leader decisions (low-risk, inside the approved stack):
 | L-09 | Auth dependencies and Unicode rule: `golang.org/x/crypto` (argon2id) and `golang.org/x/text` approved. Passwords are normalised to NFKC and display names to NFC before validation and hashing/verification. | The same Vietnamese password can arrive as NFC or NFD from different devices and keyboards; normalising once, before any user exists, prevents lock-outs. NIST SP 800-63B recommends NFKC/NFKD. Changing this after users exist would break their logins. |
 | L-10 | Go toolchain: `go.mod` keeps `go 1.26.0` as the minimum, but CI and production images build with the newest 1.26 patch release. | At exactly go1.26.0 `govulncheck` reports 11 reachable standard-library vulnerabilities; the current patch has none. Raising the `go` directive would force every dev machine to download a newer toolchain for no benefit, while the vulnerable code only matters in what we ship. The Dockerfile (T-022) must follow the same rule. |
 | L-11 | Persistence: plain `database/sql` with parameterised queries and hand-written SQL; `sqlc` (mentioned in L-01) is not adopted. | Auth and yearbooks already use plain SQL cleanly and there is no code generation step to maintain; revisit if the query surface grows. Migrations stay numbered and ordered: always take the next free number (goose rejects out-of-order versions). |
+| L-12 | **Designer templates are imported as pre-rendered decoration plus slots; the runtime stays pure Go.** | Leader decision 2026-10-08 within D-06/D-12. A dev-only Node/Playwright tool renders each canvas page to a background PNG with text and photo placeholders hidden and reads slot and label boxes from the page; the Go renderer draws the background, then localised static text and the user's text and photos (template format v2, T-038). No browser at run time. Costs about 1 MiB per page of embedded assets (budget 8 MiB per template). | Re-draw every design in JSON shapes by hand; render HTML in the server (headless browser); embed PDF pages as backgrounds (new dependency) | Assets pass 64 MiB in total, or a design needs live vector effects |
 
 ## 5. Engineering conventions
 
@@ -1227,7 +1233,7 @@ db.Open: treat MySQL 1044 as permanent; README warning about bare docker compose
 #### Comments
 
 ### T-033 — CI: do not cancel in-progress runs on develop and main
-- **Status:** IN_PROGRESS
+- **Status:** IN_QA
 - **Priority:** P1
 - **Type:** infra
 - **Milestone:** M1
@@ -1235,10 +1241,10 @@ db.Open: treat MySQL 1044 as permanent; README warning about bare docker compose
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** qa
 - **Branch:** task/t-033-ci-do-not-cancel-in-progress-runs-on-dev
-- **PR:** —
-- **Updated:** 2026-10-08 02:47Z by dev
+- **PR:** https://github.com/danyaa666/smemories/pull/22
+- **Updated:** 2026-10-08 03:05Z by qa
 - **Comments-seen:** 2
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/09-ci-do-not-cancel-in-progress-runs-on-develop.md`
@@ -1250,6 +1256,7 @@ Evidence from the T-006/T-030 merges: the workflow's concurrency group has cance
 #### Comments
 - 2026-10-08 02:24Z · leader · Merge-commit CI runs on develop keep getting cancelled by board-sync pushes; ready.
 - 2026-10-08 02:47Z · leader · Leader: raised to P1. Merge commits on develop (d209266 T-011) were cancelled by later board-sync pushes, so develop is not getting a full CI pass per merge. Do this first.
+- 2026-10-08 02:47Z · dev · ci.yml: cancel-in-progress only for pull_request; push events group by sha so each merge commit runs fully; mysql digest-pinned; docs/ci.md sentence. Test: PR CI green; push twice to develop and check both runs finish. Needs owner approval (risk high).
 
 ### T-034 — Public note submission (text and photos)
 - **Status:** TODO
@@ -1299,7 +1306,7 @@ From the T-010 QA notes: adding a template exactly as docs/templates.md describe
 - 2026-10-08 02:24Z · leader · T-010 is accepted: small follow-up, ready.
 
 ### T-036 — Bound the memory of image processing (caps, concurrency, memory limit)
-- **Status:** TODO
+- **Status:** IN_QA
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -1307,10 +1314,10 @@ From the T-010 QA notes: adding a template exactly as docs/templates.md describe
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-08 01:59Z by leader
+- **Assignee:** qa
+- **Branch:** task/t-036-bound-the-memory-of-image-processing-cap
+- **PR:** https://github.com/danyaa666/smemories/pull/23
+- **Updated:** 2026-10-08 03:05Z by qa
 - **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E03-yearbooks/04-bound-the-memory-of-image-processing.md`
@@ -1321,6 +1328,145 @@ Make the worst-case memory of the T-009 image pipeline a measured, enforced numb
 
 #### Comments
 - 2026-10-08 01:59Z · leader · T-009 is merged: ready for dev. It must land before T-034.
+- 2026-10-08 02:56Z · dev · Root cause: x/image Scale float64 scratch (dst w x src h x4 = 480MB at 50MP) -> banded resize. Header caps (PNG/WebP 25MP, JPEG 50MP, decoded est. 128MiB incl. JPEG SOF subsampling/progressive), concurrency default 2, SMEM_MEMORY_LIMIT_MIB, docs/media.md. Test: TestLimitsFromHeader, TestJPEGSamples, TestResizeBandsMatchOneShot; measure with TestMeasurePeak (see docs/media.md). Dev: 4x16-bit PNG 4096^2 at defaults = 970MB RSS. Re-run media Postman twice.
+
+### T-037 — US Letter page size, end to end
+- **Status:** TODO
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M1
+- **Depends-on:** —
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-08 03:08Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E08-designer-templates/01-us-letter-page-size-end-to-end.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E08-designer-templates · **PRD:** `.team/epics/E08-designer-templates/PRD.md`
+
+Add Letter (215.9 x 279.4 mm) as a third yearbook page size: migration, API, OpenAPI, PDF page geometry, template reference page.
+
+#### Comments
+
+### T-038 — Template format v2: backgrounds, static text, rotation, ellipse, font families
+- **Status:** TODO
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M1
+- **Depends-on:** T-035
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-08 03:08Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E08-designer-templates/02-template-format-v2-backgrounds-static-text.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E08-designer-templates · **PRD:** `.team/epics/E08-designer-templates/PRD.md`
+
+Extend the template JSON and renderer with page background images, localised static text, rotation, ellipse photo masks and several embedded font families.
+
+#### Comments
+
+### T-039 — Design import tool (dev only): canvas page to template draft
+- **Status:** BACKLOG
+- **Priority:** P2
+- **Type:** tech-debt
+- **Milestone:** M1
+- **Depends-on:** T-038
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-08 03:08Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E08-designer-templates/03-design-import-tool-dev-only.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E08-designer-templates · **PRD:** `.team/epics/E08-designer-templates/PRD.md`
+
+Dev-only Node/Playwright command that renders decoration backgrounds and reads slot and text boxes from a Claude Design canvas into a draft template.
+
+#### Comments
+
+### T-040 — Template memory-book from design temp1 (pilot 1)
+- **Status:** BACKLOG
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M1
+- **Depends-on:** T-037, T-038, T-039, T-035
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-08 03:08Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E08-designer-templates/04-template-memory-book-from-temp1.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E08-designer-templates · **PRD:** `.team/epics/E08-designer-templates/PRD.md`
+
+Pilot 1: the pastel Memory Book design as a system template with four page kinds in English and Vietnamese.
+
+#### Comments
+
+### T-041 — Template navy-classic from design temp2 (pilot 2)
+- **Status:** BACKLOG
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M1
+- **Depends-on:** T-037, T-038, T-039, T-035
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-08 03:08Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E08-designer-templates/05-template-navy-classic-from-temp2.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E08-designer-templates · **PRD:** `.team/epics/E08-designer-templates/PRD.md`
+
+Pilot 2: the navy and gold classic design as a system template with four page kinds in English and Vietnamese.
+
+#### Comments
+
+### T-042 — Plan the rollout of designs temp3 to temp8 after the pilots
+- **Status:** BACKLOG
+- **Priority:** P3
+- **Type:** feature
+- **Milestone:** M1
+- **Depends-on:** T-040, T-041
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-08 03:08Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E08-designer-templates/06-roll-out-designs-temp3-to-temp8.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E08-designer-templates · **PRD:** `.team/epics/E08-designer-templates/PRD.md`
+
+Planning placeholder: after the owner reviews the pilots, split into one task per remaining design.
+
+#### Comments
 
 <!-- tasks:end -->
 
