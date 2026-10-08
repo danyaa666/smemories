@@ -66,3 +66,26 @@ func TestReadyWrongMethod(t *testing.T) {
 		t.Fatalf("got %d, want 405", rec.Code)
 	}
 }
+
+func TestReadyFailsWhenAnyDepIsDown(t *testing.T) {
+	up := fakePinger(func(context.Context) error { return nil })
+	for name, tc := range map[string]struct {
+		db   fakePinger
+		dep  func(context.Context) error
+		want int
+	}{
+		"both up":    {up, func(context.Context) error { return nil }, 200},
+		"redis down": {up, func(context.Context) error { return errors.New("redis refused") }, 503},
+		"db down":    {fakePinger(func(context.Context) error { return errors.New("db refused") }), func(context.Context) error { return nil }, 503},
+	} {
+		var logs bytes.Buffer
+		h, _ := newTestRouter(t, Ready(tc.db, slog.New(slog.NewJSONHandler(&logs, nil)), Dep{"redis", tc.dep}))
+		rec := do(h, "GET", "/readyz", nil)
+		if rec.Code != tc.want || strings.Contains(rec.Body.String(), "refused") {
+			t.Errorf("%s: got %d %q, want %d without the error text", name, rec.Code, rec.Body.String(), tc.want)
+		}
+		if name == "redis down" && !strings.Contains(logs.String(), "readyz: redis ping failed") {
+			t.Errorf("log should name the failing dependency, got %q", logs.String())
+		}
+	}
+}

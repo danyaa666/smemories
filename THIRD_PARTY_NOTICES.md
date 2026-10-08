@@ -17,3 +17,11 @@ Licences of third-party material committed to or used by this repository. Update
 | `golang.org/x/image`, `golang.org/x/text` | BSD-3-Clause | Glyph lookup for font fallback, NFC normalisation |
 
 Excluded by decision D-06: `unipdf` (AGPL or commercial licence).
+
+## Redis client and server (T-051, decision D-23)
+
+| Item | Licence | Role |
+|---|---|---|
+| `github.com/redis/go-redis/v9` v9.23.0 | BSD-2-Clause | Redis-protocol client (`internal/redis`) |
+| `github.com/cespare/xxhash/v2`, `go.uber.org/atomic` (indirect) | MIT | go-redis dependencies |
+| Valkey 8 (`valkey/valkey` image, local stack and CI only, not shipped) | BSD-3-Clause | Redis-protocol server |
