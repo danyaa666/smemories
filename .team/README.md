@@ -12,16 +12,16 @@
 |---|---:|---|
 | BACKLOG | 26 | T-013, T-014, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-039, T-040, T-041, T-042, T-044, T-049, T-050, T-052, T-053, T-055 |
 | TODO | 2 | T-034, T-048 |
-| IN_PROGRESS | 1 | T-054 |
 | QA_PASS | 2 | T-047, T-051 |
 | MERGED | 2 | T-016, T-046 |
 | DONE | 22 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-028, T-030, T-033, T-035, T-036, T-037, T-038, T-043, T-045 |
+| NEEDS_DECISION | 1 | T-054 |
 
 **Awaiting your review (MERGED):** T-016 (Web: yearbook list, create/edit, profile and photo upload UI); T-046 (List a yearbook's photos (API and photo library in the web UI))
 
-**Open questions for you:** Q-015 (Approve merge of T-051 (Redis foundation)?); Q-016 (Approve merge of T-047 (fix flaky concurrent Google callback)?)
+**Open questions for you:** Q-015 (Approve merge of T-051 (Redis foundation)?); Q-016 (Approve merge of T-047 (fix flaky concurrent Google callback)?); Q-017 (Decide D-24: browser print-to-PDF or keep the Go renderer? Needs your phone and Safari tests)
 
-_Board last written 2026-10-08 15:00Z_
+_Board last written 2026-10-08 15:17Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -269,6 +269,15 @@ QA passed and my review is clean (head a59f2c5, CI green). High risk because it 
 - **Answer:** _(pending)_
 
 QA passed and my review is clean (head ef6bee0, CI green). High risk only because it is in the sign-in path; the change is a bounded retry with jittered waits and no behaviour change. It removes the intermittent red CI on develop and a real failure a student could see when signing in twice quickly. Command: cd /Users/unisoft/GolandProjects/awesomeProject1 && /Users/unisoft/.claude/plugins/cache/claude-agent-team/agent-team/0.3.0/bin/team approve T-047
+
+### Q-017 — Decide D-24: browser print-to-PDF or keep the Go renderer? Needs your phone and Safari tests
+- **Status:** OPEN
+- **Asked:** 2026-10-08 15:17Z
+- **Blocks:** T-054
+- **Recommendation:** Run the 30-minute phone and Safari test in ADR 0003 section 'What the owner must test', then tell me the result. Until then keep the Go path for M1.
+- **Answer:** _(pending)_
+
+Spike T-054 (PR #35, ADR docs/adr/0003-html-print-export.md): desktop Chromium prints the 24-page, 30-photo book exactly (A5, A4, Letter; 4.1 MB, 1.3 s, fonts embedded, Vietnamese text extractable); Firefox prints with caveats (tiled gradients turn black, 30.8 MB file); Safari, Android Chrome and iOS Safari were NOT tested (no devices). The steps for you are in the ADR (step 3 Safari desktop, 4 Android Chrome, 5 iOS Safari): open http://<your computer's address>:5173/spike/print with npm run dev -- --host on the same network, try Print / Save as PDF with A5 and A4, and report: page count, paper size honoured, backgrounds on, did the tab survive 24 pages with 30 photos. Reply with what you saw (a sentence per device is enough).
 
 <!-- questions:end -->
 
@@ -1969,7 +1978,7 @@ Redis sliding-window limiter with Take and Refund replacing the in-memory one ev
 #### Comments
 
 ### T-054 — Spike: HTML templates and browser print-to-PDF instead of server rendering
-- **Status:** IN_PROGRESS
+- **Status:** NEEDS_DECISION
 - **Priority:** P1
 - **Type:** spike
 - **Milestone:** M1
@@ -1977,10 +1986,10 @@ Redis sliding-window limiter with Take and Refund replacing the in-memory one ev
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-054-spike-html-templates-and-browser-print-t
-- **PR:** —
-- **Updated:** 2026-10-08 14:40Z by dev
+- **PR:** https://github.com/danyaa666/smemories/pull/35
+- **Updated:** 2026-10-08 15:17Z by leader
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/06-spike-browser-print-to-pdf.md`
@@ -1990,6 +1999,8 @@ Redis sliding-window limiter with Take and Refund replacing the in-memory one ev
 Prototype two designs as HTML/CSS pages printed through the browser (Save as PDF), test across browsers and phones, and write ADR 0003 with a go/no-go recommendation.
 
 #### Comments
+- 2026-10-08 15:17Z · dev · ADR docs/adr/0003-html-print-export.md. Prototype web/src/spike/print (dev server only), tooling tools/print-spike (npm test = AC3, node measure.mjs = matrix), PDFs+results.json docs/spikes/print. Measured: Chromium 156, Chrome 154, Edge Dev/Canary 157, Firefox 157 (headless print). NOT tested: Safari, Android, iOS, interactive dialogs (owner steps in ADR). Findings: Firefox black tiled gradients, design fonts lack Vietnamese, 3000px photos give 63 MB. QA: npm test in tools/print-spike (needs poppler), inspect PDFs.
+- 2026-10-08 15:17Z · leader · Spike done (PR #35, ADR 0003). Waiting for the owner's phone and Safari tests (Q-017) before D-24; do not merge the PDFs (11 MB) until the decision, then keep only the ADR and a few evidence files.
 
 ### T-055 — Opaque list cursors: do not expose internal ids
 - **Status:** BACKLOG
