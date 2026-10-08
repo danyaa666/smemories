@@ -319,6 +319,64 @@ paths:
         "413": {$ref: "#/components/responses/PayloadTooLarge"}
         "415": {$ref: "#/components/responses/UnsupportedMediaType"}
         "503": {$ref: "#/components/responses/Busy"}
+  /v1/auth/google/start:
+    get:
+      operationId: googleStart
+      security: []
+      tags: [auth]
+      summary: Start Google sign-in (browser navigation, not a fetch call)
+      description: >-
+        Only exists when the server has `SMEM_GOOGLE_CLIENT_ID` set; otherwise `404 not_found`. Redirects
+        to Google's authorization endpoint (authorization-code flow with PKCE S256, `state` and `nonce`,
+        scope `openid email profile`) and sets the 10-minute `smem_oidc` cookie (HttpOnly, SameSite=Lax,
+        signed) that binds the flow to this browser. `return_to` must be a same-site relative path (one
+        leading `/`, at most 200 characters, no `//`, `/\`, scheme or control characters); anything else
+        is replaced by `/`. If Google cannot be reached the answer is `302 /login?error=oidc_failed`.
+        30 per 15 minutes per IP.
+      parameters:
+        - {name: return_to, in: query, required: false, schema: {type: string, maxLength: 200}}
+      responses:
+        "302":
+          description: To Google (or to `/login?error=oidc_failed`).
+          headers:
+            Location: {schema: {type: string}}
+            Set-Cookie:
+              description: "`smem_oidc`, valid 10 minutes."
+              schema: {type: string}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "429": {$ref: "#/components/responses/RateLimited"}
+  /v1/auth/google/callback:
+    get:
+      operationId: googleCallback
+      security: []
+      tags: [auth]
+      summary: Google redirects the browser here after sign-in
+      description: >-
+        Only exists when Google sign-in is enabled (else `404 not_found`). The redirect URI registered at
+        Google is `<public base URL>/api/v1/auth/google/callback`. Success signs the user in (new
+        `smem_session` cookie; a session cookie sent with the request is revoked) and redirects to the
+        `return_to` given at start. Linking: a known Google account signs in; the same verified email on a
+        local account links to it; the same email on a local account that never verified it first loses its
+        password and sessions, is marked verified and linked (pre-hijacking defence); an unknown email
+        creates a password-less account. Every failure is `302 /login?error=<code>` and creates nothing:
+        `oidc_state` (cookie missing, altered or expired, or `state` differs), `oidc_denied` (the provider
+        reported an error), `oidc_failed` (code exchange or ID-token check failed, or no usable email),
+        `email_unverified` (Google did not mark the email verified). Provider details are only logged.
+        30 per 15 minutes per IP.
+      parameters:
+        - {name: code, in: query, required: false, schema: {type: string}}
+        - {name: state, in: query, required: false, schema: {type: string}}
+        - {name: error, in: query, required: false, schema: {type: string}}
+      responses:
+        "302":
+          description: To `return_to` (signed in) or to `/login?error=<code>`.
+          headers:
+            Location: {schema: {type: string}}
+            Set-Cookie:
+              description: "`smem_session` on success; `smem_oidc` is always cleared."
+              schema: {type: string}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "429": {$ref: "#/components/responses/RateLimited"}
   /v1/me:
     get:
       operationId: getMe

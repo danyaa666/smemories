@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "SMemories - auth",
-    "description": "Email + password auth core (T-006): register, login, logout, /v1/me, plus (T-007) verification-email resend, forgot/reset password and verify-email. Run against an API started with SMEM_ENV=dev (the session cookie is not Secure there, so Newman's cookie jar sends it over http). Register is limited to 5 per hour per IP and each run makes 2 counted attempts (the register and the duplicate), so a third run within the hour gets 429: restart the API (in-memory limits) or set SMEM_RATE_REGISTER_PER_HOUR higher. Forgot-password is limited to 5 per hour per IP and each run makes 2 counted calls, so a third run within the hour gets 429 (restart the API to reset). The emailed tokens only appear in the API's stdout (log mailer), so Newman cannot follow a real verify or reset link: those happy paths, token expiry, single use, session removal and the 429/503 paths are covered by the Go integration tests, not here.",
+    "description": "Email + password auth core (T-006): register, login, logout, /v1/me, plus (T-007) verification-email resend, forgot/reset password and verify-email. Run against an API started with SMEM_ENV=dev (the session cookie is not Secure there, so Newman's cookie jar sends it over http). Register is limited to 5 per hour per IP and each run makes 2 counted attempts (the register and the duplicate), so a third run within the hour gets 429: restart the API (in-memory limits) or set SMEM_RATE_REGISTER_PER_HOUR higher. Forgot-password is limited to 5 per hour per IP and each run makes 2 counted calls, so a third run within the hour gets 429 (restart the API to reset). The emailed tokens only appear in the API's stdout (log mailer), so Newman cannot follow a real verify or reset link: those happy paths, token expiry, single use, session removal and the 429/503 paths are covered by the Go integration tests, not here. Google sign-in (T-011): the last folder needs the API started with the SMEM_GOOGLE_* variables (README, 'Google sign-in setup'); requests there do not follow redirects.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -12,6 +12,10 @@
     {
       "key": "origin",
       "value": "http://localhost:5173"
+    },
+    {
+      "key": "oidcState",
+      "value": ""
     }
   ],
   "item": [
@@ -1786,6 +1790,323 @@
                 "exec": [
                   "pm.test(\"status 400\", () => pm.response.to.have.status(400));",
                   "pm.test(\"error code invalid_body\", () => pm.expect(pm.response.json().error.code).to.eql(\"invalid_body\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Google sign-in",
+      "description": "Needs the API started with SMEM_GOOGLE_CLIENT_ID, SMEM_GOOGLE_CLIENT_SECRET, SMEM_PUBLIC_BASE_URL and SMEM_OIDC_COOKIE_KEY (see the README); without them these routes are 404 and this folder fails. Only the steps that need no signed-in Google user: the redirect, the cookie, and the rejection paths. The happy paths, linking, the pre-hijacking defence and every ID-token check run against an in-process fake provider in the Go integration tests. Start needs to reach the provider's discovery document (https://accounts.google.com unless SMEM_GOOGLE_ISSUER says otherwise). Each callback clears smem_oidc, so every callback step has its own start.",
+      "item": [
+        {
+          "name": "1. Start - redirect to the provider with PKCE, state and nonce",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/google/start?return_to=%2Fyearbooks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "google",
+                "start"
+              ],
+              "query": [
+                {
+                  "key": "return_to",
+                  "value": "%2Fyearbooks"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 302\", () => pm.response.to.have.status(302));",
+                  "const loc = pm.response.headers.get(\"Location\") || \"\";",
+                  "pm.test(\"redirects to the provider (if this fails with /login?error=oidc_failed the provider could not be reached: check SMEM_GOOGLE_ISSUER and the network)\", () => pm.expect(loc).to.match(/^https:\\/\\//));",
+                  "const param = k => { const m = loc.match(new RegExp(\"[?&]\" + k + \"=([^&]*)\")); return m ? decodeURIComponent(m[1].replace(/\\+/g, \" \")) : null; };",
+                  "pm.test(\"authorization request parameters\", () => {",
+                  "  pm.expect(param(\"response_type\")).to.eql(\"code\");",
+                  "  pm.expect(param(\"scope\")).to.eql(\"openid email profile\");",
+                  "  pm.expect(param(\"code_challenge_method\")).to.eql(\"S256\");",
+                  "  pm.expect(param(\"redirect_uri\")).to.match(/\\/api\\/v1\\/auth\\/google\\/callback$/);",
+                  "  [\"state\", \"nonce\", \"code_challenge\", \"client_id\"].forEach(k => pm.expect(param(k)).to.be.a(\"string\").and.not.empty);",
+                  "});",
+                  "const sc = pm.response.headers.filter(h => h.key.toLowerCase() === \"set-cookie\").map(h => h.value);",
+                  "const oc = sc.find(v => v.startsWith(\"smem_oidc=\")) || \"\";",
+                  "pm.test(\"smem_oidc cookie: HttpOnly, SameSite=Lax, 10 minutes\", () => { pm.expect(oc).to.include(\"HttpOnly\"); pm.expect(oc).to.match(/SameSite=Lax/i); pm.expect(oc).to.match(/Max-Age=600/i); });",
+                  "pm.test(\"not cacheable\", () => pm.expect(pm.response.headers.get(\"Cache-Control\")).to.eql(\"no-store\"));",
+                  "pm.collectionVariables.set(\"oidcState\", param(\"state\"));"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
+        },
+        {
+          "name": "2. Callback - provider denied (error param, valid cookie and state) - oidc_denied",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/google/callback?error=access_denied&state={{oidcState}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "google",
+                "callback"
+              ],
+              "query": [
+                {
+                  "key": "error",
+                  "value": "access_denied"
+                },
+                {
+                  "key": "state",
+                  "value": "{{oidcState}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 302\", () => pm.response.to.have.status(302));",
+                  "pm.test(\"redirects to /login?error=oidc_denied\", () => pm.expect(pm.response.headers.get(\"Location\")).to.eql(\"/login?error=oidc_denied\"));",
+                  "const sc = pm.response.headers.filter(h => h.key.toLowerCase() === \"set-cookie\").map(h => h.value);",
+                  "pm.test(\"no session cookie, smem_oidc cleared\", () => { pm.expect(sc.some(v => v.startsWith(\"smem_session=\"))).to.be.false; pm.expect(sc.some(v => v.startsWith(\"smem_oidc=\") && /Max-Age=0|Expires=Thu, 01 Jan 1970/i.test(v))).to.be.true; });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
+        },
+        {
+          "name": "3. Start again - hostile return_to is accepted and sanitised later",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/google/start?return_to=%2F%2Fevil.example",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "google",
+                "start"
+              ],
+              "query": [
+                {
+                  "key": "return_to",
+                  "value": "%2F%2Fevil.example"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 302\", () => pm.response.to.have.status(302));",
+                  "const loc = pm.response.headers.get(\"Location\") || \"\";",
+                  "pm.test(\"redirects to the provider (if this fails with /login?error=oidc_failed the provider could not be reached: check SMEM_GOOGLE_ISSUER and the network)\", () => pm.expect(loc).to.match(/^https:\\/\\//));",
+                  "const param = k => { const m = loc.match(new RegExp(\"[?&]\" + k + \"=([^&]*)\")); return m ? decodeURIComponent(m[1].replace(/\\+/g, \" \")) : null; };",
+                  "pm.test(\"authorization request parameters\", () => {",
+                  "  pm.expect(param(\"response_type\")).to.eql(\"code\");",
+                  "  pm.expect(param(\"scope\")).to.eql(\"openid email profile\");",
+                  "  pm.expect(param(\"code_challenge_method\")).to.eql(\"S256\");",
+                  "  pm.expect(param(\"redirect_uri\")).to.match(/\\/api\\/v1\\/auth\\/google\\/callback$/);",
+                  "  [\"state\", \"nonce\", \"code_challenge\", \"client_id\"].forEach(k => pm.expect(param(k)).to.be.a(\"string\").and.not.empty);",
+                  "});",
+                  "const sc = pm.response.headers.filter(h => h.key.toLowerCase() === \"set-cookie\").map(h => h.value);",
+                  "const oc = sc.find(v => v.startsWith(\"smem_oidc=\")) || \"\";",
+                  "pm.test(\"smem_oidc cookie: HttpOnly, SameSite=Lax, 10 minutes\", () => { pm.expect(oc).to.include(\"HttpOnly\"); pm.expect(oc).to.match(/SameSite=Lax/i); pm.expect(oc).to.match(/Max-Age=600/i); });",
+                  "pm.test(\"not cacheable\", () => pm.expect(pm.response.headers.get(\"Cache-Control\")).to.eql(\"no-store\"));",
+                  "pm.collectionVariables.set(\"oidcState\", param(\"state\"));"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
+        },
+        {
+          "name": "4. Callback - state differs - oidc_state",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/google/callback?code=abc&state=not-the-state",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "google",
+                "callback"
+              ],
+              "query": [
+                {
+                  "key": "code",
+                  "value": "abc"
+                },
+                {
+                  "key": "state",
+                  "value": "not-the-state"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 302\", () => pm.response.to.have.status(302));",
+                  "pm.test(\"redirects to /login?error=oidc_state\", () => pm.expect(pm.response.headers.get(\"Location\")).to.eql(\"/login?error=oidc_state\"));",
+                  "const sc = pm.response.headers.filter(h => h.key.toLowerCase() === \"set-cookie\").map(h => h.value);",
+                  "pm.test(\"no session cookie, smem_oidc cleared\", () => { pm.expect(sc.some(v => v.startsWith(\"smem_session=\"))).to.be.false; pm.expect(sc.some(v => v.startsWith(\"smem_oidc=\") && /Max-Age=0|Expires=Thu, 01 Jan 1970/i.test(v))).to.be.true; });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
+        },
+        {
+          "name": "5. Callback - cookie already used up (cleared by step 4) - oidc_state",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/google/callback?code=abc&state={{oidcState}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "google",
+                "callback"
+              ],
+              "query": [
+                {
+                  "key": "code",
+                  "value": "abc"
+                },
+                {
+                  "key": "state",
+                  "value": "{{oidcState}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 302\", () => pm.response.to.have.status(302));",
+                  "pm.test(\"redirects to /login?error=oidc_state\", () => pm.expect(pm.response.headers.get(\"Location\")).to.eql(\"/login?error=oidc_state\"));",
+                  "const sc = pm.response.headers.filter(h => h.key.toLowerCase() === \"set-cookie\").map(h => h.value);",
+                  "pm.test(\"no session cookie, smem_oidc cleared\", () => { pm.expect(sc.some(v => v.startsWith(\"smem_session=\"))).to.be.false; pm.expect(sc.some(v => v.startsWith(\"smem_oidc=\") && /Max-Age=0|Expires=Thu, 01 Jan 1970/i.test(v))).to.be.true; });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
+        },
+        {
+          "name": "6. Callback - no parameters, no cookie - oidc_state",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/google/callback",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "google",
+                "callback"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 302\", () => pm.response.to.have.status(302));",
+                  "pm.test(\"redirects to /login?error=oidc_state\", () => pm.expect(pm.response.headers.get(\"Location\")).to.eql(\"/login?error=oidc_state\"));",
+                  "const sc = pm.response.headers.filter(h => h.key.toLowerCase() === \"set-cookie\").map(h => h.value);",
+                  "pm.test(\"no session cookie, smem_oidc cleared\", () => { pm.expect(sc.some(v => v.startsWith(\"smem_session=\"))).to.be.false; pm.expect(sc.some(v => v.startsWith(\"smem_oidc=\") && /Max-Age=0|Expires=Thu, 01 Jan 1970/i.test(v))).to.be.true; });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
+        },
+        {
+          "name": "7. Who am I - no session was created -> 401",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "me"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"error code unauthenticated\", () => pm.expect(pm.response.json().error.code).to.eql(\"unauthenticated\"));"
                 ]
               }
             }

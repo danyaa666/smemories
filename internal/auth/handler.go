@@ -25,6 +25,7 @@ type Handler struct {
 	svc    *Service
 	cfg    HandlerConfig
 	logger *slog.Logger
+	google *googleFlow // nil unless EnableGoogle was called
 }
 
 func NewHandler(svc *Service, cfg HandlerConfig, logger *slog.Logger) *Handler {
@@ -41,6 +42,10 @@ func (h *Handler) Routes(mux *http.ServeMux) {
 	mux.Handle("POST /v1/auth/verify-email/resend", Guard(h.cfg.AllowedOrigins, h.RequireUser(http.HandlerFunc(h.resendVerification))))
 	mux.Handle("POST /v1/auth/forgot-password", guard(h.forgotPassword))
 	mux.Handle("POST /v1/auth/reset-password", guard(h.resetPassword))
+	if h.google != nil {
+		mux.HandleFunc("GET /v1/auth/google/start", h.googleStart)
+		mux.HandleFunc("GET /v1/auth/google/callback", h.googleCallback)
+	}
 	mux.Handle("GET /v1/me", h.RequireUser(http.HandlerFunc(h.me)))
 }
 

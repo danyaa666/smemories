@@ -32,6 +32,11 @@ type Config struct {
 	RegisterPerHour   int      // SMEM_RATE_REGISTER_PER_HOUR (per IP), default 5
 	LoginFailsPerPair int      // SMEM_RATE_LOGIN_FAILS_PER_EMAIL (per IP+email, 15 min), default 10
 	LoginFailsPerIP   int      // SMEM_RATE_LOGIN_FAILS_PER_IP (15 min), default 100
+
+	GoogleClientID     string // SMEM_GOOGLE_CLIENT_ID: empty = Google sign-in off (the endpoints answer 404)
+	GoogleClientSecret string // SMEM_GOOGLE_CLIENT_SECRET: required with a client id. Never log it.
+	GoogleIssuer       string // SMEM_GOOGLE_ISSUER, default https://accounts.google.com (tests point it at a fake)
+	OIDCCookieKey      []byte // SMEM_OIDC_COOKIE_KEY: HMAC key for the smem_oidc cookie, at least 32 bytes; required with a client id. Never log it.
 }
 
 var logLevels = map[string]slog.Level{
@@ -144,7 +149,36 @@ func Load(getenv func(string) string) (Config, error) {
 	if cfg.LoginFailsPerIP, err = getInt(get, "SMEM_RATE_LOGIN_FAILS_PER_IP", "100", 1); err != nil {
 		return Config{}, err
 	}
+	if cfg.GoogleClientID = getenv("SMEM_GOOGLE_CLIENT_ID"); cfg.GoogleClientID != "" {
+		if err := cfg.loadGoogle(getenv, get); err != nil {
+			return Config{}, err
+		}
+	}
 	return cfg, nil
+}
+
+// loadGoogle reads the Google settings; all of them are required once a client id is set.
+func (cfg *Config) loadGoogle(getenv func(string) string, get func(key, def string) string) error {
+	if cfg.GoogleClientSecret = getenv("SMEM_GOOGLE_CLIENT_SECRET"); cfg.GoogleClientSecret == "" {
+		return fmt.Errorf("SMEM_GOOGLE_CLIENT_SECRET is required when SMEM_GOOGLE_CLIENT_ID is set")
+	}
+	if getenv("SMEM_PUBLIC_BASE_URL") == "" { // the OAuth redirect URI is built from it, so no silent dev default
+		return fmt.Errorf("SMEM_PUBLIC_BASE_URL is required when SMEM_GOOGLE_CLIENT_ID is set (e.g. https://app.example.com)")
+	}
+	key := getenv("SMEM_OIDC_COOKIE_KEY")
+	if key == "" {
+		return fmt.Errorf("SMEM_OIDC_COOKIE_KEY is required when SMEM_GOOGLE_CLIENT_ID is set (at least 32 random bytes)")
+	}
+	if len(key) < 32 {
+		return fmt.Errorf("SMEM_OIDC_COOKIE_KEY is too short: %d bytes, want at least 32", len(key))
+	}
+	cfg.OIDCCookieKey = []byte(key)
+	cfg.GoogleIssuer = get("SMEM_GOOGLE_ISSUER", "https://accounts.google.com")
+	u, err := url.Parse(cfg.GoogleIssuer)
+	if err != nil || u.Host == "" || u.RawQuery != "" || u.Fragment != "" || u.User != nil || (u.Scheme != "https" && (u.Scheme != "http" || cfg.Env == "prod")) {
+		return fmt.Errorf("SMEM_GOOGLE_ISSUER=%q: want an https URL such as https://accounts.google.com", cfg.GoogleIssuer)
+	}
+	return nil
 }
 
 func getInt(get func(key, def string) string, key, def string, min int) (int, error) {

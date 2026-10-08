@@ -136,6 +136,31 @@ An invalid value stops the process with a message naming the variable. The API c
 `api/openapi.yaml`; the Postman collections live in `postman/` (`newman run postman/platform.postman_collection.json`
 against a running API).
 
+### Google sign-in setup
+
+Google sign-in is optional: with `SMEM_GOOGLE_CLIENT_ID` unset, `GET /v1/auth/google/start` and `/callback` answer `404 not_found`
+and everything else works as usual. To turn it on:
+
+1. In the [Google Cloud Console](https://console.cloud.google.com/apis/credentials) create a project (or pick one), configure the
+   OAuth consent screen (scopes `openid`, `email`, `profile`), then **Create credentials > OAuth client ID > Web application**.
+2. Add the authorised redirect URI `<public base URL>/api/v1/auth/google/callback`: for local development
+   `http://localhost:5173/api/v1/auth/google/callback` (the Vite dev server proxies `/api` to the API), in production
+   `https://<your domain>/api/v1/auth/google/callback`. It must match exactly.
+3. Set these variables (see `.env.example`); the API refuses to start if one is missing:
+
+   | Variable | Value |
+   |---|---|
+   | `SMEM_GOOGLE_CLIENT_ID` | the client ID from step 1 (setting it turns the feature on) |
+   | `SMEM_GOOGLE_CLIENT_SECRET` | the client secret; keep it out of git |
+   | `SMEM_PUBLIC_BASE_URL` | where the web app lives, e.g. `http://localhost:5173`; the redirect URI is built from it |
+   | `SMEM_OIDC_COOKIE_KEY` | at least 32 random bytes that sign the short-lived `smem_oidc` cookie, e.g. `openssl rand -base64 48` |
+   | `SMEM_GOOGLE_ISSUER` | optional, default `https://accounts.google.com` (tests point it at a fake provider) |
+
+The web app starts the flow by navigating the browser to `/api/v1/auth/google/start?return_to=/path`. Failures come back as
+`/login?error=<code>` with one of `oidc_state`, `oidc_denied`, `oidc_failed`, `email_unverified`. A Google account whose email matches
+a local account is linked to it; if that local account never verified its email it loses its password and sessions first
+(pre-hijacking defence). Social-only accounts have no password; "Forgot password" sets one.
+
 ## Project management
 
 Work is planned and tracked on the team board: [`.team/README.md`](.team/README.md) (vision, roadmap, decisions, tasks).
