@@ -9,6 +9,8 @@ import (
 	"unicode/utf8"
 
 	"github.com/go-sql-driver/mysql"
+
+	"github.com/danyaa666/smemories/internal/ulid"
 )
 
 var (
@@ -16,7 +18,10 @@ var (
 	ErrEmailTaken = errors.New("auth: email already registered")
 )
 
-const mysqlDuplicateEntry = 1062
+const (
+	mysqlDuplicateEntry = 1062
+	mysqlDeadlock       = 1213
+)
 
 // User is the account as the API shows it. InternalID is the BIGINT key other tables
 // reference; it is never serialised (L-05).
@@ -149,4 +154,76 @@ func (s *Store) deleteSession(ctx context.Context, tokenHash []byte) error {
 func (s *Store) deleteExpiredSessions(ctx context.Context, userID uint64, now time.Time) error {
 	_, err := s.db.ExecContext(ctx, `DELETE FROM sessions WHERE user_id = ? AND expires_at <= ?`, userID, now)
 	return err
+}
+
+// googleUser finds or creates the account for a Google identity in one transaction (see
+// Service.SignInGoogle for the rules). want carries the display name and locale to use if
+// the account is created. A concurrent callback for the same person can hit the unique key
+// or a deadlock; the loser retries and then finds the winner's rows.
+func (s *Store) googleUser(ctx context.Context, id GoogleIdentity, want User, now time.Time) (User, error) {
+	var u User
+	var err error
+	for range 3 {
+		if u, err = s.googleUserTx(ctx, id, want, now); !isRetryable(err) {
+			break
+		}
+	}
+	return u, err
+}
+
+func isRetryable(err error) bool {
+	var me *mysql.MySQLError
+	return errors.As(err, &me) && (me.Number == mysqlDuplicateEntry || me.Number == mysqlDeadlock)
+}
+
+func (s *Store) googleUserTx(ctx context.Context, id GoogleIdentity, want User, now time.Time) (User, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return User{}, err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	u, err := scanUser(tx.QueryRowContext(ctx,
+		`SELECT `+userCols+` FROM user_identities i JOIN users u ON u.id = i.user_id WHERE i.provider = 'google' AND i.subject = ?`, id.Subject))
+	if err == nil {
+		return u, nil // known identity
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return User{}, err
+	}
+
+	u, err = scanUser(tx.QueryRowContext(ctx, `SELECT `+userCols+` FROM users u WHERE u.email = ? FOR UPDATE`, id.Email))
+	switch {
+	case err == nil && !u.EmailVerified:
+		// Pre-hijacking defence: whoever registered this address never proved they own it, so
+		// their password and sessions go before the real owner is linked.
+		if _, err = tx.ExecContext(ctx, `UPDATE users SET password_hash = NULL, email_verified_at = ?, updated_at = ? WHERE id = ?`, now, now, u.InternalID); err != nil {
+			return User{}, err
+		}
+		if _, err = tx.ExecContext(ctx, `DELETE FROM sessions WHERE user_id = ?`, u.InternalID); err != nil {
+			return User{}, err
+		}
+		u.EmailVerified = true
+	case err == nil:
+	case errors.Is(err, sql.ErrNoRows):
+		u = User{ID: ulid.New(now), Email: id.Email, EmailVerified: true, DisplayName: want.DisplayName, Locale: want.Locale, CreatedAt: now}
+		res, err := tx.ExecContext(ctx,
+			`INSERT INTO users (public_id, email, password_hash, email_verified_at, display_name, locale, created_at, updated_at) VALUES (?,?,NULL,?,?,?,?,?)`,
+			u.ID, u.Email, now, u.DisplayName, u.Locale, now, now)
+		if err != nil {
+			return User{}, err
+		}
+		n, err := res.LastInsertId()
+		if err != nil || n <= 0 {
+			return User{}, errors.New("auth: insert returned no user id")
+		}
+		u.InternalID = uint64(n)
+	default:
+		return User{}, err
+	}
+	if _, err := tx.ExecContext(ctx,
+		`INSERT INTO user_identities (user_id, provider, subject, email, created_at) VALUES (?,'google',?,?,?)`, u.InternalID, id.Subject, id.Email, now); err != nil {
+		return User{}, err
+	}
+	return u, tx.Commit()
 }

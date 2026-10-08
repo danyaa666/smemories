@@ -157,3 +157,47 @@ func TestLoadPublicBaseURL(t *testing.T) {
 		}
 	}
 }
+
+func TestLoadGoogle(t *testing.T) {
+	cfg, err := Load(env(map[string]string{"SMEM_DB_DSN": dsn}))
+	if err != nil || cfg.GoogleClientID != "" {
+		t.Fatalf("google must be off by default: %+v, %v", cfg, err)
+	}
+	full := map[string]string{
+		"SMEM_DB_DSN": dsn, "SMEM_GOOGLE_CLIENT_ID": "id", "SMEM_GOOGLE_CLIENT_SECRET": "sec",
+		"SMEM_PUBLIC_BASE_URL": "https://app.example.com", "SMEM_OIDC_COOKIE_KEY": strings.Repeat("k", 32),
+	}
+	cfg, err = Load(env(full))
+	if err != nil || cfg.GoogleClientID != "id" || cfg.GoogleClientSecret != "sec" || cfg.GoogleIssuer != "https://accounts.google.com" || len(cfg.OIDCCookieKey) != 32 {
+		t.Fatalf("got %+v, %v", cfg, err)
+	}
+	for _, missing := range []string{"SMEM_GOOGLE_CLIENT_SECRET", "SMEM_PUBLIC_BASE_URL", "SMEM_OIDC_COOKIE_KEY"} {
+		m := map[string]string{}
+		for k, v := range full {
+			if k != missing {
+				m[k] = v
+			}
+		}
+		if _, err := Load(env(m)); err == nil || !strings.Contains(err.Error(), missing) {
+			t.Errorf("without %s: want error naming it, got %v", missing, err)
+		}
+	}
+	for k, v := range map[string]string{"SMEM_OIDC_COOKIE_KEY": strings.Repeat("k", 31), "SMEM_GOOGLE_ISSUER": "accounts.google.com"} {
+		m := map[string]string{k: v}
+		for k2, v2 := range full {
+			if _, ok := m[k2]; !ok {
+				m[k2] = v2
+			}
+		}
+		if _, err := Load(env(m)); err == nil || !strings.Contains(err.Error(), k) || strings.Contains(err.Error(), v) && k == "SMEM_OIDC_COOKIE_KEY" {
+			t.Errorf("%s=%q: want error naming the variable (and never the key), got %v", k, v, err)
+		}
+	}
+	prod := map[string]string{"SMEM_ENV": "prod", "SMEM_ALLOWED_ORIGINS": "https://app.example.com", "SMEM_GOOGLE_ISSUER": "http://idp.example.com"}
+	for k, v := range full {
+		prod[k] = v
+	}
+	if _, err := Load(env(prod)); err == nil || !strings.Contains(err.Error(), "SMEM_GOOGLE_ISSUER") {
+		t.Errorf("http issuer in prod: got %v", err)
+	}
+}

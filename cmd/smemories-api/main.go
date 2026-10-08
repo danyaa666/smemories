@@ -63,6 +63,16 @@ func main() {
 		AllowedOrigins: cfg.AllowedOrigins, SecureCookie: cfg.Env != "dev", TrustProxy: cfg.TrustProxy,
 	}, logger)
 
+	if cfg.GoogleClientID != "" {
+		if err := authH.EnableGoogle(auth.GoogleConfig{
+			ClientID: cfg.GoogleClientID, ClientSecret: cfg.GoogleClientSecret, Issuer: cfg.GoogleIssuer,
+			RedirectURL: cfg.PublicBaseURL + "/api/v1/auth/google/callback", CookieKey: cfg.OIDCCookieKey,
+		}); err != nil {
+			logger.Error("google sign-in setup failed", "error", err)
+			os.Exit(1)
+		}
+	}
+
 	go svc.RunCleanup(ctx)
 
 	mediaSvc := media.NewService(media.NewStore(d), storage.NewS3(storage.S3Config{

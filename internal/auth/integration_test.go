@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/danyaa666/smemories/internal/auth/oidctest"
 	"github.com/danyaa666/smemories/internal/db/dbtest"
 	"github.com/danyaa666/smemories/internal/httpx"
 )
@@ -34,6 +35,7 @@ type env struct {
 	db     *sql.DB
 	h      http.Handler
 	svc    *Service
+	ah     *Handler
 	hasher *Hasher
 	logs   *bytes.Buffer
 	clock  *testClock
@@ -59,6 +61,7 @@ type opts struct {
 	maxHashes  int
 	hashWait   time.Duration
 	hashMemKiB uint32
+	google     *oidctest.Provider // enables Google sign-in against this fake
 }
 
 func newEnv(t *testing.T, o opts) *env {
@@ -86,7 +89,15 @@ func newEnv(t *testing.T, o opts) *env {
 		t.Fatal(err)
 	}
 	ah := NewHandler(svc, HandlerConfig{AllowedOrigins: []string{origin}, SecureCookie: o.secure, TrustProxy: o.trustProxy}, logger)
-	return &env{t: t, db: d, h: httpx.NewRouter(logger, ah.Routes), svc: svc, hasher: hasher, logs: logs, clock: clock, mail: rm}
+	if o.google != nil {
+		if err := ah.EnableGoogle(GoogleConfig{
+			ClientID: oidctest.ClientID, ClientSecret: oidctest.ClientSecret, Issuer: o.google.URL,
+			RedirectURL: testBase + "/api/v1/auth/google/callback", CookieKey: []byte(strings.Repeat("k", 32)),
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return &env{t: t, db: d, h: httpx.NewRouter(logger, ah.Routes), svc: svc, ah: ah, hasher: hasher, logs: logs, clock: clock, mail: rm}
 }
 
 type syncWriter struct {
@@ -103,6 +114,7 @@ func (s *syncWriter) Write(b []byte) (int, error) {
 type req struct {
 	method, path, body string
 	cookie             string
+	oidc               string // smem_oidc cookie value
 	origin             string // "" = send none
 	contentType        string // "" with a body = application/json
 	remote             string // "" = 192.0.2.1:1234
@@ -125,6 +137,9 @@ func (e *env) do(r req) *httptest.ResponseRecorder {
 	}
 	if r.cookie != "" {
 		hr.AddCookie(&http.Cookie{Name: CookieName, Value: r.cookie})
+	}
+	if r.oidc != "" {
+		hr.AddCookie(&http.Cookie{Name: oidcCookie, Value: r.oidc})
 	}
 	if r.origin != "" {
 		hr.Header.Set("Origin", r.origin)

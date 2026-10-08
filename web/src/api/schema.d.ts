@@ -178,6 +178,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/auth/google/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Start Google sign-in (browser navigation, not a fetch call)
+         * @description Only exists when the server has `SMEM_GOOGLE_CLIENT_ID` set; otherwise `404 not_found`. Redirects to Google's authorization endpoint (authorization-code flow with PKCE S256, `state` and `nonce`, scope `openid email profile`) and sets the 10-minute `smem_oidc` cookie (HttpOnly, SameSite=Lax, signed) that binds the flow to this browser. `return_to` must be a same-site relative path (one leading `/`, at most 200 characters, no `//`, `/\`, scheme or control characters); anything else is replaced by `/`. If Google cannot be reached the answer is `302 /login?error=oidc_failed`. 30 per 15 minutes per IP.
+         */
+        get: operations["googleStart"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/google/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Google redirects the browser here after sign-in
+         * @description Only exists when Google sign-in is enabled (else `404 not_found`). The redirect URI registered at Google is `<public base URL>/api/v1/auth/google/callback`. Success signs the user in (new `smem_session` cookie; a session cookie sent with the request is revoked) and redirects to the `return_to` given at start. Linking: a known Google account signs in; the same verified email on a local account links to it; the same email on a local account that never verified it first loses its password and sessions, is marked verified and linked (pre-hijacking defence); an unknown email creates a password-less account. Every failure is `302 /login?error=<code>` and creates nothing: `oidc_state` (cookie missing, altered or expired, or `state` differs), `oidc_denied` (the provider reported an error), `oidc_failed` (code exchange or ID-token check failed, or no usable email), `email_unverified` (Google did not mark the email verified). Provider details are only logged. 30 per 15 minutes per IP.
+         */
+        get: operations["googleCallback"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me": {
         parameters: {
             query?: never;
@@ -950,6 +990,58 @@ export interface operations {
             413: components["responses"]["PayloadTooLarge"];
             415: components["responses"]["UnsupportedMediaType"];
             503: components["responses"]["Busy"];
+        };
+    };
+    googleStart: {
+        parameters: {
+            query?: {
+                return_to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description To Google (or to `/login?error=oidc_failed`). */
+            302: {
+                headers: {
+                    Location?: string;
+                    /** @description `smem_oidc`, valid 10 minutes. */
+                    "Set-Cookie"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    googleCallback: {
+        parameters: {
+            query?: {
+                code?: string;
+                state?: string;
+                error?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description To `return_to` (signed in) or to `/login?error=<code>`. */
+            302: {
+                headers: {
+                    Location?: string;
+                    /** @description `smem_session` on success; `smem_oidc` is always cleared. */
+                    "Set-Cookie"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["RateLimited"];
         };
     };
     getMe: {
