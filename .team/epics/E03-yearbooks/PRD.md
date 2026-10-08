@@ -51,3 +51,4 @@ Specs live next to this file; **status lives only on the board** (`L list`), nev
 | T-016 Web: yearbook list, create/edit, profile and photo upload UI | `03-web-yearbook-list-create-edit-profile-and.md` | T-009, T-015 |
 | T-036 Bound the memory of image processing (caps, concurrency, memory limit) | `04-bound-the-memory-of-image-processing.md` | T-009 |
 | T-046 List a yearbook's photos (API and photo library) | `05-list-a-yearbooks-photos.md` | T-016 |
+| T-055 Opaque list cursors (do not expose internal ids) | `06-opaque-list-cursors.md` | T-046 |

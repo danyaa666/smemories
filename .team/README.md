@@ -10,19 +10,18 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 25 | T-013, T-014, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-039, T-040, T-041, T-042, T-044, T-049, T-050, T-052, T-053 |
+| BACKLOG | 26 | T-013, T-014, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-039, T-040, T-041, T-042, T-044, T-049, T-050, T-052, T-053, T-055 |
 | TODO | 2 | T-034, T-048 |
 | IN_PROGRESS | 1 | T-054 |
-| READY_FOR_QA | 1 | T-046 |
 | QA_PASS | 2 | T-047, T-051 |
-| MERGED | 1 | T-016 |
+| MERGED | 2 | T-016, T-046 |
 | DONE | 22 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-028, T-030, T-033, T-035, T-036, T-037, T-038, T-043, T-045 |
 
-**Awaiting your review (MERGED):** T-016 (Web: yearbook list, create/edit, profile and photo upload UI)
+**Awaiting your review (MERGED):** T-016 (Web: yearbook list, create/edit, profile and photo upload UI); T-046 (List a yearbook's photos (API and photo library in the web UI))
 
 **Open questions for you:** Q-015 (Approve merge of T-051 (Redis foundation)?); Q-016 (Approve merge of T-047 (fix flaky concurrent Google callback)?)
 
-_Board last written 2026-10-08 14:51Z_
+_Board last written 2026-10-08 15:00Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -1748,7 +1747,7 @@ Let the register request carry the UI language so Vietnamese students get the ve
 - 2026-10-08 09:29Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-037, T-038, T-043, T-045')
 
 ### T-046 — List a yearbook's photos (API and photo library in the web UI)
-- **Status:** READY_FOR_QA
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -1759,8 +1758,8 @@ Let the register request carry the UI language so Vietnamese students get the ve
 - **Assignee:** —
 - **Branch:** task/t-046-list-a-yearbook-s-photos-api-and-photo-l
 - **PR:** https://github.com/danyaa666/smemories/pull/34
-- **Updated:** 2026-10-08 14:40Z by dev
-- **Comments-seen:** 1
+- **Updated:** 2026-10-08 15:00Z by leader
+- **Comments-seen:** 4
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E03-yearbooks/05-list-a-yearbooks-photos.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1771,6 +1770,15 @@ Owner-only list endpoint for a yearbook's photos and the web photo library that 
 #### Comments
 - 2026-10-08 14:02Z · leader · T-016 is merged: ready.
 - 2026-10-08 14:40Z · dev · GET /v1/yearbooks/{id}/media (owner-only keyset list, FORCE INDEX ix_media_yearbook, no migration) + Photos.tsx infinite list. Test: make lint/test/test-integration green; newman media collection x2 green (needs API with SMEM_S3_* from .env.example). Gap: no 375px visual check.
+- 2026-10-08 15:00Z · qa · PR head e347c81, CI 4/4 green (go, go-integration, security, web). Evidence (own API on :8080 + vite :5173, fresh DB, MinIO; python/requests, EXPLAIN, Playwright chromium):
+  AC1: default list newest first, fields exactly id,width,height,bytes,uploader_kind,created_at; next_cursor null on last page and on exact fit; limit default 50, 100 ok; limit 0/-1/101/abc/1.5/overflow -> 400 invalid_limit; uploader owner|contributor|all work (contributor rows seeded via SQL), 'x'/'OWNER' -> 400 invalid_uploader; cursor '!!!', 'YWJj', 0, '007', negative, 2^63, base64 of JSON, padded base64 -> 400 invalid_cursor.
+  AC2: B->A's book, unknown id: 404 not_found; no session 401; A's cursor on B's book only narrows B's own rows (empty/own); cursor on foreign book 404; crafted huge/small cursors return only A's rows. Body contains no object_key/thumb_key/sha256/URL.
+  AC3: EXPLAIN with FORCE INDEX (50k rows total, 10k in one book): type=range/ref on ix_media_yearbook, Backward index scan, no filesort; without FORCE INDEX the optimizer picks PRIMARY scanning ~25k rows (confirms the hint). 10k rows: limit 50 median 3.0 ms, limit 100 2.4 ms, deep cursor 2.3 ms, full walk of 10k in 100 pages 0.26 s. 120 photos paged 50/50/20: no dups, none skipped, with an upload, a delete of a seen row and delete of the cursor row between pages; deleted unseen row disappears; cursor to a deleted id works.
+  AC4: openapi + schema.d.ts (make lint 'api schema ok'); newman media collection x2 with API restart between: 66 req / 122 assertions, 0 failed both times. make lint, make test, make test-integration exit 0; Vitest 25/25 (reload+load more, error+retry, delete).
+  AC5 real browser: login, 120-photo book: 50 -> Show more -> 100 -> 120, button disappears; reload keeps photos (50); cover and profile toggles persist after reload; deleting cover/profile photo clears both and list refreshes; uploading 2 files via input shows them at top without reload; deleting with 2 pages loaded keeps 100 unique tiles (no duplicates); empty state EN + VI; list 500 -> translated error with Retry, Retry then shows empty state; VI labels (Ảnh bìa, Ảnh đại diện, Xóa, Xem thêm ảnh); 375 px: scrollWidth=375, no off-screen controls, buttons 44 px high, 2-column grid.
+  Cursor question: plain base64url of the numeric id is ACCEPTABLE. It is validated strictly (canonical decimal, >0, <2^63), is only an 'id < ?' predicate AND-ed with yearbook_id of the already owner-checked book, so it cannot reach another yearbook's rows (tested). Only side effect: it exposes the global auto-increment id (rough table-wide row volume); non-blocking. Spec says 'base64url of small JSON'; leader may update spec text.
+  Non-blocking: (1) validation (400) runs before ownership, so a foreign book with bad limit gives 400 not 404; no existence leak. (2) Query default retry=3 in main.tsx means the list error shows after ~7 s of 'Loading'. (3) At 375 px each tile is ~268 px tall because the 3 action buttons stack; fine but tall. (4) Padded base64 cursors are rejected (we only issue unpadded).
+- 2026-10-08 15:00Z · leader · merged 472d700 (squash), QA_PASS on head e347c81 (real Chromium against a real API, 375 px, EN and VI), CI green. Review: owner-scoped keyset list on an indexed range scan (FORCE INDEX, 2-3 ms at 10000 rows), limit capped at 100, no keys or hashes in responses, library keeps photos across reloads. For owner to check: upload photos in the yearbook screen, reload, they are still there. Follow-up T-055: the cursor is base64 of the internal numeric id (L-05 says internal ids stay internal); make it opaque.
 
 ### T-047 — Fix the flaky concurrent Google callback: retry with jittered backoff and a stress test
 - **Status:** QA_PASS
@@ -1980,6 +1988,29 @@ Redis sliding-window limiter with Take and Refund replacing the in-memory one ev
 **Epic:** E05-templates-export · **PRD:** `.team/epics/E05-templates-export/PRD.md`
 
 Prototype two designs as HTML/CSS pages printed through the browser (Save as PDF), test across browsers and phones, and write ADR 0003 with a go/no-go recommendation.
+
+#### Comments
+
+### T-055 — Opaque list cursors: do not expose internal ids
+- **Status:** BACKLOG
+- **Priority:** P3
+- **Type:** tech-debt
+- **Milestone:** M1
+- **Depends-on:** T-046
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-08 15:00Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E03-yearbooks/06-opaque-list-cursors.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E03-yearbooks · **PRD:** `.team/epics/E03-yearbooks/PRD.md`
+
+Replace the numeric-id paging cursor with a signed opaque cursor and a shared helper (L-05).
 
 #### Comments
 

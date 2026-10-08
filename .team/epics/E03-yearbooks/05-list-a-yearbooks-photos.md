@@ -29,3 +29,6 @@ Scope by yearbook through `owner_id` exactly as `ownedYearbook` does; cap the li
 #### Test plan
 - Dev: ownership matrix with two users, paging across 120 photos, deletion between pages, filter values, bad parameters; Vitest for the library.
 - QA should probe: a cursor from another yearbook (must not leak), limit 0, negative and 101, a deleted photo's id as cursor, the list while uploading, 375 px layout of the library.
+
+#### Leader note from the T-046 review (2026-10-08)
+The merged cursor is the plain numeric media id in base64url, so the global auto-increment id leaves the API (L-05 keeps internal ids internal; it does not reveal another yearbook's data). Follow-up T-055 replaces it with an opaque cursor.
