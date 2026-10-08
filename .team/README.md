@@ -10,17 +10,18 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 22 | T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-039, T-040, T-041, T-042, T-044 |
-| TODO | 6 | T-015, T-034, T-035, T-037, T-038, T-043 |
-| QA_PASS | 1 | T-033 |
+| BACKLOG | 23 | T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-039, T-040, T-041, T-042, T-044, T-045 |
+| TODO | 3 | T-015, T-034, T-038 |
+| IN_QA | 2 | T-035, T-037 |
+| QA_PASS | 2 | T-033, T-043 |
 | MERGED | 1 | T-036 |
 | DONE | 14 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-028, T-030 |
 
 **Awaiting your review (MERGED):** T-036 (Bound the memory of image processing (caps, concurrency, memory limit))
 
-**Open questions for you:** Q-011 (Approve merge of T-033 (CI: do not cancel runs on develop and main)?)
+**Open questions for you:** Q-011 (Approve merge of T-033 (CI: do not cancel runs on develop and main)?); Q-012 (Vietnamese labels for the friends' note form (T-043): OK to merge?)
 
-_Board last written 2026-10-08 03:21Z_
+_Board last written 2026-10-08 03:43Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -223,6 +224,15 @@ QA passed and my review is clean (head 231955e, CI green); it already merges cle
 - **Answer:** _(pending)_
 
 QA passed and my review is clean (head 74346f4, CI green). High risk because it changes the CI workflow, but the change is small: pushes to develop and main get one concurrency group per commit (never cancelled), pull requests keep cancelling superseded runs, and the integration job's mysql:8.4 image is pinned to its digest. Today 8 of the last 15 develop runs were cancelled, so merge commits are not getting full CI. One caveat: nobody could test a real double push; I will verify with the first pushes after merge. Command: cd /Users/unisoft/GolandProjects/awesomeProject1 && /Users/unisoft/.claude/plugins/cache/claude-agent-team/agent-team/0.3.0/bin/team approve T-033
+
+### Q-012 — Vietnamese labels for the friends' note form (T-043): OK to merge?
+- **Status:** OPEN
+- **Asked:** 2026-10-08 03:43Z
+- **Blocks:** T-043
+- **Recommendation:** Accept the table in PR #24, with one wording change: 'Chúng mình quen nhau thế nào' instead of 'Chúng ta quen nhau thế nào'
+- **Answer:** _(pending)_
+
+The table of EN/VI labels and hints is in the description of https://github.com/danyaa666/smemories/pull/24 (9 fields). Please reply with 'OK' or the wording you want; labels are plain text in code, so they can be changed any time without touching stored notes (field ids never change). Merging T-043 unblocks the public notes submission (T-034).
 
 <!-- questions:end -->
 
@@ -507,7 +517,7 @@ The core of email+password authentication: register, login, logout, "who am I", 
 - **Branch:** task/t-007-email-verification-and-password-reset
 - **PR:** https://github.com/danyaa666/smemories/pull/18
 - **Updated:** 2026-10-08 02:35Z by leader
-- **Comments-seen:** 5
+- **Comments-seen:** 8
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/03-email-verification-and-password-reset.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -822,10 +832,10 @@ Asynchronous export: POST creates a job (one active export per book), a bounded 
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-08 02:24Z by leader
-- **Comments-seen:** 2
+- **Branch:** task/t-015-web-auth-pages-and-session-handling
+- **PR:** https://github.com/danyaa666/smemories/pull/25
+- **Updated:** 2026-10-08 03:43Z by leader
+- **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/04-web-auth-pages-and-session-handling.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -836,6 +846,9 @@ Register, login, logout, verify-email, forgot/reset password pages; session boot
 #### Comments
 - 2026-10-07 06:10Z · leader · Leader note from the T-003 review (non-blocking, do with this task): the language buttons show only EN/VI. Give each an accessible name from the existing language.en / language.vi locale keys (aria-label), which are unused today; update the LanguageSwitcher test accordingly. Also pass Headers instances safely in api/client.ts (spreading a Headers object drops its entries).
 - 2026-10-08 02:24Z · leader · T-007 is merged: unblocked. Spec updated with leader notes from the T-007 and T-011 reviews (token handling on verify/reset pages, Google button and error codes).
+- 2026-10-08 03:30Z · dev · Auth pages + session bootstrap + RequireAuth + Google link (VITE_GOOGLE_SIGNIN) + leader notes from T-003/T-007/T-011 done. make lint build test green, 56 vitest tests. QA: run web against the API (make up, make run, npm run dev) incl. real email links, Vietnamese strings, keyboard/screen-reader pass. Spec had no numbered AC; checklist in PR. Known: not run in a real browser by me.
+- 2026-10-08 03:42Z · qa · Tested against a real API (make up, migrate, API built from the task worktree, vite dev, headless Chrome via playwright-core; mail from the log mailer) in EN and VI and at 375 px. Passing: register (field error aria-invalid/aria-describedby, email_taken, weak_password, empty submit), login (wrong pw, 429 lockout 'try again in 15 min' from Retry-After), logout (nav, redirect), session bootstrap (reload keeps session, 401 -> signed out, API unreachable -> RequireAuth shows retry, retry works), RequireAuth round trip (/account?tab=1 -> /login -> back to /account?tab=1), signed-in /login and /register redirect, verify-email from the logged mail link (exactly one POST under StrictMode, account flips to Email verified without reload, reuse/garbage/no token -> expired message), forgot password (identical text for unknown and known address, bad email field error), reset from the logged link (weak password field error, success, link reuse -> expired + ask for new, old password rejected, new works), resend limit (3 ok, 4th 429 'try again in 60 min'), ?error= oidc_state/oidc_denied/oidc_failed/email_unverified/unknown/HTML payload (translated, escaped), Google button hidden by default and shown with VITE_GOOGLE_SIGNIN=true with href /api/v1/auth/google/start?return_to=<encoded path>, EN/VI switch (html lang, persisted), keyboard tab order and Enter submit, :focus-visible ring, no horizontal overflow at 375 px for normal names. web: lint, typecheck, i18n, check:api, 56 vitest x3 and build all green; PR CI green on head 31c2546. ISSUES: 1 (major, violates leader note 'removes the token before any other work or network call') the first GET /api/v1/me (session bootstrap from AuthNav) is sent while the address bar still holds the token and its Referer is the full /verify-email?token=... (same for /reset-password). Repro: playwright request log shows 'GET /api/v1/me | page url at request: /reset-password?token=MktbKs4V...| referer: http://localhost:5173/reset-password?token=...'; only the later POST sees the clean URL. Cause: AuthNav (earlier in the tree) fires useMe in its effect before useUrlToken's effect in the page runs. Fix options: strip ?token synchronously before React mounts (e.g. in main.tsx/index.html inline script, keeping it in a module variable for the page), and/or add <meta name="referrer" content="no-referrer"> to web/index.html; add a test that no request is issued while location.search holds the token. 2 (minor) offline: with the browser offline, submit on login stays on 'Please wait…' with a disabled button and no message (TanStack default networkMode 'online' pauses the mutation, then fires it automatically when the network returns). Repro: open /login, context offline, submit. Expected: the network_error text. Fix: new QueryClient({defaultOptions:{queries:{networkMode:'always'},mutations:{networkMode:'always'}}}) in web/src/main.tsx; same pause applies to the useMe bootstrap (stuck 'Loading' instead of the retry panel). 3 (minor) at 375 px a 100-character display name without spaces (allowed by the API) makes the page 1391 px wide (header link does not wrap/shrink). Repro: register with 'W' x 100, open /account at 375 px. Expected no horizontal scroll (min-width:0 / overflow-wrap:anywhere on .auth-nav a). 4 (minor, cosmetic) at 375 px the brand touches the nav links, nav links wrap to two lines ('Đăng nhập', 'Create account') and the Google button sits flush under the submit button; Sign out and 'Send the link again' use unstyled default buttons. Observation for the leader, not T-015: a Vietnamese-UI user receives the English verification email because POST /v1/auth/register has no locale input (users.locale defaults to en); consider a locale field or Accept-Language in T-006/T-007. Not checked: real Google round trip (API had no Google config, /google/start answers 404), screen reader (VoiceOver/NVDA) pass, Safari/Firefox/real phone, vite preview production build, CSRF behaviour on a non-allowed origin (403 csrf_origin_mismatch falls back to the generic message).
+- 2026-10-08 03:43Z · leader · Leader: QA_FAIL accepted; fix in the same PR (branch and worktree are reused), then READY_FOR_QA. (1) MAJOR, spec requirement: on /verify-email and /reset-password the token must leave the address bar before ANY network call; today AuthNav's effect fires GET /api/v1/me while the URL still holds the token and the Referer carries it. Fix: strip the token synchronously before anything that can fetch mounts (read it into memory, history.replaceState before AuthNav mounts, or hold the /me query until the token is stripped); add a test that fails if any request is made while location.search still contains a token. Also add <meta name=referrer content=no-referrer> to index.html as defence in depth. (2) networkMode 'always' for the mutations (and queries where it matters) so an offline submit shows the network-error message instead of 'Please wait'. (3) A 100-character display name with no spaces makes the page 1391 px wide at 375 px: wrap with overflow-wrap:anywhere wherever the name is shown, with a test or note. (4) Minor spacing at 375 px: fix if cheap. Not in this PR: the English verification email for Vietnamese users is the API register endpoint (new task T-045). The generic message for 403 csrf_origin_mismatch is acceptable.
 
 ### T-016 — Web: yearbook list, create/edit, profile and photo upload UI
 - **Status:** BACKLOG
@@ -1300,7 +1313,7 @@ Public endpoint where a friend with a collection link submits a note with text, 
 #### Comments
 
 ### T-035 — T-010 follow-ups: template tests iterate templates.List()
-- **Status:** TODO
+- **Status:** IN_QA
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -1308,10 +1321,10 @@ Public endpoint where a friend with a collection link submits a note with text, 
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-08 02:24Z by leader
+- **Assignee:** qa
+- **Branch:** task/t-035-t-010-follow-ups-template-tests-iterate-
+- **PR:** 26
+- **Updated:** 2026-10-08 03:43Z by qa
 - **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/05-t-010-follow-ups-template-tests-iterate.md`
@@ -1322,6 +1335,7 @@ From the T-010 QA notes: adding a template exactly as docs/templates.md describe
 
 #### Comments
 - 2026-10-08 02:24Z · leader · T-010 is accepted: small follow-up, ready.
+- 2026-10-08 03:32Z · dev · Test-only: TestListHasBuiltIns and TestSamples iterate templates.List(); built-ins asserted as minimum. Test: go test ./internal/pdf ./internal/templates.
 
 ### T-036 — Bound the memory of image processing (caps, concurrency, memory limit)
 - **Status:** MERGED
@@ -1351,7 +1365,7 @@ Make the worst-case memory of the T-009 image pipeline a measured, enforced numb
 - 2026-10-08 03:21Z · leader · merged 7772eb7 (squash), QA_PASS on the same head c6d78ce, CI green. Review: the 480 MB scaler buffer is gone (banded resize, same picture), header-based caps by colour model and JPEG subsampling, concurrency default 2, SMEM_MEMORY_LIMIT_MIB validated (0 or 64..1048576), 4 worst-case uploads peak at about 925 MiB (was 3.2 GB). For owner to check: PNG/WebP over 25 MP, 16-bit PNG over 4096x4096 and large progressive JPEGs are now refused with 400 invalid_image; phone JPEGs up to 50 MP still pass. Follow-up: stale OpenAPI sentence (noted in T-034 spec).
 
 ### T-037 — US Letter page size, end to end
-- **Status:** TODO
+- **Status:** IN_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
@@ -1359,10 +1373,10 @@ Make the worst-case memory of the T-009 image pipeline a measured, enforced numb
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-08 03:08Z by leader
+- **Assignee:** qa
+- **Branch:** task/t-037-us-letter-page-size-end-to-end
+- **PR:** 27
+- **Updated:** 2026-10-08 03:43Z by qa
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E08-designer-templates/01-us-letter-page-size-end-to-end.md`
@@ -1372,6 +1386,7 @@ Make the worst-case memory of the T-009 image pipeline a measured, enforced numb
 Add Letter (215.9 x 279.4 mm) as a third yearbook page size: migration, API, OpenAPI, PDF page geometry, template reference page.
 
 #### Comments
+- 2026-10-08 03:38Z · dev · Letter end to end: migration 0009 (up/down tested on A5/A4/Letter books), API+OpenAPI+schema.d.ts, templates.Dims/reference/ForPageSize, pdf MediaBox 612x792, docs, Postman yearbooks (steps 21-24 + 3 edge cases, newman x2 green). Test: go test -tags integration ./...; newman. Gap: npm check:api not run locally (CI).
 
 ### T-038 — Template format v2: backgrounds, static text, rotation, ellipse, font families
 - **Status:** TODO
@@ -1489,7 +1504,7 @@ Planning placeholder: after the owner reviews the pilots, split into one task pe
 #### Comments
 
 ### T-043 — Note field catalogue (internal/notefields): closed set of form fields with EN/VI labels and validation
-- **Status:** TODO
+- **Status:** QA_PASS
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -1497,11 +1512,11 @@ Planning placeholder: after the owner reviews the pilots, split into one task pe
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-08 03:19Z by leader
-- **Comments-seen:** 0
+- **Assignee:** leader
+- **Branch:** task/t-043-note-field-catalogue-internal-notefields
+- **PR:** https://github.com/danyaa666/smemories/pull/24
+- **Updated:** 2026-10-08 03:42Z by qa
+- **Comments-seen:** 3
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/06-note-field-catalogue.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1510,6 +1525,9 @@ Planning placeholder: after the owner reviews the pilots, split into one task pe
 Closed catalogue of note form fields (name, relationship, message, how we met, ...) with limits, EN/VI labels and a validator, so forms and notes can be template-driven (D-21).
 
 #### Comments
+- 2026-10-08 03:24Z · dev · Catalogue, Validate, Info, Default, docs/note-fields.md; added textx.CleanMultiline (Clean unchanged). make lint build test green. Owner must review the VI label table in the PR description before merge. Test: go test -race ./internal/notefields ./internal/textx. Dup/unknown refs are errors.
+- 2026-10-08 03:42Z · qa · AC1 catalogue ids/kinds/limits: TestCatalogueGuard (dev) + my read of catalogue.go -> OK. AC2 EN/VI labels+hints present, NFC, PR table matches code; owner must still review VI table before merge (not mine to approve). AC3 Validate: my probes (internal/notefields/qa_probe_test.go, pushed, CI green on PR head): NFD Vie+U+0302+U+0323 -> composed NFC; limit and limit+1 counted in characters (60 'Đ' ok, 61 rejected; 500/501 wish); CRLF -> LF counts as 1 char; rejected in name and message and at edges: U+202A-202E, U+2066-2069, LRM/RLM, ALM, ZWSP, ZWNJ, WJ, BOM, soft hyphen, U+180E, invisible times, tag char U+E0041, U+0085/2028/2029 inside, DEL, ESC, NUL, invalid UTF-8 (\xff, overlong, surrogate, truncated); accepted unchanged: ZWJ emoji and family emoji, skin tone, VS15/VS16, NBSP inside, Thai combining; whitespace-only (space, \n, NBSP, U+3000, CRLF mix) -> missing_answer for required, dropped for optional; short-text inner \n/\r\n -> invalid_answer; 10 MB ASCII in name/message/wish, 10 MB NFD and 10 MB NUL -> invalid_answer, all five in well under 1 s (byte guard before NFC); unknown answer ids reported in sorted order before missing; input map not mutated; Default()/Info() results do not alias the catalogue; Info(nil) is non-nil. Duplicate refs and unknown/empty/wrong-case ref ids -> error (unknown ids are FieldError unknown_field, errors.Is ErrUnknownField). AC4 Default() test + mine. AC5 Info JSON fixed by TestInfoJSON. AC6 guard tests present. AC7 docs/note-fields.md read: fields + add-a-field rule, matches catalogue. Commands: go test -race -count=3 ./internal/notefields ./internal/textx; go vet; gofmt -l (clean); golangci-lint run on both pkgs (0 issues); go test -race ./... all ok; gh pr checks 24 all pass. Non-blocking observations: (a) spec-mandated byte guard 4*limit before NFC rejects extreme decomposed text (60 x e+U+0302+U+0323 = 300 bytes > 240) even though it is 60 chars after NFC; 48 of them pass; documented in the PR. (b) duplicate-ref error is a plain error, not *FieldError, so errors.As callers (T-034/T-044) must treat any non-FieldError as a template bug. (c) a trailing newline in a short-text value is trimmed, not rejected (OK per trimming rule). (d) a literal U+FFFD in text is rejected (same rule as invalid UTF-8) and tag characters (subdivision-flag emoji) are rejected as Cf per spec.
+- 2026-10-08 03:43Z · leader · Leader review OK on head 9b9b08a (QA_PASS; the head includes QA's probe test commit; CI 4/4 green). Pure package with no input surface of its own: the catalogue ids are fixed by a guard test, Validate resolves refs first (unknown or duplicate ref = template bug), rejects unknown answer ids before anything else, applies textx (NFC, no control or format characters except ZWJ and variation selectors; long text allows only \n), and bounds work with a 4-bytes-per-character pre-check. Non-blocking: the byte pre-check rejects extreme all-decomposed text (more than 4 bytes per character), normal Vietnamese in NFD is far below it; a duplicate ref returns a plain error rather than a FieldError (intended). Waiting only for the owner's review of the Vietnamese label table (AC2), then I merge.
 
 ### T-044 — Templates declare note fields (format v2.1): note_fields, note_field slot, NoteFields helper
 - **Status:** BACKLOG
@@ -1531,6 +1549,29 @@ Closed catalogue of note form fields (name, relationship, message, how we met, .
 **Epic:** E08-designer-templates · **PRD:** `.team/epics/E08-designer-templates/PRD.md`
 
 A template lists which note fields its friend pages ask for and where each answer prints; the API reads the list for the public form.
+
+#### Comments
+
+### T-045 — Register accepts a locale; verification email in the student's language
+- **Status:** BACKLOG
+- **Priority:** P1
+- **Type:** feature
+- **Milestone:** M1
+- **Depends-on:** T-015
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-08 03:43Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/06-register-accepts-locale.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E02-auth · **PRD:** `.team/epics/E02-auth/PRD.md`
+
+Let the register request carry the UI language so Vietnamese students get the verification email in Vietnamese and a correct stored locale.
 
 #### Comments
 

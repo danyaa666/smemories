@@ -55,3 +55,4 @@ Specs live next to this file; **status lives only on the board** (`L list`), nev
 | T-007 Email verification and password reset | `03-email-verification-and-password-reset.md` | T-006 |
 | T-015 Web: auth pages and session handling | `04-web-auth-pages-and-session-handling.md` | T-003, T-007 |
 | T-031 Auth hardening for go-live: edge rate limits, shared limiter, session purge, stored-hash caps | `05-auth-hardening-for-go-live-edge-rate-limits.md` | T-023 |
+| T-045 Register accepts a locale; verification email in the student's language | `06-register-accepts-locale.md` | T-015 |
