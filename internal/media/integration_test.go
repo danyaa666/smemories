@@ -587,3 +587,49 @@ func TestProfilePhotoAndCover(t *testing.T) {
 	// A new book cannot start with a cover.
 	e.json(u, "POST", "/v1/yearbooks", fmt.Sprintf(`{"title":"T","language":"en","cover_media_id":%q}`, mine)).status(400, "invalid_media")
 }
+
+// T-034: contributor uploads wait a bounded time for a processing slot, count toward the quotas and can be discarded.
+func TestContributorUploadBusyAndDiscard(t *testing.T) {
+	e := newEnv(t)
+	u := e.register("owner@example.com")
+	book := e.newBook(u)
+	var ownerID, row uint64
+	if err := e.db.QueryRow(`SELECT owner_id, id FROM yearbooks WHERE public_id = ?`, book).Scan(&ownerID, &row); err != nil {
+		t.Fatal(err)
+	}
+	data := photo(t)
+
+	for range cap(e.svc.sem) { // every slot taken: the wait is bounded and ends in ErrBusy, with nothing stored
+		e.svc.sem <- struct{}{}
+	}
+	start := time.Now()
+	if _, err := e.svc.save(context.Background(), ownerID, row, book, "contributor", data, 50*time.Millisecond); !errors.Is(err, ErrBusy) {
+		t.Fatalf("err %v, want ErrBusy", err)
+	}
+	if time.Since(start) > 2*time.Second {
+		t.Fatal("did not give up in time")
+	}
+	for range cap(e.svc.sem) {
+		<-e.svc.sem
+	}
+	if e.count(`SELECT COUNT(*) FROM media`) != 0 || e.st.count(yearbookPrefix(book)) != 0 {
+		t.Fatal("a busy refusal stored something")
+	}
+
+	m, err := e.svc.UploadContributor(context.Background(), row, data)
+	if err != nil || m.RowID == 0 {
+		t.Fatalf("upload: %v %+v", err, m)
+	}
+	if e.count(`SELECT COUNT(*) FROM media WHERE uploader_kind = 'contributor' AND yearbook_id = ?`, row) != 1 || e.st.count(yearbookPrefix(book)) != 2 {
+		t.Fatal("contributor photo not stored as such")
+	}
+	if err := e.svc.Discard(m); err != nil {
+		t.Fatal(err)
+	}
+	if e.count(`SELECT COUNT(*) FROM media`) != 0 || e.st.count(yearbookPrefix(book)) != 0 {
+		t.Fatal("discard left a row or objects")
+	}
+	if _, err := e.svc.UploadContributor(context.Background(), row+1000, data); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("unknown yearbook: %v", err)
+	}
+}

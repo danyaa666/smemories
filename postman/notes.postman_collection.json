@@ -2,7 +2,7 @@
   "info": {
     "name": "SMemories - notes",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Collection links for friends' notes (T-012): create, list, revoke and the public lookup. Run against an API started with SMEM_ENV=dev.\n\nSetup, once per database: the owner endpoints need a verified email, and the dev mail is only printed to the API's stdout, which Newman cannot read. So the collection uses three fixed accounts (A, B verified, C never verified): run `newman run postman/notes.postman_collection.json --folder \"Setup (once per database)\"`, then `make verify-newman-users` (marks A and B verified in the dev database; for another database run `UPDATE users SET email_verified_at = NOW(6) WHERE email IN ('newman-notes-a@example.com','newman-notes-b@example.com')`). After that run the whole collection as often as you like: Setup tolerates accounts that already exist (409, or 429 once the register limit of 5 per hour per IP is used up) and everything else only logs in. Run it in order: Edge cases reuses the users and the yearbook of the Full flow, and ends by deleting the yearbook. The public lookup is limited to 60 requests per IP per 15 minutes; a run makes about 12."
+    "description": "Collection links for friends' notes (T-012) and public note submission (T-034): create, list, revoke, the public lookup and the multipart note form. Run against an API started with SMEM_ENV=dev.\n\nSetup, once per database: the owner endpoints need a verified email, and the dev mail is only printed to the API's stdout, which Newman cannot read. So the collection uses three fixed accounts (A, B verified, C never verified): run `newman run postman/notes.postman_collection.json --folder \"Setup (once per database)\"`, then `make verify-newman-users` (marks A and B verified in the dev database; for another database run `UPDATE users SET email_verified_at = NOW(6) WHERE email IN ('newman-notes-a@example.com','newman-notes-b@example.com')`). After that run the whole collection as often as you like: Setup tolerates accounts that already exist (409, or 429 once the register limit of 5 per hour per IP is used up) and everything else only logs in. Run it in order: Edge cases reuses the users and the yearbook of the Full flow, and ends by deleting the yearbook. Run it from the postman/ directory (`newman run notes.postman_collection.json --working-dir .`) because the note requests upload the photo fixtures of fixtures/media/ (and the Setup command above then needs the same flags). The public routes count only misses (unknown tokens) against 60 per IP per 15 minutes, and a run makes about 8 of them; submissions are limited to 100 per IP per hour, a run makes about 14, so run the whole collection at most 6 times an hour from one address or restart the API. Each run creates its own links, so it can run twice back to back."
   },
   "variable": [
     {
@@ -83,6 +83,14 @@
     },
     {
       "key": "fillId",
+      "value": ""
+    },
+    {
+      "key": "noteId",
+      "value": ""
+    },
+    {
+      "key": "photoNoteId",
       "value": ""
     }
   ],
@@ -503,7 +511,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('body', () => pm.expect(pm.response.json()).to.eql({yearbook: {title: 'Newman notes book'}, owner: {display_name: pm.collectionVariables.get('nameA')}, deadline_at: pm.collectionVariables.get('deadline'), open: true}));",
+                  "pm.test('body', () => pm.expect(pm.response.json()).to.eql({yearbook: {title: 'Newman notes book'}, owner: {display_name: pm.collectionVariables.get('nameA')}, deadline_at: pm.collectionVariables.get('deadline'), open: true, fields: pm.response.json().fields}));",
+                  "pm.test('form fields', () => { const f = pm.response.json().fields; pm.expect(f.map(x => x.id + ':' + x.required)).to.eql(['name:true', 'relationship:false', 'message:true']); pm.expect(f[0]).to.have.keys(['id','kind','label','hint','required','max_length']); pm.expect(f[2].kind).to.eql('long_text'); });",
                   "pm.test('no cookie set, no CORS', () => { pm.expect(pm.response.headers.has('Set-Cookie')).to.eql(false); pm.expect(pm.response.headers.has('Access-Control-Allow-Origin')).to.eql(false); });"
                 ]
               }
@@ -886,6 +895,207 @@
                 "type": "text/javascript",
                 "exec": [
                   "const end = Date.now() + 3200; while (Date.now() < end) {} // wait for the deadline to pass"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "16. Friend sends a text-only note - 201, only the id comes back",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/public/collect/{{linkToken2}}/notes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "public",
+                "collect",
+                "{{linkToken2}}",
+                "notes"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "{\"name\":\"Minh\",\"message\":\"hi\"}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "const b = pm.response.json(); pm.test('only the id', () => { pm.expect(Object.keys(b)).to.eql(['note']); pm.expect(Object.keys(b.note)).to.eql(['id']); pm.expect(b.note.id).to.match(/^[0-9A-Z]{26}$/); });",
+                  "pm.collectionVariables.set('noteId', b.note.id);",
+                  "pm.test('no cookie set, no CORS', () => { pm.expect(pm.response.headers.has('Set-Cookie')).to.eql(false); pm.expect(pm.response.headers.has('Access-Control-Allow-Origin')).to.eql(false); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "17. Friend sends emoji, Vietnamese text and two photos - 201",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/public/collect/{{linkToken2}}/notes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "public",
+                "collect",
+                "{{linkToken2}}",
+                "notes"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "{\"name\":\"Newman Friend\",\"relationship\":\"classmate\",\"message\":\"Chúc bạn mãi vui 🎉👨‍👩‍👧‍👦 ❤️ Nguyễn Văn Ánh\\n\\nHẹn gặp lại!\"}",
+                  "type": "text"
+                },
+                {
+                  "key": "photos",
+                  "type": "file",
+                  "src": "fixtures/media/photo-gps.jpg"
+                },
+                {
+                  "key": "photos",
+                  "type": "file",
+                  "src": "fixtures/media/photo-alpha.png"
+                },
+                {
+                  "key": "website",
+                  "value": "",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('photoNoteId', pm.response.json().note.id);",
+                  "pm.test('a different note', () => pm.expect(pm.collectionVariables.get('photoNoteId')).to.not.eql(pm.collectionVariables.get('noteId')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "18. A bot fills the honeypot - 201 as if stored (nothing is)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/public/collect/{{linkToken2}}/notes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "public",
+                "collect",
+                "{{linkToken2}}",
+                "notes"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "{\"name\":\"Minh\",\"message\":\"hi\"}",
+                  "type": "text"
+                },
+                {
+                  "key": "website",
+                  "value": "http://spam.example",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('looks like a note', () => pm.expect(pm.response.json().note.id).to.match(/^[0-9A-Z]{26}$/));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "19. A lists the links: the two real notes are counted, the bot's is not",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/collections",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks",
+                "{{bookId}}",
+                "collections"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const c = pm.response.json().collections.find(x => x.id === pm.collectionVariables.get('collId2'));",
+                  "pm.test('two notes', () => pm.expect(c.note_count).to.eql(2));"
                 ]
               }
             }
@@ -2166,6 +2376,870 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit: unknown field - 400 unknown_field",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/public/collect/{{linkToken2}}/notes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "public",
+                "collect",
+                "{{linkToken2}}",
+                "notes"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "{\"name\":\"A\",\"message\":\"m\",\"nickname\":\"n\"}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code unknown_field', () => pm.expect(pm.response.json().error.code).to.eql('unknown_field'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit: required field missing - 400 missing_answer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/public/collect/{{linkToken2}}/notes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "public",
+                "collect",
+                "{{linkToken2}}",
+                "notes"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "{\"name\":\"A\"}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code missing_answer', () => pm.expect(pm.response.json().error.code).to.eql('missing_answer'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit: control character in a name - 400 invalid_answer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/public/collect/{{linkToken2}}/notes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "public",
+                "collect",
+                "{{linkToken2}}",
+                "notes"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "{\"name\":\"A\\u0000\",\"message\":\"m\"}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code invalid_answer', () => pm.expect(pm.response.json().error.code).to.eql('invalid_answer'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit: answers is not a JSON object - 400 invalid_body",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/public/collect/{{linkToken2}}/notes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "public",
+                "collect",
+                "{{linkToken2}}",
+                "notes"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "[\"name\"]",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code invalid_body', () => pm.expect(pm.response.json().error.code).to.eql('invalid_body'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit: answers is not JSON - 400 invalid_body",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/public/collect/{{linkToken2}}/notes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "public",
+                "collect",
+                "{{linkToken2}}",
+                "notes"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "name=A",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code invalid_body', () => pm.expect(pm.response.json().error.code).to.eql('invalid_body'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit: no answers part - 400 invalid_body",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/public/collect/{{linkToken2}}/notes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "public",
+                "collect",
+                "{{linkToken2}}",
+                "notes"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "photos",
+                  "type": "file",
+                  "src": "fixtures/media/photo-gps.jpg"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code invalid_body', () => pm.expect(pm.response.json().error.code).to.eql('invalid_body'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit: four photos - 400 too_many_photos",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/public/collect/{{linkToken2}}/notes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "public",
+                "collect",
+                "{{linkToken2}}",
+                "notes"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "{\"name\":\"Minh\",\"message\":\"hi\"}",
+                  "type": "text"
+                },
+                {
+                  "key": "photos",
+                  "type": "file",
+                  "src": "fixtures/media/photo-gps.jpg"
+                },
+                {
+                  "key": "photos",
+                  "type": "file",
+                  "src": "fixtures/media/photo-gps.jpg"
+                },
+                {
+                  "key": "photos",
+                  "type": "file",
+                  "src": "fixtures/media/photo-gps.jpg"
+                },
+                {
+                  "key": "photos",
+                  "type": "file",
+                  "src": "fixtures/media/photo-gps.jpg"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code too_many_photos', () => pm.expect(pm.response.json().error.code).to.eql('too_many_photos'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit: an HTML page named .jpg - 415 unsupported_media_type",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/public/collect/{{linkToken2}}/notes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "public",
+                "collect",
+                "{{linkToken2}}",
+                "notes"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "{\"name\":\"Minh\",\"message\":\"hi\"}",
+                  "type": "text"
+                },
+                {
+                  "key": "photos",
+                  "type": "file",
+                  "src": "fixtures/media/renamed-page.jpg"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 415', () => pm.response.to.have.status(415));",
+                  "pm.test('error code unsupported_media_type', () => pm.expect(pm.response.json().error.code).to.eql('unsupported_media_type'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit: an empty file - 415 unsupported_media_type",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/public/collect/{{linkToken2}}/notes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "public",
+                "collect",
+                "{{linkToken2}}",
+                "notes"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "{\"name\":\"Minh\",\"message\":\"hi\"}",
+                  "type": "text"
+                },
+                {
+                  "key": "photos",
+                  "type": "file",
+                  "src": "fixtures/media/empty.jpg"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 415', () => pm.response.to.have.status(415));",
+                  "pm.test('error code unsupported_media_type', () => pm.expect(pm.response.json().error.code).to.eql('unsupported_media_type'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit: a GIF - 415 unsupported_media_type",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/public/collect/{{linkToken2}}/notes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "public",
+                "collect",
+                "{{linkToken2}}",
+                "notes"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "{\"name\":\"Minh\",\"message\":\"hi\"}",
+                  "type": "text"
+                },
+                {
+                  "key": "photos",
+                  "type": "file",
+                  "src": "fixtures/media/image.gif"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 415', () => pm.response.to.have.status(415));",
+                  "pm.test('error code unsupported_media_type', () => pm.expect(pm.response.json().error.code).to.eql('unsupported_media_type'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit: a decompression bomb PNG - 400 invalid_image",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/public/collect/{{linkToken2}}/notes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "public",
+                "collect",
+                "{{linkToken2}}",
+                "notes"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "{\"name\":\"Minh\",\"message\":\"hi\"}",
+                  "type": "text"
+                },
+                {
+                  "key": "photos",
+                  "type": "file",
+                  "src": "fixtures/media/bomb.png"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code invalid_image', () => pm.expect(pm.response.json().error.code).to.eql('invalid_image'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit: JSON instead of multipart - 415 unsupported_media_type",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/public/collect/{{linkToken2}}/notes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "public",
+                "collect",
+                "{{linkToken2}}",
+                "notes"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"answers\":{\"name\":\"A\",\"message\":\"m\"}}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 415', () => pm.response.to.have.status(415));",
+                  "pm.test('error code unsupported_media_type', () => pm.expect(pm.response.json().error.code).to.eql('unsupported_media_type'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit: a revoked link - 404 not_found",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/public/collect/{{linkToken}}/notes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "public",
+                "collect",
+                "{{linkToken}}",
+                "notes"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "{\"name\":\"Minh\",\"message\":\"hi\"}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('error code not_found', () => pm.expect(pm.response.json().error.code).to.eql('not_found'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit: an unknown token - 404 not_found",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/public/collect/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/notes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "public",
+                "collect",
+                "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+                "notes"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "{\"name\":\"Minh\",\"message\":\"hi\"}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('error code not_found', () => pm.expect(pm.response.json().error.code).to.eql('not_found'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit: a malformed token - 404 not_found",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/public/collect/short/notes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "public",
+                "collect",
+                "short",
+                "notes"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "{\"name\":\"Minh\",\"message\":\"hi\"}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('error code not_found', () => pm.expect(pm.response.json().error.code).to.eql('not_found'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit: an expired link - 410 collection_closed",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/public/collect/{{shortToken}}/notes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "public",
+                "collect",
+                "{{shortToken}}",
+                "notes"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "{\"name\":\"Minh\",\"message\":\"hi\"}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 410', () => pm.response.to.have.status(410));",
+                  "pm.test('error code collection_closed', () => pm.expect(pm.response.json().error.code).to.eql('collection_closed'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit: GET on the route - 405 method_not_allowed",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/public/collect/{{linkToken2}}/notes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "public",
+                "collect",
+                "{{linkToken2}}",
+                "notes"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 405', () => pm.response.to.have.status(405));",
+                  "pm.test('error code method_not_allowed', () => pm.expect(pm.response.json().error.code).to.eql('method_not_allowed'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "After the failures the list still counts two notes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/collections",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks",
+                "{{bookId}}",
+                "collections"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const c = pm.response.json().collections.find(x => x.id === pm.collectionVariables.get('collId2'));",
+                  "pm.test('still two notes', () => pm.expect(c.note_count).to.eql(2));"
                 ]
               }
             }

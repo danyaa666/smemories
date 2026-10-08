@@ -31,6 +31,7 @@ type Media struct {
 	Height      int
 	SHA256      string
 	CreatedAt   time.Time
+	RowID       int64 // internal id, set by insert; for rows that refer to the media (note photos)
 }
 
 // Store persists media rows. Every query is parameterised and scoped by the owner of the yearbook.
@@ -71,34 +72,48 @@ func checkQuota(ctx context.Context, q rowQuerier, ownerID, yearbookID uint64, a
 
 // insert stores the row after re-checking the quotas under a lock on the user row, so parallel
 // uploads cannot all slip under a limit. It also locks the yearbook so it cannot vanish meanwhile.
-func (s *Store) insert(ctx context.Context, ownerID, yearbookID uint64, m Media) error {
+func (s *Store) insert(ctx context.Context, ownerID, yearbookID uint64, kind string, m Media) (Media, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		return err
+		return Media{}, err
 	}
 	defer func() { _ = tx.Rollback() }()
 	var locked uint64
 	if err := tx.QueryRowContext(ctx, `SELECT id FROM users WHERE id = ? FOR UPDATE`, ownerID).Scan(&locked); err != nil {
-		return err
+		return Media{}, err
 	}
 	err = tx.QueryRowContext(ctx, `SELECT id FROM yearbooks WHERE id = ? AND owner_id = ? FOR SHARE`, yearbookID, ownerID).Scan(&locked)
 	if errors.Is(err, sql.ErrNoRows) {
-		return ErrNotFound
+		return Media{}, ErrNotFound
 	}
 	if err != nil {
-		return err
+		return Media{}, err
 	}
 	if err := checkQuota(ctx, tx, ownerID, yearbookID, m.Bytes); err != nil {
-		return err
+		return Media{}, err
 	}
-	_, err = tx.ExecContext(ctx,
+	res, err := tx.ExecContext(ctx,
 		`INSERT INTO media (public_id, yearbook_id, uploader_kind, object_key, thumb_key, content_type, bytes, width, height, sha256, created_at)
-		 VALUES (?,?,'owner',?,?,?,?,?,?,?,?)`,
-		m.ID, yearbookID, m.ObjectKey, m.ThumbKey, m.ContentType, m.Bytes, m.Width, m.Height, m.SHA256, m.CreatedAt)
+		 VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+		m.ID, yearbookID, kind, m.ObjectKey, m.ThumbKey, m.ContentType, m.Bytes, m.Width, m.Height, m.SHA256, m.CreatedAt)
 	if err != nil {
-		return err
+		return Media{}, err
 	}
-	return tx.Commit()
+	id, err := res.LastInsertId()
+	if err != nil {
+		return Media{}, err
+	}
+	m.RowID = id
+	return m, tx.Commit()
+}
+
+// yearbookByRow returns the owner and the public id of a yearbook given its internal id.
+func (s *Store) yearbookByRow(ctx context.Context, id uint64) (ownerID uint64, publicID string, err error) {
+	err = s.db.QueryRowContext(ctx, `SELECT owner_id, public_id FROM yearbooks WHERE id = ?`, id).Scan(&ownerID, &publicID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, "", ErrNotFound
+	}
+	return ownerID, publicID, err
 }
 
 // owned returns the media with that public id if its yearbook belongs to the user.

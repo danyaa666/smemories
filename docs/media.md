@@ -21,6 +21,10 @@ and a progressive JPEG counts five times that, because the Go decoder keeps 4 by
 whose SOF cannot be read counts as progressive 4:4:4. Largest accepted: 4096 x 4096 16-bit PNG, 5000 x 5000 8-bit PNG or WebP,
 10000 x 5000 baseline 4:2:0 JPEG, 6000 x 7456 baseline 4:4:4 JPEG, about 18 MP progressive 4:2:0 JPEG.
 
+Photos sent through a collection link (`media.Service.UploadContributor`, T-034) use the same processing slots and limits. A submission with
+photos holds its raw bytes (at most 3 x `SMEM_MEDIA_MAX_BYTES`) in memory until each photo is processed, one at a time; at most 2 x the slot
+count of such submissions are in flight (`503 busy`), and a photo that finds no free processing slot for 5 seconds also answers `503 busy`.
+
 ## What was wrong, and the fix
 
 `golang.org/x/image/draw` allocates a `float64` scratch buffer of (destination width x SOURCE height x 4) in one scaling call: 480 MB for a

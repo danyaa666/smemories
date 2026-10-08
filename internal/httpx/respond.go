@@ -5,6 +5,7 @@ package httpx
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 )
 
 // WriteJSON writes v as JSON with the given status. It marshals first so a
@@ -18,4 +19,18 @@ func WriteJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
 	_, _ = w.Write(append(b, '\n'))
+}
+
+// ExtendDeadlines moves the connection's read and write deadlines of this request out, for routes whose
+// bodies are slow to arrive (phone uploads) while the global timeouts stay short. A server or writer that
+// does not support it keeps the global deadlines.
+func ExtendDeadlines(w http.ResponseWriter, read, write time.Duration) {
+	rc := http.NewResponseController(w)
+	now := time.Now()
+	if read > 0 {
+		_ = rc.SetReadDeadline(now.Add(read))
+	}
+	if write > 0 {
+		_ = rc.SetWriteDeadline(now.Add(write))
+	}
 }

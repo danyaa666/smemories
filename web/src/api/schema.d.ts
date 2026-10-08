@@ -397,7 +397,7 @@ export interface paths {
         };
         /**
          * List a yearbook's collection links
-         * @description Newest first, revoked ones included (`revoked_at` set). Never contains a token or a token hash. `note_count` counts notes in any status; it is 0 until notes can be submitted.
+         * @description Newest first, revoked ones included (`revoked_at` set). Never contains a token or a token hash. `note_count` counts the link's notes in any status.
          */
         get: operations["listCollections"];
         put?: never;
@@ -447,11 +447,36 @@ export interface paths {
         };
         /**
          * Look up a collection link (public)
-         * @description For the contributor form. No session is needed and none is read; no cookie is set and no CORS headers are sent. An unknown, malformed or revoked token all answer the same `404 not_found`. Once the deadline has passed the answer is `410 collection_closed`. Limited to 60 requests per client IP per 15 minutes (`429 rate_limited`, with `Retry-After`), valid or not. The token never appears in logs.
+         * @description For the contributor form. No session is needed and none is read; no cookie is set and no CORS headers are sent. An unknown, malformed or revoked token all answer the same `404 not_found`. Once the deadline has passed the answer is `410 collection_closed`. The answer also carries `fields`, the questions of the note form in order (`notefields.Info`), so the page can render the form. Only requests that miss (unknown, malformed or revoked token) count against the tight limit of 60 per client IP per 15 minutes, so a class behind one address can open the same link; all requests together are capped at 600 per client IP per 15 minutes (`429 rate_limited`, with `Retry-After`). The token never appears in logs.
          */
         get: operations["lookupCollection"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/collect/{token}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The link token */
+                token: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit a note through a collection link (public)
+         * @description A friend sends answers to the form fields (`fields` of the lookup) and up to three photos, without an account. The note is stored as `pending` for the owner to moderate; nothing about it is returned except its id. No session is read, no cookie is set, no CORS headers are sent, and neither the client IP nor the user agent is stored. The link is checked before the body is read (`404 not_found` for an unknown, malformed or revoked token, `410 collection_closed` after the deadline). Parts may come in any order; unknown parts are ignored.
+         *     Answers are validated against the set of fields in force at submission time (text rules of `docs/note-fields.md`: NFC, trimmed, control and format characters rejected except ZWJ and variation selectors, limits in characters). Each photo goes through the same pipeline as owner uploads (content sniffing, decode limits, metadata stripped, display and thumbnail versions); a rejected photo rejects the whole submission and nothing is stored. Photos are processed one at a time; when no processing slot frees up within a few seconds the answer is `503 busy` with `Retry-After`.
+         *     Limits: request body 32 MiB, each photo `SMEM_MEDIA_MAX_BYTES` (default 10 MiB), `answers` 16 KiB, 300 notes per link in any status, the yearbook's photo quota. Submissions that passed text validation are counted per client IP (100 per hour, 300 per day) and per link (60 per hour): `429 rate_limited` with `Retry-After`. A non-empty `website` field is a honeypot: the answer is a normal `201` and nothing is stored.
+         */
+        post: operations["submitNote"];
         delete?: never;
         options?: never;
         head?: never;
@@ -618,6 +643,32 @@ export interface components {
             deadline_at: string | null;
             /** @constant */
             open: true;
+            /** @description The questions of the note form, in order. */
+            fields: components["schemas"]["NoteField"][];
+        };
+        NoteField: {
+            /** @example name */
+            id: string;
+            /**
+             * @description A short text is a single line.
+             * @enum {string}
+             */
+            kind: "short_text" | "long_text";
+            label: components["schemas"]["LocalizedText"];
+            hint: components["schemas"]["LocalizedText"];
+            required: boolean;
+            /** @description In characters */
+            max_length: number;
+        };
+        LocalizedText: {
+            en: string;
+            vi: string;
+        };
+        NoteCreated: {
+            note: {
+                /** @description Note ULID. */
+                id: string;
+            };
         };
         /** @description Shared error envelope. `code` is a stable snake_case contract (clients localise it); `message` is English text meant for logs. */
         Error: {
@@ -639,6 +690,13 @@ export interface components {
                  * @example quota_exceeded
                  * @example storage_error
                  * @example invalid_media
+                 * @example missing_answer
+                 * @example invalid_answer
+                 * @example too_many_photos
+                 * @example collection_full
+                 * @example collection_closed
+                 * @example verification_failed
+                 * @example busy
                  */
                 code: string;
                 message: string;
@@ -722,7 +780,7 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
-        /** @description All password-hashing slots stayed taken for 2 seconds (`busy`); retry shortly. */
+        /** @description All password-hashing or image-processing slots stayed taken for a few seconds (`busy`); retry shortly. */
         Busy: {
             headers: {
                 "Retry-After"?: number;
@@ -1402,7 +1460,7 @@ export interface operations {
                     "application/json": components["schemas"]["MediaEnvelope"];
                 };
             };
-            /** @description `invalid_image` (corrupt, over 12000 px on a side or over 50 megapixels) or `invalid_body` (not multipart or no `file` part). */
+            /** @description `invalid_image` (corrupt, over 12000 px on a side, over 50 megapixels for JPEG or 25 megapixels for PNG and WebP, or an estimated decoded size over 128 MiB) or `invalid_body` (not multipart or no `file` part). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1683,6 +1741,110 @@ export interface operations {
                 };
             };
             429: components["responses"]["RateLimited"];
+        };
+    };
+    submitNote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The link token */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * @description A JSON object `{"<field id>":"<text>"}` of at most 16 KiB. Keys must be fields of the form; required fields must be present and not blank.
+                     * @example {"name":"Linh","message":"Nhớ các bạn nhiều 🎓"}
+                     */
+                    answers: string;
+                    /** @description Up to three JPEG, PNG or WebP images (the content decides, not the name or Content-Type). */
+                    photos?: string[];
+                    /** @description Honeypot. Leave empty. */
+                    website?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Stored as pending. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoteCreated"];
+                };
+            };
+            /** @description `unknown_field`, `missing_answer` or `invalid_answer` (the message names the field id, never the value), `invalid_body` (not multipart, no `answers` part, `answers` over 16 KiB or not a JSON object of strings), `too_many_photos`, or `invalid_image` (corrupt, over 12000 px on a side, over 50 megapixels for JPEG or 25 megapixels for PNG and WebP, or an estimated decoded size over 128 MiB). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The abuse check refused the submission (`verification_failed`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            /** @description The link holds 300 notes (`collection_full`) or the yearbook's photo quota is reached (`quota_exceeded`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The deadline has passed (`collection_closed`). */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The request body is over 32 MiB or a photo is over the per-photo cap (`payload_too_large`). */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The request is not `multipart/form-data`, or a photo is not a JPEG, PNG or WebP image (`unsupported_media_type`). */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            429: components["responses"]["RateLimited"];
+            /** @description Unexpected failure (`internal_error`); nothing was kept. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            502: components["responses"]["StorageError"];
+            503: components["responses"]["Busy"];
         };
     };
 }

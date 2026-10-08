@@ -4,6 +4,7 @@ package notes
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"database/sql"
 	"encoding/json"
@@ -21,8 +22,18 @@ import (
 	"github.com/danyaa666/smemories/internal/db/dbtest"
 	"github.com/danyaa666/smemories/internal/httpx"
 	"github.com/danyaa666/smemories/internal/mailer"
+	"github.com/danyaa666/smemories/internal/media"
+	"github.com/danyaa666/smemories/internal/notefields"
+	"github.com/danyaa666/smemories/internal/storage/storagetest"
 	"github.com/danyaa666/smemories/internal/yearbook"
 )
+
+// What the lookup returns for the default form (the JSON shape itself is fixed by the notefields tests).
+var defaultFieldsJSON = func() string {
+	info, _ := notefields.Info(notefields.Default())
+	b, _ := json.Marshal(info)
+	return string(b)
+}()
 
 const (
 	origin = "http://localhost:5173"
@@ -33,6 +44,10 @@ type env struct {
 	t     *testing.T
 	db    *sql.DB
 	h     http.Handler
+	nh    *Handler
+	st    *flakyStore
+	svc   *media.Service
+	books []string // public ids, for object cleanup
 	logs  *bytes.Buffer
 	mu    sync.Mutex
 	clock time.Time
@@ -74,9 +89,16 @@ func newEnv(t *testing.T) *env {
 		t.Fatal(err)
 	}
 	ah := auth.NewHandler(svc, auth.HandlerConfig{AllowedOrigins: []string{origin}}, logger)
-	yh := yearbook.NewHandler(yearbook.NewStore(d), nil, ah.RequireUser, []string{origin}, logger, e.now)
-	nh := NewHandler(NewStore(d), ah.RequireUser, []string{origin}, ah.ClientIP, logger, e.now)
-	e.h = httpx.NewRouter(logger, ah.Routes, yh.Routes, nh.Routes)
+	e.st = &flakyStore{Storage: storagetest.New(t), keys: map[string]bool{}}
+	e.svc = media.NewService(media.NewStore(d), e.st, 2, nil)
+	yh := yearbook.NewHandler(yearbook.NewStore(d), e.svc, ah.RequireUser, []string{origin}, logger, e.now)
+	e.nh = NewHandler(NewStore(d), e.svc, 10<<20, ah.RequireUser, []string{origin}, ah.ClientIP, logger, e.now)
+	e.h = httpx.NewRouter(logger, ah.Routes, yh.Routes, e.nh.Routes)
+	t.Cleanup(func() { // objects of every book this test created
+		for _, id := range e.books {
+			_ = e.st.Storage.DeletePrefix(context.Background(), "yearbooks/"+id+"/")
+		}
+	})
 	return e
 }
 
@@ -155,8 +177,10 @@ func (r resp) json() map[string]any {
 
 func (e *env) book(u user, title string) string {
 	e.t.Helper()
-	return e.do(u, "POST", "/v1/yearbooks", fmt.Sprintf(`{"title":%q,"language":"en"}`, title)).status(201, "").
+	id := e.do(u, "POST", "/v1/yearbooks", fmt.Sprintf(`{"title":%q,"language":"en"}`, title)).status(201, "").
 		json()["yearbook"].(map[string]any)["id"].(string)
+	e.books = append(e.books, id)
+	return id
 }
 
 // newLink creates a link and returns its collection id and token.
@@ -402,7 +426,7 @@ func TestPublicLookup(t *testing.T) {
 	deadline := e.now().Add(time.Hour).Format(time.RFC3339)
 	_, token := e.newLink(alice, book, fmt.Sprintf(`{"deadline_at":%q}`, deadline))
 	rec := e.lookup(token).status(200, "")
-	want := fmt.Sprintf(`{"yearbook":{"title":"Class 12A"},"owner":{"display_name":"Đặng Thị Hồng"},"deadline_at":%q,"open":true}`, deadline)
+	want := fmt.Sprintf(`{"yearbook":{"title":"Class 12A"},"owner":{"display_name":"Đặng Thị Hồng"},"deadline_at":%q,"open":true,"fields":%s}`, deadline, defaultFieldsJSON)
 	if strings.TrimSpace(rec.Body.String()) != want {
 		t.Fatalf("body %s\nwant %s", rec.Body.String(), want)
 	}
@@ -453,26 +477,33 @@ func TestPublicLookup(t *testing.T) {
 	e.lookup(noDeadline).status(200, "")
 }
 
-// AC6: 60 lookups per client IP per 15 minutes, valid or not; the token never reaches the logs.
+// T-034 leader note: only misses count against the tight per-IP limit, so a class behind one address can open the link;
+// a high cap on all requests stays as a cost guard. The token never reaches the logs.
 func TestPublicRateLimitAndLogs(t *testing.T) {
 	e := newEnv(t)
 	alice := e.register("alice@example.com", "Alice", true)
 	book := e.book(alice, "Book")
 	id, token := e.newLink(alice, book, `{}`)
-	for i := range 60 {
-		tok := token
-		if i%2 == 1 {
-			tok = fmt.Sprintf("%032d", i)
-		}
-		e.lookup(tok)
+	for i := range 59 { // 59 misses and 500 hits from one IP: still fine
+		e.lookup(fmt.Sprintf("%032d", i)).status(404, "not_found")
 	}
+	for range 500 {
+		e.lookup(token).status(200, "")
+	}
+	e.lookup("x").status(404, "not_found") // the 60th miss
 	rec := e.lookup(token).status(429, "rate_limited")
 	if rec.Header().Get("Retry-After") == "" {
 		t.Fatal("no Retry-After")
 	}
 	e.advance(15*time.Minute + time.Second)
 	e.lookup(token).status(200, "")
-	// the owner endpoints are not limited by the public counter
+	// the cost guard: 600 requests of any kind per 15 minutes
+	for range 599 {
+		e.lookup(token)
+	}
+	e.lookup(token).status(429, "rate_limited")
+	e.advance(15*time.Minute + time.Second)
+	// the owner endpoints are not limited by the public counters
 	e.do(alice, "GET", "/v1/yearbooks/"+book+"/collections", "").status(200, "")
 	e.do(alice, "DELETE", "/v1/collections/"+id, "").status(204, "")
 

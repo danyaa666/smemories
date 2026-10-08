@@ -21,6 +21,13 @@ const (
 	uploadWindow     = 10 * time.Minute
 )
 
+// ErrBusy: every image-processing slot stayed taken for the whole wait (503 busy, retry shortly).
+var ErrBusy = errors.New("media: busy")
+
+// contributorSlotWait is how long a public submission waits for a processing slot before it gives up
+// instead of queueing without bound.
+const contributorSlotWait = 5 * time.Second
+
 // StorageError wraps a failure of the object store (502 storage_error).
 type StorageError struct{ Err error }
 
@@ -50,6 +57,9 @@ func NewService(store *Store, st storage.Storage, maxConcurrent int, now func() 
 		sem: make(chan struct{}, maxConcurrent), now: now}
 }
 
+// Slots is how many images can be processed at once.
+func (s *Service) Slots() int { return cap(s.sem) }
+
 func yearbookPrefix(yearbookID string) string { return "yearbooks/" + yearbookID + "/" }
 
 // Upload validates and stores one photo for a yearbook the user owns.
@@ -61,12 +71,37 @@ func (s *Service) Upload(ctx context.Context, ownerID uint64, yearbookID string,
 	if ok, retry := s.limiter.Take(fmt.Sprint(ownerID)); !ok {
 		return Media{}, RateLimitedError{retry}
 	}
+	return s.save(ctx, ownerID, yb, yearbookID, "owner", data, 0)
+}
+
+// UploadContributor stores a photo sent through a collection link (T-034) in the yearbook with internal
+// id yearbookRow. It counts toward the owner's quotas like any photo, takes a processing slot like
+// Upload but waits at most a few seconds for it (ErrBusy), and has no per-user rate limit: the caller
+// limits the public endpoint. On success the caller owns the photo: call Discard if the submission fails later.
+func (s *Service) UploadContributor(ctx context.Context, yearbookRow uint64, data []byte) (Media, error) {
+	ownerID, publicID, err := s.store.yearbookByRow(ctx, yearbookRow)
+	if err != nil {
+		return Media{}, err
+	}
+	return s.save(ctx, ownerID, yearbookRow, publicID, "contributor", data, contributorSlotWait)
+}
+
+// save is the shared pipeline: quota pre-check, processing slot, process, put objects, insert the row.
+// slotWait 0 waits for a slot until ctx ends.
+func (s *Service) save(ctx context.Context, ownerID, yb uint64, yearbookID, kind string, data []byte, slotWait time.Duration) (Media, error) {
 	if err := checkQuota(ctx, s.store.db, ownerID, yb, 0); err != nil { // cheap early exit; insert re-checks under a lock
 		return Media{}, err
 	}
-
+	var timeout <-chan time.Time
+	if slotWait > 0 {
+		t := time.NewTimer(slotWait)
+		defer t.Stop()
+		timeout = t.C
+	}
 	select {
 	case s.sem <- struct{}{}:
+	case <-timeout:
+		return Media{}, ErrBusy
 	case <-ctx.Done():
 		return Media{}, ctx.Err()
 	}
@@ -88,11 +123,25 @@ func (s *Service) Upload(ctx context.Context, ownerID uint64, yearbookID string,
 		s.cleanup(m)
 		return Media{}, StorageError{err}
 	}
-	if err := s.store.insert(ctx, ownerID, yb, m); err != nil {
+	saved, err := s.store.insert(ctx, ownerID, yb, kind, m)
+	if err != nil {
 		s.cleanup(m) // never leave objects without a row
 		return Media{}, err
 	}
-	return m, nil
+	return saved, nil
+}
+
+// Discard removes photos (objects and rows) that were stored for a submission that then failed. It uses
+// its own context, so it also runs when the client has gone away.
+func (s *Service) Discard(ms ...Media) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	var errs []error
+	for _, m := range ms {
+		// The row goes even when the objects cannot be deleted: a leftover object is removed with the yearbook's prefix.
+		errs = append(errs, s.st.Delete(ctx, m.ObjectKey, m.ThumbKey), s.store.remove(ctx, m.ID))
+	}
+	return errors.Join(errs...)
 }
 
 // cleanup removes the objects of a failed upload; it must outlive a cancelled request.
