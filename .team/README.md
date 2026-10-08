@@ -11,17 +11,17 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 22 | T-013, T-014, T-016, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-039, T-040, T-041, T-042, T-044 |
-| TODO | 2 | T-034, T-045 |
-| READY_FOR_QA | 1 | T-038 |
-| QA_PASS | 2 | T-037, T-043 |
-| MERGED | 4 | T-015, T-033, T-035, T-036 |
+| TODO | 1 | T-034 |
+| READY_FOR_QA | 1 | T-045 |
+| QA_PASS | 1 | T-038 |
+| MERGED | 6 | T-015, T-033, T-035, T-036, T-037, T-043 |
 | DONE | 14 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-028, T-030 |
 
-**Awaiting your review (MERGED):** T-015 (Web: auth pages and session handling); T-033 (CI: do not cancel in-progress runs on develop and main); T-035 (T-010 follow-ups: template tests iterate templates.List()); T-036 (Bound the memory of image processing (caps, concurrency, memory limit))
+**Awaiting your review (MERGED):** T-015 (Web: auth pages and session handling); T-033 (CI: do not cancel in-progress runs on develop and main); T-035 (T-010 follow-ups: template tests iterate templates.List()); T-036 (Bound the memory of image processing (caps, concurrency, memory limit)); T-037 (US Letter page size, end to end); T-043 (Note field catalogue (internal/notefields): closed set of form fields with EN/VI labels and validation)
 
-**Open questions for you:** Q-012 (Vietnamese labels for the friends' note form (T-043): OK to merge?); Q-013 (Approve merge of T-037 (US Letter page size)?)
+**Open questions for you:** none
 
-_Board last written 2026-10-08 08:34Z_
+_Board last written 2026-10-08 08:44Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -226,20 +226,20 @@ QA passed and my review is clean (head 231955e, CI green); it already merges cle
 QA passed and my review is clean (head 74346f4, CI green). High risk because it changes the CI workflow, but the change is small: pushes to develop and main get one concurrency group per commit (never cancelled), pull requests keep cancelling superseded runs, and the integration job's mysql:8.4 image is pinned to its digest. Today 8 of the last 15 develop runs were cancelled, so merge commits are not getting full CI. One caveat: nobody could test a real double push; I will verify with the first pushes after merge. Command: cd /Users/unisoft/GolandProjects/awesomeProject1 && /Users/unisoft/.claude/plugins/cache/claude-agent-team/agent-team/0.3.0/bin/team approve T-033
 
 ### Q-012 — Vietnamese labels for the friends' note form (T-043): OK to merge?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-08 03:43Z
 - **Blocks:** T-043
 - **Recommendation:** Accept the table in PR #24, with one wording change: 'Chúng mình quen nhau thế nào' instead of 'Chúng ta quen nhau thế nào'
-- **Answer:** _(pending)_
+- **Answer:** _OK_
 
 The table of EN/VI labels and hints is in the description of https://github.com/danyaa666/smemories/pull/24 (9 fields). Please reply with 'OK' or the wording you want; labels are plain text in code, so they can be changed any time without touching stored notes (field ids never change). Merging T-043 unblocks the public notes submission (T-034).
 
 ### Q-013 — Approve merge of T-037 (US Letter page size)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-08 03:49Z
 - **Blocks:** T-037
 - **Recommendation:** approve
-- **Answer:** _(pending)_
+- **Answer:** _OK_
 
 QA passed and my review is clean (head 9546d3b, CI green, merges cleanly). High risk because it includes a database migration (0009): it adds Letter to the yearbook page_size enum; existing books are untouched, and rolling back turns Letter books into A5. Nothing in the web UI offers Letter yet (the yearbook form comes with T-016). Command: cd /Users/unisoft/GolandProjects/awesomeProject1 && /Users/unisoft/.claude/plugins/cache/claude-agent-team/agent-team/0.3.0/bin/team approve T-037
 
@@ -1316,7 +1316,7 @@ Evidence from the T-006/T-030 merges: the workflow's concurrency group has cance
 - **Branch:** —
 - **PR:** —
 - **Updated:** 2026-10-08 03:19Z by leader
-- **Comments-seen:** 0
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/02-public-note-submission.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1325,6 +1325,7 @@ Evidence from the T-006/T-030 merges: the workflow's concurrency group has cance
 Public endpoint where a friend with a collection link submits a note with text, emoji and up to three photos; stored as pending.
 
 #### Comments
+- 2026-10-08 08:44Z · leader · Leader: T-043 is merged (0032e6f), you are unblocked. First commit: change the Vietnamese label of field how_we_met from 'Chúng ta quen nhau thế nào' to 'Chúng mình quen nhau thế nào' in internal/notefields (owner-approved wording). Spec updated with the template-driven answers design; read it again.
 
 ### T-035 — T-010 follow-ups: template tests iterate templates.List()
 - **Status:** MERGED
@@ -1381,19 +1382,19 @@ Make the worst-case memory of the T-009 image pipeline a measured, enforced numb
 - 2026-10-08 03:21Z · leader · merged 7772eb7 (squash), QA_PASS on the same head c6d78ce, CI green. Review: the 480 MB scaler buffer is gone (banded resize, same picture), header-based caps by colour model and JPEG subsampling, concurrency default 2, SMEM_MEMORY_LIMIT_MIB validated (0 or 64..1048576), 4 worst-case uploads peak at about 925 MiB (was 3.2 GB). For owner to check: PNG/WebP over 25 MP, 16-bit PNG over 4096x4096 and large progressive JPEGs are now refused with 400 invalid_image; phone JPEGs up to 50 MP still pass. Follow-up: stale OpenAPI sentence (noted in T-034 spec).
 
 ### T-037 — US Letter page size, end to end
-- **Status:** QA_PASS
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
 - **Depends-on:** —
 - **Risk:** high
 - **Rework:** 0
-- **Owner-approved:** —
-- **Assignee:** leader
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-037-us-letter-page-size-end-to-end
 - **PR:** 27
-- **Updated:** 2026-10-08 03:48Z by qa
-- **Comments-seen:** 3
+- **Updated:** 2026-10-08 08:44Z by leader
+- **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E08-designer-templates/01-us-letter-page-size-end-to-end.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1414,9 +1415,11 @@ Add Letter (215.9 x 279.4 mm) as a third yearbook page size: migration, API, Ope
   Mechanical: go build, go vet (+integration tag), gofmt, golangci-lint 0 issues, go test -race ./... and go test -race -tags integration ./... all ok.
   Non-blocking observations: (a) reference 'letter' (lower case) yields a second misleading error 'different aspect ratio than the letter reference page' besides the correct 'invalid reference' one; (b) templates.Dims is an exported mutable map; (c) duplicate entries in page_sizes are accepted (pre-existing); (d) explicit reference empty string is accepted as the A5 default. RISK:HIGH: owner approves the merge.
 - 2026-10-08 03:49Z · leader · Leader review OK on head 9546d3b (QA_PASS on the same head, CI 4/4 green; the PR merges cleanly into develop after T-035). Migration 0009 is additive (enum value appended, metadata-only in MySQL) and its Down turns Letter books into A5 before restoring the enum; QA ran up, down, up on real data. Validation is a fixed list, the aspect-ratio rule (1% tolerance) keeps Letter apart from A5/A4, ForPageSize and the render guard stop a template from being used on a size it does not declare, MediaBox is 612x792 pt for Letter. Non-blocking, moved to the T-038 spec: exported mutable Dims map, double error for an invalid reference; Postman has no create-with-LETTER entry (patch is covered, create tested by hand). Awaiting owner approval.
+- 2026-10-08 08:43Z · human · owner approved merge
+- 2026-10-08 08:44Z · leader · merged 6044ea3 (squash), owner-approved ('OK' to Q-013), QA_PASS on head 9546d3b, CI green. Review: migration 0009 additive (Letter appended to the enum, Down turns Letter books into A5), aspect-ratio rule keeps Letter apart from A5/A4, ForPageSize and the render guard prevent a template on a size it does not declare, MediaBox 612x792 pt. For owner to check: nothing to run yet (no UI for Letter until T-016).
 
 ### T-038 — Template format v2: backgrounds, static text, rotation, ellipse, font families
-- **Status:** READY_FOR_QA
+- **Status:** QA_PASS
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
@@ -1424,11 +1427,11 @@ Add Letter (215.9 x 279.4 mm) as a third yearbook page size: migration, API, Ope
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** leader
 - **Branch:** task/t-038-template-format-v2-backgrounds-static-te
 - **PR:** 28
-- **Updated:** 2026-10-08 04:05Z by dev
-- **Comments-seen:** 0
+- **Updated:** 2026-10-08 08:42Z by qa
+- **Comments-seen:** 2
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E08-designer-templates/02-template-format-v2-backgrounds-static-text.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1438,6 +1441,16 @@ Extend the template JSON and renderer with page background images, localised sta
 
 #### Comments
 - 2026-10-08 04:05Z · dev · PR #28, stacked on T-037 (#27, merged into the branch; T-038 is commit 6e810cf). All AC + the two T-037 review notes (PageDims, single invalid-reference error). Test: go test -race ./internal/templates ./internal/pdf ./internal/pdf/fonts; budget: go test ./internal/pdf -run '^$' -bench LetterBook -benchtime 1x. Gaps: PNG backgrounds checked for placement/order only (JPEG byte-identical probe); 8 MiB total rule unreachable with 4 page kinds, unit-tested on the validator.
+- 2026-10-08 08:42Z · qa · PR #28 head 826da58 (dev 6e810cf + my test-only commit), CI green on that head (go, go-integration, security, web). Mechanical: make build, make lint, gofmt, go vet clean; go test -race ./... pass; templates/pdf/fonts/yearbook -race -count=2 pass (no flakes).
+  AC1 background: dev tables + my probes. Wrong ratio, <150/>400 DPI, over-size file (limit 1.5 MiB; my 1.8 MiB 400-DPI RGBA rejected, 1.4 MiB accepted), JPEG named .png accepted by content, '..', other template folder, sub folder, abs path, backslash, bad ext, two per page, in flow, with box/slot/rotate all rejected with template+page+file in the error. Draw order: pdftoppm of my render shows paper, then background, then shapes/text on top; pixel probes on PNG and JPEG backgrounds match asset (green/red/blue at probes, full page incl. corners).
+  AC2 static text: validator table (both langs, 500/501 chars, control chars, slot+text, neither, label, 3rd language) pass; render en and vi both correct (read back from PDF and rasterised), lang fr/empty falls back to en; very long text in 20x6 mm box gives one text_truncated without slot, no crash.
+  AC3 rotation: +/-45 accepted, 45.01/-46/90 rejected; box-outside-page rejected before rotation; rendered +45 is clockwise (visual), -45 counter-clockwise; q/Q balanced; clip rotates with image.
+  AC4 ellipse: circle and non-square accepted, radius rejected; rendered ellipse clip visible, rotated ellipse OK.
+  AC5 fonts: unknown family/role, font!=fonts.body, no body all rejected; display role renders Vietnamese (tone marks) and emoji; registry coverage test + Register panics on no-Vietnamese family (Emoji font) and bad TTF; display family only embedded when used.
+  AC6/AC7 classic.pdf and modern.pdf regenerated with -write-samples: shasum identical to origin/develop (byte-identical); docs/templates.md documents all fields, limits and examples; shared tests iterate List().
+  Budget: 24 pages, 30 photos, Letter, backgrounds: benchmark 14 ms, 52 MB peak heap, 7.3 MB PDF. My worst case, 4 distinct 3400x4400 (400 DPI) RGBA PNG backgrounds of 1.4-1.5 MiB each, same book: 0.72 s, 295-358 MB peak heap, 324 MB RSS: inside 60 s / 512 MB but the closest to the limit; RGB or JPEG backgrounds are far cheaper (docs already warn).
+  Added test: internal/pdf/background_formats_test.go (rgb, nrgba, gray, gray16, rgba64, palette PNG backgrounds validate and render).
+  Non-blocking: (1) an Adam7-interlaced PNG passes the validator (DecodeConfig only) but Render fails with 'interlacing not supported in PNG buffer'; build tests that render every template would catch a real asset, but rejecting interlace (IHDR byte 12 != 0) in templates/validate.go would honour 'bad asset fails the tests, not the request'. (2) Static text is not checked for glyph coverage at validation; a missing glyph only shows as a missing_glyph warning at render. (3) T-037 parts: no regression seen.
 
 ### T-039 — Design import tool (dev only): canvas page to template draft
 - **Status:** BACKLOG
@@ -1532,7 +1545,7 @@ Planning placeholder: after the owner reviews the pilots, split into one task pe
 #### Comments
 
 ### T-043 — Note field catalogue (internal/notefields): closed set of form fields with EN/VI labels and validation
-- **Status:** QA_PASS
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -1540,11 +1553,11 @@ Planning placeholder: after the owner reviews the pilots, split into one task pe
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** leader
+- **Assignee:** —
 - **Branch:** task/t-043-note-field-catalogue-internal-notefields
 - **PR:** https://github.com/danyaa666/smemories/pull/24
-- **Updated:** 2026-10-08 03:42Z by qa
-- **Comments-seen:** 3
+- **Updated:** 2026-10-08 08:44Z by leader
+- **Comments-seen:** 4
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/06-note-field-catalogue.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1556,6 +1569,7 @@ Closed catalogue of note form fields (name, relationship, message, how we met, .
 - 2026-10-08 03:24Z · dev · Catalogue, Validate, Info, Default, docs/note-fields.md; added textx.CleanMultiline (Clean unchanged). make lint build test green. Owner must review the VI label table in the PR description before merge. Test: go test -race ./internal/notefields ./internal/textx. Dup/unknown refs are errors.
 - 2026-10-08 03:42Z · qa · AC1 catalogue ids/kinds/limits: TestCatalogueGuard (dev) + my read of catalogue.go -> OK. AC2 EN/VI labels+hints present, NFC, PR table matches code; owner must still review VI table before merge (not mine to approve). AC3 Validate: my probes (internal/notefields/qa_probe_test.go, pushed, CI green on PR head): NFD Vie+U+0302+U+0323 -> composed NFC; limit and limit+1 counted in characters (60 'Đ' ok, 61 rejected; 500/501 wish); CRLF -> LF counts as 1 char; rejected in name and message and at edges: U+202A-202E, U+2066-2069, LRM/RLM, ALM, ZWSP, ZWNJ, WJ, BOM, soft hyphen, U+180E, invisible times, tag char U+E0041, U+0085/2028/2029 inside, DEL, ESC, NUL, invalid UTF-8 (\xff, overlong, surrogate, truncated); accepted unchanged: ZWJ emoji and family emoji, skin tone, VS15/VS16, NBSP inside, Thai combining; whitespace-only (space, \n, NBSP, U+3000, CRLF mix) -> missing_answer for required, dropped for optional; short-text inner \n/\r\n -> invalid_answer; 10 MB ASCII in name/message/wish, 10 MB NFD and 10 MB NUL -> invalid_answer, all five in well under 1 s (byte guard before NFC); unknown answer ids reported in sorted order before missing; input map not mutated; Default()/Info() results do not alias the catalogue; Info(nil) is non-nil. Duplicate refs and unknown/empty/wrong-case ref ids -> error (unknown ids are FieldError unknown_field, errors.Is ErrUnknownField). AC4 Default() test + mine. AC5 Info JSON fixed by TestInfoJSON. AC6 guard tests present. AC7 docs/note-fields.md read: fields + add-a-field rule, matches catalogue. Commands: go test -race -count=3 ./internal/notefields ./internal/textx; go vet; gofmt -l (clean); golangci-lint run on both pkgs (0 issues); go test -race ./... all ok; gh pr checks 24 all pass. Non-blocking observations: (a) spec-mandated byte guard 4*limit before NFC rejects extreme decomposed text (60 x e+U+0302+U+0323 = 300 bytes > 240) even though it is 60 chars after NFC; 48 of them pass; documented in the PR. (b) duplicate-ref error is a plain error, not *FieldError, so errors.As callers (T-034/T-044) must treat any non-FieldError as a template bug. (c) a trailing newline in a short-text value is trimmed, not rejected (OK per trimming rule). (d) a literal U+FFFD in text is rejected (same rule as invalid UTF-8) and tag characters (subdivision-flag emoji) are rejected as Cf per spec.
 - 2026-10-08 03:43Z · leader · Leader review OK on head 9b9b08a (QA_PASS; the head includes QA's probe test commit; CI 4/4 green). Pure package with no input surface of its own: the catalogue ids are fixed by a guard test, Validate resolves refs first (unknown or duplicate ref = template bug), rejects unknown answer ids before anything else, applies textx (NFC, no control or format characters except ZWJ and variation selectors; long text allows only \n), and bounds work with a 4-bytes-per-character pre-check. Non-blocking: the byte pre-check rejects extreme all-decomposed text (more than 4 bytes per character), normal Vietnamese in NFD is far below it; a duplicate ref returns a plain error rather than a FieldError (intended). Waiting only for the owner's review of the Vietnamese label table (AC2), then I merge.
+- 2026-10-08 08:44Z · leader · merged 0032e6f (squash), owner OK on the Vietnamese labels (Q-012), QA_PASS on head 9b9b08a, CI green. Review: closed catalogue with fixed ids, Validate rejects unknown ids first and bounds work by bytes, textx rules (NFC, no control or format chars except ZWJ and variation selectors). Owner said OK to my recommendation, which included one wording change: 'Chúng ta quen nhau thế nào' becomes 'Chúng mình quen nhau thế nào' (done in T-034, first commit). For owner to check: docs/note-fields.md.
 
 ### T-044 — Templates declare note fields (format v2.1): note_fields, note_field slot, NoteFields helper
 - **Status:** BACKLOG
@@ -1581,7 +1595,7 @@ A template lists which note fields its friend pages ask for and where each answe
 #### Comments
 
 ### T-045 — Register accepts a locale; verification email in the student's language
-- **Status:** TODO
+- **Status:** READY_FOR_QA
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -1590,10 +1604,10 @@ A template lists which note fields its friend pages ask for and where each answe
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-08 03:54Z by leader
-- **Comments-seen:** 1
+- **Branch:** task/t-045-register-accepts-a-locale-verification-e
+- **PR:** https://github.com/danyaa666/smemories/pull/29
+- **Updated:** 2026-10-08 08:42Z by dev
+- **Comments-seen:** 2
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/06-register-accepts-locale.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1603,6 +1617,7 @@ Let the register request carry the UI language so Vietnamese students get the ve
 
 #### Comments
 - 2026-10-08 03:54Z · leader · T-015 merged: ready.
+- 2026-10-08 08:42Z · dev · Register accepts optional locale en|vi (else 400 invalid_locale); stored + verification mail follows it; web form sends i18n language; openapi/schema/Postman updated (newman x2 green, step 1 now registers with vi). Tests: TestRegisterLocale (integration), auth.test.tsx. Integration tests need make up + migrate.
 
 <!-- tasks:end -->
 
