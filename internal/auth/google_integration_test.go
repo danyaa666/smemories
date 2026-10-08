@@ -467,7 +467,9 @@ func TestGoogleRateLimits(t *testing.T) {
 }
 
 // Two callbacks for the same new person at once: one account, no error.
-func TestGoogleConcurrentCallbacksCreateOneAccount(t *testing.T) {
+func TestGoogleConcurrentCallbacksCreateOneAccount(t *testing.T) { concurrentCreate(t) }
+
+func concurrentCreate(t *testing.T) {
 	e, p := newGoogleEnv(t, opts{})
 	const n = 6
 	flows := make([]*flow, n)
@@ -492,7 +494,9 @@ func TestGoogleConcurrentCallbacksCreateOneAccount(t *testing.T) {
 }
 
 // Same race when the local account exists unverified: it is cleaned once and linked once.
-func TestGoogleConcurrentCallbacksLinkOnce(t *testing.T) {
+func TestGoogleConcurrentCallbacksLinkOnce(t *testing.T) { concurrentLink(t) }
+
+func concurrentLink(t *testing.T) {
 	e, p := newGoogleEnv(t, opts{})
 	want(t, e.register("race@example.com", testPW, "Local"), 201, "")
 	const n = 4
@@ -516,6 +520,14 @@ func TestGoogleConcurrentCallbacksLinkOnce(t *testing.T) {
 		t.Errorf("%d users, %d identities, want 1 and 1", u, id)
 	}
 	want(t, e.login("race@example.com", testPW, ""), 401, "invalid_credentials")
+}
+
+// T-047: the two races above, 30 times each on a fresh database, must never fail (CI flake).
+// Run it with GOMAXPROCS=2 to match a small runner.
+func TestGoogleConcurrentCallbacksStress(t *testing.T) {
+	for i := range 30 {
+		t.Run(fmt.Sprint(i), func(t *testing.T) { concurrentCreate(t); concurrentLink(t) })
+	}
 }
 
 // Discovery trouble is a clean redirect, not a 500.
