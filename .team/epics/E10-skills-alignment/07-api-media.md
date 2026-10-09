@@ -11,7 +11,8 @@ Move the media endpoints to `/api/media/*`: multipart `create`, `get-list`, bina
 1. Routes: `POST /api/media/create` (multipart; fields `yearbook_id`, `file`), `GET /api/media/get-list?yearbook_id=&limit=&next_id=`, `GET /api/media/get-content?id=&variant=display|thumb|print` (default `display`), `POST /api/media/delete` (`id`). `/v1/...` media routes removed.
 2. `get-content` SHALL return the image bytes with the existing cache and security headers and **no envelope** on success; on failure it SHALL return the v2 error envelope with the right HTTP status (an `<img>` tag only needs the status).
 3. `create` SHALL keep the existing body cap, concurrency cap, timeout, decode limits and the multipart origin guard; the per-route timeout from T-063 (`WithTimeout`) replaces any hand-made deadline. A route timeout longer than the server's `WriteTimeout` (30 s, `httpx.NewServer`) is cut off by it: if the upload route needs longer, raise `WriteTimeout` per request with `http.NewResponseController(w).SetWriteDeadline` and `SetReadDeadline` inside the route wrapper (T-063 finding), and cover it with a test.
-4. List items carry `id`, `yearbook_id`, `content_type`, `bytes`, `width`, `height`, `created_at` (Unix ms), and the content URLs are built by the client from `id`; no storage keys in responses.
+4. `next_id` SHALL be an opaque, tamper-evident token that never shows an internal numeric id (absorbs T-055: use one shared cursor helper in `internal/httpx`, reused by every list endpoint in T-070; a tampered or foreign token is `ERROR_PARAM`).
+5. List items carry `id`, `yearbook_id`, `content_type`, `bytes`, `width`, `height`, `created_at` (Unix ms), and the content URLs are built by the client from `id`; no storage keys in responses.
 
 #### Acceptance criteria
 - [ ] AC1 — Contract lint passes for the four operations; multipart and binary responses documented (content types, `variant` enum values explained).

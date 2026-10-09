@@ -10,18 +10,19 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 34 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-044, T-050, T-055, T-056, T-058, T-059, T-060, T-061, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075 |
-| IN_PROGRESS | 1 | T-049 |
+| BACKLOG | 32 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-044, T-050, T-056, T-058, T-059, T-060, T-061, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-075 |
+| TODO | 1 | T-074 |
+| READY_FOR_QA | 1 | T-049 |
 | QA_PASS | 3 | T-052, T-053, T-057 |
 | MERGED | 3 | T-034, T-048, T-054 |
 | DONE | 28 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-035, T-036, T-037, T-038, T-043, T-045, T-046, T-047, T-051, T-062, T-063 |
-| CANCELLED | 6 | T-014, T-019, T-039, T-040, T-041, T-042 |
+| CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
 
 **Awaiting your review (MERGED):** T-034 ([E04] Public note submission (text and photos)); T-048 ([E02] Email one-time codes replace verification and reset links (API) with a dev-only fixed code); T-054 ([E05] Spike: HTML templates and browser print-to-PDF instead of server rendering)
 
 **Open questions for you:** Q-022 (Approve merge of T-052 (login sessions in Redis, drop sessions table)?); Q-023 (Approve merge of T-057 (print-size photos 1800 px + backfill)?); Q-024 (Approve merge of T-053 (rate limiters in Redis)?)
 
-_Board last written 2026-10-09 11:18Z_
+_Board last written 2026-10-09 13:15Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -1982,7 +1983,7 @@ CI on develop failed once on TestGoogleConcurrentCallbacksCreateOneAccount: goog
 - 2026-10-09 04:28Z · leader · merged bb6709a. Review: Lua check+attempt script, HMAC with 32-byte key, decoy for unknown emails, fail-closed on Redis down, dev fixed code 123123 guarded (env dev/test, refuses start otherwise, DEV-SHORTCUT(otp) tags registered); migration 0011 drops email_tokens. QA passed twice (second after the T-034 merge). For owner to check: .env.example SMEM_OTP_KEY, docs/auth-otp.md, docs/dev-shortcuts.md. Web code-entry screens are T-049; until then UI sign-up verification uses the removed link flow.
 
 ### T-049 — [E02] Web: code entry screens for email verification and password reset
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -1990,11 +1991,11 @@ CI on develop failed once on TestGoogleConcurrentCallbacksCreateOneAccount: goog
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-049-e02-web-code-entry-screens-for-email-ver
-- **PR:** —
-- **Updated:** 2026-10-09 11:15Z by dev
-- **Comments-seen:** 0
+- **PR:** https://github.com/danyaa666/smemories/pull/42
+- **Updated:** 2026-10-09 11:22Z by dev
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/09-web-email-code-screens.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2003,6 +2004,7 @@ CI on develop failed once on TestGoogleConcurrentCallbacksCreateOneAccount: goog
 Code input screens (paste, auto-submit, resend cooldown) replacing the link pages of T-015.
 
 #### Comments
+- 2026-10-09 11:22Z · dev · Code screens for verify/forgot/reset done (EN+VI), token-in-URL code removed, T-052 503 string added. Test: cd web && npm test (128 pass), lint, typecheck, i18n, build green. Real API (dev code, isolated stack) checked with a curl replay of the same requests, not in a browser; QA please check the 375px VI layout and a screen-reader pass in a browser.
 
 ### T-050 — [E06] Remove dev-only shortcuts before production (delete the fixed OTP) and add a pipeline check
 - **Status:** BACKLOG
@@ -2168,7 +2170,7 @@ Redis sliding-window limiter with Take and Refund replacing the in-memory one ev
 - **Branch:** task/t-054-spike-html-templates-and-browser-print-t
 - **PR:** https://github.com/danyaa666/smemories/pull/35
 - **Updated:** 2026-10-09 11:18Z by leader
-- **Comments-seen:** 4
+- **Comments-seen:** 6
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/06-spike-browser-print-to-pdf.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2193,7 +2195,7 @@ Prototype two designs as HTML/CSS pages printed through the browser (Save as PDF
 - 2026-10-09 11:18Z · leader · merged 85733f9 (squash, so the 11 MB of PDFs stay out of history). Review: ADR 0003 Accepted, evidence trimmed to 332 KB, PDFs gitignored, prototype only in the dev server (not in dist). For owner to check: docs/spikes/print/OWNER-TESTS.md, the phone/Safari tests are yours (D-24).
 
 ### T-055 — [E03] Opaque list cursors: do not expose internal ids
-- **Status:** BACKLOG
+- **Status:** CANCELLED
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2204,8 +2206,8 @@ Prototype two designs as HTML/CSS pages printed through the browser (Save as PDF
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-09 13:15Z by leader
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E03-yearbooks/06-opaque-list-cursors.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2214,6 +2216,7 @@ Prototype two designs as HTML/CSS pages printed through the browser (Save as PDF
 Replace the numeric-id paging cursor with a signed opaque cursor and a shared helper (L-05).
 
 #### Comments
+- 2026-10-09 13:15Z · leader · Absorbed by E10: T-069 (media API v2) and T-070 (yearbook API v2) return an opaque next_id from one shared helper; doing it twice on /v1 would be thrown away.
 
 ### T-056 — [E05] Book data endpoint for rendering (owner-only, approved notes)
 - **Status:** BACKLOG
@@ -2675,7 +2678,7 @@ Adds request and pool metrics as be-golang requires; waits for Q-018 (library ch
 #### Comments
 
 ### T-074 — [E04] Sweep orphaned upload spool files at start-up
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2686,7 +2689,7 @@ Adds request and pool metrics as be-golang requires; waits for Q-018 (library ch
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-09 03:43Z by leader
+- **Updated:** 2026-10-09 13:15Z by leader
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/07-sweep-orphaned-upload-spool-files.md`
