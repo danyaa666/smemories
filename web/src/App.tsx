@@ -43,8 +43,8 @@ export function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/verify-email" element={<VerifyEmail />} />
           <Route element={<RequireAuth />}>
+            <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/account" element={<Account />} />
             <Route path="/yearbooks" element={<Yearbooks />} />
             <Route path="/yearbooks/new" element={<YearbookNew />} />
