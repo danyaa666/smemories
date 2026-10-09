@@ -10,18 +10,19 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 34 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-044, T-049, T-050, T-055, T-056, T-058, T-059, T-060, T-061, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074 |
-| TODO | 2 | T-053, T-054 |
-| IN_QA | 2 | T-052, T-057 |
+| BACKLOG | 35 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-044, T-049, T-050, T-055, T-056, T-058, T-059, T-060, T-061, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075 |
+| TODO | 1 | T-054 |
+| READY_FOR_QA | 1 | T-053 |
+| QA_PASS | 2 | T-052, T-057 |
 | MERGED | 2 | T-034, T-048 |
 | DONE | 28 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-035, T-036, T-037, T-038, T-043, T-045, T-046, T-047, T-051, T-062, T-063 |
 | CANCELLED | 6 | T-014, T-019, T-039, T-040, T-041, T-042 |
 
 **Awaiting your review (MERGED):** T-034 ([E04] Public note submission (text and photos)); T-048 ([E02] Email one-time codes replace verification and reset links (API) with a dev-only fixed code)
 
-**Open questions for you:** none
+**Open questions for you:** Q-022 (Approve merge of T-052 (login sessions in Redis, drop sessions table)?); Q-023 (Approve merge of T-057 (print-size photos 1800 px + backfill)?)
 
-_Board last written 2026-10-09 09:52Z_
+_Board last written 2026-10-09 10:44Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -317,6 +318,24 @@ Third QA round passed with no findings. This is the first public, unauthenticate
 - **Answer:** _(pending)_
 
 QA passed first time. Verification and reset links are replaced by 6-digit codes kept as HMACs in Redis (30/15 min, 5 attempts, one Lua script). The dev-only fixed code 123123 is accepted only when SMEM_ENV is dev/test and SMEM_DEV_FIXED_OTP is set; the API refuses to start otherwise; every line is tagged DEV-SHORTCUT(otp) and listed in docs/dev-shortcuts.md; T-050 removes it before go-live. Migration 0011 drops the email_tokens table. Known limit (task T-031): a third party can lock a victim's reset code with 5 wrong guesses. The web screens still use the old links until T-049, so signup verification in the UI is broken until that lands (merge T-049 soon after). Merge order: T-034 first, then this one after a rebase. To approve: team approve T-048.
+
+### Q-022 — Approve merge of T-052 (login sessions in Redis, drop sessions table)?
+- **Status:** OPEN
+- **Asked:** 2026-10-09 10:44Z
+- **Blocks:** T-052
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+QA passed twice. Sessions live in Redis only (key = SHA-256 of the cookie value, sliding 30 days, per-user index, atomic delete-all for password reset and the Google pre-hijack defence). Redis down = 503 and no one is anonymous or fake-signed-in. Migration 0012 drops the sessions table (existing logins end; nothing is in production). Includes the T-051 clean-ups. Known gaps (specs T-031/T-049): no per-user session cap, no web text yet for the 503 code. To approve: team approve T-052.
+
+### Q-023 — Approve merge of T-057 (print-size photos 1800 px + backfill)?
+- **Status:** OPEN
+- **Asked:** 2026-10-09 10:44Z
+- **Blocks:** T-057
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+QA passed. Every new photo also gets a 1800 px print version (smaller PDFs/prints); ?size=print serves it with the same access rules; existing photos are filled by the new smemories-media-backfill command (idempotent, --dry-run); until then print falls back to display size. Migration 0013 adds a nullable column. Merges after T-052 (migration order). Follow-up T-075 hardens the backfill before production. To approve: team approve T-057.
 
 <!-- questions:end -->
 
@@ -2045,7 +2064,7 @@ Add a Redis-protocol service (Valkey 8) to the local stack and CI, the go-redis 
 - 2026-10-09 01:42Z · leader · accepted by owner (chat, 2026-10-09: 'team accept T-016, T-046, T-047, T-051')
 
 ### T-052 — [E02] Login sessions move to Redis (drop the sessions table)
-- **Status:** IN_QA
+- **Status:** QA_PASS
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2053,10 +2072,10 @@ Add a Redis-protocol service (Valkey 8) to the local stack and CI, the go-redis 
 - **Risk:** high
 - **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** leader
 - **Branch:** task/t-052-e02-login-sessions-move-to-redis-drop-th
 - **PR:** https://github.com/danyaa666/smemories/pull/39
-- **Updated:** 2026-10-09 09:52Z by qa
+- **Updated:** 2026-10-09 10:00Z by qa
 - **Comments-seen:** 6
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/10-sessions-in-redis.md`
@@ -2083,9 +2102,16 @@ Sessions with native expiry in Redis, per-user index for delete-all, fail-closed
 - 2026-10-09 04:29Z · leader · Leader review (content) OK at head fd64f74: sessions as sess:<sha256> hashes + usess:<uid> index, scripts atomic, fail-closed 503, reset/pre-hijack delete-all before the MySQL commit, migration 0012. Non-blocking items went into the T-031 spec (per-user session cap, logout with Redis down) and the T-049 spec (web strings). PR #39 is CONFLICTING after #38 merged: merge develop into the branch, keep T-052 only, re-run all tests, READY_FOR_QA (short regression). Then owner approval.
 - 2026-10-09 04:29Z · leader · T-048 (#38) is merged (develop bb6709a). Merge develop into the T-052 branch (the T-048 commits now appear as one squash commit; resolve conflicts keeping develop's T-048 files and your T-052 changes), re-run make lint build test test-integration, push, READY_FOR_QA. No other change requested.
 - 2026-10-09 04:31Z · dev · Merged origin/develop (bb6709a/2abb2f0) into the branch; T-048 files taken from develop (code tree identical to the old stacked T-048 head a40bfc5), T-052 commit fd64f74 unchanged, no .team diff vs develop. Re-ran make lint build test test-integration: all green. QA: short regression only (make up; make lint build test test-integration; sessions + auth newman).
+- 2026-10-09 10:00Z · qa · Regression pass at head 881c549 (CI green: go, go-integration, security, web).
+  MERGE CHECK: diff of branch vs 2abb2f0 (develop at the merge) = exactly the 25 files / +907 -115 of T-052 commit fd64f74; line-level +/- diff of fd64f74 vs (2abb2f0..HEAD) identical; no .team/ change. origin/develop has since moved to 4cb5405 (board sync only: .team/README.md, TASKS.md), no code drift. T-048 files = develop's.
+  MECHANICAL: make lint build test test-integration in the T-052 worktree: exit 0 (37 ok packages incl. auth 73 s, media, yearbook, db; no FAIL).
+  MIGRATIONS: scratch DB smem_test_qa052b: up -> 11 applied (0001..0012 minus 0003), 'down' x3 rolls back 0012 (sessions table back), 0011 (email_tokens back), 0010 (notes tables gone), up again -> all 11 applied, sessions/email_tokens gone, notes tables back.
+  NEWMAN (fresh API on :8091, scratch DB + Redis db 5, register limit raised): auth 74 req/174 assert, only the 20 Google-folder assertions fail (Google unconfigured, documented), identical on 2 runs; notes 72/137 0 fail x2 (after verifying accounts A and B, C stays unverified); yearbooks 92/189 0 fail x2; media 66/122 0 fail x2. Redis shows smem:dev:sess:<sha256> keys after the runs.
+  NON-BLOCKING: notes collection needs verify-newman-users equivalent for the scratch DB (the make target only touches the compose 'smemories' DB); no product issue. Earlier non-blocking items from the first QA pass stand (all tracked in T-031/T-049 specs).
+- 2026-10-09 10:44Z · leader · Leader review OK at head 881c549 (= QA head, CI green, diff = T-052 only, no .team changes). Sessions in Redis (sha256 keys, atomic scripts, fail-closed 503), migration 0012 drops sessions. Non-blocking items are in the T-031/T-049 specs. Awaiting owner approval; merge order #39 then #40.
 
 ### T-053 — [E02] Rate limiters move to Redis (shared limiter for all endpoints)
-- **Status:** TODO
+- **Status:** READY_FOR_QA
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2094,9 +2120,9 @@ Sessions with native expiry in Redis, per-user index for delete-all, fail-closed
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
+- **Branch:** task/t-053-e02-rate-limiters-move-to-redis-shared-l
+- **PR:** https://github.com/danyaa666/smemories/pull/41
+- **Updated:** 2026-10-09 10:05Z by dev
 - **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/11-rate-limiters-in-redis.md`
@@ -2107,6 +2133,8 @@ Redis sliding-window limiter with Take and Refund replacing the in-memory one ev
 
 #### Comments
 - 2026-10-09 01:31Z · leader · T-051 is merged: ready.
+- 2026-10-09 10:05Z · dev · PR #41. Redis sliding-window limiter (Lua, Redis TIME) replaces all 16 in-memory limiters; Factory Open/Closed policy (closed: login_pair, login_ip, verify_tries, reset_tries -> 503 limiter_unavailable). Test: make test-integration (internal/ratelimit/redis_integration_test.go, policy_test.go, internal/auth/limiters_integration_test.go), make reset-limits. Newman auth/yearbooks/media/notes run 2-3x with 0 failures. Gaps: expect small NewService merge conflict with T-052 (PR #39); web schema.d.ts regenerated for the new error code.
+- 2026-10-09 10:06Z · leader · Leader note for QA: dev did not run make web-lint / web tests (only schema.d.ts regenerated) - run the full make lint build test test-integration plus npm run check:api. Merge risk: auth.NewService, media.NewService and notes.NewHandler gained a limiters parameter, so it conflicts with T-052 (PR #39) in internal/auth/service.go; whichever merges second gets a develop merge. Probe especially: fail-closed list (login_pair, login_ip, verify_tries, reset_tries) vs fail-open (12 others) with Redis down, no email in keys, Retry-After accuracy, refund paths, limit values unchanged from the old in-memory ones.
 
 ### T-054 — [E05] Spike: HTML templates and browser print-to-PDF instead of server rendering
 - **Status:** TODO
@@ -2181,7 +2209,7 @@ One owner-only request returns the yearbook, profile and approved notes with ans
 #### Comments
 
 ### T-057 — [E05] Media print-size variant (1800 px) with backfill
-- **Status:** IN_QA
+- **Status:** QA_PASS
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -2189,10 +2217,10 @@ One owner-only request returns the yearbook, profile and approved notes with ans
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** leader
 - **Branch:** task/t-057-e05-media-print-size-variant-1800-px-wit
 - **PR:** https://github.com/danyaa666/smemories/pull/40
-- **Updated:** 2026-10-09 09:52Z by qa
+- **Updated:** 2026-10-09 10:44Z by qa
 - **Comments-seen:** 2
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/08-print-size-photo-variant.md`
@@ -2204,6 +2232,14 @@ Third stored size for printing: lighter PDFs and faster print (spike: 63 MB and 
 #### Comments
 - 2026-10-09 01:42Z · leader · Only depends on T-009 (merged): ready.
 - 2026-10-09 04:46Z · dev · PR #40. print object <id>-print.<ext> (1800 px, q85, PNG kept), media.print_key migration 0013 (T-052 owns 0012: merge #39 first), size=print endpoint (display fallback while print_key is NULL), delete/discard/yearbook purge cover it, cmd/smemories-media-backfill (--dry-run, --batch, idempotent). Test: make up; make lint build test test-integration; newman media (67 req 0 fail). Perf numbers in docs/media.md (peak 954->960 MiB, process 0.90->0.86 s). Gap: backfill uses config.Load (needs SMEM_REDIS_URL) until T-052 LoadMigrate lands; old object-count asserts in 3 tests updated.
+- 2026-10-09 10:44Z · qa · PR #40 head eeb4c51, CI green (go, go-integration, security, web). No product code or tests changed by QA.
+  MECHANICAL: make lint build test test-integration on the branch exit 0; media+notes integration -race -count=3 stable. SCRATCH MERGE (T-052 head 881c549 + eeb4c51): merges cleanly (no conflicts), make lint build test test-integration exit 0 (37 ok pkgs). Migrations on the merged chain: up -> 0012 then 0013 applied, 4x down -> back to 0009 (media.print_key gone, sessions/email_tokens back), up again OK. Branch alone: 0013 applies on top of 0011 (gap 0012 is fine for goose).
+  AC1 (live, real MinIO, API on branch alone and on merged stack): uploads of 4032x3024 JPEG, 3000x2000 alpha PNG, 2500x1500 WebP, 3000x3000 opaque PNG, 1200x800, 1800x1200, 1801x1200, 800x600 alpha PNG -> object <id>-print.<ext> next to display/thumb. size=print: 1800x1350 / 1800x1200 / 1800x1080 / 1800x1800 / 1800x1199; JPEG quantisation tables equal a reference q85 (display = q92); alpha PNG stays PNG RGBA with transparent pixels kept; photos <=1800 px keep their display bytes; no EXIF. Headers same as other sizes (Cache-Control private max-age 3600, nosniff, ETag <sha>-p, 304 on If-None-Match, Range 206). Auth identical for display/thumb/print: owner 200, other user 404, anon 401, unknown id 404; size=Print/PRINT/original/1800/print%20 -> 400 invalid_size. Contributor (public submit, 2 photos) -> media rows with print_key + objects; submit with good+corrupt photo -> 400, object count unchanged (compensation incl. print). DELETE photo removes print object (repeat DELETE 204); DELETE yearbook leaves 0 objects under yearbooks/<id>/. Print-write failure leaves no row/object (TestStorageFailureLeavesNoRow).
+  AC2 backfill (30 legacy-style photos: print_key NULL + print objects removed, one display corrupt, one display missing; JPEG, alpha PNG, WebP, small): --dry-run reports 30, writes nothing; --batch 4 run: created 28, failed 2 (media: invalid image / storage: object not found, logged by media id), exit 1; run 2: created 0, same 2 failed, S3 object listing identical (idempotent); fallback ?size=print serves display before backfill, 1800 px after; PNG stays PNG, photos <=1800 keep display bytes; SIGINT mid-run: 'backfill stopped: context canceled', exit 1, rows done = objects present, resume completes the rest; two backfills in parallel: created 138+120, skipped 120+138, no duplicates/failures; bad flags (--batch 0 / 10001) exit 2; S3 endpoint down: all fail, exit 1, nothing written; wrong secret: 403 per photo, no secret in output. TestBackfillPrint also runs it twice.
+  AC3: upload (12 x 12 MP JPEG, request time incl. curl) base 2abb2f0 vs branch: 0.726 vs 0.734 s median (+1%); GOMAXPROCS=1: 0.738 -> 0.902 s (+22%, under 25% but close); 49 MP JPEG + 25 MP PNG concurrent (T-036 worst case, 2 at a time, 3 rounds): peak RSS base 871/897 MiB-ish (871333888/896778240 B) vs branch 885014528/884637696 B; GOMAXPROCS=1 877/903 MB vs 909/963 MB (+3..6%). Within budget.
+  AC4: openapi + web/src/api/schema.d.ts (check:api in lint passes) + docs/media.md + Postman 6b (size=print, 0 fail) accurate. Existing tests changed only by object-count asserts (6->9, 4->6, 2->3, 6->9) and the printOnly flag of the flaky storage wrapper: judged OK, the counts rise by design (third object). Newman on branch alone: media 67/126 0 fail x2, notes 72/137, yearbooks 92/189 0 fail, auth only the 20 Google assertions, platform 1 known manual item; on merged stack media 67/126 x2, notes x2, yearbooks, auth same.
+  NON-BLOCKING: (1) backfill uses config.Load: needs SMEM_REDIS_URL (confirmed) and in prod also SMEM_ALLOWED_ORIGINS etc.; after T-052 merges switch it to config.LoadMigrate (exists on the merged tree; env -i with only DB+S3 vars still fails there) and fix docs/media.md ('same SMEM_* environment as the API'); T-022 must pass these to the backfill task. (2) With S3 unreachable the backfill walks every photo (about 2.5 s each, 3 SDK attempts): 10k photos = hours; consider stopping after N consecutive storage failures. (3) --dry-run counts photos whose display is corrupt/missing as 'would create' (it does not read objects). (4) Postman 6b uses a tiny photo, so it does not assert the 1800 px edge or the fallback (covered by Go tests/my live runs). (5) Alpha PNG print can be larger than its display (synthetic stripes: 1.3 MiB vs 577 KiB) because scaling destroys compressibility; real photos should shrink, check with a real transparent sample. (6) A DELETE racing the backfill leaves one orphan print object until the yearbook delete (documented in code). (7) Migration 0013 down drops the column but leaves print objects (cleaned with the yearbook prefix).
+- 2026-10-09 10:44Z · leader · Leader review OK at head eeb4c51 (= QA head, CI green, no .team changes). Print version (1800 px, q85, PNG stays PNG, reuses display bytes when small), ?size=print same authorisation as display/thumb, delete/purge remove it, idempotent backfill binary, migration 0013 (nullable column, Down drops it). Cost: +1% upload time, +22% single-core, memory flat. Follow-ups: T-075 (backfill hardening). Awaiting owner approval; merge after #39 (migration order 0012 then 0013).
 
 ### T-058 — [E05] Web: HTML book renderer core and print preview (browser print-to-PDF)
 - **Status:** BACKLOG
@@ -2628,6 +2664,29 @@ Adds request and pool metrics as be-golang requires; waits for Q-018 (library ch
 **Epic:** E04-friends-notes · **PRD:** `.team/epics/E04-friends-notes/PRD.md`
 
 T-034 QA finding: a shutdown or crash in the middle of an upload leaves a smem-upload-* spool file with a friend's private data; remove old ones at start-up.
+
+#### Comments
+
+### T-075 — [E05] Media backfill hardening
+- **Status:** BACKLOG
+- **Priority:** P3
+- **Type:** tech-debt
+- **Milestone:** M1
+- **Depends-on:** T-057
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-09 10:44Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/13-media-backfill-hardening.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E05-templates-export · **PRD:** `.team/epics/E05-templates-export/PRD.md`
+
+T-057 QA findings: backfill config loader, stop after consecutive storage failures, dry-run over-count, Postman print edge, delete race, alpha PNG size.
 
 #### Comments
 
