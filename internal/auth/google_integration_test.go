@@ -98,7 +98,7 @@ func (e *env) nothingCreated() {
 	if n := e.count(`SELECT COUNT(*) FROM users`); n != 0 {
 		e.t.Errorf("%d users created", n)
 	}
-	if n := e.count(`SELECT COUNT(*) FROM sessions`); n != 0 {
+	if n := e.sessionCount(); n != 0 {
 		e.t.Errorf("%d sessions created", n)
 	}
 	if n := e.count(`SELECT COUNT(*) FROM user_identities`); n != 0 {
@@ -279,7 +279,7 @@ func TestGoogleDefeatsPreHijacking(t *testing.T) {
 	if n := e.count(`SELECT COUNT(*) FROM users`); n != 1 {
 		t.Errorf("%d users, want 1", n)
 	}
-	if n := e.count(`SELECT COUNT(*) FROM sessions`); n != 1 {
+	if n := e.sessionCount(); n != 1 {
 		t.Errorf("%d sessions, want only the new one", n)
 	}
 }
@@ -382,7 +382,7 @@ func TestGoogleReplayIsRejected(t *testing.T) {
 	wantRedirect(t, f.callback(""), "/")
 	wantRedirect(t, f.callback(""), "/login?error=oidc_failed") // same cookie, state, code
 	wantRedirect(t, e.gCallback(url.Values{"code": {f.code}, "state": {f.state}}, "", "", ""), "/login?error=oidc_state")
-	if n := e.count(`SELECT COUNT(*) FROM sessions`); n != 1 {
+	if n := e.sessionCount(); n != 1 {
 		t.Errorf("%d sessions, want 1", n)
 	}
 }

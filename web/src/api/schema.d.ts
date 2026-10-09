@@ -701,6 +701,7 @@ export interface components {
                  * @example code_expired
                  * @example code_locked
                  * @example code_store_unavailable
+                 * @example session_store_unavailable
                  * @example limit_reached
                  * @example unknown_field
                  * @example unsupported_media_type
@@ -801,6 +802,36 @@ export interface components {
         };
         /** @description Redis, which holds the email codes, did not answer (`code_store_unavailable`); nothing was accepted, retry shortly. */
         CodeStoreUnavailable: {
+            headers: {
+                "Retry-After"?: number;
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description Redis, which holds the login sessions, did not answer (`session_store_unavailable`). Sessions have no copy elsewhere, so the request fails closed: the caller is not treated as anonymous and no session is created. Retry after `Retry-After`. */
+        SessionStoreUnavailable: {
+            headers: {
+                "Retry-After"?: number;
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description All password-hashing slots stayed taken (`busy`), or the session store is down (`session_store_unavailable`; for register no account is created); retry after `Retry-After`. */
+        BusyOrSessionStore: {
+            headers: {
+                "Retry-After"?: number;
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description Redis did not answer: `code_store_unavailable` (nothing was accepted) or `session_store_unavailable` (the session could not be read); retry shortly. */
+        CodeOrSessionStoreUnavailable: {
             headers: {
                 "Retry-After"?: number;
                 [name: string]: unknown;
@@ -969,7 +1000,7 @@ export interface operations {
             413: components["responses"]["PayloadTooLarge"];
             415: components["responses"]["UnsupportedMediaType"];
             429: components["responses"]["RateLimited"];
-            503: components["responses"]["Busy"];
+            503: components["responses"]["BusyOrSessionStore"];
         };
     };
     login: {
@@ -1025,7 +1056,7 @@ export interface operations {
             413: components["responses"]["PayloadTooLarge"];
             415: components["responses"]["UnsupportedMediaType"];
             429: components["responses"]["RateLimited"];
-            503: components["responses"]["Busy"];
+            503: components["responses"]["BusyOrSessionStore"];
         };
     };
     logout: {
@@ -1048,6 +1079,7 @@ export interface operations {
             };
             403: components["responses"]["CsrfOriginMismatch"];
             415: components["responses"]["UnsupportedMediaType"];
+            503: components["responses"]["SessionStoreUnavailable"];
         };
     };
     verifyEmail: {
@@ -1087,7 +1119,7 @@ export interface operations {
             413: components["responses"]["PayloadTooLarge"];
             415: components["responses"]["UnsupportedMediaType"];
             429: components["responses"]["RateLimited"];
-            503: components["responses"]["CodeStoreUnavailable"];
+            503: components["responses"]["CodeOrSessionStoreUnavailable"];
         };
     };
     resendVerificationEmail: {
@@ -1124,7 +1156,7 @@ export interface operations {
             403: components["responses"]["CsrfOriginMismatch"];
             415: components["responses"]["UnsupportedMediaType"];
             429: components["responses"]["RateLimited"];
-            503: components["responses"]["CodeStoreUnavailable"];
+            503: components["responses"]["CodeOrSessionStoreUnavailable"];
         };
     };
     forgotPassword: {
@@ -1205,7 +1237,7 @@ export interface operations {
             413: components["responses"]["PayloadTooLarge"];
             415: components["responses"]["UnsupportedMediaType"];
             429: components["responses"]["RateLimited"];
-            /** @description `busy` (all password-hashing slots stayed taken; the code is already used, ask for a new one) or `code_store_unavailable`. */
+            /** @description `busy` (all password-hashing slots stayed taken; the code is already used, ask for a new one), `code_store_unavailable` or `session_store_unavailable` (the sessions could not be deleted, so the password was not changed either). */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -1297,6 +1329,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            503: components["responses"]["SessionStoreUnavailable"];
         };
     };
     listYearbooks: {
@@ -1327,6 +1360,7 @@ export interface operations {
             };
             400: components["responses"]["YearbookInvalid"];
             401: components["responses"]["Unauthenticated"];
+            503: components["responses"]["SessionStoreUnavailable"];
         };
     };
     createYearbook: {
@@ -1365,6 +1399,7 @@ export interface operations {
             };
             413: components["responses"]["PayloadTooLarge"];
             415: components["responses"]["UnsupportedMediaType"];
+            503: components["responses"]["SessionStoreUnavailable"];
         };
     };
     getYearbook: {
@@ -1390,6 +1425,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             404: components["responses"]["YearbookNotFound"];
+            503: components["responses"]["SessionStoreUnavailable"];
         };
     };
     deleteYearbook: {
@@ -1415,6 +1451,7 @@ export interface operations {
             403: components["responses"]["CsrfOriginMismatch"];
             404: components["responses"]["YearbookNotFound"];
             502: components["responses"]["StorageError"];
+            503: components["responses"]["SessionStoreUnavailable"];
         };
     };
     updateYearbook: {
@@ -1448,6 +1485,7 @@ export interface operations {
             404: components["responses"]["YearbookNotFound"];
             413: components["responses"]["PayloadTooLarge"];
             415: components["responses"]["UnsupportedMediaType"];
+            503: components["responses"]["SessionStoreUnavailable"];
         };
     };
     replaceYearbookProfile: {
@@ -1481,6 +1519,7 @@ export interface operations {
             404: components["responses"]["YearbookNotFound"];
             413: components["responses"]["PayloadTooLarge"];
             415: components["responses"]["UnsupportedMediaType"];
+            503: components["responses"]["SessionStoreUnavailable"];
         };
     };
     listMedia: {
@@ -1525,6 +1564,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             404: components["responses"]["YearbookNotFound"];
+            503: components["responses"]["SessionStoreUnavailable"];
         };
     };
     uploadMedia: {
@@ -1596,7 +1636,7 @@ export interface operations {
             };
             429: components["responses"]["RateLimited"];
             502: components["responses"]["StorageError"];
-            /** @description Too many uploads in progress (`busy`); retry after the `Retry-After` seconds. */
+            /** @description Too many uploads in progress (`busy`) or the session store is down (`session_store_unavailable`); retry after the `Retry-After` seconds. */
             503: {
                 headers: {
                     "Retry-After"?: number;
@@ -1667,6 +1707,7 @@ export interface operations {
                 content?: never;
             };
             502: components["responses"]["StorageError"];
+            503: components["responses"]["SessionStoreUnavailable"];
         };
     };
     deleteMedia: {
@@ -1691,6 +1732,7 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["CsrfOriginMismatch"];
             502: components["responses"]["StorageError"];
+            503: components["responses"]["SessionStoreUnavailable"];
         };
     };
     listCollections: {
@@ -1718,6 +1760,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             404: components["responses"]["YearbookNotFound"];
+            503: components["responses"]["SessionStoreUnavailable"];
         };
     };
     createCollection: {
@@ -1778,6 +1821,7 @@ export interface operations {
             };
             413: components["responses"]["PayloadTooLarge"];
             415: components["responses"]["UnsupportedMediaType"];
+            503: components["responses"]["SessionStoreUnavailable"];
         };
     };
     revokeCollection: {
@@ -1802,6 +1846,7 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["CsrfOriginMismatch"];
             404: components["responses"]["NotFound"];
+            503: components["responses"]["SessionStoreUnavailable"];
         };
     };
     lookupCollection: {

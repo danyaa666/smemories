@@ -69,11 +69,12 @@ func (s *Service) ResetPassword(ctx context.Context, ip, email, code, password s
 	if err != nil {
 		return err
 	}
-	return s.store.resetPassword(ctx, u.InternalID, phc, now)
+	return s.store.resetPassword(ctx, u.InternalID, phc, now, s.sessions.DeleteAll)
 }
 
-// resetPassword stores the new hash and deletes every session of the user, atomically.
-func (s *Store) resetPassword(ctx context.Context, userID uint64, phc string, now time.Time) error {
+// resetPassword stores the new hash and deletes every session of the user. The sessions go before the
+// commit: if Redis fails the password is not changed either, and the sign-out can never be skipped.
+func (s *Store) resetPassword(ctx context.Context, userID uint64, phc string, now time.Time, dropSessions func(ctx context.Context, userID uint64) error) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -82,7 +83,7 @@ func (s *Store) resetPassword(ctx context.Context, userID uint64, phc string, no
 	if _, err := tx.ExecContext(ctx, `UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?`, phc, now, userID); err != nil {
 		return err
 	}
-	if _, err := tx.ExecContext(ctx, `DELETE FROM sessions WHERE user_id = ?`, userID); err != nil {
+	if err := dropSessions(ctx, userID); err != nil {
 		return err
 	}
 	return tx.Commit()

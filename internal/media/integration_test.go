@@ -138,11 +138,16 @@ func newEnv(t *testing.T) *env {
 	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
 	mail, _ := mailer.NewLog("test", io.Discard)
 	hasher := auth.NewHasher(auth.HashParams{MemoryKiB: 64, Time: 1, Parallelism: 1}, 4, auth.HashWait)
-	codes, err := auth.NewCodes(context.Background(), redistest.New(t), "test", []byte(strings.Repeat("k", auth.MinOTPKeyBytes)), "")
+	rc := redistest.New(t)
+	codes, err := auth.NewCodes(context.Background(), rc, "test", []byte(strings.Repeat("k", auth.MinOTPKeyBytes)), "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	as, err := auth.NewService(auth.NewStore(d), hasher, auth.Limits{RegisterPerHour: 1000, LoginFailsPerPair: 1000, LoginFailsPerIP: 1000},
+	sessions, err := auth.NewSessions(context.Background(), rc, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	as, err := auth.NewService(auth.NewStore(d), sessions, hasher, auth.Limits{RegisterPerHour: 1000, LoginFailsPerPair: 1000, LoginFailsPerIP: 1000},
 		auth.Mail{Mailer: mail, Logger: logger}, codes, nil)
 	if err != nil {
 		t.Fatal(err)

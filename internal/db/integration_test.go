@@ -226,3 +226,35 @@ func TestEmailTokensTableIsDroppedAndDownRecreatesIt(t *testing.T) {
 		t.Fatal("email_tokens exists after migrating up again")
 	}
 }
+
+// T-052: sessions live in Redis, so migration 0012 drops the sessions table; its Down recreates it empty.
+func TestSessionsTableIsDroppedAndDownRecreatesIt(t *testing.T) {
+	ctx := context.Background()
+	d := dbtest.New(t)
+	exists := func() bool {
+		t.Helper()
+		var n int
+		if err := d.QueryRowContext(ctx, `SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sessions'`).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		return n == 1
+	}
+	if exists() {
+		t.Fatal("sessions still exists after migrating up")
+	}
+	for i := 0; i < 20 && !exists(); i++ { // roll back (any later migrations first) until 0012 is undone
+		if err := db.MigrateDown(ctx, d); err != nil {
+			t.Fatalf("down: %v", err)
+		}
+	}
+	var n int
+	if err := d.QueryRowContext(ctx, `SELECT COUNT(*) FROM sessions`).Scan(&n); err != nil || n != 0 {
+		t.Fatalf("recreated table: %d rows, %v", n, err)
+	}
+	if err := db.MigrateUp(ctx, d); err != nil {
+		t.Fatalf("up: %v", err)
+	}
+	if exists() {
+		t.Fatal("sessions exists after migrating up again")
+	}
+}
