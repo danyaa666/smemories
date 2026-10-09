@@ -1,4 +1,4 @@
-// Runs the test matrix of spike T-054 on this machine and writes docs/spikes/print/results.json plus the PDFs that fit the 5 MB limit.
+// Runs the test matrix of spike T-054 on this machine and writes docs/spikes/print/results.json plus the PDFs that fit the 5 MB limit (the PDFs are git-ignored).
 //   cd tools/print-spike && npm install && npx playwright install chromium && node measure.mjs
 // Browsers other than Playwright's Chromium are used if installed: Chrome, Edge Dev, Edge Canary (Playwright channels) and Firefox
 // (FIREFOX=/path/to/firefox; a stock build, `npx @puppeteer/browsers install firefox@stable`). Safari, Android and iOS cannot be automated here.
