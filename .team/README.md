@@ -11,8 +11,8 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 34 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-044, T-049, T-050, T-055, T-056, T-058, T-059, T-060, T-061, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074 |
-| TODO | 3 | T-053, T-054, T-057 |
-| CHANGES_REQUESTED | 1 | T-052 |
+| TODO | 2 | T-053, T-054 |
+| IN_QA | 2 | T-052, T-057 |
 | MERGED | 2 | T-034, T-048 |
 | DONE | 28 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-035, T-036, T-037, T-038, T-043, T-045, T-046, T-047, T-051, T-062, T-063 |
 | CANCELLED | 6 | T-014, T-019, T-039, T-040, T-041, T-042 |
@@ -21,7 +21,7 @@
 
 **Open questions for you:** none
 
-_Board last written 2026-10-09 04:29Z_
+_Board last written 2026-10-09 09:52Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -1425,7 +1425,7 @@ Evidence from the T-006/T-030 merges: the workflow's concurrency group has cance
 - **Branch:** task/t-034-public-note-submission-text-and-photos
 - **PR:** 30
 - **Updated:** 2026-10-09 03:59Z by leader
-- **Comments-seen:** 7
+- **Comments-seen:** 12
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/02-public-note-submission.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1915,7 +1915,7 @@ CI on develop failed once on TestGoogleConcurrentCallbacksCreateOneAccount: goog
 - **Branch:** task/t-048-e02-email-one-time-codes-replace-verific
 - **PR:** https://github.com/danyaa666/smemories/pull/38
 - **Updated:** 2026-10-09 04:28Z by leader
-- **Comments-seen:** 0
+- **Comments-seen:** 9
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/08-email-otp-codes-replace-links-api.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2045,7 +2045,7 @@ Add a Redis-protocol service (Valkey 8) to the local stack and CI, the go-redis 
 - 2026-10-09 01:42Z · leader · accepted by owner (chat, 2026-10-09: 'team accept T-016, T-046, T-047, T-051')
 
 ### T-052 — [E02] Login sessions move to Redis (drop the sessions table)
-- **Status:** CHANGES_REQUESTED
+- **Status:** IN_QA
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2053,11 +2053,11 @@ Add a Redis-protocol service (Valkey 8) to the local stack and CI, the go-redis 
 - **Risk:** high
 - **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** qa
 - **Branch:** task/t-052-e02-login-sessions-move-to-redis-drop-th
 - **PR:** https://github.com/danyaa666/smemories/pull/39
-- **Updated:** 2026-10-09 04:29Z by leader
-- **Comments-seen:** 1
+- **Updated:** 2026-10-09 09:52Z by qa
+- **Comments-seen:** 6
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/10-sessions-in-redis.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2082,6 +2082,7 @@ Sessions with native expiry in Redis, per-user index for delete-all, fail-closed
   NON-BLOCKING: (a) createScript sweeps the user's whole index in Lua on every login: with 100000 sessions for one user one login blocked Redis 152 ms (1000 sessions: 24 ms total request). Successful logins are not rate limited, so an account owner could bloat his own index; consider a per-user cap (e.g. 50 sessions, drop oldest) later. (b) logout with Redis down answers 503 and does not clear the cookie (fail-closed by design; user can retry). (c) a Redis failure after the MySQL insert of register burns an auto-increment id (cosmetic); a MySQL commit failure after Sessions.Create would leave an orphan Redis session for a never-committed user id (Authenticate then answers 401, harmless). (d) no account-delete endpoint yet: the future one must call Sessions.DeleteAll (the old FK cascade is gone); orphans resolve to 401 meanwhile. (e) web has no text for session_store_unavailable yet (dev noted). (f) Postman has no request for the 503 (needs Redis stopped), covered by Go integration tests + my manual run. (g) prod smemories-migrate still needs SMEM_S3_BUCKET/ALLOWED_ORIGINS/PUBLIC_BASE_URL (pre-existing, not Redis): T-022 must pass them.
 - 2026-10-09 04:29Z · leader · Leader review (content) OK at head fd64f74: sessions as sess:<sha256> hashes + usess:<uid> index, scripts atomic, fail-closed 503, reset/pre-hijack delete-all before the MySQL commit, migration 0012. Non-blocking items went into the T-031 spec (per-user session cap, logout with Redis down) and the T-049 spec (web strings). PR #39 is CONFLICTING after #38 merged: merge develop into the branch, keep T-052 only, re-run all tests, READY_FOR_QA (short regression). Then owner approval.
 - 2026-10-09 04:29Z · leader · T-048 (#38) is merged (develop bb6709a). Merge develop into the T-052 branch (the T-048 commits now appear as one squash commit; resolve conflicts keeping develop's T-048 files and your T-052 changes), re-run make lint build test test-integration, push, READY_FOR_QA. No other change requested.
+- 2026-10-09 04:31Z · dev · Merged origin/develop (bb6709a/2abb2f0) into the branch; T-048 files taken from develop (code tree identical to the old stacked T-048 head a40bfc5), T-052 commit fd64f74 unchanged, no .team diff vs develop. Re-ran make lint build test test-integration: all green. QA: short regression only (make up; make lint build test test-integration; sessions + auth newman).
 
 ### T-053 — [E02] Rate limiters move to Redis (shared limiter for all endpoints)
 - **Status:** TODO
@@ -2180,7 +2181,7 @@ One owner-only request returns the yearbook, profile and approved notes with ans
 #### Comments
 
 ### T-057 — [E05] Media print-size variant (1800 px) with backfill
-- **Status:** TODO
+- **Status:** IN_QA
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -2188,11 +2189,11 @@ One owner-only request returns the yearbook, profile and approved notes with ans
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
-- **Comments-seen:** 1
+- **Assignee:** qa
+- **Branch:** task/t-057-e05-media-print-size-variant-1800-px-wit
+- **PR:** https://github.com/danyaa666/smemories/pull/40
+- **Updated:** 2026-10-09 09:52Z by qa
+- **Comments-seen:** 2
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/08-print-size-photo-variant.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2202,6 +2203,7 @@ Third stored size for printing: lighter PDFs and faster print (spike: 63 MB and 
 
 #### Comments
 - 2026-10-09 01:42Z · leader · Only depends on T-009 (merged): ready.
+- 2026-10-09 04:46Z · dev · PR #40. print object <id>-print.<ext> (1800 px, q85, PNG kept), media.print_key migration 0013 (T-052 owns 0012: merge #39 first), size=print endpoint (display fallback while print_key is NULL), delete/discard/yearbook purge cover it, cmd/smemories-media-backfill (--dry-run, --batch, idempotent). Test: make up; make lint build test test-integration; newman media (67 req 0 fail). Perf numbers in docs/media.md (peak 954->960 MiB, process 0.90->0.86 s). Gap: backfill uses config.Load (needs SMEM_REDIS_URL) until T-052 LoadMigrate lands; old object-count asserts in 3 tests updated.
 
 ### T-058 — [E05] Web: HTML book renderer core and print preview (browser print-to-PDF)
 - **Status:** BACKLOG
