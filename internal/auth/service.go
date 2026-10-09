@@ -24,6 +24,12 @@ const (
 
 	loginWindow    = 15 * time.Minute
 	registerWindow = time.Hour
+
+	resendPerHour      = 3  // per user
+	verifyTriesPerHour = 20 // per user
+	forgotPerIPHour    = 5
+	forgotPerEmailHour = 3
+	resetTriesPerHour  = 20 // per IP
 )
 
 var (
@@ -67,14 +73,17 @@ type Service struct {
 
 	mail        Mail
 	bg          sync.WaitGroup // emails being sent in the background
+	codes       *Codes
 	resend      *ratelimit.Limiter
+	verifyTries *ratelimit.Limiter // per user
 	forgotIP    *ratelimit.Limiter
 	forgotEmail *ratelimit.Limiter
+	resetIP     *ratelimit.Limiter
 }
 
 // NewService builds a Service. It hashes one throw-away password at startup for the
 // unknown-email timing path.
-func NewService(store *Store, hasher *Hasher, limits Limits, mail Mail, now func() time.Time) (*Service, error) {
+func NewService(store *Store, hasher *Hasher, limits Limits, mail Mail, codes *Codes, now func() time.Time) (*Service, error) {
 	if now == nil {
 		now = time.Now
 	}
@@ -85,14 +94,16 @@ func NewService(store *Store, hasher *Hasher, limits Limits, mail Mail, now func
 		return nil, err
 	}
 	return &Service{
-		store: store, hasher: hasher, dummyHash: dummy, now: now, mail: mail,
+		store: store, hasher: hasher, dummyHash: dummy, now: now, mail: mail, codes: codes,
 		register:  ratelimit.New(limits.RegisterPerHour, registerWindow, now),
 		loginPair: ratelimit.New(limits.LoginFailsPerPair, loginWindow, now),
 		loginIP:   ratelimit.New(limits.LoginFailsPerIP, loginWindow, now),
 
 		resend:      ratelimit.New(resendPerHour, time.Hour, now),
+		verifyTries: ratelimit.New(verifyTriesPerHour, time.Hour, now),
 		forgotIP:    ratelimit.New(forgotPerIPHour, time.Hour, now),
 		forgotEmail: ratelimit.New(forgotPerEmailHour, time.Hour, now),
+		resetIP:     ratelimit.New(resetTriesPerHour, time.Hour, now),
 	}, nil
 }
 
@@ -145,7 +156,7 @@ func (s *Service) Register(ctx context.Context, ip, userAgent, email, password, 
 		return User{}, Session{}, err
 	}
 	// The account exists now; a mail failure must not undo that, the user can resend.
-	if err := s.sendToken(ctx, u, purposeVerify); err != nil {
+	if err := s.sendCode(ctx, u, purposeVerify); err != nil {
 		s.mail.Logger.Error("auth: verification email not sent", "user_id", u.ID, "error", err)
 	}
 	return u, sess, nil

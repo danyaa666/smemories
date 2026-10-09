@@ -22,6 +22,8 @@ import (
 	"github.com/danyaa666/smemories/internal/auth/oidctest"
 	"github.com/danyaa666/smemories/internal/db/dbtest"
 	"github.com/danyaa666/smemories/internal/httpx"
+	"github.com/danyaa666/smemories/internal/redis"
+	"github.com/danyaa666/smemories/internal/redis/redistest"
 )
 
 const (
@@ -40,6 +42,8 @@ type env struct {
 	logs   *bytes.Buffer
 	clock  *testClock
 	mail   *recMailer
+	rc     *redis.Client
+	codes  *Codes
 }
 
 type testClock struct {
@@ -62,7 +66,11 @@ type opts struct {
 	hashWait   time.Duration
 	hashMemKiB uint32
 	google     *oidctest.Provider // enables Google sign-in against this fake
+	fixedOTP   string             // SMEM_DEV_FIXED_OTP; "" = off
 }
+
+// testOTPKey is the HMAC key of the codes in tests.
+var testOTPKey = []byte(strings.Repeat("k", MinOTPKeyBytes))
 
 func newEnv(t *testing.T, o opts) *env {
 	t.Helper()
@@ -84,7 +92,12 @@ func newEnv(t *testing.T, o opts) *env {
 	logs := &bytes.Buffer{}
 	logger := slog.New(slog.NewJSONHandler(&syncWriter{w: logs}, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	rm := &recMailer{}
-	svc, err := NewService(NewStore(d), hasher, o.limits, Mail{Mailer: rm, BaseURL: testBase, Logger: logger}, clock.now)
+	rc := redistest.New(t)
+	codes, err := NewCodes(context.Background(), rc, "test", testOTPKey, o.fixedOTP)
+	if err != nil {
+		t.Fatal(err)
+	}
+	svc, err := NewService(NewStore(d), hasher, o.limits, Mail{Mailer: rm, Logger: logger}, codes, clock.now)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +110,7 @@ func newEnv(t *testing.T, o opts) *env {
 			t.Fatal(err)
 		}
 	}
-	return &env{t: t, db: d, h: httpx.NewRouter(logger, ah.Routes), svc: svc, ah: ah, hasher: hasher, logs: logs, clock: clock, mail: rm}
+	return &env{t: t, db: d, h: httpx.NewRouter(logger, ah.Routes), svc: svc, ah: ah, hasher: hasher, logs: logs, clock: clock, mail: rm, rc: rc, codes: codes}
 }
 
 type syncWriter struct {

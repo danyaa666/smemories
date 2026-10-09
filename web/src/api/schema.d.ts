@@ -108,8 +108,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Confirm an email address with the token from the verification email
-         * @description Tokens are 32 random bytes (base64url), stored only as SHA-256, valid 24 hours and single use. An unknown, expired, used or wrong-purpose token (a reset token, for example) is `400 invalid_token`. Registration and `verify-email/resend` send the email; the link is `SMEM_PUBLIC_BASE_URL/verify-email?token=...`.
+         * Confirm the signed-in user's email address with the 6-digit code from the verification email
+         * @description The code is 6 decimal digits, valid 30 minutes, single use; there is one live code per user (a new one from registration or `verify-email/resend` replaces the old). Only the HMAC of the code is stored, in Redis. A wrong or missing code (or one that is not 6 digits) is `400 invalid_code`, a code past its lifetime `400 code_expired`, and after 5 wrong attempts on one code it is `400 code_locked` until a new code is requested. An already verified user gets `204` without a check. Also limited to 20 attempts per hour per user (`429 rate_limited` with `Retry-After`). When the code store (Redis) is down the answer is `503 code_store_unavailable`. In dev and test `SMEM_DEV_FIXED_OTP` makes one fixed code valid (docs/dev-shortcuts.md).
          */
         post: operations["verifyEmail"];
         delete?: never;
@@ -128,8 +128,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Send a new verification email to the signed-in user
-         * @description At most 3 per hour per user (`429 rate_limited` with `Retry-After`). Earlier links stay valid until they expire. Takes no body.
+         * Send a new verification code to the signed-in user
+         * @description At most 3 per hour per user (`429 rate_limited` with `Retry-After`). The new code replaces the previous one, which stops working. Takes no body.
          */
         post: operations["resendVerificationEmail"];
         delete?: never;
@@ -148,8 +148,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Ask for a password reset email
-         * @description Always `202 {}` for a well-formed address, whether or not an account exists; the email (valid link for 1 hour, in the user's `locale`) goes out in the background and only when the account exists, so neither the body nor the timing tells them apart. Limits: 5 per hour per IP and 3 per hour per address (counted for unknown addresses too). The address is trimmed, lower-cased and NFC-normalised like at login; one that is not an email at all is `400 invalid_email`.
+         * Ask for a password reset code by email
+         * @description Always `202 {}` for a well-formed address, whether or not an account exists; the email (a 6-digit code valid 15 minutes, in the user's `locale`; a new request replaces the previous code) goes out in the background and only when the account exists, so neither the body nor the timing tells them apart. Limits: 5 per hour per IP and 3 per hour per address (counted for unknown addresses too). The address is trimmed, lower-cased and NFC-normalised like at login; one that is not an email at all is `400 invalid_email`.
          */
         post: operations["forgotPassword"];
         delete?: never;
@@ -168,8 +168,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Set a new password with the token from the reset email
-         * @description The token is valid 1 hour and single use; an unknown, expired, used or wrong-purpose token is `400 invalid_token`. The password follows the registration rules (NFKC, 10-128 characters, not the email); a rejected password is `400 weak_password` and does not use up the token. On success every session of the user is deleted (sign in again), and the user's other open reset links stop working.
+         * Set a new password with the 6-digit code from the reset email
+         * @description Checked in this order: the address format (`400 invalid_email`), 20 attempts per hour per IP (`429 rate_limited`), the password rules (NFKC, 10-128 characters, not the email; a rejected password is `400 weak_password` and leaves the code untouched, so the answer cannot confirm a code), then the code. An unknown address, a wrong code and no live code all answer `400 invalid_code` with the same body; `400 code_expired` and `400 code_locked` (5 wrong attempts) only for an account that has such a code. The code is valid 15 minutes and single use. On success every session of the user is deleted (sign in again). When the code store (Redis) is down the answer is `503 code_store_unavailable`. In dev and test `SMEM_DEV_FIXED_OTP` makes one fixed code valid for any existing account (docs/dev-shortcuts.md).
          */
         post: operations["resetPassword"];
         delete?: never;
@@ -697,7 +697,10 @@ export interface components {
                  * @example invalid_credentials
                  * @example unauthenticated
                  * @example rate_limited
-                 * @example invalid_token
+                 * @example invalid_code
+                 * @example code_expired
+                 * @example code_locked
+                 * @example code_store_unavailable
                  * @example limit_reached
                  * @example unknown_field
                  * @example unsupported_media_type
@@ -790,6 +793,16 @@ export interface components {
         /** @description The object store failed (`storage_error`); nothing was changed, retry later. */
         StorageError: {
             headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description Redis, which holds the email codes, did not answer (`code_store_unavailable`); nothing was accepted, retry shortly. */
+        CodeStoreUnavailable: {
+            headers: {
+                "Retry-After"?: number;
                 [name: string]: unknown;
             };
             content: {
@@ -1047,19 +1060,20 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    token: string;
+                    /** @example 042917 */
+                    code: string;
                 };
             };
         };
         responses: {
-            /** @description The address is verified (`email_verified` is now true). */
+            /** @description The address is verified (`email_verified` is now true) and the code is used. */
             204: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description `invalid_token` or `invalid_body`. */
+            /** @description `invalid_code`, `code_expired`, `code_locked` or `invalid_body`. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1068,9 +1082,12 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            401: components["responses"]["Unauthenticated"];
             403: components["responses"]["CsrfOriginMismatch"];
             413: components["responses"]["PayloadTooLarge"];
             415: components["responses"]["UnsupportedMediaType"];
+            429: components["responses"]["RateLimited"];
+            503: components["responses"]["CodeStoreUnavailable"];
         };
     };
     resendVerificationEmail: {
@@ -1094,7 +1111,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description The email was sent. A mailer failure is `500 internal_error` (and is logged without the token). */
+            /** @description The email was sent. A mailer failure is `500 internal_error` (and is logged without the code). */
             202: {
                 headers: {
                     [name: string]: unknown;
@@ -1107,6 +1124,7 @@ export interface operations {
             403: components["responses"]["CsrfOriginMismatch"];
             415: components["responses"]["UnsupportedMediaType"];
             429: components["responses"]["RateLimited"];
+            503: components["responses"]["CodeStoreUnavailable"];
         };
     };
     forgotPassword: {
@@ -1158,7 +1176,9 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    token: string;
+                    email: string;
+                    /** @example 042917 */
+                    code: string;
                     /** Format: password */
                     password: string;
                 };
@@ -1172,7 +1192,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description `invalid_token`, `weak_password` or `invalid_body`. */
+            /** @description `invalid_email`, `invalid_code`, `code_expired`, `code_locked`, `weak_password` or `invalid_body`. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1184,7 +1204,16 @@ export interface operations {
             403: components["responses"]["CsrfOriginMismatch"];
             413: components["responses"]["PayloadTooLarge"];
             415: components["responses"]["UnsupportedMediaType"];
-            503: components["responses"]["Busy"];
+            429: components["responses"]["RateLimited"];
+            /** @description `busy` (all password-hashing slots stayed taken; the code is already used, ask for a new one) or `code_store_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     googleStart: {

@@ -5,7 +5,7 @@ with their attempt counters (T-048) and the rate limiters (T-053). MySQL keeps e
 server is **Valkey 8** (BSD licence), pinned by digest in `docker-compose.yml` and `.github/workflows/ci.yml`; the code
 uses only the Redis protocol (client `github.com/redis/go-redis/v9`), so Redis or ElastiCache work too.
 
-T-051 only adds the plumbing: nothing is stored in Redis yet.
+T-051 added the plumbing; the first data stored is the email codes of T-048 (`docs/auth-otp.md`).
 
 ## Configuration
 
@@ -33,7 +33,7 @@ one server in an emergency without colliding. Parts must come from hashes or num
 | Prefix | Owner | Content |
 |---|---|---|
 | `smem:<env>:sess:` | T-052 | login sessions, with native expiry |
-| `smem:<env>:code:` | T-048 | email codes and their attempt counters |
+| `smem:<env>:otp:<purpose>:<user id>` | T-048 | one hash per live email code (`verify` or `reset`): `h` HMAC of the code, `a` wrong attempts, `x` expiry (ms) |
 | `smem:<env>:rl:` | T-053 | rate-limiter windows |
 
 (The prefixes of the later tasks are planned; each task documents the final names here.)

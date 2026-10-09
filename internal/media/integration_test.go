@@ -26,6 +26,7 @@ import (
 	"github.com/danyaa666/smemories/internal/httpx"
 	"github.com/danyaa666/smemories/internal/mailer"
 	"github.com/danyaa666/smemories/internal/ratelimit"
+	"github.com/danyaa666/smemories/internal/redis/redistest"
 	"github.com/danyaa666/smemories/internal/storage"
 	"github.com/danyaa666/smemories/internal/storage/storagetest"
 	"github.com/danyaa666/smemories/internal/yearbook"
@@ -137,8 +138,12 @@ func newEnv(t *testing.T) *env {
 	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
 	mail, _ := mailer.NewLog("test", io.Discard)
 	hasher := auth.NewHasher(auth.HashParams{MemoryKiB: 64, Time: 1, Parallelism: 1}, 4, auth.HashWait)
+	codes, err := auth.NewCodes(context.Background(), redistest.New(t), "test", []byte(strings.Repeat("k", auth.MinOTPKeyBytes)), "")
+	if err != nil {
+		t.Fatal(err)
+	}
 	as, err := auth.NewService(auth.NewStore(d), hasher, auth.Limits{RegisterPerHour: 1000, LoginFailsPerPair: 1000, LoginFailsPerIP: 1000},
-		auth.Mail{Mailer: mail, BaseURL: "http://localhost:5173", Logger: logger}, nil)
+		auth.Mail{Mailer: mail, Logger: logger}, codes, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

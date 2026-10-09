@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/danyaa666/smemories/internal/httpx"
+	"github.com/danyaa666/smemories/internal/redis"
 )
 
 // HandlerConfig carries the HTTP-level settings.
@@ -36,7 +37,7 @@ func (h *Handler) Routes(mux *http.ServeMux) {
 	mux.Handle("POST /v1/auth/register", guard(h.register))
 	mux.Handle("POST /v1/auth/login", guard(h.login))
 	mux.Handle("POST /v1/auth/logout", guard(h.logout))
-	mux.Handle("POST /v1/auth/verify-email", guard(h.verifyEmail))
+	mux.Handle("POST /v1/auth/verify-email", Guard(h.cfg.AllowedOrigins, h.RequireUser(http.HandlerFunc(h.verifyEmail))))
 	mux.Handle("POST /v1/auth/verify-email/resend", Guard(h.cfg.AllowedOrigins, h.RequireUser(http.HandlerFunc(h.resendVerification))))
 	mux.Handle("POST /v1/auth/forgot-password", guard(h.forgotPassword))
 	mux.Handle("POST /v1/auth/reset-password", guard(h.resetPassword))
@@ -126,12 +127,13 @@ func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) verifyEmail(w http.ResponseWriter, r *http.Request) {
 	var in struct {
-		Token string `json:"token"`
+		Code string `json:"code"`
 	}
 	if !decode(w, r, &in) {
 		return
 	}
-	if err := h.svc.VerifyEmail(r.Context(), in.Token); err != nil {
+	u, _ := UserFrom(r.Context())
+	if err := h.svc.VerifyEmail(r.Context(), u, in.Code); err != nil {
 		h.fail(w, r, err)
 		return
 	}
@@ -168,13 +170,14 @@ func (h *Handler) forgotPassword(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) resetPassword(w http.ResponseWriter, r *http.Request) {
 	var in struct {
-		Token    string `json:"token"`
+		Email    string `json:"email"`
+		Code     string `json:"code"`
 		Password string `json:"password"`
 	}
 	if !decode(w, r, &in) {
 		return
 	}
-	if err := h.svc.ResetPassword(r.Context(), in.Token, in.Password); err != nil {
+	if err := h.svc.ResetPassword(r.Context(), h.clientIP(r), in.Email, in.Code, in.Password); err != nil {
 		h.fail(w, r, err)
 		return
 	}
@@ -200,8 +203,16 @@ func (h *Handler) fail(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.As(err, &ve):
 		httpx.WriteError(w, r, http.StatusBadRequest, ve.Code, "invalid input: "+ve.Code)
-	case errors.Is(err, ErrInvalidToken):
-		httpx.WriteError(w, r, http.StatusBadRequest, "invalid_token", "invalid, expired or used token")
+	case errors.Is(err, ErrInvalidCode):
+		httpx.WriteError(w, r, http.StatusBadRequest, "invalid_code", "invalid code")
+	case errors.Is(err, ErrCodeExpired):
+		httpx.WriteError(w, r, http.StatusBadRequest, "code_expired", "code expired, request a new one")
+	case errors.Is(err, ErrCodeLocked):
+		httpx.WriteError(w, r, http.StatusBadRequest, "code_locked", "too many wrong attempts, request a new code")
+	case errors.Is(err, redis.ErrUnavailable):
+		h.logger.Error("auth: code store unavailable", "request_id", httpx.RequestIDFrom(r.Context()), "error", err)
+		w.Header().Set("Retry-After", "5")
+		httpx.WriteError(w, r, http.StatusServiceUnavailable, "code_store_unavailable", "code store unavailable, retry shortly")
 	case errors.Is(err, ErrEmailTaken):
 		httpx.WriteError(w, r, http.StatusConflict, "email_taken", "email already registered")
 	case errors.Is(err, ErrInvalidCredentials):

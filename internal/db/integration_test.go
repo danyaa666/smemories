@@ -166,7 +166,16 @@ func TestMigratePageSizeLetter(t *testing.T) {
 	if got := sizes(); got != "A5,A4,Letter" {
 		t.Fatalf("before down: %s", got)
 	}
-	for range 2 { // 0010 (notes) is the latest migration and does not touch yearbooks; 0009 is the one under test
+	// Roll back until 0009 itself is undone (later migrations come and go; the enum tells us where we are).
+	for i := 0; i < 20; i++ {
+		var colType string
+		if err := d.QueryRowContext(ctx, `SELECT COLUMN_TYPE FROM information_schema.COLUMNS
+			WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'yearbooks' AND COLUMN_NAME = 'page_size'`).Scan(&colType); err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(colType, "Letter") {
+			break
+		}
 		if err := db.MigrateDown(ctx, d); err != nil {
 			t.Fatalf("down: %v", err)
 		}
@@ -183,5 +192,37 @@ func TestMigratePageSizeLetter(t *testing.T) {
 	mustExec(`UPDATE yearbooks SET page_size = 'Letter' WHERE public_id = 'Y1'`)
 	if got := sizes(); got != "Letter,A4,A5" {
 		t.Fatalf("after up: %s", got)
+	}
+}
+
+// T-048: codes live in Redis, so migration 0011 drops the link-token table of T-007; its Down recreates it empty.
+func TestEmailTokensTableIsDroppedAndDownRecreatesIt(t *testing.T) {
+	ctx := context.Background()
+	d := dbtest.New(t)
+	exists := func() bool {
+		t.Helper()
+		var n int
+		if err := d.QueryRowContext(ctx, `SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'email_tokens'`).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		return n == 1
+	}
+	if exists() {
+		t.Fatal("email_tokens still exists after migrating up")
+	}
+	for i := 0; i < 20 && !exists(); i++ { // roll back (any later migrations first) until 0011 is undone
+		if err := db.MigrateDown(ctx, d); err != nil {
+			t.Fatalf("down: %v", err)
+		}
+	}
+	var n int
+	if err := d.QueryRowContext(ctx, `SELECT COUNT(*) FROM email_tokens`).Scan(&n); err != nil || n != 0 {
+		t.Fatalf("recreated table: %d rows, %v", n, err)
+	}
+	if err := db.MigrateUp(ctx, d); err != nil {
+		t.Fatalf("up: %v", err)
+	}
+	if exists() {
+		t.Fatal("email_tokens exists after migrating up again")
 	}
 }
