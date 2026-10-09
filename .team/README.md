@@ -12,16 +12,15 @@
 |---|---:|---|
 | BACKLOG | 34 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-044, T-049, T-050, T-055, T-056, T-058, T-059, T-060, T-061, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074 |
 | TODO | 4 | T-052, T-053, T-054, T-057 |
-| IN_QA | 1 | T-048 |
-| QA_PASS | 1 | T-034 |
+| QA_PASS | 2 | T-034, T-048 |
 | DONE | 28 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-035, T-036, T-037, T-038, T-043, T-045, T-046, T-047, T-051, T-062, T-063 |
 | CANCELLED | 6 | T-014, T-019, T-039, T-040, T-041, T-042 |
 
 **Awaiting your review (MERGED):** nothing
 
-**Open questions for you:** Q-020 (Approve merge of T-034 (public note submission with photos)?)
+**Open questions for you:** Q-020 (Approve merge of T-034 (public note submission with photos)?); Q-021 (Approve merge of T-048 (6-digit email codes, dev code 123123)?)
 
-_Board last written 2026-10-09 03:43Z_
+_Board last written 2026-10-09 03:53Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -308,6 +307,15 @@ T-062 unblocks every merge: the required security job (govulncheck) is red on al
 - **Answer:** _(pending)_
 
 Third QA round passed with no findings. This is the first public, unauthenticated write endpoint (text answers by catalogue field and up to 3 photos per note, pending until the owner approves). Protection: link token, honeypot, per-IP/per-collection rate limits, 300-note cap per link, uploads spooled to disk with caps of 48 total / 8 per IP connections and a 16 KiB/s minimum pace, photos decoded under the T-036 memory bounds. Migration 0010 adds the notes and note_photos tables. To approve: team approve T-034. T-048 (codes, migration 0011) merges after it.
+
+### Q-021 — Approve merge of T-048 (6-digit email codes, dev code 123123)?
+- **Status:** OPEN
+- **Asked:** 2026-10-09 03:53Z
+- **Blocks:** T-048
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+QA passed first time. Verification and reset links are replaced by 6-digit codes kept as HMACs in Redis (30/15 min, 5 attempts, one Lua script). The dev-only fixed code 123123 is accepted only when SMEM_ENV is dev/test and SMEM_DEV_FIXED_OTP is set; the API refuses to start otherwise; every line is tagged DEV-SHORTCUT(otp) and listed in docs/dev-shortcuts.md; T-050 removes it before go-live. Migration 0011 drops the email_tokens table. Known limit (task T-031): a third party can lock a victim's reset code with 5 wrong guesses. The web screens still use the old links until T-049, so signup verification in the UI is broken until that lands (merge T-049 soon after). Merge order: T-034 first, then this one after a rebase. To approve: team approve T-048.
 
 <!-- questions:end -->
 
@@ -1892,7 +1900,7 @@ CI on develop failed once on TestGoogleConcurrentCallbacksCreateOneAccount: goog
 - 2026-10-09 01:42Z · leader · accepted by owner (chat, 2026-10-09: 'team accept T-016, T-046, T-047, T-051')
 
 ### T-048 — [E02] Email one-time codes replace verification and reset links (API) with a dev-only fixed code
-- **Status:** IN_QA
+- **Status:** QA_PASS
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -1900,10 +1908,10 @@ CI on develop failed once on TestGoogleConcurrentCallbacksCreateOneAccount: goog
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** leader
 - **Branch:** task/t-048-e02-email-one-time-codes-replace-verific
 - **PR:** https://github.com/danyaa666/smemories/pull/38
-- **Updated:** 2026-10-09 03:42Z by qa
+- **Updated:** 2026-10-09 03:51Z by qa
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/08-email-otp-codes-replace-links-api.md`
@@ -1914,6 +1922,23 @@ CI on develop failed once on TestGoogleConcurrentCallbacksCreateOneAccount: goog
 
 #### Comments
 - 2026-10-09 03:34Z · dev · PR #38. Codes in Redis (Lua check+count), verify-email needs session, reset takes email+code+password, migration 0011 (merge after T-034's 0010), DEV-SHORTCUT(otp) guarded in config.Load and NewCodes, docs/auth-otp.md + dev-shortcuts.md, openapi/schema/Postman (newman x2 green). Test: make up; go test -race -tags integration ./...; newman with SMEM_DEV_FIXED_OTP=123123. Decisions to check: locked code stays (6th try code_locked), code_expired via logical expiry + 1h grace, reset consumes code before hashing.
+- 2026-10-09 03:51Z · qa · PR #38 head adaa9ca, CI green (go, go-integration, security, web). Local: make lint OK, make build OK, make test OK (go -race + web 109 tests), make test-integration OK (all pkgs). Ran the real API (SMEM_ENV=dev, scratch DB + Redis db 7), no product code changed, no tests added.
+  AC1 codes/storage: Redis hash {h,a,x} key smem:dev:otp:<purpose>:<uid>, h = 64 hex HMAC, TTL verify 30m / reset 15m (+1h grace key expiry, x = logical expiry); resend/forgot replaces code (old code -> invalid_code); 15 parallel wrong guesses on live API: attempts a=5 exactly, 4 invalid_code + 11 code_locked; migration 0011 drops email_tokens, Down recreates identical empty table; with T-034's 0010 merged in a scratch tree: up, down, up all OK. Code format: newCode via crypto/rand.Int, zero-padded (unit test passes).
+  AC2 key: prod w/o key -> startup error naming SMEM_OTP_KEY; 5-byte key rejected; dev uses fixed dev key.
+  AC3 verify: no session 401; wrong x4 invalid_code, 5th code_locked, right code while locked code_locked, new code via resend unlocks; malformed (5/7 digits, letters, empty, missing) invalid_code; already verified 204; 21st attempt in an hour 429 + Retry-After; reset code used for verify and other user's code -> invalid_code; expired (x moved in Redis) -> code_expired.
+  AC4 resend 202, old dies; register sends first code, register still 201 with Redis down.
+  AC5 forgot/reset: forgot known vs unknown: 202, identical body and header set, median 0.96 ms both (15 samples each); reset wrong code known vs unknown: 400 invalid_code, 1.3 vs 1.6 ms median; weak_password returned before code touched (right code still usable after, then 204); success deletes all sessions (2 sessions 200 -> 401), replay -> invalid_code, old pw 401, new 200; forgot limits 3/email and 5/IP then 429; reset 20/IP then 429 Retry-After 3600.
+  AC6 emails: vi and en verify + vi reset seen with code, lifetime, do-not-share, no link; no 6-digit code or OTP key in API logs outside the dev LogMailer block (mailer refuses outside dev/test).
+  AC7 dev code: SMEM_ENV=prod, empty, production, staging, Dev all refuse to start (config error names var); non-6-digit refused; dev+var: WARN dev fixed otp active once; 123123 verifies session user (even with a locked code), resets any existing account without forgot, repeatable, unknown email -> invalid_code, weak_password still first, wrong 6-digit code still rejected; var unset -> 123123 is just invalid_code (verify and reset). grep DEV-SHORTCUT: every line in config.go, codes.go, main.go, .env.example tagged, registered in docs/dev-shortcuts.md with where/guard/remove.
+  Redis down (separate valkey container stopped): verify, resend, reset (known and unknown email) 503 code_store_unavailable + Retry-After 5; weak password still 400; forgot 202 (error logged); fails closed.
+  AC8 docs/contracts: openapi + schema.d.ts (make lint check:api OK) match behavior; Postman Full flow + Edge cases 67 requests / 150 assertions, 0 failures, run twice back to back on a fresh API (Google folder fails only because Google is not configured in my run, unrelated).
+  NON-BLOCKING:
+  1. Dev's note says locked on the 6th try; actually the 5th wrong guess already answers code_locked (matches AC3/openapi).
+  2. Spec-sanctioned oracle: forgot-password for X then 5 wrong reset guesses gives code_locked for an existing account vs invalid_code for unknown (also code_expired after 15 min). It also lets a third party lock a victim's reset code (needs 5 guesses, within the 20/IP limit). Leader may accept or later tighten (T-053 per-email limit).
+  3. Reset with 503 busy (or DB error after the Check) has already consumed the code; user needs a new code (forgot is 3/hr/email). Documented in openapi/auth-otp.md; low severity, only under hash saturation. Splitting check and consume would remove it.
+  4. Postman has no expired-code edge case (no hook now that codes are in Redis; expiry is covered by integration test TestVerifyCodeExpiry/TestResetCodeExpiresAfterFifteenMinutes). A 3rd run within an hour from one IP hits forgot 5/hr/IP (in-memory limiter) until the API restarts.
+  5. Merge order: with T-034 merged first, this branch conflicts in api/openapi.yaml, web/src/api/schema.d.ts, internal/db/integration_test.go, internal/notes/integration_test.go (mechanical); needs a rebase/regenerate after T-034 lands. Migration numbers 0010 + 0011 are fine.
+- 2026-10-09 03:53Z · leader · Leader review OK (head adaa9ca = QA head, CI green, no .team changes). Checked: single Lua script for check+attempt count, HMAC with SMEM_OTP_KEY (32+ bytes enforced), uniform 6-digit draw, dev fixed code guarded by env dev/test and refused otherwise, all lines tagged DEV-SHORTCUT(otp) and registered, decoy path for unknown emails, Redis down fails closed. Accepted: locked code stays until expiry; expired grace 1 h. Non-blocking: reset-lock griefing/enumeration noted in the T-031 spec. After T-034 merges this branch needs a merge of develop (conflicts in openapi.yaml, schema.d.ts, integration tests) and a short re-test. Awaiting owner approval: auth flow, migration 0011 (drops email_tokens), the dev-only fixed code.
 
 ### T-049 — [E02] Web: code entry screens for email verification and password reset
 - **Status:** BACKLOG
