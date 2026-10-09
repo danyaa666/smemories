@@ -1,4 +1,4 @@
-# T-034 — Public note submission (text and photos)
+# E04_T-034 — Public note submission (text and photos)
 
 **Epic:** E04-friends-notes · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** high · **Priority:** P1
 

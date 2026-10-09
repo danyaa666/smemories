@@ -1,4 +1,4 @@
-# T-071 — API v2: auth and user domain; remove the /v1 paths and the web shim
+# E10_T-071 — API v2: auth and user domain; remove the /v1 paths and the web shim
 
 **Epic:** E10-skills-alignment · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** high (authentication) · **Priority:** P1 · **Type:** tech-debt
 **Read first:** `docs/api-contract.md`, `docs/go-conventions.md`, `docs/auth-otp.md` (from T-048), T-068 (the pattern).

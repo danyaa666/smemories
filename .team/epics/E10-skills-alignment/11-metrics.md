@@ -1,4 +1,4 @@
-# T-073 — Observability: request metrics middleware and /metrics endpoint
+# E10_T-073 — Observability: request metrics middleware and /metrics endpoint
 
 **Epic:** E10-skills-alignment · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** low · **Priority:** P3 · **Type:** infra
 **Depends on:** T-063. **Q-018 answered 2026-10-09: the owner approved `github.com/prometheus/client_golang`** (new core dependency, approved).

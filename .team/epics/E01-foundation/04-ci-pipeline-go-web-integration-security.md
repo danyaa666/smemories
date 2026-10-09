@@ -1,4 +1,4 @@
-# T-004 — CI pipeline (Go, web, integration, security)
+# E01_T-004 — CI pipeline (Go, web, integration, security)
 
 **Epic:** E01-foundation · **PRD:** [PRD.md](PRD.md) · **Milestone:** M0 · **Risk:** high · **Priority:** P1 · **Type:** infra
 

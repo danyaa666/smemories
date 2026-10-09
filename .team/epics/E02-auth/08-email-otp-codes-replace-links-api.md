@@ -1,4 +1,4 @@
-# T-048 — Email one-time codes replace verification and reset links (API)
+# E02_T-048 — Email one-time codes replace verification and reset links (API)
 
 **Epic:** E02-auth · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** high · **Priority:** P1 · **Type:** feature
 

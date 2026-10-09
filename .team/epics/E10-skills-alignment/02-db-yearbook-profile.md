@@ -1,4 +1,4 @@
-# T-064 — DB conventions: yearbook and profile tables
+# E10_T-064 — DB conventions: yearbook and profile tables
 
 **Epic:** E10-skills-alignment · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** high (migration that changes existing data) · **Priority:** P1 · **Type:** tech-debt
 **Read first:** `docs/db-conventions.md` (all of it), `.agents/skills/be-rldb/SKILL.md`, `.agents/skills/be-golang/references/data-store.md`.

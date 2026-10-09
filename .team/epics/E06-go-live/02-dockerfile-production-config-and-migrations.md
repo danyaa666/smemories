@@ -1,4 +1,4 @@
-# T-022 — Dockerfile, production config and migrations as a one-off task
+# E06_T-022 — Dockerfile, production config and migrations as a one-off task
 
 **Epic:** E06-go-live · **PRD:** [PRD.md](PRD.md) · **Milestone:** M2 · **Risk:** high · **Priority:** P2 · **Type:** infra
 

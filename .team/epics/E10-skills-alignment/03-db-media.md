@@ -1,4 +1,4 @@
-# T-065 — DB conventions: media table
+# E10_T-065 — DB conventions: media table
 
 **Epic:** E10-skills-alignment · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** high · **Priority:** P1 · **Type:** tech-debt
 **Read first:** `docs/db-conventions.md`, T-064 spec (the purger and reference hooks you plug into), T-057 spec (print columns).

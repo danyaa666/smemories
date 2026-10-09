@@ -1,4 +1,4 @@
-# T-063 — E10 foundation: apperr, v2 response helpers, request timeout and client-IP middleware, contract lint
+# E10_T-063 — E10 foundation: apperr, v2 response helpers, request timeout and client-IP middleware, contract lint
 
 **Epic:** E10-skills-alignment · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** low · **Priority:** P1 · **Type:** infra
 **Read first:** `docs/api-contract.md`, `docs/go-conventions.md`, `.agents/skills/be-golang/SKILL.md` and `references/code-quality.md`, `.agents/skills/be-api-design/SKILL.md` (main checkout).

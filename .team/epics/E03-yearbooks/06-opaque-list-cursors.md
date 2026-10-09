@@ -1,4 +1,4 @@
-# T-055 — Opaque list cursors (do not expose internal ids)
+# E03_T-055 — Opaque list cursors (do not expose internal ids)
 
 **Epic:** E03-yearbooks · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** low · **Priority:** P3 · **Type:** tech-debt
 

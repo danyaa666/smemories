@@ -1,4 +1,4 @@
-# T-044 — Templates declare note fields (format v2.1)
+# E08_T-044 — Templates declare note fields (format v2.1)
 
 **Epic:** E08-designer-templates · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** low · **Priority:** P2 · **Type:** feature
 

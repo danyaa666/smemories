@@ -1,4 +1,4 @@
-# T-041 — Template "navy-classic" from temp2
+# E08_T-041 — Template "navy-classic" from temp2
 
 **Epic:** E08-designer-templates · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** low · **Priority:** P2 · **Type:** feature
 

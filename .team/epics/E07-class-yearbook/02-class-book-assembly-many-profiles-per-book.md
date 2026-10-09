@@ -1,4 +1,4 @@
-# T-027 — Class book assembly: many profiles per book, class pages and templates
+# E07_T-027 — Class book assembly: many profiles per book, class pages and templates
 
 **Epic:** E07-class-yearbook · **PRD:** [PRD.md](PRD.md) · **Milestone:** M3 · **Risk:** low · **Priority:** P3 · **Type:** feature
 

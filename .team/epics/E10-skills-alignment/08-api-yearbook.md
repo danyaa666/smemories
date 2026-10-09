@@ -1,4 +1,4 @@
-# T-070 — API v2: yearbook domain with a service layer
+# E10_T-070 — API v2: yearbook domain with a service layer
 
 **Epic:** E10-skills-alignment · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** low · **Priority:** P1 · **Type:** tech-debt
 **Read first:** `docs/api-contract.md`, `docs/go-conventions.md`, T-064 (the `Service` it started), T-068 (the pattern).

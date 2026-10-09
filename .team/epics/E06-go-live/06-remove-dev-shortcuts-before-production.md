@@ -1,4 +1,4 @@
-# T-050 — Remove dev-only shortcuts before production (delete the fixed OTP)
+# E06_T-050 — Remove dev-only shortcuts before production (delete the fixed OTP)
 
 **Epic:** E06-go-live · **PRD:** [PRD.md](PRD.md) · **Milestone:** M2 · **Risk:** high · **Priority:** P1 · **Type:** security
 

@@ -1,4 +1,4 @@
-# T-052 — Login sessions move to Redis
+# E02_T-052 — Login sessions move to Redis
 
 **Epic:** E02-auth · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** high · **Priority:** P1 · **Type:** tech-debt
 

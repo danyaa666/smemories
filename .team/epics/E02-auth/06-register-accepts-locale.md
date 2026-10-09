@@ -1,4 +1,4 @@
-# T-045 — Register accepts a locale; verification email in the student's language
+# E02_T-045 — Register accepts a locale; verification email in the student's language
 
 **Epic:** E02-auth · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** high · **Priority:** P1 · **Type:** feature
 

@@ -1,4 +1,4 @@
-# T-029 — Replace the frozen MinIO dev image with a maintained S3-compatible store
+# E01_T-029 — Replace the frozen MinIO dev image with a maintained S3-compatible store
 
 **Epic:** E01-foundation · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** low · **Priority:** P3 · **Type:** tech-debt
 

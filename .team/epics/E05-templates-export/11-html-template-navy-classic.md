@@ -1,4 +1,4 @@
-# T-060 — HTML template "navy-classic" (from design temp2)
+# E05_T-060 — HTML template "navy-classic" (from design temp2)
 
 **Epic:** E05-templates-export · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** low · **Priority:** P2 · **Type:** feature
 

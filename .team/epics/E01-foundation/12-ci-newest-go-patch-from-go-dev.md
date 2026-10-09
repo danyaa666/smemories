@@ -1,4 +1,4 @@
-# T-062 — CI: get the newest Go patch straight from go.dev
+# E01_T-062 — CI: get the newest Go patch straight from go.dev
 
 **Epic:** E01-foundation · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** high · **Priority:** P3 · **Type:** tech-debt
 

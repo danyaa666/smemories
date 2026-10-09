@@ -1,4 +1,4 @@
-# T-021 — Transactional email provider and domain setup
+# E06_T-021 — Transactional email provider and domain setup
 
 **Epic:** E06-go-live · **PRD:** [PRD.md](PRD.md) · **Milestone:** M2 · **Risk:** high · **Priority:** P2 · **Type:** infra
 

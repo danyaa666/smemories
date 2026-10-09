@@ -1,4 +1,4 @@
-# T-066 — DB conventions: note collections and notes tables
+# E10_T-066 — DB conventions: note collections and notes tables
 
 **Epic:** E10-skills-alignment · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** high · **Priority:** P1 · **Type:** tech-debt
 **Read first:** `docs/db-conventions.md`, T-064/T-065 specs, the T-034 spec (the tables it created).

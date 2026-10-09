@@ -1,4 +1,4 @@
-# T-039 — Design import tool (dev only)
+# E08_T-039 — Design import tool (dev only)
 
 **Epic:** E08-designer-templates · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** low · **Priority:** P2 · **Type:** tech-debt
 

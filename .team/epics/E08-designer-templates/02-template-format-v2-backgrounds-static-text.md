@@ -1,4 +1,4 @@
-# T-038 — Template format v2: backgrounds, static text, rotation, ellipse, font families
+# E08_T-038 — Template format v2: backgrounds, static text, rotation, ellipse, font families
 
 **Epic:** E08-designer-templates · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** low · **Priority:** P2 · **Type:** feature
 

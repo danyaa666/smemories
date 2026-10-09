@@ -1,4 +1,4 @@
-# T-072 — Quality sweep: mnd, forbidigo, pointer parameters, pool defaults, remove the transition switch
+# E10_T-072 — Quality sweep: mnd, forbidigo, pointer parameters, pool defaults, remove the transition switch
 
 **Epic:** E10-skills-alignment · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** low · **Priority:** P2 · **Type:** tech-debt
 **Read first:** `docs/go-conventions.md`, `.agents/skills/be-golang/references/code-quality.md`, `.golangci.yml`.

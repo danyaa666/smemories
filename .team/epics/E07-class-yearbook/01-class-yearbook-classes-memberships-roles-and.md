@@ -1,4 +1,4 @@
-# T-026 — Class yearbook: classes, memberships, roles and invites
+# E07_T-026 — Class yearbook: classes, memberships, roles and invites
 
 **Epic:** E07-class-yearbook · **PRD:** [PRD.md](PRD.md) · **Milestone:** M3 · **Risk:** high · **Priority:** P3 · **Type:** feature
 

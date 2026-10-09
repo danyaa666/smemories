@@ -1,4 +1,4 @@
-# T-047 — Fix the flaky concurrent Google callback (retry with backoff)
+# E02_T-047 — Fix the flaky concurrent Google callback (retry with backoff)
 
 **Epic:** E02-auth · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** high · **Priority:** P1 · **Type:** bug
 

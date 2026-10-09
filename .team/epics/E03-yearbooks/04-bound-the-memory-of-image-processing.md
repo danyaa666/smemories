@@ -1,4 +1,4 @@
-# T-036 — Bound the memory of image processing
+# E03_T-036 — Bound the memory of image processing
 
 **Epic:** E03-yearbooks · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** low · **Priority:** P1
 

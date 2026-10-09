@@ -1,4 +1,4 @@
-# T-069 — API v2: media domain
+# E10_T-069 — API v2: media domain
 
 **Epic:** E10-skills-alignment · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** high (uploads) · **Priority:** P1 · **Type:** tech-debt
 **Read first:** `docs/api-contract.md`, `docs/go-conventions.md`, T-068 (the pattern), `docs/media.md`.

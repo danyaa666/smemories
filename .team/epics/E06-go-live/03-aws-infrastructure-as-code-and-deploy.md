@@ -1,4 +1,4 @@
-# T-023 — AWS infrastructure as code and deploy pipeline
+# E06_T-023 — AWS infrastructure as code and deploy pipeline
 
 **Epic:** E06-go-live · **PRD:** [PRD.md](PRD.md) · **Milestone:** M2 · **Risk:** high · **Priority:** P2 · **Type:** infra
 

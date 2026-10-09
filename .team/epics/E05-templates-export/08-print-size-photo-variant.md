@@ -1,4 +1,4 @@
-# T-057 — Media print-size variant (1800 px) for fast, light printing
+# E05_T-057 — Media print-size variant (1800 px) for fast, light printing
 
 **Epic:** E05-templates-export · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** high · **Priority:** P1 · **Type:** feature
 

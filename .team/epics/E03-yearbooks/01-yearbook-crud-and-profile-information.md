@@ -1,4 +1,4 @@
-# T-008 — Yearbook CRUD and profile information
+# E03_T-008 — Yearbook CRUD and profile information
 
 **Epic:** E03-yearbooks · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** low · **Priority:** P1 · **Type:** feature
 

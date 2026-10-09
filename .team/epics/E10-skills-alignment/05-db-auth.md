@@ -1,4 +1,4 @@
-# T-067 — DB conventions: user and identity tables
+# E10_T-067 — DB conventions: user and identity tables
 
 **Epic:** E10-skills-alignment · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** high · **Priority:** P1 · **Type:** tech-debt
 **Read first:** `docs/db-conventions.md`, T-052 and T-048 specs (they removed `sessions` and `email_tokens`).

@@ -1,4 +1,4 @@
-# T-020 — End-to-end smoke test of the M1 journey in CI (Playwright)
+# E01_T-020 — End-to-end smoke test of the M1 journey in CI (Playwright)
 
 **Epic:** E01-foundation · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** low · **Priority:** P1 · **Type:** infra
 

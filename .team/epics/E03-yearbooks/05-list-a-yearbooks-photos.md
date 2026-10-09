@@ -1,4 +1,4 @@
-# T-046 — List a yearbook's photos (API and photo library in the web UI)
+# E03_T-046 — List a yearbook's photos (API and photo library in the web UI)
 
 **Epic:** E03-yearbooks · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** low · **Priority:** P1 · **Type:** feature
 

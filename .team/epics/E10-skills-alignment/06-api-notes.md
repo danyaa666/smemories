@@ -1,4 +1,4 @@
-# T-068 — API v2: notes domain (collections, public lookup and submission) with a service layer
+# E10_T-068 — API v2: notes domain (collections, public lookup and submission) with a service layer
 
 **Epic:** E10-skills-alignment · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** high (public API) · **Priority:** P1 · **Type:** tech-debt
 **Read first:** `docs/api-contract.md` (all), `docs/go-conventions.md`, `.agents/skills/be-api-design/SKILL.md`, `.agents/skills/be-golang/references/architecture-controller.md` and `architecture-modules-manager.md`, T-063 (helpers).

@@ -1,4 +1,4 @@
-# T-049 — Web: code entry screens for email verification and password reset
+# E02_T-049 — Web: code entry screens for email verification and password reset
 
 **Epic:** E02-auth · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** high · **Priority:** P1 · **Type:** feature
 

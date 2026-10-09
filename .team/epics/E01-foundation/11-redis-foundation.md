@@ -1,4 +1,4 @@
-# T-051 — Redis foundation: local stack, client, config, readiness, CI
+# E01_T-051 — Redis foundation: local stack, client, config, readiness, CI
 
 **Epic:** E01-foundation · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** high · **Priority:** P1 · **Type:** infra
 
