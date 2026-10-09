@@ -10,7 +10,7 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 23 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-044, T-049, T-050, T-055, T-056, T-058, T-059, T-060, T-061 |
+| BACKLOG | 24 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-044, T-049, T-050, T-055, T-056, T-058, T-059, T-060, T-061, T-062 |
 | TODO | 6 | T-034, T-048, T-052, T-053, T-054, T-057 |
 | DONE | 26 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-035, T-036, T-037, T-038, T-043, T-045, T-046, T-047, T-051 |
 | CANCELLED | 6 | T-014, T-019, T-039, T-040, T-041, T-042 |
@@ -19,7 +19,7 @@
 
 **Open questions for you:** none
 
-_Board last written 2026-10-09 01:42Z_
+_Board last written 2026-10-09 01:44Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -2177,6 +2177,29 @@ Navy and gold canvas as the second HTML template.
 **Epic:** E05-templates-export · **PRD:** `.team/epics/E05-templates-export/PRD.md`
 
 Pick a template for the page size, print with per-browser guidance, anonymous worked-or-not feedback counter.
+
+#### Comments
+
+### T-062 — CI: get the newest Go patch straight from go.dev (no manifest lag)
+- **Status:** BACKLOG
+- **Priority:** P3
+- **Type:** tech-debt
+- **Milestone:** M1
+- **Depends-on:** T-033
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-09 01:44Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/12-ci-newest-go-patch-from-go-dev.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E01-foundation · **PRD:** `.team/epics/E01-foundation/PRD.md`
+
+CI resolved Go 1.26.8 while 1.26.9 (ten stdlib vulnerability fixes) was out, turning the security job red for hours; take the newest patch from go.dev directly.
 
 #### Comments
 
