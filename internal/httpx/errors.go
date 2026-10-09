@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/danyaa666/smemories/internal/apperr"
@@ -60,11 +61,15 @@ func v2Code(code string) string {
 }
 
 // WriteBodyError reports a failed request-body read: 413 payload_too_large when the
-// body cap was hit, 400 invalid_body otherwise.
+// body cap was hit, 408 request_timeout on a read deadline, 400 invalid_body otherwise.
 func WriteBodyError(w http.ResponseWriter, r *http.Request, err error) {
 	var tooLarge *http.MaxBytesError
 	if errors.As(err, &tooLarge) {
 		WriteError(w, r, http.StatusRequestEntityTooLarge, "payload_too_large", "request body too large")
+		return
+	}
+	if errors.Is(err, os.ErrDeadlineExceeded) { // a read deadline, e.g. IdleBody: the client stopped sending
+		WriteError(w, r, http.StatusRequestTimeout, "request_timeout", "the request body arrived too slowly")
 		return
 	}
 	WriteError(w, r, http.StatusBadRequest, "invalid_body", "request body could not be read")

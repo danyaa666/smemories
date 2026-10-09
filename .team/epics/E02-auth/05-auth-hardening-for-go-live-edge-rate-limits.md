@@ -1,5 +1,7 @@
 # E02_T-031 — Auth hardening for go-live: edge rate limits, shared limiter, session purge, stored-hash caps
 
+> **From T-048 QA (2026-10-09):** the reset code is locked after 5 wrong attempts and the spec lets `code_locked` be answered for an existing account only. So (a) `forgot-password` followed by 5 wrong `reset-password` guesses reveals that an account exists, and (b) a third party who knows a victim's email can lock the victim's reset code (3 requests per hour per email limit the victim's retries): a griefing denial of service on password reset, never a takeover. Decide here: answer `code_locked` for unknown addresses too after the same number of tries (decoy counters), and/or tie the lock to the requesting IP. Out of scope for T-048.
+
 **Epic:** E02-auth · **PRD:** [PRD.md](PRD.md) · **Milestone:** M2 · **Risk:** high · **Priority:** P3 · **Type:** security
 
 <!-- Migrated from the board block on 2026-10-07; the text below is unchanged. The board keeps status, dependencies and comments only. -->

@@ -12,7 +12,7 @@ text), no format characters (except U+200D and variation selectors), length coun
 | `nickname` | short text | 40 | Nickname | Biệt danh |
 | `relationship` | short text | 60 | Your relationship | Mối quan hệ |
 | `message` | long text | 2000 | Your message | Lời nhắn |
-| `how_we_met` | long text | 500 | How we met | Chúng ta quen nhau thế nào |
+| `how_we_met` | long text | 500 | How we met | Chúng mình quen nhau thế nào |
 | `first_impression` | long text | 500 | First impression | Ấn tượng đầu tiên |
 | `best_memory` | long text | 500 | Best memory together | Kỷ niệm đẹp nhất của chúng ta |
 | `wish` | long text | 500 | My wish for you | Điều mình ước cho bạn |

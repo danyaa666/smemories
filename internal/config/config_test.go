@@ -127,7 +127,7 @@ func TestLoadMediaAndS3(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.MediaMaxBytes != 10<<20 || cfg.MediaMaxConcurrent != 2 || cfg.MemoryLimitMiB != 0 || cfg.S3Bucket != "smemories-dev" || cfg.S3Region != "us-east-1" || cfg.S3PathStyle {
+	if cfg.MediaMaxBytes != 10<<20 || cfg.MediaMaxConcurrent != 2 || cfg.PublicUploadsPerIP != 8 || cfg.PublicUploadConns != 48 || cfg.UploadTmpDir != "" || cfg.MemoryLimitMiB != 0 || cfg.S3Bucket != "smemories-dev" || cfg.S3Region != "us-east-1" || cfg.S3PathStyle {
 		t.Fatalf("unexpected defaults: %+v", cfg)
 	}
 	cfg, err = Load(env(map[string]string{"SMEM_DB_DSN": dsn, "SMEM_MEDIA_MAX_BYTES": "2048", "SMEM_S3_ENDPOINT": "http://127.0.0.1:9000", "SMEM_S3_PATH_STYLE": "true", "SMEM_S3_BUCKET": "b"}))
@@ -140,13 +140,17 @@ func TestLoadMediaAndS3(t *testing.T) {
 		}
 	}
 	for _, c := range []struct{ key, val string }{
-		{"SMEM_MEDIA_MAX_BYTES", "0"}, {"SMEM_MEDIA_MAX_BYTES", "999999999999"}, {"SMEM_MEDIA_MAX_CONCURRENT", "0"},
+		{"SMEM_MEDIA_MAX_BYTES", "0"}, {"SMEM_MEDIA_MAX_BYTES", "999999999999"}, {"SMEM_MEDIA_MAX_CONCURRENT", "0"}, {"SMEM_PUBLIC_UPLOAD_CONCURRENT_PER_IP", "0"}, {"SMEM_PUBLIC_UPLOAD_MAX_CONNS", "0"}, {"SMEM_UPLOAD_TMP_DIR", "/no/such/dir/for/smem"},
 		{"SMEM_MEMORY_LIMIT_MIB", "-1"}, {"SMEM_MEMORY_LIMIT_MIB", "63"}, {"SMEM_MEMORY_LIMIT_MIB", "1048577"}, {"SMEM_MEMORY_LIMIT_MIB", "1g"},
 		{"SMEM_S3_ENDPOINT", "minio:9000"}, {"SMEM_S3_PATH_STYLE", "maybe"},
 	} {
 		if _, err := Load(env(map[string]string{"SMEM_DB_DSN": dsn, c.key: c.val})); err == nil || !strings.Contains(err.Error(), c.key) {
 			t.Errorf("%s=%q: want error naming the variable, got %v", c.key, c.val, err)
 		}
+	}
+	dir := t.TempDir()
+	if cfg, err = Load(env(map[string]string{"SMEM_DB_DSN": dsn, "SMEM_UPLOAD_TMP_DIR": dir, "SMEM_PUBLIC_UPLOAD_MAX_CONNS": "5"})); err != nil || cfg.UploadTmpDir != dir || cfg.PublicUploadConns != 5 {
+		t.Errorf("upload settings: %+v, %v", cfg, err)
 	}
 	if _, err := Load(env(map[string]string{"SMEM_ENV": "prod", "SMEM_DB_DSN": dsn, "SMEM_ALLOWED_ORIGINS": "https://a.example.com", "SMEM_PUBLIC_BASE_URL": "https://a.example.com"})); err == nil || !strings.Contains(err.Error(), "SMEM_S3_BUCKET") {
 		t.Errorf("prod without bucket: got %v", err)

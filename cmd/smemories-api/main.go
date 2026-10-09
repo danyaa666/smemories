@@ -110,7 +110,8 @@ func main() {
 	}), cfg.MediaMaxConcurrent, nil)
 	mediaH := media.NewHandler(mediaSvc, cfg.MediaMaxBytes, authH.RequireUser, cfg.AllowedOrigins, logger)
 	bookH := yearbook.NewHandler(yearbook.NewStore(d), mediaSvc, authH.RequireUser, cfg.AllowedOrigins, logger, nil)
-	notesH := notes.NewHandler(notes.NewStore(d), authH.RequireUser, cfg.AllowedOrigins, authH.ClientIP, logger, nil)
+	notesH := notes.NewHandler(notes.NewStore(d), mediaSvc, cfg.MediaMaxBytes, authH.RequireUser, cfg.AllowedOrigins, authH.ClientIP, logger, nil)
+	notesH.SetUploadLimits(cfg.PublicUploadConns, cfg.PublicUploadsPerIP, cfg.UploadTmpDir)
 
 	srv := httpx.NewServer(cfg.HTTPAddr, httpx.NewRouterWith(logger, httpx.RouterConfig{RequestTimeout: cfg.RequestTimeout, TrustProxy: cfg.TrustProxy}, httpx.Ready(d, logger, httpx.Dep{Name: "redis", Ping: rc.Ping}), authH.Routes, bookH.Routes, mediaH.Routes, notesH.Routes))
 	if err := httpx.Serve(ctx, srv, ln, httpx.DrainTimeout); err != nil {
