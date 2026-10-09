@@ -589,7 +589,8 @@ paths:
         `multipart/form-data` with the image in the part named `file`; other parts are ignored and the client file
         name is never used. The type is decided by sniffing the content (JPEG, PNG, WebP), never by file name or
         Content-Type. The image is decoded, rotated upright, stripped of all metadata (EXIF, GPS, ICC, comments),
-        resized to at most 3000 px on the long edge (never enlarged) and stored; a 480 px JPEG thumbnail is stored
+        resized to at most 3000 px on the long edge (never enlarged) and stored; a 480 px JPEG thumbnail and a
+        print version (long edge at most 1800 px, JPEG quality 85, PNG when the photo has transparency) are stored
         too. Opaque images are stored as JPEG, images with transparency as PNG. Only the owner may upload (`404`
         otherwise). The body cap is `SMEM_MEDIA_MAX_BYTES` (default 10 MiB). Limits: 200 photos per yearbook, 500 MiB
         per user, 60 uploads per 10 minutes per user.
@@ -691,11 +692,13 @@ paths:
       summary: Download a photo
       description: >-
         Streams the stored image to the yearbook owner only (`404` for anyone else). `Content-Type` comes from the
-        stored record. Honours `Range` and `If-None-Match`.
+        stored record. Honours `Range` and `If-None-Match`. `size=print` is the 1800 px version for the print renderer
+        (same type as `display`); a photo uploaded before it existed, and not yet reached by the backfill
+        (`smemories-media-backfill`), is answered in display size.
       security:
         - sessionCookie: []
       parameters:
-        - {name: size, in: query, required: false, schema: {type: string, enum: [display, thumb], default: display}}
+        - {name: size, in: query, required: false, schema: {type: string, enum: [display, thumb, print], default: display}}
       responses:
         "200":
           description: The image.
@@ -880,7 +883,7 @@ paths:
         Answers are validated against the set of fields in force at submission time (text rules of
         `docs/note-fields.md`: NFC, trimmed, control and format characters rejected except ZWJ and variation
         selectors, limits in characters). Each photo goes through the same pipeline as owner uploads (content sniffing,
-        decode limits, metadata stripped, display and thumbnail versions); a rejected photo rejects the whole
+        decode limits, metadata stripped, display, print and thumbnail versions); a rejected photo rejects the whole
         submission and nothing is stored. Photos are processed one at a time, each waiting up to 10 seconds for a free
         image-processing slot. A submission is refused at once, before any byte of the body is read, with `503 busy`
         and a `Retry-After` of 2 to 6 seconds (random) when the server already has `SMEM_PUBLIC_UPLOAD_MAX_CONNS`

@@ -1,6 +1,6 @@
 # Photo processing: memory budget
 
-Every upload is decoded, scaled to at most 3000 px (thumbnail 480 px) and re-encoded by `process` in
+Every upload is decoded, scaled to at most 3000 px (print 1800 px, thumbnail 480 px) and re-encoded by `process` in
 `internal/media/image.go`. Decoding is the memory risk: a few hundred KB of PNG can claim a 49 megapixel
 canvas. The limits below make the worst case a number we chose.
 
@@ -41,6 +41,27 @@ sent only after the rest of the body has been read (same limits), so a browser s
 **Disk sizing.** Worst case is `SMEM_PUBLIC_UPLOAD_MAX_CONNS` x 32 MiB = 1.5 GiB of temporary files (48 x 32 MiB), in practice far less. In production
 (T-022) the ephemeral storage of the task, or the volume behind `SMEM_UPLOAD_TMP_DIR`, must exceed that plus headroom. A process that is killed leaves
 its files behind; ephemeral storage is cleared on restart. Many-address floods are the job of the WAF and load balancer limits (T-031).
+
+## Print size (T-057, decision D-24)
+
+Three objects per photo: `<id>.<ext>` (display, 3000 px), `<id>-print.<ext>` (print, long edge 1800 px, JPEG quality 85, PNG with
+transparency stays PNG) and `<id>-thumb.jpg` (480 px). `media.print_key` holds the print key (migration 0013, NULL for photos older than
+the migration). `GET /v1/media/{id}/content?size=print` serves it with the headers and authorisation of the other sizes (ETag ends in `-p`);
+while `print_key` is NULL it answers in display size, so the print renderer works before and during the backfill.
+
+- A photo whose long edge is at most 1800 px keeps its display bytes as the print object (no second lossy pass).
+- The thumbnail is scaled from the print size (cheaper than from 3000 px); the print version is scaled and encoded in a goroutine
+  while the display is encoded. Process time of a 4032 x 3024 JPEG, median of 9 on a laptop: 0.90 s before, 0.86 s after. On a single
+  core the extra work is about 20%. Peak memory with the two largest accepted inputs (49 MP JPEG, 25 MP PNG), 2 at a time: 954 MiB
+  before, 960 MiB after (the print buffer is 1800 x 1350 x 4 bytes, about 10 MB).
+- Deleting a photo, discarding a failed submission or deleting a yearbook removes the print object too; a failed print write leaves nothing behind.
+
+**Backfill.** `bin/smemories-media-backfill [--dry-run] [--batch 100]` (same `SMEM_*` environment as the API: database and S3) creates the print object
+of every photo with `print_key IS NULL` from its stored display object, oldest first. It is idempotent (finished photos are never selected; a crash only
+repeats one write), can be stopped with Ctrl-C and restarted, and holds one image in memory at a time. It prints
+`print objects created: N, skipped: N, failed: N` (skipped: deleted meanwhile; failed: display object missing or unreadable, logged by media id, retried by
+the next run) and exits 1 when something failed. Run `--dry-run` first to see how many photos are waiting. Run it once after `make migrate` / the deploy
+that carries migration 0013; locally `make build && bin/smemories-media-backfill`.
 
 ## What was wrong, and the fix
 

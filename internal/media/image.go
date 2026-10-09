@@ -2,6 +2,7 @@ package media
 
 import (
 	"bytes"
+	"cmp"
 	"encoding/binary"
 	"errors"
 	"image"
@@ -9,6 +10,7 @@ import (
 	"image/jpeg"
 	"image/png"
 	"net/http"
+	"sync"
 
 	"golang.org/x/image/draw"
 	_ "golang.org/x/image/webp" // registers the WebP decoder
@@ -28,17 +30,19 @@ const (
 	bandSize         = 128        // rows or columns scaled at once, bounds the scaler's float64 scratch buffer
 	maxPixelsPNGWebP = 25_000_000
 	displayEdge      = 3000
+	printEdge        = 1800 // T-057: what the print renderer loads; lighter PDFs than the 3000 px display
 	thumbEdge        = 480
 	displayQuality   = 92
+	printQuality     = 85
 	thumbQuality     = 80
 )
 
-// processed is the normalised result of an upload: metadata-free display and thumbnail encodings.
+// processed is the normalised result of an upload: metadata-free display, print and thumbnail encodings.
 type processed struct {
-	display, thumb []byte
-	contentType    string // of display: image/jpeg, or image/png when the image has transparency
-	ext            string // "jpg" or "png"
-	width, height  int    // of display
+	display, print, thumb []byte
+	contentType           string // of display: image/jpeg, or image/png when the image has transparency
+	ext                   string // "jpg" or "png"
+	width, height         int    // of display
 }
 
 // process validates an untrusted image and re-encodes it. Re-encoding is what strips metadata: the
@@ -64,30 +68,80 @@ func process(data []byte) (processed, error) {
 	disp := orient(resize(img, displayEdge), exifOrientation(data, format))
 	out := processed{width: disp.Rect.Dx(), height: disp.Rect.Dy()}
 
-	var buf bytes.Buffer
+	out.contentType, out.ext = "image/jpeg", "jpg"
 	if alpha {
 		out.contentType, out.ext = "image/png", "png"
-		err = png.Encode(&buf, disp)
-	} else {
-		out.contentType, out.ext = "image/jpeg", "jpg"
-		err = jpeg.Encode(&buf, disp, &jpeg.Options{Quality: displayQuality})
 	}
-	if err != nil {
+	// The print version is scaled and encoded while the display is encoded: the extra work then costs little wall time.
+	// A photo not larger than printEdge keeps its display bytes: re-encoding would only lose quality.
+	var pr *image.NRGBA
+	var printErr error
+	var wg sync.WaitGroup
+	wg.Go(func() {
+		if pr = printSized(disp); pr != disp {
+			out.print, printErr = encode(pr, alpha, printQuality)
+		}
+	})
+	out.display, err = encode(disp, alpha, displayQuality)
+	wg.Wait()
+	if err = cmp.Or(err, printErr); err != nil {
 		return processed{}, err
 	}
-	out.display = buf.Bytes()
+	if pr == disp {
+		out.print = out.display
+	}
 
-	// The thumbnail is always a JPEG; transparency is flattened onto white.
-	th := resize(disp, thumbEdge)
+	// The thumbnail is always a JPEG; transparency is flattened onto white. It is scaled from the print size,
+	// which is cheaper than from the display size and pays for most of the print version's cost (T-057).
+	th := resize(pr, thumbEdge)
 	flat := image.NewNRGBA(th.Bounds())
 	draw.Draw(flat, flat.Bounds(), image.NewUniform(color.White), image.Point{}, draw.Src)
 	draw.Draw(flat, flat.Bounds(), th, th.Bounds().Min, draw.Over)
-	buf = bytes.Buffer{}
+	var buf bytes.Buffer
 	if err := jpeg.Encode(&buf, flat, &jpeg.Options{Quality: thumbQuality}); err != nil {
 		return processed{}, err
 	}
 	out.thumb = buf.Bytes()
 	return out, nil
+}
+
+// encode writes img as PNG (alpha) or as a JPEG of the given quality.
+func encode(img image.Image, alpha bool, quality int) ([]byte, error) {
+	var buf bytes.Buffer
+	var err error
+	if alpha {
+		err = png.Encode(&buf, img)
+	} else {
+		err = jpeg.Encode(&buf, img, &jpeg.Options{Quality: quality})
+	}
+	return buf.Bytes(), err
+}
+
+// printSized returns disp itself when its long edge is at most printEdge, else a copy scaled to printEdge.
+func printSized(disp *image.NRGBA) *image.NRGBA {
+	if max(disp.Rect.Dx(), disp.Rect.Dy()) <= printEdge {
+		return disp
+	}
+	return resize(disp, printEdge)
+}
+
+// printOf derives the print version from a stored display object (backfill). The display is already
+// oriented and at most displayEdge px, so decoding it is cheap and needs no limit checks beyond Decode's own header read.
+func printOf(display []byte) ([]byte, error) {
+	cfg, _, err := image.DecodeConfig(bytes.NewReader(display))
+	if err != nil || cfg.Width > displayEdge || cfg.Height > displayEdge {
+		return nil, ErrInvalidImage
+	}
+	img, format, err := image.Decode(bytes.NewReader(display))
+	if err != nil {
+		return nil, ErrInvalidImage
+	}
+	// The display's format decides (PNG stays PNG even when its pixels happen to be opaque).
+	disp := resize(img, displayEdge)
+	if pr := printSized(disp); pr != disp {
+		return encode(pr, format == "png", printQuality)
+	}
+	return display, nil
 }
 
 // sniff returns the content type of the first bytes when it is one we accept.

@@ -334,7 +334,7 @@ export interface paths {
         put?: never;
         /**
          * Upload a photo to a yearbook
-         * @description `multipart/form-data` with the image in the part named `file`; other parts are ignored and the client file name is never used. The type is decided by sniffing the content (JPEG, PNG, WebP), never by file name or Content-Type. The image is decoded, rotated upright, stripped of all metadata (EXIF, GPS, ICC, comments), resized to at most 3000 px on the long edge (never enlarged) and stored; a 480 px JPEG thumbnail is stored too. Opaque images are stored as JPEG, images with transparency as PNG. Only the owner may upload (`404` otherwise). The body cap is `SMEM_MEDIA_MAX_BYTES` (default 10 MiB). Limits: 200 photos per yearbook, 500 MiB per user, 60 uploads per 10 minutes per user.
+         * @description `multipart/form-data` with the image in the part named `file`; other parts are ignored and the client file name is never used. The type is decided by sniffing the content (JPEG, PNG, WebP), never by file name or Content-Type. The image is decoded, rotated upright, stripped of all metadata (EXIF, GPS, ICC, comments), resized to at most 3000 px on the long edge (never enlarged) and stored; a 480 px JPEG thumbnail and a print version (long edge at most 1800 px, JPEG quality 85, PNG when the photo has transparency) are stored too. Opaque images are stored as JPEG, images with transparency as PNG. Only the owner may upload (`404` otherwise). The body cap is `SMEM_MEDIA_MAX_BYTES` (default 10 MiB). Limits: 200 photos per yearbook, 500 MiB per user, 60 uploads per 10 minutes per user.
          */
         post: operations["uploadMedia"];
         delete?: never;
@@ -355,7 +355,7 @@ export interface paths {
         };
         /**
          * Download a photo
-         * @description Streams the stored image to the yearbook owner only (`404` for anyone else). `Content-Type` comes from the stored record. Honours `Range` and `If-None-Match`.
+         * @description Streams the stored image to the yearbook owner only (`404` for anyone else). `Content-Type` comes from the stored record. Honours `Range` and `If-None-Match`. `size=print` is the 1800 px version for the print renderer (same type as `display`); a photo uploaded before it existed, and not yet reached by the backfill (`smemories-media-backfill`), is answered in display size.
          */
         get: operations["getMediaContent"];
         put?: never;
@@ -477,7 +477,7 @@ export interface paths {
         /**
          * Submit a note through a collection link (public)
          * @description A friend sends answers to the form fields (`fields` of the lookup) and up to three photos, without an account. The note is stored as `pending` for the owner to moderate; nothing about it is returned except its id. No session is read, no cookie is set, no CORS headers are sent, and neither the client IP nor the user agent is stored. The body is spooled to a temporary file on the server while it arrives (nothing is decoded and no image-processing slot is held during the upload); the server removes the file in every case. The link, the note limit and the text are checked once the body has arrived, and a rejection (`404 not_found` for an unknown, malformed or revoked token, `410 collection_closed` after the deadline, `400`, `429`) is sent only after the rest of the body has been read, so a browser can show it. Send `answers` before the first `photos` part (otherwise `400 invalid_body`). Unknown parts are ignored. A body that delivers no byte for 10 seconds, or averages under 16 KiB/s once 15 seconds have passed, or takes over 120 seconds, is dropped (`408 request_timeout`, nothing stored).
-         *     Answers are validated against the set of fields in force at submission time (text rules of `docs/note-fields.md`: NFC, trimmed, control and format characters rejected except ZWJ and variation selectors, limits in characters). Each photo goes through the same pipeline as owner uploads (content sniffing, decode limits, metadata stripped, display and thumbnail versions); a rejected photo rejects the whole submission and nothing is stored. Photos are processed one at a time, each waiting up to 10 seconds for a free image-processing slot. A submission is refused at once, before any byte of the body is read, with `503 busy` and a `Retry-After` of 2 to 6 seconds (random) when the server already has `SMEM_PUBLIC_UPLOAD_MAX_CONNS` uploads in progress or the client IP has `SMEM_PUBLIC_UPLOAD_CONCURRENT_PER_IP`; `503 busy` is also the answer when no processing slot frees up in 10 seconds. A `503` costs the client nothing against the request limits below. The server does not read the body of an immediate `503`, so a client that is still uploading may see the connection reset instead of the answer: treat a network error exactly like `503` and retry with the same data.
+         *     Answers are validated against the set of fields in force at submission time (text rules of `docs/note-fields.md`: NFC, trimmed, control and format characters rejected except ZWJ and variation selectors, limits in characters). Each photo goes through the same pipeline as owner uploads (content sniffing, decode limits, metadata stripped, display, print and thumbnail versions); a rejected photo rejects the whole submission and nothing is stored. Photos are processed one at a time, each waiting up to 10 seconds for a free image-processing slot. A submission is refused at once, before any byte of the body is read, with `503 busy` and a `Retry-After` of 2 to 6 seconds (random) when the server already has `SMEM_PUBLIC_UPLOAD_MAX_CONNS` uploads in progress or the client IP has `SMEM_PUBLIC_UPLOAD_CONCURRENT_PER_IP`; `503 busy` is also the answer when no processing slot frees up in 10 seconds. A `503` costs the client nothing against the request limits below. The server does not read the body of an immediate `503`, so a client that is still uploading may see the connection reset instead of the answer: treat a network error exactly like `503` and retry with the same data.
          *     Limits: request body 32 MiB, each photo `SMEM_MEDIA_MAX_BYTES` (default 10 MiB), `answers` 16 KiB, 300 notes per link in any status, the yearbook's photo quota. Submissions that passed text validation are counted per client IP (100 per hour, 300 per day) and per link (60 per hour): `429 rate_limited` with `Retry-After`. A non-empty `website` field is a honeypot: the answer is a normal `201` and nothing is stored.
          */
         post: operations["submitNote"];
@@ -1611,7 +1611,7 @@ export interface operations {
     getMediaContent: {
         parameters: {
             query?: {
-                size?: "display" | "thumb";
+                size?: "display" | "thumb" | "print";
             };
             header?: never;
             path: {
