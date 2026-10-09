@@ -46,6 +46,13 @@ type Config struct {
 	S3AccessKey        string // SMEM_S3_ACCESS_KEY: never log
 	S3SecretKey        string // SMEM_S3_SECRET_KEY: never log
 	S3PathStyle        bool   // SMEM_S3_PATH_STYLE: true for MinIO
+
+	RedisURL          string        // SMEM_REDIS_URL: redis[s]://[:password@]host:port/db; required in every environment. Never log it.
+	RedisPassword     string        // SMEM_REDIS_PASSWORD: used when the URL carries none. Never log it.
+	RedisDialTimeout  time.Duration // SMEM_REDIS_DIAL_TIMEOUT, default 2s
+	RedisReadTimeout  time.Duration // SMEM_REDIS_READ_TIMEOUT, default 1s
+	RedisWriteTimeout time.Duration // SMEM_REDIS_WRITE_TIMEOUT, default 1s
+	RedisPoolSize     int           // SMEM_REDIS_POOL_SIZE, default 10
 }
 
 var logLevels = map[string]slog.Level{
@@ -193,7 +200,43 @@ func Load(getenv func(string) string) (Config, error) {
 	if cfg.S3PathStyle, err = strconv.ParseBool(get("SMEM_S3_PATH_STYLE", "false")); err != nil {
 		return Config{}, fmt.Errorf("SMEM_S3_PATH_STYLE=%q: want true or false", getenv("SMEM_S3_PATH_STYLE"))
 	}
+	if err := cfg.loadRedis(getenv, get); err != nil {
+		return Config{}, err
+	}
 	return cfg, nil
+}
+
+// loadRedis reads the Redis settings (T-051). The URL is checked here so a typo fails at startup naming the variable.
+func (cfg *Config) loadRedis(getenv func(string) string, get func(key, def string) string) error {
+	cfg.RedisURL, cfg.RedisPassword = getenv("SMEM_REDIS_URL"), getenv("SMEM_REDIS_PASSWORD")
+	if cfg.RedisURL == "" {
+		return fmt.Errorf("SMEM_REDIS_URL is required (e.g. redis://127.0.0.1:6379/0)")
+	}
+	bad := fmt.Errorf("SMEM_REDIS_URL: want redis://[:password@]host:port/db or rediss://..., db 0-15")
+	u, err := url.Parse(cfg.RedisURL)
+	if err != nil || (u.Scheme != "redis" && u.Scheme != "rediss") || u.Hostname() == "" || u.RawQuery != "" || u.Fragment != "" {
+		return bad
+	}
+	if db := strings.TrimPrefix(u.Path, "/"); db != "" {
+		if n, err := strconv.Atoi(db); err != nil || n < 0 || n > 15 {
+			return bad
+		}
+	}
+	for _, t := range []struct {
+		key, def string
+		dst      *time.Duration
+	}{
+		{"SMEM_REDIS_DIAL_TIMEOUT", "2s", &cfg.RedisDialTimeout},
+		{"SMEM_REDIS_READ_TIMEOUT", "1s", &cfg.RedisReadTimeout},
+		{"SMEM_REDIS_WRITE_TIMEOUT", "1s", &cfg.RedisWriteTimeout},
+	} {
+		raw := get(t.key, t.def)
+		if *t.dst, err = time.ParseDuration(raw); err != nil || *t.dst <= 0 {
+			return fmt.Errorf("%s=%q: want a positive duration such as %s", t.key, raw, t.def)
+		}
+	}
+	cfg.RedisPoolSize, err = getInt(get, "SMEM_REDIS_POOL_SIZE", "10", 1)
+	return err
 }
 
 // loadGoogle reads the Google settings; all of them are required once a client id is set.

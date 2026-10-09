@@ -8,7 +8,15 @@ import (
 	"time"
 )
 
-func env(m map[string]string) func(string) string { return func(k string) string { return m[k] } }
+// env serves m; SMEM_REDIS_URL defaults to a valid URL unless the case sets it (even to "").
+func env(m map[string]string) func(string) string {
+	return func(k string) string {
+		if v, ok := m[k]; ok || k != "SMEM_REDIS_URL" {
+			return v
+		}
+		return "redis://127.0.0.1:6379/0"
+	}
+}
 
 const dsn = "u:p@tcp(127.0.0.1:3306)/db"
 
@@ -206,5 +214,51 @@ func TestLoadGoogle(t *testing.T) {
 	}
 	if _, err := Load(env(prod)); err == nil || !strings.Contains(err.Error(), "SMEM_GOOGLE_ISSUER") {
 		t.Errorf("http issuer in prod: got %v", err)
+	}
+}
+
+func TestLoadRedisDefaults(t *testing.T) {
+	cfg, err := Load(env(map[string]string{"SMEM_DB_DSN": dsn, "SMEM_REDIS_PASSWORD": "pw"}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.RedisURL != "redis://127.0.0.1:6379/0" || cfg.RedisPassword != "pw" || cfg.RedisDialTimeout != 2*time.Second ||
+		cfg.RedisReadTimeout != time.Second || cfg.RedisWriteTimeout != time.Second || cfg.RedisPoolSize != 10 {
+		t.Fatalf("unexpected redis defaults: %+v", cfg)
+	}
+}
+
+func TestLoadRedisRequiredInEveryEnv(t *testing.T) {
+	for _, e := range []string{"dev", "test", "prod"} {
+		_, err := Load(env(map[string]string{"SMEM_ENV": e, "SMEM_DB_DSN": dsn, "SMEM_REDIS_URL": "", "SMEM_ALLOWED_ORIGINS": "https://a.example", "SMEM_PUBLIC_BASE_URL": "https://a.example", "SMEM_S3_BUCKET": "b"}))
+		if err == nil || !strings.Contains(err.Error(), "SMEM_REDIS_URL") {
+			t.Errorf("SMEM_ENV=%s without SMEM_REDIS_URL: want error naming it, got %v", e, err)
+		}
+	}
+}
+
+func TestLoadRedisInvalidNamesVariableAndHidesPassword(t *testing.T) {
+	cases := []struct{ key, val string }{
+		{"SMEM_REDIS_URL", "127.0.0.1:6379"},
+		{"SMEM_REDIS_URL", "http://127.0.0.1:6379/0"},
+		{"SMEM_REDIS_URL", "redis://:s3cret@/0"},
+		{"SMEM_REDIS_URL", "redis://:s3cret@h:6379/16"},
+		{"SMEM_REDIS_URL", "redis://:s3cret@h:6379/x"},
+		{"SMEM_REDIS_URL", "redis://:s3cret@h:6379/0?db=1"},
+		{"SMEM_REDIS_DIAL_TIMEOUT", "2"},
+		{"SMEM_REDIS_READ_TIMEOUT", "0s"},
+		{"SMEM_REDIS_WRITE_TIMEOUT", "-1s"},
+		{"SMEM_REDIS_POOL_SIZE", "0"},
+	}
+	for _, c := range cases {
+		_, err := Load(env(map[string]string{c.key: c.val, "SMEM_DB_DSN": dsn}))
+		if err == nil || !strings.Contains(err.Error(), c.key) || strings.Contains(err.Error(), "s3cret") {
+			t.Errorf("%s=%q: want error naming the variable without the password, got %v", c.key, c.val, err)
+		}
+	}
+	for _, ok := range []string{"redis://h:6379", "rediss://:pw@h:6380/3", "redis://h/0"} {
+		if _, err := Load(env(map[string]string{"SMEM_REDIS_URL": ok, "SMEM_DB_DSN": dsn})); err != nil {
+			t.Errorf("%q should be valid: %v", ok, err)
+		}
 	}
 }

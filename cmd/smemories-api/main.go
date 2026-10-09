@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"runtime/debug"
 	"syscall"
+	"time"
 
 	"github.com/danyaa666/smemories/internal/auth"
 	"github.com/danyaa666/smemories/internal/config"
@@ -18,6 +19,7 @@ import (
 	"github.com/danyaa666/smemories/internal/mailer"
 	"github.com/danyaa666/smemories/internal/media"
 	"github.com/danyaa666/smemories/internal/notes"
+	"github.com/danyaa666/smemories/internal/redis"
 	"github.com/danyaa666/smemories/internal/storage"
 	"github.com/danyaa666/smemories/internal/yearbook"
 )
@@ -49,6 +51,21 @@ func main() {
 		os.Exit(1)
 	}
 	defer func() { _ = d.Close() }()
+
+	rc, err := redis.New(cfg)
+	if err != nil {
+		logger.Error("redis setup failed", "error", err)
+		os.Exit(1)
+	}
+	defer func() { _ = rc.Close() }()
+	pctx, pcancel := context.WithTimeout(ctx, 5*time.Second)
+	err = rc.Ping(pctx)
+	pcancel()
+	if err != nil {
+		logger.Error("redis unavailable", "addr", rc.Addr(), "error", err)
+		os.Exit(1)
+	}
+	logger.Info("redis connected", "addr", rc.Addr())
 
 	ln, err := net.Listen("tcp", cfg.HTTPAddr)
 	if err != nil {
@@ -89,7 +106,7 @@ func main() {
 	bookH := yearbook.NewHandler(yearbook.NewStore(d), mediaSvc, authH.RequireUser, cfg.AllowedOrigins, logger, nil)
 	notesH := notes.NewHandler(notes.NewStore(d), authH.RequireUser, cfg.AllowedOrigins, authH.ClientIP, logger, nil)
 
-	srv := httpx.NewServer(cfg.HTTPAddr, httpx.NewRouter(logger, httpx.Ready(d, logger), authH.Routes, bookH.Routes, mediaH.Routes, notesH.Routes))
+	srv := httpx.NewServer(cfg.HTTPAddr, httpx.NewRouter(logger, httpx.Ready(d, logger, httpx.Dep{Name: "redis", Ping: rc.Ping}), authH.Routes, bookH.Routes, mediaH.Routes, notesH.Routes))
 	if err := httpx.Serve(ctx, srv, ln, httpx.DrainTimeout); err != nil {
 		logger.Error("server stopped", "error", err)
 		os.Exit(1)

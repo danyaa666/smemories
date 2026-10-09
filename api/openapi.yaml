@@ -32,10 +32,10 @@ paths:
   /readyz:
     get:
       operationId: getReady
-      summary: Readiness probe (pings the database, 1 s timeout)
+      summary: Readiness probe (pings the database and Redis, 1 s timeout together)
       responses:
         "200":
-          description: The database answered.
+          description: The database and Redis answered.
           content:
             application/json:
               schema:
@@ -47,7 +47,7 @@ paths:
                     const: ready
         "503":
           description: >-
-            The database did not answer in time. Error code `not_ready`; the body never
+            The database or Redis did not answer in time. Error code `not_ready`; the body never
             carries driver error text (it is logged server-side).
           content:
             application/json:

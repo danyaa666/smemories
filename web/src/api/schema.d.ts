@@ -28,7 +28,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Readiness probe (pings the database, 1 s timeout) */
+        /** Readiness probe (pings the database and Redis, 1 s timeout together) */
         get: operations["getReady"];
         put?: never;
         post?: never;
@@ -812,7 +812,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The database answered. */
+            /** @description The database and Redis answered. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -825,7 +825,7 @@ export interface operations {
                 };
             };
             405: components["responses"]["MethodNotAllowed"];
-            /** @description The database did not answer in time. Error code `not_ready`; the body never carries driver error text (it is logged server-side). */
+            /** @description The database or Redis did not answer in time. Error code `not_ready`; the body never carries driver error text (it is logged server-side). */
             503: {
                 headers: {
                     [name: string]: unknown;
