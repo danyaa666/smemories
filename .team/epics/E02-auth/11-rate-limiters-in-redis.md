@@ -1,4 +1,4 @@
-# T-053 — Rate limiters move to Redis (shared limiter)
+# E02_T-053 — Rate limiters move to Redis (shared limiter)
 
 **Epic:** E02-auth · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** high · **Priority:** P1 · **Type:** tech-debt
 

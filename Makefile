@@ -52,10 +52,10 @@ web-test: web/node_modules
 web-lint: web/node_modules
 	cd web && npm run lint && npm run typecheck && npm run lint:i18n && npm run check:api
 
-# Starts MySQL 8.4 and MinIO and returns once both are healthy and the bucket exists.
+# Starts MySQL 8.4, Valkey and MinIO and returns once all are healthy and the bucket exists.
 up:
 	@test -f .env || { cp .env.example .env; echo "created .env from .env.example"; }
-	docker compose up -d --wait mysql minio
+	docker compose up -d --wait mysql redis minio
 	docker compose run --rm -T minio-init
 	@# The init script only runs on a fresh volume; GRANT is idempotent, so re-run it for older volumes.
 	docker compose exec -T mysql sh /docker-entrypoint-initdb.d/10-test-grants.sh

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"math/rand/v2"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -21,6 +22,9 @@ var (
 const (
 	mysqlDuplicateEntry = 1062
 	mysqlDeadlock       = 1213
+	mysqlLockTimeout    = 1205
+
+	txAttempts = 6
 )
 
 // User is the account as the API shows it. InternalID is the BIGINT key other tables
@@ -162,18 +166,43 @@ func (s *Store) deleteExpiredSessions(ctx context.Context, userID uint64, now ti
 // or a deadlock; the loser retries and then finds the winner's rows.
 func (s *Store) googleUser(ctx context.Context, id GoogleIdentity, want User, now time.Time) (User, error) {
 	var u User
-	var err error
-	for range 3 {
-		if u, err = s.googleUserTx(ctx, id, want, now); !isRetryable(err) {
-			break
-		}
-	}
+	err := retryTx(ctx, sleepCtx, func() (err error) {
+		u, err = s.googleUserTx(ctx, id, want, now)
+		return err
+	})
 	return u, err
 }
 
 func isRetryable(err error) bool {
 	var me *mysql.MySQLError
-	return errors.As(err, &me) && (me.Number == mysqlDuplicateEntry || me.Number == mysqlDeadlock)
+	return errors.As(err, &me) && (me.Number == mysqlDuplicateEntry || me.Number == mysqlDeadlock || me.Number == mysqlLockTimeout)
+}
+
+// retryTx runs fn up to txAttempts times while it fails with a retryable MySQL error, waiting a
+// random time between attempts (5-25 ms, doubling, upper bound capped at 200 ms) so colliding
+// transactions spread out. It stops at once when ctx ends and returns the last error.
+func retryTx(ctx context.Context, sleep func(context.Context, time.Duration) error, fn func() error) error {
+	err := fn()
+	for i := 0; i < txAttempts-1 && isRetryable(err); i++ {
+		lo := 5 * time.Millisecond << i
+		hi := min(5*lo, 200*time.Millisecond)
+		if serr := sleep(ctx, lo+rand.N(hi-lo)); serr != nil { //nolint:gosec // jitter, not a secret
+			return err
+		}
+		err = fn()
+	}
+	return err
+}
+
+func sleepCtx(ctx context.Context, d time.Duration) error {
+	t := time.NewTimer(d)
+	defer t.Stop()
+	select {
+	case <-t.C:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 func (s *Store) googleUserTx(ctx context.Context, id GoogleIdentity, want User, now time.Time) (User, error) {

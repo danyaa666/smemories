@@ -1,6 +1,6 @@
 # E05 — Templates and PDF export
 
-**Status:** active   **Milestone(s):** M0 (spike), M1   **Owner decisions:** D-04, D-06, D-12 (README §4)
+**Status:** active (export path changed by D-24: browser print of HTML templates, 2026-10-09)   **Milestone(s):** M0 (spike), M1   **Owner decisions:** D-04, D-06, D-12 (README §4)
 
 ## Problem and users
 The owner wants a finished book: pick a look, see exactly what will print, and download a print-quality PDF to take to any print shop.
@@ -51,3 +51,9 @@ Specs live next to this file; **status lives only on the board** (`L list`), nev
 | T-019 Web: template picker, PDF preview (pdf.js) and export/download | `04-web-template-picker-pdf-preview-pdf-js-and.md` | T-014, T-016 |
 | T-035 T-010 follow-ups: template tests iterate templates.List() | `05-t-010-follow-ups-template-tests-iterate.md` | T-010 |
 | T-054 Spike: HTML templates and browser print-to-PDF | `06-spike-browser-print-to-pdf.md` | — |
+| T-056 Book data endpoint for rendering | `07-book-data-endpoint.md` | T-013 |
+| T-057 Media print-size variant (1800 px) for fast, light printing | `08-print-size-photo-variant.md` | T-009 |
+| T-058 Web: HTML book renderer core and print preview | `09-html-book-renderer-core.md` | T-054, T-056, T-057 |
+| T-059 HTML template "memory-book" (from design temp1) | `10-html-template-memory-book.md` | T-058, T-044 |
+| T-060 HTML template "navy-classic" (from design temp2) | `11-html-template-navy-classic.md` | T-058, T-044 |
+| T-061 Web: template picker and print screen with device guidance | `12-template-picker-and-print-screen.md` | T-058, T-059 |

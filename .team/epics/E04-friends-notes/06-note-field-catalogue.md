@@ -1,4 +1,4 @@
-# T-043 — Note field catalogue (`internal/notefields`)
+# E04_T-043 — Note field catalogue (`internal/notefields`)
 
 **Epic:** E04-friends-notes · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** low · **Priority:** P1 · **Type:** feature
 

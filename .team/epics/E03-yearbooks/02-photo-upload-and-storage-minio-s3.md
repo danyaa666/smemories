@@ -1,4 +1,4 @@
-# T-009 — Photo upload and storage (MinIO/S3)
+# E03_T-009 — Photo upload and storage (MinIO/S3)
 
 **Epic:** E03-yearbooks · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** high · **Priority:** P1 · **Type:** feature
 

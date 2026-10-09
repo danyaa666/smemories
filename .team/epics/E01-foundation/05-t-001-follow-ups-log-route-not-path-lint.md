@@ -1,4 +1,4 @@
-# T-028 — T-001 follow-ups: log route not path, lint scope and findings, OpenAPI 404/405
+# E01_T-028 — T-001 follow-ups: log route not path, lint scope and findings, OpenAPI 404/405
 
 **Epic:** E01-foundation · **PRD:** [PRD.md](PRD.md) · **Milestone:** M0 · **Risk:** low · **Priority:** P2 · **Type:** tech-debt
 

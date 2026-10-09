@@ -6,9 +6,11 @@ package media
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/danyaa666/smemories/internal/ratelimit"
@@ -149,6 +151,57 @@ func (s *Service) cleanup(m Media) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	_ = s.st.Delete(ctx, m.ObjectKey, m.ThumbKey) // best effort: an orphan is still removed with its yearbook
+}
+
+// ValidationError is a bad query parameter (400); Code is the API error code.
+type ValidationError struct{ Code string }
+
+func (e ValidationError) Error() string { return "media: " + e.Code }
+
+// List limits and the uploader filter values.
+const (
+	DefaultListLimit = 50
+	MaxListLimit     = 100
+)
+
+// List returns one page of a yearbook's photos, newest first, for its owner. uploader is "owner", "contributor"
+// or "all". The cursor only narrows a query that is already scoped to the owner's yearbook.
+func (s *Service) List(ctx context.Context, ownerID uint64, yearbookID, uploader string, limit int, cursor string) ([]Media, string, error) {
+	var kinds []string
+	switch uploader {
+	case "", "owner":
+		kinds = []string{"owner"}
+	case "contributor":
+		kinds = []string{"contributor"}
+	case "all":
+		kinds = []string{"owner", "contributor"}
+	default:
+		return nil, "", ValidationError{"invalid_uploader"}
+	}
+	var before uint64
+	if cursor != "" {
+		raw, derr := base64.RawURLEncoding.DecodeString(cursor)
+		var perr error
+		before, perr = strconv.ParseUint(string(raw), 10, 63)
+		// the round trip rejects "+5", "007" and other spellings of a number we never issue
+		if derr != nil || perr != nil || before == 0 || strconv.FormatUint(before, 10) != string(raw) {
+			return nil, "", ValidationError{"invalid_cursor"}
+		}
+	}
+	yb, err := s.store.ownedYearbook(ctx, ownerID, yearbookID)
+	if err != nil {
+		return nil, "", err
+	}
+	items, err := s.store.list(ctx, yb, kinds, before, limit+1) // one extra row says whether another page exists
+	if err != nil {
+		return nil, "", err
+	}
+	next := ""
+	if len(items) > limit {
+		items = items[:limit]
+		next = base64.RawURLEncoding.EncodeToString([]byte(strconv.FormatUint(items[limit-1].seq, 10)))
+	}
+	return items, next, nil
 }
 
 // Content returns the stored bytes of a photo the user owns: the thumbnail or the display version.

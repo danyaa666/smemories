@@ -1,4 +1,4 @@
-# T-002 — Local stack (MySQL + MinIO), migrations and readiness
+# E01_T-002 — Local stack (MySQL + MinIO), migrations and readiness
 
 **Epic:** E01-foundation · **PRD:** [PRD.md](PRD.md) · **Milestone:** M0 · **Risk:** low · **Priority:** P1 · **Type:** infra
 

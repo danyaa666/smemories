@@ -1,4 +1,4 @@
-# T-024 — Observability: metrics, alarms, uptime check, log retention
+# E06_T-024 — Observability: metrics, alarms, uptime check, log retention
 
 **Epic:** E06-go-live · **PRD:** [PRD.md](PRD.md) · **Milestone:** M2 · **Risk:** low · **Priority:** P2 · **Type:** infra
 

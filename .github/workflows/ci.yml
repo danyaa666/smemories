@@ -1,4 +1,4 @@
-# Continuous integration: Go, Go integration (MySQL), web, security. Details and the
+# Continuous integration: Go, Go integration (MySQL, Valkey, MinIO), web, security. Details and the
 # required-check names for branch protection: docs/ci.md.
 # No repository secrets are used anywhere in this file; keep it that way (public repo, and
 # pull requests from forks must be able to run it).
@@ -37,6 +37,9 @@ jobs:
           go-version: ${{ steps.gover.outputs.minor }}
           check-latest: true
           cache: true # module and build cache, keyed on go.sum
+      - uses: ./.github/actions/go-newest-patch
+        with:
+          minor: ${{ steps.gover.outputs.minor }}
       - name: gofmt
         run: |
           out="$(gofmt -l .)"
@@ -72,6 +75,8 @@ jobs:
       SMEM_TEST_S3_ACCESS_KEY: ci-only-minio
       SMEM_TEST_S3_SECRET_KEY: ci-only-fake-minio-pw
       SMEM_TEST_S3_BUCKET: smemories-ci
+      # Throwaway Valkey on the runner (same pinned image as docker-compose.yml, T-051). No password, loopback only.
+      SMEM_TEST_REDIS_URL: redis://127.0.0.1:6379/0
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -83,6 +88,9 @@ jobs:
           go-version: ${{ steps.gover.outputs.minor }}
           check-latest: true
           cache: true
+      - uses: ./.github/actions/go-newest-patch
+        with:
+          minor: ${{ steps.gover.outputs.minor }}
       # A `services:` container cannot take server arguments, so this starts MySQL 8.4 with
       # the same flags as docker-compose.yml (utf8mb4, strict sql_mode, UTC).
       - name: Start MySQL 8.4 (utf8mb4)
@@ -112,6 +120,20 @@ jobs:
             sleep 2
           done
           docker logs minio
+          exit 1
+      # Same image and flags as docker-compose.yml (the digest is the one pinned there; keep them in step). A
+      # `services:` container cannot take server arguments, so this is a docker run like the other two.
+      - name: Start Valkey 8 (Redis protocol)
+        run: |
+          docker run -d --name valkey -p 127.0.0.1:6379:6379 \
+            valkey/valkey:8@sha256:640c5e62cea04b6d6f2084232651d0cc70362d31f4f805e7be94dbed6855e8f2 \
+            valkey-server --appendonly yes --appendfsync everysec --save "" \
+            --maxmemory 256mb --maxmemory-policy noeviction --protected-mode no
+          for i in $(seq 1 30); do
+            docker exec valkey valkey-cli ping | grep -qx PONG && exit 0
+            sleep 1
+          done
+          docker logs valkey
           exit 1
       - run: make test-integration
 
@@ -152,6 +174,9 @@ jobs:
           go-version: ${{ steps.gover.outputs.minor }}
           check-latest: true
           cache: true
+      - uses: ./.github/actions/go-newest-patch
+        with:
+          minor: ${{ steps.gover.outputs.minor }}
       # Blocking: a known vulnerability that the code can reach fails the build.
       - name: govulncheck
         run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...

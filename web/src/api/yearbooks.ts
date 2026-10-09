@@ -1,10 +1,11 @@
 import type { components } from "./schema";
-import { ApiError, apiErrorFrom, postJson, request, sendJson } from "./client";
+import { ApiError, apiErrorFrom, postJson, request, sendJson, unwrapSuccess } from "./client";
 
 type S = components["schemas"];
 export type Yearbook = S["Yearbook"];
 export type Profile = S["Profile"];
 export type Media = S["Media"];
+export type MediaItem = S["MediaItem"];
 export type YearbookCreate = S["YearbookCreate"];
 export type YearbookPatch = S["YearbookPatch"];
 export type ProfileInput = S["ProfileInput"];
@@ -41,6 +42,12 @@ export const profileInput = (p: Profile): ProfileInput => ({
 });
 
 export const deleteYearbook = (id: string) => sendJson<void>("DELETE", book(id));
+/** One page of the owner's own photos, newest first. */
+export const listMedia = (id: string, cursor?: string) =>
+  request<{ media: MediaItem[]; next_cursor: string | null }>(
+    `${book(id)}/media${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`,
+  );
+
 export const deleteMedia = (id: string) =>
   sendJson<void>("DELETE", `/v1/media/${encodeURIComponent(id)}`);
 
@@ -77,7 +84,8 @@ export function uploadMedia(
       } catch {
         body = undefined;
       }
-      if (xhr.status === 201) resolve((body as S["MediaEnvelope"]).media);
+      if (xhr.status >= 200 && xhr.status < 300)
+        resolve((unwrapSuccess(body) as S["MediaEnvelope"]).media);
       else reject(apiErrorFrom(xhr.status, body, (n) => xhr.getResponseHeader(n)));
     };
     const form = new FormData();

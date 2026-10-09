@@ -1,4 +1,6 @@
-# T-017 — Web: notes link management and moderation inbox
+# E04_T-017 — Web: notes link management and moderation inbox
+
+> **E10 contract note (2026-10-09, D-25..D-27):** build on the v2 API contract and database conventions (`docs/api-contract.md`, `docs/db-conventions.md`, `docs/go-conventions.md`); where this spec names `/v1/...` paths, old error codes, RFC 3339 times or `cursor`, use the v2 equivalents (route map: `docs/api-contract.md` section 8). Epic: `.team/epics/E10-skills-alignment/PRD.md`.
 
 **Epic:** E04-friends-notes · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** low · **Priority:** P2 · **Type:** feature
 

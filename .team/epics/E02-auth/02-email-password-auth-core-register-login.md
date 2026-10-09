@@ -1,4 +1,4 @@
-# T-006 — Email + password auth core (register, login, sessions)
+# E02_T-006 — Email + password auth core (register, login, sessions)
 
 **Epic:** E02-auth · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** high · **Priority:** P1 · **Type:** feature
 

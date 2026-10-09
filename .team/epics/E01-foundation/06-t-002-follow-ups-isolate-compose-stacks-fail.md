@@ -1,4 +1,4 @@
-# T-030 — T-002 follow-ups: isolate compose stacks, fail fast on auth errors, test-DB grants
+# E01_T-030 — T-002 follow-ups: isolate compose stacks, fail fast on auth errors, test-DB grants
 
 **Epic:** E01-foundation · **PRD:** [PRD.md](PRD.md) · **Milestone:** M0 · **Risk:** low · **Priority:** P2 · **Type:** tech-debt
 

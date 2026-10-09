@@ -1,4 +1,4 @@
-# T-007 — Email verification and password reset
+# E02_T-007 — Email verification and password reset
 
 > **Superseded in part (2026-10-08, D-22):** the emailed link tokens of this task were replaced by 6-digit codes: see T-048 (API) and T-049 (web). The mailer, rate-limit and cleanup parts stay.
 

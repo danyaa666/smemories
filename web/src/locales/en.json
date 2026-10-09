@@ -163,6 +163,7 @@
     "title": "Photos",
     "add": "Add photos",
     "hint": "JPEG, PNG or WebP, up to 10 MB each. Photos are private to you.",
+    "more": "Show more photos",
     "empty": "No photos to show yet.",
     "alt": "Photo {{n}}",
     "cover": "Cover photo",

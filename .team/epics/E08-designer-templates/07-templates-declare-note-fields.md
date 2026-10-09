@@ -1,4 +1,4 @@
-# T-044 — Templates declare note fields (format v2.1)
+# E08_T-044 — Templates declare note fields (format v2.1)
 
 **Epic:** E08-designer-templates · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** low · **Priority:** P2 · **Type:** feature
 
@@ -30,3 +30,6 @@ Answers are already cleaned by T-043 when stored; the renderer still treats them
 #### Test plan
 - Dev: validator table tests (unknown id, duplicate, field not declared, too many); renderer test with answers for each kind including Vietnamese and an emoji ZWJ sequence; alias equivalence test (old slot output equals new slot output byte for byte for the same data).
 - QA should probe: a notes page where one note has all answers empty except `name`; the longest allowed answers in every box (truncation with an ellipsis and a warning); switching a book between two templates with different fields (nothing lost, nothing crashes).
+
+#### Leader note from D-24 (2026-10-09)
+Templates are now HTML components in the web app (T-059, T-060), but the API still needs each template's id, names, supported page sizes and note fields (the public form, `GET /v1/templates`, validation of `template_id`). Do the manifest part of this task (`note_fields`, `templates.NoteFields`) and allow a manifest that has `"renderer":"html"` and **no pages**; skip the Go renderer changes (`note_field` slot, `pdf.Render` input) unless a Go template needs them.

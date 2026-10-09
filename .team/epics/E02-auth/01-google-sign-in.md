@@ -1,4 +1,4 @@
-# T-011 — Google sign-in (OIDC + PKCE, account linking)
+# E02_T-011 — Google sign-in (OIDC + PKCE, account linking)
 
 **Epic:** E02-auth · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** high · **Priority:** P1
 

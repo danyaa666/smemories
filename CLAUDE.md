@@ -44,3 +44,18 @@ Rules for every agent:
 - **Delete all shortcuts before going to production.** T-050 does it and adds `scripts/check-no-dev-shortcuts.sh` to CI and to the deploy pipeline; it is a prerequisite of the first deploy (T-023). The leader checks `docs/dev-shortcuts.md` at every go-live review, and nobody sets a shortcut variable in a production configuration or in infrastructure code.
 - Never log, print or commit a real code, key or token, and never reuse the dev code value for anything else.
 
+
+## Engineering standards (owner rule, 2026-10-09)
+
+The backend skills in `.agents/skills/` (`be-golang` with its `references/`, `be-api-design`, `be-rldb`, `be-architect`, `be-td`) are the team's standard, as adapted by
+[docs/api-contract.md](docs/api-contract.md), [docs/db-conventions.md](docs/db-conventions.md) and [docs/go-conventions.md](docs/go-conventions.md) (decisions D-25..D-27).
+- **Read the skills from the main checkout** (`.agents/skills/`, not a task worktree) and the three docs before any Go, SQL or API change; the docs list the few places where we deliberately differ (plain `database/sql`, stdlib mux, `internal/apperr` instead of `go-common`, ULID public ids).
+- New endpoints are `/api/<namespace>/<action>` with the `{status,data}` envelope; new tables are `_tab` tables with BIGINT ms timestamps and no foreign keys; handlers never call stores; no `fmt.Errorf`/`errors.New` in application code. Existing code is converted by epic E10 (T-063..T-073); do not "fix" other domains in an unrelated PR.
+- Reviewers (leader, QA) check the PR against those documents' checklists.
+
+## Finding tasks by epic (owner request, 2026-10-09)
+
+`board.py` only understands plain ids (`T-063`: board headings, `Depends-on`, branches `task/t-063-...`, worktrees), so the id itself cannot carry the epic.
+Instead every board title starts with the epic code (`T-063 — [E10] Foundation: ...`, searchable with `grep "\[E10\]"` or `board.py list`), every spec's first line is
+`# E10_T-063 — ...`, and [.team/TASKS.md](.team/TASKS.md) lists all tasks grouped by epic with labels like `E10_T-063`.
+**Leader only:** new tasks get the `[E##]` prefix in `add-task --title`; before each board commit run `python3 .team/epic_index.py` (add `--titles` to prefix any task that lacks it).

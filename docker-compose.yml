@@ -1,4 +1,4 @@
-# Local development stack: MySQL 8.4 + MinIO (S3). Dev-only credentials come from .env
+# Local development stack: MySQL 8.4 + Valkey 8 (Redis protocol) + MinIO (S3). Dev-only credentials come from .env
 # (copied from .env.example by `make up`). Every port binds to loopback only.
 name: smemories
 
@@ -31,6 +31,39 @@ services:
       timeout: 3s
       retries: 40
       start_period: 10s
+
+  redis:
+    # Valkey 8 (BSD): Redis-protocol compatible, so the code also runs on Redis or ElastiCache. Holds sessions, email
+    # codes and rate limiters (D-23). The AOF on a named volume keeps them over a restart; noeviction makes a full
+    # Redis fail writes loudly instead of silently dropping sessions. The tag is pinned by digest (multi-arch index).
+    image: valkey/valkey:8@sha256:640c5e62cea04b6d6f2084232651d0cc70362d31f4f805e7be94dbed6855e8f2
+    restart: unless-stopped
+    command:
+      - valkey-server
+      - --appendonly
+      - "yes"
+      - --appendfsync
+      - everysec
+      - --save
+      - ""
+      - --maxmemory
+      - 256mb
+      - --maxmemory-policy
+      - noeviction
+      # Without a password the server refuses connections that arrive through the published port (they look
+      # non-loopback inside the container). Safe here: the port is published on 127.0.0.1 only.
+      - --protected-mode
+      - "no"
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 3s
 
   minio:
     # MinIO no longer publishes images on Docker Hub or Quay. This is a frozen Bitnami build
@@ -69,4 +102,5 @@ services:
 
 volumes:
   mysql-data:
+  redis-data:
   minio-data:

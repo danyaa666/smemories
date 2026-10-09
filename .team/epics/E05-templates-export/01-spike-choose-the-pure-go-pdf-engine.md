@@ -1,4 +1,4 @@
-# T-005 — Spike: choose the pure-Go PDF engine
+# E05_T-005 — Spike: choose the pure-Go PDF engine
 
 **Epic:** E05-templates-export · **PRD:** [PRD.md](PRD.md) · **Milestone:** M0 · **Risk:** low · **Priority:** P1 · **Type:** feature
 

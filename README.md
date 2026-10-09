@@ -100,9 +100,9 @@ Prerequisites: Go 1.26 (the `go` directive in `go.mod`), `make`, Docker with Com
 | `make lint` | Fails (listing the files) if a tracked or new Go file is not gofmt-clean, runs `go vet` (with and without the `integration` tag), then the web checks (eslint, prettier, `tsc`, i18n key parity, stale API types) |
 | `make web-install` | `npm ci` in `web/` (Node 22, see `web/.nvmrc`); the other web targets do it on demand. Dev server: `cd web && npm run dev` (proxies `/api/*` to `localhost:8080`) |
 | `make run` | Runs the API from source (needs the stack below: `SMEM_DB_DSN` is required) |
-| `make up` / `make down` | Start (and wait for) / stop MySQL 8.4 and MinIO; creates `.env` from `.env.example` first. Ports bind to `127.0.0.1`. `make up` also (re)applies the `smem_test_%` grants, so it works on older MySQL volumes |
+| `make up` / `make down` | Start (and wait for) / stop MySQL 8.4, Valkey 8 (Redis protocol) and MinIO; creates `.env` from `.env.example` first. Ports bind to `127.0.0.1`. `make up` also (re)applies the `smem_test_%` grants, so it works on older MySQL volumes |
 | `make migrate` / `make migrate-down` | Apply all migrations / roll back the last one |
-| `make test-integration` | Tests tagged `integration` against the local MySQL (run `make up migrate` first; each test gets its own throwaway database) |
+| `make test-integration` | Tests tagged `integration` against the local MySQL and Valkey (run `make up migrate` first; each test gets its own throwaway database) |
 
 Run the API locally:
 
@@ -110,14 +110,14 @@ Run the API locally:
 make up migrate               # creates .env, starts MySQL + MinIO, applies migrations
 make run                      # make loads .env for you
 curl -i localhost:8080/healthz   # {"status":"ok"}
-curl -i localhost:8080/readyz    # {"status":"ready"}; 503 not_ready while MySQL is down
+curl -i localhost:8080/readyz    # {"status":"ready"}; 503 not_ready while MySQL or Redis is down
 ```
 
 Several checkouts on one machine: `make up` names the compose project after the checkout directory
 (`COMPOSE_PROJECT_NAME`, lower-cased; set it in your shell or `.env` to choose another name), so each checkout has its own
 containers and volumes and `make down` in one leaves the others running. The host ports are fixed per machine, so give each
-checkout free ones in its `.env`: `MYSQL_PORT`, `MINIO_PORT`, `MINIO_CONSOLE_PORT` (and match the port in `SMEM_DB_DSN` and
-`SMEM_TEST_DB_DSN`). A checkout whose stack already runs under the old fixed name `smemories` keeps that name; to retire an
+checkout free ones in its `.env`: `MYSQL_PORT`, `REDIS_PORT`, `MINIO_PORT`, `MINIO_CONSOLE_PORT` (and match the port in `SMEM_DB_DSN`,
+`SMEM_TEST_DB_DSN`, `SMEM_REDIS_URL` and `SMEM_TEST_REDIS_URL`). A checkout whose stack already runs under the old fixed name `smemories` keeps that name; to retire an
 old stack run `COMPOSE_PROJECT_NAME=smemories docker compose down` once from the directory that started it.
 
 MinIO console: <http://127.0.0.1:9001> (credentials in `.env`). MinIO stopped publishing Docker images, so
@@ -127,6 +127,8 @@ Configuration is read from environment variables (see `.env.example`): `SMEM_HTT
 `SMEM_ENV` (`dev|test|prod`, default `dev`), `SMEM_LOG_LEVEL` (`debug|info|warn|error`, default `info`),
 `SMEM_DB_DSN` (`user:pass@tcp(host:port)/db`; required, in every `SMEM_ENV`, for the API binary, which exits with a clear message when it is empty), and the pool settings
 `SMEM_DB_MAX_OPEN` (20), `SMEM_DB_MAX_IDLE` (5), `SMEM_DB_CONN_MAX_LIFETIME` (5m).
+Request deadline: `SMEM_HTTP_REQUEST_TIMEOUT` (30s, minimum 1s) cancels the context of every request unless a route sets its own.
+Redis (`docs/redis.md`): `SMEM_REDIS_URL` (`redis://[:password@]host:port/db`; required in every `SMEM_ENV`, copy it from `.env.example` into an older `.env`), `SMEM_REDIS_PASSWORD`, `SMEM_REDIS_DIAL_TIMEOUT` (2s), `SMEM_REDIS_READ_TIMEOUT` and `SMEM_REDIS_WRITE_TIMEOUT` (1s), `SMEM_REDIS_POOL_SIZE` (10).
 Auth (see `.env.example`): `SMEM_ALLOWED_ORIGINS` (comma-separated browser origins allowed to send cookie-carrying
 state-changing requests; required in prod, default `http://localhost:5173`), `SMEM_PUBLIC_BASE_URL` (web app URL for emailed links; required in prod, default `http://localhost:5173`; in dev/test emails are printed to stdout by the log mailer, and prod refuses to start until a real mailer exists), `SMEM_TRUST_PROXY` (take the client IP from the
 last `X-Forwarded-For` hop; only behind a trusted proxy), `SMEM_AUTH_MAX_CONCURRENT_HASHES` (4), `SMEM_AUTH_ARGON_MEMORY_KIB`
@@ -163,6 +165,12 @@ The web app starts the flow by navigating the browser to `/api/v1/auth/google/st
 `/login?error=<code>` with one of `oidc_state`, `oidc_denied`, `oidc_failed`, `email_unverified`. A Google account whose email matches
 a local account is linked to it; if that local account never verified its email it loses its password and sessions first
 (pre-hijacking defence). Social-only accounts have no password; "Forgot password" sets one.
+
+## Engineering standards
+
+Code follows the backend skills in `.agents/skills/` as adapted for this project: the API contract ([docs/api-contract.md](docs/api-contract.md)), database conventions
+([docs/db-conventions.md](docs/db-conventions.md)) and Go conventions ([docs/go-conventions.md](docs/go-conventions.md)). Existing code is being converted (epic E10 on the board);
+until a domain is converted its endpoints still live under `/v1`.
 
 ## Project management
 

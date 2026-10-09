@@ -1,4 +1,4 @@
-# T-033 — CI: do not cancel in-progress runs on develop and main
+# E01_T-033 — CI: do not cancel in-progress runs on develop and main
 
 **Epic:** E01-foundation · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** high · **Priority:** P2 · **Type:** infra
 

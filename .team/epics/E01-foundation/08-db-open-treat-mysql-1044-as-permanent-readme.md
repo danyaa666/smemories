@@ -1,4 +1,4 @@
-# T-032 — db.Open: treat MySQL 1044 as permanent; README warning about bare docker compose
+# E01_T-032 — db.Open: treat MySQL 1044 as permanent; README warning about bare docker compose
 
 **Epic:** E01-foundation · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** low · **Priority:** P3 · **Type:** tech-debt
 

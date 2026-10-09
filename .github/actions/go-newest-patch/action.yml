@@ -1,0 +1,35 @@
+# Pins the job to the newest patch of the go.mod minor, read from go.dev (actions/setup-go gets its
+# list from a manifest that lags a release by hours). Run it right after actions/setup-go.
+# Sets GOTOOLCHAIN=go1.X.N for the following steps: the go command then downloads that toolchain
+# itself and verifies it against the Go checksum database. Details: docs/ci.md.
+name: go-newest-patch
+description: Resolve the newest Go patch of the go.mod minor from go.dev and select it with GOTOOLCHAIN.
+inputs:
+  minor:
+    description: Go minor version from go.mod, for example 1.26.
+    required: true
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        MINOR: ${{ inputs.minor }}
+      run: |
+        # GitHub runs this as bash -e -o pipefail; the lookup may fail (outage, HTML page, bad JSON) and must
+        # then reach the warning branch below instead of aborting the step.
+        set +e
+        set -u
+        want=""
+        if json="$(curl -fsS --max-time 20 --retry 2 'https://go.dev/dl/?mode=json')"; then
+          want="$(printf '%s' "$json" | jq -r --arg m "go$MINOR." \
+            '[.[] | select(.stable) | .version | select(startswith($m))][]' 2>/dev/null | sort -V | tail -n 1)"
+        fi
+        # Accept only go1.26.N for this minor; anything else (unreachable, malformed answer) falls back.
+        if [[ "$MINOR" =~ ^1\.[0-9]+$ && "$want" =~ ^go${MINOR//./\\.}\.[0-9]+$ ]]; then
+          echo "GOTOOLCHAIN=$want" >> "$GITHUB_ENV"
+          export GOTOOLCHAIN="$want"
+          echo "Go toolchain selected from go.dev: $want"
+        else
+          echo "::warning title=go.dev lookup failed::Could not resolve the newest Go $MINOR patch from go.dev; using the setup-go result."
+        fi
+        go version

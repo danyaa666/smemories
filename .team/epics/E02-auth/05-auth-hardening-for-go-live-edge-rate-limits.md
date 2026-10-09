@@ -1,4 +1,4 @@
-# T-031 — Auth hardening for go-live: edge rate limits, shared limiter, session purge, stored-hash caps
+# E02_T-031 — Auth hardening for go-live: edge rate limits, shared limiter, session purge, stored-hash caps
 
 **Epic:** E02-auth · **PRD:** [PRD.md](PRD.md) · **Milestone:** M2 · **Risk:** high · **Priority:** P3 · **Type:** security
 

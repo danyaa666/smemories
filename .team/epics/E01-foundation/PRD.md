@@ -59,3 +59,4 @@ Specs live next to this file; **status lives only on the board** (`L list`), nev
 | T-033 CI: do not cancel in-progress runs on develop and main | `09-ci-do-not-cancel-in-progress-runs-on-develop.md` | T-004 |
 | T-020 End-to-end smoke test of the M1 journey in CI (Playwright) | `10-end-to-end-smoke-test-of-the-m1-journey-in.md` | T-017, T-018, T-019 |
 | T-051 Redis foundation: local stack, client, config, readiness, CI | `11-redis-foundation.md` | T-030 |
+| T-062 CI: get the newest Go patch straight from go.dev | `12-ci-newest-go-patch-from-go-dev.md` | T-033 |

@@ -1,4 +1,4 @@
-# T-016 — Web: yearbook list, create/edit, profile and photo upload UI
+# E03_T-016 — Web: yearbook list, create/edit, profile and photo upload UI
 
 **Epic:** E03-yearbooks · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** low · **Priority:** P1 · **Type:** feature
 

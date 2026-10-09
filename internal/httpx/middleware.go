@@ -7,9 +7,11 @@ import (
 	"encoding/hex"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"regexp"
 	"runtime/debug"
+	"strings"
 	"time"
 )
 
@@ -161,4 +163,78 @@ func WithBodyLimit(max int64, next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+// DefaultRequestTimeout is the per-request deadline unless a route sets another.
+const DefaultRequestTimeout = 30 * time.Second
+
+type (
+	clientIPKey    struct{}
+	originalCtxKey struct{}
+)
+
+// Timeout gives every request a context that expires after d. It only sets the deadline:
+// handlers pass ctx to the stores and see the cancellation as an error; the middleware
+// writes nothing itself.
+func Timeout(d time.Duration) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx, cancel := context.WithTimeout(context.WithValue(r.Context(), originalCtxKey{}, r.Context()), d)
+			defer cancel()
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
+
+// WithTimeout replaces the deadline for one route (an upload needs longer than the default;
+// it must still fit the server's own WriteTimeout). Client disconnect and shutdown still cancel.
+func WithTimeout(d time.Duration, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		orig, ok := r.Context().Value(originalCtxKey{}).(context.Context)
+		if !ok {
+			orig = r.Context()
+		}
+		ctx, cancel := context.WithTimeout(context.WithoutCancel(r.Context()), d) // keeps the values, drops the old deadline
+		defer cancel()
+		defer context.AfterFunc(orig, cancel)()
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+// ResolveClientIP is RemoteAddr's host, or with trustProxy the last X-Forwarded-For hop (the
+// one our own proxy appended; earlier hops are client-controlled) when it parses as an IP.
+func ResolveClientIP(r *http.Request, trustProxy bool) string {
+	if trustProxy {
+		if xff := r.Header.Values("X-Forwarded-For"); len(xff) > 0 {
+			hops := strings.Split(xff[len(xff)-1], ",")
+			if ip := strings.TrimSpace(hops[len(hops)-1]); net.ParseIP(ip) != nil {
+				return ip
+			}
+		}
+	}
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+	return host
+}
+
+// WithClientIP resolves the client address once per request (see ResolveClientIP) and stores
+// it for ClientIP.
+func WithClientIP(trustProxy bool) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ip := ResolveClientIP(r, trustProxy)
+			next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), clientIPKey{}, ip)))
+		})
+	}
+}
+
+// ClientIP returns the address WithClientIP stored; without the middleware it is the
+// RemoteAddr host (forwarded headers are never trusted by default).
+func ClientIP(r *http.Request) string {
+	if ip, ok := r.Context().Value(clientIPKey{}).(string); ok {
+		return ip
+	}
+	return ResolveClientIP(r, false)
 }

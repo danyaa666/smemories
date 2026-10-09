@@ -1,4 +1,4 @@
-# T-012 — Collection links (owner API and public lookup)
+# E04_T-012 — Collection links (owner API and public lookup)
 
 **Epic:** E04-friends-notes · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** high · **Priority:** P1
 

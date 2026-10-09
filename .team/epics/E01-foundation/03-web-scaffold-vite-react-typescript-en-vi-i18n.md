@@ -1,4 +1,4 @@
-# T-003 — Web scaffold: Vite + React + TypeScript + EN/VI i18n
+# E01_T-003 — Web scaffold: Vite + React + TypeScript + EN/VI i18n
 
 **Epic:** E01-foundation · **PRD:** [PRD.md](PRD.md) · **Milestone:** M0 · **Risk:** low · **Priority:** P1 · **Type:** feature
 

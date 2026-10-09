@@ -1,4 +1,6 @@
-# T-025 — Backups, restore drill, and user data export/deletion
+# E06_T-025 — Backups, restore drill, and user data export/deletion
+
+> **E10 note (2026-10-09, D-26):** the database has no foreign keys, so deleting a user is an explicit transaction: delete each of the user's yearbooks through `yearbook.Service.Delete` (which purges storage and calls every child purger), then `user_identity_tab` rows, then the `user_tab` row; sessions and codes live in Redis and are removed by key. Extend the zero-rows test of T-066 (`dbtest.AssertNoOrphans` and the full-book test) to cover a user with several books before this task can pass QA.
 
 **Epic:** E06-go-live · **PRD:** [PRD.md](PRD.md) · **Milestone:** M2 · **Risk:** high · **Priority:** P2 · **Type:** security
 
