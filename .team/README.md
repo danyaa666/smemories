@@ -10,8 +10,8 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 24 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-044, T-049, T-050, T-055, T-056, T-057, T-058, T-059, T-060, T-061 |
-| TODO | 5 | T-034, T-048, T-052, T-053, T-054 |
+| BACKLOG | 23 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-044, T-049, T-050, T-055, T-056, T-058, T-059, T-060, T-061 |
+| TODO | 6 | T-034, T-048, T-052, T-053, T-054, T-057 |
 | MERGED | 4 | T-016, T-046, T-047, T-051 |
 | DONE | 22 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-028, T-030, T-033, T-035, T-036, T-037, T-038, T-043, T-045 |
 | CANCELLED | 6 | T-014, T-019, T-039, T-040, T-041, T-042 |
@@ -2062,7 +2062,7 @@ One owner-only request returns the yearbook, profile and approved notes with ans
 #### Comments
 
 ### T-057 — Media print-size variant (1800 px) with backfill
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -2074,7 +2074,7 @@ One owner-only request returns the yearbook, profile and approved notes with ans
 - **Branch:** —
 - **PR:** —
 - **Updated:** 2026-10-09 01:42Z by leader
-- **Comments-seen:** 0
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/08-print-size-photo-variant.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2083,6 +2083,7 @@ One owner-only request returns the yearbook, profile and approved notes with ans
 Third stored size for printing: lighter PDFs and faster print (spike: 63 MB and 10.6 s with 3000 px photos).
 
 #### Comments
+- 2026-10-09 01:42Z · leader · Only depends on T-009 (merged): ready.
 
 ### T-058 — Web: HTML book renderer core and print preview (browser print-to-PDF)
 - **Status:** BACKLOG
