@@ -19,6 +19,7 @@ import (
 	"github.com/danyaa666/smemories/internal/mailer"
 	"github.com/danyaa666/smemories/internal/media"
 	"github.com/danyaa666/smemories/internal/notes"
+	"github.com/danyaa666/smemories/internal/ratelimit"
 	"github.com/danyaa666/smemories/internal/redis"
 	"github.com/danyaa666/smemories/internal/storage"
 	"github.com/danyaa666/smemories/internal/yearbook"
@@ -75,6 +76,7 @@ func main() {
 	logger.Info("listening", "addr", ln.Addr().String(), "env", cfg.Env)
 
 	hasher := auth.NewHasher(auth.HashParams{MemoryKiB: cfg.ArgonMemoryKiB, Time: cfg.ArgonTime, Parallelism: cfg.ArgonParallelism}, cfg.MaxHashes, auth.HashWait)
+	limiters := ratelimit.NewFactory(rc, logger, nil)                          // the Redis clock, so every API task agrees
 	codes, err := auth.NewCodes(ctx, rc, cfg.Env, cfg.OTPKey, cfg.DevFixedOTP) // DEV-SHORTCUT(otp): the last argument
 	if err != nil {
 		logger.Error("email code setup failed", "error", err)
@@ -85,7 +87,7 @@ func main() {
 	} // DEV-SHORTCUT(otp)
 	svc, err := auth.NewService(auth.NewStore(d), hasher, auth.Limits{
 		RegisterPerHour: cfg.RegisterPerHour, LoginFailsPerPair: cfg.LoginFailsPerPair, LoginFailsPerIP: cfg.LoginFailsPerIP,
-	}, auth.Mail{Mailer: mail, Logger: logger}, codes, nil)
+	}, auth.Mail{Mailer: mail, Logger: logger}, codes, limiters, nil)
 	if err != nil {
 		logger.Error("auth setup failed", "error", err)
 		os.Exit(1)
@@ -107,10 +109,10 @@ func main() {
 	mediaSvc := media.NewService(media.NewStore(d), storage.NewS3(storage.S3Config{
 		Endpoint: cfg.S3Endpoint, Region: cfg.S3Region, Bucket: cfg.S3Bucket,
 		AccessKey: cfg.S3AccessKey, SecretKey: cfg.S3SecretKey, PathStyle: cfg.S3PathStyle,
-	}), cfg.MediaMaxConcurrent, nil)
+	}), cfg.MediaMaxConcurrent, limiters, nil)
 	mediaH := media.NewHandler(mediaSvc, cfg.MediaMaxBytes, authH.RequireUser, cfg.AllowedOrigins, logger)
 	bookH := yearbook.NewHandler(yearbook.NewStore(d), mediaSvc, authH.RequireUser, cfg.AllowedOrigins, logger, nil)
-	notesH := notes.NewHandler(notes.NewStore(d), mediaSvc, cfg.MediaMaxBytes, authH.RequireUser, cfg.AllowedOrigins, authH.ClientIP, logger, nil)
+	notesH := notes.NewHandler(notes.NewStore(d), mediaSvc, cfg.MediaMaxBytes, authH.RequireUser, cfg.AllowedOrigins, authH.ClientIP, limiters, logger, nil)
 	notesH.SetUploadLimits(cfg.PublicUploadConns, cfg.PublicUploadsPerIP, cfg.UploadTmpDir)
 
 	srv := httpx.NewServer(cfg.HTTPAddr, httpx.NewRouterWith(logger, httpx.RouterConfig{RequestTimeout: cfg.RequestTimeout, TrustProxy: cfg.TrustProxy}, httpx.Ready(d, logger, httpx.Dep{Name: "redis", Ping: rc.Ping}), authH.Routes, bookH.Routes, mediaH.Routes, notesH.Routes))

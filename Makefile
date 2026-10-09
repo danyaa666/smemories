@@ -12,7 +12,7 @@ COMPOSE_PROJECT_NAME := $(shell if docker ps -a --filter label=com.docker.compos
 endif
 export COMPOSE_PROJECT_NAME
 
-.PHONY: build test lint run web-install web-build web-test web-lint up down migrate migrate-down test-integration
+.PHONY: build test lint run web-install web-build web-test web-lint up down migrate migrate-down test-integration reset-limits
 
 build:
 	go build -o bin/smemories-api ./cmd/smemories-api
@@ -78,3 +78,7 @@ test-integration:
 .PHONY: verify-newman-users
 verify-newman-users:
 	docker compose exec -T mysql sh -c 'mysql -u"$$MYSQL_USER" -p"$$MYSQL_PASSWORD" "$$MYSQL_DATABASE" -e "UPDATE users SET email_verified_at = NOW(6) WHERE email IN (\"newman-notes-a@example.com\",\"newman-notes-b@example.com\") AND email_verified_at IS NULL"'
+
+# Dev only: forgets every rate-limiter window (keys smem:<SMEM_ENV>:rl:*) in the compose Redis, so Newman can be re-run from one address.
+reset-limits:
+	docker compose exec -T redis sh -c "valkey-cli --scan --pattern 'smem:$(or $(SMEM_ENV),dev):rl:*' | xargs -r -n 100 valkey-cli DEL"

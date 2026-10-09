@@ -22,6 +22,7 @@ import (
 	"github.com/danyaa666/smemories/internal/auth/oidctest"
 	"github.com/danyaa666/smemories/internal/db/dbtest"
 	"github.com/danyaa666/smemories/internal/httpx"
+	"github.com/danyaa666/smemories/internal/ratelimit"
 	"github.com/danyaa666/smemories/internal/redis"
 	"github.com/danyaa666/smemories/internal/redis/redistest"
 )
@@ -97,7 +98,7 @@ func newEnv(t *testing.T, o opts) *env {
 	if err != nil {
 		t.Fatal(err)
 	}
-	svc, err := NewService(NewStore(d), hasher, o.limits, Mail{Mailer: rm, Logger: logger}, codes, clock.now)
+	svc, err := NewService(NewStore(d), hasher, o.limits, Mail{Mailer: rm, Logger: logger}, codes, ratelimit.NewFactory(rc, logger, clock.now), clock.now)
 	if err != nil {
 		t.Fatal(err)
 	}

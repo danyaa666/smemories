@@ -1034,7 +1034,7 @@ func TestFortyStudentsAtOneMBps(t *testing.T) {
 func TestMediaBusyIsRefunded(t *testing.T) {
 	e := newEnv(t)
 	l := e.newOpenLink()
-	svc := media.NewService(media.NewStore(e.db), e.st, 1, nil)
+	svc := media.NewService(media.NewStore(e.db), e.st, 1, e.lim, nil)
 	svc.SetContributorWait(time.Millisecond)
 	e.nh.media = svc
 	big := image.NewNRGBA(image.Rect(0, 0, 2000, 2000)) // decoding 4 MP keeps the only slot busy for a while
@@ -1063,7 +1063,7 @@ func TestMediaBusyIsRefunded(t *testing.T) {
 	// the busy answers did not use up the address' submissions: only the stored notes count
 	left := 0
 	for {
-		if ok, _ := e.nh.subIPHr.Take("192.0.2.50"); !ok {
+		if ok, _, _ := e.nh.subIPHr.Take(context.Background(), "192.0.2.50"); !ok {
 			break
 		}
 		left++

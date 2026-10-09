@@ -1038,7 +1038,7 @@ components:
         application/json:
           schema: {$ref: "#/components/schemas/Error"}
     CodeStoreUnavailable:
-      description: Redis, which holds the email codes, did not answer (`code_store_unavailable`); nothing was accepted, retry shortly.
+      description: Redis, which holds the email codes, did not answer (`code_store_unavailable`), or the rate limiter that guards sign-in, verification and reset did (`limiter_unavailable`); nothing was accepted, retry shortly.
       headers:
         Retry-After:
           schema: {type: integer}
@@ -1270,7 +1270,7 @@ components:
           properties:
             code:
               type: string
-              examples: [not_found, method_not_allowed, payload_too_large, internal_error, not_ready, invalid_credentials, unauthenticated, rate_limited, invalid_code, code_expired, code_locked, code_store_unavailable, limit_reached, unknown_field, unsupported_media_type, invalid_image, quota_exceeded, storage_error, invalid_media, missing_answer, invalid_answer, too_many_photos, collection_full, collection_closed, verification_failed, busy, request_timeout]
+              examples: [not_found, method_not_allowed, payload_too_large, internal_error, not_ready, invalid_credentials, unauthenticated, rate_limited, invalid_code, code_expired, code_locked, code_store_unavailable, limiter_unavailable, limit_reached, unknown_field, unsupported_media_type, invalid_image, quota_exceeded, storage_error, invalid_media, missing_answer, invalid_answer, too_many_photos, collection_full, collection_closed, verification_failed, busy, request_timeout]
             message:
               type: string
             request_id:

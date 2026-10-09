@@ -1,6 +1,7 @@
 package notes
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -12,10 +13,13 @@ import (
 func TestTakeSubmit(t *testing.T) {
 	now := time.Date(2026, 10, 8, 0, 0, 0, 0, time.UTC)
 	clock := func() time.Time { return now }
-	h := &Handler{subIPHr: ratelimit.New(submitPerIPHour, time.Hour, clock), subIPDay: ratelimit.New(submitPerIPDay, 24*time.Hour, clock),
-		subColl: ratelimit.New(submitPerCollectionHour, time.Hour, clock)}
+	h := &Handler{subIPHr: ratelimit.NewMemory(submitPerIPHour, time.Hour, clock), subIPDay: ratelimit.NewMemory(submitPerIPDay, 24*time.Hour, clock),
+		subColl: ratelimit.NewMemory(submitPerCollectionHour, time.Hour, clock)}
 	n := 0
-	take := func(ip string) (bool, time.Duration) { n++; return h.takeSubmit(ip, fmt.Sprint("collection", n)) }
+	take := func(ip string) (bool, time.Duration) {
+		n++
+		return h.takeSubmit(context.Background(), ip, fmt.Sprint("collection", n))
+	}
 
 	for range 3 { // three hours of 100: the daily 300 is used up
 		for range submitPerIPHour {
@@ -36,15 +40,15 @@ func TestTakeSubmit(t *testing.T) {
 	}
 	// one collection: 60 an hour, whoever sends
 	for range submitPerCollectionHour {
-		if ok, _ := h.takeSubmit("a"+fmt.Sprint(n), "same"); !ok {
+		if ok, _ := h.takeSubmit(context.Background(), "a"+fmt.Sprint(n), "same"); !ok {
 			t.Fatal("refused under the collection limit")
 		}
 		n++
 	}
-	if ok, _ := h.takeSubmit("fresh", "same"); ok {
+	if ok, _ := h.takeSubmit(context.Background(), "fresh", "same"); ok {
 		t.Fatal("collection limit not enforced")
 	}
-	if ok, _ := h.takeSubmit("fresh", "elsewhere"); !ok { // and the refused request used none of fresh's allowance
+	if ok, _ := h.takeSubmit(context.Background(), "fresh", "elsewhere"); !ok { // and the refused request used none of fresh's allowance
 		t.Fatal("a refusal consumed the IP allowance")
 	}
 }

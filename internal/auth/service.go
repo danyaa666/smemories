@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"sync"
 	"time"
@@ -67,23 +68,24 @@ type Service struct {
 	dummyHash string // verified for unknown emails so both paths cost the same
 	now       func() time.Time
 
-	register  *ratelimit.Limiter
-	loginPair *ratelimit.Limiter
-	loginIP   *ratelimit.Limiter
+	limiters  *ratelimit.Factory // also builds the Google ones (google.go)
+	register  ratelimit.Limiter
+	loginPair ratelimit.Limiter
+	loginIP   ratelimit.Limiter
 
 	mail        Mail
 	bg          sync.WaitGroup // emails being sent in the background
 	codes       *Codes
-	resend      *ratelimit.Limiter
-	verifyTries *ratelimit.Limiter // per user
-	forgotIP    *ratelimit.Limiter
-	forgotEmail *ratelimit.Limiter
-	resetIP     *ratelimit.Limiter
+	resend      ratelimit.Limiter
+	verifyTries ratelimit.Limiter // per user
+	forgotIP    ratelimit.Limiter
+	forgotEmail ratelimit.Limiter
+	resetIP     ratelimit.Limiter
 }
 
 // NewService builds a Service. It hashes one throw-away password at startup for the
 // unknown-email timing path.
-func NewService(store *Store, hasher *Hasher, limits Limits, mail Mail, codes *Codes, now func() time.Time) (*Service, error) {
+func NewService(store *Store, hasher *Hasher, limits Limits, mail Mail, codes *Codes, limiters *ratelimit.Factory, now func() time.Time) (*Service, error) {
 	if now == nil {
 		now = time.Now
 	}
@@ -95,16 +97,26 @@ func NewService(store *Store, hasher *Hasher, limits Limits, mail Mail, codes *C
 	}
 	return &Service{
 		store: store, hasher: hasher, dummyHash: dummy, now: now, mail: mail, codes: codes,
-		register:  ratelimit.New(limits.RegisterPerHour, registerWindow, now),
-		loginPair: ratelimit.New(limits.LoginFailsPerPair, loginWindow, now),
-		loginIP:   ratelimit.New(limits.LoginFailsPerIP, loginWindow, now),
+		limiters: limiters,
+		// Fail policy (D-23, docs/redis.md): the login lockouts and the code-guessing limits fail closed because
+		// they stop guessing; everything else fails open.
+		register:  limiters.Open("register", limits.RegisterPerHour, registerWindow),
+		loginPair: limiters.Closed("login_pair", limits.LoginFailsPerPair, loginWindow),
+		loginIP:   limiters.Closed("login_ip", limits.LoginFailsPerIP, loginWindow),
 
-		resend:      ratelimit.New(resendPerHour, time.Hour, now),
-		verifyTries: ratelimit.New(verifyTriesPerHour, time.Hour, now),
-		forgotIP:    ratelimit.New(forgotPerIPHour, time.Hour, now),
-		forgotEmail: ratelimit.New(forgotPerEmailHour, time.Hour, now),
-		resetIP:     ratelimit.New(resetTriesPerHour, time.Hour, now),
+		resend:      limiters.Open("verify_resend", resendPerHour, time.Hour),
+		verifyTries: limiters.Closed("verify_tries", verifyTriesPerHour, time.Hour),
+		forgotIP:    limiters.Open("forgot_ip", forgotPerIPHour, time.Hour),
+		forgotEmail: limiters.Open("forgot_email", forgotPerEmailHour, time.Hour),
+		resetIP:     limiters.Closed("reset_tries", resetTriesPerHour, time.Hour),
 	}, nil
+}
+
+// hashKey is the hex SHA-256 of a value that must not appear in a Redis key (an email address). Callers
+// normalise the value first, so the key is case-insensitive like the address.
+func hashKey(v string) string {
+	h := sha256.Sum256([]byte(v))
+	return hex.EncodeToString(h[:])
 }
 
 func newToken() (token string, hash []byte, err error) {
@@ -138,8 +150,8 @@ func (s *Service) Register(ctx context.Context, ip, userAgent, email, password, 
 	if !ok {
 		return User{}, Session{}, ValidationError{codeInvalidDisplayName}
 	}
-	// Only inputs that would cost a hash count against the per-IP limit.
-	if ok, retry := s.register.Take(ip); !ok {
+	// Only inputs that would cost a hash count against the per-IP limit. Fails open: a registration is not a guess.
+	if ok, retry, _ := s.register.Take(ctx, ip); !ok {
 		return User{}, Session{}, RateLimitedError{retry}
 	}
 	phc, err := s.hasher.Hash(ctx, password)
@@ -180,17 +192,26 @@ func (s *Service) Login(ctx context.Context, ip, userAgent, email, password, old
 	if len(emailKey) > maxEmailLen {
 		emailKey = "?" // do not let an attacker choose arbitrarily large map keys
 	}
-	pairKey := ip + "|" + emailKey
+	pairKey := ip + "|" + hashKey(emailKey) // no email address in a Redis key
 	// Every attempt is counted up front and refunded on success (or when we are too busy to
-	// judge it), so parallel guesses cannot slip past the limit.
-	if ok, retry := s.loginPair.Take(pairKey); !ok {
+	// judge it), so parallel guesses cannot slip past the limit. Both limiters fail closed (503
+	// limiter_unavailable when Redis is down): they are the lockouts that stop password guessing.
+	ok, retry, err := s.loginPair.Take(ctx, pairKey)
+	if err != nil {
+		return User{}, Session{}, err
+	}
+	if !ok {
 		return User{}, Session{}, RateLimitedError{retry}
 	}
-	if ok, retry := s.loginIP.Take(ip); !ok {
-		s.loginPair.Refund(pairKey)
+	ok, retry, err = s.loginIP.Take(ctx, ip)
+	if err != nil || !ok {
+		_ = s.loginPair.Refund(ctx, pairKey)
+		if err != nil {
+			return User{}, Session{}, err
+		}
 		return User{}, Session{}, RateLimitedError{retry}
 	}
-	refund := func() { s.loginPair.Refund(pairKey); s.loginIP.Refund(ip) }
+	refund := func() { _ = s.loginPair.Refund(ctx, pairKey); _ = s.loginIP.Refund(ctx, ip) }
 
 	password = normalizePassword(password)
 	if n := utf8.RuneCountInString(password); n == 0 || n > maxPasswordLen { // never hash oversize input

@@ -701,6 +701,7 @@ export interface components {
                  * @example code_expired
                  * @example code_locked
                  * @example code_store_unavailable
+                 * @example limiter_unavailable
                  * @example limit_reached
                  * @example unknown_field
                  * @example unsupported_media_type
@@ -799,7 +800,7 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
-        /** @description Redis, which holds the email codes, did not answer (`code_store_unavailable`); nothing was accepted, retry shortly. */
+        /** @description Redis, which holds the email codes, did not answer (`code_store_unavailable`), or the rate limiter that guards sign-in, verification and reset did (`limiter_unavailable`); nothing was accepted, retry shortly. */
         CodeStoreUnavailable: {
             headers: {
                 "Retry-After"?: number;

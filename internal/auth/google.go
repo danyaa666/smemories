@@ -59,8 +59,8 @@ type googleFlow struct {
 	cfg    GoogleConfig
 	client *http.Client
 
-	startIP    *ratelimit.Limiter
-	callbackIP *ratelimit.Limiter
+	startIP    ratelimit.Limiter
+	callbackIP ratelimit.Limiter
 
 	mu       sync.Mutex
 	provider *oidc.Provider // discovered on first use, then cached
@@ -81,8 +81,9 @@ func (h *Handler) EnableGoogle(cfg GoogleConfig) error {
 	}
 	h.google = &googleFlow{
 		cfg: cfg, client: client,
-		startIP:    ratelimit.New(googleRateLimit, googleRateWindow, h.svc.now),
-		callbackIP: ratelimit.New(googleRateLimit, googleRateWindow, h.svc.now),
+		// Both fail open: they bound redirects and token exchanges, not guesses.
+		startIP:    h.svc.limiters.Open("google_start", googleRateLimit, googleRateWindow),
+		callbackIP: h.svc.limiters.Open("google_callback", googleRateLimit, googleRateWindow),
 	}
 	return nil
 }
@@ -168,7 +169,7 @@ func (h *Handler) setOIDCCookie(w http.ResponseWriter, value string, maxAge int)
 func (h *Handler) googleStart(w http.ResponseWriter, r *http.Request) {
 	g := h.google
 	w.Header().Set("Cache-Control", "no-store")
-	if ok, retry := g.startIP.Take(h.clientIP(r)); !ok {
+	if ok, retry, _ := g.startIP.Take(r.Context(), h.clientIP(r)); !ok {
 		h.fail(w, r, RateLimitedError{retry})
 		return
 	}
@@ -191,7 +192,7 @@ func (h *Handler) googleCallback(w http.ResponseWriter, r *http.Request) {
 	g := h.google
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Referrer-Policy", "no-referrer")
-	if ok, retry := g.callbackIP.Take(h.clientIP(r)); !ok {
+	if ok, retry, _ := g.callbackIP.Take(r.Context(), h.clientIP(r)); !ok {
 		h.fail(w, r, RateLimitedError{retry})
 		return
 	}

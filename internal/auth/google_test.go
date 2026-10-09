@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/danyaa666/smemories/internal/ratelimit"
 )
 
 func TestSafeReturnTo(t *testing.T) {
@@ -35,7 +37,7 @@ func TestSafeReturnTo(t *testing.T) {
 
 func testFlow(t *testing.T) (*googleFlow, *Handler) {
 	t.Helper()
-	h := NewHandler(&Service{now: time.Now}, HandlerConfig{}, nil)
+	h := NewHandler(&Service{now: time.Now, limiters: ratelimit.NewMemoryFactory(nil)}, HandlerConfig{}, nil)
 	if err := h.EnableGoogle(GoogleConfig{ClientID: "id", ClientSecret: "s", Issuer: "https://idp.example", RedirectURL: "https://x/cb", CookieKey: []byte(strings.Repeat("k", 32))}); err != nil {
 		t.Fatal(err)
 	}
@@ -43,7 +45,7 @@ func testFlow(t *testing.T) (*googleFlow, *Handler) {
 }
 
 func TestEnableGoogleValidates(t *testing.T) {
-	h := NewHandler(&Service{now: time.Now}, HandlerConfig{}, nil)
+	h := NewHandler(&Service{now: time.Now, limiters: ratelimit.NewMemoryFactory(nil)}, HandlerConfig{}, nil)
 	ok := GoogleConfig{ClientID: "id", ClientSecret: "s", Issuer: "https://idp.example", RedirectURL: "https://x/cb", CookieKey: []byte(strings.Repeat("k", 32))}
 	for name, mutate := range map[string]func(*GoogleConfig){
 		"no id":      func(c *GoogleConfig) { c.ClientID = "" },
