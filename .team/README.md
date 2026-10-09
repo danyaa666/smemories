@@ -11,17 +11,16 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 33 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-044, T-050, T-056, T-058, T-059, T-060, T-061, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-075, T-076 |
-| READY_FOR_QA | 1 | T-074 |
 | QA_PASS | 4 | T-049, T-052, T-053, T-057 |
-| MERGED | 3 | T-034, T-048, T-054 |
+| MERGED | 4 | T-034, T-048, T-054, T-074 |
 | DONE | 28 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-035, T-036, T-037, T-038, T-043, T-045, T-046, T-047, T-051, T-062, T-063 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
 
-**Awaiting your review (MERGED):** T-034 ([E04] Public note submission (text and photos)); T-048 ([E02] Email one-time codes replace verification and reset links (API) with a dev-only fixed code); T-054 ([E05] Spike: HTML templates and browser print-to-PDF instead of server rendering)
+**Awaiting your review (MERGED):** T-034 ([E04] Public note submission (text and photos)); T-048 ([E02] Email one-time codes replace verification and reset links (API) with a dev-only fixed code); T-054 ([E05] Spike: HTML templates and browser print-to-PDF instead of server rendering); T-074 ([E04] Sweep orphaned upload spool files at start-up)
 
 **Open questions for you:** Q-022 (Approve merge of T-052 (login sessions in Redis, drop sessions table)?); Q-023 (Approve merge of T-057 (print-size photos 1800 px + backfill)?); Q-024 (Approve merge of T-053 (rate limiters in Redis)?); Q-025 (Approve merge of T-049 (web screens for the 6-digit email codes)?)
 
-_Board last written 2026-10-09 13:28Z_
+_Board last written 2026-10-09 13:53Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -2705,7 +2704,7 @@ Adds request and pool metrics as be-golang requires; waits for Q-018 (library ch
 #### Comments
 
 ### T-074 — [E04] Sweep orphaned upload spool files at start-up
-- **Status:** READY_FOR_QA
+- **Status:** MERGED
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2716,7 +2715,7 @@ Adds request and pool metrics as be-golang requires; waits for Q-018 (library ch
 - **Assignee:** —
 - **Branch:** task/t-074-e04-sweep-orphaned-upload-spool-files-at
 - **PR:** https://github.com/danyaa666/smemories/pull/43
-- **Updated:** 2026-10-09 13:19Z by dev
+- **Updated:** 2026-10-09 13:53Z by leader
 - **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/07-sweep-orphaned-upload-spool-files.md`
@@ -2727,6 +2726,18 @@ T-034 QA finding: a shutdown or crash in the middle of an upload leaves a smem-u
 
 #### Comments
 - 2026-10-09 13:19Z · dev · Handler.SweepSpool (internal/notes/spool.go) called in main.go before Serve. Tests: TestSweepSpool, TestSweepSpoolMissingDir, integration TestSweepSpoolAtStartup (live upload kept, aged file removed). docs/media.md updated. Build, race tests, vet, golangci-lint, integration notes tests green. Note: age threshold = 4 min (route timeout 3 min + 1).
+- 2026-10-09 13:52Z · qa · QA_PASS. CI on PR #43 green (go, go-integration, security, web). Branch == PR head 8f0e6f7.
+  Mechanical: make lint build test (incl. go test -race ./... and web tests) green; go test -race -tags integration ./internal/notes green; TestSweepSpool* x3 repeat all pass (no flake).
+  Evidence (AC / requirement -> how -> result):
+  - AC1 / req 2: unit TestSweepSpool (old x removed; fresh y, unrelated file, sub-dir, symlink z and its target kept) -> pass. Real run: aged smem-upload-* regular files removed; fresh (just created), 3-min-old, other-file (aged), smem-upload-DIR (aged, with inner file), smem-upload-LINK (aged symlink -> file outside the spool dir; target intact) and a dangling symlink all untouched; 5-min-old file removed. Threshold 4 min confirmed.
+  - AC2 / REAL kill test with built bin/smemories-api (SMEM_UPLOAD_TMP_DIR=scratch dir): registered user + collection link, raw-socket multipart POST with Content-Length 5 MB that sends only the first ~90 bytes and stalls -> spool file smem-upload-NNN (0600, 91 bytes) appeared -> kill -9 API -> file still there (the gap) -> touch -d to 2020 plus fixtures above -> restart -> log 'upload spool sweep removed=4' (killed file, 2 old, 5-min), killed file gone, young ones kept. Integration TestSweepSpoolAtStartup also covers live upload not swept.
+  - Req 1 (before accepting traffic): main.go calls notesH.SweepSpool() before httpx.Serve (listener socket is bound earlier, but Accept only starts in Serve). Sweep log line appears before the first request in the logs.
+  - Req 2 log: exactly one INFO 'upload spool sweep' with removed=N, no names.
+  - Req 3: delete failure (read-only dir, aged file) -> WARN 'cannot remove a file', INFO removed=0, API started and /healthz 200. Unreadable dir (chmod 000) -> WARN 'cannot list directory', API started and served. Missing dir is rejected earlier by config validation (existing behaviour, 'want an existing directory'); unit TestSweepSpoolMissingDir covers the sweep itself. 30000 aged files swept in about 1 s at start-up.
+  - AC3: docs/media.md diff states location (SMEM_UPLOAD_TMP_DIR else OS temp), 4-min sweep rule, 48 x 32 MiB sizing -> ok.
+  Non-blocking observations: (1) the two WARN lines carry the Go PathError text, which includes the full path of the file/dir (random temp name, no private content); spec only forbids names in the INFO line, but dev may want to log only the error kind. (2) 'listening' is logged before the sweep line, slightly misleading ordering though accept starts after the sweep. (3) Sweep runs only at start-up, so files orphaned by a drain cut-off live until the next restart (by design).
+  Test artefacts: scratchpad only; test user deleted from dev DB. No product code or .team files changed.
+- 2026-10-09 13:53Z · leader · merged 9433726. Review: sweeps only regular smem-upload-* files directly in the spool dir older than route timeout + 1 min, before the listener opens; failures WARN only. QA did a real kill -9 test. For owner to check: docs/media.md spool section.
 
 ### T-075 — [E05] Media backfill hardening
 - **Status:** BACKLOG
