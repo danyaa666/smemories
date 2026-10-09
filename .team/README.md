@@ -10,17 +10,17 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 24 | T-013, T-014, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-039, T-040, T-041, T-042, T-044, T-049, T-050, T-055 |
-| TODO | 4 | T-034, T-048, T-052, T-053 |
+| BACKLOG | 24 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-044, T-049, T-050, T-055, T-056, T-057, T-058, T-059, T-060, T-061 |
+| TODO | 5 | T-034, T-048, T-052, T-053, T-054 |
 | MERGED | 4 | T-016, T-046, T-047, T-051 |
 | DONE | 22 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-028, T-030, T-033, T-035, T-036, T-037, T-038, T-043, T-045 |
-| NEEDS_DECISION | 1 | T-054 |
+| CANCELLED | 6 | T-014, T-019, T-039, T-040, T-041, T-042 |
 
 **Awaiting your review (MERGED):** T-016 (Web: yearbook list, create/edit, profile and photo upload UI); T-046 (List a yearbook's photos (API and photo library in the web UI)); T-047 (Fix the flaky concurrent Google callback: retry with jittered backoff and a stress test); T-051 (Redis foundation: local stack (Valkey), client, config, readiness, CI)
 
-**Open questions for you:** Q-017 (Decide D-24: browser print-to-PDF or keep the Go renderer? Needs your phone and Safari tests)
+**Open questions for you:** none
 
-_Board last written 2026-10-09 01:31Z_
+_Board last written 2026-10-09 01:42Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -270,11 +270,11 @@ QA passed and my review is clean (head a59f2c5, CI green). High risk because it 
 QA passed and my review is clean (head ef6bee0, CI green). High risk only because it is in the sign-in path; the change is a bounded retry with jittered waits and no behaviour change. It removes the intermittent red CI on develop and a real failure a student could see when signing in twice quickly. Command: cd /Users/unisoft/GolandProjects/awesomeProject1 && /Users/unisoft/.claude/plugins/cache/claude-agent-team/agent-team/0.3.0/bin/team approve T-047
 
 ### Q-017 — Decide D-24: browser print-to-PDF or keep the Go renderer? Needs your phone and Safari tests
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-08 15:17Z
 - **Blocks:** T-054
 - **Recommendation:** Run the 30-minute phone and Safari test in ADR 0003 section 'What the owner must test', then tell me the result. Until then keep the Go path for M1.
-- **Answer:** _(pending)_
+- **Answer:** just build it, I will test it myself and give you result (owner, chat 2026-10-09)
 
 Spike T-054 (PR #35, ADR docs/adr/0003-html-print-export.md): desktop Chromium prints the 24-page, 30-photo book exactly (A5, A4, Letter; 4.1 MB, 1.3 s, fonts embedded, Vietnamese text extractable); Firefox prints with caveats (tiled gradients turn black, 30.8 MB file); Safari, Android Chrome and iOS Safari were NOT tested (no devices). The steps for you are in the ADR (step 3 Safari desktop, 4 Android Chrome, 5 iOS Safari): open http://<your computer's address>:5173/spike/print with npm run dev -- --host on the same network, try Print / Save as PDF with A5 and A4, and report: page count, paper size honoured, backgrounds on, did the tab survive 24 pages with 30 photos. Reply with what you saw (a sentence per device is enough).
 
@@ -309,6 +309,7 @@ Owner decisions (2026-10-06, `/team-init` interview). "Rejected" lists the optio
 | D-21 | **Friends' notes are template-driven from the start: answers keyed by field id from a closed catalogue, form generated from the template's fields.** | Owner answer in chat 2026-10-08 (the designs need richer forms: how we met, first impression, best memory, wish). `internal/notefields` (T-043) defines fields with limits and EN/VI labels; T-034 stores `notes.answers` JSON validated against it; the public lookup returns the form's `fields`; templates declare `note_fields` (T-044). Answers survive a template change. The catalogue has no personal-data fields beyond a name (D-01 data minimisation). | Fixed columns in M1, migrate later (rewrite of tables, form, moderation, export); fixed fields forever | A field needs a type the catalogue lacks (rating, choice), or contributors must give contact data |
 | D-22 | **Email verification and password reset use 6-digit one-time codes typed by the student, not emailed links; a dev-only fixed code `123123` exists and must be deleted before production.** | Owner answers in chat 2026-10-08. Replaces the link design of T-007 (nothing is in production). Codes are stored as HMAC-SHA256 with a server key, valid 30 min (verify) or 15 min (reset), 5 wrong attempts lock a code, plus per-user and per-IP limits (T-048, web T-049). The dev code is `SMEM_DEV_FIXED_OTP=123123`, honoured only when `SMEM_ENV` is `dev` or `test`; the API refuses to start otherwise if it is set. Every such shortcut is tagged `DEV-SHORTCUT`, listed in `docs/dev-shortcuts.md`, and removed by T-050, a prerequisite of the first deploy (T-023); the rule is in CLAUDE.md. | Keep links with a dev shortcut; links and codes together | Phones prove awkward with codes, or a provider needs links (then add magic links beside codes) |
 | D-23 | **All time-limited data lives in Redis (Valkey locally; Redis-protocol compatible): login sessions, the 6-digit email codes with their attempt counters, and every rate limiter.** | Owner request in chat 2026-10-08. Native expiry replaces purge jobs; limiters become correct across several API tasks. MySQL keeps everything durable (users, identities, yearbooks, notes, media metadata, collection links). Local and CI run Valkey 8 pinned by digest (BSD licence; the code uses only the Redis protocol, client `github.com/redis/go-redis/v9`). Policy: sessions and OTP attempts fail closed (503) when Redis is down; other limiters fail open with an ERROR log; Redis runs with `noeviction` and AOF `everysec` so memory pressure fails writes loudly and a restart keeps sessions. Nothing is in production, so no data migration: the `sessions` table and the planned `email_codes` table are not kept. Tasks T-051 (foundation), T-052 (sessions), T-053 (limiters); T-048 writes codes straight to Redis. AWS: ElastiCache (Valkey or Redis OSS) with a cost estimate agreed with the owner in T-023. | Keep MySQL tables with purge jobs; Redis only for rate limits | Sessions must be queryable (device list) beyond a simple index, or the ElastiCache cost is unacceptable |
+| D-24 | **Export is browser print of HTML templates (the page's Print / Save as PDF), not server-side PDF rendering; the Go renderer stays as a fallback and is not extended.** | Owner answer in chat 2026-10-09 to Q-017: "just build it, I will test it myself and give you result". Basis: spike T-054 and ADR 0003 (desktop Chromium prints the 24-page book with 30 photos exactly: 4.1 MB, 1.3 s, fonts embedded, Vietnamese extractable; Firefox has black tiled gradients; Safari, Android Chrome and iOS Safari untested). The owner tests the phone and Safari cells and reports; if a device class fails, the same templates are rendered by headless Chromium on the server (exit path in the ADR; would reverse D-12 for that path and needs its own decision). Consequences: templates are React components fed by one owner-only book endpoint (T-056), photos get a print size (T-057), the designer canvases become components instead of Go specs (T-059, T-060); T-014, T-019 and the E08 import pipeline (T-039..T-042) are cancelled. T-010 and T-038 stay in the code as fallback. | Keep the Go renderer as the main path | The owner's device tests fail on a device class that matters (then add server-side headless Chromium for it) |
 
 Leader decisions (low-risk, inside the approved stack):
 
@@ -845,7 +846,7 @@ Owner lists pending/approved/hidden notes per yearbook, approves or hides them, 
 #### Comments
 
 ### T-014 — Export job: assemble book, render PDF, store, download
-- **Status:** BACKLOG
+- **Status:** CANCELLED
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -856,8 +857,8 @@ Owner lists pending/approved/hidden notes per yearbook, approves or hides them, 
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-06 10:13Z by leader
-- **Comments-seen:** 2
+- **Updated:** 2026-10-09 01:42Z by leader
+- **Comments-seen:** 3
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/03-export-job-assemble-book-render-pdf-store.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -868,6 +869,7 @@ Asynchronous export: POST creates a job (one active export per book), a bounded 
 #### Comments
 - 2026-10-07 11:38Z · leader · Leader note from the T-010 review: pdf.Render has no caps on notes or text length (10,000 notes with three 100 KB fields took 87 s of CPU in QA's adversarial test, memory bounded). The export job must (1) run Render under a context deadline (60 s, matching the quality bar), (2) pass only approved notes (T-034 already caps a collection at 300 notes and messages at 2000 characters), (3) report warnings (low_resolution, missing_glyph, missing_image, extra_photos, text_truncated) to the owner in plain language (T-019).
 - 2026-10-08 13:31Z · leader · On hold for planning: the export job may be replaced by browser print-to-PDF; spike T-054 decides. Do not promote until D-24.
+- 2026-10-09 01:42Z · leader · Superseded by D-24 (2026-10-09): export is browser print of HTML templates (T-056..T-061). The Go renderer (T-010, T-038) stays as the fallback and is not extended.
 
 ### T-015 — Web: auth pages and session handling
 - **Status:** DONE
@@ -991,7 +993,7 @@ Mobile-first public page opened from the shared link: name, relationship, messag
 #### Comments
 
 ### T-019 — Web: template picker, PDF preview (pdf.js) and export/download
-- **Status:** BACKLOG
+- **Status:** CANCELLED
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -1002,8 +1004,8 @@ Mobile-first public page opened from the shared link: name, relationship, messag
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-06 10:13Z by leader
-- **Comments-seen:** 1
+- **Updated:** 2026-10-09 01:42Z by leader
+- **Comments-seen:** 2
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/04-web-template-picker-pdf-preview-pdf-js-and.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1013,6 +1015,7 @@ Choose a template (thumbnails from sample renders), trigger export, show progres
 
 #### Comments
 - 2026-10-08 13:31Z · leader · On hold for planning: the preview and export UI depend on the spike T-054 outcome (D-24). Do not promote until then.
+- 2026-10-09 01:42Z · leader · Superseded by D-24 (2026-10-09): export is browser print of HTML templates (T-056..T-061). The Go renderer (T-010, T-038) stays as the fallback and is not extended.
 
 ### T-020 — End-to-end smoke test of the M1 journey in CI (Playwright)
 - **Status:** BACKLOG
@@ -1569,7 +1572,7 @@ Extend the template JSON and renderer with page background images, localised sta
 - 2026-10-08 09:29Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-037, T-038, T-043, T-045')
 
 ### T-039 — Design import tool (dev only): canvas page to template draft
-- **Status:** BACKLOG
+- **Status:** CANCELLED
 - **Priority:** P2
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -1580,8 +1583,8 @@ Extend the template JSON and renderer with page background images, localised sta
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-08 13:31Z by leader
-- **Comments-seen:** 2
+- **Updated:** 2026-10-09 01:42Z by leader
+- **Comments-seen:** 3
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E08-designer-templates/03-design-import-tool-dev-only.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1592,9 +1595,10 @@ Dev-only Node/Playwright command that renders decoration backgrounds and reads s
 #### Comments
 - 2026-10-08 09:14Z · leader · T-038 is merged: the import tool can target the v2 format. Spec: .team/epics/E08-designer-templates/03-design-import-tool-dev-only.md.
 - 2026-10-08 13:31Z · leader · On hold: owner proposed browser print-to-PDF (HTML templates). Spike T-054 decides; resume or retire after ADR 0003 / D-24.
+- 2026-10-09 01:42Z · leader · Superseded by D-24 (2026-10-09): export is browser print of HTML templates (T-056..T-061). The Go renderer (T-010, T-038) stays as the fallback and is not extended.
 
 ### T-040 — Template memory-book from design temp1 (pilot 1)
-- **Status:** BACKLOG
+- **Status:** CANCELLED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
@@ -1605,8 +1609,8 @@ Dev-only Node/Playwright command that renders decoration backgrounds and reads s
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-08 03:19Z by leader
-- **Comments-seen:** 1
+- **Updated:** 2026-10-09 01:42Z by leader
+- **Comments-seen:** 2
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E08-designer-templates/04-template-memory-book-from-temp1.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1616,9 +1620,10 @@ Pilot 1: the pastel Memory Book design as a system template with four page kinds
 
 #### Comments
 - 2026-10-08 13:31Z · leader · On hold pending spike T-054 (browser print-to-PDF); see the E08 PRD note.
+- 2026-10-09 01:42Z · leader · Superseded by D-24 (2026-10-09): export is browser print of HTML templates (T-056..T-061). The Go renderer (T-010, T-038) stays as the fallback and is not extended.
 
 ### T-041 — Template navy-classic from design temp2 (pilot 2)
-- **Status:** BACKLOG
+- **Status:** CANCELLED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
@@ -1629,8 +1634,8 @@ Pilot 1: the pastel Memory Book design as a system template with four page kinds
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-08 03:19Z by leader
-- **Comments-seen:** 1
+- **Updated:** 2026-10-09 01:42Z by leader
+- **Comments-seen:** 2
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E08-designer-templates/05-template-navy-classic-from-temp2.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1640,9 +1645,10 @@ Pilot 2: the navy and gold classic design as a system template with four page ki
 
 #### Comments
 - 2026-10-08 13:31Z · leader · On hold pending spike T-054 (browser print-to-PDF); see the E08 PRD note.
+- 2026-10-09 01:42Z · leader · Superseded by D-24 (2026-10-09): export is browser print of HTML templates (T-056..T-061). The Go renderer (T-010, T-038) stays as the fallback and is not extended.
 
 ### T-042 — Plan the rollout of designs temp3 to temp8 after the pilots
-- **Status:** BACKLOG
+- **Status:** CANCELLED
 - **Priority:** P3
 - **Type:** feature
 - **Milestone:** M1
@@ -1653,8 +1659,8 @@ Pilot 2: the navy and gold classic design as a system template with four page ki
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-08 03:08Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-09 01:42Z by leader
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E08-designer-templates/06-roll-out-designs-temp3-to-temp8.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1663,6 +1669,7 @@ Pilot 2: the navy and gold classic design as a system template with four page ki
 Planning placeholder: after the owner reviews the pilots, split into one task per remaining design.
 
 #### Comments
+- 2026-10-09 01:42Z · leader · Superseded by D-24 (2026-10-09): export is browser print of HTML templates (T-056..T-061). The Go renderer (T-010, T-038) stays as the fallback and is not extended.
 
 ### T-043 — Note field catalogue (internal/notefields): closed set of form fields with EN/VI labels and validation
 - **Status:** DONE
@@ -1983,7 +1990,7 @@ Redis sliding-window limiter with Take and Refund replacing the in-memory one ev
 - 2026-10-09 01:31Z · leader · T-051 is merged: ready.
 
 ### T-054 — Spike: HTML templates and browser print-to-PDF instead of server rendering
-- **Status:** NEEDS_DECISION
+- **Status:** TODO
 - **Priority:** P1
 - **Type:** spike
 - **Milestone:** M1
@@ -1994,7 +2001,7 @@ Redis sliding-window limiter with Take and Refund replacing the in-memory one ev
 - **Assignee:** —
 - **Branch:** task/t-054-spike-html-templates-and-browser-print-t
 - **PR:** https://github.com/danyaa666/smemories/pull/35
-- **Updated:** 2026-10-08 15:17Z by leader
+- **Updated:** 2026-10-09 01:42Z by leader
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/06-spike-browser-print-to-pdf.md`
@@ -2006,6 +2013,7 @@ Prototype two designs as HTML/CSS pages printed through the browser (Save as PDF
 #### Comments
 - 2026-10-08 15:17Z · dev · ADR docs/adr/0003-html-print-export.md. Prototype web/src/spike/print (dev server only), tooling tools/print-spike (npm test = AC3, node measure.mjs = matrix), PDFs+results.json docs/spikes/print. Measured: Chromium 156, Chrome 154, Edge Dev/Canary 157, Firefox 157 (headless print). NOT tested: Safari, Android, iOS, interactive dialogs (owner steps in ADR). Findings: Firefox black tiled gradients, design fonts lack Vietnamese, 3000px photos give 63 MB. QA: npm test in tools/print-spike (needs poppler), inspect PDFs.
 - 2026-10-08 15:17Z · leader · Spike done (PR #35, ADR 0003). Waiting for the owner's phone and Safari tests (Q-017) before D-24; do not merge the PDFs (11 MB) until the decision, then keep only the ADR and a few evidence files.
+- 2026-10-09 01:42Z · leader · Leader: D-24 decided (build it). Please: (1) keep docs/adr/0003-html-print-export.md and set its status to Accepted (owner decision D-24, the owner will test Safari, Android Chrome and iOS Safari and report); (2) trim docs/spikes/print to at most 1 MiB in total (keep results.json and 2 or 3 small evidence images, drop the large PDFs; the Playwright check regenerates them); (3) keep web/src/spike/print and tools/print-spike as the starting point of T-058 (dev server only, nothing in the production build); (4) add the owner test steps as docs/spikes/print/OWNER-TESTS.md. Then READY_FOR_QA.
 
 ### T-055 — Opaque list cursors: do not expose internal ids
 - **Status:** BACKLOG
@@ -2030,6 +2038,144 @@ Replace the numeric-id paging cursor with a signed opaque cursor and a shared he
 
 #### Comments
 
+### T-056 — Book data endpoint for rendering (owner-only, approved notes)
+- **Status:** BACKLOG
+- **Priority:** P1
+- **Type:** feature
+- **Milestone:** M1
+- **Depends-on:** T-013
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-09 01:42Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/07-book-data-endpoint.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E05-templates-export · **PRD:** `.team/epics/E05-templates-export/PRD.md`
+
+One owner-only request returns the yearbook, profile and approved notes with answers and photo ids for the HTML renderer (D-24). Replaces T-014.
+
+#### Comments
+
+### T-057 — Media print-size variant (1800 px) with backfill
+- **Status:** BACKLOG
+- **Priority:** P1
+- **Type:** feature
+- **Milestone:** M1
+- **Depends-on:** T-009
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-09 01:42Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/08-print-size-photo-variant.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E05-templates-export · **PRD:** `.team/epics/E05-templates-export/PRD.md`
+
+Third stored size for printing: lighter PDFs and faster print (spike: 63 MB and 10.6 s with 3000 px photos).
+
+#### Comments
+
+### T-058 — Web: HTML book renderer core and print preview (browser print-to-PDF)
+- **Status:** BACKLOG
+- **Priority:** P1
+- **Type:** feature
+- **Milestone:** M1
+- **Depends-on:** T-054, T-056, T-057
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-09 01:42Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/09-html-book-renderer-core.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E05-templates-export · **PRD:** `.team/epics/E05-templates-export/PRD.md`
+
+Fixed-size HTML pages, pagination, text fit, print CSS, readiness gate and a headless print check (D-24).
+
+#### Comments
+
+### T-059 — HTML template memory-book (design temp1)
+- **Status:** BACKLOG
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M1
+- **Depends-on:** T-058, T-044
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-09 01:42Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/10-html-template-memory-book.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E05-templates-export · **PRD:** `.team/epics/E05-templates-export/PRD.md`
+
+Pastel Memory Book canvas as an HTML template, EN and VI, four page kinds.
+
+#### Comments
+
+### T-060 — HTML template navy-classic (design temp2)
+- **Status:** BACKLOG
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M1
+- **Depends-on:** T-058, T-044
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-09 01:42Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/11-html-template-navy-classic.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E05-templates-export · **PRD:** `.team/epics/E05-templates-export/PRD.md`
+
+Navy and gold canvas as the second HTML template.
+
+#### Comments
+
+### T-061 — Web: template picker and print screen with device guidance
+- **Status:** BACKLOG
+- **Priority:** P1
+- **Type:** feature
+- **Milestone:** M1
+- **Depends-on:** T-058, T-059
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-09 01:42Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/12-template-picker-and-print-screen.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E05-templates-export · **PRD:** `.team/epics/E05-templates-export/PRD.md`
+
+Pick a template for the page size, print with per-browser guidance, anonymous worked-or-not feedback counter.
+
+#### Comments
+
 <!-- tasks:end -->
 
 ## 7. Change log
@@ -2047,3 +2193,4 @@ Replace the numeric-id paging cursor with a signed opaque cursor and a shared he
 - 2026-10-08 — T-010 accepted (DONE). T-007 reviewed, owner-approved and merged (186ac52). T-009 passed QA and review; awaiting owner approval, merges after T-007 (migration 0006). Follow-up T-036 (memory bound of image processing) created and made a prerequisite of T-034.
 - 2026-10-08 — T-009 (photo upload, d46aec5), T-011 (Google sign-in, d209266) and T-012 (collection links) merged, each owner-approved after QA and leader review; T-007 and T-009 and T-011 await owner acceptance. T-010 accepted. Promoted T-015, T-033, T-035 to TODO; T-036 (memory bound) is queued ahead of T-034.
 - 2026-10-08 — Owner asked for a Canva-style editor. Decisions D-19 (staged editing), D-20 (each owner edits their own copy), D-21 (template-driven note fields, now). New epic E09 (sketch), tasks T-043 (field catalogue, P1, before T-034) and T-044 (templates declare fields); T-034's spec was rewritten for answers by field id. Epic E08 (designer templates, D-15..D-18, L-12) created earlier today with T-037..T-042.
+- 2026-10-09 — D-24: export becomes browser print of HTML templates (owner: 'just build it, I will test it myself'). Cancelled T-014, T-019, T-039..T-042; new tasks T-056..T-061 (book data endpoint, print-size photos, HTML renderer core, two HTML templates, picker and print screen). T-054 spike returns to dev to trim its evidence files, then merges.
