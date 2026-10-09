@@ -262,3 +262,19 @@ func TestLoadRedisInvalidNamesVariableAndHidesPassword(t *testing.T) {
 		}
 	}
 }
+
+func TestLoadRequestTimeout(t *testing.T) {
+	cfg, err := Load(env(map[string]string{"SMEM_DB_DSN": dsn}))
+	if err != nil || cfg.RequestTimeout != 30*time.Second {
+		t.Fatalf("default: %v, %v", cfg.RequestTimeout, err)
+	}
+	cfg, err = Load(env(map[string]string{"SMEM_DB_DSN": dsn, "SMEM_HTTP_REQUEST_TIMEOUT": "1s"}))
+	if err != nil || cfg.RequestTimeout != time.Second {
+		t.Fatalf("1s: %v, %v", cfg.RequestTimeout, err)
+	}
+	for _, bad := range []string{"999ms", "0", "-5s", "soon"} {
+		if _, err := Load(env(map[string]string{"SMEM_DB_DSN": dsn, "SMEM_HTTP_REQUEST_TIMEOUT": bad})); err == nil || !strings.Contains(err.Error(), "SMEM_HTTP_REQUEST_TIMEOUT") {
+			t.Errorf("%q: got %v", bad, err)
+		}
+	}
+}

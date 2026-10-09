@@ -1,0 +1,184 @@
+# Fixture: one operation per contract rule, each breaking exactly that rule. The lint must report all of them.
+openapi: 3.1.0
+info: {title: fixture, version: "1"}
+x-ok-response: &ok
+  "200":
+    description: ok
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            status: {type: string, description: '"OK".'}
+        examples:
+          sample: {value: {status: OK}}
+paths:
+  /v1/legacy: {get: {}}
+  /healthz: {get: {}}
+  /api/bad/no-summary:
+    post:
+      description: d
+      operationId: no_summary
+      x-auth: public
+      x-error-codes: []
+      responses: *ok
+  /api/bad/no-description:
+    post:
+      summary: s
+      operationId: no_description
+      x-auth: public
+      x-error-codes: []
+      responses: *ok
+  /api/bad/no-operation-id:
+    post:
+      summary: s
+      description: d
+      x-auth: public
+      x-error-codes: []
+      responses: *ok
+  /api/bad/bad-auth:
+    post:
+      summary: s
+      description: d
+      operationId: bad_auth
+      x-auth: maybe
+      x-error-codes: []
+      responses: *ok
+  /api/bad/no-error-codes:
+    post:
+      summary: s
+      description: d
+      operationId: no_error_codes
+      x-auth: public
+      responses: *ok
+  /api/bad/bad-error-code:
+    post:
+      summary: s
+      description: d
+      operationId: bad_error_code
+      x-auth: public
+      x-error-codes: [{code: invalid_title, description: d}]
+      responses: *ok
+  /api/bad/global-error-code:
+    post:
+      summary: s
+      description: d
+      operationId: global_error_code
+      x-auth: public
+      x-error-codes: [{code: ERROR_PARAM, description: d}]
+      responses: *ok
+  /api/bad/error-code-no-description:
+    post:
+      summary: s
+      description: d
+      operationId: error_code_no_description
+      x-auth: public
+      x-error-codes: [{code: ERROR_X}]
+      responses: *ok
+  /api/bad/no-property-description:
+    post:
+      summary: s
+      description: d
+      operationId: no_property_description
+      x-auth: public
+      x-error-codes: []
+      requestBody:
+        content:
+          application/json:
+            schema: {type: object, properties: {title: {type: string}}}
+      responses: *ok
+  /api/bad/no-ref-property-description:
+    post:
+      summary: s
+      description: d
+      operationId: no_ref_property_description
+      x-auth: public
+      x-error-codes: []
+      requestBody:
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/Nameless"}
+      responses: *ok
+  /api/bad/no-example:
+    post:
+      summary: s
+      description: d
+      operationId: no_example
+      x-auth: public
+      x-error-codes: []
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: {type: object}
+  /api/bad/no-200:
+    post:
+      summary: s
+      description: d
+      operationId: no_200
+      x-auth: public
+      x-error-codes: []
+      responses:
+        "201": {description: created}
+  /api/bad/timestamp-type:
+    post:
+      summary: s
+      description: d
+      operationId: timestamp_type
+      x-auth: public
+      x-error-codes: []
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  created_at: {type: string, description: "Unix ms."}
+              examples: {sample: {value: {}}}
+  /api/bad/timestamp-unit:
+    post:
+      summary: s
+      description: d
+      operationId: timestamp_unit
+      x-auth: public
+      x-error-codes: []
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  created_at: {type: integer, format: int64, description: "Created, in seconds."}
+              examples: {sample: {value: {}}}
+  /api/bad/get-list:
+    get:
+      summary: s
+      description: d
+      operationId: get_list
+      x-auth: public
+      x-error-codes: []
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    description: page
+                    properties:
+                      rows: {type: array, description: wrong name, items: {type: string}}
+              examples: {sample: {value: {}}}
+components:
+  schemas:
+    Nameless:
+      type: object
+      properties:
+        name: {type: string}

@@ -25,3 +25,9 @@ Excluded by decision D-06: `unipdf` (AGPL or commercial licence).
 | `github.com/redis/go-redis/v9` v9.23.0 | BSD-2-Clause | Redis-protocol client (`internal/redis`) |
 | `github.com/cespare/xxhash/v2`, `go.uber.org/atomic` (indirect) | MIT | go-redis dependencies |
 | Valkey 8 (`valkey/valkey` image, local stack and CI only, not shipped) | BSD-3-Clause | Redis-protocol server |
+
+## Contract lint (T-063)
+
+| Item | Licence | Role |
+|---|---|---|
+| `gopkg.in/yaml.v3` v3.0.1 | MIT and Apache-2.0 | Test-only: parses `api/openapi.yaml` in `api/contract_lint_test.go`; not linked into the API binary |

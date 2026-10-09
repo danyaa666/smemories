@@ -1,8 +1,10 @@
 package httpx
 
 import (
+	"cmp"
 	"log/slog"
 	"net/http"
+	"time"
 )
 
 // NewRouter returns the root handler: the middleware chain around a ServeMux that
@@ -10,8 +12,19 @@ import (
 // and wrong methods answer with the shared error envelope.
 //
 // Chain (outermost first): request id, access log, security headers, panic recovery,
-// body cap, mux.
+// request timeout, body cap, client IP, mux.
 func NewRouter(logger *slog.Logger, routes ...func(*http.ServeMux)) http.Handler {
+	return NewRouterWith(logger, RouterConfig{}, routes...)
+}
+
+// RouterConfig tunes the chain; the zero value means DefaultRequestTimeout and no trusted proxy.
+type RouterConfig struct {
+	RequestTimeout time.Duration
+	TrustProxy     bool // WithClientIP reads the last X-Forwarded-For hop
+}
+
+// NewRouterWith is NewRouter with an explicit RouterConfig.
+func NewRouterWith(logger *slog.Logger, cfg RouterConfig, routes ...func(*http.ServeMux)) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
@@ -20,12 +33,13 @@ func NewRouter(logger *slog.Logger, routes ...func(*http.ServeMux)) http.Handler
 		register(mux)
 	}
 
-	h := envelopeNotFound(mux)
+	h := WithClientIP(cfg.TrustProxy)(envelopeNotFound(mux))
 	h = BodyLimit(DefaultMaxBody, h)
+	h = Timeout(cmp.Or(cfg.RequestTimeout, DefaultRequestTimeout))(h)
 	h = Recover(logger, h)
 	h = SecurityHeaders(h)
 	h = AccessLog(logger, h)
-	return RequestID(h)
+	return RequestID(withLogger(logger, h))
 }
 
 // envelopeNotFound dispatches to mux, but replaces the mux's plain-text 404 and 405
