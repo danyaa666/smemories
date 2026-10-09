@@ -13,11 +13,10 @@
 | BACKLOG | 33 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-044, T-049, T-050, T-055, T-056, T-058, T-059, T-060, T-061, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073 |
 | TODO | 5 | T-048, T-052, T-053, T-054, T-057 |
 | IN_PROGRESS | 1 | T-034 |
-| MERGED | 1 | T-063 |
-| DONE | 27 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-035, T-036, T-037, T-038, T-043, T-045, T-046, T-047, T-051, T-062 |
+| DONE | 28 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-035, T-036, T-037, T-038, T-043, T-045, T-046, T-047, T-051, T-062, T-063 |
 | CANCELLED | 6 | T-014, T-019, T-039, T-040, T-041, T-042 |
 
-**Awaiting your review (MERGED):** T-063 ([E10] Foundation: apperr, v2 response helpers, request timeout and client-IP middleware, contract lint)
+**Awaiting your review (MERGED):** nothing
 
 **Open questions for you:** none
 
@@ -2254,7 +2253,7 @@ CI resolved Go 1.26.8 while 1.26.9 (ten stdlib vulnerability fixes) was out, tur
 - 2026-10-09 03:05Z · human · accepted by owner
 
 ### T-063 — [E10] Foundation: apperr, v2 response helpers, request timeout and client-IP middleware, contract lint
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** infra
 - **Milestone:** M1
@@ -2265,7 +2264,7 @@ CI resolved Go 1.26.8 while 1.26.9 (ten stdlib vulnerability fixes) was out, tur
 - **Assignee:** —
 - **Branch:** task/t-063-e10-foundation-apperr-v2-response-helper
 - **PR:** https://github.com/danyaa666/smemories/pull/36
-- **Updated:** 2026-10-09 03:02Z by leader
+- **Updated:** 2026-10-09 03:05Z by human
 - **Comments-seen:** 6
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/01-foundation.md`
@@ -2286,6 +2285,7 @@ Adds the tools the rest of E10 uses: the typed error package, the v2 envelope he
   Non-blocking: (1) GET list rule in lint triggers only for paths ending -list (matches the contract naming). (2) A /api handler that returns after the deadline without writing yields an empty 200 by design (AC4); handlers should check ctx.Err() as the helpers do. (3) /api/v1/... reaching Go directly (no edge) is 404 v2, expected until T-023.
 - 2026-10-09 02:41Z · leader · Leader review: code OK (QA_PASS, head c1dd96e matches). Merge is blocked only by the red security job (Go 1.26.8 vulns, not from this PR); will merge as soon as T-062 fixes CI or the job turns green.
 - 2026-10-09 03:02Z · leader · merged bb5143f. Review: apperr (100% cov), httpx v2 helpers + /api path switch, Timeout/WithTimeout, WithClientIP, contract lint with a bad fixture, web shim + proxy rule (incl. healthz/readyz); no existing endpoint changed; CI green on all 4 checks after T-062. For owner to check: README note for SMEM_HTTP_REQUEST_TIMEOUT, new test-only dependency gopkg.in/yaml.v3 in THIRD_PARTY_NOTICES.
+- 2026-10-09 03:05Z · human · accepted by owner
 
 ### T-064 — [E10] DB conventions: yearbook and profile tables (no joins, no foreign keys, ms timestamps)
 - **Status:** BACKLOG
