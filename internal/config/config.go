@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -39,7 +40,9 @@ type Config struct {
 	GoogleIssuer       string // SMEM_GOOGLE_ISSUER, default https://accounts.google.com (tests point it at a fake)
 	OIDCCookieKey      []byte // SMEM_OIDC_COOKIE_KEY: HMAC key for the smem_oidc cookie, at least 32 bytes; required with a client id. Never log it.
 	MediaMaxBytes      int64  // SMEM_MEDIA_MAX_BYTES: largest accepted upload, default 10 MiB
-	PublicUploadsPerIP int    // SMEM_PUBLIC_UPLOAD_CONCURRENT_PER_IP: submissions with photos in progress per client IP, default 8
+	PublicUploadsPerIP int    // SMEM_PUBLIC_UPLOAD_CONCURRENT_PER_IP: public note submissions in progress per client IP, default 8
+	PublicUploadConns  int    // SMEM_PUBLIC_UPLOAD_MAX_CONNS: public note submissions in progress in total, default 48
+	UploadTmpDir       string // SMEM_UPLOAD_TMP_DIR: where public submissions are spooled while they arrive, default the OS temp dir
 	MediaMaxConcurrent int    // SMEM_MEDIA_MAX_CONCURRENT: images processed at once, default 2 (see docs/media.md)
 	MemoryLimitMiB     int    // SMEM_MEMORY_LIMIT_MIB: soft memory limit of the Go runtime in MiB, 0 = unset
 	S3Endpoint         string // SMEM_S3_ENDPOINT: empty for AWS S3, e.g. http://127.0.0.1:9000 for MinIO
@@ -186,6 +189,14 @@ func Load(getenv func(string) string) (Config, error) {
 	}
 	if cfg.PublicUploadsPerIP, err = getInt(get, "SMEM_PUBLIC_UPLOAD_CONCURRENT_PER_IP", "8", 1); err != nil {
 		return Config{}, err
+	}
+	if cfg.PublicUploadConns, err = getInt(get, "SMEM_PUBLIC_UPLOAD_MAX_CONNS", "48", 1); err != nil {
+		return Config{}, err
+	}
+	if cfg.UploadTmpDir = getenv("SMEM_UPLOAD_TMP_DIR"); cfg.UploadTmpDir != "" {
+		if fi, err := os.Stat(cfg.UploadTmpDir); err != nil || !fi.IsDir() {
+			return Config{}, fmt.Errorf("SMEM_UPLOAD_TMP_DIR=%q: want an existing directory", cfg.UploadTmpDir)
+		}
 	}
 	// Below 64 MiB the collector would run almost continuously, so such a value is a typo, not a limit.
 	if cfg.MemoryLimitMiB, err = getInt(get, "SMEM_MEMORY_LIMIT_MIB", "0", 0); err != nil || cfg.MemoryLimitMiB > 1<<20 || (cfg.MemoryLimitMiB != 0 && cfg.MemoryLimitMiB < 64) {

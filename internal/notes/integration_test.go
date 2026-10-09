@@ -49,6 +49,7 @@ type env struct {
 	svc   *media.Service
 	books []string // public ids, for object cleanup
 	logs  *bytes.Buffer
+	tmp   string // where the handler spools request bodies
 	mu    sync.Mutex
 	clock time.Time
 }
@@ -93,6 +94,8 @@ func newEnv(t *testing.T) *env {
 	e.svc = media.NewService(media.NewStore(d), e.st, 2, nil)
 	yh := yearbook.NewHandler(yearbook.NewStore(d), e.svc, ah.RequireUser, []string{origin}, logger, e.now)
 	e.nh = NewHandler(NewStore(d), e.svc, 10<<20, ah.RequireUser, []string{origin}, ah.ClientIP, logger, e.now)
+	e.tmp = t.TempDir()
+	e.nh.SetUploadLimits(defaultUploadConns, defaultUploadsPerIP, e.tmp)
 	e.h = httpx.NewRouter(logger, ah.Routes, yh.Routes, e.nh.Routes)
 	t.Cleanup(func() { // objects of every book this test created
 		for _, id := range e.books {

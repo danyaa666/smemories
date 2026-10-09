@@ -12,18 +12,25 @@ import (
 	"image"
 	"image/color"
 	"image/jpeg"
+	"image/png"
 	"io"
+	"math/rand"
 	"mime/multipart"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/textproto"
+	"os"
+	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/danyaa666/smemories/internal/auth"
+	"github.com/danyaa666/smemories/internal/httpx"
+	"github.com/danyaa666/smemories/internal/media"
 	"github.com/danyaa666/smemories/internal/storage"
 	"github.com/danyaa666/smemories/internal/ulid"
 )
@@ -535,25 +542,28 @@ type verifierFunc func(context.Context, *http.Request) error
 
 func (f verifierFunc) Verify(ctx context.Context, r *http.Request) error { return f(ctx, r) }
 
-// A submission with photos is refused with 503 busy when too many are already holding photo bytes.
+// A busy answer (all submission slots taken) comes before anything is read, carries a jittered Retry-After and is
+// not counted against the per-IP request caps: 700 refusals later the same address still gets in.
 func TestSubmitBusy(t *testing.T) {
 	e := newEnv(t)
 	l := e.newOpenLink()
-	for range cap(e.nh.inflight) {
-		e.nh.inflight <- struct{}{}
+	e.nh.SetUploadLimits(2, 8, e.tmp)
+	if !e.nh.acquire("x") || !e.nh.acquire("y") {
+		t.Fatal("could not take the slots")
 	}
-	rec := e.post(l.token, answers("A", "m"), photoPart(jpegOf(t, 1))).status(503, "busy")
-	if rec.Header().Get("Retry-After") == "" {
-		t.Fatal("no Retry-After")
+	for range allPerWindow + 100 {
+		rec := e.post(l.token, answers("A", "m"), photoPart(jpegOf(t, 1))).status(503, "busy")
+		if ra, _ := strconv.Atoi(rec.Header().Get("Retry-After")); ra < 2 || ra > 6 {
+			t.Fatalf("Retry-After %q, want 2 to 6", rec.Header().Get("Retry-After"))
+		}
 	}
-	e.post(l.token, answers("A", "m")).status(201, "") // text-only does not need a slot
-	for range cap(e.nh.inflight) {
-		<-e.nh.inflight
-	}
+	e.nh.release("x")
 	e.post(l.token, answers("A", "m"), photoPart(jpegOf(t, 1))).status(201, "")
-	if len(e.nh.inflight) != 0 {
+	e.nh.release("y")
+	if e.inProgress() != 0 {
 		t.Fatal("slot not released")
 	}
+	e.noSpool()
 }
 
 // AC9: no cookie read or set, no CORS, no IP or user agent stored, nothing sensitive in the logs.
@@ -634,43 +644,29 @@ func noErrorLogged(t *testing.T, e *env) {
 	}
 }
 
-// stalled is a submission whose photos part never finishes: the answers and the first bytes of a photo arrive, then nothing.
-type stalled struct {
-	rec     *httptest.ResponseRecorder
-	done    chan struct{}
-	release func()
+func (e *env) inProgress() int {
+	e.nh.upMu.Lock()
+	defer e.nh.upMu.Unlock()
+	return e.nh.upTotal
 }
 
-// stall starts a stalled submission from ip. It returns at once; callers wait for that with waitFor or the done channel.
-func (e *env) stall(token, ip string) *stalled {
+// noSpool asserts that no spooled body is left on disk (the handler removes its file when it returns).
+func (e *env) noSpool() {
 	e.t.Helper()
-	pr, pw := io.Pipe()
-	mw := multipart.NewWriter(pw)
-	go func() {
-		a := answers("A", "m")
-		w, _ := mw.CreateFormField("answers")
-		_, _ = w.Write(a.data)
-		h := textproto.MIMEHeader{}
-		h.Set("Content-Disposition", `form-data; name="photos"; filename="a.jpg"`)
-		w, _ = mw.CreatePart(h)
-		_, _ = w.Write([]byte{0xff, 0xd8, 0xff})
-		_, _ = w.Write(make([]byte, 1<<20)) // blocks: the handler is not reading, or the test never lets it finish
-	}()
-	r := httptest.NewRequest("POST", "/v1/public/collect/"+token+"/notes", pr)
-	r.Header.Set("Content-Type", mw.FormDataContentType())
-	r.RemoteAddr = ip + ":4000"
-	s := &stalled{rec: httptest.NewRecorder(), done: make(chan struct{}), release: func() { _ = pw.CloseWithError(io.ErrUnexpectedEOF) }}
-	go func() {
-		defer close(s.done)
-		e.h.ServeHTTP(s.rec, r)
-	}()
-	e.t.Cleanup(s.release)
-	return s
+	e.waitFor("spool files removed", func() bool { return len(e.spooled()) == 0 })
+}
+
+func (e *env) spooled() []os.DirEntry {
+	ents, err := os.ReadDir(e.tmp)
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	return ents
 }
 
 func (e *env) waitFor(what string, ok func() bool) {
 	e.t.Helper()
-	for range 500 {
+	for range 1000 {
 		if ok() {
 			return
 		}
@@ -679,134 +675,400 @@ func (e *env) waitFor(what string, ok func() bool) {
 	e.t.Fatalf("timed out waiting for %s", what)
 }
 
-func finished(all []*stalled) (out []*stalled) {
-	for _, s := range all {
-		select {
-		case <-s.done:
-			out = append(out, s)
-		default:
+// serve runs the API on a real socket. The client address comes from the X-Test-IP header, so one test can play many IPs.
+func (e *env) serve() *httptest.Server {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if ip := r.Header.Get("X-Test-IP"); ip != "" {
+			r.RemoteAddr = ip + ":4000"
 		}
-	}
-	return out
+		e.h.ServeHTTP(w, r)
+	}))
+	e.t.Cleanup(func() { srv.CloseClientConnections(); srv.Close() })
+	return srv
 }
 
-func (e *env) held() int {
-	e.nh.upMu.Lock()
-	defer e.nh.upMu.Unlock()
-	return len(e.nh.inflight)
-}
-
-// The slow-upload attack: stalled uploads from one address cannot take the slots of everybody else.
-func TestStalledUploadsDoNotBlockOthers(t *testing.T) {
-	e := newEnv(t)
-	l := e.newOpenLink()
-	var all []*stalled
-	for range 4 { // QA's repro: four half-open uploads from one address
-		all = append(all, e.stall(l.token, "198.51.100.1"))
-	}
-	e.waitFor("two slots held and two refused", func() bool { return e.held() == 2 && len(finished(all)) == 2 })
-	for _, s := range finished(all) { // the address' share is half of the 4 slots; the others were refused at once
-		if s.rec.Code != 503 || s.rec.Header().Get("Retry-After") == "" {
-			t.Fatalf("a refused stalled upload: %d", s.rec.Code)
-		}
-	}
-	// a normal submission with three photos from another address succeeds while the attacker is still connected
-	e.postFrom(context.Background(), "203.0.113.7", l.token, answers("Real", "hi"), photoPart(jpegOf(t, 1)), photoPart(jpegOf(t, 2)), photoPart(jpegOf(t, 3))).status(201, "")
-	// text-only never needs a slot, also from the attacker's address
-	e.postFrom(context.Background(), "198.51.100.1", l.token, answers("A", "m")).status(201, "")
-	// the attacker's address has used its share, so its next photo upload is refused immediately
-	e.postFrom(context.Background(), "198.51.100.1", l.token, answers("A", "m"), photoPart(jpegOf(t, 4))).status(503, "busy")
-
-	for _, s := range all {
-		s.release()
-		<-s.done
-	}
-	e.waitFor("slots released", func() bool { return e.held() == 0 })
-	e.postFrom(context.Background(), "198.51.100.1", l.token, answers("A", "m"), photoPart(jpegOf(t, 5))).status(201, "")
-	if len(e.nh.upIP) != 0 {
-		t.Fatalf("per-IP counters left: %v", e.nh.upIP)
-	}
-	if n := e.noteCount(); n != 3 {
-		t.Fatalf("%d notes, want 3 (the stalled ones keep nothing)", n)
-	}
-}
-
-// Many addresses can still fill the pool (that is the edge's job, T-031), and the config value is honoured below half.
-func TestUploadsPerIPLimit(t *testing.T) {
-	e := newEnv(t)
-	l := e.newOpenLink()
-	e.nh.SetUploadsPerIP(1)
-	a := e.stall(l.token, "198.51.100.1")
-	e.waitFor("one slot", func() bool { return e.held() == 1 })
-	e.postFrom(context.Background(), "198.51.100.1", l.token, answers("A", "m"), photoPart(jpegOf(t, 1))).status(503, "busy")
-	e.postFrom(context.Background(), "198.51.100.2", l.token, answers("A", "m"), photoPart(jpegOf(t, 1))).status(201, "")
-	a.release()
-	<-a.done
-}
-
-// The text is checked before a slot is taken: with every slot busy, a request that would be rejected anyway gets its own error.
-func TestRejectedRequestsDoNotNeedASlot(t *testing.T) {
-	e := newEnv(t)
-	l := e.newOpenLink()
-	for range cap(e.nh.inflight) {
-		e.nh.inflight <- struct{}{}
-	}
-	e.post(l.token, text("answers", `{"name":"A"}`), photoPart(jpegOf(t, 1))).status(400, "missing_answer")
-	e.post(l.token, text("answers", `{"name":"A","message":"m","x":"y"}`), photoPart(jpegOf(t, 1))).status(400, "unknown_field")
-	e.post(l.token, photoPart(jpegOf(t, 1)), answers("A", "m")).status(400, "invalid_body") // answers must come first
-	for range cap(e.nh.inflight) {
-		<-e.nh.inflight
-	}
-	e.nothingKept()
-}
-
-// A class behind one address: 40 students each send a photo, one after the other; every slot is given back.
-func TestFortyStudentsWithPhotos(t *testing.T) {
-	e := newEnv(t)
-	l := e.newOpenLink()
-	for i := range 40 {
-		e.post(l.token, answers("Student", "hi"), photoPart(jpegOf(t, uint8(i)))).status(201, "")
-	}
-	if e.held() != 0 || len(e.nh.upIP) != 0 {
-		t.Fatal("slots not released")
-	}
-}
-
-// A body that stops arriving is dropped after the idle timeout (real socket, the deadline is the connection's):
-// 408, no note, no object, slot free again.
-func TestIdleBodyIsDropped(t *testing.T) {
-	old := submitIdleTimeout
-	submitIdleTimeout = 300 * time.Millisecond
-	t.Cleanup(func() { submitIdleTimeout = old })
-	e := newEnv(t)
-	l := e.newOpenLink()
-	srv := httptest.NewServer(e.h)
-	defer srv.Close()
-
+func dial(t testing.TB, srv *httptest.Server) net.Conn {
+	t.Helper()
 	conn, err := net.Dial("tcp", srv.Listener.Addr().String())
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer conn.Close()
-	body, ct := multipartOf(answers("A", "m"), photoPart(jpegOf(t, 1)))
-	head := body.Bytes()[:body.Len()-200] // the photo is cut short; Content-Length promises the rest
-	fmt.Fprintf(conn, "POST /v1/public/collect/%s/notes HTTP/1.1\r\nHost: x\r\nContent-Type: %s\r\nContent-Length: %d\r\n\r\n", l.token, ct, body.Len())
-	_, _ = conn.Write(head)
-	e.waitFor("slot taken", func() bool { return e.held() == 1 })
+	t.Cleanup(func() { _ = conn.Close() })
+	return conn
+}
 
-	start := time.Now()
-	_ = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+func sendHead(conn net.Conn, token, ip, ctype string, length int) {
+	fmt.Fprintf(conn, "POST /v1/public/collect/%s/notes HTTP/1.1\r\nHost: x\r\nX-Test-IP: %s\r\nContent-Type: %s\r\nContent-Length: %d\r\n\r\n", token, ip, ctype, length)
+}
+
+func readResponse(t testing.TB, conn net.Conn, within time.Duration) (status int, header http.Header, body string) {
+	t.Helper()
+	_ = conn.SetReadDeadline(time.Now().Add(within))
 	res, err := http.ReadResponse(bufio.NewReader(conn), nil)
 	if err != nil {
-		t.Fatalf("no answer to a stalled upload: %v", err)
+		t.Fatalf("no answer: %v", err)
 	}
 	defer res.Body.Close()
-	if res.StatusCode != 408 || time.Since(start) > 3*time.Second {
-		t.Fatalf("status %d after %v, want 408 within the idle window", res.StatusCode, time.Since(start))
+	b, _ := io.ReadAll(res.Body)
+	return res.StatusCode, res.Header, string(b)
+}
+
+// bigBody is a multipart body whose photo is 4 MiB of zeros: it never reaches image processing in these tests.
+var bigBody, bigType = multipartOf(answers("A", "m"), photoPart(make([]byte, 4<<20)))
+
+// stall opens a connection that sends the answers, the head of a photo and then extra more bytes of an upload that
+// promises 4 MiB, and goes silent. It returns the connection.
+func (e *env) stall(srv *httptest.Server, token, ip string, extra int) net.Conn {
+	conn := dial(e.t, srv)
+	sendHead(conn, token, ip, bigType, bigBody.Len())
+	if _, err := conn.Write(bigBody.Bytes()[:600+extra]); err != nil {
+		e.t.Fatal(err)
 	}
-	e.waitFor("slot released", func() bool { return e.held() == 0 })
+	return conn
+}
+
+func statusOf(t testing.TB, conn net.Conn, within time.Duration) int {
+	t.Helper()
+	status, _, _ := readResponse(t, conn, within)
+	return status
+}
+
+// A body that stops arriving is dropped after the idle timeout (real socket, the deadline is the connection's):
+// 408, no note, no object, nothing left on disk, the submission slot free again.
+func TestIdleBodyIsDropped(t *testing.T) {
+	old := submitPace
+	submitPace.Idle = 300 * time.Millisecond
+	t.Cleanup(func() { submitPace = old })
+	e := newEnv(t)
+	l := e.newOpenLink()
+	srv := e.serve()
+
+	conn := e.stall(srv, l.token, "10.0.0.1", 100)
+	e.waitFor("upload in progress", func() bool { return e.inProgress() == 1 && len(e.spooled()) == 1 })
+	start := time.Now()
+	if got := statusOf(t, conn, 5*time.Second); got != 408 || time.Since(start) > 3*time.Second {
+		t.Fatalf("status %d after %v, want 408 within the idle window", got, time.Since(start))
+	}
+	e.waitFor("slot released", func() bool { return e.inProgress() == 0 })
+	e.noSpool()
 	e.nothingKept()
-	if n := e.noteCount(); n != 0 {
+}
+
+// Slow drip: one byte every few hundred milliseconds never trips the idle timeout, but the average rate falls under
+// the minimum once the grace period has passed, so the request is dropped long before the total cap.
+func TestSlowDripIsDropped(t *testing.T) {
+	old := submitPace
+	submitPace = httpx.BodyPace{Idle: time.Second, Total: 30 * time.Second, MinRate: 1000, Grace: 500 * time.Millisecond}
+	t.Cleanup(func() { submitPace = old })
+	e := newEnv(t)
+	l := e.newOpenLink()
+	srv := e.serve()
+
+	conn := e.stall(srv, l.token, "10.0.0.1", 0)
+	start := time.Now()
+	stop := make(chan struct{})
+	go func() {
+		for {
+			select {
+			case <-stop:
+				return
+			case <-time.After(250 * time.Millisecond):
+				if _, err := conn.Write([]byte{0}); err != nil {
+					return
+				}
+			}
+		}
+	}()
+	defer close(stop)
+	if got := statusOf(t, conn, 10*time.Second); got != 408 || time.Since(start) > 5*time.Second {
+		t.Fatalf("status %d after %v, want 408 soon after the grace period", got, time.Since(start))
+	}
+	e.waitFor("slot released", func() bool { return e.inProgress() == 0 })
+	e.noSpool()
+	e.nothingKept()
+}
+
+// QA's repro, round 2: 8 stalled uploads from each of two addresses (their per-address share) do not stop a third
+// address; a ninth from the first is turned away at once; when they hang up everything is released.
+func TestStalledUploadsDoNotBlockOthers(t *testing.T) {
+	e := newEnv(t)
+	l := e.newOpenLink()
+	srv := e.serve()
+	var conns []net.Conn
+	for _, ip := range []string{"198.51.100.1", "198.51.100.2"} {
+		for range 8 {
+			conns = append(conns, e.stall(srv, l.token, ip, 100))
+		}
+	}
+	e.waitFor("16 uploads in progress", func() bool { return e.inProgress() == 16 && len(e.spooled()) == 16 })
+
+	extra := dial(t, srv)
+	sendHead(extra, l.token, "198.51.100.1", bigType, bigBody.Len())
+	code, header, _ := readResponse(t, extra, 3*time.Second)
+	if ra, _ := strconv.Atoi(header.Get("Retry-After")); code != 503 || ra < 2 || ra > 6 {
+		t.Fatalf("ninth upload from one address: %d, Retry-After %q", code, header.Get("Retry-After"))
+	}
+	// a normal 3-photo submission from a third address, and a text-only one from an attacker's address, both succeed
+	body, ct := multipartOf(answers("Real", "hi"), photoPart(jpegOf(t, 1)), photoPart(jpegOf(t, 2)), photoPart(jpegOf(t, 3)))
+	c3 := dial(t, srv)
+	sendHead(c3, l.token, "203.0.113.7", ct, body.Len())
+	_, _ = c3.Write(body.Bytes())
+	if got := statusOf(t, c3, 5*time.Second); got != 201 {
+		t.Fatalf("third address: %d", got)
+	}
+	for _, c := range conns {
+		_ = c.Close()
+	}
+	e.waitFor("everything released", func() bool { return e.inProgress() == 0 })
+	e.noSpool()
+	if len(e.nh.upIP) != 0 {
+		t.Fatalf("per-IP counters left: %v", e.nh.upIP)
+	}
+	if n := e.noteCount(); n != 1 {
+		t.Fatalf("%d notes, want 1 (the stalled uploads keep nothing)", n)
+	}
+	if e.count(`SELECT COUNT(*) FROM media`) != 3 || e.st.count() != 6 {
+		t.Fatal("only the real submission's 3 photos (6 objects) should exist")
+	}
+}
+
+// The 49th concurrent upload is turned away while 48 are in progress, and holding 48 uploads costs disk, not memory.
+func TestConnectionCapAndFlatMemory(t *testing.T) {
+	e := newEnv(t)
+	l := e.newOpenLink()
+	e.nh.SetUploadLimits(48, 8, e.tmp)
+	srv := e.serve()
+	runtime.GC()
+	var before runtime.MemStats
+	runtime.ReadMemStats(&before)
+
+	const each = 1 << 20
+	var conns []net.Conn
+	for i := range 48 {
+		conns = append(conns, e.stall(srv, l.token, fmt.Sprintf("10.9.%d.1", i), each))
+	}
+	var spooledBytes int64
+	e.waitFor("48 MiB on disk", func() bool {
+		spooledBytes = 0
+		for _, f := range e.spooled() {
+			if fi, err := f.Info(); err == nil {
+				spooledBytes += fi.Size()
+			}
+		}
+		return e.inProgress() == 48 && spooledBytes >= 48*each
+	})
+	runtime.GC()
+	var after runtime.MemStats
+	runtime.ReadMemStats(&after)
+	if grown := int64(after.HeapAlloc) - int64(before.HeapAlloc); grown > 16<<20 {
+		t.Fatalf("heap grew by %d MiB while 48 MiB were being uploaded: the body is not spooled", grown>>20)
+	}
+	over := dial(t, srv)
+	sendHead(over, l.token, "10.9.99.1", bigType, bigBody.Len())
+	if got := statusOf(t, over, 3*time.Second); got != 503 {
+		t.Fatalf("49th upload: %d, want 503", got)
+	}
+	for _, c := range conns {
+		_ = c.Close()
+	}
+	e.waitFor("released", func() bool { return e.inProgress() == 0 })
+	e.noSpool()
+}
+
+// An early rejection waits for the upload to end, so a browser can read it: the client sends half of its body, pauses,
+// and must get no answer during the pause; after the second half the real answer arrives, complete.
+func TestEarlyRejectionDrainsTheBody(t *testing.T) {
+	e := newEnv(t)
+	l := e.newOpenLink()
+	srv := e.serve()
+	photo := part{"photos", "a.jpg", "image/jpeg", make([]byte, 1<<20)}
+	cases := []struct {
+		name, token string
+		parts       []part
+		status      int
+		code        string
+	}{
+		{"unknown link", "ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ", []part{answers("A", "m"), photo}, 404, "not_found"},
+		{"missing answer", l.token, []part{text("answers", `{"name":"A"}`), photo}, 400, "missing_answer"},
+		{"answers after photos", l.token, []part{photo, answers("A", "m")}, 400, "invalid_body"},
+	}
+	for _, c := range cases {
+		body, ct := multipartOf(c.parts...)
+		conn := dial(t, srv)
+		sendHead(conn, c.token, "10.0.0.5", ct, body.Len())
+		half := body.Len() / 2
+		_, _ = conn.Write(body.Bytes()[:half])
+		_ = conn.SetReadDeadline(time.Now().Add(300 * time.Millisecond))
+		if n, err := conn.Read(make([]byte, 1)); err == nil || n != 0 {
+			t.Fatalf("%s: answered before the upload ended", c.name)
+		}
+		_, _ = conn.Write(body.Bytes()[half:])
+		code, _, out := readResponse(t, conn, 5*time.Second)
+		if code != c.status || !strings.Contains(out, `"`+c.code+`"`) {
+			t.Fatalf("%s: %d %s", c.name, code, out)
+		}
+	}
+	e.noSpool()
+	e.nothingKept()
+}
+
+// The spooled body is removed after success, rejection, a client that hangs up and a panic in the handler.
+func TestSpoolIsAlwaysRemoved(t *testing.T) {
+	e := newEnv(t)
+	l := e.newOpenLink()
+	e.post(l.token, answers("A", "m"), photoPart(jpegOf(t, 1))).status(201, "")
+	e.noSpool()
+	e.post(l.token, answers("A", "m"), photoPart([]byte("not an image"))).status(415, "")
+	e.noSpool()
+	e.post(l.token, text("answers", `{}`)).status(400, "")
+	e.noSpool()
+
+	srv := e.serve()
+	conn := e.stall(srv, l.token, "10.0.0.2", 100)
+	e.waitFor("spooling", func() bool { return len(e.spooled()) == 1 })
+	_ = conn.Close()
+	e.waitFor("released", func() bool { return e.inProgress() == 0 })
+	e.noSpool()
+
+	e.nh.SetVerifier(verifierFunc(func(context.Context, *http.Request) error { panic("boom") }))
+	e.post(l.token, answers("A", "m")).status(500, "")
+	e.noSpool()
+	if e.inProgress() != 0 {
+		t.Fatal("slot not released after a panic")
+	}
+}
+
+// photoNoise is a JPEG of random noise, a few hundred KB, so that a throttled upload takes visible time.
+func photoNoise(t testing.TB, seed int64) []byte {
+	t.Helper()
+	rng := rand.New(rand.NewSource(seed))
+	img := image.NewNRGBA(image.Rect(0, 0, 360, 360))
+	for i := range img.Pix {
+		img.Pix[i] = uint8(rng.Intn(256))
+	}
+	var b bytes.Buffer
+	if err := jpeg.Encode(&b, img, &jpeg.Options{Quality: 80}); err != nil {
+		t.Fatal(err)
+	}
+	return b.Bytes()
+}
+
+// throttled delivers its bytes at about rate bytes per second.
+type throttled struct {
+	r    io.Reader
+	rate int
+}
+
+func (t *throttled) Read(p []byte) (int, error) {
+	n, err := t.r.Read(p[:min(len(p), 32<<10)])
+	time.Sleep(time.Duration(n) * time.Second / time.Duration(t.rate))
+	return n, err
+}
+
+// The 40-students case: one campus address, every student looks the link up and uploads 3 photos at 1 MB/s, and
+// retries like the web form (on 503 and on a network error, after Retry-After). Everybody gets a 201 and nobody a
+// 429. Retry-After is honoured at 1/10 of its value so that the test is quick.
+func TestFortyStudentsAtOneMBps(t *testing.T) {
+	e := newEnv(t)
+	l := e.newOpenLink()
+	srv := e.serve()
+	photos := [][]byte{photoNoise(t, 1), photoNoise(t, 2), photoNoise(t, 3)}
+	t.Logf("3 photos of %d KB", (len(photos[0])+len(photos[1])+len(photos[2]))>>10)
+
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	got := map[int]int{}
+	maxTries := 0
+	for i := range 40 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			client := &http.Client{Timeout: 60 * time.Second}
+			get, _ := http.NewRequest("GET", srv.URL+"/v1/public/collect/"+l.token, nil)
+			get.Header.Set("X-Test-IP", "10.70.0.1")
+			if res, err := client.Do(get); err == nil {
+				_, _ = io.Copy(io.Discard, res.Body)
+				_ = res.Body.Close()
+			}
+			body, ct := multipartOf(answers(fmt.Sprintf("Student %d", i), "hi"), photoPart(photos[0]), photoPart(photos[1]), photoPart(photos[2]))
+			status, tries := 0, 0
+			for tries < 300 {
+				tries++
+				req, _ := http.NewRequest("POST", srv.URL+"/v1/public/collect/"+l.token+"/notes", io.NopCloser(&throttled{bytes.NewReader(body.Bytes()), 1 << 20}))
+				req.ContentLength = int64(body.Len())
+				req.Header.Set("Content-Type", ct)
+				req.Header.Set("X-Test-IP", "10.70.0.1")
+				res, err := client.Do(req)
+				if err != nil { // the server answered 503 before reading the body and closed: same as a 503
+					time.Sleep(300 * time.Millisecond)
+					continue
+				}
+				_, _ = io.Copy(io.Discard, res.Body)
+				_ = res.Body.Close()
+				status = res.StatusCode
+				if status != 503 {
+					break
+				}
+				ra, _ := strconv.Atoi(res.Header.Get("Retry-After"))
+				time.Sleep(time.Duration(ra) * 100 * time.Millisecond)
+			}
+			mu.Lock()
+			got[status]++
+			maxTries = max(maxTries, tries)
+			mu.Unlock()
+		}()
+	}
+	wg.Wait()
+	t.Logf("results %v, most tries %d", got, maxTries)
+	if got[201] != 40 {
+		t.Fatalf("results %v, want 40 x 201 and no 429", got)
+	}
+	if n := e.noteCount(); n != 40 {
 		t.Fatalf("%d notes", n)
+	}
+	e.noSpool()
+}
+
+// A 503 busy from the media service (no processing slot within the wait) is retryable and costs the client nothing:
+// the request caps are given back, so 700 busy answers do not lock the address out.
+func TestMediaBusyIsRefunded(t *testing.T) {
+	e := newEnv(t)
+	l := e.newOpenLink()
+	svc := media.NewService(media.NewStore(e.db), e.st, 1, nil)
+	svc.SetContributorWait(time.Millisecond)
+	e.nh.media = svc
+	big := image.NewNRGBA(image.Rect(0, 0, 2000, 2000)) // decoding 4 MP keeps the only slot busy for a while
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, big); err != nil {
+		t.Fatal(err)
+	}
+	slow := buf.Bytes()
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		e.postFrom(context.Background(), "192.0.2.50", l.token, answers("Slow", "m"), photoPart(slow))
+	}()
+	time.Sleep(100 * time.Millisecond)
+	busy := 0
+	for range 5 {
+		if e.postFrom(context.Background(), "192.0.2.50", l.token, answers("Fast", "m"), photoPart(jpegOf(t, 1))).Code == 503 {
+			busy++
+		}
+	}
+	wg.Wait()
+	if busy == 0 {
+		t.Skip("the slow photo finished before the others arrived; nothing to measure on this machine")
+	}
+	// the busy answers did not use up the address' submissions: only the stored notes count
+	left := 0
+	for {
+		if ok, _ := e.nh.subIPHr.Take("192.0.2.50"); !ok {
+			break
+		}
+		left++
+	}
+	if want := submitPerIPHour - e.noteCount(); left != want {
+		t.Fatalf("%d hourly submissions left, want %d: busy answers were counted", left, want)
 	}
 }

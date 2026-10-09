@@ -26,9 +26,9 @@ const (
 // ErrBusy: every image-processing slot stayed taken for the whole wait (503 busy, retry shortly).
 var ErrBusy = errors.New("media: busy")
 
-// contributorSlotWait is how long a public submission waits for a processing slot before it gives up
+// defaultContributorSlotWait is how long a public submission waits for a processing slot before it gives up
 // instead of queueing without bound.
-const contributorSlotWait = 5 * time.Second
+const defaultContributorSlotWait = 10 * time.Second
 
 // StorageError wraps a failure of the object store (502 storage_error).
 type StorageError struct{ Err error }
@@ -48,6 +48,8 @@ type Service struct {
 	limiter *ratelimit.Limiter
 	sem     chan struct{} // bounds concurrent image processing (memory)
 	now     func() time.Time
+
+	contributorWait time.Duration
 }
 
 // NewService builds the service; maxConcurrent bounds parallel image decodes; now may be nil.
@@ -56,8 +58,11 @@ func NewService(store *Store, st storage.Storage, maxConcurrent int, now func() 
 		now = time.Now
 	}
 	return &Service{store: store, st: st, limiter: ratelimit.New(uploadsPerWindow, uploadWindow, now),
-		sem: make(chan struct{}, maxConcurrent), now: now}
+		sem: make(chan struct{}, maxConcurrent), now: now, contributorWait: defaultContributorSlotWait}
 }
+
+// SetContributorWait changes how long a contributor photo waits for a processing slot (default 10 s); for tests.
+func (s *Service) SetContributorWait(d time.Duration) { s.contributorWait = d }
 
 // Slots is how many images can be processed at once.
 func (s *Service) Slots() int { return cap(s.sem) }
@@ -73,24 +78,30 @@ func (s *Service) Upload(ctx context.Context, ownerID uint64, yearbookID string,
 	if ok, retry := s.limiter.Take(fmt.Sprint(ownerID)); !ok {
 		return Media{}, RateLimitedError{retry}
 	}
-	return s.save(ctx, ownerID, yb, yearbookID, "owner", data, 0)
+	return s.save(ctx, ownerID, yb, yearbookID, "owner", func() ([]byte, error) { return data, nil }, 0)
 }
 
 // UploadContributor stores a photo sent through a collection link (T-034) in the yearbook with internal
 // id yearbookRow. It counts toward the owner's quotas like any photo, takes a processing slot like
-// Upload but waits at most a few seconds for it (ErrBusy), and has no per-user rate limit: the caller
+// Upload but waits a bounded time (10 s) for it (ErrBusy), and has no per-user rate limit: the caller
 // limits the public endpoint. On success the caller owns the photo: call Discard if the submission fails later.
 func (s *Service) UploadContributor(ctx context.Context, yearbookRow uint64, data []byte) (Media, error) {
+	return s.UploadContributorFrom(ctx, yearbookRow, func() ([]byte, error) { return data, nil })
+}
+
+// UploadContributorFrom is UploadContributor for a photo that waits on disk: load runs only once a processing slot
+// is held, so photos queued for a slot cost no memory.
+func (s *Service) UploadContributorFrom(ctx context.Context, yearbookRow uint64, load func() ([]byte, error)) (Media, error) {
 	ownerID, publicID, err := s.store.yearbookByRow(ctx, yearbookRow)
 	if err != nil {
 		return Media{}, err
 	}
-	return s.save(ctx, ownerID, yearbookRow, publicID, "contributor", data, contributorSlotWait)
+	return s.save(ctx, ownerID, yearbookRow, publicID, "contributor", load, s.contributorWait)
 }
 
-// save is the shared pipeline: quota pre-check, processing slot, process, put objects, insert the row.
+// save is the shared pipeline: quota pre-check, processing slot, load, process, put objects, insert the row.
 // slotWait 0 waits for a slot until ctx ends.
-func (s *Service) save(ctx context.Context, ownerID, yb uint64, yearbookID, kind string, data []byte, slotWait time.Duration) (Media, error) {
+func (s *Service) save(ctx context.Context, ownerID, yb uint64, yearbookID, kind string, load func() ([]byte, error), slotWait time.Duration) (Media, error) {
 	if err := checkQuota(ctx, s.store.db, ownerID, yb, 0); err != nil { // cheap early exit; insert re-checks under a lock
 		return Media{}, err
 	}
@@ -107,7 +118,11 @@ func (s *Service) save(ctx context.Context, ownerID, yb uint64, yearbookID, kind
 	case <-ctx.Done():
 		return Media{}, ctx.Err()
 	}
-	p, err := process(data)
+	data, err := load()
+	var p processed
+	if err == nil {
+		p, err = process(data)
+	}
 	<-s.sem
 	if err != nil {
 		return Media{}, err

@@ -2664,6 +2664,58 @@
           ]
         },
         {
+          "name": "Submit: answers after the photos - 400 invalid_body",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/public/collect/{{linkToken2}}/notes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "public",
+                "collect",
+                "{{linkToken2}}",
+                "notes"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "photos",
+                  "type": "file",
+                  "src": "fixtures/media/photo-gps.jpg"
+                },
+                {
+                  "key": "answers",
+                  "value": "{\"name\":\"Minh\",\"message\":\"hi\"}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code invalid_body', () => pm.expect(pm.response.json().error.code).to.eql('invalid_body'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Submit: four photos - 400 too_many_photos",
           "request": {
             "method": "POST",

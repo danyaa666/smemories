@@ -8,6 +8,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -42,23 +43,42 @@ func ExtendDeadlines(w http.ResponseWriter, read, write time.Duration) {
 	}
 }
 
-// IdleBody makes every read of r.Body move the connection's read deadline to idle from now, but never past total
-// from this call. A client that stops sending for idle is dropped (the read fails with os.ErrDeadlineExceeded,
-// which WriteBodyError reports as 408) instead of holding resources until total.
-func IdleBody(w http.ResponseWriter, r *http.Request, idle, total time.Duration) {
-	r.Body = &idleBody{ReadCloser: r.Body, rc: http.NewResponseController(w), idle: idle, end: time.Now().Add(total)}
+// BodyPace is what a slow-upload route demands of its client.
+type BodyPace struct {
+	Idle    time.Duration // longest silence between two reads
+	Total   time.Duration // longest time for the whole body
+	MinRate int64         // bytes per second the body must average once Grace has passed; 0 = no minimum
+	Grace   time.Duration
 }
 
-type idleBody struct {
+// PaceBody makes every read of r.Body move the connection's read deadline to p.Idle from now, but never past
+// p.Total from this call, and fails the read when the average rate stays under p.MinRate after p.Grace. A client
+// that stalls or drips bytes is dropped (the read fails with os.ErrDeadlineExceeded, which WriteBodyError reports
+// as 408) instead of holding resources until Total.
+func PaceBody(w http.ResponseWriter, r *http.Request, p BodyPace) {
+	now := time.Now()
+	r.Body = &pacedBody{ReadCloser: r.Body, rc: http.NewResponseController(w), p: p, start: now, end: now.Add(p.Total)}
+}
+
+type pacedBody struct {
 	io.ReadCloser
-	rc   *http.ResponseController
-	idle time.Duration
-	end  time.Time
+	rc    *http.ResponseController
+	p     BodyPace
+	start time.Time
+	end   time.Time
+	n     int64
 }
 
-func (b *idleBody) Read(p []byte) (int, error) {
-	_ = b.rc.SetReadDeadline(minTime(time.Now().Add(b.idle), b.end))
-	return b.ReadCloser.Read(p)
+func (b *pacedBody) Read(p []byte) (int, error) {
+	_ = b.rc.SetReadDeadline(minTime(time.Now().Add(b.p.Idle), b.end))
+	n, err := b.ReadCloser.Read(p)
+	b.n += int64(n)
+	if err == nil && b.p.MinRate > 0 {
+		if el := time.Since(b.start); el > b.p.Grace && float64(b.n) < float64(b.p.MinRate)*el.Seconds() {
+			return n, os.ErrDeadlineExceeded
+		}
+	}
+	return n, err
 }
 
 func minTime(a, b time.Time) time.Time {

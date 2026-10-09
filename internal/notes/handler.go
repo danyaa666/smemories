@@ -29,6 +29,7 @@ const (
 	publicWindow    = 15 * time.Minute
 
 	defaultUploadsPerIP = 8
+	defaultUploadConns  = 48
 )
 
 // Handler serves the owner endpoints for collection links and the public lookup.
@@ -44,11 +45,12 @@ type Handler struct {
 	media                      *media.Service // photos of submissions
 	maxPhoto                   int64          // largest accepted photo, bytes
 	verifier                   Verifier
-	inflight                   chan struct{}      // submissions holding photo bytes in memory
 	subIPHr, subIPDay, subColl *ratelimit.Limiter // submissions per IP per hour and day, per collection per hour
-	upMu                       sync.Mutex
-	upIP                       map[string]int // photo-bearing submissions in progress per client IP
-	upPerIP                    int
+	upMu                       sync.Mutex         // guards upTotal and upIP
+	upTotal                    int                // submissions in progress (their bodies spooled to disk)
+	upIP                       map[string]int     // ... per client IP
+	upMax, upPerIP             int
+	tmpDir                     string // where bodies are spooled; "" = the OS temp dir
 }
 
 // NewHandler builds the handler; now may be nil (time.Now). svc stores the photos of submissions, each at
@@ -60,14 +62,17 @@ func NewHandler(store *Store, svc *media.Service, maxPhoto int64, requireUser fu
 	return &Handler{store: store, requireUser: requireUser, allowedOrigins: allowedOrigins, clientIP: clientIP,
 		misses: ratelimit.New(missesPerWindow, publicWindow, now), all: ratelimit.New(allPerWindow, publicWindow, now),
 		logger: logger, now: now,
-		media: svc, maxPhoto: maxPhoto, verifier: allowAll{}, inflight: make(chan struct{}, 2*svc.Slots()),
+		media: svc, maxPhoto: maxPhoto, verifier: allowAll{},
 		subIPHr: ratelimit.New(submitPerIPHour, time.Hour, now), subIPDay: ratelimit.New(submitPerIPDay, 24*time.Hour, now),
 		subColl: ratelimit.New(submitPerCollectionHour, time.Hour, now),
-		upIP:    map[string]int{}, upPerIP: defaultUploadsPerIP}
+		upIP:    map[string]int{}, upMax: defaultUploadConns, upPerIP: defaultUploadsPerIP}
 }
 
-// SetUploadsPerIP sets how many submissions with photos one client IP may have in progress (default 8).
-func (h *Handler) SetUploadsPerIP(n int) { h.upPerIP = n }
+// SetUploadLimits sets how many public submissions may be in progress at once (default 48) and how many of those
+// one client IP may have (default 8), and the directory their bodies are spooled to ("" = the OS temp dir).
+func (h *Handler) SetUploadLimits(conns, perIP int, tmpDir string) {
+	h.upMax, h.upPerIP, h.tmpDir = conns, perIP, tmpDir
+}
 
 // SetVerifier plugs in an abuse check (CAPTCHA) for submissions; the default lets everything pass.
 func (h *Handler) SetVerifier(v Verifier) { h.verifier = v }
@@ -80,7 +85,7 @@ func (h *Handler) Routes(mux *http.ServeMux) {
 	mux.Handle("DELETE /v1/collections/{id}", write(h.revoke))
 	// Public routes: no session, no cookie, no CORS; the token is the credential.
 	mux.HandleFunc("GET /v1/public/collect/{token}", h.lookup)
-	mux.Handle("POST /v1/public/collect/{token}/notes", httpx.WithBodyLimit(maxBody, http.HandlerFunc(h.submit)))
+	mux.Handle("POST /v1/public/collect/{token}/notes", httpx.WithTimeout(submitRouteTimeout, httpx.WithBodyLimit(maxBody, http.HandlerFunc(h.submit))))
 }
 
 type createInput struct {

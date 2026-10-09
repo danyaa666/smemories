@@ -603,8 +603,13 @@ func TestContributorUploadBusyAndDiscard(t *testing.T) {
 		e.svc.sem <- struct{}{}
 	}
 	start := time.Now()
-	if _, err := e.svc.save(context.Background(), ownerID, row, book, "contributor", data, 50*time.Millisecond); !errors.Is(err, ErrBusy) {
+	loaded := false
+	load := func() ([]byte, error) { loaded = true; return data, nil }
+	if _, err := e.svc.save(context.Background(), ownerID, row, book, "contributor", load, 50*time.Millisecond); !errors.Is(err, ErrBusy) {
 		t.Fatalf("err %v, want ErrBusy", err)
+	}
+	if loaded {
+		t.Fatal("the photo was loaded into memory without a processing slot")
 	}
 	if time.Since(start) > 2*time.Second {
 		t.Fatal("did not give up in time")
