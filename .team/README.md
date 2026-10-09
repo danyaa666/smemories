@@ -17,9 +17,9 @@
 
 **Awaiting your review (MERGED):** nothing
 
-**Open questions for you:** Q-018 (Metrics library for request metrics (T-073): Prometheus client?)
+**Open questions for you:** none
 
-_Board last written 2026-10-09 02:12Z_
+_Board last written 2026-10-09 02:22Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -279,11 +279,11 @@ QA passed and my review is clean (head ef6bee0, CI green). High risk only becaus
 Spike T-054 (PR #35, ADR docs/adr/0003-html-print-export.md): desktop Chromium prints the 24-page, 30-photo book exactly (A5, A4, Letter; 4.1 MB, 1.3 s, fonts embedded, Vietnamese text extractable); Firefox prints with caveats (tiled gradients turn black, 30.8 MB file); Safari, Android Chrome and iOS Safari were NOT tested (no devices). The steps for you are in the ADR (step 3 Safari desktop, 4 Android Chrome, 5 iOS Safari): open http://<your computer's address>:5173/spike/print with npm run dev -- --host on the same network, try Print / Save as PDF with A5 and A4, and report: page count, paper size honoured, backgrounds on, did the tab survive 24 pages with 30 photos. Reply with what you saw (a sentence per device is enough).
 
 ### Q-018 — Metrics library for request metrics (T-073): Prometheus client?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-09 02:12Z
 - **Blocks:** T-073
 - **Recommendation:** Yes: github.com/prometheus/client_golang, text endpoint on a separate internal address (default off)
-- **Answer:** _(pending)_
+- **Answer:** Yes: use github.com/prometheus/client_golang (owner, 2026-10-09)
 
 be-golang requires request metrics (duration, status code), pool stats and rate-limit counters. We only have an access log. Options: (1) prometheus/client_golang, the de facto standard, small, works with CloudWatch agent / Grafana later (recommended); (2) stdlib expvar JSON, no dependency but no histograms and nothing reads it; (3) skip metrics until T-024 (go-live observability). Only T-073 waits; everything else in E10 continues.
 
@@ -2489,3 +2489,4 @@ Adds request and pool metrics as be-golang requires; waits for Q-018 (library ch
 - 2026-10-08 — Owner asked for a Canva-style editor. Decisions D-19 (staged editing), D-20 (each owner edits their own copy), D-21 (template-driven note fields, now). New epic E09 (sketch), tasks T-043 (field catalogue, P1, before T-034) and T-044 (templates declare fields); T-034's spec was rewritten for answers by field id. Epic E08 (designer templates, D-15..D-18, L-12) created earlier today with T-037..T-042.
 - 2026-10-09 — D-24: export becomes browser print of HTML templates (owner: 'just build it, I will test it myself'). Cancelled T-014, T-019, T-039..T-042; new tasks T-056..T-061 (book data endpoint, print-size photos, HTML renderer core, two HTML templates, picker and print screen). T-054 spike returns to dev to trim its evidence files, then merges.
 - 2026-10-09 — Owner asked to follow the skills in `.agents/skills`, check the code and refactor. Audit (`epics/E10-skills-alignment/AUDIT.md`), standards (`docs/api-contract.md`, `docs/db-conventions.md`, `docs/go-conventions.md`), decisions D-25 (API v2, full), D-26 (database, full, hard deletes kept), D-27 (layers inside domain packages, apperr). New epic E10 with T-063..T-073 in one lane (foundation, four DB tasks, four API tasks, sweep, metrics); T-013 and T-018 now wait for T-068. Q-018 asks for the metrics library. L-05 (timestamps) and L-07 (edge strips `/api`) superseded.
+- 2026-10-09 — Q-018 answered: the owner approved `github.com/prometheus/client_golang` for request metrics (T-073 is unblocked; it still waits for T-063).
