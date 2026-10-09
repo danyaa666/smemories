@@ -10,17 +10,18 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 33 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-044, T-049, T-050, T-055, T-056, T-058, T-059, T-060, T-061, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073 |
-| TODO | 5 | T-048, T-052, T-053, T-054, T-057 |
-| IN_PROGRESS | 1 | T-034 |
+| BACKLOG | 34 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-044, T-049, T-050, T-055, T-056, T-058, T-059, T-060, T-061, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074 |
+| TODO | 4 | T-052, T-053, T-054, T-057 |
+| IN_QA | 1 | T-048 |
+| QA_PASS | 1 | T-034 |
 | DONE | 28 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-035, T-036, T-037, T-038, T-043, T-045, T-046, T-047, T-051, T-062, T-063 |
 | CANCELLED | 6 | T-014, T-019, T-039, T-040, T-041, T-042 |
 
 **Awaiting your review (MERGED):** nothing
 
-**Open questions for you:** none
+**Open questions for you:** Q-020 (Approve merge of T-034 (public note submission with photos)?)
 
-_Board last written 2026-10-09 03:05Z_
+_Board last written 2026-10-09 03:43Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -298,6 +299,15 @@ be-golang requires request metrics (duration, status code), pool stats and rate-
 - **Answer:** _(pending)_
 
 T-062 unblocks every merge: the required security job (govulncheck) is red on all PRs and develop because setup-go still gives Go 1.26.8. The PR adds a local composite action (no third-party action) that reads go.dev, validates go1.26.N and sets GOTOOLCHAIN; the Go toolchain is downloaded and checksum-verified by the go command. If go.dev is down it warns and keeps the setup-go version. QA passed after one rework (a malformed go.dev answer used to abort the step); CI is green with go1.26.9 in all three Go jobs. To approve: team approve T-062. After it merges I update T-063's branch (green security job) and merge T-063.
+
+### Q-020 — Approve merge of T-034 (public note submission with photos)?
+- **Status:** OPEN
+- **Asked:** 2026-10-09 03:43Z
+- **Blocks:** T-034
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+Third QA round passed with no findings. This is the first public, unauthenticated write endpoint (text answers by catalogue field and up to 3 photos per note, pending until the owner approves). Protection: link token, honeypot, per-IP/per-collection rate limits, 300-note cap per link, uploads spooled to disk with caps of 48 total / 8 per IP connections and a 16 KiB/s minimum pace, photos decoded under the T-036 memory bounds. Migration 0010 adds the notes and note_photos tables. To approve: team approve T-034. T-048 (codes, migration 0011) merges after it.
 
 <!-- questions:end -->
 
@@ -1394,7 +1404,7 @@ Evidence from the T-006/T-030 merges: the workflow's concurrency group has cance
 - 2026-10-08 09:23Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-015, T-033, T-035, T-036')
 
 ### T-034 — [E04] Public note submission (text and photos)
-- **Status:** IN_PROGRESS
+- **Status:** QA_PASS
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -1402,10 +1412,10 @@ Evidence from the T-006/T-030 merges: the workflow's concurrency group has cance
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** leader
 - **Branch:** task/t-034-public-note-submission-text-and-photos
 - **PR:** 30
-- **Updated:** 2026-10-09 03:03Z by dev
+- **Updated:** 2026-10-09 03:42Z by qa
 - **Comments-seen:** 7
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/02-public-note-submission.md`
@@ -1463,6 +1473,30 @@ Public endpoint where a friend with a collection link submits a note with text, 
   NON-BLOCKING NOTES: a) answers JSON escaped as surrogate pairs (python ensure_ascii) is 6 bytes per emoji and hits the 16 KiB cap; browsers send raw UTF-8. b) My test API process was stopped twice by something outside my scripts (graceful shutdown in the log); not related to the product.
   Re-test after fix: rerun the throttled 40-student run at 1 MB/s (script in QA scratch space; any client that uploads 3 x 1.2 MB at 1 MB/s with retry on 503 works) and the 2-address trickle.
 - 2026-10-08 14:51Z · leader · Leader: QA_FAIL round 2 accepted; the design needed to change, not only the code. See the spec section 'Leader notes, round 2': spool the body to disk so the network phase holds no processing slot, cheap connection caps (48 global, 8 per IP) instead of the pool-based cap, 503 busy not counted against the IP request cap and jittered Retry-After, minimum throughput rule, drain the body before an early error so browsers show it, and the tests listed there (40 students at 1 MB/s must all succeed). Keep everything QA already passed. Same PR #30, same branch and worktree.
+- 2026-10-09 03:19Z · dev · Round 2 redesign, PR #30 head 97ee5a2 (develop merged first). Body spooled to a 0600 temp file, no memory/processing slot during the network phase; photos loaded into memory only once a slot is held (10 s wait). Caps: 48 conns / 8 per IP, 503 busy before any read with 2-6 s jitter, refunded from request caps (also after the media wait). Pace: 10 s idle, 120 s total, >=16 KiB/s after 15 s. Early rejections drain the body first (the immediate 503 busy does not: clients must retry on a network error too, see OpenAPI/T-018). Route uses WithTimeout 180 s. Tests on real sockets: 40 students at 1 MB/s all 201, slow drip, stalled 8+8, 49th conn 503 with flat heap, drain, spool removed on success/error/disconnect/panic. make lint build test test-integration green; newman notes 72 req/137 assert and media 66/122, 0 failures. Decision for leader: busy 503 is not drained (draining would hold connections beyond the cap). Disk worst case 48 x 32 MiB, documented for T-022.
+- 2026-10-09 03:42Z · qa · Round 3 re-test of PR #30 head 97ee5a2: both earlier fails (slow-upload DoS, design flaw) are fixed, no regression. CI green (go, go-integration, security, web). Real API binary from the branch (SMEM_TRUST_PROXY=true to vary client IPs), MySQL 8.4 + MinIO, own DB/bucket/Redis db, removed afterwards. Raw-socket clients, not httptest.
+  MECHANICAL: make lint build test test-integration exit 0 (incl. web tests); go test -race -count=3 -tags integration on notes, httpx, media: stable. Config: bad SMEM_UPLOAD_TMP_DIR / MAX_CONNS=0 / PER_IP=abc refuse to start. No DEV-SHORTCUT lines in the diff.
+  EVIDENCE (AC / attack -> result)
+  1 Slow drip: 1 byte per 7 s after a valid head -> 408 at 21.0 s, spool file gone. Steady 10 KiB/s and 15 KiB/s -> 408 at 15.0 s. 22 KiB/s legit 2.25 MB upload -> 201 after 106 s, answer delivered (route WithTimeout 180 s + write deadline OK; a 30 s ctx would have failed it).
+  2 Stalled: headers only, answers only, photo head then silence -> 408 at 10.0 s, nothing stored. Burst of 4 MiB then 1 byte per 8 s -> dropped at the 120 s cap (log 120000-120002 ms).
+  3 Caps: 48 uploads from 6 IPs (8 each, 4 MiB spooled each = 192 MiB on disk): the 9th from a held IP and the 49th from a 7th IP answer 503 busy, Retry-After 6/3/4 (2-6 jitter), text-only too; lookups stay 200. RSS 55 MB before, 55 during, 56 after 700 more busy attempts; 17 MB after all dropped. 8 held on each of 2 IPs: a third IP's 3-photo note -> 201 in 0.1 s.
+  4 503 not counted: 700 x 503 from one IP, then lookup 200 and a submit 201 (no 429).
+  5 Spool: files are 0600; empty after success, 400/404/410/415/429, 408, 499 disconnects (13 aborts at 10 B..2 MB, RST and FIN, mid-processing closes): 0 ERROR log lines, 'client gone' at DEBUG, media rows == objects/2, no orphans. Dev's panic test (verifier panics -> 500, no spool, slot released) read and is meaningful.
+  6 40 students behind one IP, lookup + 3 x 1.23 MB PNG, retry on 503/network error: 1 MB/s -> 40/40 201 in 26 s; 256 KiB/s -> 40/40 in 83 s (max 17 tries); 100 KiB/s -> 40/40 in 199 s (max 38 tries). No 429 anywhere.
+  7 Early-error drain (6 MB body at 3 MB/s, client keeps sending, reads the answer at the end): unknown_field, missing_answer, bad JSON, unknown token 404, revoked 404, expired 410, JSON content-type 415, non-image 415, answers-after-photos 400, 429 -> every JSON error readable, no reset. 11 MiB photo in a 11 MiB body -> 413 readable.
+  8 Honeypot (website part first/last, with photos, garbage answers) 201 and nothing stored; answers after photos 400 invalid_body; empty website = real note.
+  9 Rate limits: 105 submits one IP over 2 collections -> 100 x 201 then 429 Retry-After 3600, lookups 200, other IP 201; 65 from distinct IPs on one collection -> 60 x 201, 5 x 429; 150 invalid requests not counted.
+  10 Tokens/privacy: short, 10 KB, %00, ../, 31/33 chars, case-swapped -> 404; GET/PUT/DELETE/OPTIONS 405; foreign Origin + junk cookie: 201 with no Set-Cookie, no Access-Control-*. API log grep for token, names, message text, file names, client IPs, answers: 0 hits (the only emails in the log are the dev log mailer of auth).
+  11 Field catalogue/text: name 1/60 ok, 61 invalid_answer; message 2000 emoji ok, 2001 invalid_answer; RLO, NUL, newline, ZWSP rejected; ZWJ family/flag/skin tone/Vietnamese stored byte-identical (hex); NFD stored as NFC; non-string/null/array/nested/bad UTF-8 -> 400; how_we_met and <script> keys unknown_field.
+  12 Postman: notes 72 req / 137 assertions x3 runs (API restarted between), media 66 / 122 x2, yearbooks 92 / 189: 0 failures. New 'answers after the photos' entry present. (auth/platform collections have manual/mail steps, unrelated.)
+  NON-BLOCKING OBSERVATIONS
+  a) Graceful shutdown (SIGTERM) with 4 uploads in flight: process exits after the 10 s drain and 1 of 4 smem-upload-* files was left in SMEM_UPLOAD_TMP_DIR; a crash or kill -9 leaves them too. No startup sweep exists. Suggest deleting smem-upload-* older than ~10 min at startup (T-022 ephemeral storage hides it in prod).
+  b) The immediate 503 busy is never readable by a client that is uploading (reset, as documented): in all 3 student runs 100% of the 503s showed as a network error, so Retry-After and its jitter never reach a browser. T-018 must retry on network error with its own jittered backoff (it needs 15-40 tries at 100-256 KiB/s).
+  c) A body over 32 MiB (Content-Length known) is answered 413 only after the server stops reading; the client sees a reset, not the 413 (33 MiB, also chunked). Per-photo 413 within 32 MiB is readable. Web form should cap sizes client-side.
+  d) Known gap, as the leader said: 6 IPs x 8 connections hold all 48 for 120 s repeatedly (burst then drip), turning every public submission, text-only included, into 503. T-031 (WAF/LB) owns it.
+  e) 12 parallel 3 x 12 MP submissions: all 201 in 9-13 s, RSS peaked 551 MB (318 MB later) with 2 slots; size the task memory per docs/media.md.
+  f) Hard floor: body at 16 KiB/s x 120 s = about 1.9 MB max for the slowest accepted phone; the web form should resize photos before upload.
+- 2026-10-09 03:43Z · leader · Leader review OK (head 97ee5a2 = QA head, CI green, no .team changes). Checked: spool to 0600 temp file removed on every exit path, connection caps taken before any read and never counted against request caps, 503 refunds, pace/min-rate, early-error drain, honeypot, validation before any photo decode, photo cleanup on failure, no PII stored or logged. Non-blocking follow-ups: T-074 (startup sweep of orphaned spool files). Note for owner: migration 0010 still uses v1 style (FKs, ENUM, DATETIME); T-066 converts it. Awaiting owner approval: the public upload endpoint POST /v1/public/collect/{token}/notes, its caps (48 global / 8 per IP / 16 KiB/s) and migration 0010.
 
 ### T-035 — [E05] T-010 follow-ups: template tests iterate templates.List()
 - **Status:** DONE
@@ -1858,7 +1892,7 @@ CI on develop failed once on TestGoogleConcurrentCallbacksCreateOneAccount: goog
 - 2026-10-09 01:42Z · leader · accepted by owner (chat, 2026-10-09: 'team accept T-016, T-046, T-047, T-051')
 
 ### T-048 — [E02] Email one-time codes replace verification and reset links (API) with a dev-only fixed code
-- **Status:** TODO
+- **Status:** IN_QA
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -1866,10 +1900,10 @@ CI on develop failed once on TestGoogleConcurrentCallbacksCreateOneAccount: goog
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
+- **Assignee:** qa
+- **Branch:** task/t-048-e02-email-one-time-codes-replace-verific
+- **PR:** https://github.com/danyaa666/smemories/pull/38
+- **Updated:** 2026-10-09 03:42Z by qa
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/08-email-otp-codes-replace-links-api.md`
@@ -1879,6 +1913,7 @@ CI on develop failed once on TestGoogleConcurrentCallbacksCreateOneAccount: goog
 6-digit email codes with attempt limits replace the link tokens of T-007; dev-only fixed code 123123 behind SMEM_DEV_FIXED_OTP, refused in prod (D-22).
 
 #### Comments
+- 2026-10-09 03:34Z · dev · PR #38. Codes in Redis (Lua check+count), verify-email needs session, reset takes email+code+password, migration 0011 (merge after T-034's 0010), DEV-SHORTCUT(otp) guarded in config.Load and NewCodes, docs/auth-otp.md + dev-shortcuts.md, openapi/schema/Postman (newman x2 green). Test: make up; go test -race -tags integration ./...; newman with SMEM_DEV_FIXED_OTP=123123. Decisions to check: locked code stays (6th try code_locked), code_expired via logical expiry + 1h grace, reset consumes code before hashing.
 
 ### T-049 — [E02] Web: code entry screens for email verification and password reset
 - **Status:** BACKLOG
@@ -2514,6 +2549,29 @@ Turns the remaining skill rules into lint (mnd, forbidigo), fixes what they find
 **Epic:** E10-skills-alignment · **PRD:** `.team/epics/E10-skills-alignment/PRD.md` · **Standards:** `docs/api-contract.md`, `docs/db-conventions.md`, `docs/go-conventions.md`
 
 Adds request and pool metrics as be-golang requires; waits for Q-018 (library choice).
+
+#### Comments
+
+### T-074 — [E04] Sweep orphaned upload spool files at start-up
+- **Status:** BACKLOG
+- **Priority:** P3
+- **Type:** tech-debt
+- **Milestone:** M1
+- **Depends-on:** T-034
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-09 03:43Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/07-sweep-orphaned-upload-spool-files.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E04-friends-notes · **PRD:** `.team/epics/E04-friends-notes/PRD.md`
+
+T-034 QA finding: a shutdown or crash in the middle of an upload leaves a smem-upload-* spool file with a friend's private data; remove old ones at start-up.
 
 #### Comments
 
