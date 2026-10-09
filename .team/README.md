@@ -20,7 +20,7 @@
 
 **Open questions for you:** Q-022 (Approve merge of T-052 (login sessions in Redis, drop sessions table)?); Q-023 (Approve merge of T-057 (print-size photos 1800 px + backfill)?); Q-024 (Approve merge of T-053 (rate limiters in Redis)?); Q-025 (Approve merge of T-049 (web screens for the 6-digit email codes)?)
 
-_Board last written 2026-10-09 13:53Z_
+_Board last written 2026-10-09 14:11Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -2405,7 +2405,7 @@ Pick a template for the page size, print with per-browser guidance, anonymous wo
 - **Branch:** task/t-062-e01-ci-get-the-newest-go-patch-straight-
 - **PR:** https://github.com/danyaa666/smemories/pull/37
 - **Updated:** 2026-10-09 03:05Z by human
-- **Comments-seen:** 8
+- **Comments-seen:** 9
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/12-ci-newest-go-patch-from-go-dev.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2451,7 +2451,7 @@ CI resolved Go 1.26.8 while 1.26.9 (ten stdlib vulnerability fixes) was out, tur
 - **Branch:** task/t-063-e10-foundation-apperr-v2-response-helper
 - **PR:** https://github.com/danyaa666/smemories/pull/36
 - **Updated:** 2026-10-09 03:05Z by human
-- **Comments-seen:** 6
+- **Comments-seen:** 7
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/01-foundation.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2716,7 +2716,7 @@ Adds request and pool metrics as be-golang requires; waits for Q-018 (library ch
 - **Branch:** task/t-074-e04-sweep-orphaned-upload-spool-files-at
 - **PR:** https://github.com/danyaa666/smemories/pull/43
 - **Updated:** 2026-10-09 13:53Z by leader
-- **Comments-seen:** 1
+- **Comments-seen:** 3
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/07-sweep-orphaned-upload-spool-files.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
