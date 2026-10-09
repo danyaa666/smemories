@@ -10,18 +10,17 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 26 | T-013, T-014, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-039, T-040, T-041, T-042, T-044, T-049, T-050, T-052, T-053, T-055 |
-| TODO | 2 | T-034, T-048 |
-| QA_PASS | 2 | T-047, T-051 |
-| MERGED | 2 | T-016, T-046 |
+| BACKLOG | 24 | T-013, T-014, T-017, T-018, T-019, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-039, T-040, T-041, T-042, T-044, T-049, T-050, T-055 |
+| TODO | 4 | T-034, T-048, T-052, T-053 |
+| MERGED | 4 | T-016, T-046, T-047, T-051 |
 | DONE | 22 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-028, T-030, T-033, T-035, T-036, T-037, T-038, T-043, T-045 |
 | NEEDS_DECISION | 1 | T-054 |
 
-**Awaiting your review (MERGED):** T-016 (Web: yearbook list, create/edit, profile and photo upload UI); T-046 (List a yearbook's photos (API and photo library in the web UI))
+**Awaiting your review (MERGED):** T-016 (Web: yearbook list, create/edit, profile and photo upload UI); T-046 (List a yearbook's photos (API and photo library in the web UI)); T-047 (Fix the flaky concurrent Google callback: retry with jittered backoff and a stress test); T-051 (Redis foundation: local stack (Valkey), client, config, readiness, CI)
 
-**Open questions for you:** Q-015 (Approve merge of T-051 (Redis foundation)?); Q-016 (Approve merge of T-047 (fix flaky concurrent Google callback)?); Q-017 (Decide D-24: browser print-to-PDF or keep the Go renderer? Needs your phone and Safari tests)
+**Open questions for you:** Q-017 (Decide D-24: browser print-to-PDF or keep the Go renderer? Needs your phone and Safari tests)
 
-_Board last written 2026-10-08 15:17Z_
+_Board last written 2026-10-09 01:31Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -253,7 +252,7 @@ QA passed and my review is clean (head 9546d3b, CI green, merges cleanly). High 
 QA passed and my review is clean (head 8a9cafb, CI green). High risk only because it touches the register endpoint contract (one optional field 'locale', en or vi, default en). Fixes the Vietnamese UI sending an English verification email. Command: cd /Users/unisoft/GolandProjects/awesomeProject1 && /Users/unisoft/.claude/plugins/cache/claude-agent-team/agent-team/0.3.0/bin/team approve T-045
 
 ### Q-015 — Approve merge of T-051 (Redis foundation)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-08 14:13Z
 - **Blocks:** T-051
 - **Recommendation:** approve
@@ -262,7 +261,7 @@ QA passed and my review is clean (head 8a9cafb, CI green). High risk only becaus
 QA passed and my review is clean (head a59f2c5, CI green). High risk because it adds infrastructure and a dependency (go-redis, BSD-2) and changes CI; no behaviour change. After merging, the API and smemories-migrate need SMEM_REDIS_URL in .env (see .env.example) and make up starts Valkey. Command: cd /Users/unisoft/GolandProjects/awesomeProject1 && /Users/unisoft/.claude/plugins/cache/claude-agent-team/agent-team/0.3.0/bin/team approve T-051
 
 ### Q-016 — Approve merge of T-047 (fix flaky concurrent Google callback)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-08 14:23Z
 - **Blocks:** T-047
 - **Recommendation:** approve
@@ -1790,19 +1789,19 @@ Owner-only list endpoint for a yearbook's photos and the web photo library that 
 - 2026-10-08 15:00Z · leader · merged 472d700 (squash), QA_PASS on head e347c81 (real Chromium against a real API, 375 px, EN and VI), CI green. Review: owner-scoped keyset list on an indexed range scan (FORCE INDEX, 2-3 ms at 10000 rows), limit capped at 100, no keys or hashes in responses, library keeps photos across reloads. For owner to check: upload photos in the yearbook screen, reload, they are still there. Follow-up T-055: the cursor is base64 of the internal numeric id (L-05 says internal ids stay internal); make it opaque.
 
 ### T-047 — Fix the flaky concurrent Google callback: retry with jittered backoff and a stress test
-- **Status:** QA_PASS
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** bug
 - **Milestone:** M1
 - **Depends-on:** T-011
 - **Risk:** high
 - **Rework:** 0
-- **Owner-approved:** —
-- **Assignee:** leader
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-047-fix-the-flaky-concurrent-google-callback
 - **PR:** 33
-- **Updated:** 2026-10-08 14:23Z by qa
-- **Comments-seen:** 3
+- **Updated:** 2026-10-09 01:31Z by leader
+- **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/07-fix-flaky-google-concurrent-callback-test.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1820,6 +1819,8 @@ CI on develop failed once on TestGoogleConcurrentCallbacksCreateOneAccount: goog
   AC4: make lint build test test-integration exit 0 (31 packages ok); Google integration tests pass; newman postman/auth.postman_collection.json twice with API restarted between runs (dummy SMEM_GOOGLE_*, real Google discovery): 55 requests, 140 assertions, 0 failures both runs. Diff of internal/ vs base touches only store.go retry loop + tests: no handler, status or error-code change. Scratch tests I used were not committed.
   Non-blocking: when the wait is cancelled retryTx returns the last MySQL error (not ctx.Err()); callers still map to oidc_failed, fine. Other auth transactions not given the retry (dev checked; I did not audit).
 - 2026-10-08 14:23Z · leader · Leader review OK on head ef6bee0 (QA_PASS on the same head, CI 4/4 green). A 30-line change in internal/auth/store.go: 6 attempts, jittered doubling waits (5-25 ms up to 80-200 ms), retries only MySQL 1213, 1205 and 1062, stops at once when the context ends, no change to responses or error codes. QA reproduced the flake on the old code (4 of 6 loaded test processes failed with oidc_failed) and saw 0 failures in 24 loaded runs on the fix; 12 parallel callbacks against the real binary gave one user and one identity. Non-blocking: after a cancelled wait it returns the last MySQL error instead of the context error (callers map both to oidc_failed). Awaiting owner approval.
+- 2026-10-09 01:30Z · human · owner approved merge
+- 2026-10-09 01:31Z · leader · merged c77561d (squash), owner-approved in chat, QA_PASS on head ef6bee0, CI green. Review: bounded retry with jittered doubling waits (6 attempts, 1213/1205/1062 only, stops with the context), no change to responses or error codes; QA reproduced the flake on the old code and saw none on the fix. For owner to check: nothing to run.
 
 ### T-048 — Email one-time codes replace verification and reset links (API) with a dev-only fixed code
 - **Status:** TODO
@@ -1891,19 +1892,19 @@ Go-live gate: delete the dev fixed OTP and every DEV-SHORTCUT, fail CI and the d
 #### Comments
 
 ### T-051 — Redis foundation: local stack (Valkey), client, config, readiness, CI
-- **Status:** QA_PASS
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** infra
 - **Milestone:** M1
 - **Depends-on:** T-030
 - **Risk:** high
 - **Rework:** 0
-- **Owner-approved:** —
-- **Assignee:** leader
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-051-redis-foundation-local-stack-valkey-clie
 - **PR:** https://github.com/danyaa666/smemories/pull/32
-- **Updated:** 2026-10-08 14:13Z by qa
-- **Comments-seen:** 3
+- **Updated:** 2026-10-09 01:31Z by leader
+- **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/11-redis-foundation.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1930,9 +1931,11 @@ Add a Redis-protocol service (Valkey 8) to the local stack and CI, the go-redis 
   5. /readyz stays 200 when Redis is at maxmemory (writes fail with OOM); by design, but worth an alert/metric later.
   6. API exits at startup if Redis is unreachable (documented in docs/redis.md, not in the AC): fail fast, fine.
 - 2026-10-08 14:13Z · leader · Leader review OK on head a59f2c5 (QA_PASS on the same head, includes QA's isolation test commit; CI 4/4 green). Thin wrapper with no business logic: one attempt per command (a dead Redis cannot cost seconds per request), TLS 1.2 minimum, errors never carry the password, network failures classified as ErrUnavailable so callers pick fail-open or fail-closed, namespaced keys. Valkey pinned by digest, AOF everysec, noeviction (QA filled it to maxmemory: writes fail with OOM, nothing evicted), loopback-only port, restart and recreate keep keys, readiness 503 in 0.4 s with Redis stopped and 1.0 s when hung. Both disclosed departures accepted. Five minor findings moved to the T-052 spec (migrate should not need Redis, port range check, TLS hint, go-redis stderr logger, readiness write probe). Awaiting owner approval.
+- 2026-10-09 01:30Z · human · owner approved merge
+- 2026-10-09 01:31Z · leader · merged c70a528 (squash), owner-approved in chat, QA_PASS on head a59f2c5, CI green. Review: thin go-redis wrapper (one attempt per command, TLS 1.2 minimum, no password in errors, ErrUnavailable classification), Valkey 8 pinned by digest with AOF everysec and noeviction, loopback-only port, /readyz covers Redis. For owner to check: add the Redis lines from .env.example to your .env (SMEM_REDIS_URL, REDIS_PORT), run make up (starts Valkey), then the API; docker compose exec redis valkey-cli ping. Minor clean-ups are in the T-052 spec.
 
 ### T-052 — Login sessions move to Redis (drop the sessions table)
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -1943,8 +1946,8 @@ Add a Redis-protocol service (Valkey 8) to the local stack and CI, the go-redis 
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-08 11:18Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-09 01:31Z by leader
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/10-sessions-in-redis.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1953,9 +1956,10 @@ Add a Redis-protocol service (Valkey 8) to the local stack and CI, the go-redis 
 Sessions with native expiry in Redis, per-user index for delete-all, fail-closed policy, sessions table dropped (D-23).
 
 #### Comments
+- 2026-10-09 01:31Z · leader · T-051 is merged: ready (spec carries the T-051 clean-ups).
 
 ### T-053 — Rate limiters move to Redis (shared limiter for all endpoints)
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -1966,8 +1970,8 @@ Sessions with native expiry in Redis, per-user index for delete-all, fail-closed
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-08 11:18Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-09 01:31Z by leader
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/11-rate-limiters-in-redis.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1976,6 +1980,7 @@ Sessions with native expiry in Redis, per-user index for delete-all, fail-closed
 Redis sliding-window limiter with Take and Refund replacing the in-memory one everywhere, fail-open except OTP and login lockouts (D-23).
 
 #### Comments
+- 2026-10-09 01:31Z · leader · T-051 is merged: ready.
 
 ### T-054 — Spike: HTML templates and browser print-to-PDF instead of server rendering
 - **Status:** NEEDS_DECISION
