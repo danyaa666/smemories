@@ -54,7 +54,15 @@ type Config struct {
 	RedisReadTimeout  time.Duration // SMEM_REDIS_READ_TIMEOUT, default 1s
 	RedisWriteTimeout time.Duration // SMEM_REDIS_WRITE_TIMEOUT, default 1s
 	RedisPoolSize     int           // SMEM_REDIS_POOL_SIZE, default 10
+
+	OTPKey      []byte // SMEM_OTP_KEY: HMAC key of the email codes, at least 32 bytes; required unless Env is dev or test (a fixed development key is used there). Never log it.
+	DevFixedOTP string // DEV-SHORTCUT(otp) SMEM_DEV_FIXED_OTP: 6 digits accepted as every email code; only with SMEM_ENV=dev or test, otherwise the API refuses to start (docs/dev-shortcuts.md)
 }
+
+// devOTPKey is the HMAC key of the email codes in dev and test when SMEM_OTP_KEY is unset. Not a secret.
+const devOTPKey = "smemories-dev-only-otp-key-not-a-secret"
+
+const minOTPKeyBytes = 32
 
 var logLevels = map[string]slog.Level{
 	"debug": slog.LevelDebug,
@@ -208,7 +216,35 @@ func Load(getenv func(string) string) (Config, error) {
 	if err := cfg.loadRedis(getenv, get); err != nil {
 		return Config{}, err
 	}
+	if err := cfg.loadOTP(getenv); err != nil {
+		return Config{}, err
+	}
 	return cfg, nil
+}
+
+// loadOTP reads the email-code settings (T-048).
+func (cfg *Config) loadOTP(getenv func(string) string) error {
+	if key := getenv("SMEM_OTP_KEY"); key != "" {
+		if len(key) < minOTPKeyBytes {
+			return fmt.Errorf("SMEM_OTP_KEY is too short: %d bytes, want at least %d", len(key), minOTPKeyBytes)
+		}
+		cfg.OTPKey = []byte(key)
+	} else if cfg.Env == "dev" || cfg.Env == "test" {
+		cfg.OTPKey = []byte(devOTPKey)
+	} else {
+		return fmt.Errorf("SMEM_OTP_KEY is required when SMEM_ENV is %s (at least %d random bytes, e.g. `openssl rand -base64 48`)", cfg.Env, minOTPKeyBytes)
+	}
+	// DEV-SHORTCUT(otp): the fixed code. The raw SMEM_ENV is read, not cfg.Env, so an empty SMEM_ENV (which defaults to dev) refuses too.
+	if fixed := getenv("SMEM_DEV_FIXED_OTP"); fixed != "" { // DEV-SHORTCUT(otp)
+		if env := getenv("SMEM_ENV"); env != "dev" && env != "test" { // DEV-SHORTCUT(otp)
+			return fmt.Errorf("SMEM_DEV_FIXED_OTP is set but SMEM_ENV=%q: the fixed code is only allowed when SMEM_ENV is dev or test; unset it", env) // DEV-SHORTCUT(otp)
+		} // DEV-SHORTCUT(otp)
+		if len(fixed) != 6 || strings.Trim(fixed, "0123456789") != "" { // DEV-SHORTCUT(otp)
+			return fmt.Errorf("SMEM_DEV_FIXED_OTP: want exactly 6 digits") // DEV-SHORTCUT(otp)
+		} // DEV-SHORTCUT(otp)
+		cfg.DevFixedOTP = fixed // DEV-SHORTCUT(otp)
+	} // DEV-SHORTCUT(otp)
+	return nil
 }
 
 // loadRedis reads the Redis settings (T-051). The URL is checked here so a typo fails at startup naming the variable.

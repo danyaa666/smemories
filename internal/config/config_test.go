@@ -55,7 +55,7 @@ func TestLoadPoolSettings(t *testing.T) {
 }
 
 func TestLoadValid(t *testing.T) {
-	cfg, err := Load(env(map[string]string{"SMEM_HTTP_ADDR": "127.0.0.1:0", "SMEM_ENV": "prod", "SMEM_LOG_LEVEL": "debug", "SMEM_DB_DSN": dsn, "SMEM_ALLOWED_ORIGINS": "https://app.example.com", "SMEM_PUBLIC_BASE_URL": "https://app.example.com/", "SMEM_S3_BUCKET": "b"}))
+	cfg, err := Load(env(map[string]string{"SMEM_HTTP_ADDR": "127.0.0.1:0", "SMEM_ENV": "prod", "SMEM_LOG_LEVEL": "debug", "SMEM_DB_DSN": dsn, "SMEM_ALLOWED_ORIGINS": "https://app.example.com", "SMEM_PUBLIC_BASE_URL": "https://app.example.com/", "SMEM_S3_BUCKET": "b", "SMEM_OTP_KEY": strings.Repeat("k", 32)}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,7 +100,7 @@ func TestLoadAuthDefaults(t *testing.T) {
 }
 
 func TestLoadAllowedOrigins(t *testing.T) {
-	cfg, err := Load(env(map[string]string{"SMEM_DB_DSN": dsn, "SMEM_ENV": "prod", "SMEM_PUBLIC_BASE_URL": "https://app.example.com", "SMEM_ALLOWED_ORIGINS": " https://App.Example.com , http://localhost:5173 ", "SMEM_TRUST_PROXY": "true", "SMEM_S3_BUCKET": "b"}))
+	cfg, err := Load(env(map[string]string{"SMEM_DB_DSN": dsn, "SMEM_ENV": "prod", "SMEM_PUBLIC_BASE_URL": "https://app.example.com", "SMEM_ALLOWED_ORIGINS": " https://App.Example.com , http://localhost:5173 ", "SMEM_TRUST_PROXY": "true", "SMEM_S3_BUCKET": "b", "SMEM_OTP_KEY": strings.Repeat("k", 32)}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -275,6 +275,77 @@ func TestLoadRequestTimeout(t *testing.T) {
 	for _, bad := range []string{"999ms", "0", "-5s", "soon"} {
 		if _, err := Load(env(map[string]string{"SMEM_DB_DSN": dsn, "SMEM_HTTP_REQUEST_TIMEOUT": bad})); err == nil || !strings.Contains(err.Error(), "SMEM_HTTP_REQUEST_TIMEOUT") {
 			t.Errorf("%q: got %v", bad, err)
+		}
+	}
+}
+
+func TestLoadOTPKey(t *testing.T) {
+	base := map[string]string{"SMEM_DB_DSN": dsn, "SMEM_ALLOWED_ORIGINS": "https://a.example.com", "SMEM_PUBLIC_BASE_URL": "https://a.example.com", "SMEM_S3_BUCKET": "b"}
+	with := func(kv ...string) map[string]string {
+		m := map[string]string{}
+		for k, v := range base {
+			m[k] = v
+		}
+		for i := 0; i < len(kv); i += 2 {
+			m[kv[i]] = kv[i+1]
+		}
+		return m
+	}
+	key := strings.Repeat("k", 32)
+
+	for _, e := range []string{"dev", "test"} { // a development key is used when none is set
+		cfg, err := Load(env(with("SMEM_ENV", e)))
+		if err != nil || len(cfg.OTPKey) < 32 {
+			t.Errorf("SMEM_ENV=%s: key %d bytes, %v", e, len(cfg.OTPKey), err)
+		}
+	}
+	if _, err := Load(env(with("SMEM_ENV", "prod"))); err == nil || !strings.Contains(err.Error(), "SMEM_OTP_KEY") {
+		t.Errorf("prod without key: %v", err)
+	}
+	if _, err := Load(env(with("SMEM_ENV", "prod", "SMEM_OTP_KEY", strings.Repeat("k", 31)))); err == nil || !strings.Contains(err.Error(), "SMEM_OTP_KEY") {
+		t.Errorf("short key: %v", err)
+	}
+	if _, err := Load(env(with("SMEM_ENV", "dev", "SMEM_OTP_KEY", "short"))); err == nil || !strings.Contains(err.Error(), "SMEM_OTP_KEY") {
+		t.Errorf("short key in dev: %v", err)
+	}
+	cfg, err := Load(env(with("SMEM_ENV", "prod", "SMEM_OTP_KEY", key)))
+	if err != nil || string(cfg.OTPKey) != key || cfg.DevFixedOTP != "" {
+		t.Errorf("prod with key: %v", err)
+	}
+}
+
+// DEV-SHORTCUT(otp): the API refuses to start with the fixed code in any environment but dev and test.
+func TestLoadDevFixedOTP(t *testing.T) {
+	load := func(envName, fixed string) (Config, error) {
+		return Load(env(map[string]string{
+			"SMEM_DB_DSN": dsn, "SMEM_ENV": envName, "SMEM_DEV_FIXED_OTP": fixed, "SMEM_OTP_KEY": strings.Repeat("k", 32),
+			"SMEM_ALLOWED_ORIGINS": "https://a.example.com", "SMEM_PUBLIC_BASE_URL": "https://a.example.com", "SMEM_S3_BUCKET": "b",
+		}))
+	}
+	for _, e := range []string{"dev", "test"} {
+		cfg, err := load(e, "123123")
+		if err != nil || cfg.DevFixedOTP != "123123" {
+			t.Errorf("SMEM_ENV=%s: %q, %v", e, cfg.DevFixedOTP, err)
+		}
+	}
+	for _, e := range []string{"prod", ""} { // "" defaults to dev for everything else, but not for this
+		if _, err := load(e, "123123"); err == nil || !strings.Contains(err.Error(), "SMEM_DEV_FIXED_OTP") {
+			t.Errorf("SMEM_ENV=%q with the fixed code: want a refusal naming SMEM_DEV_FIXED_OTP, got %v", e, err)
+		}
+	}
+	for _, e := range []string{"production", "staging", "Dev"} { // already invalid environments
+		if _, err := load(e, "123123"); err == nil {
+			t.Errorf("SMEM_ENV=%q with the fixed code must not load", e)
+		}
+	}
+	for _, bad := range []string{"12312", "1231234", "abcdef", "12 123", "١٢٣١٢٣"} {
+		if _, err := load("dev", bad); err == nil || !strings.Contains(err.Error(), "SMEM_DEV_FIXED_OTP") {
+			t.Errorf("fixed code %q: want an error, got %v", bad, err)
+		}
+	}
+	for _, e := range []string{"prod", "dev", ""} { // unset is fine everywhere and means off
+		if cfg, err := load(e, ""); e != "" && (err != nil || cfg.DevFixedOTP != "") {
+			t.Errorf("SMEM_ENV=%q unset: %q, %v", e, cfg.DevFixedOTP, err)
 		}
 	}
 }

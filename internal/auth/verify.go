@@ -5,13 +5,25 @@ import (
 	"time"
 )
 
-// VerifyEmail consumes a verification token and marks the account's email verified.
-func (s *Service) VerifyEmail(ctx context.Context, token string) error {
-	return s.store.verifyEmail(ctx, hashToken(token), s.now().UTC())
+// VerifyEmail checks the 6-digit code typed by the signed-in user and marks their email verified.
+// An already verified user is a no-op. Attempts are limited to 20 per hour per user on top of the
+// 5 wrong guesses a single code allows.
+func (s *Service) VerifyEmail(ctx context.Context, u User, code string) error {
+	if u.EmailVerified {
+		return nil
+	}
+	if ok, retry := s.verifyTries.Take(u.ID); !ok {
+		return RateLimitedError{retry}
+	}
+	now := s.now().UTC()
+	if err := s.codes.Check(ctx, purposeVerify, u.InternalID, code, now); err != nil {
+		return err
+	}
+	return s.store.markEmailVerified(ctx, u.InternalID, now)
 }
 
-// ResendVerification emails a new link (3 per hour per user). alreadyVerified is true when
-// there is nothing to send.
+// ResendVerification emails a new code (3 per hour per user; the old code dies). alreadyVerified
+// is true when there is nothing to send.
 func (s *Service) ResendVerification(ctx context.Context, u User) (alreadyVerified bool, err error) {
 	if u.EmailVerified {
 		return true, nil
@@ -19,22 +31,11 @@ func (s *Service) ResendVerification(ctx context.Context, u User) (alreadyVerifi
 	if ok, retry := s.resend.Take(u.ID); !ok {
 		return false, RateLimitedError{retry}
 	}
-	return false, s.sendToken(ctx, u, purposeVerify)
+	return false, s.sendCode(ctx, u, purposeVerify)
 }
 
-func (s *Store) verifyEmail(ctx context.Context, hash []byte, now time.Time) error {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = tx.Rollback() }()
-	userID, err := consumeEmailToken(ctx, tx, hash, purposeVerify, now)
-	if err != nil {
-		return err
-	}
-	if _, err := tx.ExecContext(ctx,
-		`UPDATE users SET email_verified_at = ?, updated_at = ? WHERE id = ? AND email_verified_at IS NULL`, now, now, userID); err != nil {
-		return err
-	}
-	return tx.Commit()
+func (s *Store) markEmailVerified(ctx context.Context, userID uint64, now time.Time) error {
+	_, err := s.db.ExecContext(ctx,
+		`UPDATE users SET email_verified_at = ?, updated_at = ? WHERE id = ? AND email_verified_at IS NULL`, now, now, userID)
+	return err
 }

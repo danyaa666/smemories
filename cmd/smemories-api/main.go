@@ -75,9 +75,17 @@ func main() {
 	logger.Info("listening", "addr", ln.Addr().String(), "env", cfg.Env)
 
 	hasher := auth.NewHasher(auth.HashParams{MemoryKiB: cfg.ArgonMemoryKiB, Time: cfg.ArgonTime, Parallelism: cfg.ArgonParallelism}, cfg.MaxHashes, auth.HashWait)
+	codes, err := auth.NewCodes(ctx, rc, cfg.Env, cfg.OTPKey, cfg.DevFixedOTP) // DEV-SHORTCUT(otp): the last argument
+	if err != nil {
+		logger.Error("email code setup failed", "error", err)
+		os.Exit(1)
+	}
+	if cfg.DevFixedOTP != "" { // DEV-SHORTCUT(otp)
+		logger.Warn("dev fixed otp active") // DEV-SHORTCUT(otp)
+	} // DEV-SHORTCUT(otp)
 	svc, err := auth.NewService(auth.NewStore(d), hasher, auth.Limits{
 		RegisterPerHour: cfg.RegisterPerHour, LoginFailsPerPair: cfg.LoginFailsPerPair, LoginFailsPerIP: cfg.LoginFailsPerIP,
-	}, auth.Mail{Mailer: mail, BaseURL: cfg.PublicBaseURL, Logger: logger}, nil)
+	}, auth.Mail{Mailer: mail, Logger: logger}, codes, nil)
 	if err != nil {
 		logger.Error("auth setup failed", "error", err)
 		os.Exit(1)
@@ -95,8 +103,6 @@ func main() {
 			os.Exit(1)
 		}
 	}
-
-	go svc.RunCleanup(ctx)
 
 	mediaSvc := media.NewService(media.NewStore(d), storage.NewS3(storage.S3Config{
 		Endpoint: cfg.S3Endpoint, Region: cfg.S3Region, Bucket: cfg.S3Bucket,
