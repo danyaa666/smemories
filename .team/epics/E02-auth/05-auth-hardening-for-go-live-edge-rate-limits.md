@@ -1,5 +1,7 @@
 # E02_T-031 — Auth hardening for go-live: edge rate limits, shared limiter, session purge, stored-hash caps
 
+> **From T-052 QA (2026-10-09):** add a per-user session cap (for example 20, evicting the oldest) inside the Redis `createScript`: the login-time sweep blocked Redis for 152 ms when one user had 100,000 sessions, and nothing bounds the number of sessions a user can create within the rate limits. Also decide whether logout with Redis down should still clear the cookie (today: 503 and the cookie stays).
+
 > **From T-048 QA (2026-10-09):** the reset code is locked after 5 wrong attempts and the spec lets `code_locked` be answered for an existing account only. So (a) `forgot-password` followed by 5 wrong `reset-password` guesses reveals that an account exists, and (b) a third party who knows a victim's email can lock the victim's reset code (3 requests per hour per email limit the victim's retries): a griefing denial of service on password reset, never a takeover. Decide here: answer `code_locked` for unknown addresses too after the same number of tries (decoy counters), and/or tie the lock to the requesting IP. Out of scope for T-048.
 
 **Epic:** E02-auth · **PRD:** [PRD.md](PRD.md) · **Milestone:** M2 · **Risk:** high · **Priority:** P3 · **Type:** security
