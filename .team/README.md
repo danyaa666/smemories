@@ -10,19 +10,18 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 32 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-044, T-050, T-056, T-058, T-059, T-060, T-061, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-075 |
-| TODO | 1 | T-074 |
-| READY_FOR_QA | 1 | T-049 |
-| QA_PASS | 3 | T-052, T-053, T-057 |
+| BACKLOG | 33 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-044, T-050, T-056, T-058, T-059, T-060, T-061, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-075, T-076 |
+| READY_FOR_QA | 1 | T-074 |
+| QA_PASS | 4 | T-049, T-052, T-053, T-057 |
 | MERGED | 3 | T-034, T-048, T-054 |
 | DONE | 28 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-035, T-036, T-037, T-038, T-043, T-045, T-046, T-047, T-051, T-062, T-063 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
 
 **Awaiting your review (MERGED):** T-034 ([E04] Public note submission (text and photos)); T-048 ([E02] Email one-time codes replace verification and reset links (API) with a dev-only fixed code); T-054 ([E05] Spike: HTML templates and browser print-to-PDF instead of server rendering)
 
-**Open questions for you:** Q-022 (Approve merge of T-052 (login sessions in Redis, drop sessions table)?); Q-023 (Approve merge of T-057 (print-size photos 1800 px + backfill)?); Q-024 (Approve merge of T-053 (rate limiters in Redis)?)
+**Open questions for you:** Q-022 (Approve merge of T-052 (login sessions in Redis, drop sessions table)?); Q-023 (Approve merge of T-057 (print-size photos 1800 px + backfill)?); Q-024 (Approve merge of T-053 (rate limiters in Redis)?); Q-025 (Approve merge of T-049 (web screens for the 6-digit email codes)?)
 
-_Board last written 2026-10-09 13:15Z_
+_Board last written 2026-10-09 13:28Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -345,6 +344,15 @@ QA passed. Every new photo also gets a 1800 px print version (smaller PDFs/print
 - **Answer:** _(pending)_
 
 QA passed. All 16 limiters move from per-process memory to Redis sliding windows (one atomic script, Redis clock), so limits hold across several API instances and restarts: 200 parallel registrations over two API processes admitted exactly 5. If Redis is down the 4 guessing limiters (login per email/IP, verify tries, reset tries) refuse with 503 limiter_unavailable; the other 12 let requests through and log one ERROR per minute. Emails are SHA-256 hashed inside keys. No migration. Merges after T-052 and then needs a mechanical develop merge. To approve: team approve T-053.
+
+### Q-025 — Approve merge of T-049 (web screens for the 6-digit email codes)?
+- **Status:** OPEN
+- **Asked:** 2026-10-09 13:28Z
+- **Blocks:** T-049
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+QA passed in a real browser (Chromium) with the dev code: register -> verify, forgot -> reset, resend cooldown, EN/VI, 375 px with a long email, nothing secret in URL/storage/Referer, the dev code is not in the web bundle. Not tested: a real screen reader (ARIA/focus checked instead). Small polish items are T-076. Without this merge the UI cannot verify email or reset a password (the API already needs codes since T-048). To approve: team approve T-049.
 
 <!-- questions:end -->
 
@@ -1983,7 +1991,7 @@ CI on develop failed once on TestGoogleConcurrentCallbacksCreateOneAccount: goog
 - 2026-10-09 04:28Z · leader · merged bb6709a. Review: Lua check+attempt script, HMAC with 32-byte key, decoy for unknown emails, fail-closed on Redis down, dev fixed code 123123 guarded (env dev/test, refuses start otherwise, DEV-SHORTCUT(otp) tags registered); migration 0011 drops email_tokens. QA passed twice (second after the T-034 merge). For owner to check: .env.example SMEM_OTP_KEY, docs/auth-otp.md, docs/dev-shortcuts.md. Web code-entry screens are T-049; until then UI sign-up verification uses the removed link flow.
 
 ### T-049 — [E02] Web: code entry screens for email verification and password reset
-- **Status:** READY_FOR_QA
+- **Status:** QA_PASS
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -1991,11 +1999,11 @@ CI on develop failed once on TestGoogleConcurrentCallbacksCreateOneAccount: goog
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** leader
 - **Branch:** task/t-049-e02-web-code-entry-screens-for-email-ver
 - **PR:** https://github.com/danyaa666/smemories/pull/42
-- **Updated:** 2026-10-09 11:22Z by dev
-- **Comments-seen:** 1
+- **Updated:** 2026-10-09 13:28Z by qa
+- **Comments-seen:** 3
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/09-web-email-code-screens.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2005,6 +2013,25 @@ Code input screens (paste, auto-submit, resend cooldown) replacing the link page
 
 #### Comments
 - 2026-10-09 11:22Z · dev · Code screens for verify/forgot/reset done (EN+VI), token-in-URL code removed, T-052 503 string added. Test: cd web && npm test (128 pass), lint, typecheck, i18n, build green. Real API (dev code, isolated stack) checked with a curl replay of the same requests, not in a browser; QA please check the 375px VI layout and a screen-reader pass in a browser.
+- 2026-10-09 13:28Z · qa · QA_PASS. Head 331ad68, CI green (go, go-integration, security, web). Local: make lint build test all exit 0, web 128/128 pass. No HTTP endpoint changed, so no Postman change needed.
+  Real Chromium (Playwright, headless shell) against the worktree API (SMEM_ENV=dev, SMEM_DEV_FIXED_OTP=123123, typed only by me; grep shows 123123 appears nowhere in web/src non-test or in web/dist) behind the Vite dev proxy. Error variants not producible for real were mocked with page.route; the clock was faked for the 60 s cooldown.
+  AC1 | register -> lands on /verify-email, no query or hash, "We sent a 6-digit code to <email>", input inputmode=numeric autocomplete=one-time-code maxlength=6, visible label, focused. 5 digits = no request, 6th digit = exactly 1 POST {"code":...}. Paste "111 222\n" -> 111222; paste "12ab34 5678901" -> 123456; typing "ab1-2 3" -> 123; Enter with 3 digits -> no request, message; type+Enter x3 quickly -> 1 request. Account page shows "Verify your email" link while unverified (keyboard Enter opens the screen). PASS
+  AC2 | verify screen EN and VI: invalid_code, code_expired, code_locked sit in the field's aria-describedby with aria-invalid and focus moves to the field; rate_limited (Retry-After 7200 -> "120 min"/"120 phut"), code_store_unavailable 503, session_store_unavailable 503, busy, internal_error, network abort, unknown code -> generic. All strings are right in both languages; the typed code is never echoed. Real lockout: 5 wrong codes -> 5th answers code_locked, resend -> new code -> invalid_code again. Reset screen EN and VI: code_expired, code_locked, rate_limited, 503s, network, and the special "busy" text. Unknown email + dev code and known email + wrong code give the identical invalid_code text. PASS
+  AC3 | after register the button is disabled "Send a new code (60s)" and counts down (57s after 3 s); a fresh visit has no cooldown; resend -> "We sent a new code.", button disabled 60 s again, field cleared; re-enabled after 60 s. Mocked 429 (Retry-After 1800) -> "Try again in 30 min", button not locked. Real API: resends 1-3 OK, 4th -> 429 "Try again in 60 min" (VI too). PASS
+  AC4 | /forgot-password with existing and unknown email both go to /reset-password with the neutral "If an account exists..." message (EN, VI); email prefilled and editable; code field focused; hint "At least 10 characters." shown; weak password + wrong code -> weak_password message on the password field, not invalid_code; short code -> client message, no request; invalid_email stays on step 1/field error; success -> /login with "Your password has been changed", URL clean (/login), request body is {email,code,password}; old password rejected, new one logs in; revisiting /login shows no stale message. forgot 429/network/503 stay on the page with a message. Reset-page resend uses the typed email, has the same cooldown, shows 429. EN and VI both run end to end. PASS
+  AC5 | grep: no useUrlToken/captureUrlToken/invalid_token/?token in web/src (only the test that asserts it); /verify-email?token=X signed out -> /login; /reset-password?token=X shows the normal code form; no API request, DOM or storage contains the token. localStorage/sessionStorage hold only smemories.lang; cookies/URL/DOM never hold the code; Referer header absent on API calls; <meta name=referrer content=no-referrer> kept. PASS
+  AC6 | EN/VI key parity (lint:i18n inside make lint). 375x667, VI, 69-char-local-part-style long email: no horizontal overflow on verify-email (also in error state), reset-password (prefilled and with errors), forgot, login, register, account (screenshots read). Keyboard only: Enter on account link, Tab order input -> submit -> resend, visible 3px outline, typing 6 digits submits, Enter in the password field submits reset. Accessibility tree (ariaSnapshot) shows heading, labelled textbox, role=alert linked to field, role=status messages; html lang follows EN/VI. Vitest covers paste, auto-submit, errors, cooldown (fake timers), two-step reset. PASS (a real screen reader such as VoiceOver was NOT run; accessibility-tree and ARIA wiring checked instead)
+  Non-blocking observations (no AC violated):
+  1. Resend button is 121x21 px at 13.3 px font on 375 px (below the 24 px WCAG 2.5.8 target size; the submit button is 42 px). Style it like the other buttons.
+  2. Reloading /verify-email or /reset-password right after sign-up/forgot restarts the 60 s cooldown and re-shows the "sent" message (history state survives a reload).
+  3. Fewer than 6 digits shows "That code is wrong..." instead of "enter 6 digits".
+  4. A weak_password error leaves focus on the submit button, not the password field (error is still announced, role=alert plus aria-describedby).
+  5. Re-pasting the identical wrong code after an error does nothing (v === value guard); Enter or editing a digit still works.
+  6. On reset, if the resend then fails (429) the earlier "we sent a code" status stays next to the error.
+  7. An old link with ?token= keeps the token in the address bar and history (not read, not sent, no-referrer).
+  8. Mid-flow 401 shows "Your session has ended" but does not redirect.
+  Test data: ~12 qa*@example.com accounts left in the dev DB (db smemories); API/Vite processes I started are stopped.
+- 2026-10-09 13:28Z · leader · Leader review OK at head 331ad68 (= QA head, CI green, no .team changes, web only). Verified: no 123123 in web/src or dist, nothing secret in URL/storage/Referer, old token capture code removed, EN/VI parity. Non-blocking items -> T-076. Awaiting owner approval.
 
 ### T-050 — [E06] Remove dev-only shortcuts before production (delete the fixed OTP) and add a pipeline check
 - **Status:** BACKLOG
@@ -2678,7 +2705,7 @@ Adds request and pool metrics as be-golang requires; waits for Q-018 (library ch
 #### Comments
 
 ### T-074 — [E04] Sweep orphaned upload spool files at start-up
-- **Status:** TODO
+- **Status:** READY_FOR_QA
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2687,10 +2714,10 @@ Adds request and pool metrics as be-golang requires; waits for Q-018 (library ch
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-09 13:15Z by leader
-- **Comments-seen:** 0
+- **Branch:** task/t-074-e04-sweep-orphaned-upload-spool-files-at
+- **PR:** https://github.com/danyaa666/smemories/pull/43
+- **Updated:** 2026-10-09 13:19Z by dev
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/07-sweep-orphaned-upload-spool-files.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2699,6 +2726,7 @@ Adds request and pool metrics as be-golang requires; waits for Q-018 (library ch
 T-034 QA finding: a shutdown or crash in the middle of an upload leaves a smem-upload-* spool file with a friend's private data; remove old ones at start-up.
 
 #### Comments
+- 2026-10-09 13:19Z · dev · Handler.SweepSpool (internal/notes/spool.go) called in main.go before Serve. Tests: TestSweepSpool, TestSweepSpoolMissingDir, integration TestSweepSpoolAtStartup (live upload kept, aged file removed). docs/media.md updated. Build, race tests, vet, golangci-lint, integration notes tests green. Note: age threshold = 4 min (route timeout 3 min + 1).
 
 ### T-075 — [E05] Media backfill hardening
 - **Status:** BACKLOG
@@ -2720,6 +2748,29 @@ T-034 QA finding: a shutdown or crash in the middle of an upload leaves a smem-u
 **Epic:** E05-templates-export · **PRD:** `.team/epics/E05-templates-export/PRD.md`
 
 T-057 QA findings: backfill config loader, stop after consecutive storage failures, dry-run over-count, Postman print edge, delete race, alpha PNG size.
+
+#### Comments
+
+### T-076 — [E02] Code screens polish (target size, cooldown reload, messages, focus)
+- **Status:** BACKLOG
+- **Priority:** P3
+- **Type:** tech-debt
+- **Milestone:** M1
+- **Depends-on:** T-049
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-09 13:28Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/12-code-screens-polish.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E02-auth · **PRD:** `.team/epics/E02-auth/PRD.md`
+
+T-049 QA findings: resend button target size, cooldown restarts on reload, short-code message, focus after weak password, leftover ?token= in the address bar.
 
 #### Comments
 
