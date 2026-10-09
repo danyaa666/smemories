@@ -15,7 +15,10 @@ runs:
       env:
         MINOR: ${{ inputs.minor }}
       run: |
-        set -uo pipefail
+        # GitHub runs this as bash -e -o pipefail; the lookup may fail (outage, HTML page, bad JSON) and must
+        # then reach the warning branch below instead of aborting the step.
+        set +e
+        set -u
         want=""
         if json="$(curl -fsS --max-time 20 --retry 2 'https://go.dev/dl/?mode=json')"; then
           want="$(printf '%s' "$json" | jq -r --arg m "go$MINOR." \

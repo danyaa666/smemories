@@ -36,7 +36,8 @@ branch, no force pushes, no deletions. Do not require the `ci` workflow name; on
   ("go.dev lookup failed") and the job keeps the `setup-go` result (`check-latest`); a red `security` job in that
   situation with stdlib findings means the fallback was too old: re-run once go.dev is reachable. If the step itself fails
   at `go version`, the toolchain download from the Go module proxy failed; re-run the job. To debug, run the step's script
-  locally with `MINOR=1.26`.
+  locally with `scripts/test-go-newest-patch.sh [--live]`, which runs it with the runner's `bash -e -o pipefail` flags
+  against good and malformed answers (HTML page, non-JSON, JSON object, empty array, wrong minor, unreachable host).
 - MySQL is started with `docker run` instead of a `services:` block because a service container cannot take
   server arguments (character set, collation, `sql_mode`, time zone). The root password is a fake that exists only on the
   runner. Tests create and drop their own `smem_test_*` databases.
