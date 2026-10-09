@@ -10,7 +10,8 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 35 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-044, T-049, T-050, T-055, T-056, T-058, T-059, T-060, T-061, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075 |
+| BACKLOG | 34 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-044, T-050, T-055, T-056, T-058, T-059, T-060, T-061, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075 |
+| TODO | 1 | T-049 |
 | READY_FOR_QA | 1 | T-054 |
 | QA_PASS | 3 | T-052, T-053, T-057 |
 | MERGED | 2 | T-034, T-048 |
@@ -21,7 +22,7 @@
 
 **Open questions for you:** Q-022 (Approve merge of T-052 (login sessions in Redis, drop sessions table)?); Q-023 (Approve merge of T-057 (print-size photos 1800 px + backfill)?); Q-024 (Approve merge of T-053 (rate limiters in Redis)?)
 
-_Board last written 2026-10-09 10:53Z_
+_Board last written 2026-10-09 11:15Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -1982,7 +1983,7 @@ CI on develop failed once on TestGoogleConcurrentCallbacksCreateOneAccount: goog
 - 2026-10-09 04:28Z · leader · merged bb6709a. Review: Lua check+attempt script, HMAC with 32-byte key, decoy for unknown emails, fail-closed on Redis down, dev fixed code 123123 guarded (env dev/test, refuses start otherwise, DEV-SHORTCUT(otp) tags registered); migration 0011 drops email_tokens. QA passed twice (second after the T-034 merge). For owner to check: .env.example SMEM_OTP_KEY, docs/auth-otp.md, docs/dev-shortcuts.md. Web code-entry screens are T-049; until then UI sign-up verification uses the removed link flow.
 
 ### T-049 — [E02] Web: code entry screens for email verification and password reset
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -1993,7 +1994,7 @@ CI on develop failed once on TestGoogleConcurrentCallbacksCreateOneAccount: goog
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
+- **Updated:** 2026-10-09 11:15Z by leader
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/09-web-email-code-screens.md`
@@ -2131,7 +2132,7 @@ Sessions with native expiry in Redis, per-user index for delete-all, fail-closed
 - **Branch:** task/t-053-e02-rate-limiters-move-to-redis-shared-l
 - **PR:** https://github.com/danyaa666/smemories/pull/41
 - **Updated:** 2026-10-09 10:53Z by qa
-- **Comments-seen:** 3
+- **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/11-rate-limiters-in-redis.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2168,7 +2169,7 @@ Redis sliding-window limiter with Take and Refund replacing the in-memory one ev
 - **Branch:** task/t-054-spike-html-templates-and-browser-print-t
 - **PR:** https://github.com/danyaa666/smemories/pull/35
 - **Updated:** 2026-10-09 10:46Z by dev
-- **Comments-seen:** 3
+- **Comments-seen:** 4
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/06-spike-browser-print-to-pdf.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
