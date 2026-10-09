@@ -21,6 +21,27 @@ and a progressive JPEG counts five times that, because the Go decoder keeps 4 by
 whose SOF cannot be read counts as progressive 4:4:4. Largest accepted: 4096 x 4096 16-bit PNG, 5000 x 5000 8-bit PNG or WebP,
 10000 x 5000 baseline 4:2:0 JPEG, 6000 x 7456 baseline 4:4:4 JPEG, about 18 MP progressive 4:2:0 JPEG.
 
+Photos sent through a collection link (`media.Service.UploadContributorFrom`, T-034) use the same processing slots and limits, but the upload
+does not hold one. The whole body (at most 32 MiB) is first **spooled to a temporary file** while the phone sends it, so a slow client costs a
+socket and some disk, never memory and never a processing slot. Only when the body is complete are the text validated and the photos
+processed, one at a time: each photo is read from the file into memory **after** a processing slot was obtained (at most
+`SMEM_MEDIA_MAX_BYTES` per slot) and the request waits at most 10 s for a slot, otherwise `503 busy`.
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `SMEM_PUBLIC_UPLOAD_MAX_CONNS` | 48 | public note submissions in progress at once (all addresses); the next one is `503 busy` |
+| `SMEM_PUBLIC_UPLOAD_CONCURRENT_PER_IP` | 8 | ... of which one client IP may have this many |
+| `SMEM_UPLOAD_TMP_DIR` | OS temp dir | where the bodies are spooled (files `0600`, `smem-upload-*`, removed when the request ends, also on error, panic and disconnect) |
+
+A refused submission (`503 busy`, 2 to 6 s random `Retry-After`) is answered before any byte of its body is read and is not counted against
+the per-IP request limits, so a class that retries cannot lock itself out. A body must keep moving: no byte for 10 s, or less than 16 KiB/s on
+average after a 15 s grace period, or more than 120 s in total is dropped with `408`. Early rejections (closed link, bad text, rate limit) are
+sent only after the rest of the body has been read (same limits), so a browser shows the answer instead of a connection reset.
+
+**Disk sizing.** Worst case is `SMEM_PUBLIC_UPLOAD_MAX_CONNS` x 32 MiB = 1.5 GiB of temporary files (48 x 32 MiB), in practice far less. In production
+(T-022) the ephemeral storage of the task, or the volume behind `SMEM_UPLOAD_TMP_DIR`, must exceed that plus headroom. A process that is killed leaves
+its files behind; ephemeral storage is cleared on restart. Many-address floods are the job of the WAF and load balancer limits (T-031).
+
 ## What was wrong, and the fix
 
 `golang.org/x/image/draw` allocates a `float64` scratch buffer of (destination width x SOURCE height x 4) in one scaling call: 480 MB for a

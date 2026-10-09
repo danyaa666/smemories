@@ -166,8 +166,10 @@ func TestMigratePageSizeLetter(t *testing.T) {
 	if got := sizes(); got != "A5,A4,Letter" {
 		t.Fatalf("before down: %s", got)
 	}
-	if err := db.MigrateDown(ctx, d); err != nil { // 0009 is the latest migration
-		t.Fatalf("down: %v", err)
+	for range 2 { // 0010 (notes) is the latest migration and does not touch yearbooks; 0009 is the one under test
+		if err := db.MigrateDown(ctx, d); err != nil {
+			t.Fatalf("down: %v", err)
+		}
 	}
 	if got := sizes(); got != "A5,A4,A5" {
 		t.Fatalf("after down: %s, want A5,A4,A5", got)
