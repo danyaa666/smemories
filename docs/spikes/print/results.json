@@ -1,0 +1,778 @@
+{
+ "machine": "Apple M3 Pro, 11 cores, 36 GB, macOS 24.6.0 (Darwin)",
+ "node": "v22.17.0",
+ "runs": [
+  {
+   "browser": "chromium-shell",
+   "version": "156.0.8078.4",
+   "design": "memory",
+   "size": "a5",
+   "lang": "vi",
+   "tag": "",
+   "readyMs": 951,
+   "pages": 24,
+   "fit": {
+    "ok": 229,
+    "shrunk": 6,
+    "overflow": 1
+   },
+   "pdfMs": 1348,
+   "bytes": 4079078,
+   "peakMb": 667,
+   "committed": true,
+   "sizePt": [
+    420,
+    594.96
+   ],
+   "sizeMm": [
+    148.2,
+    209.9
+   ],
+   "pdfVersion": "1.4",
+   "fonts": 73,
+   "allFontsEmbedded": true,
+   "images": 61,
+   "photos": 30,
+   "photoPx": "1200x1600",
+   "photoEncodings": [
+    "jpeg"
+   ],
+   "ppiMin": 492,
+   "ppiMax": 1552,
+   "names": "6/6",
+   "emoji": "4/5",
+   "sentence": true,
+   "externalHosts": []
+  },
+  {
+   "browser": "chromium-shell",
+   "version": "156.0.8078.4",
+   "design": "memory",
+   "size": "a4",
+   "lang": "vi",
+   "tag": "",
+   "readyMs": 899,
+   "pages": 24,
+   "fit": {
+    "shrunk": 7,
+    "ok": 228,
+    "overflow": 1
+   },
+   "pdfMs": 1967,
+   "bytes": 5191977,
+   "peakMb": 680,
+   "committed": false,
+   "sizePt": [
+    594.96,
+    841.92
+   ],
+   "sizeMm": [
+    209.9,
+    297
+   ],
+   "pdfVersion": "1.4",
+   "fonts": 73,
+   "allFontsEmbedded": true,
+   "images": 61,
+   "photos": 30,
+   "photoPx": "1200x1600",
+   "photoEncodings": [
+    "jpeg"
+   ],
+   "ppiMin": 347,
+   "ppiMax": 1097,
+   "names": "6/6",
+   "emoji": "4/5",
+   "sentence": true,
+   "externalHosts": []
+  },
+  {
+   "browser": "chromium-shell",
+   "version": "156.0.8078.4",
+   "design": "memory",
+   "size": "letter",
+   "lang": "vi",
+   "tag": "",
+   "readyMs": 900,
+   "pages": 24,
+   "fit": {
+    "shrunk": 7,
+    "ok": 228,
+    "overflow": 1
+   },
+   "pdfMs": 1773,
+   "bytes": 2678293,
+   "peakMb": 679,
+   "committed": true,
+   "sizePt": [
+    612,
+    792
+   ],
+   "sizeMm": [
+    215.9,
+    279.4
+   ],
+   "pdfVersion": "1.4",
+   "fonts": 73,
+   "allFontsEmbedded": true,
+   "images": 61,
+   "photos": 30,
+   "photoPx": "1200x1600",
+   "photoEncodings": [
+    "jpeg"
+   ],
+   "ppiMin": 337,
+   "ppiMax": 1067,
+   "names": "6/6",
+   "emoji": "4/5",
+   "sentence": true,
+   "externalHosts": []
+  },
+  {
+   "browser": "chromium-shell",
+   "version": "156.0.8078.4",
+   "design": "classic",
+   "size": "a5",
+   "lang": "vi",
+   "tag": "",
+   "readyMs": 905,
+   "pages": 4,
+   "fit": {
+    "ok": 22
+   },
+   "pdfMs": 57,
+   "bytes": 494057,
+   "peakMb": 360,
+   "committed": true,
+   "sizePt": [
+    420,
+    594.96
+   ],
+   "sizeMm": [
+    148.2,
+    209.9
+   ],
+   "pdfVersion": "1.4",
+   "fonts": 49,
+   "allFontsEmbedded": true,
+   "images": 1,
+   "photos": 1,
+   "photoPx": "1600x1200",
+   "photoEncodings": [
+    "jpeg"
+   ],
+   "ppiMin": 648,
+   "ppiMax": 648,
+   "names": "1/1",
+   "emoji": "3/5",
+   "sentence": true,
+   "externalHosts": []
+  },
+  {
+   "browser": "chromium-shell",
+   "version": "156.0.8078.4",
+   "design": "classic",
+   "size": "a4",
+   "lang": "vi",
+   "tag": "",
+   "readyMs": 898,
+   "pages": 4,
+   "fit": {
+    "ok": 22
+   },
+   "pdfMs": 56,
+   "bytes": 497771,
+   "peakMb": 364,
+   "committed": true,
+   "sizePt": [
+    594.96,
+    841.92
+   ],
+   "sizeMm": [
+    209.9,
+    297
+   ],
+   "pdfVersion": "1.4",
+   "fonts": 49,
+   "allFontsEmbedded": true,
+   "images": 1,
+   "photos": 1,
+   "photoPx": "1600x1200",
+   "photoEncodings": [
+    "jpeg"
+   ],
+   "ppiMin": 456,
+   "ppiMax": 456,
+   "names": "1/1",
+   "emoji": "3/5",
+   "sentence": true,
+   "externalHosts": []
+  },
+  {
+   "browser": "chromium-shell",
+   "version": "156.0.8078.4",
+   "design": "classic",
+   "size": "letter",
+   "lang": "vi",
+   "tag": "",
+   "readyMs": 901,
+   "pages": 5,
+   "fit": {
+    "ok": 22
+   },
+   "pdfMs": 56,
+   "bytes": 499921,
+   "peakMb": 362,
+   "committed": true,
+   "sizePt": [
+    612,
+    792
+   ],
+   "sizeMm": [
+    215.9,
+    279.4
+   ],
+   "pdfVersion": "1.4",
+   "fonts": 49,
+   "allFontsEmbedded": true,
+   "images": 1,
+   "photos": 1,
+   "photoPx": "1600x1200",
+   "photoEncodings": [
+    "jpeg"
+   ],
+   "ppiMin": 444,
+   "ppiMax": 444,
+   "names": "1/1",
+   "emoji": "3/5",
+   "sentence": true,
+   "externalHosts": []
+  },
+  {
+   "browser": "chromium-shell",
+   "version": "156.0.8078.4",
+   "design": "memory",
+   "size": "a5",
+   "lang": "en",
+   "tag": "",
+   "readyMs": 901,
+   "pages": 24,
+   "fit": {
+    "ok": 229,
+    "shrunk": 6,
+    "overflow": 1
+   },
+   "pdfMs": 1342,
+   "bytes": 3988158,
+   "peakMb": 670,
+   "committed": false,
+   "sizePt": [
+    420,
+    594.96
+   ],
+   "sizeMm": [
+    148.2,
+    209.9
+   ],
+   "pdfVersion": "1.4",
+   "fonts": 54,
+   "allFontsEmbedded": true,
+   "images": 61,
+   "photos": 30,
+   "photoPx": "1200x1600",
+   "photoEncodings": [
+    "jpeg"
+   ],
+   "ppiMin": 492,
+   "ppiMax": 1552,
+   "names": "6/6",
+   "emoji": "4/5",
+   "sentence": true,
+   "externalHosts": []
+  },
+  {
+   "browser": "chromium-shell",
+   "version": "156.0.8078.4",
+   "design": "memory",
+   "size": "a5",
+   "lang": "vi",
+   "tag": "-transform",
+   "readyMs": 896,
+   "pages": 24,
+   "fit": {
+    "shrunk": 7,
+    "ok": 228,
+    "overflow": 1
+   },
+   "pdfMs": 2998,
+   "bytes": 3872732,
+   "peakMb": 660,
+   "committed": false,
+   "sizePt": [
+    420,
+    594.96
+   ],
+   "sizeMm": [
+    148.2,
+    209.9
+   ],
+   "pdfVersion": "1.4",
+   "fonts": 73,
+   "allFontsEmbedded": true,
+   "images": 61,
+   "photos": 30,
+   "photoPx": "1200x1600",
+   "photoEncodings": [
+    "jpeg"
+   ],
+   "ppiMin": 491,
+   "ppiMax": 1556,
+   "names": "6/6",
+   "emoji": "4/5",
+   "sentence": true,
+   "externalHosts": []
+  },
+  {
+   "browser": "chromium-shell",
+   "version": "156.0.8078.4",
+   "design": "memory",
+   "size": "a5",
+   "lang": "vi",
+   "tag": "-3000px",
+   "readyMs": 3635,
+   "pages": 24,
+   "fit": {
+    "ok": 229,
+    "shrunk": 6,
+    "overflow": 1
+   },
+   "pdfMs": 10583,
+   "bytes": 62758122,
+   "peakMb": 826,
+   "committed": false,
+   "sizePt": [
+    420,
+    594.96
+   ],
+   "sizeMm": [
+    148.2,
+    209.9
+   ],
+   "pdfVersion": "1.4",
+   "fonts": 73,
+   "allFontsEmbedded": true,
+   "images": 61,
+   "photos": 30,
+   "photoPx": "2250x3000",
+   "photoEncodings": [
+    "jpeg"
+   ],
+   "ppiMin": 923,
+   "ppiMax": 2909,
+   "names": "6/6",
+   "emoji": "4/5",
+   "sentence": true,
+   "externalHosts": []
+  },
+  {
+   "browser": "chromium-shell",
+   "version": "156.0.8078.4",
+   "design": "memory",
+   "size": "a4",
+   "lang": "vi",
+   "tag": "-3000px",
+   "readyMs": 3663,
+   "pages": 24,
+   "fit": {
+    "shrunk": 7,
+    "ok": 228,
+    "overflow": 1
+   },
+   "pdfMs": 11289,
+   "bytes": 63870999,
+   "peakMb": 816,
+   "committed": false,
+   "sizePt": [
+    594.96,
+    841.92
+   ],
+   "sizeMm": [
+    209.9,
+    297
+   ],
+   "pdfVersion": "1.4",
+   "fonts": 73,
+   "allFontsEmbedded": true,
+   "images": 61,
+   "photos": 30,
+   "photoPx": "2250x3000",
+   "photoEncodings": [
+    "jpeg"
+   ],
+   "ppiMin": 651,
+   "ppiMax": 2057,
+   "names": "6/6",
+   "emoji": "4/5",
+   "sentence": true,
+   "externalHosts": []
+  },
+  {
+   "browser": "chromium-shell",
+   "version": "156.0.8078.4",
+   "design": "memory",
+   "size": "letter",
+   "lang": "vi",
+   "tag": "-3000px",
+   "readyMs": 3614,
+   "pages": 24,
+   "fit": {
+    "shrunk": 7,
+    "ok": 228,
+    "overflow": 1
+   },
+   "pdfMs": 11071,
+   "bytes": 61357324,
+   "peakMb": 830,
+   "committed": false,
+   "sizePt": [
+    612,
+    792
+   ],
+   "sizeMm": [
+    215.9,
+    279.4
+   ],
+   "pdfVersion": "1.4",
+   "fonts": 73,
+   "allFontsEmbedded": true,
+   "images": 61,
+   "photos": 30,
+   "photoPx": "2250x3000",
+   "photoEncodings": [
+    "jpeg"
+   ],
+   "ppiMin": 632,
+   "ppiMax": 2000,
+   "names": "6/6",
+   "emoji": "4/5",
+   "sentence": true,
+   "externalHosts": []
+  },
+  {
+   "browser": "chrome",
+   "version": "154.0.8037.98",
+   "design": "memory",
+   "size": "a5",
+   "lang": "vi",
+   "tag": "",
+   "readyMs": 996,
+   "pages": 24,
+   "fit": {
+    "ok": 229,
+    "shrunk": 6,
+    "overflow": 1
+   },
+   "pdfMs": 2081,
+   "bytes": 4079042,
+   "peakMb": 3242,
+   "committed": false,
+   "sizePt": [
+    420,
+    594.96
+   ],
+   "sizeMm": [
+    148.2,
+    209.9
+   ],
+   "pdfVersion": "1.4",
+   "fonts": 73,
+   "allFontsEmbedded": true,
+   "images": 61,
+   "photos": 30,
+   "photoPx": "1200x1600",
+   "photoEncodings": [
+    "jpeg"
+   ],
+   "ppiMin": 492,
+   "ppiMax": 1552,
+   "names": "6/6",
+   "emoji": "4/5",
+   "sentence": true,
+   "externalHosts": []
+  },
+  {
+   "browser": "chrome",
+   "version": "154.0.8037.98",
+   "design": "classic",
+   "size": "a5",
+   "lang": "vi",
+   "tag": "",
+   "readyMs": 902,
+   "pages": 4,
+   "fit": {
+    "ok": 22
+   },
+   "pdfMs": 423,
+   "bytes": 494124,
+   "peakMb": 2503,
+   "committed": true,
+   "sizePt": [
+    420,
+    594.96
+   ],
+   "sizeMm": [
+    148.2,
+    209.9
+   ],
+   "pdfVersion": "1.4",
+   "fonts": 49,
+   "allFontsEmbedded": true,
+   "images": 1,
+   "photos": 1,
+   "photoPx": "1600x1200",
+   "photoEncodings": [
+    "jpeg"
+   ],
+   "ppiMin": 648,
+   "ppiMax": 648,
+   "names": "1/1",
+   "emoji": "3/5",
+   "sentence": true,
+   "externalHosts": []
+  },
+  {
+   "browser": "edge-dev",
+   "version": "157.0.4322.0",
+   "design": "memory",
+   "size": "a5",
+   "lang": "vi",
+   "tag": "",
+   "readyMs": 1004,
+   "pages": 24,
+   "fit": {
+    "ok": 229,
+    "shrunk": 6,
+    "overflow": 1
+   },
+   "pdfMs": 1982,
+   "bytes": 4173932,
+   "peakMb": 3189,
+   "committed": false,
+   "sizePt": [
+    420,
+    594.96
+   ],
+   "sizeMm": [
+    148.2,
+    209.9
+   ],
+   "pdfVersion": "1.4",
+   "fonts": 73,
+   "allFontsEmbedded": true,
+   "images": 61,
+   "photos": 30,
+   "photoPx": "1200x1600",
+   "photoEncodings": [
+    "jpeg"
+   ],
+   "ppiMin": 492,
+   "ppiMax": 1552,
+   "names": "6/6",
+   "emoji": "4/5",
+   "sentence": true,
+   "externalHosts": []
+  },
+  {
+   "browser": "edge-dev",
+   "version": "157.0.4322.0",
+   "design": "classic",
+   "size": "a5",
+   "lang": "vi",
+   "tag": "",
+   "readyMs": 901,
+   "pages": 4,
+   "fit": {
+    "ok": 22
+   },
+   "pdfMs": 424,
+   "bytes": 494629,
+   "peakMb": 2449,
+   "committed": true,
+   "sizePt": [
+    420,
+    594.96
+   ],
+   "sizeMm": [
+    148.2,
+    209.9
+   ],
+   "pdfVersion": "1.4",
+   "fonts": 49,
+   "allFontsEmbedded": true,
+   "images": 1,
+   "photos": 1,
+   "photoPx": "1600x1200",
+   "photoEncodings": [
+    "jpeg"
+   ],
+   "ppiMin": 648,
+   "ppiMax": 648,
+   "names": "1/1",
+   "emoji": "3/5",
+   "sentence": true,
+   "externalHosts": []
+  },
+  {
+   "browser": "edge-canary",
+   "version": "157.0.4325.0",
+   "design": "memory",
+   "size": "a5",
+   "lang": "vi",
+   "tag": "",
+   "readyMs": 991,
+   "pages": 24,
+   "fit": {
+    "ok": 229,
+    "shrunk": 6,
+    "overflow": 1
+   },
+   "pdfMs": 1968,
+   "bytes": 4173932,
+   "peakMb": 3190,
+   "committed": false,
+   "sizePt": [
+    420,
+    594.96
+   ],
+   "sizeMm": [
+    148.2,
+    209.9
+   ],
+   "pdfVersion": "1.4",
+   "fonts": 73,
+   "allFontsEmbedded": true,
+   "images": 61,
+   "photos": 30,
+   "photoPx": "1200x1600",
+   "photoEncodings": [
+    "jpeg"
+   ],
+   "ppiMin": 492,
+   "ppiMax": 1552,
+   "names": "6/6",
+   "emoji": "4/5",
+   "sentence": true,
+   "externalHosts": []
+  },
+  {
+   "browser": "edge-canary",
+   "version": "157.0.4325.0",
+   "design": "classic",
+   "size": "a5",
+   "lang": "vi",
+   "tag": "",
+   "readyMs": 904,
+   "pages": 4,
+   "fit": {
+    "ok": 22
+   },
+   "pdfMs": 379,
+   "bytes": 494629,
+   "peakMb": 2452,
+   "committed": true,
+   "sizePt": [
+    420,
+    594.96
+   ],
+   "sizeMm": [
+    148.2,
+    209.9
+   ],
+   "pdfVersion": "1.4",
+   "fonts": 49,
+   "allFontsEmbedded": true,
+   "images": 1,
+   "photos": 1,
+   "photoPx": "1600x1200",
+   "photoEncodings": [
+    "jpeg"
+   ],
+   "ppiMin": 648,
+   "ppiMax": 648,
+   "names": "1/1",
+   "emoji": "3/5",
+   "sentence": true,
+   "externalHosts": []
+  },
+  {
+   "browser": "firefox",
+   "design": "memory",
+   "size": "a5",
+   "lang": "vi",
+   "readyMs": 908,
+   "pdfMs": 8032,
+   "peakMb": 2607,
+   "version": "157.0.1",
+   "bytes": 30838726,
+   "committed": false,
+   "pages": 24,
+   "sizePt": [
+    420,
+    596
+   ],
+   "sizeMm": [
+    148.2,
+    210.3
+   ],
+   "pdfVersion": "1.4",
+   "fonts": 65,
+   "allFontsEmbedded": true,
+   "images": 358,
+   "photos": 31,
+   "photoPx": "1200x1600",
+   "photoEncodings": [
+    "image"
+   ],
+   "ppiMin": 72,
+   "ppiMax": 1556,
+   "names": "6/6",
+   "emoji": "3/5",
+   "sentence": true
+  },
+  {
+   "browser": "firefox",
+   "design": "classic",
+   "size": "a5",
+   "lang": "vi",
+   "readyMs": 874,
+   "pdfMs": 2699,
+   "peakMb": 2251,
+   "version": "157.0.1",
+   "bytes": 501930,
+   "committed": true,
+   "pages": 4,
+   "sizePt": [
+    420,
+    596
+   ],
+   "sizeMm": [
+    148.2,
+    210.3
+   ],
+   "pdfVersion": "1.4",
+   "fonts": 43,
+   "allFontsEmbedded": true,
+   "images": 27,
+   "photos": 1,
+   "photoPx": "1600x1200",
+   "photoEncodings": [
+    "image"
+   ],
+   "ppiMin": 646,
+   "ppiMax": 646,
+   "names": "1/1",
+   "emoji": "2/5",
+   "sentence": true
+  }
+ ]
+}
