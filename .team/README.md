@@ -22,7 +22,7 @@
 
 **Open questions for you:** Q-022 (Approve merge of T-052 (login sessions in Redis, drop sessions table)?); Q-023 (Approve merge of T-057 (print-size photos 1800 px + backfill)?)
 
-_Board last written 2026-10-09 10:44Z_
+_Board last written 2026-10-09 10:45Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -2076,7 +2076,7 @@ Add a Redis-protocol service (Valkey 8) to the local stack and CI, the go-redis 
 - **Branch:** task/t-052-e02-login-sessions-move-to-redis-drop-th
 - **PR:** https://github.com/danyaa666/smemories/pull/39
 - **Updated:** 2026-10-09 10:00Z by qa
-- **Comments-seen:** 6
+- **Comments-seen:** 8
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/10-sessions-in-redis.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2123,7 +2123,7 @@ Sessions with native expiry in Redis, per-user index for delete-all, fail-closed
 - **Branch:** task/t-053-e02-rate-limiters-move-to-redis-shared-l
 - **PR:** https://github.com/danyaa666/smemories/pull/41
 - **Updated:** 2026-10-09 10:05Z by dev
-- **Comments-seen:** 1
+- **Comments-seen:** 3
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/11-rate-limiters-in-redis.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2221,7 +2221,7 @@ One owner-only request returns the yearbook, profile and approved notes with ans
 - **Branch:** task/t-057-e05-media-print-size-variant-1800-px-wit
 - **PR:** https://github.com/danyaa666/smemories/pull/40
 - **Updated:** 2026-10-09 10:44Z by qa
-- **Comments-seen:** 2
+- **Comments-seen:** 4
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/08-print-size-photo-variant.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
