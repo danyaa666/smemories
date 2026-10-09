@@ -11,18 +11,17 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 35 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-044, T-049, T-050, T-055, T-056, T-058, T-059, T-060, T-061, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075 |
-| TODO | 1 | T-054 |
-| READY_FOR_QA | 1 | T-053 |
-| QA_PASS | 2 | T-052, T-057 |
+| READY_FOR_QA | 1 | T-054 |
+| QA_PASS | 3 | T-052, T-053, T-057 |
 | MERGED | 2 | T-034, T-048 |
 | DONE | 28 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-035, T-036, T-037, T-038, T-043, T-045, T-046, T-047, T-051, T-062, T-063 |
 | CANCELLED | 6 | T-014, T-019, T-039, T-040, T-041, T-042 |
 
 **Awaiting your review (MERGED):** T-034 ([E04] Public note submission (text and photos)); T-048 ([E02] Email one-time codes replace verification and reset links (API) with a dev-only fixed code)
 
-**Open questions for you:** Q-022 (Approve merge of T-052 (login sessions in Redis, drop sessions table)?); Q-023 (Approve merge of T-057 (print-size photos 1800 px + backfill)?)
+**Open questions for you:** Q-022 (Approve merge of T-052 (login sessions in Redis, drop sessions table)?); Q-023 (Approve merge of T-057 (print-size photos 1800 px + backfill)?); Q-024 (Approve merge of T-053 (rate limiters in Redis)?)
 
-_Board last written 2026-10-09 10:45Z_
+_Board last written 2026-10-09 10:53Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -336,6 +335,15 @@ QA passed twice. Sessions live in Redis only (key = SHA-256 of the cookie value,
 - **Answer:** _(pending)_
 
 QA passed. Every new photo also gets a 1800 px print version (smaller PDFs/prints); ?size=print serves it with the same access rules; existing photos are filled by the new smemories-media-backfill command (idempotent, --dry-run); until then print falls back to display size. Migration 0013 adds a nullable column. Merges after T-052 (migration order). Follow-up T-075 hardens the backfill before production. To approve: team approve T-057.
+
+### Q-024 — Approve merge of T-053 (rate limiters in Redis)?
+- **Status:** OPEN
+- **Asked:** 2026-10-09 10:53Z
+- **Blocks:** T-053
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+QA passed. All 16 limiters move from per-process memory to Redis sliding windows (one atomic script, Redis clock), so limits hold across several API instances and restarts: 200 parallel registrations over two API processes admitted exactly 5. If Redis is down the 4 guessing limiters (login per email/IP, verify tries, reset tries) refuse with 503 limiter_unavailable; the other 12 let requests through and log one ERROR per minute. Emails are SHA-256 hashed inside keys. No migration. Merges after T-052 and then needs a mechanical develop merge. To approve: team approve T-053.
 
 <!-- questions:end -->
 
@@ -2111,7 +2119,7 @@ Sessions with native expiry in Redis, per-user index for delete-all, fail-closed
 - 2026-10-09 10:44Z · leader · Leader review OK at head 881c549 (= QA head, CI green, diff = T-052 only, no .team changes). Sessions in Redis (sha256 keys, atomic scripts, fail-closed 503), migration 0012 drops sessions. Non-blocking items are in the T-031/T-049 specs. Awaiting owner approval; merge order #39 then #40.
 
 ### T-053 — [E02] Rate limiters move to Redis (shared limiter for all endpoints)
-- **Status:** READY_FOR_QA
+- **Status:** QA_PASS
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2119,10 +2127,10 @@ Sessions with native expiry in Redis, per-user index for delete-all, fail-closed
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** leader
 - **Branch:** task/t-053-e02-rate-limiters-move-to-redis-shared-l
 - **PR:** https://github.com/danyaa666/smemories/pull/41
-- **Updated:** 2026-10-09 10:05Z by dev
+- **Updated:** 2026-10-09 10:53Z by qa
 - **Comments-seen:** 3
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/11-rate-limiters-in-redis.md`
@@ -2135,9 +2143,20 @@ Redis sliding-window limiter with Take and Refund replacing the in-memory one ev
 - 2026-10-09 01:31Z · leader · T-051 is merged: ready.
 - 2026-10-09 10:05Z · dev · PR #41. Redis sliding-window limiter (Lua, Redis TIME) replaces all 16 in-memory limiters; Factory Open/Closed policy (closed: login_pair, login_ip, verify_tries, reset_tries -> 503 limiter_unavailable). Test: make test-integration (internal/ratelimit/redis_integration_test.go, policy_test.go, internal/auth/limiters_integration_test.go), make reset-limits. Newman auth/yearbooks/media/notes run 2-3x with 0 failures. Gaps: expect small NewService merge conflict with T-052 (PR #39); web schema.d.ts regenerated for the new error code.
 - 2026-10-09 10:06Z · leader · Leader note for QA: dev did not run make web-lint / web tests (only schema.d.ts regenerated) - run the full make lint build test test-integration plus npm run check:api. Merge risk: auth.NewService, media.NewService and notes.NewHandler gained a limiters parameter, so it conflicts with T-052 (PR #39) in internal/auth/service.go; whichever merges second gets a develop merge. Probe especially: fail-closed list (login_pair, login_ip, verify_tries, reset_tries) vs fail-open (12 others) with Redis down, no email in keys, Retry-After accuracy, refund paths, limit values unchanged from the old in-memory ones.
+- 2026-10-09 10:53Z · qa · PR #41 head caf2ea4; CI green (go, go-integration, security, web).
+  Mechanical: make lint (gofmt, vet x2, golangci-lint, eslint, prettier, tsc, i18n) OK; make build test (-race + web 109 vitest) OK; make test-integration -race OK; npm run check:api OK; ratelimit integration x3 -race OK; BenchmarkRedisTake 1000 ops = 252us/op.
+  AC1 interface+Redis Lua (TIME, ZREMRANGEBYSCORE/ZCARD/ZADD/PEXPIRE, Refund ZPOPMAX), Memory only in tests (grep: not in cmd/): code read + live: key smem:dev:rl:register:127.0.0.1 is zset, ttl 3600, zcard 5. PASS.
+  AC2 values unchanged (const lines untouched in diff; 16 limiters; docs/redis.md table matches code). Live: register 6th=429 Retry-After 3600; login 11th=429 (900); public_misses 61st=429; successful login refunds (login_ip zcard stayed 10). PASS.
+  AC3 fail policy, live with a second API pointed at a throwaway Valkey that I stopped: register x3 201 (open) with ONE ERROR log 'ratelimit: limiter failed' (failures counter); login wrong and right = 503 limiter_unavailable + Retry-After 5 (closed); reset-password 503 limiter_unavailable; verify-email 503 limiter_unavailable; public collect lookup 404 (open). Call-site comments present on each. PASS. (forgot-password 202 and resend 503 code_store_unavailable are the T-048 code store, not the limiter.)
+  AC4 keys: login_pair key = ip|sha256(lowercased email) (matches shasum of qaprobe1@example.com); scan of all smem:* keys for '@'/'qaprobe' empty; TestLimiterKeysHoldNoEmail passes. PASS.
+  AC5 tests on real Redis exist and pass (limit N, retry-after, refund, 50 parallel, shared instances, expiry/TTL, fake clock). Extra live: 200 parallel registrations spread over two API processes sharing Redis = exactly 5x201, 195x429; 3 on proc A + 3 on proc B => 6th 429; counts survive an API restart (Retry-After 3590 after restart). PASS.
+  AC6 Newman x2 each with make reset-limits between runs (no API restart): yearbooks 0 failures x2, media 0 x2, notes (--working-dir postman) 0 x2; auth 20 failed assertions x2, all Google OIDC (no SMEM_GOOGLE_* in my env, provider unreachable; Google limiters covered by auth integration tests), everything else passes. make reset-limits works (needs .env in the cwd, so run from the main checkout; not from a worktree without .env). PASS.
+  Scratch merge with T-052 (PR #39 head 881c549): CONFLICTS in 9 files, 10 hunks: internal/auth/service.go (2: NewService signature needs both sessions *Sessions and limiters *ratelimit.Factory; Service literal needs sessions + the Open/Closed limiters), internal/auth/handler.go, internal/auth/integration_test.go, internal/media/integration_test.go, internal/notes/integration_test.go, internal/yearbook/integration_test.go, api/openapi.yaml, docs/redis.md, web/src/api/schema.d.ts (regenerate). All textual/mechanical; whoever merges second must merge develop and re-run make lint build test test-integration. Scratch worktree removed, nothing pushed.
+  Non-blocking: (a) openapi /v1/auth/login 503 lists only Busy, not limiter_unavailable (login now returns it); check reset-password likewise. (b) Redis flapping edge: an open limiter whose Take failed but whose later Refund succeeds could pop another request's hit (negligible). (c) I applied migrations and created qaprobe*/d*/two*/par* users in the shared dev DB; harmless dev data.
+- 2026-10-09 10:53Z · leader · Leader review OK at head caf2ea4 (= QA head, CI green, no .team changes). Atomic sliding-window script on the Redis clock, per-limiter fail policy (4 guessing limiters closed, 12 open with one ERROR/min), emails hashed in keys, refunds, make reset-limits. When T-052 (#39) merges first, this branch needs a develop merge (9 files, textual: NewService takes sessions and limiters, regenerate schema.d.ts); fix while there: api/openapi.yaml should list limiter_unavailable among the 503s of /v1/auth/login and /v1/auth/reset-password (and every endpoint where a closed limiter applies). Awaiting owner approval.
 
 ### T-054 — [E05] Spike: HTML templates and browser print-to-PDF instead of server rendering
-- **Status:** TODO
+- **Status:** READY_FOR_QA
 - **Priority:** P1
 - **Type:** spike
 - **Milestone:** M1
@@ -2148,7 +2167,7 @@ Redis sliding-window limiter with Take and Refund replacing the in-memory one ev
 - **Assignee:** —
 - **Branch:** task/t-054-spike-html-templates-and-browser-print-t
 - **PR:** https://github.com/danyaa666/smemories/pull/35
-- **Updated:** 2026-10-09 02:28Z by leader
+- **Updated:** 2026-10-09 10:46Z by dev
 - **Comments-seen:** 3
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/06-spike-browser-print-to-pdf.md`
@@ -2161,6 +2180,7 @@ Prototype two designs as HTML/CSS pages printed through the browser (Save as PDF
 - 2026-10-08 15:17Z · dev · ADR docs/adr/0003-html-print-export.md. Prototype web/src/spike/print (dev server only), tooling tools/print-spike (npm test = AC3, node measure.mjs = matrix), PDFs+results.json docs/spikes/print. Measured: Chromium 156, Chrome 154, Edge Dev/Canary 157, Firefox 157 (headless print). NOT tested: Safari, Android, iOS, interactive dialogs (owner steps in ADR). Findings: Firefox black tiled gradients, design fonts lack Vietnamese, 3000px photos give 63 MB. QA: npm test in tools/print-spike (needs poppler), inspect PDFs.
 - 2026-10-08 15:17Z · leader · Spike done (PR #35, ADR 0003). Waiting for the owner's phone and Safari tests (Q-017) before D-24; do not merge the PDFs (11 MB) until the decision, then keep only the ADR and a few evidence files.
 - 2026-10-09 01:42Z · leader · Leader: D-24 decided (build it). Please: (1) keep docs/adr/0003-html-print-export.md and set its status to Accepted (owner decision D-24, the owner will test Safari, Android Chrome and iOS Safari and report); (2) trim docs/spikes/print to at most 1 MiB in total (keep results.json and 2 or 3 small evidence images, drop the large PDFs; the Playwright check regenerates them); (3) keep web/src/spike/print and tools/print-spike as the starting point of T-058 (dev server only, nothing in the production build); (4) add the owner test steps as docs/spikes/print/OWNER-TESTS.md. Then READY_FOR_QA.
+- 2026-10-09 10:46Z · dev · ADR 0003 now Accepted (D-24); docs/spikes/print trimmed to 332 KB (results.json + 3 PNGs, PDFs deleted and git-ignored); OWNER-TESTS.md added; prototype and tools kept. Test: cd tools/print-spike && npm test (4/4 pass, needs poppler). PDFs are still in the branch history: squash-merge.
 
 ### T-055 — [E03] Opaque list cursors: do not expose internal ids
 - **Status:** BACKLOG
