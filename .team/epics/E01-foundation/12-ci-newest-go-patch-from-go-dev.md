@@ -1,5 +1,7 @@
 # E01_T-062 — CI: get the newest Go patch straight from go.dev
 
+> **Priority raised to P1 (2026-10-09 02:45Z):** the `security` job (govulncheck, required by branch protection D-14) is red on every PR and on `develop` because `actions/setup-go` still resolves Go 1.26.8 hours after 1.26.9 shipped (re-run at 02:39Z still got 1.26.8). It blocks merging T-063 and everything after it. Fastest acceptable fix: resolve the newest patch from `https://go.dev/dl/?mode=json` as AC1 says; as an interim `go-version: 1.26.9` in `setup-go` also works because setup-go falls back to downloading from go.dev when the manifest lacks the version, but it needs a bump per patch, so do the AC1 mechanism.
+
 **Epic:** E01-foundation · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** high · **Priority:** P3 · **Type:** tech-debt
 
 #### Description

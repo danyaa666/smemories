@@ -1,5 +1,7 @@
 # E04_T-018 — Web: public anonymous notes form
 
+> **From T-034 round 2 (2026-10-09):** above the connection caps the server answers `503 busy` **without draining the request body**, so a browser can see a network error instead of the 503. The form must treat a network error on submit exactly like a 503 (keep the answers and photos, show the retry message, retry after a random 2-6 s). The `website` honeypot part wins wherever it appears in the multipart body; `answers` after the photos is `400 invalid_body`.
+
 > **E10 contract note (2026-10-09, D-25..D-27):** build on the v2 API contract and database conventions (`docs/api-contract.md`, `docs/db-conventions.md`, `docs/go-conventions.md`); where this spec names `/v1/...` paths, old error codes, RFC 3339 times or `cursor`, use the v2 equivalents (route map: `docs/api-contract.md` section 8). Epic: `.team/epics/E10-skills-alignment/PRD.md`.
 
 **Epic:** E04-friends-notes · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** low · **Priority:** P1 · **Type:** feature
