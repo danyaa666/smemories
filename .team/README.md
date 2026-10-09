@@ -10,17 +10,17 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 34 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-044, T-049, T-050, T-055, T-056, T-058, T-059, T-060, T-061, T-062, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073 |
+| BACKLOG | 33 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-044, T-049, T-050, T-055, T-056, T-058, T-059, T-060, T-061, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073 |
 | TODO | 6 | T-034, T-048, T-052, T-053, T-054, T-057 |
-| IN_PROGRESS | 1 | T-063 |
+| MERGED | 2 | T-062, T-063 |
 | DONE | 26 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-035, T-036, T-037, T-038, T-043, T-045, T-046, T-047, T-051 |
 | CANCELLED | 6 | T-014, T-019, T-039, T-040, T-041, T-042 |
 
-**Awaiting your review (MERGED):** nothing
+**Awaiting your review (MERGED):** T-062 ([E01] CI: get the newest Go patch straight from go.dev (no manifest lag)); T-063 ([E10] Foundation: apperr, v2 response helpers, request timeout and client-IP middleware, contract lint)
 
 **Open questions for you:** none
 
-_Board last written 2026-10-09 02:28Z_
+_Board last written 2026-10-09 03:03Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -289,6 +289,15 @@ Spike T-054 (PR #35, ADR docs/adr/0003-html-print-export.md): desktop Chromium p
 - **Answer:** Yes: use github.com/prometheus/client_golang (owner, 2026-10-09)
 
 be-golang requires request metrics (duration, status code), pool stats and rate-limit counters. We only have an access log. Options: (1) prometheus/client_golang, the de facto standard, small, works with CloudWatch agent / Grafana later (recommended); (2) stdlib expvar JSON, no dependency but no histograms and nothing reads it; (3) skip metrics until T-024 (go-live observability). Only T-073 waits; everything else in E10 continues.
+
+### Q-019 — Approve merge of T-062 (CI: newest Go patch from go.dev)?
+- **Status:** RESOLVED
+- **Asked:** 2026-10-09 02:54Z
+- **Blocks:** T-062,T-063
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+T-062 unblocks every merge: the required security job (govulncheck) is red on all PRs and develop because setup-go still gives Go 1.26.8. The PR adds a local composite action (no third-party action) that reads go.dev, validates go1.26.N and sets GOTOOLCHAIN; the Go toolchain is downloaded and checksum-verified by the go command. If go.dev is down it warns and keeps the setup-go version. QA passed after one rework (a malformed go.dev answer used to abort the step); CI is green with go1.26.9 in all three Go jobs. To approve: team approve T-062. After it merges I update T-063's branch (green security job) and merge T-063.
 
 <!-- questions:end -->
 
@@ -2022,7 +2031,7 @@ Redis sliding-window limiter with Take and Refund replacing the in-memory one ev
 - **Branch:** task/t-054-spike-html-templates-and-browser-print-t
 - **PR:** https://github.com/danyaa666/smemories/pull/35
 - **Updated:** 2026-10-09 02:28Z by leader
-- **Comments-seen:** 0
+- **Comments-seen:** 3
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/06-spike-browser-print-to-pdf.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2198,19 +2207,19 @@ Pick a template for the page size, print with per-browser guidance, anonymous wo
 #### Comments
 
 ### T-062 — [E01] CI: get the newest Go patch straight from go.dev (no manifest lag)
-- **Status:** BACKLOG
-- **Priority:** P3
+- **Status:** MERGED
+- **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
 - **Depends-on:** T-033
 - **Risk:** high
-- **Rework:** 0
-- **Owner-approved:** —
+- **Rework:** 1
+- **Owner-approved:** yes
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
-- **Comments-seen:** 0
+- **Branch:** task/t-062-e01-ci-get-the-newest-go-patch-straight-
+- **PR:** https://github.com/danyaa666/smemories/pull/37
+- **Updated:** 2026-10-09 02:59Z by leader
+- **Comments-seen:** 8
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/12-ci-newest-go-patch-from-go-dev.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2219,9 +2228,31 @@ Pick a template for the page size, print with per-browser guidance, anonymous wo
 CI resolved Go 1.26.8 while 1.26.9 (ten stdlib vulnerability fixes) was out, turning the security job red for hours; take the newest patch from go.dev directly.
 
 #### Comments
+- 2026-10-09 02:41Z · leader · Priority raised to P1 and moved to TODO: the security job is red on every PR (setup-go still resolves 1.26.8 although 1.26.9 is out), which blocks all merges under D-14. See the note at the top of the spec.
+- 2026-10-09 02:47Z · dev · Composite action .github/actions/go-newest-patch after setup-go in go/go-integration/security; docs/ci.md updated. PR run 37875888193: go1.26.9 in all 3 jobs, govulncheck clean, 4 checks green. Fallback tested locally (bad host, non-JSON, bad minor): warning + setup-go result. QA: simulate bad URL in the action.
+- 2026-10-09 02:48Z · qa · 1 blocker, rest passes.
+  1. BLOCKER (AC1 fallback): a malformed answer from go.dev (HTML outage page, non-JSON, or a JSON object instead of an array) FAILS the step instead of warning and falling back. Cause: GitHub runs composite 'shell: bash' as 'bash --noprofile --norc -e -o pipefail' (visible in the PR run log), so in action.yml the line want="$(printf ... | jq ... 2>/dev/null | sort -V | tail -n 1)" returns jq's exit 5 (parse error) and -e aborts the step before the 'else ::warning' branch. 'set -uo pipefail' does not turn -e off. Repro (exact runner flags): extract the run script of .github/actions/go-newest-patch/action.yml, point the URL at a file with content '<html>503</html>' (or 'not json', or '{"a":1}'), then: GITHUB_ENV=/tmp/e MINOR=1.26 GOTOOLCHAIN=local bash --noprofile --norc -e -o pipefail script.sh -> rc=5, no warning, no go version line. Same script with 'bash +e' gives the warning+fallback, which is probably how dev tested it. Expected: ::warning ... and the step succeeds with the setup-go result (rc=0). Suggested fix: make the lookup failure-tolerant, e.g. append '|| true' to the want="$(...)" assignment (or 'set +e' at the top), then re-test with -e -o pipefail. A go.dev 200 with an HTML error page is a realistic outage mode, so this matters for a required check.
+  Verified OK:
+  - CI on PR head bb5cad8: go, go-integration, security, web all pass. Run 37875888193 logs: setup-go gave go1.26.8 in all three jobs, the new step selected go1.26.9 (go: downloading go1.26.9, go version go1.26.9) in go, go-integration and security: AC2 and the 'run on a PR shows resolved patch' part of AC3 OK. govulncheck 'No vulnerabilities found'; golangci-lint '0 issues'.
+  - GOTOOLCHAIN handling: setup-go leaves GOTOOLCHAIN=local; the step overrides it through GITHUB_ENV, later steps show GOTOOLCHAIN: go1.26.9, golangci-lint (install-mode goinstall) and 'go run govulncheck@v1.8.0' both worked in the log. No ci.yml step hardcodes GOTOOLCHAIN.
+  - Local script runs (real curl+jq, runner flags): real go.dev -> go1.26.9; unreachable host and 404 -> warning, rc=0, no env written; empty array [] -> warning; minor mismatch (1.99) -> warning; injected MINOR ('1.26; echo pwned', '1x26', empty) -> rejected with warning, nothing executed; fixture with 1.26.9, 1.26.10, 1.26.11rc1 (stable:false), go1.26rc1, 1.27.1, 1.2.99 -> go1.26.10 (sort -V numeric, rc/unstable/other minors ignored). Only the malformed-body cases fail (issue 1).
+  - AC4: no third-party action added; the new action is local (./.github/actions/go-newest-patch), existing actions untouched and still SHA-pinned.
+  - docs/ci.md: mechanism, warning text, re-run guidance and local debug accurate against the code, EXCEPT it promises that an unexpected answer from go.dev gives a warning and keeps the job going, which issue 1 breaks; no doc change needed once fixed.
+  - Scope: go.mod untouched, govulncheck not weakened.
+  Re-test after fix: rerun the three malformed repros above with -e -o pipefail plus a PR CI run; priority P1 so a quick turnaround is wanted.
+- 2026-10-09 02:53Z · dev · Rework 1, QA blocker 1 fixed: action now does set +e before the lookup, so jq parse error / HTML page / JSON object reach the ::warning branch (rc 0). Covered by scripts/test-go-newest-patch.sh [--live], which runs the extracted script with bash --noprofile --norc -e -o pipefail: 10 fixture cases + real go.dev all ok; against the old script the 3 malformed-body cases fail. docs/ci.md points to it. PR run 37876450009 green (go1.26.9 in all 3 jobs).
+- 2026-10-09 02:54Z · qa · Re-verification of rework 1, head f5c6248 (diff vs bb5cad8: set +e in action.yml, scripts/test-go-newest-patch.sh, docs/ci.md line).
+  AC1 fallback: my 3 earlier repros (<html>503</html>, 'not json', {"a":1}) run with 'bash --noprofile --norc -e -o pipefail' now print ::warning, run go version, rc=0, nothing written to GITHUB_ENV (was rc=5).
+  Test script: scripts/test-go-newest-patch.sh --live -> 11/11 ok, rc=0 (newest patch picks go1.26.10 from fixture; html, non-JSON, object, empty array, empty body, minor mismatch, missing file, bad host, invalid MINOR all warn+rc 0; real go.dev matches). Mutation check: replacing 'set +e' with 'set -o pipefail' makes the script report 3 FAILs, so it really guards the bug (change reverted, worktree clean).
+  CI on PR head f5c6248 (run 37876450009): go, go-integration, security, web all pass. setup-go gave go1.26.8, the step selected go1.26.9 and 'go version go1.26.9' in go, go-integration and security (AC2, AC3 PR proof); govulncheck 'No vulnerabilities found'; golangci-lint '0 issues'.
+  AC4: no new third-party action, local composite action only. AC3 docs: docs/ci.md matches code and now points to the test script. Scope: go.mod untouched, govulncheck not weakened.
+  Non-blocking: with set +e, a failing toolchain download is caught only because 'go version' is the last command (its rc ends the step); keep it last. test script strips the 'go version' line via sed, fine for a fixture test.
+- 2026-10-09 02:54Z · leader · Leader review OK (head f5c6248 = QA head, CI green, +test script, no third-party action, composite writes GITHUB_ENV only after the go1.26.N regex check; toolchain is fetched and verified by the go command via the checksum database). Awaiting owner approval: .github/actions/go-newest-patch/action.yml and the 3 uses: lines in ci.yml.
+- 2026-10-09 02:59Z · human · owner approved merge
+- 2026-10-09 02:59Z · leader · merged 0c1e2d4. Review: composite action validates go1.26.N before writing GITHUB_ENV, falls back with a warning, toolchain verified by the go command; test script covers 10 cases under bash -e -o pipefail. For owner to check: first CI run on develop shows go1.26.9 in the go, go-integration and security jobs.
 
 ### T-063 — [E10] Foundation: apperr, v2 response helpers, request timeout and client-IP middleware, contract lint
-- **Status:** IN_PROGRESS
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** infra
 - **Milestone:** M1
@@ -2229,11 +2260,11 @@ CI resolved Go 1.26.8 while 1.26.9 (ten stdlib vulnerability fixes) was out, tur
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-063-e10-foundation-apperr-v2-response-helper
-- **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
-- **Comments-seen:** 0
+- **PR:** https://github.com/danyaa666/smemories/pull/36
+- **Updated:** 2026-10-09 03:02Z by leader
+- **Comments-seen:** 6
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/01-foundation.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2242,6 +2273,17 @@ CI resolved Go 1.26.8 while 1.26.9 (ten stdlib vulnerability fixes) was out, tur
 Adds the tools the rest of E10 uses: the typed error package, the v2 envelope helpers with the path-based switch, Unix-ms JSON type, the contract lint test, the web client shim and dev proxy rule.
 
 #### Comments
+- 2026-10-09 02:33Z · dev · apperr, httpx v2 helpers + /api path switch, Timeout/WithTimeout, WithClientIP, contract lint (api/contract_lint_test.go + fixtures), web shim, vite rule. make lint/test and integration green. Flag: AC8 literal means /api/healthz (ApiStatus) is no longer rewritten in dev -> 404; leader to decide. Test: make test; go test ./api ./internal/httpx ./internal/apperr.
+- 2026-10-09 02:33Z · leader · Spec updated (AC8): the dev proxy must also rewrite /api/healthz and /api/readyz to /healthz and /readyz so the status badge keeps working; /api/v1 is rewritten as before, every other /api/... path is unchanged. Leader decision after the dev's report; dev applies it on the same branch before QA starts (not a rework).
+- 2026-10-09 02:34Z · dev · AC8 updated per leader: dev proxy now also rewrites /api/healthz and /api/readyz (commit c1dd96e, viteProxy.test.ts extended). make lint + web tests (109) green. PR #36 description updated incl. WriteTimeout note. Still READY_FOR_QA.
+- 2026-10-09 02:38Z · qa · QA_PASS. Worktree clean, nothing committed by QA. Head c1dd96e = PR head.
+  Checks: make lint OK (gofmt, vet, vet -tags integration, golangci-lint, eslint, tsc, i18n, api schema). go test -race -count=1 ./... OK. make test web: 109 tests OK. Integration (go test -race -count=1 -tags integration ./... with main .env + SMEM_REDIS_URL, local stack): all packages OK incl. auth 35s. Coverage apperr 100%, httpx 93.6%.
+  CI on PR head: go, go-integration, web green; security (govulncheck) RED but PRE-EXISTING and not from this PR: Go stdlib 1.26.8 vulns (GO-2026-6603..6617, fixed in 1.26.9) and the same job fails on every recent develop push (913704b, ddbe0e1, 495bd1b...). T-062 'newest Go patch' should pick up 1.26.9; leader decide whether to treat as blocker for merge.
+  AC1 apperr: tests + 100% cov; codes/HTTP table verified in code (10 predefined, no net/http import). AC2: ran real probes: cause text 'password=hunter2' wrapped in Internal -> client got generic 'internal server error', logged at ERROR with request_id+full error; Unavailable on deadline -> 503 ERROR_UNAVAILABLE generic; plain fmt error wrapping context.Canceled -> 500 ERROR_INTERNAL. AC3: real server (binary, port 18063): GET /api/nope -> 404 {status:ERROR_NOT_FOUND,request_id}; /v1/nope -> 404 old {error:{...}}; 2 MiB POST /v1/auth/login -> 413 payload_too_large old body; PUT /healthz -> 405 + Allow old body; unit TestPathSwitch covers /api 405+Allow, /api 413 ERROR_TOO_LARGE, /api panic 500 no stack/'kaboom' in body (logged), RequireUser 401 ERROR_UNAUTHORIZED, /apix not v2. TRANSITION(E10) comment present. AC4: SMEM_HTTP_REQUEST_TIMEOUT 0s/500ms/abc -> startup config error; 2s accepted. Probe with 300ms timeout: store-blocked handler got ctx.Done at 300ms; handler returning after deadline wrote nothing extra; WithTimeout(1s) route ran 600ms OK past the 300ms default. AC5: TestClientIP/TestRouterClientIPTrust (spoof w/o trust uses RemoteAddr, with trust last hop of last header, invalid ip falls back); auth tests unchanged and green incl. integration. AC6: TestOpenAPIContract passes; injecting a bad /api/x/get op into openapi.yaml made it FAIL listing 5 violations (reverted); TestContractLintFixtures asserts all 15 rules against contract_bad.yaml, good fixture clean, /v1 and /healthz not linted. AC7: vitest cases for v2 ok/error, 401/429 Retry-After, non-JSON body, ERROR_* -> legacy codes; upload helper uses unwrapSuccess/apiErrorFrom. AC8: regex checked in node: /api/v1/* -> /v1/*, /api/healthz,/api/readyz -> root (query kept), /api/v10/x, /api/healthzx, /api/auth/login, /apix/... unchanged; viteProxy.test.ts green. AC9: README links both docs (L171-172); no .team/ files in the diff.
+  Existing endpoints: real-server /v1/me -> 401 unauthenticated old envelope, /v1/auth/register invalid -> 400 invalid_email old envelope, /healthz and /readyz bodies unchanged.
+  Non-blocking: (1) GET list rule in lint triggers only for paths ending -list (matches the contract naming). (2) A /api handler that returns after the deadline without writing yields an empty 200 by design (AC4); handlers should check ctx.Err() as the helpers do. (3) /api/v1/... reaching Go directly (no edge) is 404 v2, expected until T-023.
+- 2026-10-09 02:41Z · leader · Leader review: code OK (QA_PASS, head c1dd96e matches). Merge is blocked only by the red security job (Go 1.26.8 vulns, not from this PR); will merge as soon as T-062 fixes CI or the job turns green.
+- 2026-10-09 03:02Z · leader · merged bb5143f. Review: apperr (100% cov), httpx v2 helpers + /api path switch, Timeout/WithTimeout, WithClientIP, contract lint with a bad fixture, web shim + proxy rule (incl. healthz/readyz); no existing endpoint changed; CI green on all 4 checks after T-062. For owner to check: README note for SMEM_HTTP_REQUEST_TIMEOUT, new test-only dependency gopkg.in/yaml.v3 in THIRD_PARTY_NOTICES.
 
 ### T-064 — [E10] DB conventions: yearbook and profile tables (no joins, no foreign keys, ms timestamps)
 - **Status:** BACKLOG
@@ -2494,3 +2536,5 @@ Adds request and pool metrics as be-golang requires; waits for Q-018 (library ch
 - 2026-10-09 — Owner asked to follow the skills in `.agents/skills`, check the code and refactor. Audit (`epics/E10-skills-alignment/AUDIT.md`), standards (`docs/api-contract.md`, `docs/db-conventions.md`, `docs/go-conventions.md`), decisions D-25 (API v2, full), D-26 (database, full, hard deletes kept), D-27 (layers inside domain packages, apperr). New epic E10 with T-063..T-073 in one lane (foundation, four DB tasks, four API tasks, sweep, metrics); T-013 and T-018 now wait for T-068. Q-018 asks for the metrics library. L-05 (timestamps) and L-07 (edge strips `/api`) superseded.
 - 2026-10-09 — Q-018 answered: the owner approved `github.com/prometheus/client_golang` for request metrics (T-073 is unblocked; it still waits for T-063).
 - 2026-10-09 — Owner asked for task codes with the epic prefix. `board.py` hard-codes `T-nnn` (headings, dependencies, branches), so ids are unchanged; every title now starts with `[E##]`, spec headers read `# E##_T-nnn`, and `.team/TASKS.md` lists tasks by epic as `E##_T-nnn` (tool: `.team/epic_index.py`).
+- 2026-10-09 — T-062 (CI takes the newest Go patch from go.dev; owner-approved, merged 0c1e2d4) and T-063 (E10 foundation: apperr, v2 helpers, timeout and client-IP middleware, contract lint; merged bb5143f) merged; both await owner acceptance. The required `security` job had been red on every PR because setup-go lagged Go 1.26.9; T-062 fixed it. T-063's QA found no issues; T-062 needed one rework (malformed go.dev answer aborted the step).
+
