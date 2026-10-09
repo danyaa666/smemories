@@ -39,8 +39,11 @@ average after a 15 s grace period, or more than 120 s in total is dropped with `
 sent only after the rest of the body has been read (same limits), so a browser shows the answer instead of a connection reset.
 
 **Disk sizing.** Worst case is `SMEM_PUBLIC_UPLOAD_MAX_CONNS` x 32 MiB = 1.5 GiB of temporary files (48 x 32 MiB), in practice far less. In production
-(T-022) the ephemeral storage of the task, or the volume behind `SMEM_UPLOAD_TMP_DIR`, must exceed that plus headroom. A process that is killed leaves
-its files behind; ephemeral storage is cleared on restart. Many-address floods are the job of the WAF and load balancer limits (T-031).
+(T-022) the ephemeral storage of the task, or the volume behind `SMEM_UPLOAD_TMP_DIR`, must exceed that plus headroom. A process that is killed (or whose drain
+is cut off) leaves its files behind: at start-up, before the listener accepts traffic, the API deletes every regular file named `smem-upload-*`
+directly in the spool directory (`SMEM_UPLOAD_TMP_DIR`, else the OS temp dir) that is older than 4 min (the 3 min route timeout plus 1 minute), so a live
+upload is never touched; sub-directories and symlinks are left alone, a failure is only a WARN, and one INFO line gives the count removed (T-074).
+Ephemeral storage is cleared on restart anyway. Many-address floods are the job of the WAF and load balancer limits (T-031).
 
 ## What was wrong, and the fix
 

@@ -21,6 +21,7 @@ import (
 	"net/http/httptest"
 	"net/textproto"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -1071,4 +1072,32 @@ func TestMediaBusyIsRefunded(t *testing.T) {
 	if want := submitPerIPHour - e.noteCount(); left != want {
 		t.Fatalf("%d hourly submissions left, want %d: busy answers were counted", left, want)
 	}
+}
+
+// AC2: a file left by an upload that never got to clean up is removed when a new Handler starts on the same
+// directory, but the file of an upload still arriving (fresh) is not.
+func TestSweepSpoolAtStartup(t *testing.T) {
+	e := newEnv(t)
+	l := e.newOpenLink()
+	srv := e.serve()
+	conn := e.stall(srv, l.token, "10.0.0.1", 100)
+	e.waitFor("upload in progress", func() bool { return e.inProgress() == 1 && len(e.spooled()) == 1 })
+
+	next := NewHandler(NewStore(e.db), e.svc, 10<<20, nil, nil, nil, e.nh.logger, e.now)
+	next.SetUploadLimits(defaultUploadConns, defaultUploadsPerIP, e.tmp)
+	if n := next.SweepSpool(); n != 0 || len(e.spooled()) != 1 {
+		t.Fatalf("a live upload's file was swept (removed %d)", n)
+	}
+	// the process dies: the handler never runs its cleanup; the file ages
+	name := filepath.Join(e.tmp, e.spooled()[0].Name())
+	aged := time.Now().Add(-spoolMaxAge - time.Minute)
+	if err := os.Chtimes(name, aged, aged); err != nil {
+		t.Fatal(err)
+	}
+	if n := next.SweepSpool(); n != 1 {
+		t.Fatalf("removed %d, want 1", n)
+	}
+	e.noSpool()
+	_ = conn.Close()
+	e.waitFor("slot released", func() bool { return e.inProgress() == 0 })
 }
