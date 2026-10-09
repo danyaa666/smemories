@@ -11,18 +11,17 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 34 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-044, T-050, T-055, T-056, T-058, T-059, T-060, T-061, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075 |
-| TODO | 1 | T-049 |
-| READY_FOR_QA | 1 | T-054 |
+| IN_PROGRESS | 1 | T-049 |
 | QA_PASS | 3 | T-052, T-053, T-057 |
-| MERGED | 2 | T-034, T-048 |
+| MERGED | 3 | T-034, T-048, T-054 |
 | DONE | 28 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-035, T-036, T-037, T-038, T-043, T-045, T-046, T-047, T-051, T-062, T-063 |
 | CANCELLED | 6 | T-014, T-019, T-039, T-040, T-041, T-042 |
 
-**Awaiting your review (MERGED):** T-034 ([E04] Public note submission (text and photos)); T-048 ([E02] Email one-time codes replace verification and reset links (API) with a dev-only fixed code)
+**Awaiting your review (MERGED):** T-034 ([E04] Public note submission (text and photos)); T-048 ([E02] Email one-time codes replace verification and reset links (API) with a dev-only fixed code); T-054 ([E05] Spike: HTML templates and browser print-to-PDF instead of server rendering)
 
 **Open questions for you:** Q-022 (Approve merge of T-052 (login sessions in Redis, drop sessions table)?); Q-023 (Approve merge of T-057 (print-size photos 1800 px + backfill)?); Q-024 (Approve merge of T-053 (rate limiters in Redis)?)
 
-_Board last written 2026-10-09 11:15Z_
+_Board last written 2026-10-09 11:18Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -1983,7 +1982,7 @@ CI on develop failed once on TestGoogleConcurrentCallbacksCreateOneAccount: goog
 - 2026-10-09 04:28Z · leader · merged bb6709a. Review: Lua check+attempt script, HMAC with 32-byte key, decoy for unknown emails, fail-closed on Redis down, dev fixed code 123123 guarded (env dev/test, refuses start otherwise, DEV-SHORTCUT(otp) tags registered); migration 0011 drops email_tokens. QA passed twice (second after the T-034 merge). For owner to check: .env.example SMEM_OTP_KEY, docs/auth-otp.md, docs/dev-shortcuts.md. Web code-entry screens are T-049; until then UI sign-up verification uses the removed link flow.
 
 ### T-049 — [E02] Web: code entry screens for email verification and password reset
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -1991,10 +1990,10 @@ CI on develop failed once on TestGoogleConcurrentCallbacksCreateOneAccount: goog
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-049-e02-web-code-entry-screens-for-email-ver
 - **PR:** —
-- **Updated:** 2026-10-09 11:15Z by leader
+- **Updated:** 2026-10-09 11:15Z by dev
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/09-web-email-code-screens.md`
@@ -2157,7 +2156,7 @@ Redis sliding-window limiter with Take and Refund replacing the in-memory one ev
 - 2026-10-09 10:53Z · leader · Leader review OK at head caf2ea4 (= QA head, CI green, no .team changes). Atomic sliding-window script on the Redis clock, per-limiter fail policy (4 guessing limiters closed, 12 open with one ERROR/min), emails hashed in keys, refunds, make reset-limits. When T-052 (#39) merges first, this branch needs a develop merge (9 files, textual: NewService takes sessions and limiters, regenerate schema.d.ts); fix while there: api/openapi.yaml should list limiter_unavailable among the 503s of /v1/auth/login and /v1/auth/reset-password (and every endpoint where a closed limiter applies). Awaiting owner approval.
 
 ### T-054 — [E05] Spike: HTML templates and browser print-to-PDF instead of server rendering
-- **Status:** READY_FOR_QA
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** spike
 - **Milestone:** M1
@@ -2168,7 +2167,7 @@ Redis sliding-window limiter with Take and Refund replacing the in-memory one ev
 - **Assignee:** —
 - **Branch:** task/t-054-spike-html-templates-and-browser-print-t
 - **PR:** https://github.com/danyaa666/smemories/pull/35
-- **Updated:** 2026-10-09 10:46Z by dev
+- **Updated:** 2026-10-09 11:18Z by leader
 - **Comments-seen:** 4
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/06-spike-browser-print-to-pdf.md`
@@ -2182,6 +2181,16 @@ Prototype two designs as HTML/CSS pages printed through the browser (Save as PDF
 - 2026-10-08 15:17Z · leader · Spike done (PR #35, ADR 0003). Waiting for the owner's phone and Safari tests (Q-017) before D-24; do not merge the PDFs (11 MB) until the decision, then keep only the ADR and a few evidence files.
 - 2026-10-09 01:42Z · leader · Leader: D-24 decided (build it). Please: (1) keep docs/adr/0003-html-print-export.md and set its status to Accepted (owner decision D-24, the owner will test Safari, Android Chrome and iOS Safari and report); (2) trim docs/spikes/print to at most 1 MiB in total (keep results.json and 2 or 3 small evidence images, drop the large PDFs; the Playwright check regenerates them); (3) keep web/src/spike/print and tools/print-spike as the starting point of T-058 (dev server only, nothing in the production build); (4) add the owner test steps as docs/spikes/print/OWNER-TESTS.md. Then READY_FOR_QA.
 - 2026-10-09 10:46Z · dev · ADR 0003 now Accepted (D-24); docs/spikes/print trimmed to 332 KB (results.json + 3 PNGs, PDFs deleted and git-ignored); OWNER-TESTS.md added; prototype and tools kept. Test: cd tools/print-spike && npm test (4/4 pass, needs poppler). PDFs are still in the branch history: squash-merge.
+- 2026-10-09 11:17Z · qa · AC evidence (all produced by me in worktree at PR head; CI go/go-integration/security/web all pass): 
+  1. ADR docs/adr/0003-html-print-export.md: Status line = Accepted (D-24); every relative link resolves (OWNER-TESTS.md, 0002-pdf-engine.md, 3 PNGs exist). 
+  2. docs/spikes/print = 332 KB (du -sk), 4 tracked files (results.json, 3 PNG) + OWNER-TESTS.md; .gitignore has docs/spikes/print/*.pdf; after npm test, git status clean (no PDF leaked). 
+  3. OWNER-TESTS.md: setup URL works (vite dev serves /spike/print?design=memory&size=a5&lang=vi -> 200; params design/size/lang/scale verified in PrintSpike.tsx and sheet.tsx; vite default port 5173), per-browser steps for Safari desktop, Android Chrome, iOS Safari, a result table with all matrix columns. Understandable by a non-developer. 
+  4. cd tools/print-spike && npm ci && npm test: 4/4 pass (24 pages, 30 photos, A5/A4/Letter, classic 4 pages). 
+  5. Prototype dev-only: App.tsx gates lazy import on import.meta.env.DEV; make build -> web/dist has only index js/css (384K), grep for spike/Gaegu/photo-01 in dist = no hits, no woff2 refs. 
+  6. make lint build test: all exit 0 (go race tests, web 83/83). 
+  7. git diff origin/develop...HEAD has no .team/ paths. 
+  Non-blocking: OWNER-TESTS says classic 4 or 5 pages, test asserts 4 on A5 (fine). Branch history contains ~11 MB PDFs: leader must squash-merge. I did not run browsers other than Playwright Chromium; Safari/Android/iOS remain owner tests by design.
+- 2026-10-09 11:18Z · leader · merged 85733f9 (squash, so the 11 MB of PDFs stay out of history). Review: ADR 0003 Accepted, evidence trimmed to 332 KB, PDFs gitignored, prototype only in the dev server (not in dist). For owner to check: docs/spikes/print/OWNER-TESTS.md, the phone/Safari tests are yours (D-24).
 
 ### T-055 — [E03] Opaque list cursors: do not expose internal ids
 - **Status:** BACKLOG
