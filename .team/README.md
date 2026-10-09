@@ -10,16 +10,16 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 24 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-044, T-049, T-050, T-055, T-056, T-058, T-059, T-060, T-061, T-062 |
-| TODO | 6 | T-034, T-048, T-052, T-053, T-054, T-057 |
+| BACKLOG | 34 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-044, T-049, T-050, T-055, T-056, T-058, T-059, T-060, T-061, T-062, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073 |
+| TODO | 7 | T-034, T-048, T-052, T-053, T-054, T-057, T-063 |
 | DONE | 26 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-035, T-036, T-037, T-038, T-043, T-045, T-046, T-047, T-051 |
 | CANCELLED | 6 | T-014, T-019, T-039, T-040, T-041, T-042 |
 
 **Awaiting your review (MERGED):** nothing
 
-**Open questions for you:** none
+**Open questions for you:** Q-018 (Metrics library for request metrics (T-073): Prometheus client?)
 
-_Board last written 2026-10-09 01:44Z_
+_Board last written 2026-10-09 02:12Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -68,6 +68,7 @@ _Board last written 2026-10-09 01:44Z_
 | E07-class-yearbook | [PRD](epics/E07-class-yearbook/PRD.md) | M3 | Class spaces, roles, invites and assembly | planned |
 | E08-designer-templates | [PRD](epics/E08-designer-templates/PRD.md) | M1 | Claude Design canvases become system templates (US Letter, pilot of two, then six more) | planned |
 | E09-customisation-editor | [PRD](epics/E09-customisation-editor/PRD.md) | M1b, M4 | Guided customisation and the Canva-style editor (staged, D-19) | planned (sketch) |
+| E10-skills-alignment | [PRD](epics/E10-skills-alignment/PRD.md) | M1 | Align API, database, layering and errors with the backend skills (D-25..D-27) | planned (T-063..T-073) |
 
 **M0 exit.** From a clean checkout: `make up && make migrate` starts MySQL and MinIO; `make build test lint` is green; `GET /healthz` is 200 and `GET /readyz` reflects the database; the web dev server shows the home page with a working EN/VI switcher and an API status badge; CI is green on a PR; the PDF engine ADR is merged with a go/no-go verdict backed by a Vietnamese-text sample, 300 DPI image test and a memory/time measurement; no secrets in the repo.
 
@@ -277,6 +278,15 @@ QA passed and my review is clean (head ef6bee0, CI green). High risk only becaus
 
 Spike T-054 (PR #35, ADR docs/adr/0003-html-print-export.md): desktop Chromium prints the 24-page, 30-photo book exactly (A5, A4, Letter; 4.1 MB, 1.3 s, fonts embedded, Vietnamese text extractable); Firefox prints with caveats (tiled gradients turn black, 30.8 MB file); Safari, Android Chrome and iOS Safari were NOT tested (no devices). The steps for you are in the ADR (step 3 Safari desktop, 4 Android Chrome, 5 iOS Safari): open http://<your computer's address>:5173/spike/print with npm run dev -- --host on the same network, try Print / Save as PDF with A5 and A4, and report: page count, paper size honoured, backgrounds on, did the tab survive 24 pages with 30 photos. Reply with what you saw (a sentence per device is enough).
 
+### Q-018 — Metrics library for request metrics (T-073): Prometheus client?
+- **Status:** OPEN
+- **Asked:** 2026-10-09 02:12Z
+- **Blocks:** T-073
+- **Recommendation:** Yes: github.com/prometheus/client_golang, text endpoint on a separate internal address (default off)
+- **Answer:** _(pending)_
+
+be-golang requires request metrics (duration, status code), pool stats and rate-limit counters. We only have an access log. Options: (1) prometheus/client_golang, the de facto standard, small, works with CloudWatch agent / Grafana later (recommended); (2) stdlib expvar JSON, no dependency but no histograms and nothing reads it; (3) skip metrics until T-024 (go-live observability). Only T-073 waits; everything else in E10 continues.
+
 <!-- questions:end -->
 
 ## 4. Architecture & decision log
@@ -309,6 +319,9 @@ Owner decisions (2026-10-06, `/team-init` interview). "Rejected" lists the optio
 | D-22 | **Email verification and password reset use 6-digit one-time codes typed by the student, not emailed links; a dev-only fixed code `123123` exists and must be deleted before production.** | Owner answers in chat 2026-10-08. Replaces the link design of T-007 (nothing is in production). Codes are stored as HMAC-SHA256 with a server key, valid 30 min (verify) or 15 min (reset), 5 wrong attempts lock a code, plus per-user and per-IP limits (T-048, web T-049). The dev code is `SMEM_DEV_FIXED_OTP=123123`, honoured only when `SMEM_ENV` is `dev` or `test`; the API refuses to start otherwise if it is set. Every such shortcut is tagged `DEV-SHORTCUT`, listed in `docs/dev-shortcuts.md`, and removed by T-050, a prerequisite of the first deploy (T-023); the rule is in CLAUDE.md. | Keep links with a dev shortcut; links and codes together | Phones prove awkward with codes, or a provider needs links (then add magic links beside codes) |
 | D-23 | **All time-limited data lives in Redis (Valkey locally; Redis-protocol compatible): login sessions, the 6-digit email codes with their attempt counters, and every rate limiter.** | Owner request in chat 2026-10-08. Native expiry replaces purge jobs; limiters become correct across several API tasks. MySQL keeps everything durable (users, identities, yearbooks, notes, media metadata, collection links). Local and CI run Valkey 8 pinned by digest (BSD licence; the code uses only the Redis protocol, client `github.com/redis/go-redis/v9`). Policy: sessions and OTP attempts fail closed (503) when Redis is down; other limiters fail open with an ERROR log; Redis runs with `noeviction` and AOF `everysec` so memory pressure fails writes loudly and a restart keeps sessions. Nothing is in production, so no data migration: the `sessions` table and the planned `email_codes` table are not kept. Tasks T-051 (foundation), T-052 (sessions), T-053 (limiters); T-048 writes codes straight to Redis. AWS: ElastiCache (Valkey or Redis OSS) with a cost estimate agreed with the owner in T-023. | Keep MySQL tables with purge jobs; Redis only for rate limits | Sessions must be queryable (device list) beyond a simple index, or the ElastiCache cost is unacceptable |
 | D-24 | **Export is browser print of HTML templates (the page's Print / Save as PDF), not server-side PDF rendering; the Go renderer stays as a fallback and is not extended.** | Owner answer in chat 2026-10-09 to Q-017: "just build it, I will test it myself and give you result". Basis: spike T-054 and ADR 0003 (desktop Chromium prints the 24-page book with 30 photos exactly: 4.1 MB, 1.3 s, fonts embedded, Vietnamese extractable; Firefox has black tiled gradients; Safari, Android Chrome and iOS Safari untested). The owner tests the phone and Safari cells and reports; if a device class fails, the same templates are rendered by headless Chromium on the server (exit path in the ADR; would reverse D-12 for that path and needs its own decision). Consequences: templates are React components fed by one owner-only book endpoint (T-056), photos get a print size (T-057), the designer canvases become components instead of Go specs (T-059, T-060); T-014, T-019 and the E08 import pipeline (T-039..T-042) are cancelled. T-010 and T-038 stay in the code as fallback. | Keep the Go renderer as the main path | The owner's device tests fail on a device class that matters (then add server-side headless Chromium for it) |
+| D-25 | **Client API follows the `be-api-design` skill: `/api/<namespace>/<action>`, GET/POST only, envelope `{status,data}` / `{status,error_message,request_id}`, `ERROR_*` codes, Unix-ms timestamps, `limit`/`next_id` pagination, every operation documented in `api/openapi.yaml` (enforced by a test).** | Owner answer in chat 2026-10-09 ("follow skills in /.agents ... refactor them"; chose full adoption). Cheapest now: nothing is in production. HTTP status codes are kept alongside the envelope (browsers and the edge need them); ULID `public_id` strings stay as ids; a birthday stays a `YYYY-MM-DD` date; `/healthz` and `/readyz` stay outside. Domains move one at a time behind a path-based envelope switch (`/api/...` = v2, `/v1/...` = old), so develop and the web app stay working. Standard: `docs/api-contract.md` (includes the old-to-new route map). Supersedes L-07 and the error-envelope line in section 5. Epic E10: T-063, T-068..T-071. Owner action: register the new Google redirect URI before T-071 is deployed. | Keep REST `/v1` and adopt only the documentation rules | Never (a later change would be a breaking change on a live API) |
+| D-26 | **Database follows the `be-rldb` skill: `_tab` tables, `BIGINT UNSIGNED AUTO_INCREMENT` ids, `created_at`/`updated_at` as BIGINT Unix ms on every table, no foreign keys, no ENUM, indexed reference columns, goose Up/Down; new migrations are timestamp-named.** | Owner answer 2026-10-09 ("align fully before launch"). Integrity moves into Go: the parent's service deletes children in one transaction through small purger interfaces, proven by a zero-rows test per domain. Joins are replaced by one `IN` query per relation. **Interpretation to confirm:** the skill describes soft deletes (`deleted_at BIGINT`) for features that use them; no feature does, and user-requested deletion stays a hard delete for privacy, so no table gets `deleted_at` now. A birthday stays `DATE`. Existing migration files `0001`..`0009` are not renamed. Standard: `docs/db-conventions.md`. Supersedes the timestamp part of L-05. Tasks T-064..T-067 (high risk, owner approves each). | Keep the schema and record the deviations; soft-delete every table | A feature needs undelete or an audit trail (then a decision record for that table) |
+| D-27 | **`.agents/skills/be-*` are the team's backend standard; three layers (handler -> service -> store) inside each domain package; typed errors in `internal/apperr`; deviations only as listed in `docs/go-conventions.md`.** | Owner answer 2026-10-09 ("3 layers inside each domain package"). Not adopted because the stack differs: GORM (L-11 stands), gin (L-01 stands), proto/gRPC, the private `go-common` library (replaced by `internal/apperr` and `internal/httpx`), `idgen` (ULID), ClickHouse, Elasticsearch, Kafka. D-23 keeps sessions fail-closed although be-architect prefers a DB fallback for caches. Lint (`mnd`, `forbidigo`) makes the rules mechanical in T-072; metrics (T-073) wait for Q-018. Audit: `.team/epics/E10-skills-alignment/AUDIT.md`. Dev and QA read the skills from the main checkout (`.agents/skills/`). | Move to `internal/controller|modules|adapter` (large import churn, conflicts with queued tasks) | The domain packages grow past about 500 lines per layer file, or a second binary needs the services |
 
 Leader decisions (low-risk, inside the approved stack):
 
@@ -318,9 +331,9 @@ Leader decisions (low-risk, inside the approved stack):
 | L-02 | API contract is a hand-written `api/openapi.yaml` (OpenAPI 3.1); TS types generated with `openapi-typescript`; Postman collection per epic in `postman/`. | One contract both sides read; keeps FE/BE from drifting. |
 | L-03 | Web: react-router, TanStack Query, react-i18next, Vitest + Testing Library, `pdfjs-dist` for the preview; Playwright for the M1 E2E smoke; system font stack (handles Vietnamese). | Mainstream choices with the best agent support. pdf.js (not an `<iframe>`) because phone browsers do not show embedded PDFs. |
 | L-04 | Repo layout: `cmd/<binary>/`, `internal/<domain>/`, `migrations/`, `api/`, `postman/`, `web/`, `docs/`, `docker-compose.yml`, `Makefile`. | One Go module at the root, one Vite app in `web/`. |
-| L-05 | IDs: `BIGINT UNSIGNED AUTO_INCREMENT` primary keys internally; every externally visible id is an opaque ULID (`CHAR(26)`, unique). Timestamps are `DATETIME(6)` in UTC. | No enumerable ids in URLs; cheap joins. |
+| L-05 | IDs: `BIGINT UNSIGNED AUTO_INCREMENT` primary keys internally; every externally visible id is an opaque ULID (`CHAR(26)`, unique). Timestamps are `DATETIME(6)` in UTC. **Timestamps superseded by D-26 (BIGINT Unix ms); the ULID public id stays.** | No enumerable ids in URLs; cheap joins. |
 | L-06 | Risk calibration: **high** = auth, anything personal-data-bearing and public, file uploads, new core dependency, infra/CI/secrets, migrations that change existing data. Greenfield **additive** migrations before the first production deploy are **low** (no data to lose). | Keeps owner approvals for what can really hurt, not for every table. |
-| L-07 | HTTP paths: infrastructure routes `/healthz` and `/readyz` at the root; business routes under `/v1/…`. The web app calls the API at `/api/*` on its own origin and the edge strips `/api` (Vite proxy in dev, CloudFront in M2). Same origin means a `SameSite=Lax` session cookie works and no CORS is needed. | Simplest secure cookie setup; one place (the edge) owns the prefix. |
+| L-07 | HTTP paths: infrastructure routes `/healthz` and `/readyz` at the root; business routes under `/v1/…`. The web app calls the API at `/api/*` on its own origin and the edge strips `/api` (Vite proxy in dev, CloudFront in M2). Same origin means a `SameSite=Lax` session cookie works and no CORS is needed. **Superseded by D-25: business routes are `/api/<namespace>/<action>` served by the API itself, and the edge forwards `/api/*` unchanged (during E10 only `/api/v1` is rewritten to `/v1`).** | Simplest secure cookie setup; one place (the edge) owns the prefix. |
 | L-08 | Dev/CI object store: MinIO through the frozen image `bitnamilegacy/minio:2025.4.22-debian-12-r2`, loopback-only, no real data. | MinIO stopped publishing images on Docker Hub and Quay. The frozen image gets no security patches, which is acceptable for a dev-only, loopback-only store; it is also the last release with a working web console (T-002 AC8). The app uses only the S3 API via aws-sdk-go-v2, so the store is swappable. Replacement tracked in T-029. |
 | L-09 | Auth dependencies and Unicode rule: `golang.org/x/crypto` (argon2id) and `golang.org/x/text` approved. Passwords are normalised to NFKC and display names to NFC before validation and hashing/verification. | The same Vietnamese password can arrive as NFC or NFD from different devices and keyboards; normalising once, before any user exists, prevents lock-outs. NIST SP 800-63B recommends NFKC/NFKD. Changing this after users exist would break their logins. |
 | L-10 | Go toolchain: `go.mod` keeps `go 1.26.0` as the minimum, but CI and production images build with the newest 1.26 patch release. | At exactly go1.26.0 `govulncheck` reports 11 reachable standard-library vulnerabilities; the current patch has none. Raising the `go` directive would force every dev machine to download a newer toolchain for no benefit, while the vulnerable code only matters in what we ship. The Dockerfile (T-022) must follow the same rule. |
@@ -331,7 +344,8 @@ Leader decisions (low-risk, inside the approved stack):
 
 - **Build:** `make build` (Go build + web build). **Test:** `make test` (Go `-race` unit tests + vitest). **Integration:** `make test-integration` (needs `make up`). **Lint:** `make lint` (gofmt check, `go vet`, golangci-lint, eslint, `tsc --noEmit`, i18n parity). These targets are created by T-001, T-002, T-003 and mirrored in `.team/config.json`.
 - **Branches:** `task/t-<id>-<slug>`, one per task, PR to `develop`, squash-merged by the leader; the owner promotes `develop` → `main` with `bin/team promote`.
-- **API errors:** always `{"error":{"code":"snake_case_code","message":"English text for logs","request_id":"…"}}` with the right HTTP status. Codes are the contract; the client localises messages.
+- **API errors:** new (v2) endpoints: `{"status":"ERROR_CODE","error_message":"English text for logs","request_id":"…"}` with the right HTTP status (`docs/api-contract.md`, D-25); endpoints still under `/v1` keep `{"error":{"code":"snake_case_code","message":…,"request_id":…}}` until their E10 task moves them. Codes are the contract; the client localises messages.
+- **Engineering standards (D-25..D-27):** `docs/api-contract.md`, `docs/db-conventions.md`, `docs/go-conventions.md`, based on the skills in `.agents/skills/be-*`. Every Go, SQL and API change follows them; the Definition of done includes the checklists in those files.
 - **Data:** UTF-8 everywhere (`utf8mb4`), UTC timestamps, opaque ULIDs outside the database, no PII in logs, secrets only from environment variables.
 - **i18n:** every user-visible string lives in `web/src/locales/{en,vi}.json`; both files get the key in the same PR.
 - **Definition of done:** acceptance criteria met; tests written and green; build + lint green; `api/openapi.yaml` and the Postman collection updated for any HTTP change; PR open; QA_PASS; leader review passed.
@@ -826,14 +840,14 @@ Owner-created private collection links (create, list, revoke) and the public loo
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
-- **Depends-on:** T-034
+- **Depends-on:** T-034,T-068
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-06 10:13Z by leader
+- **Updated:** 2026-10-09 02:12Z by leader
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/03-notes-moderation-api-approve-hide-reorder.md`
@@ -974,14 +988,14 @@ Create/copy/revoke the collection link, set a deadline, see submissions grouped 
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
-- **Depends-on:** T-003, T-034
+- **Depends-on:** T-003,T-034,T-068
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-06 10:13Z by leader
+- **Updated:** 2026-10-09 02:12Z by leader
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/05-web-public-anonymous-notes-form.md`
@@ -2203,6 +2217,259 @@ CI resolved Go 1.26.8 while 1.26.9 (ten stdlib vulnerability fixes) was out, tur
 
 #### Comments
 
+### T-063 — E10 foundation: apperr, v2 response helpers, request timeout and client-IP middleware, contract lint
+- **Status:** TODO
+- **Priority:** P1
+- **Type:** infra
+- **Milestone:** M1
+- **Depends-on:** —
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-09 02:12Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/01-foundation.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E10-skills-alignment · **PRD:** `.team/epics/E10-skills-alignment/PRD.md` · **Standards:** `docs/api-contract.md`, `docs/db-conventions.md`, `docs/go-conventions.md`
+
+Adds the tools the rest of E10 uses: the typed error package, the v2 envelope helpers with the path-based switch, Unix-ms JSON type, the contract lint test, the web client shim and dev proxy rule.
+
+#### Comments
+
+### T-064 — DB conventions: yearbook and profile tables (no joins, no foreign keys, ms timestamps)
+- **Status:** BACKLOG
+- **Priority:** P1
+- **Type:** tech-debt
+- **Milestone:** M1
+- **Depends-on:** T-063, T-034, T-048, T-052, T-057
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-09 02:09Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/02-db-yearbook-profile.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E10-skills-alignment · **PRD:** `.team/epics/E10-skills-alignment/PRD.md` · **Standards:** `docs/api-contract.md`, `docs/db-conventions.md`, `docs/go-conventions.md`
+
+Converts `yearbooks` and `profiles` to `yearbook_tab` and `profile_tab` per docs/db-conventions.md, removes the joins and the cascades from SQL into the yearbook service, and adds the child-purger mechanism.
+
+#### Comments
+
+### T-065 — DB conventions: media table
+- **Status:** BACKLOG
+- **Priority:** P1
+- **Type:** tech-debt
+- **Milestone:** M1
+- **Depends-on:** T-064
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-09 02:09Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/03-db-media.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E10-skills-alignment · **PRD:** `.team/epics/E10-skills-alignment/PRD.md` · **Standards:** `docs/api-contract.md`, `docs/db-conventions.md`, `docs/go-conventions.md`
+
+Converts `media` to `media_tab` (ms timestamps, no FK, no ENUM, print columns from T-057 included), media deletes clear the cover and profile references in code, and registers as a yearbook child purger.
+
+#### Comments
+
+### T-066 — DB conventions: note collections and notes tables
+- **Status:** BACKLOG
+- **Priority:** P1
+- **Type:** tech-debt
+- **Milestone:** M1
+- **Depends-on:** T-065
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-09 02:09Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/04-db-notes.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E10-skills-alignment · **PRD:** `.team/epics/E10-skills-alignment/PRD.md` · **Standards:** `docs/api-contract.md`, `docs/db-conventions.md`, `docs/go-conventions.md`
+
+Converts `note_collections` and the notes tables created by T-034 to the `_tab` conventions, registers as a yearbook child purger, and adds the full-book delete zero-rows test.
+
+#### Comments
+
+### T-067 — DB conventions: user and identity tables
+- **Status:** BACKLOG
+- **Priority:** P1
+- **Type:** tech-debt
+- **Milestone:** M1
+- **Depends-on:** T-066, T-048, T-052
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-09 02:09Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/05-db-auth.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E10-skills-alignment · **PRD:** `.team/epics/E10-skills-alignment/PRD.md` · **Standards:** `docs/api-contract.md`, `docs/db-conventions.md`, `docs/go-conventions.md`
+
+Converts `users` and `user_identities` (the sessions and email_tokens tables are gone by then) to `user_tab` and `user_identity_tab`; no user deletion exists yet, T-025 gets the explicit delete requirement.
+
+#### Comments
+
+### T-068 — API v2: notes domain (collections, public lookup and submission) with a service layer
+- **Status:** BACKLOG
+- **Priority:** P1
+- **Type:** tech-debt
+- **Milestone:** M1
+- **Depends-on:** T-063, T-066
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-09 02:09Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/06-api-notes.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E10-skills-alignment · **PRD:** `.team/epics/E10-skills-alignment/PRD.md` · **Standards:** `docs/api-contract.md`, `docs/db-conventions.md`, `docs/go-conventions.md`
+
+Moves the notes endpoints to /api/note-collection/* and /api/public-collect/*, introduces notes.Service, apperr and the v2 envelope, updates openapi, Postman, the web calls and tests.
+
+#### Comments
+
+### T-069 — API v2: media domain
+- **Status:** BACKLOG
+- **Priority:** P1
+- **Type:** tech-debt
+- **Milestone:** M1
+- **Depends-on:** T-065, T-068
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-09 02:09Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/07-api-media.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E10-skills-alignment · **PRD:** `.team/epics/E10-skills-alignment/PRD.md` · **Standards:** `docs/api-contract.md`, `docs/db-conventions.md`, `docs/go-conventions.md`
+
+Moves the media endpoints to /api/media/* (multipart create, binary get-content), v2 envelope and codes, openapi, Postman, web upload and photo library.
+
+#### Comments
+
+### T-070 — API v2: yearbook domain with a service layer
+- **Status:** BACKLOG
+- **Priority:** P1
+- **Type:** tech-debt
+- **Milestone:** M1
+- **Depends-on:** T-064, T-069
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-09 02:09Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/08-api-yearbook.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E10-skills-alignment · **PRD:** `.team/epics/E10-skills-alignment/PRD.md` · **Standards:** `docs/api-contract.md`, `docs/db-conventions.md`, `docs/go-conventions.md`
+
+Moves the yearbook endpoints to /api/yearbook/*, introduces yearbook.Service (rules out of the handler), keyset pagination with next_id, openapi, Postman, web screens.
+
+#### Comments
+
+### T-071 — API v2: auth and user domain; remove the /v1 paths and the web shim
+- **Status:** BACKLOG
+- **Priority:** P1
+- **Type:** tech-debt
+- **Milestone:** M1
+- **Depends-on:** T-067, T-070, T-053
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-09 02:09Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/09-api-auth.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E10-skills-alignment · **PRD:** `.team/epics/E10-skills-alignment/PRD.md` · **Standards:** `docs/api-contract.md`, `docs/db-conventions.md`, `docs/go-conventions.md`
+
+Moves auth to /api/auth/* and /api/user/get-me, Google callback path, last domain: deletes the /v1 routes, the proxy rewrite and the web client shim.
+
+#### Comments
+
+### T-072 — Quality sweep: mnd, forbidigo, pointer parameters, pool defaults, remove the transition switch
+- **Status:** BACKLOG
+- **Priority:** P2
+- **Type:** tech-debt
+- **Milestone:** M1
+- **Depends-on:** T-071
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-09 02:09Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/10-sweep.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E10-skills-alignment · **PRD:** `.team/epics/E10-skills-alignment/PRD.md` · **Standards:** `docs/api-contract.md`, `docs/db-conventions.md`, `docs/go-conventions.md`
+
+Turns the remaining skill rules into lint (mnd, forbidigo), fixes what they find, sets the pool defaults and deletes the path-based envelope switch.
+
+#### Comments
+
+### T-073 — Observability: request metrics middleware and /metrics endpoint
+- **Status:** BACKLOG
+- **Priority:** P3
+- **Type:** infra
+- **Milestone:** M1
+- **Depends-on:** T-063
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-09 02:09Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/11-metrics.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E10-skills-alignment · **PRD:** `.team/epics/E10-skills-alignment/PRD.md` · **Standards:** `docs/api-contract.md`, `docs/db-conventions.md`, `docs/go-conventions.md`
+
+Adds request and pool metrics as be-golang requires; waits for Q-018 (library choice).
+
+#### Comments
+
 <!-- tasks:end -->
 
 ## 7. Change log
@@ -2221,3 +2488,4 @@ CI resolved Go 1.26.8 while 1.26.9 (ten stdlib vulnerability fixes) was out, tur
 - 2026-10-08 — T-009 (photo upload, d46aec5), T-011 (Google sign-in, d209266) and T-012 (collection links) merged, each owner-approved after QA and leader review; T-007 and T-009 and T-011 await owner acceptance. T-010 accepted. Promoted T-015, T-033, T-035 to TODO; T-036 (memory bound) is queued ahead of T-034.
 - 2026-10-08 — Owner asked for a Canva-style editor. Decisions D-19 (staged editing), D-20 (each owner edits their own copy), D-21 (template-driven note fields, now). New epic E09 (sketch), tasks T-043 (field catalogue, P1, before T-034) and T-044 (templates declare fields); T-034's spec was rewritten for answers by field id. Epic E08 (designer templates, D-15..D-18, L-12) created earlier today with T-037..T-042.
 - 2026-10-09 — D-24: export becomes browser print of HTML templates (owner: 'just build it, I will test it myself'). Cancelled T-014, T-019, T-039..T-042; new tasks T-056..T-061 (book data endpoint, print-size photos, HTML renderer core, two HTML templates, picker and print screen). T-054 spike returns to dev to trim its evidence files, then merges.
+- 2026-10-09 — Owner asked to follow the skills in `.agents/skills`, check the code and refactor. Audit (`epics/E10-skills-alignment/AUDIT.md`), standards (`docs/api-contract.md`, `docs/db-conventions.md`, `docs/go-conventions.md`), decisions D-25 (API v2, full), D-26 (database, full, hard deletes kept), D-27 (layers inside domain packages, apperr). New epic E10 with T-063..T-073 in one lane (foundation, four DB tasks, four API tasks, sweep, metrics); T-013 and T-018 now wait for T-068. Q-018 asks for the metrics library. L-05 (timestamps) and L-07 (edge strips `/api`) superseded.

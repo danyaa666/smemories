@@ -165,6 +165,12 @@ The web app starts the flow by navigating the browser to `/api/v1/auth/google/st
 a local account is linked to it; if that local account never verified its email it loses its password and sessions first
 (pre-hijacking defence). Social-only accounts have no password; "Forgot password" sets one.
 
+## Engineering standards
+
+Code follows the backend skills in `.agents/skills/` as adapted for this project: the API contract ([docs/api-contract.md](docs/api-contract.md)), database conventions
+([docs/db-conventions.md](docs/db-conventions.md)) and Go conventions ([docs/go-conventions.md](docs/go-conventions.md)). Existing code is being converted (epic E10 on the board);
+until a domain is converted its endpoints still live under `/v1`.
+
 ## Project management
 
 Work is planned and tracked on the team board: [`.team/README.md`](.team/README.md) (vision, roadmap, decisions, tasks).
