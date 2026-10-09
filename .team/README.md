@@ -12,11 +12,10 @@
 |---|---:|---|
 | BACKLOG | 23 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-044, T-049, T-050, T-055, T-056, T-058, T-059, T-060, T-061 |
 | TODO | 6 | T-034, T-048, T-052, T-053, T-054, T-057 |
-| MERGED | 4 | T-016, T-046, T-047, T-051 |
-| DONE | 22 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-028, T-030, T-033, T-035, T-036, T-037, T-038, T-043, T-045 |
+| DONE | 26 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-035, T-036, T-037, T-038, T-043, T-045, T-046, T-047, T-051 |
 | CANCELLED | 6 | T-014, T-019, T-039, T-040, T-041, T-042 |
 
-**Awaiting your review (MERGED):** T-016 (Web: yearbook list, create/edit, profile and photo upload UI); T-046 (List a yearbook's photos (API and photo library in the web UI)); T-047 (Fix the flaky concurrent Google callback: retry with jittered backoff and a stress test); T-051 (Redis foundation: local stack (Valkey), client, config, readiness, CI)
+**Awaiting your review (MERGED):** nothing
 
 **Open questions for you:** none
 
@@ -904,7 +903,7 @@ Register, login, logout, verify-email, forgot/reset password pages; session boot
 - 2026-10-08 09:23Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-015, T-033, T-035, T-036')
 
 ### T-016 — Web: yearbook list, create/edit, profile and photo upload UI
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -915,8 +914,8 @@ Register, login, logout, verify-email, forgot/reset password pages; session boot
 - **Assignee:** —
 - **Branch:** task/t-016-web-yearbook-list-create-edit-profile-an
 - **PR:** https://github.com/danyaa666/smemories/pull/31
-- **Updated:** 2026-10-08 14:02Z by leader
-- **Comments-seen:** 5
+- **Updated:** 2026-10-09 01:42Z by leader
+- **Comments-seen:** 6
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E03-yearbooks/03-web-yearbook-list-create-edit-profile-and.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -945,6 +944,7 @@ Dashboard of the user's yearbooks; create/edit form for book information and the
   3. After a 429 every remaining file in the batch gets its own identical error row (23 rows for a 70-file batch); one summary line would read better. The 429 text says "Too many attempts" for uploads.
   4. "Delete yearbook" button is small (<44 px) and unstyled next to the other buttons at 375 px; a 404 console error on page load (likely favicon) is pre-existing.
 - 2026-10-08 14:02Z · leader · merged de0233e (squash), QA_PASS on head 3bc5d24 (real browser run against real API and MinIO, EN and VI, 375 px, all upload error codes), CI green. Review: typed API client, React-escaped rendering, upload progress through the shared error mapper, busy retry bounded to 3, profile save always sends photo_media_id, page size A5/A4/Letter. For owner to check: run the web app, create a yearbook, upload photos, set cover and profile photo. Known: uploaded photos vanish after a reload until T-046; minor polish items listed in the QA note.
+- 2026-10-09 01:42Z · leader · accepted by owner (chat, 2026-10-09: 'team accept T-016, T-046, T-047, T-051')
 
 ### T-017 — Web: notes link management and moderation inbox
 - **Status:** BACKLOG
@@ -1762,7 +1762,7 @@ Let the register request carry the UI language so Vietnamese students get the ve
 - 2026-10-08 09:29Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-037, T-038, T-043, T-045')
 
 ### T-046 — List a yearbook's photos (API and photo library in the web UI)
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -1773,8 +1773,8 @@ Let the register request carry the UI language so Vietnamese students get the ve
 - **Assignee:** —
 - **Branch:** task/t-046-list-a-yearbook-s-photos-api-and-photo-l
 - **PR:** https://github.com/danyaa666/smemories/pull/34
-- **Updated:** 2026-10-08 15:00Z by leader
-- **Comments-seen:** 4
+- **Updated:** 2026-10-09 01:42Z by leader
+- **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E03-yearbooks/05-list-a-yearbooks-photos.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1794,9 +1794,10 @@ Owner-only list endpoint for a yearbook's photos and the web photo library that 
   Cursor question: plain base64url of the numeric id is ACCEPTABLE. It is validated strictly (canonical decimal, >0, <2^63), is only an 'id < ?' predicate AND-ed with yearbook_id of the already owner-checked book, so it cannot reach another yearbook's rows (tested). Only side effect: it exposes the global auto-increment id (rough table-wide row volume); non-blocking. Spec says 'base64url of small JSON'; leader may update spec text.
   Non-blocking: (1) validation (400) runs before ownership, so a foreign book with bad limit gives 400 not 404; no existence leak. (2) Query default retry=3 in main.tsx means the list error shows after ~7 s of 'Loading'. (3) At 375 px each tile is ~268 px tall because the 3 action buttons stack; fine but tall. (4) Padded base64 cursors are rejected (we only issue unpadded).
 - 2026-10-08 15:00Z · leader · merged 472d700 (squash), QA_PASS on head e347c81 (real Chromium against a real API, 375 px, EN and VI), CI green. Review: owner-scoped keyset list on an indexed range scan (FORCE INDEX, 2-3 ms at 10000 rows), limit capped at 100, no keys or hashes in responses, library keeps photos across reloads. For owner to check: upload photos in the yearbook screen, reload, they are still there. Follow-up T-055: the cursor is base64 of the internal numeric id (L-05 says internal ids stay internal); make it opaque.
+- 2026-10-09 01:42Z · leader · accepted by owner (chat, 2026-10-09: 'team accept T-016, T-046, T-047, T-051')
 
 ### T-047 — Fix the flaky concurrent Google callback: retry with jittered backoff and a stress test
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** bug
 - **Milestone:** M1
@@ -1807,8 +1808,8 @@ Owner-only list endpoint for a yearbook's photos and the web photo library that 
 - **Assignee:** —
 - **Branch:** task/t-047-fix-the-flaky-concurrent-google-callback
 - **PR:** 33
-- **Updated:** 2026-10-09 01:31Z by leader
-- **Comments-seen:** 5
+- **Updated:** 2026-10-09 01:42Z by leader
+- **Comments-seen:** 6
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/07-fix-flaky-google-concurrent-callback-test.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1828,6 +1829,7 @@ CI on develop failed once on TestGoogleConcurrentCallbacksCreateOneAccount: goog
 - 2026-10-08 14:23Z · leader · Leader review OK on head ef6bee0 (QA_PASS on the same head, CI 4/4 green). A 30-line change in internal/auth/store.go: 6 attempts, jittered doubling waits (5-25 ms up to 80-200 ms), retries only MySQL 1213, 1205 and 1062, stops at once when the context ends, no change to responses or error codes. QA reproduced the flake on the old code (4 of 6 loaded test processes failed with oidc_failed) and saw 0 failures in 24 loaded runs on the fix; 12 parallel callbacks against the real binary gave one user and one identity. Non-blocking: after a cancelled wait it returns the last MySQL error instead of the context error (callers map both to oidc_failed). Awaiting owner approval.
 - 2026-10-09 01:30Z · human · owner approved merge
 - 2026-10-09 01:31Z · leader · merged c77561d (squash), owner-approved in chat, QA_PASS on head ef6bee0, CI green. Review: bounded retry with jittered doubling waits (6 attempts, 1213/1205/1062 only, stops with the context), no change to responses or error codes; QA reproduced the flake on the old code and saw none on the fix. For owner to check: nothing to run.
+- 2026-10-09 01:42Z · leader · accepted by owner (chat, 2026-10-09: 'team accept T-016, T-046, T-047, T-051')
 
 ### T-048 — Email one-time codes replace verification and reset links (API) with a dev-only fixed code
 - **Status:** TODO
@@ -1899,7 +1901,7 @@ Go-live gate: delete the dev fixed OTP and every DEV-SHORTCUT, fail CI and the d
 #### Comments
 
 ### T-051 — Redis foundation: local stack (Valkey), client, config, readiness, CI
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** infra
 - **Milestone:** M1
@@ -1910,8 +1912,8 @@ Go-live gate: delete the dev fixed OTP and every DEV-SHORTCUT, fail CI and the d
 - **Assignee:** —
 - **Branch:** task/t-051-redis-foundation-local-stack-valkey-clie
 - **PR:** https://github.com/danyaa666/smemories/pull/32
-- **Updated:** 2026-10-09 01:31Z by leader
-- **Comments-seen:** 5
+- **Updated:** 2026-10-09 01:42Z by leader
+- **Comments-seen:** 6
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/11-redis-foundation.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1940,6 +1942,7 @@ Add a Redis-protocol service (Valkey 8) to the local stack and CI, the go-redis 
 - 2026-10-08 14:13Z · leader · Leader review OK on head a59f2c5 (QA_PASS on the same head, includes QA's isolation test commit; CI 4/4 green). Thin wrapper with no business logic: one attempt per command (a dead Redis cannot cost seconds per request), TLS 1.2 minimum, errors never carry the password, network failures classified as ErrUnavailable so callers pick fail-open or fail-closed, namespaced keys. Valkey pinned by digest, AOF everysec, noeviction (QA filled it to maxmemory: writes fail with OOM, nothing evicted), loopback-only port, restart and recreate keep keys, readiness 503 in 0.4 s with Redis stopped and 1.0 s when hung. Both disclosed departures accepted. Five minor findings moved to the T-052 spec (migrate should not need Redis, port range check, TLS hint, go-redis stderr logger, readiness write probe). Awaiting owner approval.
 - 2026-10-09 01:30Z · human · owner approved merge
 - 2026-10-09 01:31Z · leader · merged c70a528 (squash), owner-approved in chat, QA_PASS on head a59f2c5, CI green. Review: thin go-redis wrapper (one attempt per command, TLS 1.2 minimum, no password in errors, ErrUnavailable classification), Valkey 8 pinned by digest with AOF everysec and noeviction, loopback-only port, /readyz covers Redis. For owner to check: add the Redis lines from .env.example to your .env (SMEM_REDIS_URL, REDIS_PORT), run make up (starts Valkey), then the API; docker compose exec redis valkey-cli ping. Minor clean-ups are in the T-052 spec.
+- 2026-10-09 01:42Z · leader · accepted by owner (chat, 2026-10-09: 'team accept T-016, T-046, T-047, T-051')
 
 ### T-052 — Login sessions move to Redis (drop the sessions table)
 - **Status:** TODO
