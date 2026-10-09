@@ -4,10 +4,8 @@ import (
 	"context"
 	"errors"
 	"log/slog"
-	"net"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/danyaa666/smemories/internal/httpx"
@@ -247,20 +245,7 @@ func (h *Handler) cookie(w http.ResponseWriter, value string, maxAge int, expire
 // ClientIP lets other packages key their own rate limits the same way auth does.
 func (h *Handler) ClientIP(r *http.Request) string { return h.clientIP(r) }
 
-// clientIP is RemoteAddr's host, or with TrustProxy the last X-Forwarded-For hop (the one
-// our own proxy appended; earlier hops are client-controlled).
+// clientIP is httpx.ResolveClientIP with this handler's TrustProxy setting.
 func (h *Handler) clientIP(r *http.Request) string {
-	if h.cfg.TrustProxy {
-		if xff := r.Header.Values("X-Forwarded-For"); len(xff) > 0 {
-			hops := strings.Split(xff[len(xff)-1], ",")
-			if ip := strings.TrimSpace(hops[len(hops)-1]); net.ParseIP(ip) != nil {
-				return ip
-			}
-		}
-	}
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return r.RemoteAddr
-	}
-	return host
+	return httpx.ResolveClientIP(r, h.cfg.TrustProxy)
 }

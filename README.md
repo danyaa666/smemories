@@ -127,6 +127,7 @@ Configuration is read from environment variables (see `.env.example`): `SMEM_HTT
 `SMEM_ENV` (`dev|test|prod`, default `dev`), `SMEM_LOG_LEVEL` (`debug|info|warn|error`, default `info`),
 `SMEM_DB_DSN` (`user:pass@tcp(host:port)/db`; required, in every `SMEM_ENV`, for the API binary, which exits with a clear message when it is empty), and the pool settings
 `SMEM_DB_MAX_OPEN` (20), `SMEM_DB_MAX_IDLE` (5), `SMEM_DB_CONN_MAX_LIFETIME` (5m).
+Request deadline: `SMEM_HTTP_REQUEST_TIMEOUT` (30s, minimum 1s) cancels the context of every request unless a route sets its own.
 Redis (`docs/redis.md`): `SMEM_REDIS_URL` (`redis://[:password@]host:port/db`; required in every `SMEM_ENV`, copy it from `.env.example` into an older `.env`), `SMEM_REDIS_PASSWORD`, `SMEM_REDIS_DIAL_TIMEOUT` (2s), `SMEM_REDIS_READ_TIMEOUT` and `SMEM_REDIS_WRITE_TIMEOUT` (1s), `SMEM_REDIS_POOL_SIZE` (10).
 Auth (see `.env.example`): `SMEM_ALLOWED_ORIGINS` (comma-separated browser origins allowed to send cookie-carrying
 state-changing requests; required in prod, default `http://localhost:5173`), `SMEM_PUBLIC_BASE_URL` (web app URL for emailed links; required in prod, default `http://localhost:5173`; in dev/test emails are printed to stdout by the log mailer, and prod refuses to start until a real mailer exists), `SMEM_TRUST_PROXY` (take the client IP from the

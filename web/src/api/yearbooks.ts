@@ -1,5 +1,5 @@
 import type { components } from "./schema";
-import { ApiError, apiErrorFrom, postJson, request, sendJson } from "./client";
+import { ApiError, apiErrorFrom, postJson, request, sendJson, unwrapSuccess } from "./client";
 
 type S = components["schemas"];
 export type Yearbook = S["Yearbook"];
@@ -84,7 +84,8 @@ export function uploadMedia(
       } catch {
         body = undefined;
       }
-      if (xhr.status === 201) resolve((body as S["MediaEnvelope"]).media);
+      if (xhr.status >= 200 && xhr.status < 300)
+        resolve((unwrapSuccess(body) as S["MediaEnvelope"]).media);
       else reject(apiErrorFrom(xhr.status, body, (n) => xhr.getResponseHeader(n)));
     };
     const form = new FormData();

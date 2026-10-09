@@ -1,0 +1,76 @@
+# Fixture: a fully documented v2 pair of operations. The lint must report nothing.
+openapi: 3.1.0
+info: {title: fixture, version: "1"}
+paths:
+  /v1/legacy:        # not under /api/: never linted
+    get: {}
+  /api/book/create:
+    post:
+      operationId: createBook
+      summary: Create a book.
+      description: Called by the signed-in owner; creates one book.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_INVALID_TITLE, description: The title is empty or longer than 120 characters.}
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: {type: string, description: "Required, 1-120 characters."}
+      responses:
+        "200":
+          description: Created.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/BookResponse"}
+              examples:
+                created: {value: {status: OK, data: {id: 01J, created_at: 1760000000000}}}
+  /api/book/get-list:
+    get:
+      operationId: listBooks
+      summary: List the caller's books.
+      description: Keyset paginated; pass next_id back until it is empty.
+      x-auth: optional
+      x-error-codes: []
+      responses:
+        "200":
+          description: A page.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: {type: string, description: '"OK".'}
+                  data:
+                    type: object
+                    description: The page.
+                    properties:
+                      items:
+                        type: array
+                        description: The books of this page.
+                        items: {$ref: "#/components/schemas/Book"}
+                      next_id: {type: string, description: Opaque cursor; empty when there are no more pages.}
+              examples:
+                page: {value: {status: OK, data: {items: [], next_id: ""}}}
+components:
+  schemas:
+    Book:
+      type: object
+      properties:
+        id: {type: string, description: Public ULID of the book.}
+        created_at: {type: integer, format: int64, description: "Creation time, Unix ms."}
+        deleted_at: {type: [integer, "null"], format: int64, description: "Unix ms; null while the book exists."}
+        owner: {$ref: "#/components/schemas/Owner"}
+    Owner:
+      description: The owning user.
+      type: object
+      properties:
+        name: {type: string, description: Display name.}
+        book: {description: Back reference., $ref: "#/components/schemas/Book"}   # a cycle must not hang the lint
+    BookResponse:
+      type: object
+      properties:
+        status: {type: string, description: '"OK".'}
+        data: {description: The created book., $ref: "#/components/schemas/Book"}
