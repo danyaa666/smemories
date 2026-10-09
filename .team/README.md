@@ -12,15 +12,16 @@
 |---|---:|---|
 | BACKLOG | 34 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-044, T-049, T-050, T-055, T-056, T-058, T-059, T-060, T-061, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074 |
 | TODO | 4 | T-052, T-053, T-054, T-057 |
-| QA_PASS | 2 | T-034, T-048 |
+| CHANGES_REQUESTED | 1 | T-048 |
+| MERGED | 1 | T-034 |
 | DONE | 28 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-035, T-036, T-037, T-038, T-043, T-045, T-046, T-047, T-051, T-062, T-063 |
 | CANCELLED | 6 | T-014, T-019, T-039, T-040, T-041, T-042 |
 
-**Awaiting your review (MERGED):** nothing
+**Awaiting your review (MERGED):** T-034 ([E04] Public note submission (text and photos))
 
-**Open questions for you:** Q-020 (Approve merge of T-034 (public note submission with photos)?); Q-021 (Approve merge of T-048 (6-digit email codes, dev code 123123)?)
+**Open questions for you:** none
 
-_Board last written 2026-10-09 03:53Z_
+_Board last written 2026-10-09 03:59Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -300,7 +301,7 @@ be-golang requires request metrics (duration, status code), pool stats and rate-
 T-062 unblocks every merge: the required security job (govulncheck) is red on all PRs and develop because setup-go still gives Go 1.26.8. The PR adds a local composite action (no third-party action) that reads go.dev, validates go1.26.N and sets GOTOOLCHAIN; the Go toolchain is downloaded and checksum-verified by the go command. If go.dev is down it warns and keeps the setup-go version. QA passed after one rework (a malformed go.dev answer used to abort the step); CI is green with go1.26.9 in all three Go jobs. To approve: team approve T-062. After it merges I update T-063's branch (green security job) and merge T-063.
 
 ### Q-020 — Approve merge of T-034 (public note submission with photos)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-09 03:43Z
 - **Blocks:** T-034
 - **Recommendation:** approve
@@ -309,7 +310,7 @@ T-062 unblocks every merge: the required security job (govulncheck) is red on al
 Third QA round passed with no findings. This is the first public, unauthenticated write endpoint (text answers by catalogue field and up to 3 photos per note, pending until the owner approves). Protection: link token, honeypot, per-IP/per-collection rate limits, 300-note cap per link, uploads spooled to disk with caps of 48 total / 8 per IP connections and a 16 KiB/s minimum pace, photos decoded under the T-036 memory bounds. Migration 0010 adds the notes and note_photos tables. To approve: team approve T-034. T-048 (codes, migration 0011) merges after it.
 
 ### Q-021 — Approve merge of T-048 (6-digit email codes, dev code 123123)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-09 03:53Z
 - **Blocks:** T-048
 - **Recommendation:** approve
@@ -1412,18 +1413,18 @@ Evidence from the T-006/T-030 merges: the workflow's concurrency group has cance
 - 2026-10-08 09:23Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-015, T-033, T-035, T-036')
 
 ### T-034 — [E04] Public note submission (text and photos)
-- **Status:** QA_PASS
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
 - **Depends-on:** T-012, T-009, T-036, T-043
 - **Risk:** high
 - **Rework:** 0
-- **Owner-approved:** —
-- **Assignee:** leader
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-034-public-note-submission-text-and-photos
 - **PR:** 30
-- **Updated:** 2026-10-09 03:42Z by qa
+- **Updated:** 2026-10-09 03:59Z by leader
 - **Comments-seen:** 7
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/02-public-note-submission.md`
@@ -1505,6 +1506,8 @@ Public endpoint where a friend with a collection link submits a note with text, 
   e) 12 parallel 3 x 12 MP submissions: all 201 in 9-13 s, RSS peaked 551 MB (318 MB later) with 2 slots; size the task memory per docs/media.md.
   f) Hard floor: body at 16 KiB/s x 120 s = about 1.9 MB max for the slowest accepted phone; the web form should resize photos before upload.
 - 2026-10-09 03:43Z · leader · Leader review OK (head 97ee5a2 = QA head, CI green, no .team changes). Checked: spool to 0600 temp file removed on every exit path, connection caps taken before any read and never counted against request caps, 503 refunds, pace/min-rate, early-error drain, honeypot, validation before any photo decode, photo cleanup on failure, no PII stored or logged. Non-blocking follow-ups: T-074 (startup sweep of orphaned spool files). Note for owner: migration 0010 still uses v1 style (FKs, ENUM, DATETIME); T-066 converts it. Awaiting owner approval: the public upload endpoint POST /v1/public/collect/{token}/notes, its caps (48 global / 8 per IP / 16 KiB/s) and migration 0010.
+- 2026-10-09 03:59Z · human · owner approved merge
+- 2026-10-09 03:59Z · leader · merged 20b5bfc. Review: spool-to-disk upload with connection caps (48/8 per IP), pace limits, early-error drain, honeypot, rate limits, photo cleanup on failure; QA round 3 clean. For owner to check: README/.env.example settings SMEM_PUBLIC_UPLOAD_MAX_CONNS and ..._CONCURRENT_PER_IP, docs/media.md disk sizing (48 x 32 MiB) for T-022. Follow-up T-074.
 
 ### T-035 — [E05] T-010 follow-ups: template tests iterate templates.List()
 - **Status:** DONE
@@ -1900,18 +1903,18 @@ CI on develop failed once on TestGoogleConcurrentCallbacksCreateOneAccount: goog
 - 2026-10-09 01:42Z · leader · accepted by owner (chat, 2026-10-09: 'team accept T-016, T-046, T-047, T-051')
 
 ### T-048 — [E02] Email one-time codes replace verification and reset links (API) with a dev-only fixed code
-- **Status:** QA_PASS
+- **Status:** CHANGES_REQUESTED
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
 - **Depends-on:** T-045, T-051
 - **Risk:** high
-- **Rework:** 0
-- **Owner-approved:** —
-- **Assignee:** leader
+- **Rework:** 1
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-048-e02-email-one-time-codes-replace-verific
 - **PR:** https://github.com/danyaa666/smemories/pull/38
-- **Updated:** 2026-10-09 03:51Z by qa
+- **Updated:** 2026-10-09 03:59Z by leader
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/08-email-otp-codes-replace-links-api.md`
@@ -1939,6 +1942,9 @@ CI on develop failed once on TestGoogleConcurrentCallbacksCreateOneAccount: goog
   4. Postman has no expired-code edge case (no hook now that codes are in Redis; expiry is covered by integration test TestVerifyCodeExpiry/TestResetCodeExpiresAfterFifteenMinutes). A 3rd run within an hour from one IP hits forgot 5/hr/IP (in-memory limiter) until the API restarts.
   5. Merge order: with T-034 merged first, this branch conflicts in api/openapi.yaml, web/src/api/schema.d.ts, internal/db/integration_test.go, internal/notes/integration_test.go (mechanical); needs a rebase/regenerate after T-034 lands. Migration numbers 0010 + 0011 are fine.
 - 2026-10-09 03:53Z · leader · Leader review OK (head adaa9ca = QA head, CI green, no .team changes). Checked: single Lua script for check+attempt count, HMAC with SMEM_OTP_KEY (32+ bytes enforced), uniform 6-digit draw, dev fixed code guarded by env dev/test and refused otherwise, all lines tagged DEV-SHORTCUT(otp) and registered, decoy path for unknown emails, Redis down fails closed. Accepted: locked code stays until expiry; expired grace 1 h. Non-blocking: reset-lock griefing/enumeration noted in the T-031 spec. After T-034 merges this branch needs a merge of develop (conflicts in openapi.yaml, schema.d.ts, integration tests) and a short re-test. Awaiting owner approval: auth flow, migration 0011 (drops email_tokens), the dev-only fixed code.
+- 2026-10-09 03:59Z · human · owner approved merge
+- 2026-10-09 03:59Z · leader · T-034 is merged (develop 20b5bfc, migration 0010). Merge develop into the branch (conflicts expected in api/openapi.yaml, web/src/api/schema.d.ts, internal/db/integration_test.go, internal/notes/integration_test.go: keep both sides), keep migration 0011, re-run make lint build test test-integration, then READY_FOR_QA for a short regression pass.
+- 2026-10-09 03:59Z · leader · Merge develop into the branch (T-034 merged, 20b5bfc), resolve the mechanical conflicts keeping both sides, re-run all tests, then READY_FOR_QA. No other change requested.
 
 ### T-049 — [E02] Web: code entry screens for email verification and password reset
 - **Status:** BACKLOG
