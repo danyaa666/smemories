@@ -11,16 +11,17 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 33 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-044, T-049, T-050, T-055, T-056, T-058, T-059, T-060, T-061, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073 |
-| TODO | 6 | T-034, T-048, T-052, T-053, T-054, T-057 |
-| MERGED | 2 | T-062, T-063 |
-| DONE | 26 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-035, T-036, T-037, T-038, T-043, T-045, T-046, T-047, T-051 |
+| TODO | 5 | T-048, T-052, T-053, T-054, T-057 |
+| IN_PROGRESS | 1 | T-034 |
+| MERGED | 1 | T-063 |
+| DONE | 27 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-035, T-036, T-037, T-038, T-043, T-045, T-046, T-047, T-051, T-062 |
 | CANCELLED | 6 | T-014, T-019, T-039, T-040, T-041, T-042 |
 
-**Awaiting your review (MERGED):** T-062 ([E01] CI: get the newest Go patch straight from go.dev (no manifest lag)); T-063 ([E10] Foundation: apperr, v2 response helpers, request timeout and client-IP middleware, contract lint)
+**Awaiting your review (MERGED):** T-063 ([E10] Foundation: apperr, v2 response helpers, request timeout and client-IP middleware, contract lint)
 
 **Open questions for you:** none
 
-_Board last written 2026-10-09 03:03Z_
+_Board last written 2026-10-09 03:05Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -1394,7 +1395,7 @@ Evidence from the T-006/T-030 merges: the workflow's concurrency group has cance
 - 2026-10-08 09:23Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-015, T-033, T-035, T-036')
 
 ### T-034 — [E04] Public note submission (text and photos)
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -1402,10 +1403,10 @@ Evidence from the T-006/T-030 merges: the workflow's concurrency group has cance
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** dev
 - **Branch:** task/t-034-public-note-submission-text-and-photos
 - **PR:** 30
-- **Updated:** 2026-10-09 02:28Z by leader
+- **Updated:** 2026-10-09 03:03Z by dev
 - **Comments-seen:** 7
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/02-public-note-submission.md`
@@ -2207,7 +2208,7 @@ Pick a template for the page size, print with per-browser guidance, anonymous wo
 #### Comments
 
 ### T-062 — [E01] CI: get the newest Go patch straight from go.dev (no manifest lag)
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2218,7 +2219,7 @@ Pick a template for the page size, print with per-browser guidance, anonymous wo
 - **Assignee:** —
 - **Branch:** task/t-062-e01-ci-get-the-newest-go-patch-straight-
 - **PR:** https://github.com/danyaa666/smemories/pull/37
-- **Updated:** 2026-10-09 02:59Z by leader
+- **Updated:** 2026-10-09 03:05Z by human
 - **Comments-seen:** 8
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/12-ci-newest-go-patch-from-go-dev.md`
@@ -2250,6 +2251,7 @@ CI resolved Go 1.26.8 while 1.26.9 (ten stdlib vulnerability fixes) was out, tur
 - 2026-10-09 02:54Z · leader · Leader review OK (head f5c6248 = QA head, CI green, +test script, no third-party action, composite writes GITHUB_ENV only after the go1.26.N regex check; toolchain is fetched and verified by the go command via the checksum database). Awaiting owner approval: .github/actions/go-newest-patch/action.yml and the 3 uses: lines in ci.yml.
 - 2026-10-09 02:59Z · human · owner approved merge
 - 2026-10-09 02:59Z · leader · merged 0c1e2d4. Review: composite action validates go1.26.N before writing GITHUB_ENV, falls back with a warning, toolchain verified by the go command; test script covers 10 cases under bash -e -o pipefail. For owner to check: first CI run on develop shows go1.26.9 in the go, go-integration and security jobs.
+- 2026-10-09 03:05Z · human · accepted by owner
 
 ### T-063 — [E10] Foundation: apperr, v2 response helpers, request timeout and client-IP middleware, contract lint
 - **Status:** MERGED
