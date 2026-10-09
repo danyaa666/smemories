@@ -1,5 +1,7 @@
 # E02_T-049 — Web: code entry screens for email verification and password reset
 
+> **From T-052 (2026-10-09):** the web has no text for the new error code `session_store_unavailable` (503, Redis down); add EN/VI strings for it together with the code-screen messages (`code_store_unavailable`, `invalid_code`, `code_expired`, `code_locked`) and show a retry message, not the generic error.
+
 **Epic:** E02-auth · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** high · **Priority:** P1 · **Type:** feature
 
 #### Description

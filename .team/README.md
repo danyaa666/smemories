@@ -11,17 +11,17 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 34 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-044, T-049, T-050, T-055, T-056, T-058, T-059, T-060, T-061, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074 |
-| TODO | 4 | T-052, T-053, T-054, T-057 |
-| CHANGES_REQUESTED | 1 | T-048 |
-| MERGED | 1 | T-034 |
+| TODO | 3 | T-053, T-054, T-057 |
+| CHANGES_REQUESTED | 1 | T-052 |
+| MERGED | 2 | T-034, T-048 |
 | DONE | 28 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-035, T-036, T-037, T-038, T-043, T-045, T-046, T-047, T-051, T-062, T-063 |
 | CANCELLED | 6 | T-014, T-019, T-039, T-040, T-041, T-042 |
 
-**Awaiting your review (MERGED):** T-034 ([E04] Public note submission (text and photos))
+**Awaiting your review (MERGED):** T-034 ([E04] Public note submission (text and photos)); T-048 ([E02] Email one-time codes replace verification and reset links (API) with a dev-only fixed code)
 
 **Open questions for you:** none
 
-_Board last written 2026-10-09 03:59Z_
+_Board last written 2026-10-09 04:29Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -1903,7 +1903,7 @@ CI on develop failed once on TestGoogleConcurrentCallbacksCreateOneAccount: goog
 - 2026-10-09 01:42Z · leader · accepted by owner (chat, 2026-10-09: 'team accept T-016, T-046, T-047, T-051')
 
 ### T-048 — [E02] Email one-time codes replace verification and reset links (API) with a dev-only fixed code
-- **Status:** CHANGES_REQUESTED
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -1914,7 +1914,7 @@ CI on develop failed once on TestGoogleConcurrentCallbacksCreateOneAccount: goog
 - **Assignee:** —
 - **Branch:** task/t-048-e02-email-one-time-codes-replace-verific
 - **PR:** https://github.com/danyaa666/smemories/pull/38
-- **Updated:** 2026-10-09 03:59Z by leader
+- **Updated:** 2026-10-09 04:28Z by leader
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/08-email-otp-codes-replace-links-api.md`
@@ -1945,6 +1945,14 @@ CI on develop failed once on TestGoogleConcurrentCallbacksCreateOneAccount: goog
 - 2026-10-09 03:59Z · human · owner approved merge
 - 2026-10-09 03:59Z · leader · T-034 is merged (develop 20b5bfc, migration 0010). Merge develop into the branch (conflicts expected in api/openapi.yaml, web/src/api/schema.d.ts, internal/db/integration_test.go, internal/notes/integration_test.go: keep both sides), keep migration 0011, re-run make lint build test test-integration, then READY_FOR_QA for a short regression pass.
 - 2026-10-09 03:59Z · leader · Merge develop into the branch (T-034 merged, 20b5bfc), resolve the mechanical conflicts keeping both sides, re-run all tests, then READY_FOR_QA. No other change requested.
+- 2026-10-09 04:01Z · dev · Merged origin/develop (20b5bfc, T-034) into the branch. Conflicts (openapi.yaml error examples, schema.d.ts, db + notes integration tests) resolved keeping both sides; migration 0011 kept after 0010; db page-size test keeps the loop that rolls back until 0009 is undone (develop's fixed 'range 2' would break with 0011). make lint build test test-integration all green. Short regression pass only.
+- 2026-10-09 04:19Z · qa · Regression pass on merged head a40bfc5 (develop 20b5bfc + T-048), CI green on PR #38 (go, go-integration, security, web). No product code or tests changed.
+  - make lint build test: OK (go -race all pkgs, web 109 tests, check:api OK). make test-integration (-race -count=1, all pkgs incl. auth, db, notes, media, yearbook, redis): OK.
+  - Migrations on a scratch DB (smem_test_qa048m, dropped afterwards): up (0001-0011), down 0011, down 0010, up again: all OK, status shows 0010 then 0011 in order.
+  - Merge result: git diff develop..branch of api/openapi.yaml touches only T-048 hunks; the shared error-code examples list keeps every T-034 code (limit_reached, too_many_photos, collection_full, collection_closed, ...) and adds invalid_code/code_expired/code_locked/code_store_unavailable (removes invalid_token). schema.d.ts regenerated, make lint check:api passes. Db/notes integration tests keep both sides and pass.
+  - Newman (real API, SMEM_ENV=dev, SMEM_DEV_FIXED_OTP=123123, scratch DB, Redis db 9, MinIO): auth Full flow + Edge cases 67 requests / 150 assertions, 0 failures, twice back to back; notes (Setup + verify A/B + whole collection incl. T-034 photo notes) 72 requests / 137 assertions, 0 failures, twice back to back; API log had 0 ERROR lines.
+  NON-BLOCKING: the Google folder of the auth collection fails without Google configured (expected). The 5/hour/IP in-memory register/forgot limits mean a third Newman run needs an API restart (documented). Notes collection needs SMEM_S3_* set in the API env (otherwise 502 on photo notes), unrelated to this change.
+- 2026-10-09 04:28Z · leader · merged bb6709a. Review: Lua check+attempt script, HMAC with 32-byte key, decoy for unknown emails, fail-closed on Redis down, dev fixed code 123123 guarded (env dev/test, refuses start otherwise, DEV-SHORTCUT(otp) tags registered); migration 0011 drops email_tokens. QA passed twice (second after the T-034 merge). For owner to check: .env.example SMEM_OTP_KEY, docs/auth-otp.md, docs/dev-shortcuts.md. Web code-entry screens are T-049; until then UI sign-up verification uses the removed link flow.
 
 ### T-049 — [E02] Web: code entry screens for email verification and password reset
 - **Status:** BACKLOG
@@ -2037,18 +2045,18 @@ Add a Redis-protocol service (Valkey 8) to the local stack and CI, the go-redis 
 - 2026-10-09 01:42Z · leader · accepted by owner (chat, 2026-10-09: 'team accept T-016, T-046, T-047, T-051')
 
 ### T-052 — [E02] Login sessions move to Redis (drop the sessions table)
-- **Status:** TODO
+- **Status:** CHANGES_REQUESTED
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
 - **Depends-on:** T-051
 - **Risk:** high
-- **Rework:** 0
+- **Rework:** 1
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
+- **Branch:** task/t-052-e02-login-sessions-move-to-redis-drop-th
+- **PR:** https://github.com/danyaa666/smemories/pull/39
+- **Updated:** 2026-10-09 04:29Z by leader
 - **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/10-sessions-in-redis.md`
@@ -2059,6 +2067,21 @@ Sessions with native expiry in Redis, per-user index for delete-all, fail-closed
 
 #### Comments
 - 2026-10-09 01:31Z · leader · T-051 is merged: ready (spec carries the T-051 clean-ups).
+- 2026-10-09 04:14Z · dev · PR #39, STACKED on #38 (T-048): merge #38 first (branch contains its commits; migration is 0012). Sessions in Redis (sess/usess keys, Lua create+sweep/guarded extend/delete/delete-all), 503 session_store_unavailable fail-closed, register rolls back the account if Redis fails, reset + Google pre-hijack delete sessions before the MySQL commit. T-051 clean-ups 1-5 included (LoadMigrate, port range, TLS hint, slog logger, readyz write probe). Test: make up; make lint build test test-integration; newman auth x2 on a fresh API each (Google folder fails only when Google is unconfigured). Gaps: web text for the new code, single-node Redis assumed.
+- 2026-10-09 04:28Z · qa · PR #39 head fd64f74 (stack: #38 a40bfc5 + 1 commit), CI green (go, go-integration, security, web). No product code or tests changed.
+  MECHANICAL: make lint build test test-integration all OK (golangci 0 issues, go -race all pkgs, web tests, check:api). Session/redis/config tests re-run -count=3 -race: stable.
+  Live probing: real API (SMEM_ENV=dev), own Valkey 8 container (AOF, noeviction) on :6390, scratch DB smem_test_qa052 (dropped); dev's scratch DB smem_test_t052run1 is still in local MySQL (not touched, not dropped).
+  AC1 layout: sess:<sha256 hex of cookie value> hash {user_id,created_at,last_seen_at(ms),user_agent}, PTTL 2591993999 ms (30d); usess:<uid> set of hashes, PTTL pushed to latest session expiry. My own shasum of the cookie matched the key; raw cookie value absent from all keys, AOF/RDB files (grep -a 0) and API log.
+  AC2 behavior: register/login cookie HttpOnly, SameSite=Lax, Max-Age=2592000 (unchanged, code untouched); fresh session no re-issue; last_seen 16 d old -> 200 + new Set-Cookie, TTL back to ~30d, usess TTL also; last_seen 31 d with key present -> 401; unknown/garbage/5000-char/foreign-hash cookie -> 401; logout 204 + clears cookie, key and index entry gone, replay of the logged-out cookie 401, logout twice 204; 3 logins = 3 members, logging out one leaves the others valid.
+  AC3 delete-all: reset (fixed dev code) with 4 sessions -> 204, all 401, usess gone; index with a stale member -> still ok; 1000 live sessions: reset 28 ms. Atomic Lua; password-reset with Redis scripting denied (ACL) -> 503 session_store_unavailable, password NOT changed (old pw 200, new 401), sessions intact (rollback works); Google pre-hijack rollback covered by TestGooglePreHijackingRollsBackWhenSessionsCannotBeDeleted (pass x3).
+  AC4 Redis stopped: /me with cookie 503 session_store_unavailable + Retry-After 5; /me w/o cookie 401; logout with cookie 503, w/o cookie 204; login right pw 503, wrong pw 401 (account rules first); register 503 and 0 rows in users (rolled back); reset 503; verify-email/resend 503; forgot 202; healthz 200, readyz 503; 47 failing requests -> 1 log line, a 2nd line after 31 s (once per 30 s). After docker start the same cookie works again without API restart (AOF), register works. FLUSHALL -> /me 401, login 200, no 500. maxmemory below usage: readyz 503 (write probe), /me read 200, login 503 session_store_unavailable.
+  AC5 migration: 0012 up, down (SHOW CREATE TABLE sessions identical to 0002 definition, empty), up again OK on 0010+0011 chain; no code reads sessions table (git grep: only the db migration test).
+  AC6 races: 6 rounds x 31 parallel requests (30 /me on a 20-day-old session + 1 logout): session key and index entry gone every time; TestSessionRefreshRacesNeverResurrect pass.
+  AC7: Newman auth Full+Edge 67 req/150 assert 0 failures twice (fresh API each); notes x2 72/137 0 failures; media 66/122 and yearbooks 92/189 0 failures; platform only the documented manual 'database stopped' item fails.
+  CLEAN-UPS: (1) migrate: env -i with only SMEM_ENV/DB DSN/S3 bucket/origins and no SMEM_REDIS_URL/SMEM_OTP_KEY -> status/up OK; API without them still refuses. (2) redis://h:99999, :0, :abc, db 16, query string -> config error naming port 1-65535/db; :65535 passes config. (3) rediss:// against plain server: after 5 s 'redis unavailable: context deadline exceeded (rediss:// URL: is the server TLS-enabled?)', password in URL absent from output. (4) go-redis line now JSON WARN 'redis client: ...' via slog, no secrets. (5) /readyz write probe key smem:dev:probe:ready TTL 10 s, verified 503 on a full Redis.
+  NON-BLOCKING: (a) createScript sweeps the user's whole index in Lua on every login: with 100000 sessions for one user one login blocked Redis 152 ms (1000 sessions: 24 ms total request). Successful logins are not rate limited, so an account owner could bloat his own index; consider a per-user cap (e.g. 50 sessions, drop oldest) later. (b) logout with Redis down answers 503 and does not clear the cookie (fail-closed by design; user can retry). (c) a Redis failure after the MySQL insert of register burns an auto-increment id (cosmetic); a MySQL commit failure after Sessions.Create would leave an orphan Redis session for a never-committed user id (Authenticate then answers 401, harmless). (d) no account-delete endpoint yet: the future one must call Sessions.DeleteAll (the old FK cascade is gone); orphans resolve to 401 meanwhile. (e) web has no text for session_store_unavailable yet (dev noted). (f) Postman has no request for the 503 (needs Redis stopped), covered by Go integration tests + my manual run. (g) prod smemories-migrate still needs SMEM_S3_BUCKET/ALLOWED_ORIGINS/PUBLIC_BASE_URL (pre-existing, not Redis): T-022 must pass them.
+- 2026-10-09 04:29Z · leader · Leader review (content) OK at head fd64f74: sessions as sess:<sha256> hashes + usess:<uid> index, scripts atomic, fail-closed 503, reset/pre-hijack delete-all before the MySQL commit, migration 0012. Non-blocking items went into the T-031 spec (per-user session cap, logout with Redis down) and the T-049 spec (web strings). PR #39 is CONFLICTING after #38 merged: merge develop into the branch, keep T-052 only, re-run all tests, READY_FOR_QA (short regression). Then owner approval.
+- 2026-10-09 04:29Z · leader · T-048 (#38) is merged (develop bb6709a). Merge develop into the T-052 branch (the T-048 commits now appear as one squash commit; resolve conflicts keeping develop's T-048 files and your T-052 changes), re-run make lint build test test-integration, push, READY_FOR_QA. No other change requested.
 
 ### T-053 — [E02] Rate limiters move to Redis (shared limiter for all endpoints)
 - **Status:** TODO
