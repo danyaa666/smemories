@@ -37,6 +37,9 @@ jobs:
           go-version: ${{ steps.gover.outputs.minor }}
           check-latest: true
           cache: true # module and build cache, keyed on go.sum
+      - uses: ./.github/actions/go-newest-patch
+        with:
+          minor: ${{ steps.gover.outputs.minor }}
       - name: gofmt
         run: |
           out="$(gofmt -l .)"
@@ -85,6 +88,9 @@ jobs:
           go-version: ${{ steps.gover.outputs.minor }}
           check-latest: true
           cache: true
+      - uses: ./.github/actions/go-newest-patch
+        with:
+          minor: ${{ steps.gover.outputs.minor }}
       # A `services:` container cannot take server arguments, so this starts MySQL 8.4 with
       # the same flags as docker-compose.yml (utf8mb4, strict sql_mode, UTC).
       - name: Start MySQL 8.4 (utf8mb4)
@@ -168,6 +174,9 @@ jobs:
           go-version: ${{ steps.gover.outputs.minor }}
           check-latest: true
           cache: true
+      - uses: ./.github/actions/go-newest-patch
+        with:
+          minor: ${{ steps.gover.outputs.minor }}
       # Blocking: a known vulnerability that the code can reach fails the build.
       - name: govulncheck
         run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...

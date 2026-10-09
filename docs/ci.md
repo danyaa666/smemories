@@ -24,6 +24,20 @@ branch, no force pushes, no deletions. Do not require the `ci` workflow name; on
 - Go version: `go.mod` sets the language floor (`go 1.26.0`). CI builds with the newest `1.26.x`
   (`check-latest`), because the standard library of an older patch release carries known vulnerabilities that
   `govulncheck` reports. Upgrade your local Go to the latest 1.26 patch release to see the same result.
+- Newest patch from go.dev (T-062): `actions/setup-go` takes its version list from a manifest that lags a Go release by
+  hours, so a fresh security patch can be missing and `govulncheck` (the `security` job) goes red. The `go`,
+  `go-integration` and `security` jobs therefore run the local composite action
+  [`.github/actions/go-newest-patch`](../.github/actions/go-newest-patch/action.yml) right after `setup-go`. It reads
+  `https://go.dev/dl/?mode=json`, takes the highest stable `go1.<minor>.N` for the `go.mod` minor, checks that it matches
+  that exact pattern, and sets `GOTOOLCHAIN=go1.<minor>.N` for the rest of the job; the `go` command then downloads that
+  toolchain itself and verifies it against the Go checksum database. Every job prints `go version` in that step, so the
+  log shows the toolchain in use (all three jobs of a run resolve the same patch). No third-party action is involved.
+  If go.dev cannot be reached or answers something unexpected, the step prints a `::warning` annotation
+  ("go.dev lookup failed") and the job keeps the `setup-go` result (`check-latest`); a red `security` job in that
+  situation with stdlib findings means the fallback was too old: re-run once go.dev is reachable. If the step itself fails
+  at `go version`, the toolchain download from the Go module proxy failed; re-run the job. To debug, run the step's script
+  locally with `scripts/test-go-newest-patch.sh [--live]`, which runs it with the runner's `bash -e -o pipefail` flags
+  against good and malformed answers (HTML page, non-JSON, JSON object, empty array, wrong minor, unreachable host).
 - MySQL is started with `docker run` instead of a `services:` block because a service container cannot take
   server arguments (character set, collation, `sql_mode`, time zone). The root password is a fake that exists only on the
   runner. Tests create and drop their own `smem_test_*` databases.
