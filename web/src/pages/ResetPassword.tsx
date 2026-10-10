@@ -1,9 +1,10 @@
 import { useMutation } from "@tanstack/react-query";
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { forgotPassword, resetPassword } from "../api/auth";
 import { ApiError } from "../api/client";
+import { dropTokenParam } from "../auth/dropTokenParam";
 import { errorText, fieldError, formError } from "../auth/errors";
 import { CODE_LENGTH, CodeField } from "../components/CodeField";
 import { ResendCode } from "../components/ResendCode";
@@ -16,6 +17,7 @@ export function ResetPassword() {
   const [email, setEmail] = useState(state?.email ?? "");
   const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
+  const passwordRef = useRef<HTMLInputElement>(null);
   const [short, setShort] = useState(false);
   const [sent, setSent] = useState(state?.sent === true);
   const m = useMutation({
@@ -33,6 +35,11 @@ export function ResetPassword() {
     m.error instanceof ApiError && m.error.code === "busy"
       ? t("reset.busy")
       : formError(t, m.error);
+  const passwordError = fieldError(t, m.error, "password");
+  useEffect(dropTokenParam, []);
+  useEffect(() => {
+    if (passwordError) passwordRef.current?.focus(); // keyed on m.error, so a repeated error refocuses
+  }, [m.error]); // eslint-disable-line react-hooks/exhaustive-deps
   const emailError = fieldError(t, m.error, "email") ?? fieldError(t, resend.error, "email");
   return (
     <>
@@ -56,7 +63,7 @@ export function ResetPassword() {
             setShort(false);
           }}
           focusOnMount={Boolean(state?.email)}
-          error={short ? t("errors.invalid_code") : fieldError(t, m.error, "code")}
+          error={short ? t("errors.code_short") : fieldError(t, m.error, "code")}
         />
         <TextField
           label={t("fields.newPassword")}
@@ -65,7 +72,8 @@ export function ResetPassword() {
           onChange={setPassword}
           autoComplete="new-password"
           hint={t("fields.passwordHint")}
-          error={fieldError(t, m.error, "password")}
+          error={passwordError}
+          inputRef={passwordRef}
         />
         {error && (
           <p role="alert" className="error">
@@ -78,6 +86,7 @@ export function ResetPassword() {
       </form>
       <p>
         <ResendCode
+          storageKey="resendUntil:reset"
           startCooling={state?.sent === true}
           pending={resend.isPending}
           onSend={() =>

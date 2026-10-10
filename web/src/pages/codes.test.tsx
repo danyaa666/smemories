@@ -1,4 +1,6 @@
-import { act, fireEvent, screen, waitFor } from "@testing-library/react";
+import { cleanup, act, fireEvent, screen, waitFor } from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import i18n from "../i18n";
@@ -10,7 +12,10 @@ const where = () => screen.getByTestId("where").textContent;
 const ok204 = () => new Response(null, { status: 204 });
 const verifyCalls = (calls: Call[]) => calls.filter((c) => c.path === "/v1/auth/verify-email");
 
-afterEach(() => vi.useRealTimers());
+afterEach(() => {
+  vi.useRealTimers();
+  sessionStorage.clear();
+});
 
 async function codeInput() {
   return screen.findByLabelText("6-digit code");
@@ -51,11 +56,12 @@ describe("verify email", () => {
     expect(input).toHaveValue("123");
   });
 
-  it("submits a short code on Enter without a request and says it is wrong", async () => {
+  it("submits a short code on Enter without a request and asks for all 6 digits", async () => {
     const calls = mockApi({ "GET /v1/me": unverified });
     renderApp("/verify-email");
     await userEvent.type(await codeInput(), "123{Enter}");
-    expect(await screen.findByRole("alert")).toHaveTextContent("That code is wrong");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Enter all 6 digits");
+    expect(screen.getByRole("alert")).not.toHaveTextContent("wrong");
     expect(verifyCalls(calls)).toHaveLength(0);
   });
 
@@ -160,6 +166,35 @@ describe("resend the verification code", () => {
     await act(() => vi.advanceTimersByTimeAsync(31_000));
     expect(screen.getByRole("button", { name: "Send a new code" })).toBeEnabled();
     expect(calls.filter((c) => c.path.endsWith("/resend"))).toHaveLength(1);
+  });
+
+  it("keeps the cooldown over a page reload, ignores an expired one, and stores no code or email", async () => {
+    sessionStorage.clear();
+    mockApi({
+      "GET /v1/me": unverified,
+      "POST /v1/auth/verify-email/resend": Response.json({}, { status: 202 }),
+    });
+    const first = renderApp("/verify-email");
+    await userEvent.click(await screen.findByRole("button", { name: "Send a new code" }));
+    await screen.findByRole("button", { name: /Send a new code \(\d+s\)/ });
+    expect(JSON.stringify({ ...sessionStorage })).not.toContain("lan@example.com");
+    first.unmount();
+    renderApp("/verify-email"); // "reload": fresh mount, same tab storage
+    expect(await screen.findByRole("button", { name: /Send a new code \(\d+s\)/ })).toBeDisabled();
+    cleanup();
+    sessionStorage.setItem("resendUntil:verify", String(Date.now() - 1000));
+    renderApp("/verify-email");
+    expect(await screen.findByRole("button", { name: "Send a new code" })).toBeEnabled();
+    sessionStorage.clear();
+  });
+
+  it("gives the resend button a touch target of at least 44px", async () => {
+    mockApi({ "GET /v1/me": unverified });
+    renderApp("/verify-email");
+    // jsdom has no layout, so check the rule the button carries
+    expect(await screen.findByRole("button", { name: "Send a new code" })).toHaveClass("resend");
+    const css = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+    expect(css).toMatch(/\.resend\s*{[^}]*min-height:\s*2\.75rem/);
   });
 
   it("starts the cooldown when the student just registered", async () => {
@@ -301,8 +336,24 @@ describe("forgot and reset password", () => {
     renderApp("/reset-password");
     await userEvent.type(await screen.findByLabelText("6-digit code"), "12");
     await userEvent.click(screen.getByRole("button", { name: "Change password" }));
-    expect(await screen.findByText(/That code is wrong/)).toBeInTheDocument();
+    expect(await screen.findByText(/Enter all 6 digits/)).toBeInTheDocument();
     expect(calls.filter((c) => c.path === "/v1/auth/reset-password")).toHaveLength(0);
+  });
+
+  it("moves focus to the password field after weak_password, every time", async () => {
+    mockApi({
+      "GET /v1/me": signedOut,
+      "POST /v1/auth/reset-password": err(400, "weak_password"),
+    });
+    renderApp("/reset-password");
+    await userEvent.type(await screen.findByLabelText("Email"), "lan@example.com");
+    await userEvent.type(screen.getByLabelText("6-digit code"), "123456");
+    await userEvent.type(screen.getByLabelText("New password"), "short");
+    const submit = screen.getByRole("button", { name: "Change password" });
+    await userEvent.click(submit);
+    await waitFor(() => expect(screen.getByLabelText("New password")).toHaveFocus());
+    await userEvent.click(submit);
+    await waitFor(() => expect(screen.getByLabelText("New password")).toHaveFocus());
   });
 
   it("resends with the email typed, with the same cooldown", async () => {
@@ -340,5 +391,20 @@ describe("old link pages", () => {
     renderApp("/reset-password?token=secret_tok", { browser: true });
     await screen.findByLabelText("6-digit code");
     expect(calls.every((c) => c.body === undefined)).toBe(true);
+  });
+
+  it("remove a leftover ?token= from the address bar and keep other parts", async () => {
+    mockApi({ "GET /v1/me": signedOut });
+    renderApp("/reset-password?token=secret_tok&x=1", { browser: true });
+    await screen.findByLabelText("6-digit code");
+    expect(window.location.search).toBe("?x=1");
+    expect(window.location.href).not.toContain("secret_tok");
+  });
+
+  it("remove a leftover ?token= on the verify screen too", async () => {
+    mockApi({ "GET /v1/me": unverified });
+    renderApp("/verify-email?token=secret_tok", { browser: true });
+    await codeInput();
+    expect(window.location.href).not.toContain("secret_tok");
   });
 });

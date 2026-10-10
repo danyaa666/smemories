@@ -1,8 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation } from "react-router-dom";
 import { resendVerification, verifyEmail } from "../api/auth";
+import { dropTokenParam } from "../auth/dropTokenParam";
 import { errorText, fieldError, formError } from "../auth/errors";
 import { ME_KEY, useMe } from "../auth/useMe";
 import { CODE_LENGTH, CodeField } from "../components/CodeField";
@@ -15,6 +16,7 @@ export function VerifyEmail() {
   const justSent = (useLocation().state as { sent?: boolean } | null)?.sent === true;
   const [code, setCode] = useState("");
   const [short, setShort] = useState(false); // fewer than 6 digits: say so without spending an attempt
+  useEffect(dropTokenParam, []);
   const refreshMe = async () => {
     // The page may open before GET /v1/me has answered; a refetch would join that stale request.
     await qc.cancelQueries({ queryKey: ME_KEY });
@@ -66,7 +68,7 @@ export function VerifyEmail() {
           onComplete={submit}
           disabled={verify.isPending}
           focusOnMount
-          error={short ? t("errors.invalid_code") : fieldError(t, verify.error, "code")}
+          error={short ? t("errors.code_short") : fieldError(t, verify.error, "code")}
         />
         {error && (
           <p role="alert" className="error">
@@ -79,6 +81,7 @@ export function VerifyEmail() {
       </form>
       <p>
         <ResendCode
+          storageKey="resendUntil:verify"
           startCooling={justSent}
           pending={resend.isPending}
           onSend={() =>
