@@ -182,16 +182,16 @@ func (e *errRecorder) Read(p []byte) (int, error) {
 
 func (h *Handler) content(w http.ResponseWriter, r *http.Request) {
 	extend(w, false)
-	var thumb bool
-	switch r.URL.Query().Get("size") {
-	case "", "display":
-	case "thumb":
-		thumb = true
+	size := r.URL.Query().Get("size")
+	switch size {
+	case "":
+		size = SizeDisplay
+	case SizeDisplay, SizeThumb, SizePrint:
 	default:
-		httpx.WriteError(w, r, http.StatusBadRequest, "invalid_size", "size must be thumb or display")
+		httpx.WriteError(w, r, http.StatusBadRequest, "invalid_size", "size must be thumb, display or print")
 		return
 	}
-	m, data, ct, err := h.svc.Content(r.Context(), owner(r), r.PathValue("id"), thumb)
+	m, data, ct, size, err := h.svc.Content(r.Context(), owner(r), r.PathValue("id"), size)
 	if err != nil {
 		h.fail(w, r, err)
 		return
@@ -201,8 +201,11 @@ func (h *Handler) content(w http.ResponseWriter, r *http.Request) {
 	hd.Set("X-Content-Type-Options", "nosniff")
 	hd.Set("Cache-Control", "private, max-age=3600")
 	etag := `"` + m.SHA256[:32]
-	if thumb {
+	switch size {
+	case SizeThumb:
 		etag += "-t"
+	case SizePrint:
+		etag += "-p"
 	}
 	hd.Set("ETag", etag+`"`)
 	// ServeContent answers Range, If-Range and If-None-Match.

@@ -239,7 +239,7 @@ func TestSubmitWithPhotos(t *testing.T) {
 	if n := e.count(`SELECT COUNT(*) FROM note_photos np JOIN notes n ON n.id = np.note_id WHERE n.public_id = ? AND np.position IN (0, 1)`, id); n != 2 {
 		t.Fatalf("%d photo links", n)
 	}
-	if e.st.count() != 4 { // display + thumbnail each
+	if e.st.count() != 6 { // display + print + thumbnail each
 		t.Fatalf("%d objects", e.st.count())
 	}
 	// an empty file input of a browser (no file name, no bytes) is not a photo; three real photos are the maximum
@@ -362,7 +362,7 @@ func TestSubmitCompensation(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		e.st.afterFn = func(puts int) {
-			if puts == 4 { // both photos' objects... the second one's display object is put (puts 3-4); the request is gone
+			if puts == 4 { // photo 1 is complete (3 objects: display, thumb, print), photo 2's display object was just put; the request is gone
 				cancel()
 			}
 		}
@@ -828,8 +828,8 @@ func TestStalledUploadsDoNotBlockOthers(t *testing.T) {
 	if n := e.noteCount(); n != 1 {
 		t.Fatalf("%d notes, want 1 (the stalled uploads keep nothing)", n)
 	}
-	if e.count(`SELECT COUNT(*) FROM media`) != 3 || e.st.count() != 6 {
-		t.Fatal("only the real submission's 3 photos (6 objects) should exist")
+	if e.count(`SELECT COUNT(*) FROM media`) != 3 || e.st.count() != 9 {
+		t.Fatal("only the real submission's 3 photos (9 objects) should exist")
 	}
 }
 
