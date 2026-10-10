@@ -157,7 +157,9 @@ func newEnv(t *testing.T) *env {
 	ah := auth.NewHandler(as, auth.HandlerConfig{AllowedOrigins: []string{origin}}, logger)
 	e.svc = NewService(NewStore(d), e.st, 2, e.lim, nil) // two at a time, so parallel tests queue on the semaphore
 	mh := NewHandler(e.svc, 10<<20, ah.RequireUser, []string{origin}, logger)
-	yh := yearbook.NewHandler(yearbook.NewStore(d), e.svc, ah.RequireUser, []string{origin}, logger, nil)
+	bookStore := yearbook.NewStore(d)
+	e.svc.SetRefClearer(bookStore)
+	yh := yearbook.NewHandler(bookStore, yearbook.NewService(bookStore, e.svc), ah.RequireUser, []string{origin}, logger, nil)
 	e.h = httpx.NewRouter(logger, ah.Routes, yh.Routes, mh.Routes)
 	t.Cleanup(func() { // objects of every book this test created
 		for _, id := range e.books {
@@ -435,7 +437,7 @@ func TestQuotas(t *testing.T) {
 	fill := func(n int, bytes int) {
 		for i := range n {
 			_, err := e.db.Exec(`INSERT INTO media (public_id, yearbook_id, uploader_kind, object_key, thumb_key, content_type, bytes, width, height, sha256, created_at)
-				SELECT ?, id, 'owner', 'k', 't', 'image/jpeg', ?, 1, 1, '', NOW(6) FROM yearbooks WHERE public_id = ?`, fmt.Sprintf("FILL%022d", i+e.count(`SELECT COUNT(*) FROM media`)), bytes, book)
+				SELECT ?, id, 'owner', 'k', 't', 'image/jpeg', ?, 1, 1, '', NOW(6) FROM yearbook_tab WHERE public_id = ?`, fmt.Sprintf("FILL%022d", i+e.count(`SELECT COUNT(*) FROM media`)), bytes, book)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -529,6 +531,30 @@ func TestStorageFailureLeavesNoRow(t *testing.T) {
 	e.upload(u, book, "a.jpg", "image/jpeg", photo(t)).status(201, "") // and a retry works
 }
 
+// T-064 AC5: deleting a photo that is the cover and the profile photo clears both references (no ON DELETE SET NULL any more).
+func TestDeleteMediaClearsCoverAndPhoto(t *testing.T) {
+	e := newEnv(t)
+	u := e.register("a@example.com")
+	book := e.newBook(u)
+	a := e.upload(u, book, "a.jpg", "image/jpeg", photo(t)).status(201, "").mediaID()
+	b := e.upload(u, book, "b.jpg", "image/jpeg", photo(t)).status(201, "").mediaID()
+	e.json(u, "PATCH", "/v1/yearbooks/"+book, fmt.Sprintf(`{"cover_media_id":%q}`, a)).status(200, "")
+	e.json(u, "PUT", "/v1/yearbooks/"+book+"/profile", fmt.Sprintf(`{"full_name":"A","photo_media_id":%q}`, a)).status(200, "")
+	e.json(u, "DELETE", "/v1/media/"+b, "").status(204, "") // another photo: the references stay
+	got := e.json(u, "GET", "/v1/yearbooks/"+book, "").status(200, "").book()
+	if got["cover_media_id"] != a || got["profile"].(map[string]any)["photo_media_id"] != a {
+		t.Fatalf("references lost by deleting another photo: %v", got)
+	}
+	e.json(u, "DELETE", "/v1/media/"+a, "").status(204, "")
+	got = e.json(u, "GET", "/v1/yearbooks/"+book, "").status(200, "").book()
+	if got["cover_media_id"] != nil || got["profile"].(map[string]any)["photo_media_id"] != nil {
+		t.Fatalf("dangling references after the photo was deleted: %v", got)
+	}
+	if n := e.count(`SELECT COUNT(*) FROM yearbook_tab WHERE cover_media_id IS NOT NULL`) + e.count(`SELECT COUNT(*) FROM profile_tab WHERE photo_media_id IS NOT NULL`); n != 0 {
+		t.Fatalf("%d references left in the tables", n)
+	}
+}
+
 func TestDeleteYearbookRemovesObjects(t *testing.T) {
 	e := newEnv(t)
 	u := e.register("a@example.com")
@@ -614,7 +640,7 @@ func TestContributorUploadBusyAndDiscard(t *testing.T) {
 	u := e.register("owner@example.com")
 	book := e.newBook(u)
 	var ownerID, row uint64
-	if err := e.db.QueryRow(`SELECT owner_id, id FROM yearbooks WHERE public_id = ?`, book).Scan(&ownerID, &row); err != nil {
+	if err := e.db.QueryRow(`SELECT owner_id, id FROM yearbook_tab WHERE public_id = ?`, book).Scan(&ownerID, &row); err != nil {
 		t.Fatal(err)
 	}
 	data := photo(t)

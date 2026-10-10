@@ -51,7 +51,7 @@ type rowQuerier interface {
 // ownedYearbook returns the internal id of a yearbook the user owns.
 func (s *Store) ownedYearbook(ctx context.Context, ownerID uint64, publicID string) (uint64, error) {
 	var id uint64
-	err := s.db.QueryRowContext(ctx, `SELECT id FROM yearbooks WHERE owner_id = ? AND public_id = ?`, ownerID, publicID).Scan(&id)
+	err := s.db.QueryRowContext(ctx, `SELECT id FROM yearbook_tab WHERE owner_id = ? AND public_id = ?`, ownerID, publicID).Scan(&id)
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, ErrNotFound
 	}
@@ -66,7 +66,7 @@ func checkQuota(ctx context.Context, q rowQuerier, ownerID, yearbookID uint64, a
 	}
 	var used int64
 	if err := q.QueryRowContext(ctx,
-		`SELECT COALESCE(SUM(m.bytes), 0) FROM media m JOIN yearbooks y ON y.id = m.yearbook_id WHERE y.owner_id = ?`, ownerID).Scan(&used); err != nil {
+		`SELECT COALESCE(SUM(m.bytes), 0) FROM media m JOIN yearbook_tab y ON y.id = m.yearbook_id WHERE y.owner_id = ?`, ownerID).Scan(&used); err != nil {
 		return err
 	}
 	if n >= maxPerYearbook || used+int64(add) > maxBytesPerUser {
@@ -87,7 +87,7 @@ func (s *Store) insert(ctx context.Context, ownerID, yearbookID uint64, kind str
 	if err := tx.QueryRowContext(ctx, `SELECT id FROM users WHERE id = ? FOR UPDATE`, ownerID).Scan(&locked); err != nil {
 		return Media{}, err
 	}
-	err = tx.QueryRowContext(ctx, `SELECT id FROM yearbooks WHERE id = ? AND owner_id = ? FOR SHARE`, yearbookID, ownerID).Scan(&locked)
+	err = tx.QueryRowContext(ctx, `SELECT id FROM yearbook_tab WHERE id = ? AND owner_id = ? FOR SHARE`, yearbookID, ownerID).Scan(&locked)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Media{}, ErrNotFound
 	}
@@ -114,7 +114,7 @@ func (s *Store) insert(ctx context.Context, ownerID, yearbookID uint64, kind str
 
 // yearbookByRow returns the owner and the public id of a yearbook given its internal id.
 func (s *Store) yearbookByRow(ctx context.Context, id uint64) (ownerID uint64, publicID string, err error) {
-	err = s.db.QueryRowContext(ctx, `SELECT owner_id, public_id FROM yearbooks WHERE id = ?`, id).Scan(&ownerID, &publicID)
+	err = s.db.QueryRowContext(ctx, `SELECT owner_id, public_id FROM yearbook_tab WHERE id = ?`, id).Scan(&ownerID, &publicID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, "", ErrNotFound
 	}
@@ -126,9 +126,9 @@ func (s *Store) owned(ctx context.Context, ownerID uint64, publicID string) (Med
 	var m Media
 	var printKey sql.NullString
 	err := s.db.QueryRowContext(ctx,
-		`SELECT m.public_id, m.object_key, m.thumb_key, m.print_key, m.content_type, m.bytes, m.width, m.height, m.sha256, m.created_at
-		 FROM media m JOIN yearbooks y ON y.id = m.yearbook_id WHERE y.owner_id = ? AND m.public_id = ?`, ownerID, publicID).
-		Scan(&m.ID, &m.ObjectKey, &m.ThumbKey, &printKey, &m.ContentType, &m.Bytes, &m.Width, &m.Height, &m.SHA256, &m.CreatedAt)
+		`SELECT m.id, m.public_id, m.object_key, m.thumb_key, m.print_key, m.content_type, m.bytes, m.width, m.height, m.sha256, m.created_at
+		 FROM media m JOIN yearbook_tab y ON y.id = m.yearbook_id WHERE y.owner_id = ? AND m.public_id = ?`, ownerID, publicID).
+		Scan(&m.RowID, &m.ID, &m.ObjectKey, &m.ThumbKey, &printKey, &m.ContentType, &m.Bytes, &m.Width, &m.Height, &m.SHA256, &m.CreatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Media{}, ErrNotFound
 	}
@@ -148,6 +148,25 @@ func (m Media) keys() []string {
 func (s *Store) remove(ctx context.Context, publicID string) error {
 	_, err := s.db.ExecContext(ctx, `DELETE FROM media WHERE public_id = ?`, publicID)
 	return err
+}
+
+// removeRow deletes the photo row. The covers and profile photos that point at it are cleared in the same transaction
+// (refs may be nil in tests that wire no yearbooks): there is no foreign key to do it.
+func (s *Store) removeRow(ctx context.Context, rowID int64, refs RefClearer) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+	if refs != nil {
+		if err := refs.ClearMediaRefs(ctx, tx, rowID); err != nil {
+			return err
+		}
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM media WHERE id = ?`, rowID); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // list returns up to limit photos of a yearbook, newest first (id descending), with id < before when before > 0.

@@ -68,7 +68,7 @@ func TestContributorUploadStoresPrintVersion(t *testing.T) {
 	u := e.register("a@example.com")
 	book := e.newBook(u)
 	var yid uint64
-	_ = e.db.QueryRow(`SELECT id FROM yearbooks WHERE public_id = ?`, book).Scan(&yid)
+	_ = e.db.QueryRow(`SELECT id FROM yearbook_tab WHERE public_id = ?`, book).Scan(&yid)
 	m, err := e.svc.UploadContributor(context.Background(), yid, bigPhoto(t))
 	if err != nil {
 		t.Fatal(err)
