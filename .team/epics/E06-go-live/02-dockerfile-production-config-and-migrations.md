@@ -15,3 +15,6 @@ and add the `SMEM_S3_*` and `SMEM_MEDIA_*` variables to the production configura
 
 #### Leader note from decision D-23 (2026-10-08)
 Production configuration also needs `SMEM_REDIS_URL` (a `rediss://` URL with the auth token from Secrets Manager), `SMEM_OTP_KEY` and `SMEM_OIDC_COOKIE_KEY`; the API must not start in prod without them. `/readyz` includes Redis, so the container health check and the load balancer target group must tolerate a Redis outage only as "not ready", not as a crash loop.
+
+#### Leader note from T-075 (2026-10-10)
+The one-off task for `smemories-media-backfill` needs only the database and object-store settings (it uses `config.LoadMigrate`); the exact variable list is in `docs/media.md` (section on the backfill). Run it with `--dry-run` first after the first deploy, then without; it is idempotent. The migrate task definition takes the same variables.

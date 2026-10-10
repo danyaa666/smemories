@@ -11,7 +11,8 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 30 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-044, T-050, T-056, T-058, T-059, T-060, T-061, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073 |
-| TODO | 2 | T-075, T-076 |
+| TODO | 1 | T-076 |
+| READY_FOR_QA | 1 | T-075 |
 | QA_PASS | 1 | T-064 |
 | MERGED | 1 | T-053 |
 | DONE | 35 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-054, T-057, T-062, T-063, T-074 |
@@ -21,7 +22,7 @@
 
 **Open questions for you:** Q-026 (Approve merge of T-064 (E10: yearbook and profile tables to the new DB conventions)?)
 
-_Board last written 2026-10-10 04:38Z_
+_Board last written 2026-10-10 04:48Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -2808,7 +2809,7 @@ T-034 QA finding: a shutdown or crash in the middle of an upload leaves a smem-u
 - 2026-10-10 03:28Z · human · accepted by owner
 
 ### T-075 — [E05] Media backfill hardening
-- **Status:** TODO
+- **Status:** READY_FOR_QA
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2817,10 +2818,10 @@ T-034 QA finding: a shutdown or crash in the middle of an upload leaves a smem-u
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-10 04:38Z by leader
-- **Comments-seen:** 0
+- **Branch:** task/t-075-e05-media-backfill-hardening
+- **PR:** https://github.com/danyaa666/smemories/pull/45
+- **Updated:** 2026-10-10 04:47Z by dev
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/13-media-backfill-hardening.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2829,6 +2830,7 @@ T-034 QA finding: a shutdown or crash in the middle of an upload leaves a smem-u
 T-057 QA findings: backfill config loader, stop after consecutive storage failures, dry-run over-count, Postman print edge, delete race, alpha PNG size.
 
 #### Comments
+- 2026-10-10 04:47Z · dev · All 6 requirements done with tests (see PR #45). LoadMigrate also drops ALLOWED_ORIGINS/PUBLIC_BASE_URL requirement. Newman not installed here: Postman 6c-6e not run, SOF parser checked with node. R6 applied to backfill only. T-022 task def should take env list from docs/media.md.
 
 ### T-076 — [E02] Code screens polish (target size, cooldown reload, messages, focus)
 - **Status:** TODO
@@ -2840,10 +2842,10 @@ T-057 QA findings: backfill config loader, stop after consecutive storage failur
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
+- **Branch:** task/t-076-e02-code-screens-polish-target-size-cool
 - **PR:** —
-- **Updated:** 2026-10-10 04:38Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-10 04:48Z by leader
+- **Comments-seen:** 2
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/12-code-screens-polish.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2852,6 +2854,8 @@ T-057 QA findings: backfill config loader, stop after consecutive storage failur
 T-049 QA findings: resend button target size, cooldown restarts on reload, short-code message, focus after weak password, leftover ?token= in the address bar.
 
 #### Comments
+- 2026-10-10 04:47Z · dev · Claimed by mistake before re-running the usage gate; the gate then said SLEEP (usage cache stale). No work done, no commits; worktree exists, clean. Leader: please set back to TODO (dev cannot) for the next wake-up.
+- 2026-10-10 04:47Z · dev · not started, usage gate SLEEP; reset to TODO
 
 <!-- tasks:end -->
 
