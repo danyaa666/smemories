@@ -2,6 +2,7 @@ package templates
 
 import (
 	"bytes"
+	"cmp"
 	"embed"
 	"encoding/json"
 	"fmt"
@@ -9,6 +10,8 @@ import (
 	"io/fs"
 	"slices"
 	"strings"
+
+	"github.com/danyaa666/smemories/internal/notefields"
 )
 
 // The JSON files sit directly in embed/; background assets live in embed/<template id>/.
@@ -58,18 +61,21 @@ func ParseFS(data []byte, assets fs.FS) (*Template, error) {
 // is a programming error and panics.
 var registry = mustLoad()
 
-func mustLoad() map[string]*Template {
-	files, err := fs.Glob(embedded, "embed/*.json")
-	if err != nil || len(files) == 0 {
+func mustLoad() map[string]*Template { return mustLoadFS(embedded, "embed", assetRoot) }
+
+// mustLoadFS parses every dir/*.json in files (assets are read from assets).
+func mustLoadFS(files fs.FS, dir string, assets fs.FS) map[string]*Template {
+	names, err := fs.Glob(files, dir+"/*.json")
+	if err != nil || len(names) == 0 {
 		panic("templates: no embedded templates")
 	}
 	m := map[string]*Template{}
-	for _, f := range files {
-		data, err := embedded.ReadFile(f)
+	for _, f := range names {
+		data, err := fs.ReadFile(files, f)
 		if err != nil {
 			panic(err)
 		}
-		t, err := Parse(data)
+		t, err := ParseFS(data, assets)
 		if err != nil {
 			panic(fmt.Sprintf("templates: %s: %v", f, err))
 		}
@@ -80,18 +86,31 @@ func mustLoad() map[string]*Template {
 
 // Info is the public summary of a template.
 type Info struct {
-	ID   string
-	Name map[string]string
+	ID       string
+	Name     map[string]string
+	Renderer string // RendererGo or RendererHTML
 }
 
-// List returns the built-in templates ordered by id.
-func List() []Info {
-	out := make([]Info, 0, len(registry))
-	for _, t := range registry {
-		out = append(out, Info{ID: t.ID, Name: t.Name})
+// List returns the built-in templates (Go and HTML) ordered by id.
+func List() []Info { return listOf(registry) }
+
+func listOf(reg map[string]*Template) []Info {
+	out := make([]Info, 0, len(reg))
+	for _, t := range reg {
+		out = append(out, Info{ID: t.ID, Name: t.Name, Renderer: cmp.Or(t.Renderer, RendererGo)})
 	}
 	slices.SortFunc(out, func(a, b Info) int { return strings.Compare(a.ID, b.ID) })
 	return out
+}
+
+// NoteFields returns the note form fields of a built-in template: the ones it declares, or
+// notefields.Default() when it declares none. The slice is a copy. ok is false for an unknown id.
+func NoteFields(templateID string) (refs []notefields.FieldRef, ok bool) {
+	t, ok := registry[templateID]
+	if !ok {
+		return nil, false
+	}
+	return t.noteFields(), true
 }
 
 // Get returns a built-in template by id. The result is shared: do not modify it.

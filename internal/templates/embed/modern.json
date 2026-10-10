@@ -2,6 +2,7 @@
   "id": "modern",
   "name": {"en": "Modern", "vi": "Hiện đại"},
   "unit": "mm",
+  "note_fields": [{"id": "name", "required": true}, {"id": "relationship"}, {"id": "message", "required": true}],
   "page_sizes": ["A5", "A4"],
   "theme": {"font": "BeVietnamPro", "colors": {"ink": "#12263a", "accent": "#1f6f8b", "paper": "#ffffff", "tint": "#e6f0f4"}},
   "pages": [

@@ -1,14 +1,16 @@
 package notes
 
 import (
-	"context"
-
 	"github.com/danyaa666/smemories/internal/notefields"
+	"github.com/danyaa666/smemories/internal/templates"
 )
 
-// FieldsFor returns the fields the note form of a yearbook asks, in order. It is the single place the form
-// is decided: every yearbook gets the default set today; T-044 makes it return the fields of the book's
-// template. A note is checked against the set in force when it is submitted.
-func FieldsFor(_ context.Context, _ uint64) ([]notefields.FieldRef, error) {
-	return notefields.Default(), nil
+// FieldsFor returns the fields the note form of a book asks, in order: those of its template (Go or html),
+// or the default set when the book has no template yet or names one that no longer exists. It is the single
+// place the form is decided. A note is checked against the set in force when it is submitted.
+func FieldsFor(templateID string) []notefields.FieldRef {
+	if refs, ok := templates.NoteFields(templateID); ok {
+		return refs
+	}
+	return notefields.Default()
 }

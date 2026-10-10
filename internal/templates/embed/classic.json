@@ -2,6 +2,7 @@
   "id": "classic",
   "name": {"en": "Classic", "vi": "Cổ điển"},
   "unit": "mm",
+  "note_fields": [{"id": "name", "required": true}, {"id": "relationship"}, {"id": "message", "required": true}],
   "page_sizes": ["A5", "A4"],
   "theme": {"font": "BeVietnamPro", "colors": {"ink": "#1b1b1b", "accent": "#7a2e2e", "paper": "#fffdf8", "tint": "#efe6d8"}},
   "pages": [

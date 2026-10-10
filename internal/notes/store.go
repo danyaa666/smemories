@@ -131,20 +131,22 @@ type Public struct {
 	DeadlineAt   *time.Time
 	CollectionID uint64
 	YearbookID   uint64
+	TemplateID   string // "" until the owner chooses one
 }
 
 // lookup finds an active collection by token hash with one indexed query; unknown and revoked are both ErrNotFound.
 func (s *Store) lookup(ctx context.Context, hash [32]byte) (Public, error) {
 	var p Public
 	var deadline sql.NullTime
+	var tmpl sql.NullString
 	err := s.db.QueryRowContext(ctx,
-		`SELECT y.title, u.display_name, c.deadline_at, c.id, y.id FROM note_collections c
+		`SELECT y.title, u.display_name, c.deadline_at, c.id, y.id, y.template_id FROM note_collections c
 		 JOIN yearbooks y ON y.id = c.yearbook_id JOIN users u ON u.id = y.owner_id
-		 WHERE c.token_hash = ? AND c.revoked_at IS NULL`, hash[:]).Scan(&p.Title, &p.DisplayName, &deadline, &p.CollectionID, &p.YearbookID)
+		 WHERE c.token_hash = ? AND c.revoked_at IS NULL`, hash[:]).Scan(&p.Title, &p.DisplayName, &deadline, &p.CollectionID, &p.YearbookID, &tmpl)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Public{}, ErrNotFound
 	}
-	p.DeadlineAt = utc(deadline)
+	p.DeadlineAt, p.TemplateID = utc(deadline), tmpl.String
 	return p, err
 }
 
