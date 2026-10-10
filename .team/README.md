@@ -11,18 +11,17 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 29 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073 |
-| TODO | 1 | T-044 |
-| IN_PROGRESS | 1 | T-076 |
+| IN_QA | 1 | T-044 |
 | QA_PASS | 1 | T-064 |
-| MERGED | 2 | T-053, T-075 |
+| MERGED | 3 | T-053, T-075, T-076 |
 | DONE | 35 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-054, T-057, T-062, T-063, T-074 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
 
-**Awaiting your review (MERGED):** T-053 ([E02] Rate limiters move to Redis (shared limiter for all endpoints)); T-075 ([E05] Media backfill hardening)
+**Awaiting your review (MERGED):** T-053 ([E02] Rate limiters move to Redis (shared limiter for all endpoints)); T-075 ([E05] Media backfill hardening); T-076 ([E02] Code screens polish (target size, cooldown reload, messages, focus))
 
 **Open questions for you:** Q-026 (Approve merge of T-064 (E10: yearbook and profile tables to the new DB conventions)?)
 
-_Board last written 2026-10-10 05:33Z_
+_Board last written 2026-10-10 05:41Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -1818,7 +1817,7 @@ Closed catalogue of note form fields (name, relationship, message, how we met, .
 - 2026-10-08 09:29Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-037, T-038, T-043, T-045')
 
 ### T-044 — [E08] Templates declare note fields (format v2.1): note_fields, note_field slot, NoteFields helper
-- **Status:** TODO
+- **Status:** IN_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
@@ -1826,11 +1825,11 @@ Closed catalogue of note form fields (name, relationship, message, how we met, .
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-10 05:33Z by leader
-- **Comments-seen:** 2
+- **Assignee:** qa
+- **Branch:** task/t-044-e08-templates-declare-note-fields-format
+- **PR:** https://github.com/danyaa666/smemories/pull/47
+- **Updated:** 2026-10-10 05:40Z by qa
+- **Comments-seen:** 3
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E08-designer-templates/07-templates-declare-note-fields.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1841,6 +1840,7 @@ A template lists which note fields its friend pages ask for and where each answe
 #### Comments
 - 2026-10-08 09:14Z · leader · T-038 and T-043 are merged: ready.
 - 2026-10-08 13:31Z · leader · On hold: owner proposed browser print-to-PDF (HTML templates). Spike T-054 decides; resume or retire after ADR 0003 / D-24.
+- 2026-10-10 05:39Z · dev · Scope after D-24: AC1/4/6/7/8 done (AC2/3/5 dropped). note_fields + validation, templates.NoteFields, html manifest (no pages), List() has Renderer, pdf.Render refuses html, notes.FieldsFor reads the book's template (lookup query adds y.template_id). Test: go test ./..., go test -tags integration ./internal/notes, golangci-lint. Probe: html manifest with pages/theme, 10 or duplicate note_fields, book with NULL/unknown template_id.
 
 ### T-045 — [E02] Register accepts a locale; verification email in the student's language
 - **Status:** DONE
@@ -2844,7 +2844,7 @@ T-057 QA findings: backfill config loader, stop after consecutive storage failur
 - 2026-10-10 05:33Z · leader · merged c974d3c. Review: backfill uses config.LoadMigrate (Load not weakened), stops after N consecutive storage failures, dry-run counts only usable photos, delete race closed, 1800 px Postman fixture. QA ran newman twice and the idempotent backfill on 30 photos. For owner to check: docs/media.md backfill variable list. QA leftovers: test objects in the smemories-dev bucket under yearbooks/01M4J2R*, yearbooks/01M4J2V*, qa75-stash* (safe to delete).
 
 ### T-076 — [E02] Code screens polish (target size, cooldown reload, messages, focus)
-- **Status:** IN_PROGRESS
+- **Status:** MERGED
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2852,11 +2852,11 @@ T-057 QA findings: backfill config loader, stop after consecutive storage failur
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-076-e02-code-screens-polish-target-size-cool
-- **PR:** —
-- **Updated:** 2026-10-10 05:33Z by dev
-- **Comments-seen:** 2
+- **PR:** https://github.com/danyaa666/smemories/pull/46
+- **Updated:** 2026-10-10 05:41Z by leader
+- **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/12-code-screens-polish.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2867,6 +2867,9 @@ T-049 QA findings: resend button target size, cooldown restarts on reload, short
 #### Comments
 - 2026-10-10 04:47Z · dev · Claimed by mistake before re-running the usage gate; the gate then said SLEEP (usage cache stale). No work done, no commits; worktree exists, clean. Leader: please set back to TODO (dev cannot) for the next wake-up.
 - 2026-10-10 04:47Z · dev · not started, usage gate SLEEP; reset to TODO
+- 2026-10-10 05:35Z · dev · All 5 requirements done, web only. One vitest case per requirement (codes.test.tsx), EN+VI code_short, npm test/lint/typecheck/i18n/build green. Test: cd web && npm test. AC2: main already has overflow-wrap:anywhere, not changed; jsdom cannot measure layout, QA please eyeball 375px. Gap: reload after cooldown expiry with router state sent restarts 60s.
+- 2026-10-10 05:39Z · qa · QA_PASS. Real Chrome (Playwright, 375x800) vs dev stack (API SMEM_ENV=dev, SMEM_DEV_FIXED_OTP=123123, Vite from the T-076 worktree, head 882418a). R1 resend target: boundingBox 204x44 (EN) and 161x44 (VI) on verify and reset screens, >=44. R2 cooldown: sessionStorage holds only {resendUntil:verify|reset: <epoch ms>}, localStorage empty; reload keeps 'Send a new code (60s)' disabled; a 3s value survives reload, then unlocks after 3.6s; expired value, 'abc', '', '-1', 'NaN' are ignored (button enabled when no router state); resend click sends exactly one POST and writes a new end time; per-tab. R3: EN 'Enter all 6 digits of the code.' / VI 'Hãy nhập đủ 6 chữ số của mã.' on verify and reset with 0 API requests; wrong code 000000 still shows 'Mã không đúng...'. R4: weak password on reset (EN and VI) -> document.activeElement is the new-password input, also on a repeated weak submit. R5: /verify-email?token=abc123&x=1#h -> /verify-email?x=1#h; /reset-password?token=abc123 -> /reset-password (other params and hash kept, history.state kept). AC2: scrollWidth==innerWidth==375 on verify (125-char email, wraps), verify with error, reset, EN and VI; screenshot checked. Regression T-049: register -> verify with 123123 -> verified; forgot-password -> reset with 123123 -> login with the new password -> /account, EN and VI. make lint build test (run in worktree) exit 0, web 133/133. CI: web and security pass; go and go-integration still pending at the time (web-only diff). Dev gap judged ACCEPTABLE: after expiry a reload of a page reached with router state (history.state.sent survives reload) starts a new 60s; reproduced; fail-safe direction, max 60s, server rate limit still the authority. Non-blocking observations: (1) a tampered sessionStorage value like 99999999999999999999 gives a huge countdown (self-inflicted, own tab only); clamp to now+60s would fix. (2) A stale unexpired stored end time wins over a fresh send from the previous screen, so the new cooldown can be shorter than 60s after the latest send (safe, server enforces). (3) The gap could be closed by clearing history state after first use.
+- 2026-10-10 05:41Z · leader · merged 6764e64. Review: web only; 44 px resend button, cooldown end time kept in sessionStorage, 'Enter all 6 digits' message EN/VI, focus to password after weak_password, leftover ?token= removed; QA checked in real Chrome at 375 px, CI green. For owner to check: the verify and reset screens on your phone. Known minor: a tampered sessionStorage value shows a long countdown in the user's own tab.
 
 <!-- tasks:end -->
 
