@@ -71,6 +71,9 @@ type slotData struct {
 // Render draws book with tmpl onto w. Problems with the content (missing glyphs, long text, bad or small
 // photos) are reported in Report and never fail the render; an error means the PDF is not complete.
 func Render(ctx context.Context, tmpl *templates.Template, book Book, images ImageSource, w io.Writer, opts Options) (rep Report, err error) {
+	if tmpl.IsHTML() {
+		return Report{}, fmt.Errorf("template %q is an html template: the web app draws it, not this renderer", tmpl.ID)
+	}
 	if opts.PageSize == "" {
 		opts.PageSize = "A5"
 	}

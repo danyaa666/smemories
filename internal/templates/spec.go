@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io/fs"
 	"slices"
+
+	"github.com/danyaa666/smemories/internal/notefields"
 )
 
 // dims are the known page sizes as width and height in millimetres. The renderer scales a template's
@@ -45,15 +47,25 @@ const (
 	RoleDisplay = "display"
 )
 
+// Renderers: "go" (the default when the manifest says nothing) is drawn by internal/pdf from Pages; "html" is
+// a web component (ADR 0003, D-24): the manifest only declares id, names, page sizes and note fields, and has no pages.
+const (
+	RendererGo   = "go"
+	RendererHTML = "html"
+)
+
 // Template is one parsed, validated template.
 type Template struct {
 	ID        string            `json:"id"`
+	Renderer  string            `json:"renderer,omitempty"`  // go (default) or html
 	Name      map[string]string `json:"name"`                // by language: en, vi
 	Unit      string            `json:"unit"`                // must be "mm"
 	Reference string            `json:"reference,omitempty"` // A5 (default) or Letter: the page the mm coordinates refer to
 	PageSizes []string          `json:"page_sizes"`
 	Theme     Theme             `json:"theme"`
 	Pages     []Page            `json:"pages"`
+	// NoteFields is the friend-page form of this template (1..9 catalogue ids); empty means notefields.Default().
+	NoteFields []notefields.FieldRef `json:"note_fields,omitempty"`
 
 	assets fs.FS // where background assets are read from (the embedded folder, or a test fixture)
 }
@@ -112,6 +124,9 @@ func (t *Template) Asset(path string) ([]byte, error) {
 	return fs.ReadFile(t.assets, path)
 }
 
+// IsHTML reports whether the template is drawn by the web app instead of the Go renderer.
+func (t *Template) IsHTML() bool { return t.Renderer == RendererHTML }
+
 // Supports reports whether the template declares the page size.
 func (t *Template) Supports(size string) bool { return slices.Contains(t.PageSizes, size) }
 
@@ -150,4 +165,12 @@ type Element struct {
 
 	// rect
 	Fill string `json:"fill,omitempty"` // theme colour name
+}
+
+// noteFields is the declared set or the default one, always a fresh slice.
+func (t *Template) noteFields() []notefields.FieldRef {
+	if len(t.NoteFields) == 0 {
+		return notefields.Default()
+	}
+	return slices.Clone(t.NoteFields)
 }

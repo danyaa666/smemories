@@ -7,6 +7,10 @@ drop a file in `internal/templates/embed/` and the tests in `internal/templates`
 Sample output for review (synthetic photos and invented names only): [classic.pdf](templates/classic.pdf),
 [modern.pdf](templates/modern.pdf). Regenerate with `go test ./internal/pdf -run TestSamples -write-samples`.
 
+> Since decision D-24 (ADR 0003) templates are HTML components in the web app. The manifest described under
+> [Manifest only: html templates](#note-fields-and-html-manifests) is what the API reads from them; the Go renderer
+> and the page/element format below remain as a frozen fallback for `classic` and `modern`.
+
 ## Units and coordinates
 
 All numbers are **millimetres** on the template's **reference page**, origin at the top-left, `y` growing
@@ -51,6 +55,31 @@ other value is rejected.
   required; add any others (for example `tint`) and refer to them by name from elements.
 - `pages`: exactly one page of each kind, in the order they appear in the book: `cover`, `profile`, `notes`,
   `back`. Limits: at most 16 pages, 64 elements per page, 256 KB of JSON.
+
+## Note fields and html manifests
+
+`note_fields` (optional) lists the questions the friend page asks for this template, in order:
+
+```json
+"note_fields": [{"id": "name", "required": true}, {"id": "how_we_met"}, {"id": "message", "required": true}]
+```
+
+- 1 to 9 entries, each an `id` from the catalogue in [note-fields.md](note-fields.md), no duplicates, `required`
+  optional (default false). A wrong or repeated id fails validation naming the template and the entry
+  (`template "x", note_fields entry 2 ("crush"): not in the note field catalogue`).
+- Left out, the default set applies (`name` required, `relationship`, `message` required). `classic` and `modern`
+  declare exactly that set.
+- `templates.NoteFields(id)` returns the set (or the default one; `ok` is false for an unknown template) and
+  `notes.FieldsFor(templateID)` uses it for the public note form and for checking a submission. A book without a
+  template, or whose template no longer exists, gets the default set.
+- **Changing a template's fields later never loses answers.** Answers are stored by field id (see
+  [note-fields.md](note-fields.md)); a field the template no longer asks for is simply not shown or printed, and a
+  new field is empty for older notes.
+
+`"renderer": "html"` (default `"go"`) marks a template drawn by the web app. Its manifest has only `id`, `name`
+(`en` and `vi`), `page_sizes` (any of `A5`, `A4`, `Letter`; no aspect-ratio rule) and `note_fields`: no `pages`, `unit`,
+`reference` or `theme` (the validator rejects them). `templates.List()` returns Go and html templates, with a
+`Renderer` field; `pdf.Render` refuses an html template.
 
 ## Elements
 
