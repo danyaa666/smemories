@@ -18,3 +18,4 @@ Production configuration also needs `SMEM_REDIS_URL` (a `rediss://` URL with the
 
 #### Leader note from T-075 (2026-10-10)
 The one-off task for `smemories-media-backfill` needs only the database and object-store settings (it uses `config.LoadMigrate`); the exact variable list is in `docs/media.md` (section on the backfill). Run it with `--dry-run` first after the first deploy, then without; it is idempotent. The migrate task definition takes the same variables.
+Also from T-075 QA: a failing S3 read takes about 25 s when the endpoint refuses connections (the AWS client default), so set explicit dial/response timeouts on the S3 client in production config (storage.S3Config) before relying on retry or stop-after-N logic.

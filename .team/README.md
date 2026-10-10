@@ -12,17 +12,16 @@
 |---|---:|---|
 | BACKLOG | 30 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-044, T-050, T-056, T-058, T-059, T-060, T-061, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073 |
 | TODO | 1 | T-076 |
-| READY_FOR_QA | 1 | T-075 |
 | QA_PASS | 1 | T-064 |
-| MERGED | 1 | T-053 |
+| MERGED | 2 | T-053, T-075 |
 | DONE | 35 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-054, T-057, T-062, T-063, T-074 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
 
-**Awaiting your review (MERGED):** T-053 ([E02] Rate limiters move to Redis (shared limiter for all endpoints))
+**Awaiting your review (MERGED):** T-053 ([E02] Rate limiters move to Redis (shared limiter for all endpoints)); T-075 ([E05] Media backfill hardening)
 
 **Open questions for you:** Q-026 (Approve merge of T-064 (E10: yearbook and profile tables to the new DB conventions)?)
 
-_Board last written 2026-10-10 04:48Z_
+_Board last written 2026-10-10 05:33Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -2809,7 +2808,7 @@ T-034 QA finding: a shutdown or crash in the middle of an upload leaves a smem-u
 - 2026-10-10 03:28Z · human · accepted by owner
 
 ### T-075 — [E05] Media backfill hardening
-- **Status:** READY_FOR_QA
+- **Status:** MERGED
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2820,7 +2819,7 @@ T-034 QA finding: a shutdown or crash in the middle of an upload leaves a smem-u
 - **Assignee:** —
 - **Branch:** task/t-075-e05-media-backfill-hardening
 - **PR:** https://github.com/danyaa666/smemories/pull/45
-- **Updated:** 2026-10-10 04:47Z by dev
+- **Updated:** 2026-10-10 05:33Z by leader
 - **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/13-media-backfill-hardening.md`
@@ -2831,6 +2830,17 @@ T-057 QA findings: backfill config loader, stop after consecutive storage failur
 
 #### Comments
 - 2026-10-10 04:47Z · dev · All 6 requirements done with tests (see PR #45). LoadMigrate also drops ALLOWED_ORIGINS/PUBLIC_BASE_URL requirement. Newman not installed here: Postman 6c-6e not run, SOF parser checked with node. R6 applied to backfill only. T-022 task def should take env list from docs/media.md.
+- 2026-10-10 05:16Z · qa · QA_PASS. CI on PR head 250fa1e: go, go-integration, security, web all pass. Local (worktree): make lint build test test-integration all green (exit 0).
+  Evidence per requirement (all run by me against local MinIO/MySQL/Valkey, scratch DB smem_test_qa75):
+  R1 LoadMigrate: backfill with ONLY SMEM_DB_DSN + S3_* and SMEM_ENV=prod runs (exit 0); with SMEM_PUBLIC_BASE_URL=ftp://x it still rejects (config error, exit 1). API binary in prod still refuses to start without SMEM_ALLOWED_ORIGINS, SMEM_PUBLIC_BASE_URL, SMEM_REDIS_URL, SMEM_OTP_KEY (4 separate runs, each names the variable). Config unit test covers Load vs LoadMigrate. docs/media.md env list matches what is actually needed.
+  R2 consecutive failures: real binary pointed at a dead S3 endpoint: default run stops after exactly 20 failed (exit 1, 'object store keeps failing'); --max-consecutive-failures 3 stops at 3, also in --dry-run; 0 rejected with usage exit 2. With N=1 a corrupt display object and a missing one do NOT stop the run (28 created, failed 2, exit 1). Integration tests TestBackfillStopsAfterConsecutiveStorageFailures / PutFailuresCount pass.
+  R3 dry-run: with 1 corrupt + 1 missing display object of 30 legacy photos: dry-run 'would create 28, failed 2' = exactly what the real run then created (28/2). Nothing written by dry-run (object listing identical).
+  R4 Postman: ran media.postman_collection.json with newman 6.2.3 (npx) twice back to back: 70 requests, 132 assertions, 0 failed each run; 6c (2400x1200 upload), 6d (print long edge 1800, 1800x900), 6e pass.
+  R5 delete race: TestBackfillDeleteRace (integration, passes: deleted -> object removed; filled by parallel run -> kept).
+  R6 no-gain: TestPrintOfKeepsDisplayWhenPrintIsNotSmaller passes (fixture asserted to be larger as print). Real photos (3000x2000 and 2400x1200 noisy JPEGs) backfilled to 1800x1200 / 1800x900.
+  AC2 idempotency: 30 legacy-style photos (10 large JPEG, 10 small JPEG, 10 alpha PNG; print objects moved away, print_key NULL): dry-run 30, run 1 created 30 (batch 7), run 2 created 0, object listing byte-for-byte identical, dry-run afterwards 0.
+  Non-blocking observations: (a) a flat synthetic JPEG (postman/fixtures/media/photo-large.jpg 2400x1200) gets print = display bytes (2400 px) via backfill because the q85 1800px encoding is larger than the q92 display, whereas the upload path stores an 1800 px print for it; R6 as specified, but docs/media.md says 'only seen with synthetic PNGs' (also synthetic JPEGs). Real photos unaffected. (b) Backfilled print is derived from the already lossy display, so is a few KiB different from the upload-time print (expected, documented). (c) Each failing S3 read takes ~25 s with SDK retries when the endpoint refuses connections (20 x ~25 s ~ 8 min before the stop), not 2.5 s as the spec assumed; stop still works, consider a shorter SDK retry/timeout in T-022. (d) smemories-migrate in prod still requires SMEM_S3_BUCKET (pre-existing, unchanged). Leftover test objects remain in MinIO bucket smemories-dev (prefixes yearbooks/01M4J2R*, 01M4J2V*, qa75-stash*); scratch DB dropped.
+- 2026-10-10 05:33Z · leader · merged c974d3c. Review: backfill uses config.LoadMigrate (Load not weakened), stops after N consecutive storage failures, dry-run counts only usable photos, delete race closed, 1800 px Postman fixture. QA ran newman twice and the idempotent backfill on 30 photos. For owner to check: docs/media.md backfill variable list. QA leftovers: test objects in the smemories-dev bucket under yearbooks/01M4J2R*, yearbooks/01M4J2V*, qa75-stash* (safe to delete).
 
 ### T-076 — [E02] Code screens polish (target size, cooldown reload, messages, focus)
 - **Status:** TODO
