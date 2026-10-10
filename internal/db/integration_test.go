@@ -140,10 +140,35 @@ func TestSessionTimesAreUTC(t *testing.T) {
 	}
 }
 
+// tableExists reports whether the current database has a table with that name.
+func tableExists(t *testing.T, ctx context.Context, d *sql.DB, name string) bool {
+	t.Helper()
+	var n int
+	if err := d.QueryRowContext(ctx, `SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?`, name).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	return n == 1
+}
+
+// downUntil rolls back (latest first) until done reports true; any later migrations come off first.
+func downUntil(t *testing.T, ctx context.Context, d *sql.DB, done func() bool) {
+	t.Helper()
+	for i := 0; i < 50 && !done(); i++ {
+		if err := db.MigrateDown(ctx, d); err != nil {
+			t.Fatalf("down: %v", err)
+		}
+	}
+	if !done() {
+		t.Fatal("condition not reached by rolling back")
+	}
+}
+
 // T-037: migration 0009 adds the Letter page size; its Down turns Letter books into A5 and keeps the others.
+// The test runs on the pre-T-064 schema (table "yearbooks", DATETIME columns): it rolls the later migrations back first.
 func TestMigratePageSizeLetter(t *testing.T) {
 	ctx := context.Background()
 	d := dbtest.New(t)
+	downUntil(t, ctx, d, func() bool { return tableExists(t, ctx, d, "yearbooks") })
 	mustExec := func(q string, args ...any) {
 		t.Helper()
 		if _, err := d.ExecContext(ctx, q, args...); err != nil {
@@ -155,10 +180,16 @@ func TestMigratePageSizeLetter(t *testing.T) {
 		mustExec(`INSERT INTO yearbooks (public_id, owner_id, title, language, page_size, created_at, updated_at)
 			SELECT ?, id, ?, 'en', ?, NOW(6), NOW(6) FROM users WHERE public_id = 'U1'`, "Y"+string(rune('1'+i)), size, size)
 	}
+	table := func() string {
+		if tableExists(t, ctx, d, "yearbooks") {
+			return "yearbooks"
+		}
+		return "yearbook_tab"
+	}
 	sizes := func() string {
 		t.Helper()
 		var s string
-		if err := d.QueryRowContext(ctx, `SELECT GROUP_CONCAT(page_size ORDER BY public_id) FROM yearbooks`).Scan(&s); err != nil {
+		if err := d.QueryRowContext(ctx, `SELECT GROUP_CONCAT(page_size ORDER BY public_id) FROM `+table()).Scan(&s); err != nil {
 			t.Fatal(err)
 		}
 		return s
@@ -189,7 +220,7 @@ func TestMigratePageSizeLetter(t *testing.T) {
 	if err := db.MigrateUp(ctx, d); err != nil {
 		t.Fatalf("up: %v", err)
 	}
-	mustExec(`UPDATE yearbooks SET page_size = 'Letter' WHERE public_id = 'Y1'`)
+	mustExec(`UPDATE ` + table() + ` SET page_size = 'Letter' WHERE public_id = 'Y1'`)
 	if got := sizes(); got != "Letter,A4,A5" {
 		t.Fatalf("after up: %s", got)
 	}

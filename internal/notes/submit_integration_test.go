@@ -473,7 +473,7 @@ func TestSubmitLimits(t *testing.T) {
 	e2 := newEnv(t)
 	l2 := e2.newOpenLink()
 	var yb uint64
-	if err := e2.db.QueryRow(`SELECT id FROM yearbooks WHERE public_id = ?`, l2.book).Scan(&yb); err != nil {
+	if err := e2.db.QueryRow(`SELECT id FROM yearbook_tab WHERE public_id = ?`, l2.book).Scan(&yb); err != nil {
 		t.Fatal(err)
 	}
 	for range 200 {
