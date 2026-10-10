@@ -10,8 +10,9 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 30 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-044, T-050, T-056, T-058, T-059, T-060, T-061, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073 |
-| TODO | 1 | T-076 |
+| BACKLOG | 29 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073 |
+| TODO | 1 | T-044 |
+| IN_PROGRESS | 1 | T-076 |
 | QA_PASS | 1 | T-064 |
 | MERGED | 2 | T-053, T-075 |
 | DONE | 35 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-054, T-057, T-062, T-063, T-074 |
@@ -1817,7 +1818,7 @@ Closed catalogue of note form fields (name, relationship, message, how we met, .
 - 2026-10-08 09:29Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-037, T-038, T-043, T-045')
 
 ### T-044 — [E08] Templates declare note fields (format v2.1): note_fields, note_field slot, NoteFields helper
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
@@ -1828,7 +1829,7 @@ Closed catalogue of note form fields (name, relationship, message, how we met, .
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
+- **Updated:** 2026-10-10 05:33Z by leader
 - **Comments-seen:** 2
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E08-designer-templates/07-templates-declare-note-fields.md`
@@ -2820,7 +2821,7 @@ T-034 QA finding: a shutdown or crash in the middle of an upload leaves a smem-u
 - **Branch:** task/t-075-e05-media-backfill-hardening
 - **PR:** https://github.com/danyaa666/smemories/pull/45
 - **Updated:** 2026-10-10 05:33Z by leader
-- **Comments-seen:** 1
+- **Comments-seen:** 3
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/13-media-backfill-hardening.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2843,7 +2844,7 @@ T-057 QA findings: backfill config loader, stop after consecutive storage failur
 - 2026-10-10 05:33Z · leader · merged c974d3c. Review: backfill uses config.LoadMigrate (Load not weakened), stops after N consecutive storage failures, dry-run counts only usable photos, delete race closed, 1800 px Postman fixture. QA ran newman twice and the idempotent backfill on 30 photos. For owner to check: docs/media.md backfill variable list. QA leftovers: test objects in the smemories-dev bucket under yearbooks/01M4J2R*, yearbooks/01M4J2V*, qa75-stash* (safe to delete).
 
 ### T-076 — [E02] Code screens polish (target size, cooldown reload, messages, focus)
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2851,10 +2852,10 @@ T-057 QA findings: backfill config loader, stop after consecutive storage failur
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** dev
 - **Branch:** task/t-076-e02-code-screens-polish-target-size-cool
 - **PR:** —
-- **Updated:** 2026-10-10 04:48Z by leader
+- **Updated:** 2026-10-10 05:33Z by dev
 - **Comments-seen:** 2
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/12-code-screens-polish.md`

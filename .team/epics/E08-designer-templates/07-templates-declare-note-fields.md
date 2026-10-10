@@ -33,3 +33,9 @@ Answers are already cleaned by T-043 when stored; the renderer still treats them
 
 #### Leader note from D-24 (2026-10-09)
 Templates are now HTML components in the web app (T-059, T-060), but the API still needs each template's id, names, supported page sizes and note fields (the public form, `GET /v1/templates`, validation of `template_id`). Do the manifest part of this task (`note_fields`, `templates.NoteFields`) and allow a manifest that has `"renderer":"html"` and **no pages**; skip the Go renderer changes (`note_field` slot, `pdf.Render` input) unless a Go template needs them.
+
+#### Scope after D-24 — what to build (2026-10-10, supersedes the acceptance list above where they differ)
+- **Apply:** AC1 (`note_fields` in the manifest, validation, default set), AC4 (`templates.NoteFields`, tests for both built-in templates and a custom fixture), AC6 (docs: `note_fields`, the rule that changing fields never loses answers; skip the `note_field` slot and alias text unless a Go template uses them).
+- **Drop:** AC2, AC3 and AC5 (the Go renderer slot, `pdf.Render` input and box-height validation): templates are HTML components now (T-059, T-060) and the Go renderer is a frozen fallback.
+- **Add AC7:** the manifest format accepts `"renderer":"html"` with **no pages** (validated: id, names EN/VI, supported page sizes, `note_fields`); the built-in Go templates `classic` and `modern` keep `"renderer":"go"` (default when absent) and behave exactly as before; `templates.List()` returns both kinds; a test with an html-only fixture manifest covers it.
+- **Add AC8:** the public lookup used by the note form (`notes.FieldsFor`) keeps working for a book whose template is an html manifest (falls back to the default set when none is declared).
