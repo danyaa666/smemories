@@ -9,7 +9,9 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
+	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/danyaa666/smemories/internal/ratelimit"
@@ -131,12 +133,16 @@ func (s *Service) save(ctx context.Context, ownerID, yb uint64, yearbookID, kind
 	id := ulid.New(s.now())
 	sum := sha256.Sum256(p.display)
 	m := Media{ID: id, ObjectKey: yearbookPrefix(yearbookID) + id + "." + p.ext, ThumbKey: yearbookPrefix(yearbookID) + id + "-thumb.jpg",
-		ContentType: p.contentType, Bytes: len(p.display), Width: p.width, Height: p.height, SHA256: hex.EncodeToString(sum[:]), CreatedAt: s.now().UTC()}
+		PrintKey: printKey(yearbookPrefix(yearbookID) + id + "." + p.ext), ContentType: p.contentType, Bytes: len(p.display), Width: p.width, Height: p.height, SHA256: hex.EncodeToString(sum[:]), CreatedAt: s.now().UTC()}
 
 	if err := s.st.Put(ctx, m.ObjectKey, m.ContentType, p.display); err != nil {
 		return Media{}, StorageError{err}
 	}
 	if err := s.st.Put(ctx, m.ThumbKey, "image/jpeg", p.thumb); err != nil {
+		s.cleanup(m)
+		return Media{}, StorageError{err}
+	}
+	if err := s.st.Put(ctx, m.PrintKey, m.ContentType, p.print); err != nil {
 		s.cleanup(m)
 		return Media{}, StorageError{err}
 	}
@@ -156,7 +162,7 @@ func (s *Service) Discard(ms ...Media) error {
 	var errs []error
 	for _, m := range ms {
 		// The row goes even when the objects cannot be deleted: a leftover object is removed with the yearbook's prefix.
-		errs = append(errs, s.st.Delete(ctx, m.ObjectKey, m.ThumbKey), s.store.remove(ctx, m.ID))
+		errs = append(errs, s.st.Delete(ctx, m.keys()...), s.store.remove(ctx, m.ID))
 	}
 	return errors.Join(errs...)
 }
@@ -165,7 +171,7 @@ func (s *Service) Discard(ms ...Media) error {
 func (s *Service) cleanup(m Media) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	_ = s.st.Delete(ctx, m.ObjectKey, m.ThumbKey) // best effort: an orphan is still removed with its yearbook
+	_ = s.st.Delete(ctx, m.keys()...) // best effort: an orphan is still removed with its yearbook
 }
 
 // ValidationError is a bad query parameter (400); Code is the API error code.
@@ -219,24 +225,43 @@ func (s *Service) List(ctx context.Context, ownerID uint64, yearbookID, uploader
 	return items, next, nil
 }
 
-// Content returns the stored bytes of a photo the user owns: the thumbnail or the display version.
-func (s *Service) Content(ctx context.Context, ownerID uint64, mediaID string, thumb bool) (Media, []byte, string, error) {
+// Sizes of a stored photo.
+const (
+	SizeDisplay = "display"
+	SizeThumb   = "thumb"
+	SizePrint   = "print"
+)
+
+// printKey is the key of the print object next to the display object: <id>-print.<ext>.
+func printKey(objectKey string) string {
+	ext := path.Ext(objectKey)
+	return strings.TrimSuffix(objectKey, ext) + "-print" + ext
+}
+
+// Content returns the stored bytes of a photo the user owns in one of the Size* versions, with the size actually
+// served: a photo that has no print object yet (the backfill has not reached it) is served in display size.
+func (s *Service) Content(ctx context.Context, ownerID uint64, mediaID, size string) (Media, []byte, string, string, error) {
 	m, err := s.store.owned(ctx, ownerID, mediaID)
 	if err != nil {
-		return Media{}, nil, "", err
+		return Media{}, nil, "", "", err
 	}
 	key, ct := m.ObjectKey, m.ContentType
-	if thumb {
+	switch {
+	case size == SizeThumb:
 		key, ct = m.ThumbKey, "image/jpeg"
+	case size == SizePrint && m.PrintKey != "":
+		key = m.PrintKey
+	default:
+		size = SizeDisplay
 	}
 	b, err := s.st.Get(ctx, key)
 	if errors.Is(err, storage.ErrNotFound) {
-		return Media{}, nil, "", ErrNotFound
+		return Media{}, nil, "", "", ErrNotFound
 	}
 	if err != nil {
-		return Media{}, nil, "", StorageError{err}
+		return Media{}, nil, "", "", StorageError{err}
 	}
-	return m, b, ct, nil
+	return m, b, ct, size, nil
 }
 
 // Delete removes a photo's objects and row. Unknown or foreign ids succeed silently, so repeating a
@@ -249,7 +274,7 @@ func (s *Service) Delete(ctx context.Context, ownerID uint64, mediaID string) er
 	if err != nil {
 		return err
 	}
-	if err := s.st.Delete(ctx, m.ObjectKey, m.ThumbKey); err != nil {
+	if err := s.st.Delete(ctx, m.keys()...); err != nil {
 		return StorageError{err} // row stays, so a retry finds it
 	}
 	return s.store.remove(ctx, mediaID)

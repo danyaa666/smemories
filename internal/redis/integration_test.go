@@ -66,3 +66,15 @@ func TestHelperIsolatesKeysAndCleansUp(t *testing.T) {
 		t.Fatalf("key %s survived the test cleanup: n=%d err=%v", inner, n, err)
 	}
 }
+
+// Ready also writes, so a Redis that refuses writes (full, noeviction) is not ready.
+func TestReadyWritesAProbeKey(t *testing.T) {
+	c := redistest.New(t)
+	ctx := context.Background()
+	if err := c.Ready(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if ttl := c.Client().TTL(ctx, c.Key("probe", "ready")).Val(); ttl <= 0 || ttl > 10*time.Second {
+		t.Fatalf("probe key TTL %v", ttl)
+	}
+}

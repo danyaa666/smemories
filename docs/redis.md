@@ -5,7 +5,7 @@ with their attempt counters (T-048) and the rate limiters (T-053). MySQL keeps e
 server is **Valkey 8** (BSD licence), pinned by digest in `docker-compose.yml` and `.github/workflows/ci.yml`; the code
 uses only the Redis protocol (client `github.com/redis/go-redis/v9`), so Redis or ElastiCache work too.
 
-T-051 added the plumbing; the data stored so far: the email codes of T-048 (`docs/auth-otp.md`) and the rate limiters of T-053 (below).
+T-051 added the plumbing; the data stored so far: the email codes of T-048 (`docs/auth-otp.md`), the login sessions of T-052 and the rate limiters of T-053 (below).
 
 ## Configuration
 
@@ -22,8 +22,13 @@ An invalid value stops the API with a message naming the variable; the password 
 startup (5 s) and exits if it is unreachable, then logs `redis connected` with `host:port` only. Commands are not retried
 (`MaxRetries` is off): with 1 s timeouts a dead Redis would otherwise cost seconds per request.
 
-`GET /readyz` answers 503 `not_ready` when MySQL **or** Redis does not answer within 1 s (the cause is logged, never put in
-the body); `GET /healthz` does not look at either.
+`GET /readyz` answers 503 `not_ready` when MySQL **or** Redis does not answer within 1 s, or when Redis refuses a write
+(readiness SETs `smem:<env>:probe:ready` with a 10 s expiry, so a full Redis with `noeviction` is not ready); the cause is
+logged, never put in the body. `GET /healthz` does not look at either. go-redis' own log lines go through slog
+(`redis client: ...`, WARN) instead of raw stderr, and a failing `rediss://` connection names TLS in the startup error.
+
+`smemories-migrate` does not read `SMEM_REDIS_URL` or `SMEM_OTP_KEY` (the one-off migration task has no Redis access); only
+the API does.
 
 ## Keys
 
@@ -32,10 +37,26 @@ one server in an emergency without colliding. Parts must come from hashes or num
 
 | Prefix | Owner | Content |
 |---|---|---|
-| `smem:<env>:sess:` | T-052 | login sessions, with native expiry |
+| `smem:<env>:sess:<h>` | T-052 | one hash per login session, `<h>` = hex sha256 of the cookie value (the raw token never reaches Redis): `user_id`, `created_at`, `last_seen_at` (unix ms), `user_agent`; `EXPIRE` = remaining lifetime (30 days, slid forward once half has passed) |
+| `smem:<env>:usess:<user id>` | T-052 | set of that user's `<h>` (for "delete every session of the user"); its expiry is pushed to the latest session expiry; a login also removes the user's expired members |
 | `smem:<env>:otp:<purpose>:<user id>` | T-048 | one hash per live email code (`verify` or `reset`): `h` HMAC of the code, `a` wrong attempts, `x` expiry (ms) |
 | `smem:<env>:rl:<limiter>:<key>` | T-053 | one sorted set per limited key (see Rate limiters); the key expires with the window |
 
+
+## Sessions (T-052)
+
+`internal/auth/sessions.go`. One round trip per authenticated request (`HGETALL`), then one MySQL lookup of the user by id;
+a Lua script runs only at login (create + sweep), when the session slides (at most every 15 days), at logout and for
+delete-all. The slide script checks the session still exists first, so a logout or password reset that wins a race is never
+undone. Delete-all (password reset, the Google pre-hijacking defence) runs inside the MySQL transaction **before** the commit:
+if Redis fails, the password change or takeover is rolled back too and can be retried. The scripts read the `sess:<h>` keys named
+by the index set, so Redis must be a single node (Valkey, or ElastiCache without cluster mode); cluster mode would need
+hash tags. Nothing is migrated: migration `0012` drops the `sessions` table and everybody signs in again once.
+
+Redis down (or refusing writes): every request that carries a cookie answers `503 session_store_unavailable` with
+`Retry-After: 5` (never "anonymous", never a made-up session); login and register answer the same after the account rules
+ran (register rolls the new account back); endpoints without a session keep working. The failure is logged once per 30 s.
+Flushing Redis signs everybody out (401, no 500). Operating note: AOF keeps sessions across a Redis restart.
 
 ## Failure policy (D-23)
 

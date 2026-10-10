@@ -414,3 +414,49 @@ func TestResizeBandsMatchOneShot(t *testing.T) {
 		}
 	}
 }
+
+func TestProcessPrintVersion(t *testing.T) {
+	long := func(d []byte) int { c, _, _ := image.DecodeConfig(bytes.NewReader(d)); return max(c.Width, c.Height) }
+	// Larger than 1800 px: a JPEG of 1800 px on the long edge, smaller than the display.
+	p, err := process(jpegWith(t, quad(2600, 1300, false)))
+	if err != nil || long(p.print) != printEdge || long(p.display) != 2600 || len(p.print) >= len(p.display) {
+		t.Fatalf("print %d px %d bytes, display %d px %d bytes: %v", long(p.print), len(p.print), long(p.display), len(p.display), err)
+	}
+	if _, f, _ := image.DecodeConfig(bytes.NewReader(p.print)); f != "jpeg" {
+		t.Fatalf("print format %s", f)
+	}
+	// Transparency stays PNG (and transparent).
+	p, err = process(encPNG(t, quad(2000, 1000, true)))
+	if err != nil || p.ext != "png" {
+		t.Fatalf("%v %s", err, p.ext)
+	}
+	c, f, _ := image.DecodeConfig(bytes.NewReader(p.print))
+	if f != "png" || c.Width != printEdge || decode(t, p.print).At(1000, 500).(color.NRGBA).A != 0 {
+		t.Fatalf("print %s %d px", f, c.Width)
+	}
+	// Not larger than 1800 px: the display bytes are reused, no second lossy pass.
+	p, err = process(jpegWith(t, quad(1800, 900, false)))
+	if err != nil || !bytes.Equal(p.print, p.display) {
+		t.Fatalf("small photo: print differs from display (%v)", err)
+	}
+	// Orientation is applied before the print scale: a rotated 2600x1300 is 1300x2600 and its print 900x1800.
+	p, err = process(jpegWith(t, quad(2600, 1300, false), exifSegment(6)))
+	if c, _, _ := image.DecodeConfig(bytes.NewReader(p.print)); err != nil || c.Width != 900 || c.Height != 1800 {
+		t.Fatalf("rotated print %dx%d: %v", c.Width, c.Height, err)
+	}
+}
+
+func TestPrintOfDisplay(t *testing.T) {
+	// The display of an opaque PNG is a PNG; its print stays a PNG although the pixels are opaque.
+	d := encPNG(t, quad(3000, 1500, false))
+	out, err := printOf(d)
+	if c, f, _ := image.DecodeConfig(bytes.NewReader(out)); err != nil || f != "png" || c.Width != printEdge {
+		t.Fatalf("%v %s %d", err, f, c.Width)
+	}
+	if _, err := printOf([]byte("not an image")); !errors.Is(err, ErrInvalidImage) {
+		t.Fatalf("garbage: %v", err)
+	}
+	if _, err := printOf(jpegWith(t, quad(3001, 10, false))); !errors.Is(err, ErrInvalidImage) {
+		t.Fatalf("a display larger than 3000 px is not ours: %v", err)
+	}
+}

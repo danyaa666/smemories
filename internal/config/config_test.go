@@ -241,6 +241,17 @@ func TestLoadRedisRequiredInEveryEnv(t *testing.T) {
 	}
 }
 
+// T-052: the migration task has no Redis and no OTP key; only the API needs them.
+func TestLoadMigrateNeedsNeitherRedisNorOTPKey(t *testing.T) {
+	prod := map[string]string{"SMEM_ENV": "prod", "SMEM_DB_DSN": dsn, "SMEM_ALLOWED_ORIGINS": "https://a.example", "SMEM_PUBLIC_BASE_URL": "https://a.example", "SMEM_S3_BUCKET": "b", "SMEM_REDIS_URL": "", "SMEM_OTP_KEY": ""}
+	if _, err := LoadMigrate(env(prod)); err != nil {
+		t.Fatalf("LoadMigrate: %v", err)
+	}
+	if _, err := Load(env(prod)); err == nil {
+		t.Fatal("Load must still require SMEM_REDIS_URL")
+	}
+}
+
 func TestLoadRedisInvalidNamesVariableAndHidesPassword(t *testing.T) {
 	cases := []struct{ key, val string }{
 		{"SMEM_REDIS_URL", "127.0.0.1:6379"},
@@ -249,6 +260,8 @@ func TestLoadRedisInvalidNamesVariableAndHidesPassword(t *testing.T) {
 		{"SMEM_REDIS_URL", "redis://:s3cret@h:6379/16"},
 		{"SMEM_REDIS_URL", "redis://:s3cret@h:6379/x"},
 		{"SMEM_REDIS_URL", "redis://:s3cret@h:6379/0?db=1"},
+		{"SMEM_REDIS_URL", "redis://:s3cret@h:99999/0"},
+		{"SMEM_REDIS_URL", "redis://:s3cret@h:0/0"},
 		{"SMEM_REDIS_DIAL_TIMEOUT", "2"},
 		{"SMEM_REDIS_READ_TIMEOUT", "0s"},
 		{"SMEM_REDIS_WRITE_TIMEOUT", "-1s"},

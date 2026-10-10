@@ -60,31 +60,30 @@
   },
   "forgot": {
     "title": "Forgot your password?",
-    "intro": "Enter your email and we will send you a link to set a new password. If you signed up with Google, this is also how you set a password.",
-    "submit": "Send reset link",
-    "sent": "If an account exists for that address, we have sent a link. It works for 1 hour.",
+    "intro": "Enter your email and we will send you a 6-digit code to set a new password. If you signed up with Google, this is also how you set a password.",
+    "submit": "Send code",
     "back": "Back to sign in"
   },
   "reset": {
     "title": "Set a new password",
     "submit": "Change password",
     "done": "Your password has been changed. Sign in with your new password.",
-    "requestNew": "Ask for a new link"
+    "sent": "If an account exists for that address, we have sent a 6-digit code. It works for 15 minutes.",
+    "busy": "The server was busy and your code has been used up. Send a new code and try again."
   },
   "verify": {
     "title": "Verify your email",
-    "working": "Verifying your email…",
     "done": "Your email address is verified.",
-    "continue": "Continue"
+    "continue": "Continue",
+    "sentTo": "We sent a 6-digit code to {{email}}. Enter it below. It works for 30 minutes.",
+    "submit": "Verify email",
+    "resendLimit": "You can request up to 3 codes per hour."
   },
   "account": {
     "title": "My account",
     "verified": "Email verified",
-    "notVerified": "Email not verified yet. Check your inbox for the link.",
-    "resend": "Send the link again",
-    "resendSent": "We sent a new link.",
-    "resendAlready": "Your email is already verified.",
-    "resendLimit": "You can request up to 3 emails per hour."
+    "notVerified": "Email not verified yet. Enter the code we sent you.",
+    "verifyLink": "Verify your email"
   },
   "errors": {
     "generic": "Something went wrong. Please try again.",
@@ -94,7 +93,6 @@
     "invalid_display_name": "Enter a name of 1 to 100 characters without invisible or control characters.",
     "email_taken": "This email is already registered. Try signing in.",
     "invalid_credentials": "Wrong email or password.",
-    "invalid_token": "This link has expired or was already used. Ask for a new one.",
     "rate_limited": "Too many attempts. Try again in {{minutes}} min.",
     "busy": "The server is busy. Try again in a moment.",
     "unauthenticated": "Your session has ended. Sign in again.",
@@ -116,7 +114,12 @@
     "invalid_birthday": "Enter a real date in the past, not before 1900.",
     "invalid_quote": "The quote can have at most 500 characters, without invisible or control characters.",
     "invalid_hobbies": "Hobbies can have at most 300 characters, without invisible or control characters.",
-    "invalid_future_plans": "Plans can have at most 300 characters, without invisible or control characters."
+    "invalid_future_plans": "Plans can have at most 300 characters, without invisible or control characters.",
+    "invalid_code": "That code is wrong. Check the email and try again.",
+    "code_expired": "This code has expired. Send a new code.",
+    "code_locked": "Too many wrong attempts on this code. Send a new code.",
+    "code_store_unavailable": "We cannot check codes right now. Please try again in a moment.",
+    "session_store_unavailable": "We cannot reach the sign-in service right now. Please try again in a moment."
   },
   "books": {
     "title": "My yearbooks",
@@ -172,5 +175,12 @@
     "confirmDelete": "Delete this photo? This cannot be undone.",
     "busy": "The server is busy, trying again…",
     "dismiss": "Dismiss"
+  },
+  "code": {
+    "label": "6-digit code",
+    "hint": "The code from the email.",
+    "resend": "Send a new code",
+    "resendIn": "Send a new code ({{seconds}}s)",
+    "resent": "We sent a new code."
   }
 }

@@ -42,7 +42,7 @@ type flaky struct {
 	storage.Storage
 	mu                       sync.Mutex
 	failPut, failDeletePrefx bool
-	thumbOnly                bool            // with failPut: only thumbnail writes fail
+	thumbOnly, printOnly     bool            // with failPut: only thumbnail (print) writes fail
 	keys                     map[string]bool // objects written through the wrapper and not yet deleted
 }
 
@@ -81,7 +81,7 @@ func (f *flaky) Put(ctx context.Context, key, ct string, data []byte) error {
 	f.mu.Lock()
 	fail := f.failPut
 	f.mu.Unlock()
-	if fail && (!f.thumbOnly || strings.HasSuffix(key, "-thumb.jpg")) {
+	if fail && (!f.thumbOnly || strings.HasSuffix(key, "-thumb.jpg")) && (!f.printOnly || strings.Contains(key, "-print.")) {
 		return errors.New("injected put failure")
 	}
 	if err := f.Storage.Put(ctx, key, ct, data); err != nil {
@@ -145,7 +145,11 @@ func newEnv(t *testing.T) *env {
 		t.Fatal(err)
 	}
 	e.lim = ratelimit.NewFactory(rc, logger, nil)
-	as, err := auth.NewService(auth.NewStore(d), hasher, auth.Limits{RegisterPerHour: 1000, LoginFailsPerPair: 1000, LoginFailsPerIP: 1000},
+	sessions, err := auth.NewSessions(context.Background(), rc, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	as, err := auth.NewService(auth.NewStore(d), sessions, hasher, auth.Limits{RegisterPerHour: 1000, LoginFailsPerPair: 1000, LoginFailsPerIP: 1000},
 		auth.Mail{Mailer: mail, Logger: logger}, codes, e.lim, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -464,8 +468,8 @@ func TestQuotas(t *testing.T) {
 	if ok != 3 || full != 3 {
 		t.Fatalf("statuses %v, want 3x201 and 3x409", codes)
 	}
-	if n := e.st.count(yearbookPrefix(book)); n != 6 { // 3 photos x (display + thumb)
-		t.Fatalf("%d objects, want 6", n)
+	if n := e.st.count(yearbookPrefix(book)); n != 9 { // 3 photos x (display + thumb + print)
+		t.Fatalf("%d objects, want 9", n)
 	}
 	e.upload(u, book, "a.jpg", "image/jpeg", photo(t)).status(409, "quota_exceeded")
 
@@ -513,6 +517,14 @@ func TestStorageFailureLeavesNoRow(t *testing.T) {
 	e.st.set(false, false)
 	if n := e.st.count(""); n != 0 {
 		t.Fatalf("%d orphan objects after a failed thumbnail write", n)
+	}
+	e.st.set(true, false)
+	e.st.printOnly = true // display and thumbnail are written, then the print object fails
+	e.upload(u, book, "a.jpg", "image/jpeg", photo(t)).status(502, "storage_error")
+	e.st.printOnly = false
+	e.st.set(false, false)
+	if n := e.st.count(""); n != 0 {
+		t.Fatalf("%d orphan objects after a failed print write", n)
 	}
 	e.upload(u, book, "a.jpg", "image/jpeg", photo(t)).status(201, "") // and a retry works
 }
@@ -633,7 +645,7 @@ func TestContributorUploadBusyAndDiscard(t *testing.T) {
 	if err != nil || m.RowID == 0 {
 		t.Fatalf("upload: %v %+v", err, m)
 	}
-	if e.count(`SELECT COUNT(*) FROM media WHERE uploader_kind = 'contributor' AND yearbook_id = ?`, row) != 1 || e.st.count(yearbookPrefix(book)) != 2 {
+	if e.count(`SELECT COUNT(*) FROM media WHERE uploader_kind = 'contributor' AND yearbook_id = ?`, row) != 1 || e.st.count(yearbookPrefix(book)) != 3 {
 		t.Fatal("contributor photo not stored as such")
 	}
 	if err := e.svc.Discard(m); err != nil {

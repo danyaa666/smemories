@@ -363,6 +363,50 @@
           ]
         },
         {
+          "name": "6b. A downloads the print size (1800 px long edge)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/media/{{mediaId}}/content?size=print",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "media",
+                "{{mediaId}}",
+                "content"
+              ],
+              "query": [
+                {
+                  "key": "size",
+                  "value": "print"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('jpeg', () => pm.expect(pm.response.headers.get('Content-Type')).to.eql('image/jpeg'));",
+                  "pm.test('private cache and nosniff', () => { pm.expect(pm.response.headers.get('Cache-Control')).to.eql('private, max-age=3600'); pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'); });",
+                  "const bytes = pm.response.stream; // Buffer of the raw body\npm.test('JPEG without any metadata segment', () => {\n  pm.expect(bytes[0]).to.eql(0xFF); pm.expect(bytes[1]).to.eql(0xD8);\n  let i = 2;\n  while (i + 4 <= bytes.length && bytes[i] === 0xFF && bytes[i + 1] !== 0xDA) {\n    const m = bytes[i + 1];\n    pm.expect(m >= 0xE0 && m <= 0xEF || m === 0xFE, 'segment FF' + m.toString(16)).to.eql(false);\n    i += 2 + bytes.readUInt16BE(i + 2);\n  }\n  pm.expect(bytes.toString('latin1').indexOf('Exif')).to.eql(-1);\n});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "7. A fetches a byte range",
           "request": {
             "method": "GET",

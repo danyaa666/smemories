@@ -201,6 +201,7 @@ func decode(w http.ResponseWriter, r *http.Request, v any) bool {
 func (h *Handler) fail(w http.ResponseWriter, r *http.Request, err error) {
 	var ve ValidationError
 	var rl RateLimitedError
+	var sse *SessionStoreError
 	switch {
 	case errors.As(err, &ve):
 		httpx.WriteError(w, r, http.StatusBadRequest, ve.Code, "invalid input: "+ve.Code)
@@ -213,6 +214,9 @@ func (h *Handler) fail(w http.ResponseWriter, r *http.Request, err error) {
 	case errors.Is(err, ratelimit.ErrUnavailable): // a fail-closed limiter could not count (already logged, throttled)
 		w.Header().Set("Retry-After", "5")
 		httpx.WriteError(w, r, http.StatusServiceUnavailable, "limiter_unavailable", "rate limiter unavailable, retry shortly")
+	case errors.As(err, &sse): // already logged (once per interval) by the session store
+		w.Header().Set("Retry-After", "5")
+		httpx.WriteError(w, r, http.StatusServiceUnavailable, "session_store_unavailable", "session store unavailable, retry shortly")
 	case errors.Is(err, redis.ErrUnavailable):
 		h.logger.Error("auth: code store unavailable", "request_id", httpx.RequestIDFrom(r.Context()), "error", err)
 		w.Header().Set("Retry-After", "5")

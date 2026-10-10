@@ -21,6 +21,7 @@ import (
 	"net/http/httptest"
 	"net/textproto"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -238,7 +239,7 @@ func TestSubmitWithPhotos(t *testing.T) {
 	if n := e.count(`SELECT COUNT(*) FROM note_photos np JOIN notes n ON n.id = np.note_id WHERE n.public_id = ? AND np.position IN (0, 1)`, id); n != 2 {
 		t.Fatalf("%d photo links", n)
 	}
-	if e.st.count() != 4 { // display + thumbnail each
+	if e.st.count() != 6 { // display + print + thumbnail each
 		t.Fatalf("%d objects", e.st.count())
 	}
 	// an empty file input of a browser (no file name, no bytes) is not a photo; three real photos are the maximum
@@ -361,7 +362,7 @@ func TestSubmitCompensation(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		e.st.afterFn = func(puts int) {
-			if puts == 4 { // both photos' objects... the second one's display object is put (puts 3-4); the request is gone
+			if puts == 4 { // photo 1 is complete (3 objects: display, thumb, print), photo 2's display object was just put; the request is gone
 				cancel()
 			}
 		}
@@ -827,8 +828,8 @@ func TestStalledUploadsDoNotBlockOthers(t *testing.T) {
 	if n := e.noteCount(); n != 1 {
 		t.Fatalf("%d notes, want 1 (the stalled uploads keep nothing)", n)
 	}
-	if e.count(`SELECT COUNT(*) FROM media`) != 3 || e.st.count() != 6 {
-		t.Fatal("only the real submission's 3 photos (6 objects) should exist")
+	if e.count(`SELECT COUNT(*) FROM media`) != 3 || e.st.count() != 9 {
+		t.Fatal("only the real submission's 3 photos (9 objects) should exist")
 	}
 }
 
@@ -1071,4 +1072,32 @@ func TestMediaBusyIsRefunded(t *testing.T) {
 	if want := submitPerIPHour - e.noteCount(); left != want {
 		t.Fatalf("%d hourly submissions left, want %d: busy answers were counted", left, want)
 	}
+}
+
+// AC2: a file left by an upload that never got to clean up is removed when a new Handler starts on the same
+// directory, but the file of an upload still arriving (fresh) is not.
+func TestSweepSpoolAtStartup(t *testing.T) {
+	e := newEnv(t)
+	l := e.newOpenLink()
+	srv := e.serve()
+	conn := e.stall(srv, l.token, "10.0.0.1", 100)
+	e.waitFor("upload in progress", func() bool { return e.inProgress() == 1 && len(e.spooled()) == 1 })
+
+	next := NewHandler(NewStore(e.db), e.svc, 10<<20, nil, nil, nil, e.lim, e.nh.logger, e.now)
+	next.SetUploadLimits(defaultUploadConns, defaultUploadsPerIP, e.tmp)
+	if n := next.SweepSpool(); n != 0 || len(e.spooled()) != 1 {
+		t.Fatalf("a live upload's file was swept (removed %d)", n)
+	}
+	// the process dies: the handler never runs its cleanup; the file ages
+	name := filepath.Join(e.tmp, e.spooled()[0].Name())
+	aged := time.Now().Add(-spoolMaxAge - time.Minute)
+	if err := os.Chtimes(name, aged, aged); err != nil {
+		t.Fatal(err)
+	}
+	if n := next.SweepSpool(); n != 1 {
+		t.Fatalf("removed %d, want 1", n)
+	}
+	e.noSpool()
+	_ = conn.Close()
+	e.waitFor("slot released", func() bool { return e.inProgress() == 0 })
 }

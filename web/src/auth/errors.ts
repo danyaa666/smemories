@@ -6,6 +6,9 @@ const FIELD_OF: Record<string, string> = {
   invalid_email: "email",
   weak_password: "password",
   invalid_display_name: "display_name",
+  invalid_code: "code",
+  code_expired: "code",
+  code_locked: "code",
   // yearbook and profile forms: the field is named like the code
   ...Object.fromEntries(
     [

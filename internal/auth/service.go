@@ -64,6 +64,7 @@ type Limits struct {
 // Service holds the auth rules; it knows nothing about HTTP.
 type Service struct {
 	store     *Store
+	sessions  *Sessions
 	hasher    *Hasher
 	dummyHash string // verified for unknown emails so both paths cost the same
 	now       func() time.Time
@@ -85,7 +86,7 @@ type Service struct {
 
 // NewService builds a Service. It hashes one throw-away password at startup for the
 // unknown-email timing path.
-func NewService(store *Store, hasher *Hasher, limits Limits, mail Mail, codes *Codes, limiters *ratelimit.Factory, now func() time.Time) (*Service, error) {
+func NewService(store *Store, sessions *Sessions, hasher *Hasher, limits Limits, mail Mail, codes *Codes, limiters *ratelimit.Factory, now func() time.Time) (*Service, error) {
 	if now == nil {
 		now = time.Now
 	}
@@ -96,7 +97,7 @@ func NewService(store *Store, hasher *Hasher, limits Limits, mail Mail, codes *C
 		return nil, err
 	}
 	return &Service{
-		store: store, hasher: hasher, dummyHash: dummy, now: now, mail: mail, codes: codes,
+		store: store, sessions: sessions, hasher: hasher, dummyHash: dummy, now: now, mail: mail, codes: codes,
 		limiters: limiters,
 		// Fail policy (D-23, docs/redis.md): the login lockouts and the code-guessing limits fail closed because
 		// they stop guessing; everything else fails open.
@@ -164,7 +165,11 @@ func (s *Service) Register(ctx context.Context, ip, userAgent, email, password, 
 	if err != nil {
 		return User{}, Session{}, err
 	}
-	if err := s.store.createUserWithSession(ctx, &u, phc, row); err != nil {
+	err = s.store.createUser(ctx, &u, phc, func(id uint64) error {
+		row.userID = id
+		return s.sessions.Create(ctx, row)
+	})
+	if err != nil {
 		return User{}, Session{}, err
 	}
 	// The account exists now; a mail failure must not undo that, the user can resend.
@@ -247,25 +252,37 @@ func (s *Service) issue(ctx context.Context, u User, userAgent, oldToken string)
 		return User{}, Session{}, err
 	}
 	row.userID = u.InternalID
-	if err := s.store.createSession(ctx, row); err != nil {
+	if err := s.sessions.Create(ctx, row); err != nil { // also sweeps the user's expired sessions
 		return User{}, Session{}, err
 	}
 	if oldToken != "" {
-		_ = s.store.deleteSession(ctx, hashToken(oldToken)) // best effort
+		_ = s.sessions.Delete(ctx, hashToken(oldToken)) // best effort
 	}
-	_ = s.store.deleteExpiredSessions(ctx, u.InternalID, now) // best effort
 	return u, sess, nil
 }
 
 // Authenticate resolves a session cookie value to its user. When more than half the TTL
 // has elapsed the expiry is pushed out and refreshed is non-nil (the caller re-sends the cookie).
+// A session store failure is a *SessionStoreError, never "anonymous".
 func (s *Service) Authenticate(ctx context.Context, token string) (u User, refreshed *Session, err error) {
 	if token == "" {
 		return User{}, nil, ErrUnauthenticated
 	}
 	hash := hashToken(token)
 	now := s.now().UTC()
-	u, exp, err := s.store.userBySession(ctx, hash, now)
+	uid, lastSeen, err := s.sessions.Lookup(ctx, hash)
+	if errors.Is(err, errNotFound) {
+		return User{}, nil, ErrUnauthenticated
+	}
+	if err != nil {
+		return User{}, nil, err
+	}
+	// Redis drops the key at its expiry; the check on the time we stored also makes the rule the same under a test clock.
+	exp := lastSeen.Add(SessionTTL)
+	if !exp.After(now) {
+		return User{}, nil, ErrUnauthenticated
+	}
+	u, err = s.store.userByID(ctx, uid)
 	if errors.Is(err, errNotFound) {
 		return User{}, nil, ErrUnauthenticated
 	}
@@ -273,11 +290,14 @@ func (s *Service) Authenticate(ctx context.Context, token string) (u User, refre
 		return User{}, nil, err
 	}
 	if exp.Sub(now) < SessionTTL/2 {
-		newExp := now.Add(SessionTTL)
-		if err := s.store.extendSession(ctx, hash, now, newExp); err != nil {
+		alive, err := s.sessions.Extend(ctx, hash, uid, now, SessionTTL)
+		if err != nil {
 			return User{}, nil, err
 		}
-		refreshed = &Session{Token: token, Expires: newExp}
+		if !alive { // logged out (or reset) while we were looking
+			return User{}, nil, ErrUnauthenticated
+		}
+		refreshed = &Session{Token: token, Expires: now.Add(SessionTTL)}
 	}
 	return u, refreshed, nil
 }
@@ -287,5 +307,5 @@ func (s *Service) Logout(ctx context.Context, token string) error {
 	if token == "" {
 		return nil
 	}
-	return s.store.deleteSession(ctx, hashToken(token))
+	return s.sessions.Delete(ctx, hashToken(token))
 }

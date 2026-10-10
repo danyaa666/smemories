@@ -17,6 +17,7 @@ export COMPOSE_PROJECT_NAME
 build:
 	go build -o bin/smemories-api ./cmd/smemories-api
 	go build -o bin/smemories-migrate ./cmd/smemories-migrate
+	go build -o bin/smemories-media-backfill ./cmd/smemories-media-backfill
 	$(MAKE) web-build
 
 test:

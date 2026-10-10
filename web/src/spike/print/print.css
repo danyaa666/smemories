@@ -1,0 +1,193 @@
+/* Spike T-054. Fonts are self-hosted (fonts/fonts.css); nothing is requested from Google Fonts. */
+.sp-ui {
+  font:
+    14px/1.4 system-ui,
+    sans-serif;
+  padding: 12px 16px;
+  background: #fff;
+}
+.sp-ui button {
+  font-size: 16px;
+  padding: 8px 16px;
+}
+.sp-book {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: #ddd;
+}
+.sp-sheet {
+  position: relative;
+  overflow: hidden;
+  flex: none;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  break-after: page;
+  break-inside: avoid; /* one sheet = one printed page */
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.sp-sheet:last-child {
+  break-after: auto;
+}
+.sp-inner {
+  position: relative;
+  overflow: hidden;
+  transform-origin: 0 0;
+  box-sizing: border-box;
+  font-family: Nunito, sans-serif;
+  color: #3b2f4a;
+}
+.sp-dots {
+  background-image: radial-gradient(rgba(59, 47, 74, 0.13) 1.2px, transparent 1.7px);
+  background-size: 22px 22px;
+}
+.disp {
+  font-family: Fredoka, Nunito, sans-serif;
+}
+.cute {
+  font-family: Gaegu, Nunito, cursive;
+}
+.cl {
+  font-family: Jost, Nunito, sans-serif;
+  color: #1b2a4a;
+}
+.serif {
+  font-family: "Cormorant Garamond", Georgia, serif;
+}
+.caps {
+  font-family: Jost, Nunito, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.28em;
+  font-weight: 500;
+}
+.sp-fit {
+  overflow: hidden;
+}
+.sp-photo {
+  display: block;
+  object-fit: cover;
+}
+.sp-ph {
+  background: #e9e3ef;
+}
+
+.mb-polaroid {
+  background: #fff;
+  box-sizing: border-box;
+  box-shadow: 0 3px 10px rgba(59, 47, 74, 0.12);
+}
+.mb-sticker {
+  position: absolute;
+  width: 176px;
+  height: 176px;
+  border-radius: 50%;
+  background: #ffdccb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  transform: rotate(10deg);
+  box-shadow: 0 3px 10px rgba(59, 47, 74, 0.12);
+}
+.mb-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #5e5170;
+}
+.mb-field {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  height: 36px;
+}
+.mb-label {
+  font-weight: 700;
+  font-size: 15px;
+  white-space: nowrap;
+  padding-bottom: 4px;
+}
+.mb-value {
+  flex-grow: 1;
+  min-width: 0;
+  height: 30px;
+  line-height: 28px;
+  font-size: 15px;
+  white-space: nowrap;
+  border-bottom: 1.5px solid rgba(59, 47, 74, 0.32);
+}
+.mb-ruled {
+  border-radius: 18px;
+  padding: 14px 18px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+/* Ruled paper that follows the font size: one rule per line (1lh), so a shrunk text keeps its lines. */
+.mb-lines {
+  font-size: 20px;
+  line-height: 1.7;
+  background-image: linear-gradient(transparent calc(1lh - 1.5px), rgba(59, 47, 74, 0.32) 0);
+  background-size: 100% 1lh;
+}
+.mb-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  font-size: 12px;
+}
+.mb-table th {
+  padding: 8px 10px;
+  text-align: left;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: #e6defa;
+  border: 1px solid rgba(59, 47, 74, 0.32);
+}
+.mb-table td {
+  height: 34px;
+  box-sizing: border-box;
+  border: 1px solid rgba(59, 47, 74, 0.32);
+  padding: 0 8px;
+  color: #5e5170;
+}
+
+.cl-lines {
+  overflow: hidden;
+}
+.cl-note {
+  padding: 6px 0 10px;
+  border-bottom: 1px solid rgba(27, 42, 74, 0.22);
+}
+.cl-probe {
+  position: fixed;
+  left: -9999px;
+  top: 0;
+  visibility: hidden;
+}
+
+@media print {
+  .sp-ui,
+  .cl-probe {
+    display: none !important;
+  }
+  html,
+  body {
+    background: #fff;
+    margin: 0;
+  }
+  .sp-book {
+    display: block;
+    padding: 0;
+    background: none;
+  }
+  .sp-sheet {
+    box-shadow: none;
+  }
+}

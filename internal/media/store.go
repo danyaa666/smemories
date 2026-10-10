@@ -26,6 +26,7 @@ type Media struct {
 	ID          string
 	ObjectKey   string
 	ThumbKey    string
+	PrintKey    string // empty until the backfill has created it (T-057)
 	ContentType string
 	Bytes       int
 	Width       int
@@ -97,9 +98,9 @@ func (s *Store) insert(ctx context.Context, ownerID, yearbookID uint64, kind str
 		return Media{}, err
 	}
 	res, err := tx.ExecContext(ctx,
-		`INSERT INTO media (public_id, yearbook_id, uploader_kind, object_key, thumb_key, content_type, bytes, width, height, sha256, created_at)
-		 VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
-		m.ID, yearbookID, kind, m.ObjectKey, m.ThumbKey, m.ContentType, m.Bytes, m.Width, m.Height, m.SHA256, m.CreatedAt)
+		`INSERT INTO media (public_id, yearbook_id, uploader_kind, object_key, thumb_key, print_key, content_type, bytes, width, height, sha256, created_at)
+		 VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+		m.ID, yearbookID, kind, m.ObjectKey, m.ThumbKey, m.PrintKey, m.ContentType, m.Bytes, m.Width, m.Height, m.SHA256, m.CreatedAt)
 	if err != nil {
 		return Media{}, err
 	}
@@ -123,15 +124,25 @@ func (s *Store) yearbookByRow(ctx context.Context, id uint64) (ownerID uint64, p
 // owned returns the media with that public id if its yearbook belongs to the user.
 func (s *Store) owned(ctx context.Context, ownerID uint64, publicID string) (Media, error) {
 	var m Media
+	var printKey sql.NullString
 	err := s.db.QueryRowContext(ctx,
-		`SELECT m.public_id, m.object_key, m.thumb_key, m.content_type, m.bytes, m.width, m.height, m.sha256, m.created_at
+		`SELECT m.public_id, m.object_key, m.thumb_key, m.print_key, m.content_type, m.bytes, m.width, m.height, m.sha256, m.created_at
 		 FROM media m JOIN yearbooks y ON y.id = m.yearbook_id WHERE y.owner_id = ? AND m.public_id = ?`, ownerID, publicID).
-		Scan(&m.ID, &m.ObjectKey, &m.ThumbKey, &m.ContentType, &m.Bytes, &m.Width, &m.Height, &m.SHA256, &m.CreatedAt)
+		Scan(&m.ID, &m.ObjectKey, &m.ThumbKey, &printKey, &m.ContentType, &m.Bytes, &m.Width, &m.Height, &m.SHA256, &m.CreatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Media{}, ErrNotFound
 	}
+	m.PrintKey = printKey.String
 	m.CreatedAt = m.CreatedAt.UTC()
 	return m, err
+}
+
+// keys lists the objects of a photo that exist (the print object is missing until the backfill ran).
+func (m Media) keys() []string {
+	if m.PrintKey == "" {
+		return []string{m.ObjectKey, m.ThumbKey}
+	}
+	return []string{m.ObjectKey, m.ThumbKey, m.PrintKey}
 }
 
 func (s *Store) remove(ctx context.Context, publicID string) error {
@@ -169,4 +180,33 @@ func (s *Store) list(ctx context.Context, yearbookID uint64, kinds []string, bef
 		out = append(out, m)
 	}
 	return out, rows.Err()
+}
+
+// withoutPrint returns up to limit photos with id > after that have no print object yet, oldest first.
+func (s *Store) withoutPrint(ctx context.Context, after int64, limit int) ([]Media, error) {
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT id, public_id, object_key FROM media WHERE id > ? AND print_key IS NULL ORDER BY id LIMIT ?`, after, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	var out []Media
+	for rows.Next() {
+		var m Media
+		if err := rows.Scan(&m.RowID, &m.ID, &m.ObjectKey); err != nil {
+			return nil, err
+		}
+		out = append(out, m)
+	}
+	return out, rows.Err()
+}
+
+// setPrintKey records the print object of a photo; false when the photo was deleted or already has one.
+func (s *Store) setPrintKey(ctx context.Context, rowID int64, key string) (bool, error) {
+	res, err := s.db.ExecContext(ctx, `UPDATE media SET print_key = ? WHERE id = ? AND print_key IS NULL`, key, rowID)
+	if err != nil {
+		return false, err
+	}
+	n, err := res.RowsAffected()
+	return n == 1, err
 }

@@ -25,10 +25,10 @@ export const register = (
 export const login = (email: string, password: string) =>
   user("/v1/auth/login", { email, password });
 export const logout = () => postJson<void>("/v1/auth/logout");
-export const verifyEmail = (token: string) => postJson<void>("/v1/auth/verify-email", { token });
+export const verifyEmail = (code: string) => postJson<void>("/v1/auth/verify-email", { code });
 export const resendVerification = () =>
   postJson<{ already_verified?: true }>("/v1/auth/verify-email/resend");
 export const forgotPassword = (email: string) =>
   postJson<void>("/v1/auth/forgot-password", { email });
-export const resetPassword = (token: string, password: string) =>
-  postJson<void>("/v1/auth/reset-password", { token, password });
+export const resetPassword = (email: string, code: string, password: string) =>
+  postJson<void>("/v1/auth/reset-password", { email, code, password });

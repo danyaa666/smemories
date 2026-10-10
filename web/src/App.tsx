@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
-import { Route, Routes } from "react-router-dom";
+import { lazy, Suspense } from "react";
+import { Route, Routes, useLocation } from "react-router-dom";
 import { RequireAuth } from "./auth/RequireAuth";
 import { AuthNav } from "./components/AuthNav";
 import { LanguageSwitcher } from "./components/LanguageSwitcher";
@@ -15,8 +16,19 @@ import { YearbookEdit } from "./pages/YearbookEdit";
 import { YearbookNew } from "./pages/YearbookNew";
 import { Yearbooks } from "./pages/Yearbooks";
 
+// Spike T-054 (browser print-to-PDF). Dev server only: the condition is false in a production build, so the chunk is not emitted.
+const PrintSpike = import.meta.env.DEV ? lazy(() => import("./spike/print/PrintSpike")) : null;
+
 export function App() {
   const { t } = useTranslation();
+  const { pathname } = useLocation();
+  if (PrintSpike && pathname === "/spike/print") {
+    return (
+      <Suspense fallback={null}>
+        <PrintSpike />
+      </Suspense>
+    );
+  }
   return (
     <>
       <header className="app-header">
@@ -31,8 +43,8 @@ export function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/verify-email" element={<VerifyEmail />} />
           <Route element={<RequireAuth />}>
+            <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/account" element={<Account />} />
             <Route path="/yearbooks" element={<Yearbooks />} />
             <Route path="/yearbooks/new" element={<YearbookNew />} />

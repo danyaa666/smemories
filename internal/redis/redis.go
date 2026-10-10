@@ -8,8 +8,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"strings"
+	"time"
 
 	goredis "github.com/redis/go-redis/v9"
 
@@ -24,6 +26,20 @@ var ErrUnavailable = errors.New("redis unavailable")
 type Client struct {
 	rdb    *goredis.Client
 	prefix string
+	tls    bool // rediss:// URL
+}
+
+// readyProbeTTL is how long the readiness probe key lives; the key only exists to prove writes are accepted.
+const readyProbeTTL = 10 * time.Second
+
+// UseLogger routes go-redis' own log lines (pool and dial problems, otherwise unstructured text on stderr) into
+// logger at WARN. The setting is process-wide; call it once at startup.
+func UseLogger(logger *slog.Logger) { goredis.SetLogger(slogPrinter{logger}) }
+
+type slogPrinter struct{ l *slog.Logger }
+
+func (p slogPrinter) Printf(ctx context.Context, format string, v ...interface{}) {
+	p.l.WarnContext(ctx, "redis client: "+strings.TrimSpace(fmt.Sprintf(format, v...)))
 }
 
 // New builds a client from cfg. It does not connect: the first command (or Ping) does.
@@ -43,7 +59,7 @@ func New(cfg config.Config) (*Client, error) {
 	o.PoolSize = cfg.RedisPoolSize
 	// One attempt per command: with 1 s timeouts the default 3 retries would make a dead Redis cost seconds per request.
 	o.MaxRetries = -1
-	return &Client{rdb: goredis.NewClient(o), prefix: "smem:" + cfg.Env + ":"}, nil
+	return &Client{rdb: goredis.NewClient(o), prefix: "smem:" + cfg.Env + ":", tls: o.TLSConfig != nil}, nil
 }
 
 // Client returns the underlying go-redis client. Wrap its errors with Classify.
@@ -55,8 +71,24 @@ func (c *Client) Addr() string { return c.rdb.Options().Addr }
 // Close releases the connection pool.
 func (c *Client) Close() error { return c.rdb.Close() }
 
-// Ping checks the connection; failures are classified.
-func (c *Client) Ping(ctx context.Context) error { return Classify(c.rdb.Ping(ctx).Err()) }
+// Ping checks the connection; failures are classified. With a rediss:// URL a failure also hints at TLS, because
+// pointing it at a plain server ends in an opaque timeout.
+func (c *Client) Ping(ctx context.Context) error {
+	err := Classify(c.rdb.Ping(ctx).Err())
+	if err != nil && c.tls {
+		return fmt.Errorf("%w (rediss:// URL: is the server TLS-enabled?)", err)
+	}
+	return err
+}
+
+// Ready is Ping plus a write: a full Redis (maxmemory, noeviction) still answers reads but refuses writes, and then
+// sessions and codes cannot be stored, so /readyz must say not ready.
+func (c *Client) Ready(ctx context.Context) error {
+	if err := c.Ping(ctx); err != nil {
+		return err
+	}
+	return Classify(c.rdb.Set(ctx, c.Key("probe", "ready"), "1", readyProbeTTL).Err())
+}
 
 // Key builds a namespaced key: smem:<env>:<part1>:<part2>... Parts must come from hashes or numeric ids, never raw user input.
 func (c *Client) Key(parts ...string) string { return c.prefix + strings.Join(parts, ":") }

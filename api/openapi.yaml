@@ -132,7 +132,7 @@ paths:
         "413": {$ref: "#/components/responses/PayloadTooLarge"}
         "415": {$ref: "#/components/responses/UnsupportedMediaType"}
         "429": {$ref: "#/components/responses/RateLimited"}
-        "503": {$ref: "#/components/responses/Busy"}
+        "503": {$ref: "#/components/responses/BusyOrSessionStore"}
   /v1/auth/login:
     post:
       operationId: login
@@ -179,7 +179,16 @@ paths:
         "413": {$ref: "#/components/responses/PayloadTooLarge"}
         "415": {$ref: "#/components/responses/UnsupportedMediaType"}
         "429": {$ref: "#/components/responses/RateLimited"}
-        "503": {$ref: "#/components/responses/Busy"}
+        "503":
+          description: >-
+            `busy` (all password-hashing slots stayed taken), `session_store_unavailable` (no session could be created) or
+            `limiter_unavailable` (the sign-in lockout counters in Redis did not answer, so the attempt fails closed); retry after `Retry-After`.
+          headers:
+            Retry-After:
+              schema: {type: integer}
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
   /v1/auth/logout:
     post:
       operationId: logout
@@ -198,6 +207,7 @@ paths:
               schema: {type: string}
         "403": {$ref: "#/components/responses/CsrfOriginMismatch"}
         "415": {$ref: "#/components/responses/UnsupportedMediaType"}
+        "503": {$ref: "#/components/responses/SessionStoreUnavailable"}
   /v1/auth/verify-email:
     post:
       operationId: verifyEmail
@@ -235,7 +245,16 @@ paths:
         "413": {$ref: "#/components/responses/PayloadTooLarge"}
         "415": {$ref: "#/components/responses/UnsupportedMediaType"}
         "429": {$ref: "#/components/responses/RateLimited"}
-        "503": {$ref: "#/components/responses/CodeStoreUnavailable"}
+        "503":
+          description: >-
+            `code_store_unavailable`, `session_store_unavailable` or `limiter_unavailable` (the code-guess counter in Redis did not
+            answer, so the attempt fails closed); retry after `Retry-After`.
+          headers:
+            Retry-After:
+              schema: {type: integer}
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
   /v1/auth/verify-email/resend:
     post:
       operationId: resendVerificationEmail
@@ -265,7 +284,7 @@ paths:
         "403": {$ref: "#/components/responses/CsrfOriginMismatch"}
         "415": {$ref: "#/components/responses/UnsupportedMediaType"}
         "429": {$ref: "#/components/responses/RateLimited"}
-        "503": {$ref: "#/components/responses/CodeStoreUnavailable"}
+        "503": {$ref: "#/components/responses/CodeOrSessionStoreUnavailable"}
   /v1/auth/forgot-password:
     post:
       operationId: forgotPassword
@@ -341,7 +360,7 @@ paths:
         "415": {$ref: "#/components/responses/UnsupportedMediaType"}
         "429": {$ref: "#/components/responses/RateLimited"}
         "503":
-          description: "`busy` (all password-hashing slots stayed taken; the code is already used, ask for a new one) or `code_store_unavailable`."
+          description: "`busy` (all password-hashing slots stayed taken; the code is already used, ask for a new one), `code_store_unavailable`, `limiter_unavailable` (the code-guess counter in Redis did not answer, so the attempt fails closed) or `session_store_unavailable` (the sessions could not be deleted, so the password was not changed either)."
           content:
             application/json:
               schema: {$ref: "#/components/schemas/Error"}
@@ -428,6 +447,7 @@ paths:
           content:
             application/json:
               schema: {$ref: "#/components/schemas/Error"}
+        "503": {$ref: "#/components/responses/SessionStoreUnavailable"}
   /v1/yearbooks:
     post:
       operationId: createYearbook
@@ -454,6 +474,7 @@ paths:
               schema: {$ref: "#/components/schemas/YearbookEnvelope"}
         "400": {$ref: "#/components/responses/YearbookInvalid"}
         "401": {$ref: "#/components/responses/Unauthenticated"}
+        "503": {$ref: "#/components/responses/SessionStoreUnavailable"}
         "403": {$ref: "#/components/responses/CsrfOriginMismatch"}
         "409":
           description: The user already owns 20 yearbooks (`limit_reached`).
@@ -490,6 +511,7 @@ paths:
                   next_cursor: {type: [string, "null"]}
         "400": {$ref: "#/components/responses/YearbookInvalid"}
         "401": {$ref: "#/components/responses/Unauthenticated"}
+        "503": {$ref: "#/components/responses/SessionStoreUnavailable"}
   /v1/yearbooks/{id}:
     parameters:
       - {name: id, in: path, required: true, schema: {type: string}, description: Yearbook ULID.}
@@ -507,6 +529,7 @@ paths:
             application/json:
               schema: {$ref: "#/components/schemas/YearbookEnvelope"}
         "401": {$ref: "#/components/responses/Unauthenticated"}
+        "503": {$ref: "#/components/responses/SessionStoreUnavailable"}
         "404": {$ref: "#/components/responses/YearbookNotFound"}
     patch:
       operationId: updateYearbook
@@ -530,6 +553,7 @@ paths:
               schema: {$ref: "#/components/schemas/YearbookEnvelope"}
         "400": {$ref: "#/components/responses/YearbookInvalid"}
         "401": {$ref: "#/components/responses/Unauthenticated"}
+        "503": {$ref: "#/components/responses/SessionStoreUnavailable"}
         "403": {$ref: "#/components/responses/CsrfOriginMismatch"}
         "404": {$ref: "#/components/responses/YearbookNotFound"}
         "413": {$ref: "#/components/responses/PayloadTooLarge"}
@@ -546,6 +570,7 @@ paths:
       responses:
         "204": {description: Deleted.}
         "401": {$ref: "#/components/responses/Unauthenticated"}
+        "503": {$ref: "#/components/responses/SessionStoreUnavailable"}
         "403": {$ref: "#/components/responses/CsrfOriginMismatch"}
         "404": {$ref: "#/components/responses/YearbookNotFound"}
         "502": {$ref: "#/components/responses/StorageError"}
@@ -574,6 +599,7 @@ paths:
               schema: {$ref: "#/components/schemas/YearbookEnvelope"}
         "400": {$ref: "#/components/responses/YearbookInvalid"}
         "401": {$ref: "#/components/responses/Unauthenticated"}
+        "503": {$ref: "#/components/responses/SessionStoreUnavailable"}
         "403": {$ref: "#/components/responses/CsrfOriginMismatch"}
         "404": {$ref: "#/components/responses/YearbookNotFound"}
         "413": {$ref: "#/components/responses/PayloadTooLarge"}
@@ -589,7 +615,8 @@ paths:
         `multipart/form-data` with the image in the part named `file`; other parts are ignored and the client file
         name is never used. The type is decided by sniffing the content (JPEG, PNG, WebP), never by file name or
         Content-Type. The image is decoded, rotated upright, stripped of all metadata (EXIF, GPS, ICC, comments),
-        resized to at most 3000 px on the long edge (never enlarged) and stored; a 480 px JPEG thumbnail is stored
+        resized to at most 3000 px on the long edge (never enlarged) and stored; a 480 px JPEG thumbnail and a
+        print version (long edge at most 1800 px, JPEG quality 85, PNG when the photo has transparency) are stored
         too. Opaque images are stored as JPEG, images with transparency as PNG. Only the owner may upload (`404`
         otherwise). The body cap is `SMEM_MEDIA_MAX_BYTES` (default 10 MiB). Limits: 200 photos per yearbook, 500 MiB
         per user, 60 uploads per 10 minutes per user.
@@ -640,7 +667,7 @@ paths:
         "429": {$ref: "#/components/responses/RateLimited"}
         "502": {$ref: "#/components/responses/StorageError"}
         "503":
-          description: Too many uploads in progress (`busy`); retry after the `Retry-After` seconds.
+          description: Too many uploads in progress (`busy`) or the session store is down (`session_store_unavailable`); retry after the `Retry-After` seconds.
           headers:
             Retry-After: {schema: {type: integer}}
           content:
@@ -681,6 +708,7 @@ paths:
             application/json:
               schema: {$ref: "#/components/schemas/Error"}
         "401": {$ref: "#/components/responses/Unauthenticated"}
+        "503": {$ref: "#/components/responses/SessionStoreUnavailable"}
         "404": {$ref: "#/components/responses/YearbookNotFound"}
   /v1/media/{id}/content:
     parameters:
@@ -691,11 +719,13 @@ paths:
       summary: Download a photo
       description: >-
         Streams the stored image to the yearbook owner only (`404` for anyone else). `Content-Type` comes from the
-        stored record. Honours `Range` and `If-None-Match`.
+        stored record. Honours `Range` and `If-None-Match`. `size=print` is the 1800 px version for the print renderer
+        (same type as `display`); a photo uploaded before it existed, and not yet reached by the backfill
+        (`smemories-media-backfill`), is answered in display size.
       security:
         - sessionCookie: []
       parameters:
-        - {name: size, in: query, required: false, schema: {type: string, enum: [display, thumb], default: display}}
+        - {name: size, in: query, required: false, schema: {type: string, enum: [display, thumb, print], default: display}}
       responses:
         "200":
           description: The image.
@@ -713,6 +743,7 @@ paths:
             application/json:
               schema: {$ref: "#/components/schemas/Error"}
         "401": {$ref: "#/components/responses/Unauthenticated"}
+        "503": {$ref: "#/components/responses/SessionStoreUnavailable"}
         "404": {$ref: "#/components/responses/NotFound"}
         "416": {description: Range not satisfiable.}
         "502": {$ref: "#/components/responses/StorageError"}
@@ -732,6 +763,7 @@ paths:
       responses:
         "204": {description: Deleted, or nothing to delete.}
         "401": {$ref: "#/components/responses/Unauthenticated"}
+        "503": {$ref: "#/components/responses/SessionStoreUnavailable"}
         "403": {$ref: "#/components/responses/CsrfOriginMismatch"}
         "502": {$ref: "#/components/responses/StorageError"}
   /v1/yearbooks/{id}/collections:
@@ -773,6 +805,7 @@ paths:
             application/json:
               schema: {$ref: "#/components/schemas/Error"}
         "401": {$ref: "#/components/responses/Unauthenticated"}
+        "503": {$ref: "#/components/responses/SessionStoreUnavailable"}
         "403":
           description: >-
             `email_not_verified` (the owner's email is not verified) or `csrf_origin_mismatch` (the request carries
@@ -810,6 +843,7 @@ paths:
                     type: array
                     items: {$ref: "#/components/schemas/Collection"}
         "401": {$ref: "#/components/responses/Unauthenticated"}
+        "503": {$ref: "#/components/responses/SessionStoreUnavailable"}
         "404": {$ref: "#/components/responses/YearbookNotFound"}
   /v1/collections/{id}:
     parameters:
@@ -826,6 +860,7 @@ paths:
       responses:
         "204": {description: Revoked (or already revoked).}
         "401": {$ref: "#/components/responses/Unauthenticated"}
+        "503": {$ref: "#/components/responses/SessionStoreUnavailable"}
         "403": {$ref: "#/components/responses/CsrfOriginMismatch"}
         "404": {$ref: "#/components/responses/NotFound"}
   /v1/public/collect/{token}:
@@ -880,7 +915,7 @@ paths:
         Answers are validated against the set of fields in force at submission time (text rules of
         `docs/note-fields.md`: NFC, trimmed, control and format characters rejected except ZWJ and variation
         selectors, limits in characters). Each photo goes through the same pipeline as owner uploads (content sniffing,
-        decode limits, metadata stripped, display and thumbnail versions); a rejected photo rejects the whole
+        decode limits, metadata stripped, display, print and thumbnail versions); a rejected photo rejects the whole
         submission and nothing is stored. Photos are processed one at a time, each waiting up to 10 seconds for a free
         image-processing slot. A submission is refused at once, before any byte of the body is read, with `503 busy`
         and a `Retry-After` of 2 to 6 seconds (random) when the server already has `SMEM_PUBLIC_UPLOAD_MAX_CONNS`
@@ -1039,6 +1074,36 @@ components:
           schema: {$ref: "#/components/schemas/Error"}
     CodeStoreUnavailable:
       description: Redis, which holds the email codes, did not answer (`code_store_unavailable`), or the rate limiter that guards sign-in, verification and reset did (`limiter_unavailable`); nothing was accepted, retry shortly.
+      headers:
+        Retry-After:
+          schema: {type: integer}
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/Error"}
+    SessionStoreUnavailable:
+      description: >-
+        Redis, which holds the login sessions, did not answer (`session_store_unavailable`). Sessions have no copy elsewhere, so
+        the request fails closed: the caller is not treated as anonymous and no session is created. Retry after `Retry-After`.
+      headers:
+        Retry-After:
+          schema: {type: integer}
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/Error"}
+    BusyOrSessionStore:
+      description: >-
+        All password-hashing slots stayed taken (`busy`), or the session store is down (`session_store_unavailable`; for register
+        no account is created); retry after `Retry-After`.
+      headers:
+        Retry-After:
+          schema: {type: integer}
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/Error"}
+    CodeOrSessionStoreUnavailable:
+      description: >-
+        Redis did not answer: `code_store_unavailable` (nothing was accepted) or `session_store_unavailable` (the session could not be
+        read); retry shortly.
       headers:
         Retry-After:
           schema: {type: integer}
@@ -1270,7 +1335,7 @@ components:
           properties:
             code:
               type: string
-              examples: [not_found, method_not_allowed, payload_too_large, internal_error, not_ready, invalid_credentials, unauthenticated, rate_limited, invalid_code, code_expired, code_locked, code_store_unavailable, limiter_unavailable, limit_reached, unknown_field, unsupported_media_type, invalid_image, quota_exceeded, storage_error, invalid_media, missing_answer, invalid_answer, too_many_photos, collection_full, collection_closed, verification_failed, busy, request_timeout]
+              examples: [not_found, method_not_allowed, payload_too_large, internal_error, not_ready, invalid_credentials, unauthenticated, rate_limited, invalid_code, code_expired, code_locked, code_store_unavailable, session_store_unavailable, limiter_unavailable, limit_reached, unknown_field, unsupported_media_type, invalid_image, quota_exceeded, storage_error, invalid_media, missing_answer, invalid_answer, too_many_photos, collection_full, collection_closed, verification_failed, busy, request_timeout]
             message:
               type: string
             request_id:

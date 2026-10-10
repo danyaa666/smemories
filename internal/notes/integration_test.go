@@ -93,7 +93,11 @@ func newEnv(t *testing.T) *env {
 		t.Fatal(err)
 	}
 	e.lim = ratelimit.NewFactory(rc, logger, e.now)
-	svc, err := auth.NewService(auth.NewStore(d), hasher, auth.Limits{RegisterPerHour: 1000, LoginFailsPerPair: 1000, LoginFailsPerIP: 1000},
+	sessions, err := auth.NewSessions(context.Background(), rc, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	svc, err := auth.NewService(auth.NewStore(d), sessions, hasher, auth.Limits{RegisterPerHour: 1000, LoginFailsPerPair: 1000, LoginFailsPerIP: 1000},
 		auth.Mail{Mailer: mail, Logger: logger}, codes, e.lim, e.now)
 	if err != nil {
 		t.Fatal(err)

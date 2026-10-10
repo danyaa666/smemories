@@ -10,18 +10,18 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 34 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-044, T-049, T-050, T-055, T-056, T-058, T-059, T-060, T-061, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074 |
-| TODO | 2 | T-053, T-054 |
-| IN_QA | 2 | T-052, T-057 |
-| MERGED | 2 | T-034, T-048 |
+| BACKLOG | 32 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-044, T-050, T-056, T-058, T-059, T-060, T-061, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-075, T-076 |
+| TODO | 1 | T-064 |
+| CHANGES_REQUESTED | 1 | T-053 |
+| MERGED | 7 | T-034, T-048, T-049, T-052, T-054, T-057, T-074 |
 | DONE | 28 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-035, T-036, T-037, T-038, T-043, T-045, T-046, T-047, T-051, T-062, T-063 |
-| CANCELLED | 6 | T-014, T-019, T-039, T-040, T-041, T-042 |
+| CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
 
-**Awaiting your review (MERGED):** T-034 ([E04] Public note submission (text and photos)); T-048 ([E02] Email one-time codes replace verification and reset links (API) with a dev-only fixed code)
+**Awaiting your review (MERGED):** T-034 ([E04] Public note submission (text and photos)); T-048 ([E02] Email one-time codes replace verification and reset links (API) with a dev-only fixed code); T-049 ([E02] Web: code entry screens for email verification and password reset); T-052 ([E02] Login sessions move to Redis (drop the sessions table)); T-054 ([E05] Spike: HTML templates and browser print-to-PDF instead of server rendering); T-057 ([E05] Media print-size variant (1800 px) with backfill); T-074 ([E04] Sweep orphaned upload spool files at start-up)
 
 **Open questions for you:** none
 
-_Board last written 2026-10-09 09:52Z_
+_Board last written 2026-10-10 03:28Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -317,6 +317,42 @@ Third QA round passed with no findings. This is the first public, unauthenticate
 - **Answer:** _(pending)_
 
 QA passed first time. Verification and reset links are replaced by 6-digit codes kept as HMACs in Redis (30/15 min, 5 attempts, one Lua script). The dev-only fixed code 123123 is accepted only when SMEM_ENV is dev/test and SMEM_DEV_FIXED_OTP is set; the API refuses to start otherwise; every line is tagged DEV-SHORTCUT(otp) and listed in docs/dev-shortcuts.md; T-050 removes it before go-live. Migration 0011 drops the email_tokens table. Known limit (task T-031): a third party can lock a victim's reset code with 5 wrong guesses. The web screens still use the old links until T-049, so signup verification in the UI is broken until that lands (merge T-049 soon after). Merge order: T-034 first, then this one after a rebase. To approve: team approve T-048.
+
+### Q-022 — Approve merge of T-052 (login sessions in Redis, drop sessions table)?
+- **Status:** RESOLVED
+- **Asked:** 2026-10-09 10:44Z
+- **Blocks:** T-052
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+QA passed twice. Sessions live in Redis only (key = SHA-256 of the cookie value, sliding 30 days, per-user index, atomic delete-all for password reset and the Google pre-hijack defence). Redis down = 503 and no one is anonymous or fake-signed-in. Migration 0012 drops the sessions table (existing logins end; nothing is in production). Includes the T-051 clean-ups. Known gaps (specs T-031/T-049): no per-user session cap, no web text yet for the 503 code. To approve: team approve T-052.
+
+### Q-023 — Approve merge of T-057 (print-size photos 1800 px + backfill)?
+- **Status:** RESOLVED
+- **Asked:** 2026-10-09 10:44Z
+- **Blocks:** T-057
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+QA passed. Every new photo also gets a 1800 px print version (smaller PDFs/prints); ?size=print serves it with the same access rules; existing photos are filled by the new smemories-media-backfill command (idempotent, --dry-run); until then print falls back to display size. Migration 0013 adds a nullable column. Merges after T-052 (migration order). Follow-up T-075 hardens the backfill before production. To approve: team approve T-057.
+
+### Q-024 — Approve merge of T-053 (rate limiters in Redis)?
+- **Status:** RESOLVED
+- **Asked:** 2026-10-09 10:53Z
+- **Blocks:** T-053
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+QA passed. All 16 limiters move from per-process memory to Redis sliding windows (one atomic script, Redis clock), so limits hold across several API instances and restarts: 200 parallel registrations over two API processes admitted exactly 5. If Redis is down the 4 guessing limiters (login per email/IP, verify tries, reset tries) refuse with 503 limiter_unavailable; the other 12 let requests through and log one ERROR per minute. Emails are SHA-256 hashed inside keys. No migration. Merges after T-052 and then needs a mechanical develop merge. To approve: team approve T-053.
+
+### Q-025 — Approve merge of T-049 (web screens for the 6-digit email codes)?
+- **Status:** RESOLVED
+- **Asked:** 2026-10-09 13:28Z
+- **Blocks:** T-049
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+QA passed in a real browser (Chromium) with the dev code: register -> verify, forgot -> reset, resend cooldown, EN/VI, 375 px with a long email, nothing secret in URL/storage/Referer, the dev code is not in the web bundle. Not tested: a real screen reader (ARIA/focus checked instead). Small polish items are T-076. Without this merge the UI cannot verify email or reset a password (the API already needs codes since T-048). To approve: team approve T-049.
 
 <!-- questions:end -->
 
@@ -1955,19 +1991,19 @@ CI on develop failed once on TestGoogleConcurrentCallbacksCreateOneAccount: goog
 - 2026-10-09 04:28Z · leader · merged bb6709a. Review: Lua check+attempt script, HMAC with 32-byte key, decoy for unknown emails, fail-closed on Redis down, dev fixed code 123123 guarded (env dev/test, refuses start otherwise, DEV-SHORTCUT(otp) tags registered); migration 0011 drops email_tokens. QA passed twice (second after the T-034 merge). For owner to check: .env.example SMEM_OTP_KEY, docs/auth-otp.md, docs/dev-shortcuts.md. Web code-entry screens are T-049; until then UI sign-up verification uses the removed link flow.
 
 ### T-049 — [E02] Web: code entry screens for email verification and password reset
-- **Status:** BACKLOG
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
 - **Depends-on:** T-048
 - **Risk:** high
 - **Rework:** 0
-- **Owner-approved:** —
+- **Owner-approved:** yes
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
-- **Comments-seen:** 0
+- **Branch:** task/t-049-e02-web-code-entry-screens-for-email-ver
+- **PR:** https://github.com/danyaa666/smemories/pull/42
+- **Updated:** 2026-10-10 03:28Z by leader
+- **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/09-web-email-code-screens.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1976,6 +2012,28 @@ CI on develop failed once on TestGoogleConcurrentCallbacksCreateOneAccount: goog
 Code input screens (paste, auto-submit, resend cooldown) replacing the link pages of T-015.
 
 #### Comments
+- 2026-10-09 11:22Z · dev · Code screens for verify/forgot/reset done (EN+VI), token-in-URL code removed, T-052 503 string added. Test: cd web && npm test (128 pass), lint, typecheck, i18n, build green. Real API (dev code, isolated stack) checked with a curl replay of the same requests, not in a browser; QA please check the 375px VI layout and a screen-reader pass in a browser.
+- 2026-10-09 13:28Z · qa · QA_PASS. Head 331ad68, CI green (go, go-integration, security, web). Local: make lint build test all exit 0, web 128/128 pass. No HTTP endpoint changed, so no Postman change needed.
+  Real Chromium (Playwright, headless shell) against the worktree API (SMEM_ENV=dev, SMEM_DEV_FIXED_OTP=123123, typed only by me; grep shows 123123 appears nowhere in web/src non-test or in web/dist) behind the Vite dev proxy. Error variants not producible for real were mocked with page.route; the clock was faked for the 60 s cooldown.
+  AC1 | register -> lands on /verify-email, no query or hash, "We sent a 6-digit code to <email>", input inputmode=numeric autocomplete=one-time-code maxlength=6, visible label, focused. 5 digits = no request, 6th digit = exactly 1 POST {"code":...}. Paste "111 222\n" -> 111222; paste "12ab34 5678901" -> 123456; typing "ab1-2 3" -> 123; Enter with 3 digits -> no request, message; type+Enter x3 quickly -> 1 request. Account page shows "Verify your email" link while unverified (keyboard Enter opens the screen). PASS
+  AC2 | verify screen EN and VI: invalid_code, code_expired, code_locked sit in the field's aria-describedby with aria-invalid and focus moves to the field; rate_limited (Retry-After 7200 -> "120 min"/"120 phut"), code_store_unavailable 503, session_store_unavailable 503, busy, internal_error, network abort, unknown code -> generic. All strings are right in both languages; the typed code is never echoed. Real lockout: 5 wrong codes -> 5th answers code_locked, resend -> new code -> invalid_code again. Reset screen EN and VI: code_expired, code_locked, rate_limited, 503s, network, and the special "busy" text. Unknown email + dev code and known email + wrong code give the identical invalid_code text. PASS
+  AC3 | after register the button is disabled "Send a new code (60s)" and counts down (57s after 3 s); a fresh visit has no cooldown; resend -> "We sent a new code.", button disabled 60 s again, field cleared; re-enabled after 60 s. Mocked 429 (Retry-After 1800) -> "Try again in 30 min", button not locked. Real API: resends 1-3 OK, 4th -> 429 "Try again in 60 min" (VI too). PASS
+  AC4 | /forgot-password with existing and unknown email both go to /reset-password with the neutral "If an account exists..." message (EN, VI); email prefilled and editable; code field focused; hint "At least 10 characters." shown; weak password + wrong code -> weak_password message on the password field, not invalid_code; short code -> client message, no request; invalid_email stays on step 1/field error; success -> /login with "Your password has been changed", URL clean (/login), request body is {email,code,password}; old password rejected, new one logs in; revisiting /login shows no stale message. forgot 429/network/503 stay on the page with a message. Reset-page resend uses the typed email, has the same cooldown, shows 429. EN and VI both run end to end. PASS
+  AC5 | grep: no useUrlToken/captureUrlToken/invalid_token/?token in web/src (only the test that asserts it); /verify-email?token=X signed out -> /login; /reset-password?token=X shows the normal code form; no API request, DOM or storage contains the token. localStorage/sessionStorage hold only smemories.lang; cookies/URL/DOM never hold the code; Referer header absent on API calls; <meta name=referrer content=no-referrer> kept. PASS
+  AC6 | EN/VI key parity (lint:i18n inside make lint). 375x667, VI, 69-char-local-part-style long email: no horizontal overflow on verify-email (also in error state), reset-password (prefilled and with errors), forgot, login, register, account (screenshots read). Keyboard only: Enter on account link, Tab order input -> submit -> resend, visible 3px outline, typing 6 digits submits, Enter in the password field submits reset. Accessibility tree (ariaSnapshot) shows heading, labelled textbox, role=alert linked to field, role=status messages; html lang follows EN/VI. Vitest covers paste, auto-submit, errors, cooldown (fake timers), two-step reset. PASS (a real screen reader such as VoiceOver was NOT run; accessibility-tree and ARIA wiring checked instead)
+  Non-blocking observations (no AC violated):
+  1. Resend button is 121x21 px at 13.3 px font on 375 px (below the 24 px WCAG 2.5.8 target size; the submit button is 42 px). Style it like the other buttons.
+  2. Reloading /verify-email or /reset-password right after sign-up/forgot restarts the 60 s cooldown and re-shows the "sent" message (history state survives a reload).
+  3. Fewer than 6 digits shows "That code is wrong..." instead of "enter 6 digits".
+  4. A weak_password error leaves focus on the submit button, not the password field (error is still announced, role=alert plus aria-describedby).
+  5. Re-pasting the identical wrong code after an error does nothing (v === value guard); Enter or editing a digit still works.
+  6. On reset, if the resend then fails (429) the earlier "we sent a code" status stays next to the error.
+  7. An old link with ?token= keeps the token in the address bar and history (not read, not sent, no-referrer).
+  8. Mid-flow 401 shows "Your session has ended" but does not redirect.
+  Test data: ~12 qa*@example.com accounts left in the dev DB (db smemories); API/Vite processes I started are stopped.
+- 2026-10-09 13:28Z · leader · Leader review OK at head 331ad68 (= QA head, CI green, no .team changes, web only). Verified: no 123123 in web/src or dist, nothing secret in URL/storage/Referer, old token capture code removed, EN/VI parity. Non-blocking items -> T-076. Awaiting owner approval.
+- 2026-10-10 03:26Z · human · owner approved merge
+- 2026-10-10 03:28Z · leader · merged b835af9. Review: code-entry screens (auto-submit, paste, 60 s resend cooldown), two-step reset, EN/VI, old ?token= handling removed, no dev code in the bundle; QA used a real browser. For owner to check: sign up and verify with your 6-digit code (or 123123 locally); polish items are in T-076.
 
 ### T-050 — [E06] Remove dev-only shortcuts before production (delete the fixed OTP) and add a pipeline check
 - **Status:** BACKLOG
@@ -2045,19 +2103,19 @@ Add a Redis-protocol service (Valkey 8) to the local stack and CI, the go-redis 
 - 2026-10-09 01:42Z · leader · accepted by owner (chat, 2026-10-09: 'team accept T-016, T-046, T-047, T-051')
 
 ### T-052 — [E02] Login sessions move to Redis (drop the sessions table)
-- **Status:** IN_QA
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
 - **Depends-on:** T-051
 - **Risk:** high
 - **Rework:** 1
-- **Owner-approved:** —
-- **Assignee:** qa
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-052-e02-login-sessions-move-to-redis-drop-th
 - **PR:** https://github.com/danyaa666/smemories/pull/39
-- **Updated:** 2026-10-09 09:52Z by qa
-- **Comments-seen:** 6
+- **Updated:** 2026-10-10 03:27Z by leader
+- **Comments-seen:** 10
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/10-sessions-in-redis.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2083,21 +2141,30 @@ Sessions with native expiry in Redis, per-user index for delete-all, fail-closed
 - 2026-10-09 04:29Z · leader · Leader review (content) OK at head fd64f74: sessions as sess:<sha256> hashes + usess:<uid> index, scripts atomic, fail-closed 503, reset/pre-hijack delete-all before the MySQL commit, migration 0012. Non-blocking items went into the T-031 spec (per-user session cap, logout with Redis down) and the T-049 spec (web strings). PR #39 is CONFLICTING after #38 merged: merge develop into the branch, keep T-052 only, re-run all tests, READY_FOR_QA (short regression). Then owner approval.
 - 2026-10-09 04:29Z · leader · T-048 (#38) is merged (develop bb6709a). Merge develop into the T-052 branch (the T-048 commits now appear as one squash commit; resolve conflicts keeping develop's T-048 files and your T-052 changes), re-run make lint build test test-integration, push, READY_FOR_QA. No other change requested.
 - 2026-10-09 04:31Z · dev · Merged origin/develop (bb6709a/2abb2f0) into the branch; T-048 files taken from develop (code tree identical to the old stacked T-048 head a40bfc5), T-052 commit fd64f74 unchanged, no .team diff vs develop. Re-ran make lint build test test-integration: all green. QA: short regression only (make up; make lint build test test-integration; sessions + auth newman).
+- 2026-10-09 10:00Z · qa · Regression pass at head 881c549 (CI green: go, go-integration, security, web).
+  MERGE CHECK: diff of branch vs 2abb2f0 (develop at the merge) = exactly the 25 files / +907 -115 of T-052 commit fd64f74; line-level +/- diff of fd64f74 vs (2abb2f0..HEAD) identical; no .team/ change. origin/develop has since moved to 4cb5405 (board sync only: .team/README.md, TASKS.md), no code drift. T-048 files = develop's.
+  MECHANICAL: make lint build test test-integration in the T-052 worktree: exit 0 (37 ok packages incl. auth 73 s, media, yearbook, db; no FAIL).
+  MIGRATIONS: scratch DB smem_test_qa052b: up -> 11 applied (0001..0012 minus 0003), 'down' x3 rolls back 0012 (sessions table back), 0011 (email_tokens back), 0010 (notes tables gone), up again -> all 11 applied, sessions/email_tokens gone, notes tables back.
+  NEWMAN (fresh API on :8091, scratch DB + Redis db 5, register limit raised): auth 74 req/174 assert, only the 20 Google-folder assertions fail (Google unconfigured, documented), identical on 2 runs; notes 72/137 0 fail x2 (after verifying accounts A and B, C stays unverified); yearbooks 92/189 0 fail x2; media 66/122 0 fail x2. Redis shows smem:dev:sess:<sha256> keys after the runs.
+  NON-BLOCKING: notes collection needs verify-newman-users equivalent for the scratch DB (the make target only touches the compose 'smemories' DB); no product issue. Earlier non-blocking items from the first QA pass stand (all tracked in T-031/T-049 specs).
+- 2026-10-09 10:44Z · leader · Leader review OK at head 881c549 (= QA head, CI green, diff = T-052 only, no .team changes). Sessions in Redis (sha256 keys, atomic scripts, fail-closed 503), migration 0012 drops sessions. Non-blocking items are in the T-031/T-049 specs. Awaiting owner approval; merge order #39 then #40.
+- 2026-10-10 03:26Z · human · owner approved merge
+- 2026-10-10 03:27Z · leader · merged 35298e1. Review: sessions as sess:<sha256> hashes + usess:<uid> index in Redis, atomic scripts, fail-closed 503, reset and pre-hijack delete-all before the MySQL commit, migration 0012 drops sessions; QA passed twice. For owner to check: docs/redis.md, existing logins end after the migration. Follow-ups in T-031 (session cap) and T-049 (web string).
 
 ### T-053 — [E02] Rate limiters move to Redis (shared limiter for all endpoints)
-- **Status:** TODO
+- **Status:** CHANGES_REQUESTED
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
 - **Depends-on:** T-051
 - **Risk:** high
-- **Rework:** 0
-- **Owner-approved:** —
+- **Rework:** 1
+- **Owner-approved:** yes
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
-- **Comments-seen:** 1
+- **Branch:** task/t-053-e02-rate-limiters-move-to-redis-shared-l
+- **PR:** https://github.com/danyaa666/smemories/pull/41
+- **Updated:** 2026-10-10 03:28Z by leader
+- **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/11-rate-limiters-in-redis.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2107,9 +2174,24 @@ Redis sliding-window limiter with Take and Refund replacing the in-memory one ev
 
 #### Comments
 - 2026-10-09 01:31Z · leader · T-051 is merged: ready.
+- 2026-10-09 10:05Z · dev · PR #41. Redis sliding-window limiter (Lua, Redis TIME) replaces all 16 in-memory limiters; Factory Open/Closed policy (closed: login_pair, login_ip, verify_tries, reset_tries -> 503 limiter_unavailable). Test: make test-integration (internal/ratelimit/redis_integration_test.go, policy_test.go, internal/auth/limiters_integration_test.go), make reset-limits. Newman auth/yearbooks/media/notes run 2-3x with 0 failures. Gaps: expect small NewService merge conflict with T-052 (PR #39); web schema.d.ts regenerated for the new error code.
+- 2026-10-09 10:06Z · leader · Leader note for QA: dev did not run make web-lint / web tests (only schema.d.ts regenerated) - run the full make lint build test test-integration plus npm run check:api. Merge risk: auth.NewService, media.NewService and notes.NewHandler gained a limiters parameter, so it conflicts with T-052 (PR #39) in internal/auth/service.go; whichever merges second gets a develop merge. Probe especially: fail-closed list (login_pair, login_ip, verify_tries, reset_tries) vs fail-open (12 others) with Redis down, no email in keys, Retry-After accuracy, refund paths, limit values unchanged from the old in-memory ones.
+- 2026-10-09 10:53Z · qa · PR #41 head caf2ea4; CI green (go, go-integration, security, web).
+  Mechanical: make lint (gofmt, vet x2, golangci-lint, eslint, prettier, tsc, i18n) OK; make build test (-race + web 109 vitest) OK; make test-integration -race OK; npm run check:api OK; ratelimit integration x3 -race OK; BenchmarkRedisTake 1000 ops = 252us/op.
+  AC1 interface+Redis Lua (TIME, ZREMRANGEBYSCORE/ZCARD/ZADD/PEXPIRE, Refund ZPOPMAX), Memory only in tests (grep: not in cmd/): code read + live: key smem:dev:rl:register:127.0.0.1 is zset, ttl 3600, zcard 5. PASS.
+  AC2 values unchanged (const lines untouched in diff; 16 limiters; docs/redis.md table matches code). Live: register 6th=429 Retry-After 3600; login 11th=429 (900); public_misses 61st=429; successful login refunds (login_ip zcard stayed 10). PASS.
+  AC3 fail policy, live with a second API pointed at a throwaway Valkey that I stopped: register x3 201 (open) with ONE ERROR log 'ratelimit: limiter failed' (failures counter); login wrong and right = 503 limiter_unavailable + Retry-After 5 (closed); reset-password 503 limiter_unavailable; verify-email 503 limiter_unavailable; public collect lookup 404 (open). Call-site comments present on each. PASS. (forgot-password 202 and resend 503 code_store_unavailable are the T-048 code store, not the limiter.)
+  AC4 keys: login_pair key = ip|sha256(lowercased email) (matches shasum of qaprobe1@example.com); scan of all smem:* keys for '@'/'qaprobe' empty; TestLimiterKeysHoldNoEmail passes. PASS.
+  AC5 tests on real Redis exist and pass (limit N, retry-after, refund, 50 parallel, shared instances, expiry/TTL, fake clock). Extra live: 200 parallel registrations spread over two API processes sharing Redis = exactly 5x201, 195x429; 3 on proc A + 3 on proc B => 6th 429; counts survive an API restart (Retry-After 3590 after restart). PASS.
+  AC6 Newman x2 each with make reset-limits between runs (no API restart): yearbooks 0 failures x2, media 0 x2, notes (--working-dir postman) 0 x2; auth 20 failed assertions x2, all Google OIDC (no SMEM_GOOGLE_* in my env, provider unreachable; Google limiters covered by auth integration tests), everything else passes. make reset-limits works (needs .env in the cwd, so run from the main checkout; not from a worktree without .env). PASS.
+  Scratch merge with T-052 (PR #39 head 881c549): CONFLICTS in 9 files, 10 hunks: internal/auth/service.go (2: NewService signature needs both sessions *Sessions and limiters *ratelimit.Factory; Service literal needs sessions + the Open/Closed limiters), internal/auth/handler.go, internal/auth/integration_test.go, internal/media/integration_test.go, internal/notes/integration_test.go, internal/yearbook/integration_test.go, api/openapi.yaml, docs/redis.md, web/src/api/schema.d.ts (regenerate). All textual/mechanical; whoever merges second must merge develop and re-run make lint build test test-integration. Scratch worktree removed, nothing pushed.
+  Non-blocking: (a) openapi /v1/auth/login 503 lists only Busy, not limiter_unavailable (login now returns it); check reset-password likewise. (b) Redis flapping edge: an open limiter whose Take failed but whose later Refund succeeds could pop another request's hit (negligible). (c) I applied migrations and created qaprobe*/d*/two*/par* users in the shared dev DB; harmless dev data.
+- 2026-10-09 10:53Z · leader · Leader review OK at head caf2ea4 (= QA head, CI green, no .team changes). Atomic sliding-window script on the Redis clock, per-limiter fail policy (4 guessing limiters closed, 12 open with one ERROR/min), emails hashed in keys, refunds, make reset-limits. When T-052 (#39) merges first, this branch needs a develop merge (9 files, textual: NewService takes sessions and limiters, regenerate schema.d.ts); fix while there: api/openapi.yaml should list limiter_unavailable among the 503s of /v1/auth/login and /v1/auth/reset-password (and every endpoint where a closed limiter applies). Awaiting owner approval.
+- 2026-10-10 03:26Z · human · owner approved merge
+- 2026-10-10 03:28Z · leader · T-052, T-057 and T-049 are merged (develop b835af9). Merge develop into the T-053 branch (conflicts: internal/auth/service.go NewService takes both sessions and limiters, handler.go, the integration tests, api/openapi.yaml, docs/redis.md, web/src/api/schema.d.ts: regenerate it), re-run make lint build test test-integration and npm run check:api. Also fix: api/openapi.yaml must list limiter_unavailable among the 503s of /v1/auth/login, /v1/auth/reset-password, /v1/auth/verify-email and every endpoint where a closed limiter applies. Then READY_FOR_QA (short regression pass; already owner-approved).
 
 ### T-054 — [E05] Spike: HTML templates and browser print-to-PDF instead of server rendering
-- **Status:** TODO
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** spike
 - **Milestone:** M1
@@ -2120,8 +2202,8 @@ Redis sliding-window limiter with Take and Refund replacing the in-memory one ev
 - **Assignee:** —
 - **Branch:** task/t-054-spike-html-templates-and-browser-print-t
 - **PR:** https://github.com/danyaa666/smemories/pull/35
-- **Updated:** 2026-10-09 02:28Z by leader
-- **Comments-seen:** 3
+- **Updated:** 2026-10-09 11:18Z by leader
+- **Comments-seen:** 6
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/06-spike-browser-print-to-pdf.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2133,9 +2215,20 @@ Prototype two designs as HTML/CSS pages printed through the browser (Save as PDF
 - 2026-10-08 15:17Z · dev · ADR docs/adr/0003-html-print-export.md. Prototype web/src/spike/print (dev server only), tooling tools/print-spike (npm test = AC3, node measure.mjs = matrix), PDFs+results.json docs/spikes/print. Measured: Chromium 156, Chrome 154, Edge Dev/Canary 157, Firefox 157 (headless print). NOT tested: Safari, Android, iOS, interactive dialogs (owner steps in ADR). Findings: Firefox black tiled gradients, design fonts lack Vietnamese, 3000px photos give 63 MB. QA: npm test in tools/print-spike (needs poppler), inspect PDFs.
 - 2026-10-08 15:17Z · leader · Spike done (PR #35, ADR 0003). Waiting for the owner's phone and Safari tests (Q-017) before D-24; do not merge the PDFs (11 MB) until the decision, then keep only the ADR and a few evidence files.
 - 2026-10-09 01:42Z · leader · Leader: D-24 decided (build it). Please: (1) keep docs/adr/0003-html-print-export.md and set its status to Accepted (owner decision D-24, the owner will test Safari, Android Chrome and iOS Safari and report); (2) trim docs/spikes/print to at most 1 MiB in total (keep results.json and 2 or 3 small evidence images, drop the large PDFs; the Playwright check regenerates them); (3) keep web/src/spike/print and tools/print-spike as the starting point of T-058 (dev server only, nothing in the production build); (4) add the owner test steps as docs/spikes/print/OWNER-TESTS.md. Then READY_FOR_QA.
+- 2026-10-09 10:46Z · dev · ADR 0003 now Accepted (D-24); docs/spikes/print trimmed to 332 KB (results.json + 3 PNGs, PDFs deleted and git-ignored); OWNER-TESTS.md added; prototype and tools kept. Test: cd tools/print-spike && npm test (4/4 pass, needs poppler). PDFs are still in the branch history: squash-merge.
+- 2026-10-09 11:17Z · qa · AC evidence (all produced by me in worktree at PR head; CI go/go-integration/security/web all pass): 
+  1. ADR docs/adr/0003-html-print-export.md: Status line = Accepted (D-24); every relative link resolves (OWNER-TESTS.md, 0002-pdf-engine.md, 3 PNGs exist). 
+  2. docs/spikes/print = 332 KB (du -sk), 4 tracked files (results.json, 3 PNG) + OWNER-TESTS.md; .gitignore has docs/spikes/print/*.pdf; after npm test, git status clean (no PDF leaked). 
+  3. OWNER-TESTS.md: setup URL works (vite dev serves /spike/print?design=memory&size=a5&lang=vi -> 200; params design/size/lang/scale verified in PrintSpike.tsx and sheet.tsx; vite default port 5173), per-browser steps for Safari desktop, Android Chrome, iOS Safari, a result table with all matrix columns. Understandable by a non-developer. 
+  4. cd tools/print-spike && npm ci && npm test: 4/4 pass (24 pages, 30 photos, A5/A4/Letter, classic 4 pages). 
+  5. Prototype dev-only: App.tsx gates lazy import on import.meta.env.DEV; make build -> web/dist has only index js/css (384K), grep for spike/Gaegu/photo-01 in dist = no hits, no woff2 refs. 
+  6. make lint build test: all exit 0 (go race tests, web 83/83). 
+  7. git diff origin/develop...HEAD has no .team/ paths. 
+  Non-blocking: OWNER-TESTS says classic 4 or 5 pages, test asserts 4 on A5 (fine). Branch history contains ~11 MB PDFs: leader must squash-merge. I did not run browsers other than Playwright Chromium; Safari/Android/iOS remain owner tests by design.
+- 2026-10-09 11:18Z · leader · merged 85733f9 (squash, so the 11 MB of PDFs stay out of history). Review: ADR 0003 Accepted, evidence trimmed to 332 KB, PDFs gitignored, prototype only in the dev server (not in dist). For owner to check: docs/spikes/print/OWNER-TESTS.md, the phone/Safari tests are yours (D-24).
 
 ### T-055 — [E03] Opaque list cursors: do not expose internal ids
-- **Status:** BACKLOG
+- **Status:** CANCELLED
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2146,8 +2239,8 @@ Prototype two designs as HTML/CSS pages printed through the browser (Save as PDF
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-09 13:15Z by leader
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E03-yearbooks/06-opaque-list-cursors.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2156,6 +2249,7 @@ Prototype two designs as HTML/CSS pages printed through the browser (Save as PDF
 Replace the numeric-id paging cursor with a signed opaque cursor and a shared helper (L-05).
 
 #### Comments
+- 2026-10-09 13:15Z · leader · Absorbed by E10: T-069 (media API v2) and T-070 (yearbook API v2) return an opaque next_id from one shared helper; doing it twice on /v1 would be thrown away.
 
 ### T-056 — [E05] Book data endpoint for rendering (owner-only, approved notes)
 - **Status:** BACKLOG
@@ -2181,19 +2275,19 @@ One owner-only request returns the yearbook, profile and approved notes with ans
 #### Comments
 
 ### T-057 — [E05] Media print-size variant (1800 px) with backfill
-- **Status:** IN_QA
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
 - **Depends-on:** T-009
 - **Risk:** high
 - **Rework:** 0
-- **Owner-approved:** —
-- **Assignee:** qa
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-057-e05-media-print-size-variant-1800-px-wit
 - **PR:** https://github.com/danyaa666/smemories/pull/40
-- **Updated:** 2026-10-09 09:52Z by qa
-- **Comments-seen:** 2
+- **Updated:** 2026-10-10 03:27Z by leader
+- **Comments-seen:** 6
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/08-print-size-photo-variant.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2204,6 +2298,16 @@ Third stored size for printing: lighter PDFs and faster print (spike: 63 MB and 
 #### Comments
 - 2026-10-09 01:42Z · leader · Only depends on T-009 (merged): ready.
 - 2026-10-09 04:46Z · dev · PR #40. print object <id>-print.<ext> (1800 px, q85, PNG kept), media.print_key migration 0013 (T-052 owns 0012: merge #39 first), size=print endpoint (display fallback while print_key is NULL), delete/discard/yearbook purge cover it, cmd/smemories-media-backfill (--dry-run, --batch, idempotent). Test: make up; make lint build test test-integration; newman media (67 req 0 fail). Perf numbers in docs/media.md (peak 954->960 MiB, process 0.90->0.86 s). Gap: backfill uses config.Load (needs SMEM_REDIS_URL) until T-052 LoadMigrate lands; old object-count asserts in 3 tests updated.
+- 2026-10-09 10:44Z · qa · PR #40 head eeb4c51, CI green (go, go-integration, security, web). No product code or tests changed by QA.
+  MECHANICAL: make lint build test test-integration on the branch exit 0; media+notes integration -race -count=3 stable. SCRATCH MERGE (T-052 head 881c549 + eeb4c51): merges cleanly (no conflicts), make lint build test test-integration exit 0 (37 ok pkgs). Migrations on the merged chain: up -> 0012 then 0013 applied, 4x down -> back to 0009 (media.print_key gone, sessions/email_tokens back), up again OK. Branch alone: 0013 applies on top of 0011 (gap 0012 is fine for goose).
+  AC1 (live, real MinIO, API on branch alone and on merged stack): uploads of 4032x3024 JPEG, 3000x2000 alpha PNG, 2500x1500 WebP, 3000x3000 opaque PNG, 1200x800, 1800x1200, 1801x1200, 800x600 alpha PNG -> object <id>-print.<ext> next to display/thumb. size=print: 1800x1350 / 1800x1200 / 1800x1080 / 1800x1800 / 1800x1199; JPEG quantisation tables equal a reference q85 (display = q92); alpha PNG stays PNG RGBA with transparent pixels kept; photos <=1800 px keep their display bytes; no EXIF. Headers same as other sizes (Cache-Control private max-age 3600, nosniff, ETag <sha>-p, 304 on If-None-Match, Range 206). Auth identical for display/thumb/print: owner 200, other user 404, anon 401, unknown id 404; size=Print/PRINT/original/1800/print%20 -> 400 invalid_size. Contributor (public submit, 2 photos) -> media rows with print_key + objects; submit with good+corrupt photo -> 400, object count unchanged (compensation incl. print). DELETE photo removes print object (repeat DELETE 204); DELETE yearbook leaves 0 objects under yearbooks/<id>/. Print-write failure leaves no row/object (TestStorageFailureLeavesNoRow).
+  AC2 backfill (30 legacy-style photos: print_key NULL + print objects removed, one display corrupt, one display missing; JPEG, alpha PNG, WebP, small): --dry-run reports 30, writes nothing; --batch 4 run: created 28, failed 2 (media: invalid image / storage: object not found, logged by media id), exit 1; run 2: created 0, same 2 failed, S3 object listing identical (idempotent); fallback ?size=print serves display before backfill, 1800 px after; PNG stays PNG, photos <=1800 keep display bytes; SIGINT mid-run: 'backfill stopped: context canceled', exit 1, rows done = objects present, resume completes the rest; two backfills in parallel: created 138+120, skipped 120+138, no duplicates/failures; bad flags (--batch 0 / 10001) exit 2; S3 endpoint down: all fail, exit 1, nothing written; wrong secret: 403 per photo, no secret in output. TestBackfillPrint also runs it twice.
+  AC3: upload (12 x 12 MP JPEG, request time incl. curl) base 2abb2f0 vs branch: 0.726 vs 0.734 s median (+1%); GOMAXPROCS=1: 0.738 -> 0.902 s (+22%, under 25% but close); 49 MP JPEG + 25 MP PNG concurrent (T-036 worst case, 2 at a time, 3 rounds): peak RSS base 871/897 MiB-ish (871333888/896778240 B) vs branch 885014528/884637696 B; GOMAXPROCS=1 877/903 MB vs 909/963 MB (+3..6%). Within budget.
+  AC4: openapi + web/src/api/schema.d.ts (check:api in lint passes) + docs/media.md + Postman 6b (size=print, 0 fail) accurate. Existing tests changed only by object-count asserts (6->9, 4->6, 2->3, 6->9) and the printOnly flag of the flaky storage wrapper: judged OK, the counts rise by design (third object). Newman on branch alone: media 67/126 0 fail x2, notes 72/137, yearbooks 92/189 0 fail, auth only the 20 Google assertions, platform 1 known manual item; on merged stack media 67/126 x2, notes x2, yearbooks, auth same.
+  NON-BLOCKING: (1) backfill uses config.Load: needs SMEM_REDIS_URL (confirmed) and in prod also SMEM_ALLOWED_ORIGINS etc.; after T-052 merges switch it to config.LoadMigrate (exists on the merged tree; env -i with only DB+S3 vars still fails there) and fix docs/media.md ('same SMEM_* environment as the API'); T-022 must pass these to the backfill task. (2) With S3 unreachable the backfill walks every photo (about 2.5 s each, 3 SDK attempts): 10k photos = hours; consider stopping after N consecutive storage failures. (3) --dry-run counts photos whose display is corrupt/missing as 'would create' (it does not read objects). (4) Postman 6b uses a tiny photo, so it does not assert the 1800 px edge or the fallback (covered by Go tests/my live runs). (5) Alpha PNG print can be larger than its display (synthetic stripes: 1.3 MiB vs 577 KiB) because scaling destroys compressibility; real photos should shrink, check with a real transparent sample. (6) A DELETE racing the backfill leaves one orphan print object until the yearbook delete (documented in code). (7) Migration 0013 down drops the column but leaves print objects (cleaned with the yearbook prefix).
+- 2026-10-09 10:44Z · leader · Leader review OK at head eeb4c51 (= QA head, CI green, no .team changes). Print version (1800 px, q85, PNG stays PNG, reuses display bytes when small), ?size=print same authorisation as display/thumb, delete/purge remove it, idempotent backfill binary, migration 0013 (nullable column, Down drops it). Cost: +1% upload time, +22% single-core, memory flat. Follow-ups: T-075 (backfill hardening). Awaiting owner approval; merge after #39 (migration order 0012 then 0013).
+- 2026-10-10 03:26Z · human · owner approved merge
+- 2026-10-10 03:27Z · leader · merged 487555d. Review: 1800 px print version (JPEG q85, PNG stays PNG, display bytes reused when small), ?size=print with the same authorisation, delete/purge remove it, idempotent backfill command, migration 0013 nullable column. Cost +1% upload time, memory flat. For owner to check: docs/media.md; run smemories-media-backfill (--dry-run first) to fill existing photos. Follow-up T-075 before production.
 
 ### T-058 — [E05] Web: HTML book renderer core and print preview (browser print-to-PDF)
 - **Status:** BACKLOG
@@ -2310,7 +2414,7 @@ Pick a template for the page size, print with per-browser guidance, anonymous wo
 - **Branch:** task/t-062-e01-ci-get-the-newest-go-patch-straight-
 - **PR:** https://github.com/danyaa666/smemories/pull/37
 - **Updated:** 2026-10-09 03:05Z by human
-- **Comments-seen:** 8
+- **Comments-seen:** 9
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/12-ci-newest-go-patch-from-go-dev.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2356,7 +2460,7 @@ CI resolved Go 1.26.8 while 1.26.9 (ten stdlib vulnerability fixes) was out, tur
 - **Branch:** task/t-063-e10-foundation-apperr-v2-response-helper
 - **PR:** https://github.com/danyaa666/smemories/pull/36
 - **Updated:** 2026-10-09 03:05Z by human
-- **Comments-seen:** 6
+- **Comments-seen:** 7
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/01-foundation.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2379,7 +2483,7 @@ Adds the tools the rest of E10 uses: the typed error package, the v2 envelope he
 - 2026-10-09 03:05Z · human · accepted by owner
 
 ### T-064 — [E10] DB conventions: yearbook and profile tables (no joins, no foreign keys, ms timestamps)
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2390,7 +2494,7 @@ Adds the tools the rest of E10 uses: the typed error package, the v2 envelope he
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
+- **Updated:** 2026-10-10 03:28Z by leader
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/02-db-yearbook-profile.md`
@@ -2609,7 +2713,7 @@ Adds request and pool metrics as be-golang requires; waits for Q-018 (library ch
 #### Comments
 
 ### T-074 — [E04] Sweep orphaned upload spool files at start-up
-- **Status:** BACKLOG
+- **Status:** MERGED
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2618,16 +2722,75 @@ Adds request and pool metrics as be-golang requires; waits for Q-018 (library ch
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-09 03:43Z by leader
-- **Comments-seen:** 0
+- **Branch:** task/t-074-e04-sweep-orphaned-upload-spool-files-at
+- **PR:** https://github.com/danyaa666/smemories/pull/43
+- **Updated:** 2026-10-09 13:53Z by leader
+- **Comments-seen:** 3
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/07-sweep-orphaned-upload-spool-files.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
 **Epic:** E04-friends-notes · **PRD:** `.team/epics/E04-friends-notes/PRD.md`
 
 T-034 QA finding: a shutdown or crash in the middle of an upload leaves a smem-upload-* spool file with a friend's private data; remove old ones at start-up.
+
+#### Comments
+- 2026-10-09 13:19Z · dev · Handler.SweepSpool (internal/notes/spool.go) called in main.go before Serve. Tests: TestSweepSpool, TestSweepSpoolMissingDir, integration TestSweepSpoolAtStartup (live upload kept, aged file removed). docs/media.md updated. Build, race tests, vet, golangci-lint, integration notes tests green. Note: age threshold = 4 min (route timeout 3 min + 1).
+- 2026-10-09 13:52Z · qa · QA_PASS. CI on PR #43 green (go, go-integration, security, web). Branch == PR head 8f0e6f7.
+  Mechanical: make lint build test (incl. go test -race ./... and web tests) green; go test -race -tags integration ./internal/notes green; TestSweepSpool* x3 repeat all pass (no flake).
+  Evidence (AC / requirement -> how -> result):
+  - AC1 / req 2: unit TestSweepSpool (old x removed; fresh y, unrelated file, sub-dir, symlink z and its target kept) -> pass. Real run: aged smem-upload-* regular files removed; fresh (just created), 3-min-old, other-file (aged), smem-upload-DIR (aged, with inner file), smem-upload-LINK (aged symlink -> file outside the spool dir; target intact) and a dangling symlink all untouched; 5-min-old file removed. Threshold 4 min confirmed.
+  - AC2 / REAL kill test with built bin/smemories-api (SMEM_UPLOAD_TMP_DIR=scratch dir): registered user + collection link, raw-socket multipart POST with Content-Length 5 MB that sends only the first ~90 bytes and stalls -> spool file smem-upload-NNN (0600, 91 bytes) appeared -> kill -9 API -> file still there (the gap) -> touch -d to 2020 plus fixtures above -> restart -> log 'upload spool sweep removed=4' (killed file, 2 old, 5-min), killed file gone, young ones kept. Integration TestSweepSpoolAtStartup also covers live upload not swept.
+  - Req 1 (before accepting traffic): main.go calls notesH.SweepSpool() before httpx.Serve (listener socket is bound earlier, but Accept only starts in Serve). Sweep log line appears before the first request in the logs.
+  - Req 2 log: exactly one INFO 'upload spool sweep' with removed=N, no names.
+  - Req 3: delete failure (read-only dir, aged file) -> WARN 'cannot remove a file', INFO removed=0, API started and /healthz 200. Unreadable dir (chmod 000) -> WARN 'cannot list directory', API started and served. Missing dir is rejected earlier by config validation (existing behaviour, 'want an existing directory'); unit TestSweepSpoolMissingDir covers the sweep itself. 30000 aged files swept in about 1 s at start-up.
+  - AC3: docs/media.md diff states location (SMEM_UPLOAD_TMP_DIR else OS temp), 4-min sweep rule, 48 x 32 MiB sizing -> ok.
+  Non-blocking observations: (1) the two WARN lines carry the Go PathError text, which includes the full path of the file/dir (random temp name, no private content); spec only forbids names in the INFO line, but dev may want to log only the error kind. (2) 'listening' is logged before the sweep line, slightly misleading ordering though accept starts after the sweep. (3) Sweep runs only at start-up, so files orphaned by a drain cut-off live until the next restart (by design).
+  Test artefacts: scratchpad only; test user deleted from dev DB. No product code or .team files changed.
+- 2026-10-09 13:53Z · leader · merged 9433726. Review: sweeps only regular smem-upload-* files directly in the spool dir older than route timeout + 1 min, before the listener opens; failures WARN only. QA did a real kill -9 test. For owner to check: docs/media.md spool section.
+
+### T-075 — [E05] Media backfill hardening
+- **Status:** BACKLOG
+- **Priority:** P3
+- **Type:** tech-debt
+- **Milestone:** M1
+- **Depends-on:** T-057
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-09 10:44Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/13-media-backfill-hardening.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E05-templates-export · **PRD:** `.team/epics/E05-templates-export/PRD.md`
+
+T-057 QA findings: backfill config loader, stop after consecutive storage failures, dry-run over-count, Postman print edge, delete race, alpha PNG size.
+
+#### Comments
+
+### T-076 — [E02] Code screens polish (target size, cooldown reload, messages, focus)
+- **Status:** BACKLOG
+- **Priority:** P3
+- **Type:** tech-debt
+- **Milestone:** M1
+- **Depends-on:** T-049
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-09 13:28Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/12-code-screens-polish.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E02-auth · **PRD:** `.team/epics/E02-auth/PRD.md`
+
+T-049 QA findings: resend button target size, cooldown restarts on reload, short-code message, focus after weak password, leftover ?token= in the address bar.
 
 #### Comments
 
@@ -2653,4 +2816,5 @@ T-034 QA finding: a shutdown or crash in the middle of an upload leaves a smem-u
 - 2026-10-09 — Q-018 answered: the owner approved `github.com/prometheus/client_golang` for request metrics (T-073 is unblocked; it still waits for T-063).
 - 2026-10-09 — Owner asked for task codes with the epic prefix. `board.py` hard-codes `T-nnn` (headings, dependencies, branches), so ids are unchanged; every title now starts with `[E##]`, spec headers read `# E##_T-nnn`, and `.team/TASKS.md` lists tasks by epic as `E##_T-nnn` (tool: `.team/epic_index.py`).
 - 2026-10-09 — T-062 (CI takes the newest Go patch from go.dev; owner-approved, merged 0c1e2d4) and T-063 (E10 foundation: apperr, v2 helpers, timeout and client-IP middleware, contract lint; merged bb5143f) merged; both await owner acceptance. The required `security` job had been red on every PR because setup-go lagged Go 1.26.9; T-062 fixed it. T-063's QA found no issues; T-062 needed one rework (malformed go.dev answer aborted the step).
+- 2026-10-10 — Owner approved T-052, T-057, T-053, T-049. Merged: T-052 (35298e1, sessions in Redis, migration 0012), T-057 (487555d, print-size photos, migration 0013), T-049 (b835af9, web code screens). T-053 conflicted with develop and went back to dev for a mechanical merge plus the openapi 503 fix. E10 database lane started: T-064 is TODO. Follow-ups created: T-074 (done), T-075 (backfill hardening), T-076 (code screens polish); T-055 cancelled and folded into T-069/T-070.
 

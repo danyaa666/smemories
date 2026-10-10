@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"strings"
 	"testing"
@@ -144,5 +145,36 @@ func TestWrongPasswordIsNotUnavailable(t *testing.T) {
 	err = c.Ping(context.Background())
 	if err == nil || errors.Is(err, ErrUnavailable) || !strings.Contains(err.Error(), "WRONGPASS") {
 		t.Fatalf("want the WRONGPASS reply error unclassified, got %v", err)
+	}
+}
+
+// T-052 clean-up: a rediss:// URL that cannot connect names TLS in the error; a plain one does not.
+func TestPingHintsAtTLSOnlyForRediss(t *testing.T) {
+	for url, wantHint := range map[string]bool{"rediss://127.0.0.1:1/0": true, "redis://127.0.0.1:1/0": false} {
+		c, err := New(testCfg(url))
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = c.Ping(context.Background())
+		_ = c.Close()
+		if err == nil || strings.Contains(err.Error(), "TLS-enabled") != wantHint {
+			t.Errorf("%s: err %v, want TLS hint %v", url, err, wantHint)
+		}
+	}
+}
+
+// go-redis' own log lines go through slog instead of stderr.
+func TestUseLoggerRoutesGoRedisLinesIntoSlog(t *testing.T) {
+	var b strings.Builder
+	UseLogger(slog.New(slog.NewJSONHandler(&b, nil)))
+	t.Cleanup(func() { UseLogger(slog.New(slog.NewJSONHandler(io.Discard, nil))) })
+	c, err := New(testCfg("redis://127.0.0.1:1/0"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = c.Close() }()
+	_ = c.Ping(context.Background()) // the dial failure is logged by go-redis
+	if !strings.Contains(b.String(), `"msg":"redis client: `) {
+		t.Fatalf("no slog line from go-redis: %q", b.String())
 	}
 }
