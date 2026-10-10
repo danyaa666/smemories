@@ -10,7 +10,8 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 32 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-044, T-050, T-056, T-058, T-059, T-060, T-061, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-075, T-076 |
+| BACKLOG | 30 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-044, T-050, T-056, T-058, T-059, T-060, T-061, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073 |
+| TODO | 2 | T-075, T-076 |
 | QA_PASS | 1 | T-064 |
 | MERGED | 1 | T-053 |
 | DONE | 35 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-054, T-057, T-062, T-063, T-074 |
@@ -1469,7 +1470,7 @@ Evidence from the T-006/T-030 merges: the workflow's concurrency group has cance
 - **Branch:** task/t-034-public-note-submission-text-and-photos
 - **PR:** 30
 - **Updated:** 2026-10-10 03:28Z by human
-- **Comments-seen:** 12
+- **Comments-seen:** 13
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/02-public-note-submission.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1960,7 +1961,7 @@ CI on develop failed once on TestGoogleConcurrentCallbacksCreateOneAccount: goog
 - **Branch:** task/t-048-e02-email-one-time-codes-replace-verific
 - **PR:** https://github.com/danyaa666/smemories/pull/38
 - **Updated:** 2026-10-10 03:28Z by human
-- **Comments-seen:** 9
+- **Comments-seen:** 10
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/08-email-otp-codes-replace-links-api.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2013,7 +2014,7 @@ CI on develop failed once on TestGoogleConcurrentCallbacksCreateOneAccount: goog
 - **Branch:** task/t-049-e02-web-code-entry-screens-for-email-ver
 - **PR:** https://github.com/danyaa666/smemories/pull/42
 - **Updated:** 2026-10-10 03:29Z by human
-- **Comments-seen:** 5
+- **Comments-seen:** 6
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/09-web-email-code-screens.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2126,7 +2127,7 @@ Add a Redis-protocol service (Valkey 8) to the local stack and CI, the go-redis 
 - **Branch:** task/t-052-e02-login-sessions-move-to-redis-drop-th
 - **PR:** https://github.com/danyaa666/smemories/pull/39
 - **Updated:** 2026-10-10 03:29Z by human
-- **Comments-seen:** 10
+- **Comments-seen:** 11
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/10-sessions-in-redis.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2218,7 +2219,7 @@ Redis sliding-window limiter with Take and Refund replacing the in-memory one ev
 - **Branch:** task/t-054-spike-html-templates-and-browser-print-t
 - **PR:** https://github.com/danyaa666/smemories/pull/35
 - **Updated:** 2026-10-10 03:28Z by human
-- **Comments-seen:** 6
+- **Comments-seen:** 7
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/06-spike-browser-print-to-pdf.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2303,7 +2304,7 @@ One owner-only request returns the yearbook, profile and approved notes with ans
 - **Branch:** task/t-057-e05-media-print-size-variant-1800-px-wit
 - **PR:** https://github.com/danyaa666/smemories/pull/40
 - **Updated:** 2026-10-10 03:29Z by human
-- **Comments-seen:** 6
+- **Comments-seen:** 7
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/08-print-size-photo-variant.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2512,7 +2513,7 @@ Adds the tools the rest of E10 uses: the typed error package, the v2 envelope he
 - **Branch:** task/t-064-e10-db-conventions-yearbook-and-profile-
 - **PR:** https://github.com/danyaa666/smemories/pull/44
 - **Updated:** 2026-10-10 04:38Z by qa
-- **Comments-seen:** 8
+- **Comments-seen:** 10
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/02-db-yearbook-profile.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2782,7 +2783,7 @@ Adds request and pool metrics as be-golang requires; waits for Q-018 (library ch
 - **Branch:** task/t-074-e04-sweep-orphaned-upload-spool-files-at
 - **PR:** https://github.com/danyaa666/smemories/pull/43
 - **Updated:** 2026-10-10 03:28Z by human
-- **Comments-seen:** 3
+- **Comments-seen:** 4
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/07-sweep-orphaned-upload-spool-files.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2807,7 +2808,7 @@ T-034 QA finding: a shutdown or crash in the middle of an upload leaves a smem-u
 - 2026-10-10 03:28Z · human · accepted by owner
 
 ### T-075 — [E05] Media backfill hardening
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2818,7 +2819,7 @@ T-034 QA finding: a shutdown or crash in the middle of an upload leaves a smem-u
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-09 10:44Z by leader
+- **Updated:** 2026-10-10 04:38Z by leader
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/13-media-backfill-hardening.md`
@@ -2830,7 +2831,7 @@ T-057 QA findings: backfill config loader, stop after consecutive storage failur
 #### Comments
 
 ### T-076 — [E02] Code screens polish (target size, cooldown reload, messages, focus)
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2841,7 +2842,7 @@ T-057 QA findings: backfill config loader, stop after consecutive storage failur
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-09 13:28Z by leader
+- **Updated:** 2026-10-10 04:38Z by leader
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/12-code-screens-polish.md`
