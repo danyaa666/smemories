@@ -272,6 +272,10 @@ func (s *Store) list(ctx context.Context, ownerID uint64, c *cursor, limit int) 
 
 // modify locks the owner's book, lets change edit it (and write the profile through the same
 // transaction when it wants to), bumps updated_at to nowMs and returns the result.
+//
+// Lock order: yearbook_tab row (FOR UPDATE) first, then profile_tab, then media rows (share lock). Service.Delete and
+// ClearMediaRefs use the same order, so concurrent edits, deletes and photo deletes wait for each other instead of
+// deadlocking.
 func (s *Store) modify(ctx context.Context, ownerID uint64, publicID string, nowMs int64, change func(*Yearbook) error) (Yearbook, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -332,13 +336,41 @@ func mediaRow(ctx context.Context, tx *sql.Tx, bookID uint64, publicID *string) 
 	return sql.NullInt64{Int64: id, Valid: err == nil}, err
 }
 
+// lockBook takes the owner's book row FOR UPDATE: the first lock of every transaction that changes a book or its children
+// (lock order in modify). It reaches the row the same way modify does (owner_id, public_id), because locking through
+// another index (the primary key first) takes the index records in the opposite order and deadlocks too.
+// ErrNotFound when the book is gone or not the owner's.
+func lockBook(ctx context.Context, tx *sql.Tx, ownerID uint64, publicID string) error {
+	var id uint64
+	err := tx.QueryRowContext(ctx, `SELECT id FROM yearbook_tab WHERE owner_id = ? AND public_id = ? FOR UPDATE`, ownerID, publicID).Scan(&id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrNotFound
+	}
+	return err
+}
+
 // ClearMediaRefs sets every cover and profile photo that points at the media row to NULL, in the caller's transaction.
 // The media service calls it before it deletes the photo (this replaces ON DELETE SET NULL).
+//
+// Lock order: it first locks the photo's yearbook_tab row FOR UPDATE (as modify and Service.Delete do), then updates
+// yearbook_tab and profile_tab. Without it a photo delete racing with setting that photo as cover deadlocked.
 func (s *Store) ClearMediaRefs(ctx context.Context, tx *sql.Tx, mediaID int64) error {
+	var ownerID uint64
+	var publicID string
+	err := tx.QueryRowContext(ctx, `SELECT owner_id, public_id FROM yearbook_tab WHERE id = (SELECT yearbook_id FROM media WHERE id = ?)`, mediaID).Scan(&ownerID, &publicID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil // photo or book already gone, nothing refers to it
+	}
+	if err != nil {
+		return err
+	}
+	if err := lockBook(ctx, tx, ownerID, publicID); err != nil && !errors.Is(err, ErrNotFound) {
+		return err
+	}
 	if _, err := tx.ExecContext(ctx, `UPDATE yearbook_tab SET cover_media_id = NULL WHERE cover_media_id = ?`, mediaID); err != nil {
 		return err
 	}
-	_, err := tx.ExecContext(ctx, `UPDATE profile_tab SET photo_media_id = NULL WHERE photo_media_id = ?`, mediaID)
+	_, err = tx.ExecContext(ctx, `UPDATE profile_tab SET photo_media_id = NULL WHERE photo_media_id = ?`, mediaID)
 	return err
 }
 

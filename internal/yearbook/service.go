@@ -37,6 +37,10 @@ func NewService(store *Store, purger Purger, children ...ChildPurger) *Service {
 // Delete removes the owner's book with everything that belongs to it. The stored files go first (not transactional):
 // if the object store fails nothing else is deleted and the caller can retry. Then one transaction deletes the
 // profiles, calls every child purger and deletes the book; any failure rolls all of it back.
+//
+// Lock order (docs/db-conventions.md, Writes): yearbook_tab row first, then profile_tab, then the other children (media,
+// notes). Store.modify and Store.ClearMediaRefs take the same order; taking the book row last deadlocked (MySQL 1213)
+// with concurrent edits. Keep it when adding a child.
 func (s *Service) Delete(ctx context.Context, ownerID uint64, publicID string) error {
 	y, err := s.store.get(ctx, ownerID, publicID)
 	if err != nil {
@@ -52,6 +56,9 @@ func (s *Service) Delete(ctx context.Context, ownerID uint64, publicID string) e
 		return err
 	}
 	defer func() { _ = tx.Rollback() }()
+	if err := lockBook(ctx, tx, ownerID, publicID); err != nil {
+		return err
+	}
 	if err := deleteProfiles(ctx, tx, y.internalID); err != nil {
 		return err
 	}
