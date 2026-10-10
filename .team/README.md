@@ -10,17 +10,18 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 33 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-044, T-050, T-056, T-058, T-059, T-060, T-061, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-075, T-076 |
-| QA_PASS | 4 | T-049, T-052, T-053, T-057 |
-| MERGED | 4 | T-034, T-048, T-054, T-074 |
+| BACKLOG | 32 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-044, T-050, T-056, T-058, T-059, T-060, T-061, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-075, T-076 |
+| TODO | 1 | T-064 |
+| CHANGES_REQUESTED | 1 | T-053 |
+| MERGED | 7 | T-034, T-048, T-049, T-052, T-054, T-057, T-074 |
 | DONE | 28 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-035, T-036, T-037, T-038, T-043, T-045, T-046, T-047, T-051, T-062, T-063 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
 
-**Awaiting your review (MERGED):** T-034 ([E04] Public note submission (text and photos)); T-048 ([E02] Email one-time codes replace verification and reset links (API) with a dev-only fixed code); T-054 ([E05] Spike: HTML templates and browser print-to-PDF instead of server rendering); T-074 ([E04] Sweep orphaned upload spool files at start-up)
+**Awaiting your review (MERGED):** T-034 ([E04] Public note submission (text and photos)); T-048 ([E02] Email one-time codes replace verification and reset links (API) with a dev-only fixed code); T-049 ([E02] Web: code entry screens for email verification and password reset); T-052 ([E02] Login sessions move to Redis (drop the sessions table)); T-054 ([E05] Spike: HTML templates and browser print-to-PDF instead of server rendering); T-057 ([E05] Media print-size variant (1800 px) with backfill); T-074 ([E04] Sweep orphaned upload spool files at start-up)
 
-**Open questions for you:** Q-022 (Approve merge of T-052 (login sessions in Redis, drop sessions table)?); Q-023 (Approve merge of T-057 (print-size photos 1800 px + backfill)?); Q-024 (Approve merge of T-053 (rate limiters in Redis)?); Q-025 (Approve merge of T-049 (web screens for the 6-digit email codes)?)
+**Open questions for you:** none
 
-_Board last written 2026-10-09 14:11Z_
+_Board last written 2026-10-10 03:28Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -318,7 +319,7 @@ Third QA round passed with no findings. This is the first public, unauthenticate
 QA passed first time. Verification and reset links are replaced by 6-digit codes kept as HMACs in Redis (30/15 min, 5 attempts, one Lua script). The dev-only fixed code 123123 is accepted only when SMEM_ENV is dev/test and SMEM_DEV_FIXED_OTP is set; the API refuses to start otherwise; every line is tagged DEV-SHORTCUT(otp) and listed in docs/dev-shortcuts.md; T-050 removes it before go-live. Migration 0011 drops the email_tokens table. Known limit (task T-031): a third party can lock a victim's reset code with 5 wrong guesses. The web screens still use the old links until T-049, so signup verification in the UI is broken until that lands (merge T-049 soon after). Merge order: T-034 first, then this one after a rebase. To approve: team approve T-048.
 
 ### Q-022 — Approve merge of T-052 (login sessions in Redis, drop sessions table)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-09 10:44Z
 - **Blocks:** T-052
 - **Recommendation:** approve
@@ -327,7 +328,7 @@ QA passed first time. Verification and reset links are replaced by 6-digit codes
 QA passed twice. Sessions live in Redis only (key = SHA-256 of the cookie value, sliding 30 days, per-user index, atomic delete-all for password reset and the Google pre-hijack defence). Redis down = 503 and no one is anonymous or fake-signed-in. Migration 0012 drops the sessions table (existing logins end; nothing is in production). Includes the T-051 clean-ups. Known gaps (specs T-031/T-049): no per-user session cap, no web text yet for the 503 code. To approve: team approve T-052.
 
 ### Q-023 — Approve merge of T-057 (print-size photos 1800 px + backfill)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-09 10:44Z
 - **Blocks:** T-057
 - **Recommendation:** approve
@@ -336,7 +337,7 @@ QA passed twice. Sessions live in Redis only (key = SHA-256 of the cookie value,
 QA passed. Every new photo also gets a 1800 px print version (smaller PDFs/prints); ?size=print serves it with the same access rules; existing photos are filled by the new smemories-media-backfill command (idempotent, --dry-run); until then print falls back to display size. Migration 0013 adds a nullable column. Merges after T-052 (migration order). Follow-up T-075 hardens the backfill before production. To approve: team approve T-057.
 
 ### Q-024 — Approve merge of T-053 (rate limiters in Redis)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-09 10:53Z
 - **Blocks:** T-053
 - **Recommendation:** approve
@@ -345,7 +346,7 @@ QA passed. Every new photo also gets a 1800 px print version (smaller PDFs/print
 QA passed. All 16 limiters move from per-process memory to Redis sliding windows (one atomic script, Redis clock), so limits hold across several API instances and restarts: 200 parallel registrations over two API processes admitted exactly 5. If Redis is down the 4 guessing limiters (login per email/IP, verify tries, reset tries) refuse with 503 limiter_unavailable; the other 12 let requests through and log one ERROR per minute. Emails are SHA-256 hashed inside keys. No migration. Merges after T-052 and then needs a mechanical develop merge. To approve: team approve T-053.
 
 ### Q-025 — Approve merge of T-049 (web screens for the 6-digit email codes)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-09 13:28Z
 - **Blocks:** T-049
 - **Recommendation:** approve
@@ -1990,19 +1991,19 @@ CI on develop failed once on TestGoogleConcurrentCallbacksCreateOneAccount: goog
 - 2026-10-09 04:28Z · leader · merged bb6709a. Review: Lua check+attempt script, HMAC with 32-byte key, decoy for unknown emails, fail-closed on Redis down, dev fixed code 123123 guarded (env dev/test, refuses start otherwise, DEV-SHORTCUT(otp) tags registered); migration 0011 drops email_tokens. QA passed twice (second after the T-034 merge). For owner to check: .env.example SMEM_OTP_KEY, docs/auth-otp.md, docs/dev-shortcuts.md. Web code-entry screens are T-049; until then UI sign-up verification uses the removed link flow.
 
 ### T-049 — [E02] Web: code entry screens for email verification and password reset
-- **Status:** QA_PASS
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
 - **Depends-on:** T-048
 - **Risk:** high
 - **Rework:** 0
-- **Owner-approved:** —
-- **Assignee:** leader
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-049-e02-web-code-entry-screens-for-email-ver
 - **PR:** https://github.com/danyaa666/smemories/pull/42
-- **Updated:** 2026-10-09 13:28Z by qa
-- **Comments-seen:** 3
+- **Updated:** 2026-10-10 03:28Z by leader
+- **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/09-web-email-code-screens.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2031,6 +2032,8 @@ Code input screens (paste, auto-submit, resend cooldown) replacing the link page
   8. Mid-flow 401 shows "Your session has ended" but does not redirect.
   Test data: ~12 qa*@example.com accounts left in the dev DB (db smemories); API/Vite processes I started are stopped.
 - 2026-10-09 13:28Z · leader · Leader review OK at head 331ad68 (= QA head, CI green, no .team changes, web only). Verified: no 123123 in web/src or dist, nothing secret in URL/storage/Referer, old token capture code removed, EN/VI parity. Non-blocking items -> T-076. Awaiting owner approval.
+- 2026-10-10 03:26Z · human · owner approved merge
+- 2026-10-10 03:28Z · leader · merged b835af9. Review: code-entry screens (auto-submit, paste, 60 s resend cooldown), two-step reset, EN/VI, old ?token= handling removed, no dev code in the bundle; QA used a real browser. For owner to check: sign up and verify with your 6-digit code (or 123123 locally); polish items are in T-076.
 
 ### T-050 — [E06] Remove dev-only shortcuts before production (delete the fixed OTP) and add a pipeline check
 - **Status:** BACKLOG
@@ -2100,19 +2103,19 @@ Add a Redis-protocol service (Valkey 8) to the local stack and CI, the go-redis 
 - 2026-10-09 01:42Z · leader · accepted by owner (chat, 2026-10-09: 'team accept T-016, T-046, T-047, T-051')
 
 ### T-052 — [E02] Login sessions move to Redis (drop the sessions table)
-- **Status:** QA_PASS
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
 - **Depends-on:** T-051
 - **Risk:** high
 - **Rework:** 1
-- **Owner-approved:** —
-- **Assignee:** leader
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-052-e02-login-sessions-move-to-redis-drop-th
 - **PR:** https://github.com/danyaa666/smemories/pull/39
-- **Updated:** 2026-10-09 10:00Z by qa
-- **Comments-seen:** 8
+- **Updated:** 2026-10-10 03:27Z by leader
+- **Comments-seen:** 10
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/10-sessions-in-redis.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2145,20 +2148,22 @@ Sessions with native expiry in Redis, per-user index for delete-all, fail-closed
   NEWMAN (fresh API on :8091, scratch DB + Redis db 5, register limit raised): auth 74 req/174 assert, only the 20 Google-folder assertions fail (Google unconfigured, documented), identical on 2 runs; notes 72/137 0 fail x2 (after verifying accounts A and B, C stays unverified); yearbooks 92/189 0 fail x2; media 66/122 0 fail x2. Redis shows smem:dev:sess:<sha256> keys after the runs.
   NON-BLOCKING: notes collection needs verify-newman-users equivalent for the scratch DB (the make target only touches the compose 'smemories' DB); no product issue. Earlier non-blocking items from the first QA pass stand (all tracked in T-031/T-049 specs).
 - 2026-10-09 10:44Z · leader · Leader review OK at head 881c549 (= QA head, CI green, diff = T-052 only, no .team changes). Sessions in Redis (sha256 keys, atomic scripts, fail-closed 503), migration 0012 drops sessions. Non-blocking items are in the T-031/T-049 specs. Awaiting owner approval; merge order #39 then #40.
+- 2026-10-10 03:26Z · human · owner approved merge
+- 2026-10-10 03:27Z · leader · merged 35298e1. Review: sessions as sess:<sha256> hashes + usess:<uid> index in Redis, atomic scripts, fail-closed 503, reset and pre-hijack delete-all before the MySQL commit, migration 0012 drops sessions; QA passed twice. For owner to check: docs/redis.md, existing logins end after the migration. Follow-ups in T-031 (session cap) and T-049 (web string).
 
 ### T-053 — [E02] Rate limiters move to Redis (shared limiter for all endpoints)
-- **Status:** QA_PASS
+- **Status:** CHANGES_REQUESTED
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
 - **Depends-on:** T-051
 - **Risk:** high
-- **Rework:** 0
-- **Owner-approved:** —
-- **Assignee:** leader
+- **Rework:** 1
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-053-e02-rate-limiters-move-to-redis-shared-l
 - **PR:** https://github.com/danyaa666/smemories/pull/41
-- **Updated:** 2026-10-09 10:53Z by qa
+- **Updated:** 2026-10-10 03:28Z by leader
 - **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/11-rate-limiters-in-redis.md`
@@ -2182,6 +2187,8 @@ Redis sliding-window limiter with Take and Refund replacing the in-memory one ev
   Scratch merge with T-052 (PR #39 head 881c549): CONFLICTS in 9 files, 10 hunks: internal/auth/service.go (2: NewService signature needs both sessions *Sessions and limiters *ratelimit.Factory; Service literal needs sessions + the Open/Closed limiters), internal/auth/handler.go, internal/auth/integration_test.go, internal/media/integration_test.go, internal/notes/integration_test.go, internal/yearbook/integration_test.go, api/openapi.yaml, docs/redis.md, web/src/api/schema.d.ts (regenerate). All textual/mechanical; whoever merges second must merge develop and re-run make lint build test test-integration. Scratch worktree removed, nothing pushed.
   Non-blocking: (a) openapi /v1/auth/login 503 lists only Busy, not limiter_unavailable (login now returns it); check reset-password likewise. (b) Redis flapping edge: an open limiter whose Take failed but whose later Refund succeeds could pop another request's hit (negligible). (c) I applied migrations and created qaprobe*/d*/two*/par* users in the shared dev DB; harmless dev data.
 - 2026-10-09 10:53Z · leader · Leader review OK at head caf2ea4 (= QA head, CI green, no .team changes). Atomic sliding-window script on the Redis clock, per-limiter fail policy (4 guessing limiters closed, 12 open with one ERROR/min), emails hashed in keys, refunds, make reset-limits. When T-052 (#39) merges first, this branch needs a develop merge (9 files, textual: NewService takes sessions and limiters, regenerate schema.d.ts); fix while there: api/openapi.yaml should list limiter_unavailable among the 503s of /v1/auth/login and /v1/auth/reset-password (and every endpoint where a closed limiter applies). Awaiting owner approval.
+- 2026-10-10 03:26Z · human · owner approved merge
+- 2026-10-10 03:28Z · leader · T-052, T-057 and T-049 are merged (develop b835af9). Merge develop into the T-053 branch (conflicts: internal/auth/service.go NewService takes both sessions and limiters, handler.go, the integration tests, api/openapi.yaml, docs/redis.md, web/src/api/schema.d.ts: regenerate it), re-run make lint build test test-integration and npm run check:api. Also fix: api/openapi.yaml must list limiter_unavailable among the 503s of /v1/auth/login, /v1/auth/reset-password, /v1/auth/verify-email and every endpoint where a closed limiter applies. Then READY_FOR_QA (short regression pass; already owner-approved).
 
 ### T-054 — [E05] Spike: HTML templates and browser print-to-PDF instead of server rendering
 - **Status:** MERGED
@@ -2268,19 +2275,19 @@ One owner-only request returns the yearbook, profile and approved notes with ans
 #### Comments
 
 ### T-057 — [E05] Media print-size variant (1800 px) with backfill
-- **Status:** QA_PASS
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
 - **Depends-on:** T-009
 - **Risk:** high
 - **Rework:** 0
-- **Owner-approved:** —
-- **Assignee:** leader
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-057-e05-media-print-size-variant-1800-px-wit
 - **PR:** https://github.com/danyaa666/smemories/pull/40
-- **Updated:** 2026-10-09 10:44Z by qa
-- **Comments-seen:** 4
+- **Updated:** 2026-10-10 03:27Z by leader
+- **Comments-seen:** 6
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/08-print-size-photo-variant.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2299,6 +2306,8 @@ Third stored size for printing: lighter PDFs and faster print (spike: 63 MB and 
   AC4: openapi + web/src/api/schema.d.ts (check:api in lint passes) + docs/media.md + Postman 6b (size=print, 0 fail) accurate. Existing tests changed only by object-count asserts (6->9, 4->6, 2->3, 6->9) and the printOnly flag of the flaky storage wrapper: judged OK, the counts rise by design (third object). Newman on branch alone: media 67/126 0 fail x2, notes 72/137, yearbooks 92/189 0 fail, auth only the 20 Google assertions, platform 1 known manual item; on merged stack media 67/126 x2, notes x2, yearbooks, auth same.
   NON-BLOCKING: (1) backfill uses config.Load: needs SMEM_REDIS_URL (confirmed) and in prod also SMEM_ALLOWED_ORIGINS etc.; after T-052 merges switch it to config.LoadMigrate (exists on the merged tree; env -i with only DB+S3 vars still fails there) and fix docs/media.md ('same SMEM_* environment as the API'); T-022 must pass these to the backfill task. (2) With S3 unreachable the backfill walks every photo (about 2.5 s each, 3 SDK attempts): 10k photos = hours; consider stopping after N consecutive storage failures. (3) --dry-run counts photos whose display is corrupt/missing as 'would create' (it does not read objects). (4) Postman 6b uses a tiny photo, so it does not assert the 1800 px edge or the fallback (covered by Go tests/my live runs). (5) Alpha PNG print can be larger than its display (synthetic stripes: 1.3 MiB vs 577 KiB) because scaling destroys compressibility; real photos should shrink, check with a real transparent sample. (6) A DELETE racing the backfill leaves one orphan print object until the yearbook delete (documented in code). (7) Migration 0013 down drops the column but leaves print objects (cleaned with the yearbook prefix).
 - 2026-10-09 10:44Z · leader · Leader review OK at head eeb4c51 (= QA head, CI green, no .team changes). Print version (1800 px, q85, PNG stays PNG, reuses display bytes when small), ?size=print same authorisation as display/thumb, delete/purge remove it, idempotent backfill binary, migration 0013 (nullable column, Down drops it). Cost: +1% upload time, +22% single-core, memory flat. Follow-ups: T-075 (backfill hardening). Awaiting owner approval; merge after #39 (migration order 0012 then 0013).
+- 2026-10-10 03:26Z · human · owner approved merge
+- 2026-10-10 03:27Z · leader · merged 487555d. Review: 1800 px print version (JPEG q85, PNG stays PNG, display bytes reused when small), ?size=print with the same authorisation, delete/purge remove it, idempotent backfill command, migration 0013 nullable column. Cost +1% upload time, memory flat. For owner to check: docs/media.md; run smemories-media-backfill (--dry-run first) to fill existing photos. Follow-up T-075 before production.
 
 ### T-058 — [E05] Web: HTML book renderer core and print preview (browser print-to-PDF)
 - **Status:** BACKLOG
@@ -2474,7 +2483,7 @@ Adds the tools the rest of E10 uses: the typed error package, the v2 envelope he
 - 2026-10-09 03:05Z · human · accepted by owner
 
 ### T-064 — [E10] DB conventions: yearbook and profile tables (no joins, no foreign keys, ms timestamps)
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2485,7 +2494,7 @@ Adds the tools the rest of E10 uses: the typed error package, the v2 envelope he
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
+- **Updated:** 2026-10-10 03:28Z by leader
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/02-db-yearbook-profile.md`
@@ -2807,4 +2816,5 @@ T-049 QA findings: resend button target size, cooldown restarts on reload, short
 - 2026-10-09 — Q-018 answered: the owner approved `github.com/prometheus/client_golang` for request metrics (T-073 is unblocked; it still waits for T-063).
 - 2026-10-09 — Owner asked for task codes with the epic prefix. `board.py` hard-codes `T-nnn` (headings, dependencies, branches), so ids are unchanged; every title now starts with `[E##]`, spec headers read `# E##_T-nnn`, and `.team/TASKS.md` lists tasks by epic as `E##_T-nnn` (tool: `.team/epic_index.py`).
 - 2026-10-09 — T-062 (CI takes the newest Go patch from go.dev; owner-approved, merged 0c1e2d4) and T-063 (E10 foundation: apperr, v2 helpers, timeout and client-IP middleware, contract lint; merged bb5143f) merged; both await owner acceptance. The required `security` job had been red on every PR because setup-go lagged Go 1.26.9; T-062 fixed it. T-063's QA found no issues; T-062 needed one rework (malformed go.dev answer aborted the step).
+- 2026-10-10 — Owner approved T-052, T-057, T-053, T-049. Merged: T-052 (35298e1, sessions in Redis, migration 0012), T-057 (487555d, print-size photos, migration 0013), T-049 (b835af9, web code screens). T-053 conflicted with develop and went back to dev for a mechanical merge plus the openapi 503 fix. E10 database lane started: T-064 is TODO. Follow-ups created: T-074 (done), T-075 (backfill hardening), T-076 (code screens polish); T-055 cancelled and folded into T-069/T-070.
 
