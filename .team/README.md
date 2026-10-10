@@ -11,16 +11,16 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 32 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-044, T-050, T-056, T-058, T-059, T-060, T-061, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-075, T-076 |
-| QA_FAIL | 1 | T-064 |
+| QA_PASS | 1 | T-064 |
 | MERGED | 1 | T-053 |
 | DONE | 35 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-054, T-057, T-062, T-063, T-074 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
 
 **Awaiting your review (MERGED):** T-053 ([E02] Rate limiters move to Redis (shared limiter for all endpoints))
 
-**Open questions for you:** none
+**Open questions for you:** Q-026 (Approve merge of T-064 (E10: yearbook and profile tables to the new DB conventions)?)
 
-_Board last written 2026-10-10 04:13Z_
+_Board last written 2026-10-10 04:38Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -352,6 +352,15 @@ QA passed. All 16 limiters move from per-process memory to Redis sliding windows
 - **Answer:** _(pending)_
 
 QA passed in a real browser (Chromium) with the dev code: register -> verify, forgot -> reset, resend cooldown, EN/VI, 375 px with a long email, nothing secret in URL/storage/Referer, the dev code is not in the web bundle. Not tested: a real screen reader (ARIA/focus checked instead). Small polish items are T-076. Without this merge the UI cannot verify email or reset a password (the API already needs codes since T-048). To approve: team approve T-049.
+
+### Q-026 — Approve merge of T-064 (E10: yearbook and profile tables to the new DB conventions)?
+- **Status:** OPEN
+- **Asked:** 2026-10-10 04:38Z
+- **Blocks:** T-064,T-065
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+First database conversion of epic E10 (D-26). Migration 20261010120000 renames yearbooks/profiles to yearbook_tab/profile_tab, stores created_at/updated_at as BIGINT Unix ms, replaces ENUM columns with VARCHAR validated in Go, and drops the four foreign keys; Down restores the old schema and data. Integrity moves into the yearbook service: one transaction deletes profiles, registered child records and the book, with a documented lock order (a deadlock between delete and edit was found by QA and fixed). Reads use 3 queries, no joins. API/JSON/web unchanged. QA ran the migration on 307 realistic rows (Up/Down/Up clean), race probes (0 5xx over 300+ requests) and Newman. Existing local data converts in place. To approve: team approve T-064. Then T-065 (media table) can start.
 
 <!-- questions:end -->
 
@@ -2491,19 +2500,19 @@ Adds the tools the rest of E10 uses: the typed error package, the v2 envelope he
 - 2026-10-09 03:05Z · human · accepted by owner
 
 ### T-064 — [E10] DB conventions: yearbook and profile tables (no joins, no foreign keys, ms timestamps)
-- **Status:** QA_FAIL
+- **Status:** QA_PASS
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
 - **Depends-on:** T-063, T-034, T-048, T-052, T-057
 - **Risk:** high
-- **Rework:** 1
+- **Rework:** 2
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** leader
 - **Branch:** task/t-064-e10-db-conventions-yearbook-and-profile-
 - **PR:** https://github.com/danyaa666/smemories/pull/44
-- **Updated:** 2026-10-10 04:12Z by qa
-- **Comments-seen:** 3
+- **Updated:** 2026-10-10 04:38Z by qa
+- **Comments-seen:** 8
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/02-db-yearbook-profile.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2535,6 +2544,23 @@ Converts `yearbooks` and `profiles` to `yearbook_tab` and `profile_tab` per docs
    Newman against the branch (API restarted before each run because the in-memory limiter is not in this branch): yearbooks x2 189 assertions 0 failed, media x2 126/0, notes x2 137/0 (after make verify-newman-users equivalent).
    Changed tests judged: TestMigratePageSizeLetter (rolls back to the pre-T-064 schema first, same assertions: ok); TestDeleteAndLimit (user-delete cascade block removed: FK gone by design, T-025 owns user deletion, ok); validate_test cursor (ms: ok); media/notes/yearbook integration tests only table names and the NewService/SetRefClearer wiring; other domains' SQL only renamed (git diff checked). docs/README: no old table names left (git grep).
 - 2026-10-10 04:13Z · leader · QA_FAIL (rework 1), blocking: Service.Delete deadlocks with concurrent PATCH/PUT profile (locks profile_tab then yearbook_tab, Store.modify locks the other way): 75 of 125 requests 5xx in QA's test internal/yearbook/race_integration_test.go (commit 37c79af, run: go test -race -count=1 -tags integration -run TestDeleteRacesWithEdits ./internal/yearbook; develop gives 0). Fix per the spec's new 'Lock order' section and docs/db-conventions.md: lock the owner's yearbook_tab row FOR UPDATE first in Delete (and in the media-delete path that clears cover/photo refs), document the order in a comment on both methods, test must show 0 5xx. QA's non-blocking: DELETE /v1/media/{id} racing with setting that photo as cover also deadlocked (same fix). Everything else QA checked passed (migration on 307 rows with Up/Down/Up identical, indexes, query counts, limit under concurrency, scoping).
+- 2026-10-10 04:17Z · dev · Rework 1. ISSUE 1 (Delete/modify deadlock): Service.Delete now locks the owner's yearbook_tab row FOR UPDATE first (lockBook), then profile, children, book. Root cause found on the way: the lock must reach the row the same way modify does (owner_id+public_id secondary index); locking by primary key first still deadlocked (75/125 5xx) because the index records are taken in the opposite order. With lockBook(owner_id, public_id) QA's TestDeleteRacesWithEdits passes 0 5xx (3 runs, -race). N1: ClearMediaRefs now locks the photo's book row the same way before its UPDATEs. Lock order (yearbook_tab -> profile_tab -> media/children) documented in comments on Service.Delete, Store.modify, ClearMediaRefs, lockBook. Added TestMediaDeleteRacesWithCoverEdits (photo delete vs 8 cover/photo edits, 25 rounds, no 5xx, no dangling refs); note: it does not fail on the old code in my runs, so it is a guard only, QA's HTTP probe is the real check for N1. make lint build test test-integration green. Nothing under .team/ changed.
+- 2026-10-10 04:25Z · qa · Rework 1 re-test at head 0ca7c13 (3 files changed vs the first pass: service.go, store.go, race test; migration untouched). Issue 1 fixed.
+  Deadlock: my TestDeleteRacesWithEdits now passes (3 runs under -race). Over real HTTP (API + MySQL 8.4, parallel requests): 3 x (25 rounds of 1 DELETE book + 2 PATCH + 2 PUT profile) = 0 x 5xx (200 x100, 204 x25 per run; was 75/125 x 500); log shows no 1213.
+  Media delete vs set cover/photo (the case dev's own test only guards): 60 rounds x (2 DELETE /v1/media/{id} + 2 PATCH cover + 1 PUT photo on the same photo, 4 books in parallel) = 300 requests, all 200/204 (one 400 invalid_media when the photo was already gone), 0 x 5xx, 0 dangling cover/photo refs; before the fix 24 of 36 deletes were 500. Repeated 3 more times in p3 (6 books x 6 rounds x 4 ops): 0 x 5xx, 0 refs dangling.
+  Other lock-order inversions: read all transactions in yearbook, media, notes. Order is yearbook_tab (FOR UPDATE) -> profile_tab -> media/children in Service.Delete, Store.modify and ClearMediaRefs (lockBook reaches the row through owner_id,public_id like modify). media.insert is users(X) -> yearbook(S) -> media insert (no wait on the book X lock holder in a cycle); notes create-collection locks the yearbook first; note/media children go through the remaining FKs. Mixed storm over HTTP, 50 rounds x (DELETE book, PATCH, PUT profile, create + list collections, 2 uploads, media delete, set cover, set photo, all in parallel on one book): 0 x 5xx, 0 ERROR log lines, no orphan profile/media/collection rows afterwards.
+  Quick re-run of earlier checks: migration on the 307-row data set (boundary dates, accents, NULLs, microseconds): Up = 0 differences against an independent calculation, Down gives identical profiles and non-time columns (times within 999 us), Up again byte-identical. 20-book limit: 40 parallel creates = 20 x 201 + 20 x 409, 20 rows/20 profiles (3 runs). Query counts: dev counting-connector test passes (-count=3 -race), list/get = 3. make lint build test OK, make test-integration -race OK (19 packages). Newman against the branch (API restarted before each run, in-memory limiter): yearbooks x2 189/0, media x2 126/0, notes x2 137/0 (users a and b email-verified, c left unverified).
+  Non-blocking: no CI checks are reported by gh for the new head 0ca7c13 yet (gh pr checks said none), the leader should look at CI before merging; N2 to N4 of the first note still apply (sub-ms loss on Down, pre-1970 truncation, old microsecond cursors). Owner approval needed (high risk).
+- 2026-10-10 04:25Z · leader · Leader review (content) OK at head 0ca7c13: migration (tz-independent conversion, Down restores data), lock order documented and fixed, 3-query reads, tests acceptable. PR #44 is CONFLICTING since T-053 merged (3d79b5d), so GitHub ran no CI on this head. Merge develop into the branch (expected conflicts: internal/db/integration_test.go, internal/media/integration_test.go, notes/media stores or tests, cmd/smemories-api/main.go), keep both sides, re-run make lint build test test-integration, push and wait for green CI, then READY_FOR_QA (short regression for QA). Owner approval is still needed after QA.
+- 2026-10-10 04:25Z · leader · Mechanical only: merge develop (3d79b5d, T-053) into the T-064 branch, resolve conflicts keeping both sides, re-run make lint build test test-integration and the race tests (TestDeleteRacesWithEdits, TestMediaDeleteRacesWithCoverEdits), push, confirm GitHub CI is green on the new head, then READY_FOR_QA. No other change requested.
+- 2026-10-10 04:35Z · dev · Rework 2 (mechanical): merged develop 3d79b5d (T-053) into the branch, head 2aabc37. Conflicts only in cmd/smemories-api/main.go and internal/notes/integration_test.go, resolved keeping both sides (yearbook.NewService + SetRefClearer from T-064, limiters arg from T-053). Nothing else changed. make lint build test test-integration green (19 pkgs, -race, incl. TestDeleteRacesWithEdits and TestMediaDeleteRacesWithCoverEdits). GitHub CI on 2aabc37: go, go-integration, security, web all pass. QA: short regression only. Owner approval needed (high risk).
+- 2026-10-10 04:38Z · qa · Regression pass at head 2aabc37 (develop 3d79b5d with T-053 merged in; CI green: go, go-integration, security, web). Diff vs origin/develop is exactly the T-064 set (20 files: yearbook store/service/handler/validate, media service/store, notes store, migration 20261010120000, tests incl. my race test); nothing of T-053 touched or duplicated. main.go: bookStore := yearbook.NewStore(d); mediaSvc.SetRefClearer(bookStore); yearbook.NewHandler(bookStore, yearbook.NewService(bookStore, mediaSvc), ...) and the T-053 limiters wiring is intact (those lines are not in the diff). notes integration_test merge keeps both sides. Migration and yearbook/media code unchanged since 0ca7c13 apart from the merge.
+  make lint build test OK, make test-integration -race OK (19 packages). TestDeleteRacesWithEdits + TestReadQueryCountIsConstant x2 under -race OK.
+  Over real HTTP against this head (Redis limiters now in, MySQL 8.4): 3 x (25 rounds of 1 DELETE book + 2 PATCH + 2 PUT profile) = 0 x 5xx; 60 rounds of 2 DELETE media + 2 PATCH cover + 1 PUT photo on the same photo (4 books parallel) = 300 requests, 0 x 5xx (two 400 invalid_media when the photo was already gone), 0 dangling refs, 0 ERROR log lines; 3 runs of the 6-book race with 0 x 5xx; 40 parallel creates = exactly 20 x 201 + 20 x 409 (3 runs).
+  Migration spot check on the 307-row data set: Up 0 differences against an independent calculation, Down profiles identical, Up again byte-identical.
+  Newman (limits reset with make-reset-limits equivalent between runs): yearbooks 189/0, media 126/0, notes x2 137/0 (a and b verified), auth 174 assertions with the same 20 failures, all in the Google folder (Google unconfigured, expected).
+  Owner approval needed (high risk).
+- 2026-10-10 04:38Z · leader · Leader review OK at head 2aabc37 (= QA head, CI green, mergeable, no .team changes). Migration yearbooks/profiles -> yearbook_tab/profile_tab (ms timestamps, VARCHAR instead of ENUM, 4 FKs dropped, owner_flag rebuilt), yearbook.Service.Delete in one transaction with documented lock order, ClearMediaRefs, 3-query reads. Race probes 0 5xx. Awaiting owner approval.
 
 ### T-065 — [E10] DB conventions: media table
 - **Status:** BACKLOG
