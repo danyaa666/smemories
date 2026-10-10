@@ -39,7 +39,7 @@ type User struct {
 	InternalID    uint64    `json:"-"`
 }
 
-// Store is the users/sessions persistence. Every query is parameterised.
+// Store is the users persistence (sessions live in Redis, see sessions.go). Every query is parameterised.
 type Store struct{ db *sql.DB }
 
 func NewStore(db *sql.DB) *Store { return &Store{db: db} }
@@ -56,9 +56,9 @@ func scanUser(sc interface{ Scan(...any) error }, extra ...any) (User, error) {
 	return u, nil
 }
 
-// createUserWithSession inserts the user and their first session atomically.
-// A duplicate email returns ErrEmailTaken.
-func (s *Store) createUserWithSession(ctx context.Context, u *User, passwordHash string, sess session) error {
+// createUser inserts the user and then calls withUser (which creates the first session in Redis) before
+// committing, so a session store failure leaves no account behind. A duplicate email returns ErrEmailTaken.
+func (s *Store) createUser(ctx context.Context, u *User, passwordHash string, withUser func(userID uint64) error) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -82,8 +82,7 @@ func (s *Store) createUserWithSession(ctx context.Context, u *User, passwordHash
 		return errors.New("auth: insert returned a non-positive user id")
 	}
 	u.InternalID = uint64(id)
-	sess.userID = u.InternalID
-	if err := insertSession(ctx, tx, sess); err != nil {
+	if err := withUser(u.InternalID); err != nil {
 		return err
 	}
 	return tx.Commit()
@@ -99,6 +98,7 @@ func (s *Store) userByEmail(ctx context.Context, email string) (User, string, er
 	return u, hash.String, err
 }
 
+// session is what Sessions.Create stores; tokenHash is the sha256 of the cookie value.
 type session struct {
 	tokenHash []byte
 	userID    uint64
@@ -107,22 +107,7 @@ type session struct {
 	userAgent string
 }
 
-type execer interface {
-	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
-}
-
-func insertSession(ctx context.Context, x execer, s session) error {
-	_, err := x.ExecContext(ctx,
-		`INSERT INTO sessions (token_hash, user_id, created_at, last_seen_at, expires_at, user_agent) VALUES (?,?,?,?,?,?)`,
-		s.tokenHash, s.userID, s.now, s.now, s.expires, cleanUserAgent(s.userAgent))
-	return err
-}
-
-func (s *Store) createSession(ctx context.Context, sess session) error {
-	return insertSession(ctx, s.db, sess)
-}
-
-// cleanUserAgent makes a client-supplied header safe for VARCHAR(255) utf8mb4.
+// cleanUserAgent makes a client-supplied header safe to keep (valid UTF-8, at most 255 characters).
 func cleanUserAgent(ua string) string {
 	ua = strings.ToValidUTF8(ua, "")
 	if utf8.RuneCountInString(ua) > 255 {
@@ -131,43 +116,23 @@ func cleanUserAgent(ua string) string {
 	return ua
 }
 
-// userBySession returns the user owning a live (unexpired) session and its expiry.
-func (s *Store) userBySession(ctx context.Context, tokenHash []byte, now time.Time) (User, time.Time, error) {
-	var exp time.Time
-	u, err := scanUser(s.db.QueryRowContext(ctx,
-		`SELECT `+userCols+`, s.expires_at FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ? AND s.expires_at > ?`,
-		tokenHash, now), &exp)
+// userByID returns the user with the given internal id (the owner of a session).
+func (s *Store) userByID(ctx context.Context, id uint64) (User, error) {
+	u, err := scanUser(s.db.QueryRowContext(ctx, `SELECT `+userCols+` FROM users u WHERE u.id = ?`, id))
 	if errors.Is(err, sql.ErrNoRows) {
-		return User{}, time.Time{}, errNotFound
+		return User{}, errNotFound
 	}
-	return u, exp.UTC(), err
-}
-
-func (s *Store) extendSession(ctx context.Context, tokenHash []byte, now, expires time.Time) error {
-	_, err := s.db.ExecContext(ctx, `UPDATE sessions SET last_seen_at = ?, expires_at = ? WHERE token_hash = ?`, now, expires, tokenHash)
-	return err
-}
-
-func (s *Store) deleteSession(ctx context.Context, tokenHash []byte) error {
-	_, err := s.db.ExecContext(ctx, `DELETE FROM sessions WHERE token_hash = ?`, tokenHash)
-	return err
-}
-
-// deleteExpiredSessions keeps the table from filling with dead rows: each login sweeps
-// that user's expired sessions.
-func (s *Store) deleteExpiredSessions(ctx context.Context, userID uint64, now time.Time) error {
-	_, err := s.db.ExecContext(ctx, `DELETE FROM sessions WHERE user_id = ? AND expires_at <= ?`, userID, now)
-	return err
+	return u, err
 }
 
 // googleUser finds or creates the account for a Google identity in one transaction (see
 // Service.SignInGoogle for the rules). want carries the display name and locale to use if
 // the account is created. A concurrent callback for the same person can hit the unique key
 // or a deadlock; the loser retries and then finds the winner's rows.
-func (s *Store) googleUser(ctx context.Context, id GoogleIdentity, want User, now time.Time) (User, error) {
+func (s *Store) googleUser(ctx context.Context, id GoogleIdentity, want User, now time.Time, dropSessions func(ctx context.Context, userID uint64) error) (User, error) {
 	var u User
 	err := retryTx(ctx, sleepCtx, func() (err error) {
-		u, err = s.googleUserTx(ctx, id, want, now)
+		u, err = s.googleUserTx(ctx, id, want, now, dropSessions)
 		return err
 	})
 	return u, err
@@ -205,7 +170,7 @@ func sleepCtx(ctx context.Context, d time.Duration) error {
 	}
 }
 
-func (s *Store) googleUserTx(ctx context.Context, id GoogleIdentity, want User, now time.Time) (User, error) {
+func (s *Store) googleUserTx(ctx context.Context, id GoogleIdentity, want User, now time.Time, dropSessions func(ctx context.Context, userID uint64) error) (User, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return User{}, err
@@ -229,7 +194,8 @@ func (s *Store) googleUserTx(ctx context.Context, id GoogleIdentity, want User, 
 		if _, err = tx.ExecContext(ctx, `UPDATE users SET password_hash = NULL, email_verified_at = ?, updated_at = ? WHERE id = ?`, now, now, u.InternalID); err != nil {
 			return User{}, err
 		}
-		if _, err = tx.ExecContext(ctx, `DELETE FROM sessions WHERE user_id = ?`, u.InternalID); err != nil {
+		// Before the commit, so a Redis failure rolls everything back and the next try still finds the account unverified.
+		if err = dropSessions(ctx, u.InternalID); err != nil {
 			return User{}, err
 		}
 		u.EmailVerified = true

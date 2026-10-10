@@ -415,7 +415,7 @@ func TestResetPasswordFlow(t *testing.T) {
 	for _, c := range []string{c1.Value, c2.Value} {
 		want(t, e.do(req{method: "GET", path: "/v1/me", cookie: c}), 401, "unauthenticated")
 	}
-	if e.count("SELECT COUNT(*) FROM sessions") != 0 {
+	if e.sessionCount() != 0 {
 		t.Fatal("sessions left")
 	}
 	want(t, e.login(testMail, testPW, ""), 401, "invalid_credentials")

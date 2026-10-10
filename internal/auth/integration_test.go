@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -44,6 +45,7 @@ type env struct {
 	mail   *recMailer
 	rc     *redis.Client
 	codes  *Codes
+	sess   *Sessions
 }
 
 type testClock struct {
@@ -97,7 +99,11 @@ func newEnv(t *testing.T, o opts) *env {
 	if err != nil {
 		t.Fatal(err)
 	}
-	svc, err := NewService(NewStore(d), hasher, o.limits, Mail{Mailer: rm, Logger: logger}, codes, clock.now)
+	sess, err := NewSessions(context.Background(), rc, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	svc, err := NewService(NewStore(d), sess, hasher, o.limits, Mail{Mailer: rm, Logger: logger}, codes, clock.now)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -110,7 +116,7 @@ func newEnv(t *testing.T, o opts) *env {
 			t.Fatal(err)
 		}
 	}
-	return &env{t: t, db: d, h: httpx.NewRouter(logger, ah.Routes), svc: svc, ah: ah, hasher: hasher, logs: logs, clock: clock, mail: rm, rc: rc, codes: codes}
+	return &env{t: t, db: d, h: httpx.NewRouter(logger, ah.Routes), svc: svc, ah: ah, hasher: hasher, logs: logs, clock: clock, mail: rm, rc: rc, codes: codes, sess: sess}
 }
 
 type syncWriter struct {
@@ -220,6 +226,16 @@ func (e *env) count(q string, args ...any) int {
 	return n
 }
 
+// sessionCount is the number of sessions in Redis (this test's own key space).
+func (e *env) sessionCount() int {
+	e.t.Helper()
+	keys, err := e.rc.Client().Keys(context.Background(), e.rc.Key("sess", "*")).Result()
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	return len(keys)
+}
+
 // AC1, AC4, AC5, AC8: the whole life of a session.
 func TestRegisterMeLogoutFlow(t *testing.T) {
 	e := newEnv(t, opts{})
@@ -266,7 +282,7 @@ func TestRegisterMeLogoutFlow(t *testing.T) {
 	want(t, e.do(req{method: "GET", path: "/v1/me", cookie: c.Value}), 401, "unauthenticated")            // replay of the old cookie
 	want(t, e.do(req{method: "POST", path: "/v1/auth/logout", cookie: c.Value, origin: origin}), 204, "") // idempotent
 	want(t, e.do(req{method: "POST", path: "/v1/auth/logout"}), 204, "")                                  // not even signed in
-	if n := e.count("SELECT COUNT(*) FROM sessions"); n != 0 {
+	if n := e.sessionCount(); n != 0 {
 		t.Fatalf("%d sessions left", n)
 	}
 }
@@ -283,11 +299,12 @@ func TestSessionTokenAndCookieFlags(t *testing.T) {
 			t.Fatalf("token shape: %q", c.Value)
 		}
 		sum := sha256.Sum256([]byte(c.Value))
-		if n := e.count("SELECT COUNT(*) FROM sessions WHERE token_hash = ?", sum[:]); n != 1 {
-			t.Fatalf("expected the sha256 of the token to be the stored key")
+		ctx := context.Background()
+		if n, err := e.rc.Client().Exists(ctx, e.rc.Key("sess", hex.EncodeToString(sum[:]))).Result(); err != nil || n != 1 {
+			t.Fatalf("expected the sha256 of the token to be the stored key: %d, %v", n, err)
 		}
-		if n := e.count("SELECT COUNT(*) FROM sessions WHERE token_hash = ?", []byte(c.Value)); n != 0 {
-			t.Fatal("raw token must not be stored")
+		if n, err := e.rc.Client().Exists(ctx, e.rc.Key("sess", c.Value)).Result(); err != nil || n != 0 {
+			t.Fatalf("raw token must not be stored: %d, %v", n, err)
 		}
 		raw := e.do(req{method: "GET", path: "/v1/me", cookie: c.Value})
 		if raw.Code != 200 {
@@ -610,12 +627,19 @@ func TestParallelLoginsRespectTheHashCap(t *testing.T) {
 func TestSessionExpiryAndSliding(t *testing.T) {
 	e := newEnv(t, opts{})
 	c := sessionCookie(t, e.register(testMail, testPW, "A")).Value
-	expiry := func() time.Time {
-		var ts time.Time
-		if err := e.db.QueryRow("SELECT expires_at FROM sessions").Scan(&ts); err != nil {
+	expiry := func() time.Time { // last_seen_at in the hash + the TTL; the Redis TTL itself is checked below
+		keys, err := e.rc.Client().Keys(context.Background(), e.rc.Key("sess", "*")).Result()
+		if err != nil || len(keys) != 1 {
+			t.Fatalf("session keys: %v, %v", keys, err)
+		}
+		ms, err := e.rc.Client().HGet(context.Background(), keys[0], "last_seen_at").Int64()
+		if err != nil {
 			t.Fatal(err)
 		}
-		return ts.UTC()
+		if ttl := e.rc.Client().PTTL(context.Background(), keys[0]).Val(); ttl < SessionTTL-time.Minute || ttl > SessionTTL {
+			t.Fatalf("Redis TTL %v, want about %v", ttl, SessionTTL)
+		}
+		return time.UnixMilli(ms).UTC().Add(SessionTTL)
 	}
 	t0 := e.clock.now()
 	if got := expiry(); !got.Equal(t0.Add(SessionTTL)) {
@@ -644,11 +668,11 @@ func TestSessionExpiryAndSliding(t *testing.T) {
 	want(t, e.do(req{method: "GET", path: "/v1/me", cookie: c}), 401, "unauthenticated")
 
 	// Expired rows are swept by the user's next login.
-	if n := e.count("SELECT COUNT(*) FROM sessions"); n != 1 {
+	if n := e.sessionCount(); n != 1 {
 		t.Fatalf("%d sessions before login", n)
 	}
 	want(t, e.login(testMail, testPW, ""), 200, "")
-	if n := e.count("SELECT COUNT(*) FROM sessions"); n != 1 {
+	if n := e.sessionCount(); n != 1 {
 		t.Fatalf("%d sessions after login, want only the new one", n)
 	}
 }

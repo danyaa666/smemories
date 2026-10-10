@@ -52,6 +52,7 @@ func main() {
 	}
 	defer func() { _ = d.Close() }()
 
+	redis.UseLogger(logger) // go-redis' own lines go through slog, not raw stderr
 	rc, err := redis.New(cfg)
 	if err != nil {
 		logger.Error("redis setup failed", "error", err)
@@ -83,7 +84,12 @@ func main() {
 	if cfg.DevFixedOTP != "" { // DEV-SHORTCUT(otp)
 		logger.Warn("dev fixed otp active") // DEV-SHORTCUT(otp)
 	} // DEV-SHORTCUT(otp)
-	svc, err := auth.NewService(auth.NewStore(d), hasher, auth.Limits{
+	sessions, err := auth.NewSessions(ctx, rc, logger)
+	if err != nil {
+		logger.Error("session store setup failed", "error", err)
+		os.Exit(1)
+	}
+	svc, err := auth.NewService(auth.NewStore(d), sessions, hasher, auth.Limits{
 		RegisterPerHour: cfg.RegisterPerHour, LoginFailsPerPair: cfg.LoginFailsPerPair, LoginFailsPerIP: cfg.LoginFailsPerIP,
 	}, auth.Mail{Mailer: mail, Logger: logger}, codes, nil)
 	if err != nil {
@@ -114,7 +120,7 @@ func main() {
 	notesH.SetUploadLimits(cfg.PublicUploadConns, cfg.PublicUploadsPerIP, cfg.UploadTmpDir)
 	notesH.SweepSpool() // files a crash or kill left behind; before the listener accepts traffic
 
-	srv := httpx.NewServer(cfg.HTTPAddr, httpx.NewRouterWith(logger, httpx.RouterConfig{RequestTimeout: cfg.RequestTimeout, TrustProxy: cfg.TrustProxy}, httpx.Ready(d, logger, httpx.Dep{Name: "redis", Ping: rc.Ping}), authH.Routes, bookH.Routes, mediaH.Routes, notesH.Routes))
+	srv := httpx.NewServer(cfg.HTTPAddr, httpx.NewRouterWith(logger, httpx.RouterConfig{RequestTimeout: cfg.RequestTimeout, TrustProxy: cfg.TrustProxy}, httpx.Ready(d, logger, httpx.Dep{Name: "redis", Ping: rc.Ready}), authH.Routes, bookH.Routes, mediaH.Routes, notesH.Routes))
 	if err := httpx.Serve(ctx, srv, ln, httpx.DrainTimeout); err != nil {
 		logger.Error("server stopped", "error", err)
 		os.Exit(1)

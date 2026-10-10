@@ -77,7 +77,13 @@ var logLevels = map[string]slog.Level{
 
 // Load builds a Config from getenv (os.Getenv in production). An unset or empty
 // variable takes its default; an invalid value returns an error naming the variable.
-func Load(getenv func(string) string) (Config, error) {
+func Load(getenv func(string) string) (Config, error) { return load(getenv, true) }
+
+// LoadMigrate is Load for smemories-migrate: it skips the settings only the API needs (Redis, email codes), because
+// the one-off migration task has no access to Redis (T-022) and must not fail on a missing SMEM_REDIS_URL or SMEM_OTP_KEY.
+func LoadMigrate(getenv func(string) string) (Config, error) { return load(getenv, false) }
+
+func load(getenv func(string) string, forAPI bool) (Config, error) {
 	get := func(key, def string) string {
 		if v := getenv(key); v != "" {
 			return v
@@ -228,6 +234,9 @@ func Load(getenv func(string) string) (Config, error) {
 	if cfg.S3PathStyle, err = strconv.ParseBool(get("SMEM_S3_PATH_STYLE", "false")); err != nil {
 		return Config{}, fmt.Errorf("SMEM_S3_PATH_STYLE=%q: want true or false", getenv("SMEM_S3_PATH_STYLE"))
 	}
+	if !forAPI {
+		return cfg, nil
+	}
 	if err := cfg.loadRedis(getenv, get); err != nil {
 		return Config{}, err
 	}
@@ -268,10 +277,15 @@ func (cfg *Config) loadRedis(getenv func(string) string, get func(key, def strin
 	if cfg.RedisURL == "" {
 		return fmt.Errorf("SMEM_REDIS_URL is required (e.g. redis://127.0.0.1:6379/0)")
 	}
-	bad := fmt.Errorf("SMEM_REDIS_URL: want redis://[:password@]host:port/db or rediss://..., db 0-15")
+	bad := fmt.Errorf("SMEM_REDIS_URL: want redis://[:password@]host:port/db or rediss://..., port 1-65535, db 0-15")
 	u, err := url.Parse(cfg.RedisURL)
 	if err != nil || (u.Scheme != "redis" && u.Scheme != "rediss") || u.Hostname() == "" || u.RawQuery != "" || u.Fragment != "" {
 		return bad
+	}
+	if p := u.Port(); p != "" { // a port out of range would only fail at the first ping
+		if n, err := strconv.Atoi(p); err != nil || n < 1 || n > 65535 {
+			return bad
+		}
 	}
 	if db := strings.TrimPrefix(u.Path, "/"); db != "" {
 		if n, err := strconv.Atoi(db); err != nil || n < 0 || n > 15 {

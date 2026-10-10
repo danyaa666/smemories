@@ -19,7 +19,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "usage: smemories-migrate up|down|status")
 		os.Exit(2)
 	}
-	cfg, err := config.Load(os.Getenv)
+	cfg, err := config.LoadMigrate(os.Getenv)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "config error:", err)
 		os.Exit(1)
