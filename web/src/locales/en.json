@@ -116,6 +116,7 @@
     "invalid_hobbies": "Hobbies can have at most 300 characters, without invisible or control characters.",
     "invalid_future_plans": "Plans can have at most 300 characters, without invisible or control characters.",
     "invalid_code": "That code is wrong. Check the email and try again.",
+    "code_short": "Enter all 6 digits of the code.",
     "code_expired": "This code has expired. Send a new code.",
     "code_locked": "Too many wrong attempts on this code. Send a new code.",
     "code_store_unavailable": "We cannot check codes right now. Please try again in a moment.",
