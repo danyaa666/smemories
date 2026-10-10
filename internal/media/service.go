@@ -10,7 +10,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"path"
 	"strconv"
 	"strings"
@@ -48,7 +47,7 @@ func (RateLimitedError) Error() string { return "media: upload rate limit reache
 type Service struct {
 	store   *Store
 	st      storage.Storage
-	limiter *ratelimit.Limiter
+	limiter ratelimit.Limiter
 	sem     chan struct{} // bounds concurrent image processing (memory)
 	now     func() time.Time
 
@@ -66,11 +65,12 @@ type RefClearer interface {
 func (s *Service) SetRefClearer(r RefClearer) { s.refs = r }
 
 // NewService builds the service; maxConcurrent bounds parallel image decodes; now may be nil.
-func NewService(store *Store, st storage.Storage, maxConcurrent int, now func() time.Time) *Service {
+// The upload limiter fails open when Redis is down (an upload is not a guess).
+func NewService(store *Store, st storage.Storage, maxConcurrent int, limiters *ratelimit.Factory, now func() time.Time) *Service {
 	if now == nil {
 		now = time.Now
 	}
-	return &Service{store: store, st: st, limiter: ratelimit.New(uploadsPerWindow, uploadWindow, now),
+	return &Service{store: store, st: st, limiter: limiters.Open("media_upload", uploadsPerWindow, uploadWindow),
 		sem: make(chan struct{}, maxConcurrent), now: now, contributorWait: defaultContributorSlotWait}
 }
 
@@ -88,7 +88,7 @@ func (s *Service) Upload(ctx context.Context, ownerID uint64, yearbookID string,
 	if err != nil {
 		return Media{}, err
 	}
-	if ok, retry := s.limiter.Take(fmt.Sprint(ownerID)); !ok {
+	if ok, retry, _ := s.limiter.Take(ctx, strconv.FormatUint(ownerID, 10)); !ok {
 		return Media{}, RateLimitedError{retry}
 	}
 	return s.save(ctx, ownerID, yb, yearbookID, "owner", func() ([]byte, error) { return data, nil }, 0)

@@ -702,6 +702,7 @@ export interface components {
                  * @example code_locked
                  * @example code_store_unavailable
                  * @example session_store_unavailable
+                 * @example limiter_unavailable
                  * @example limit_reached
                  * @example unknown_field
                  * @example unsupported_media_type
@@ -800,7 +801,7 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
-        /** @description Redis, which holds the email codes, did not answer (`code_store_unavailable`); nothing was accepted, retry shortly. */
+        /** @description Redis, which holds the email codes, did not answer (`code_store_unavailable`), or the rate limiter that guards sign-in, verification and reset did (`limiter_unavailable`); nothing was accepted, retry shortly. */
         CodeStoreUnavailable: {
             headers: {
                 "Retry-After"?: number;
@@ -1056,7 +1057,16 @@ export interface operations {
             413: components["responses"]["PayloadTooLarge"];
             415: components["responses"]["UnsupportedMediaType"];
             429: components["responses"]["RateLimited"];
-            503: components["responses"]["BusyOrSessionStore"];
+            /** @description `busy` (all password-hashing slots stayed taken), `session_store_unavailable` (no session could be created) or `limiter_unavailable` (the sign-in lockout counters in Redis did not answer, so the attempt fails closed); retry after `Retry-After`. */
+            503: {
+                headers: {
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     logout: {
@@ -1119,7 +1129,16 @@ export interface operations {
             413: components["responses"]["PayloadTooLarge"];
             415: components["responses"]["UnsupportedMediaType"];
             429: components["responses"]["RateLimited"];
-            503: components["responses"]["CodeOrSessionStoreUnavailable"];
+            /** @description `code_store_unavailable`, `session_store_unavailable` or `limiter_unavailable` (the code-guess counter in Redis did not answer, so the attempt fails closed); retry after `Retry-After`. */
+            503: {
+                headers: {
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     resendVerificationEmail: {
@@ -1237,7 +1256,7 @@ export interface operations {
             413: components["responses"]["PayloadTooLarge"];
             415: components["responses"]["UnsupportedMediaType"];
             429: components["responses"]["RateLimited"];
-            /** @description `busy` (all password-hashing slots stayed taken; the code is already used, ask for a new one), `code_store_unavailable` or `session_store_unavailable` (the sessions could not be deleted, so the password was not changed either). */
+            /** @description `busy` (all password-hashing slots stayed taken; the code is already used, ask for a new one), `code_store_unavailable`, `limiter_unavailable` (the code-guess counter in Redis did not answer, so the attempt fails closed) or `session_store_unavailable` (the sessions could not be deleted, so the password was not changed either). */
             503: {
                 headers: {
                     [name: string]: unknown;

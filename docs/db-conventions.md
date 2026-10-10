@@ -20,7 +20,7 @@ Existing tables are converted domain by domain (epic E10, tasks T-064..T-067); *
 | Soft delete | not used today (user deletion is a hard delete, privacy, D-26). If a feature ever needs it: `deleted_at BIGINT DEFAULT NULL` (never `is_deleted`) plus `idx_deleted_at`, and a decision record first. |
 | Charset | `ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`, collation as today; a case-sensitive key (email, OIDC subject) says so in a comment. |
 | Joins | the skill asks for application-layer joins: read the parent, then the children/related rows with one `WHERE id IN (...)` per relation. No query inside a loop (N+1). A join stays only where it is 1:1, owner-scoped and measured; say why in the code. |
-| Writes | batch writes of 2000-5000 rows; transactions short; lock order is documented when a transaction takes several locks. |
+| Writes | batch writes of 2000-5000 rows; transactions short. **Lock order**: every transaction that locks several tables takes the locks in the same order everywhere, parent before child (for a yearbook: the `yearbook_tab` row `FOR UPDATE` first, then `profile_tab` and the other children). The order is written in a comment on the service method that starts the transaction, and a concurrency test (parallel delete, update and profile update of one row, 5xx count must be 0) covers it. MySQL deadlock (error 1213) is never an acceptable 500: take the parent lock first, or retry once. |
 
 ## Deleting without foreign keys
 
@@ -49,3 +49,4 @@ deletion yet; T-025 must delete a user the same way and extend that test.
 - [ ] no ENUM; no reserved column names
 - [ ] Up and Down, Down tested for conversions
 - [ ] queries read without joins or loops
+- [ ] lock order documented; parallel delete/update test shows no 5xx

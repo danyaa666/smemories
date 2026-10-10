@@ -24,6 +24,7 @@ import (
 	"github.com/danyaa666/smemories/internal/mailer"
 	"github.com/danyaa666/smemories/internal/media"
 	"github.com/danyaa666/smemories/internal/notefields"
+	"github.com/danyaa666/smemories/internal/ratelimit"
 	"github.com/danyaa666/smemories/internal/redis/redistest"
 	"github.com/danyaa666/smemories/internal/storage/storagetest"
 	"github.com/danyaa666/smemories/internal/yearbook"
@@ -51,6 +52,7 @@ type env struct {
 	books []string // public ids, for object cleanup
 	logs  *bytes.Buffer
 	tmp   string // where the handler spools request bodies
+	lim   *ratelimit.Factory
 	mu    sync.Mutex
 	clock time.Time
 }
@@ -90,22 +92,23 @@ func newEnv(t *testing.T) *env {
 	if err != nil {
 		t.Fatal(err)
 	}
+	e.lim = ratelimit.NewFactory(rc, logger, e.now)
 	sessions, err := auth.NewSessions(context.Background(), rc, logger)
 	if err != nil {
 		t.Fatal(err)
 	}
 	svc, err := auth.NewService(auth.NewStore(d), sessions, hasher, auth.Limits{RegisterPerHour: 1000, LoginFailsPerPair: 1000, LoginFailsPerIP: 1000},
-		auth.Mail{Mailer: mail, Logger: logger}, codes, e.now)
+		auth.Mail{Mailer: mail, Logger: logger}, codes, e.lim, e.now)
 	if err != nil {
 		t.Fatal(err)
 	}
 	ah := auth.NewHandler(svc, auth.HandlerConfig{AllowedOrigins: []string{origin}}, logger)
 	e.st = &flakyStore{Storage: storagetest.New(t), keys: map[string]bool{}}
-	e.svc = media.NewService(media.NewStore(d), e.st, 2, nil)
+	e.svc = media.NewService(media.NewStore(d), e.st, 2, e.lim, nil)
 	bookStore := yearbook.NewStore(d)
 	e.svc.SetRefClearer(bookStore)
 	yh := yearbook.NewHandler(bookStore, yearbook.NewService(bookStore, e.svc), ah.RequireUser, []string{origin}, logger, e.now)
-	e.nh = NewHandler(NewStore(d), e.svc, 10<<20, ah.RequireUser, []string{origin}, ah.ClientIP, logger, e.now)
+	e.nh = NewHandler(NewStore(d), e.svc, 10<<20, ah.RequireUser, []string{origin}, ah.ClientIP, e.lim, logger, e.now)
 	e.tmp = t.TempDir()
 	e.nh.SetUploadLimits(defaultUploadConns, defaultUploadsPerIP, e.tmp)
 	e.h = httpx.NewRouter(logger, ah.Routes, yh.Routes, e.nh.Routes)

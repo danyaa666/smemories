@@ -3,6 +3,7 @@ package notes
 import (
 	"bytes"
 	"cmp"
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -143,7 +144,7 @@ func (h *Handler) submit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	coll := strconv.FormatUint(p.CollectionID, 10)
-	if ok, wait := h.takeSubmit(ip, coll); !ok {
+	if ok, wait := h.takeSubmit(r.Context(), ip, coll); !ok {
 		tooMany(w, r, wait)
 		return
 	}
@@ -151,10 +152,10 @@ func (h *Handler) submit(w http.ResponseWriter, r *http.Request) {
 	var stored []media.Media
 	fail := func(err error) {
 		if errors.Is(err, media.ErrBusy) { // turned away, not misused: give back what the request cost
-			h.all.Refund(ip)
-			h.subIPHr.Refund(ip)
-			h.subIPDay.Refund(ip)
-			h.subColl.Refund(coll)
+			_ = h.all.Refund(r.Context(), ip)
+			_ = h.subIPHr.Refund(r.Context(), ip)
+			_ = h.subIPDay.Refund(r.Context(), ip)
+			_ = h.subColl.Refund(r.Context(), coll)
 		}
 		if derr := h.media.Discard(stored...); derr != nil {
 			h.logger.Error("notes: could not remove the photos of a failed submission", "request_id", httpx.RequestIDFrom(r.Context()), "error", derr)
@@ -333,17 +334,17 @@ func (h *Handler) validate(w http.ResponseWriter, r *http.Request, p Public, raw
 }
 
 // takeSubmit counts a submission against the per-IP and per-collection limits; none is counted unless all allow it.
-func (h *Handler) takeSubmit(ip, collection string) (bool, time.Duration) {
-	if ok, wait := h.subIPHr.Take(ip); !ok {
+func (h *Handler) takeSubmit(ctx context.Context, ip, collection string) (bool, time.Duration) {
+	if ok, wait, _ := h.subIPHr.Take(ctx, ip); !ok {
 		return false, wait
 	}
-	if ok, wait := h.subIPDay.Take(ip); !ok {
-		h.subIPHr.Refund(ip)
+	if ok, wait, _ := h.subIPDay.Take(ctx, ip); !ok {
+		_ = h.subIPHr.Refund(ctx, ip)
 		return false, wait
 	}
-	if ok, wait := h.subColl.Take(collection); !ok {
-		h.subIPHr.Refund(ip)
-		h.subIPDay.Refund(ip)
+	if ok, wait, _ := h.subColl.Take(ctx, collection); !ok {
+		_ = h.subIPHr.Refund(ctx, ip)
+		_ = h.subIPDay.Refund(ctx, ip)
 		return false, wait
 	}
 	return true, 0

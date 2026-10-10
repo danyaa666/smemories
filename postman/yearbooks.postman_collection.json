@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "SMemories - yearbooks",
-    "description": "Yearbook CRUD and profile information (T-008). Run against an API started with SMEM_ENV=dev, after the auth collection's assumptions: the session token is read from the register response's Set-Cookie header and sent in an explicit Cookie header, so two users (A and B) can act in one run (an explicit header wins over Newman's cookie jar; \"no session\" requests send an empty smem_session). Each run registers 2 users (the register limit is 5 per hour per IP: restart the API, or set SMEM_RATE_REGISTER_PER_HOUR higher, before a third run within the hour). Run the whole collection in order: the Edge cases folder reuses the users and the yearbook from the Full flow.",
+    "description": "Yearbook CRUD and profile information (T-008). Run against an API started with SMEM_ENV=dev, after the auth collection's assumptions: the session token is read from the register response's Set-Cookie header and sent in an explicit Cookie header, so two users (A and B) can act in one run (an explicit header wins over Newman's cookie jar; \"no session\" requests send an empty smem_session). Each run registers 2 users (the register limit is 5 per hour per IP: run `make reset-limits` (the limiters live in Redis), or set SMEM_RATE_REGISTER_PER_HOUR higher, before a third run within the hour). Run the whole collection in order: the Edge cases folder reuses the users and the yearbook from the Full flow.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [

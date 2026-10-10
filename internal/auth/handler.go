@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/danyaa666/smemories/internal/httpx"
+	"github.com/danyaa666/smemories/internal/ratelimit"
 	"github.com/danyaa666/smemories/internal/redis"
 )
 
@@ -210,6 +211,9 @@ func (h *Handler) fail(w http.ResponseWriter, r *http.Request, err error) {
 		httpx.WriteError(w, r, http.StatusBadRequest, "code_expired", "code expired, request a new one")
 	case errors.Is(err, ErrCodeLocked):
 		httpx.WriteError(w, r, http.StatusBadRequest, "code_locked", "too many wrong attempts, request a new code")
+	case errors.Is(err, ratelimit.ErrUnavailable): // a fail-closed limiter could not count (already logged, throttled)
+		w.Header().Set("Retry-After", "5")
+		httpx.WriteError(w, r, http.StatusServiceUnavailable, "limiter_unavailable", "rate limiter unavailable, retry shortly")
 	case errors.As(err, &sse): // already logged (once per interval) by the session store
 		w.Header().Set("Retry-After", "5")
 		httpx.WriteError(w, r, http.StatusServiceUnavailable, "session_store_unavailable", "session store unavailable, retry shortly")

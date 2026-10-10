@@ -21,6 +21,7 @@ import (
 	"github.com/danyaa666/smemories/internal/db/dbtest"
 	"github.com/danyaa666/smemories/internal/httpx"
 	"github.com/danyaa666/smemories/internal/mailer"
+	"github.com/danyaa666/smemories/internal/ratelimit"
 	"github.com/danyaa666/smemories/internal/redis/redistest"
 )
 
@@ -81,7 +82,7 @@ func newEnvWith(t *testing.T, children ...ChildPurger) *env {
 		t.Fatal(err)
 	}
 	svc, err := auth.NewService(auth.NewStore(d), sessions, hasher, auth.Limits{RegisterPerHour: 1000, LoginFailsPerPair: 1000, LoginFailsPerIP: 1000},
-		auth.Mail{Mailer: mail, Logger: logger}, codes, e.now)
+		auth.Mail{Mailer: mail, Logger: logger}, codes, ratelimit.NewFactory(rc, logger, e.now), e.now)
 	if err != nil {
 		t.Fatal(err)
 	}

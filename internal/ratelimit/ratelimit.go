@@ -1,16 +1,29 @@
-// Package ratelimit is a small in-memory sliding-window limiter.
-//
-// ponytail: state is per process. With more than one API task the effective limit is
-// limit x tasks; move the counters to a shared store (Redis, DynamoDB) when that matters.
+// Package ratelimit holds the sliding-window rate limiters. The production implementation lives in
+// Redis (redis.go) so every API task and every restart sees the same counts (D-23); Memory is the
+// in-process implementation for unit tests only and is never wired in cmd/smemories-api.
 package ratelimit
 
 import (
+	"context"
 	"sync"
 	"time"
 )
 
 // Limiter allows at most limit hits per key in any window.
-type Limiter struct {
+type Limiter interface {
+	// Take records a hit for key unless the key is already at its limit. When it is, it returns
+	// false and how long until the oldest hit leaves the window (the Retry-After). Recording up
+	// front (and Refund-ing on success) keeps a burst of parallel requests from all passing the
+	// check before any of them is counted. err is set only when the limiter itself failed.
+	Take(ctx context.Context, key string) (ok bool, retryAfter time.Duration, err error)
+	// Refund removes the most recent hit for key, undoing a Take (for example after a successful
+	// login: only failures should count).
+	Refund(ctx context.Context, key string) error
+}
+
+// Memory is a per-process Limiter for unit tests. Do not use it in the API: its counts are not
+// shared between tasks and a restart resets them.
+type Memory struct {
 	limit  int
 	window time.Duration
 	now    func() time.Time // injectable for tests
@@ -20,46 +33,43 @@ type Limiter struct {
 	lastSweep time.Time
 }
 
-// New returns a Limiter for limit hits per window. now may be nil (time.Now).
-func New(limit int, window time.Duration, now func() time.Time) *Limiter {
+// NewMemory returns a Memory limiter for limit hits per window. now may be nil (time.Now).
+func NewMemory(limit int, window time.Duration, now func() time.Time) *Memory {
 	if now == nil {
 		now = time.Now
 	}
-	return &Limiter{limit: limit, window: window, now: now, hits: map[string][]time.Time{}}
+	return &Memory{limit: limit, window: window, now: now, hits: map[string][]time.Time{}}
 }
 
-// Take records a hit for key unless the key is already at its limit. When it is, it
-// returns false and how long until the oldest hit leaves the window (the Retry-After).
-// Recording up front (and Refund-ing on success) keeps a burst of parallel requests
-// from all passing the check before any of them is counted.
-func (l *Limiter) Take(key string) (ok bool, retryAfter time.Duration) {
+// Take implements Limiter.
+func (l *Memory) Take(_ context.Context, key string) (bool, time.Duration, error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	now := l.now()
 	l.sweep(now)
 	hs := l.fresh(key, now)
 	if len(hs) >= l.limit {
-		return false, hs[0].Add(l.window).Sub(now)
+		return false, hs[0].Add(l.window).Sub(now), nil
 	}
 	l.hits[key] = append(hs, now)
-	return true, 0
+	return true, 0, nil
 }
 
-// Refund removes the most recent hit for key, undoing a Take (for example after a
-// successful login: only failures should count).
-func (l *Limiter) Refund(key string) {
+// Refund implements Limiter.
+func (l *Memory) Refund(_ context.Context, key string) error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	hs := l.fresh(key, l.now())
 	if len(hs) <= 1 {
 		delete(l.hits, key)
-		return
+		return nil
 	}
 	l.hits[key] = hs[:len(hs)-1]
+	return nil
 }
 
 // fresh drops the expired hits of key. Callers hold l.mu.
-func (l *Limiter) fresh(key string, now time.Time) []time.Time {
+func (l *Memory) fresh(key string, now time.Time) []time.Time {
 	hs := l.hits[key]
 	i := 0
 	for i < len(hs) && !hs[i].After(now.Add(-l.window)) {
@@ -70,7 +80,7 @@ func (l *Limiter) fresh(key string, now time.Time) []time.Time {
 
 // sweep deletes keys whose hits have all expired, at most once per window, so the map
 // does not grow forever. Callers hold l.mu.
-func (l *Limiter) sweep(now time.Time) {
+func (l *Memory) sweep(now time.Time) {
 	if now.Sub(l.lastSweep) < l.window {
 		return
 	}

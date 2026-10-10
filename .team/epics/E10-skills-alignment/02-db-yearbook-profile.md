@@ -47,6 +47,9 @@ sequenceDiagram
 ```
 The service is where the 20-book limit, default `page_size`, ULID creation and the ownership scoping live after T-070; in this task keep the handler as it is and put only the new delete/reference logic into a `Service` type so T-070 extends it.
 
+#### Lock order (added after QA round 1, 2026-10-10)
+`Service.Delete` and `Store.modify` must take locks in the same order or MySQL deadlocks (error 1213, QA measured 75 of 125 requests failing with 5xx under 1 DELETE + 2 PATCH + 2 PUT profile in parallel; develop had 0). Rule from `docs/db-conventions.md`: parent first. `Delete` locks the owner's `yearbook_tab` row `FOR UPDATE` (owner-scoped), then deletes `profile_tab`, runs the child purgers, deletes the book; `modify` already goes yearbook then profile. Document the order in a comment on both methods. The same applies to `media` delete clearing cover/photo references (`ClearMediaRefs`): lock the yearbook row first (QA saw a deadlock when a photo is deleted while being set as cover). QA's test `internal/yearbook/race_integration_test.go` (commit 37c79af) must pass: 0 5xx in 25 rounds.
+
 #### Risk
 `high`: it rewrites live data (conversion) and moves integrity from the database to code. The owner approves the merge.
 

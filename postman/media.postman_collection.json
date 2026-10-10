@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "SMemories - media",
-    "description": "Photo upload, list, download and delete (T-009, T-046). Run from the postman/ directory (newman run media.postman_collection.json --working-dir .) against an API started with SMEM_ENV=dev and a reachable MinIO (make up). Each run registers 2 users (limit 5 per hour per IP; restart the API or raise SMEM_RATE_REGISTER_PER_HOUR before a third run in the hour). Run the whole collection in order: Edge cases reuses the two users of the Full flow. Not covered here because a collection cannot generate files: the 11 MiB size cap (413), quotas and the upload rate limit; the Go integration tests cover them.",
+    "description": "Photo upload, list, download and delete (T-009, T-046). Run from the postman/ directory (newman run media.postman_collection.json --working-dir .) against an API started with SMEM_ENV=dev and a reachable MinIO (make up). Each run registers 2 users (limit 5 per hour per IP; run `make reset-limits` or raise SMEM_RATE_REGISTER_PER_HOUR before a third run in the hour). Run the whole collection in order: Edge cases reuses the two users of the Full flow. Not covered here because a collection cannot generate files: the 11 MiB size cap (413), quotas and the upload rate limit; the Go integration tests cover them.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [

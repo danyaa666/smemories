@@ -11,16 +11,16 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 32 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-044, T-050, T-056, T-058, T-059, T-060, T-061, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-075, T-076 |
-| TODO | 1 | T-064 |
-| IN_PROGRESS | 1 | T-053 |
+| QA_FAIL | 1 | T-064 |
+| MERGED | 1 | T-053 |
 | DONE | 35 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-054, T-057, T-062, T-063, T-074 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
 
-**Awaiting your review (MERGED):** nothing
+**Awaiting your review (MERGED):** T-053 ([E02] Rate limiters move to Redis (shared limiter for all endpoints))
 
 **Open questions for you:** none
 
-_Board last written 2026-10-10 03:29Z_
+_Board last written 2026-10-10 04:13Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -2155,7 +2155,7 @@ Sessions with native expiry in Redis, per-user index for delete-all, fail-closed
 - 2026-10-10 03:29Z · human · accepted by owner
 
 ### T-053 — [E02] Rate limiters move to Redis (shared limiter for all endpoints)
-- **Status:** IN_PROGRESS
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2163,11 +2163,11 @@ Sessions with native expiry in Redis, per-user index for delete-all, fail-closed
 - **Risk:** high
 - **Rework:** 1
 - **Owner-approved:** yes
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-053-e02-rate-limiters-move-to-redis-shared-l
 - **PR:** https://github.com/danyaa666/smemories/pull/41
-- **Updated:** 2026-10-10 03:28Z by dev
-- **Comments-seen:** 5
+- **Updated:** 2026-10-10 04:12Z by leader
+- **Comments-seen:** 10
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/11-rate-limiters-in-redis.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2192,6 +2192,9 @@ Redis sliding-window limiter with Take and Refund replacing the in-memory one ev
 - 2026-10-09 10:53Z · leader · Leader review OK at head caf2ea4 (= QA head, CI green, no .team changes). Atomic sliding-window script on the Redis clock, per-limiter fail policy (4 guessing limiters closed, 12 open with one ERROR/min), emails hashed in keys, refunds, make reset-limits. When T-052 (#39) merges first, this branch needs a develop merge (9 files, textual: NewService takes sessions and limiters, regenerate schema.d.ts); fix while there: api/openapi.yaml should list limiter_unavailable among the 503s of /v1/auth/login and /v1/auth/reset-password (and every endpoint where a closed limiter applies). Awaiting owner approval.
 - 2026-10-10 03:26Z · human · owner approved merge
 - 2026-10-10 03:28Z · leader · T-052, T-057 and T-049 are merged (develop b835af9). Merge develop into the T-053 branch (conflicts: internal/auth/service.go NewService takes both sessions and limiters, handler.go, the integration tests, api/openapi.yaml, docs/redis.md, web/src/api/schema.d.ts: regenerate it), re-run make lint build test test-integration and npm run check:api. Also fix: api/openapi.yaml must list limiter_unavailable among the 503s of /v1/auth/login, /v1/auth/reset-password, /v1/auth/verify-email and every endpoint where a closed limiter applies. Then READY_FOR_QA (short regression pass; already owner-approved).
+- 2026-10-10 03:31Z · dev · Merged develop b835af9 (conflicts in auth service/handler, media service, 4 integration tests, openapi, redis.md; schema.d.ts regenerated). NewService now takes sessions + limiters; backfill cmd passes a limiter factory it never uses. openapi: limiter_unavailable listed on login, verify-email, reset-password 503s and in the error code examples. make lint build test test-integration green (incl. npm run check:api, 128 vitest). Short regression pass is enough.
+- 2026-10-10 04:03Z · qa · Regression pass at head 7196cc3 (CI green: go, go-integration, security, web). Diff vs origin/develop = 32 files, all T-053 (limiter, callers, tests, docs/redis.md, openapi, schema.d.ts, postman var); no .team/ change; develop b835af9 is an ancestor. make lint OK, make build OK, make test OK (web 128 vitest), make test-integration -race OK (all pkgs incl auth/media/notes/ratelimit/yearbook), npm run check:api 'api schema ok'. Newman against my API on a scratch DB, make-reset-limits-equivalent between runs: yearbooks 92 req/0 failed, media 67 req/0 failed, notes x2 137 assertions/0 failed (after verifying the two test users), auth x2 174 assertions with the same 20 failures all Google OIDC (no SMEM_GOOGLE_* configured; unchanged from first QA). openapi: limiter_unavailable listed on 503 of /v1/auth/login, verify-email, reset-password, in CodeStoreUnavailable response and Error code examples; grep of the code shows the closed limiters (login_pair, login_ip, verify_tries, reset_tries) are used only by login, verify-email and reset-password, so no other endpoint needs it. Fail-closed vs open, live with a throwaway Valkey stopped: login wrong+right = 503 limiter_unavailable Retry-After 5; reset-password = 503 limiter_unavailable; public collect lookup = 404 (open); one 'limiter failed' ERROR log; register passes the open limiter and then fails with session_store_unavailable (T-052 session store shares Redis, expected). verify-email with Redis down returns session_store_unavailable first (session in Redis), its limiter_unavailable path is covered by internal/auth/limiters_integration_test.go (passes). make reset-limits works (needs the compose project of the running stack: the stack here runs as project 'smemories', so I ran COMPOSE_PROJECT_NAME=smemories make reset-limits from the worktree; key deleted). Non-blocking: (a) running dev stack is compose project 'smemories' not 'awesomeproject1' as CLAUDE.md says, so plain make reset-limits finds no redis service on this machine; (b) main checkout is on develop and has no reset-limits target until merge.
+- 2026-10-10 04:12Z · leader · merged 3d79b5d. Review: atomic Lua sliding window on the Redis clock, 4 guessing limiters fail closed (503 limiter_unavailable), 12 fail open with one ERROR per minute, emails hashed in keys, make reset-limits; QA passed twice (second after the develop merge). For owner to check: docs/redis.md limiter table; note COMPOSE_PROJECT_NAME for make reset-limits when your stack runs as project smemories.
 
 ### T-054 — [E05] Spike: HTML templates and browser print-to-PDF instead of server rendering
 - **Status:** DONE
@@ -2488,19 +2491,19 @@ Adds the tools the rest of E10 uses: the typed error package, the v2 envelope he
 - 2026-10-09 03:05Z · human · accepted by owner
 
 ### T-064 — [E10] DB conventions: yearbook and profile tables (no joins, no foreign keys, ms timestamps)
-- **Status:** TODO
+- **Status:** QA_FAIL
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
 - **Depends-on:** T-063, T-034, T-048, T-052, T-057
 - **Risk:** high
-- **Rework:** 0
+- **Rework:** 1
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-10 03:28Z by leader
-- **Comments-seen:** 0
+- **Branch:** task/t-064-e10-db-conventions-yearbook-and-profile-
+- **PR:** https://github.com/danyaa666/smemories/pull/44
+- **Updated:** 2026-10-10 04:12Z by qa
+- **Comments-seen:** 3
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/02-db-yearbook-profile.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2509,6 +2512,29 @@ Adds the tools the rest of E10 uses: the typed error package, the v2 envelope he
 Converts `yearbooks` and `profiles` to `yearbook_tab` and `profile_tab` per docs/db-conventions.md, removes the joins and the cascades from SQL into the yearbook service, and adds the child-purger mechanism.
 
 #### Comments
+- 2026-10-10 03:44Z · dev · PR #44. Migration 20261010120000 (Up/Down, tested by TestMigrateYearbookTabConventions incl. pre-1970/2038/2106/microsecond values and Down round trip), store without joins (3 queries for list of 1 or 50, counting connector test), yearbook.Service.Delete with ChildPurger hook + rollback test, ClearMediaRefs via media.RefClearer (SetRefClearer, so media.NewService is untouched and T-053 merges cleanly), cover/photo same-book check. Index idx_owner_updated is (owner_id, updated_at, public_id) so the list order needs no sort. Other domains: only table names in SQL. Test changes listed in PR. make lint build test test-integration green. Owner approval needed (high risk).
+- 2026-10-10 04:12Z · qa · QA_FAIL on PR #44 (head eca9970; I added one test commit 37c79af). One real issue, everything else passed.
+  ISSUE 1 (major, regression): Service.Delete deadlocks with concurrent edits of the same book -> 500 internal_error.
+   Cause: lock order inversion. yearbook.Service.Delete (internal/yearbook/service.go) deletes profile_tab rows first and yearbook_tab last; Store.modify (store.go) locks yearbook_tab FOR UPDATE first and profile_tab after. MySQL: Error 1213 (40001) Deadlock found. Not documented either (docs/db-conventions.md Writes: 'lock order is documented').
+   Repro (deterministic, ~0.6 s): git -C .team/worktrees/T-064 pull; (cd .team/worktrees/T-064 && go test -race -count=1 -tags integration -run TestDeleteRacesWithEdits ./internal/yearbook) -> 'FAIL: 75 of 125 requests answered 5xx'. Test = 25 rounds of: create book, then in parallel 1 DELETE + 2 PATCH + 2 PUT profile. Same probe over HTTP against a real API: T-064 75/125 requests 500 (all deadlocks, logged as 'yearbook: request failed ... Error 1213'), develop (5de64c2) 0 x 500 (200 x100, 204 x25). With only 1 DELETE + 1 PATCH it did not trigger in 25 rounds, so it needs two or more concurrent writers; state stays consistent (rolled back, no orphans) but the client gets 500 and, because the object-store purge ran before the transaction, the files are already gone (retry works).
+   Expected: Delete and edits serialize (204/404 for the delete, 200 or 404 for edits), never 5xx.
+   Suggested fix: in Service.Delete, first lock the owner's book row (SELECT id FROM yearbook_tab WHERE id=? AND owner_id=? FOR UPDATE inside the tx, i.e. the same first lock as modify), then DELETE profile_tab, children, DELETE yearbook_tab; write the lock order (yearbook_tab -> profile_tab -> media) in a comment or docs/db-conventions.md. The new test must pass after that.
+  Non-blocking observations (not failing on them):
+   N1 DELETE /v1/media/{id} racing with PATCH cover / PUT photo of the same photo: 24 of 36 deletes got 500 deadlock in my adversarial loop (gap lock from ClearMediaRefs UPDATE ... WHERE cover_media_id=? vs the FOR SHARE in mediaRow). develop answered 500 as well in the same race (FK error 1452 on PATCH/PUT, 29 of 160), and the final state is consistent (0 dangling cover/photo refs). Consider retrying on 1213 or locking the book row first in media.removeRow as well; here too the object was deleted before the row.
+   N2 Down is lossy only below 1 ms (max diff 999 us) and truncates toward zero for pre-1970 values (1969-12-31 23:59:59.999999 becomes 1970-01-01 00:00:00); documented in the migration, irrelevant for real data.
+   N3 column 'language' is a non-reserved MySQL keyword (information_schema.KEYWORDS RESERVED=0); the test and doc only check RESERVED=1, so fine.
+   N4 Cursor tokens issued before the deploy (microseconds) are now read as ms: they decode to a far-future time, so page 2 of an in-flight list could show the wrong page; opaque and short-lived, ignore.
+  Evidence for everything else (all PASS):
+   CI green (go, go-integration, security, web). make lint build test OK (web 128 vitest), make test-integration -race OK (19 packages incl. db, yearbook, media, notes).
+   AC1/AC2 migration on a scratch MySQL 8.4 DB with 307 books/profiles/104 media: Vietnamese/accents/emoji/quote/backslash titles, NULL and set graduation year/birthday/template/cover/photo, created/updated at 1970-01-01, 1970-01-02 00:00:00.000999, 2038-01-19 03:14:07.999999, 2106-02-07 06:28:15.999999, 1900-01-01, 9999-12-31 23:59:59.999999, 1969-12-31, microsecond values and 300 random ones: Up compared to an independent Python calculation = 0 differences (books and profiles; profile created_at/updated_at = book's). Down: every non-time column identical, times within 999 us, profiles identical, 4 FKs back, media/note FKs point at yearbooks again. Up again = byte-identical to the first Up. SHOW CREATE after Up: no FK on yearbook_tab/profile_tab, language/page_size VARCHAR(8), is_owner TINYINT UNSIGNED, BIGINT times, uq_yearbook_tab_public_id, idx_owner_updated(owner_id,updated_at,public_id), idx_cover_media_id, uq_profile_tab_one_owner(yearbook_id,owner_flag), idx_photo_media_id; the media/note_collections/notes FKs to yearbook_tab remain (out of scope). One owner profile per book still enforced (dev test + unique key).
+   EXPLAIN: list = ref idx_owner_updated Backward index scan, no filesort; with cursor (150k-row table) range idx_owner_updated, no filesort (on a 300-row table the optimizer scans, dev test forces the index); profile IN uses uq_profile_tab_one_owner; media IN uses PRIMARY; ClearMediaRefs UPDATEs use idx_cover_media_id / idx_photo_media_id.
+   AC3 HTTP (real API on fresh DB): JSON keys and profile keys unchanged, created_at/updated_at RFC 3339 UTC ('2026-10-10T04:09:31.115Z'), updated_at advances on PATCH while created_at stays, null graduation year/birthday round trip, birthdays 1970-01-02 and 2004-02-29 accepted (2038/2106 rejected as invalid_birthday = future, same validation as develop), language fr/EN and page_size A3/a5 -> 400 invalid_* (Go validation), pagination limit=7 over 20 books returns each once, ordered by updated_at desc, 21st book 409, tampered cursors 400.
+   AC4 Delete: owner scoped (user B GET/PATCH/PUT/DELETE of A's book = 404, book untouched); object store down (second API with S3 endpoint 127.0.0.1:1) -> 502 storage_error, 115/115 book and profile rows kept, book readable; rollback with a failing child purger + zero rows + foreign delete calls nothing: dev TestDeleteCallsChildrenAndRollsBack, passes (code read: tx, deleteProfiles, children, deleteBook, commit). 20-book limit: 40 parallel creates = exactly 20 x 201 + 20 x 409, 20 rows/20 profiles.
+   AC5: cover/photo of another own book, of another user, unknown id -> 400 invalid_media; own media accepted; deleting a photo used as cover and photo clears both (0 dangling); media.RefClearer wired in main.go.
+   AC6 query counts: dev counting-connector test passes (list 1 and 50 = 3, get = 3); mine via MySQL Com_* deltas on real HTTP calls: list of 20 books (one with cover) = 3 queries beyond the auth baseline, get = 3; with no media 2. No join in yearbook/store.go (media/notes keep theirs, T-065..67).
+   Newman against the branch (API restarted before each run because the in-memory limiter is not in this branch): yearbooks x2 189 assertions 0 failed, media x2 126/0, notes x2 137/0 (after make verify-newman-users equivalent).
+   Changed tests judged: TestMigratePageSizeLetter (rolls back to the pre-T-064 schema first, same assertions: ok); TestDeleteAndLimit (user-delete cascade block removed: FK gone by design, T-025 owns user deletion, ok); validate_test cursor (ms: ok); media/notes/yearbook integration tests only table names and the NewService/SetRefClearer wiring; other domains' SQL only renamed (git diff checked). docs/README: no old table names left (git grep).
+- 2026-10-10 04:13Z · leader · QA_FAIL (rework 1), blocking: Service.Delete deadlocks with concurrent PATCH/PUT profile (locks profile_tab then yearbook_tab, Store.modify locks the other way): 75 of 125 requests 5xx in QA's test internal/yearbook/race_integration_test.go (commit 37c79af, run: go test -race -count=1 -tags integration -run TestDeleteRacesWithEdits ./internal/yearbook; develop gives 0). Fix per the spec's new 'Lock order' section and docs/db-conventions.md: lock the owner's yearbook_tab row FOR UPDATE first in Delete (and in the media-delete path that clears cover/photo refs), document the order in a comment on both methods, test must show 0 5xx. QA's non-blocking: DELETE /v1/media/{id} racing with setting that photo as cover also deadlocked (same fix). Everything else QA checked passed (migration on 307 rows with Up/Down/Up identical, indexes, query counts, limit under concurrency, scoping).
 
 ### T-065 — [E10] DB conventions: media table
 - **Status:** BACKLOG
