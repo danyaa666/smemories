@@ -139,7 +139,10 @@ func printOf(display []byte) ([]byte, error) {
 	// The display's format decides (PNG stays PNG even when its pixels happen to be opaque).
 	disp := resize(img, displayEdge)
 	if pr := printSized(disp); pr != disp {
-		return encode(pr, format == "png", printQuality)
+		enc, err := encode(pr, format == "png", printQuality)
+		if err != nil || len(enc) < len(display) { // a synthetic PNG can be larger at 1800 px than at 3000 px: keep the display bytes then
+			return enc, err
+		}
 	}
 	return display, nil
 }

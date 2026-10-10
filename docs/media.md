@@ -59,12 +59,23 @@ while `print_key` is NULL it answers in display size, so the print renderer work
   before, 960 MiB after (the print buffer is 1800 x 1350 x 4 bytes, about 10 MB).
 - Deleting a photo, discarding a failed submission or deleting a yearbook removes the print object too; a failed print write leaves nothing behind.
 
-**Backfill.** `bin/smemories-media-backfill [--dry-run] [--batch 100]` (same `SMEM_*` environment as the API: database and S3) creates the print object
+**Backfill.** `bin/smemories-media-backfill [--dry-run] [--batch 100] [--max-consecutive-failures 20]` creates the print object
 of every photo with `print_key IS NULL` from its stored display object, oldest first. It is idempotent (finished photos are never selected; a crash only
 repeats one write), can be stopped with Ctrl-C and restarted, and holds one image in memory at a time. It prints
 `print objects created: N, skipped: N, failed: N` (skipped: deleted meanwhile; failed: display object missing or unreadable, logged by media id, retried by
-the next run) and exits 1 when something failed. Run `--dry-run` first to see how many photos are waiting. Run it once after `make migrate` / the deploy
-that carries migration 0013; locally `make build && bin/smemories-media-backfill`.
+the next run) and exits 1 when something failed. Run it once after `make migrate` / the deploy that carries migration 0013; locally `make build && bin/smemories-media-backfill`.
+
+- **Environment (T-075).** It loads its configuration like `smemories-migrate` (`config.LoadMigrate`): `SMEM_DB_DSN` plus the object-store settings
+  (`SMEM_S3_BUCKET`, `SMEM_S3_REGION`, `SMEM_S3_ENDPOINT` and `SMEM_S3_PATH_STYLE` for MinIO, `SMEM_S3_ACCESS_KEY` / `SMEM_S3_SECRET_KEY`) and the optional `SMEM_ENV`, `SMEM_LOG_LEVEL`, `SMEM_DB_MAX_*`. It does **not** need `SMEM_REDIS_URL`, `SMEM_OTP_KEY`, `SMEM_ALLOWED_ORIGINS`
+  or `SMEM_PUBLIC_BASE_URL`; values that are set are still validated. The one-off task definition (T-022) carries exactly this list.
+- **Object-store outage.** After `--max-consecutive-failures` (default 20) object-store errors in a row (a read that is not "not found", or a write) the run stops with
+  exit 1 and "object store keeps failing", instead of walking every photo at about 2.5 s each. A photo that fails on its own (display object missing or corrupt) does not count and
+  resets the streak.
+- **Dry run.** `--dry-run` reads and decodes every display object like a real run (so it takes about as long minus the writes) and writes nothing; "would create" is therefore exact,
+  and corrupt or missing display objects show as `failed`.
+- **Delete race.** If a photo is deleted between the print write and the row update, the backfill deletes the object it just wrote (it checks that the row is gone; a parallel
+  backfill that filled the row keeps the object, which has the same key).
+- **No gain.** Like photos not larger than 1800 px, a photo whose 1800 px encoding is not smaller than its display bytes (only seen with synthetic PNGs) gets the display bytes as its print object.
 
 ## What was wrong, and the fix
 

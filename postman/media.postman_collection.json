@@ -407,6 +407,139 @@
           ]
         },
         {
+          "name": "6c. A uploads a 2400x1200 JPEG (larger than the 1800 px print size)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/media",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks",
+                "{{bookId}}",
+                "media"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "fixtures/media/photo-large.jpg"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "const m = pm.response.json().media;",
+                  "pm.test('display keeps 2400x1200', () => { pm.expect(m.width).to.eql(2400); pm.expect(m.height).to.eql(1200); });",
+                  "pm.collectionVariables.set('bigMediaId', m.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6d. A downloads the print size of the large photo: long edge exactly 1800 px",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/media/{{bigMediaId}}/content?size=print",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "media",
+                "{{bigMediaId}}",
+                "content"
+              ],
+              "query": [
+                {
+                  "key": "size",
+                  "value": "print"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('jpeg', () => pm.expect(pm.response.headers.get('Content-Type')).to.eql('image/jpeg'));",
+                  "const b = pm.response.stream; // Buffer of the raw body\nlet w = 0, h = 0, i = 2;\nwhile (i + 9 < b.length && b[i] === 0xFF) {\n  const mk = b[i + 1];\n  if (mk >= 0xC0 && mk <= 0xCF && mk !== 0xC4 && mk !== 0xC8 && mk !== 0xCC) { h = b.readUInt16BE(i + 5); w = b.readUInt16BE(i + 7); break; }\n  i += 2 + b.readUInt16BE(i + 2);\n}\npm.test('long edge is 1800 px (1800x900)', () => { pm.expect(Math.max(w, h)).to.eql(1800); pm.expect(Math.min(w, h)).to.eql(900); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6e. A deletes the large photo (keeps the later list steps unchanged)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/media/{{bigMediaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "media",
+                "{{bigMediaId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "7. A fetches a byte range",
           "request": {
             "method": "GET",

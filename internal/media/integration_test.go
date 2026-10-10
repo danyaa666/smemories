@@ -42,8 +42,20 @@ type flaky struct {
 	storage.Storage
 	mu                       sync.Mutex
 	failPut, failDeletePrefx bool
-	thumbOnly, printOnly     bool            // with failPut: only thumbnail (print) writes fail
-	keys                     map[string]bool // objects written through the wrapper and not yet deleted
+	thumbOnly, printOnly     bool             // with failPut: only thumbnail (print) writes fail
+	keys                     map[string]bool  // objects written through the wrapper and not yet deleted
+	failGet                  bool             // Get fails with an error that is not ErrNotFound (an outage)
+	afterPut                 func(key string) // runs after a successful Put (a racing delete in the backfill tests)
+}
+
+func (f *flaky) Get(ctx context.Context, key string) ([]byte, error) {
+	f.mu.Lock()
+	fail := f.failGet
+	f.mu.Unlock()
+	if fail {
+		return nil, errors.New("injected get failure")
+	}
+	return f.Storage.Get(ctx, key)
 }
 
 // count is how many objects exist under prefix.
@@ -90,6 +102,9 @@ func (f *flaky) Put(ctx context.Context, key, ct string, data []byte) error {
 	f.mu.Lock()
 	f.keys[key] = true
 	f.mu.Unlock()
+	if f.afterPut != nil {
+		f.afterPut(key)
+	}
 	return nil
 }
 

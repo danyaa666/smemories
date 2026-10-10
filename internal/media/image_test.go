@@ -10,6 +10,7 @@ import (
 	"image/gif"
 	"image/jpeg"
 	"image/png"
+	"math/rand/v2"
 	"os"
 	"strings"
 	"testing"
@@ -458,5 +459,31 @@ func TestPrintOfDisplay(t *testing.T) {
 	}
 	if _, err := printOf(jpegWith(t, quad(3001, 10, false))); !errors.Is(err, ErrInvalidImage) {
 		t.Fatalf("a display larger than 3000 px is not ours: %v", err)
+	}
+}
+
+// T-075: a synthetic PNG that is larger at 1800 px than at 3000 px keeps its display bytes as the print object.
+func TestPrintOfKeepsDisplayWhenPrintIsNotSmaller(t *testing.T) {
+	img := image.NewNRGBA(image.Rect(0, 0, 3000, 2000))
+	rng := rand.New(rand.NewPCG(1, 2)) // random 3x3 blocks: cheap to compress as drawn, many grey levels once scaled by 0.6
+	for by := 0; by < 2000; by += 3 {
+		for bx := 0; bx < 3000; bx += 3 {
+			if rng.IntN(2) == 0 {
+				continue
+			}
+			for y := by; y < min(by+3, 2000); y++ {
+				for x := bx; x < min(bx+3, 3000); x++ {
+					img.SetNRGBA(x, y, color.NRGBA{0, 0, 0, 255})
+				}
+			}
+		}
+	}
+	display := encPNG(t, img)
+	out, err := printOf(display)
+	if err != nil || !bytes.Equal(out, display) {
+		t.Fatalf("want the display bytes (%d), got %d bytes, err %v", len(display), len(out), err)
+	}
+	if enc, err := encode(resize(img, printEdge), true, printQuality); err != nil || len(enc) < len(display) {
+		t.Fatalf("fixture is not larger as print (%d vs %d bytes), the test proves nothing: %v", len(enc), len(display), err)
 	}
 }
