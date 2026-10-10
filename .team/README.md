@@ -12,16 +12,15 @@
 |---|---:|---|
 | BACKLOG | 32 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-044, T-050, T-056, T-058, T-059, T-060, T-061, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-075, T-076 |
 | TODO | 1 | T-064 |
-| CHANGES_REQUESTED | 1 | T-053 |
-| MERGED | 7 | T-034, T-048, T-049, T-052, T-054, T-057, T-074 |
-| DONE | 28 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-035, T-036, T-037, T-038, T-043, T-045, T-046, T-047, T-051, T-062, T-063 |
+| IN_PROGRESS | 1 | T-053 |
+| DONE | 35 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-054, T-057, T-062, T-063, T-074 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
 
-**Awaiting your review (MERGED):** T-034 ([E04] Public note submission (text and photos)); T-048 ([E02] Email one-time codes replace verification and reset links (API) with a dev-only fixed code); T-049 ([E02] Web: code entry screens for email verification and password reset); T-052 ([E02] Login sessions move to Redis (drop the sessions table)); T-054 ([E05] Spike: HTML templates and browser print-to-PDF instead of server rendering); T-057 ([E05] Media print-size variant (1800 px) with backfill); T-074 ([E04] Sweep orphaned upload spool files at start-up)
+**Awaiting your review (MERGED):** nothing
 
 **Open questions for you:** none
 
-_Board last written 2026-10-10 03:28Z_
+_Board last written 2026-10-10 03:29Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -1449,7 +1448,7 @@ Evidence from the T-006/T-030 merges: the workflow's concurrency group has cance
 - 2026-10-08 09:23Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-015, T-033, T-035, T-036')
 
 ### T-034 — [E04] Public note submission (text and photos)
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -1460,7 +1459,7 @@ Evidence from the T-006/T-030 merges: the workflow's concurrency group has cance
 - **Assignee:** —
 - **Branch:** task/t-034-public-note-submission-text-and-photos
 - **PR:** 30
-- **Updated:** 2026-10-09 03:59Z by leader
+- **Updated:** 2026-10-10 03:28Z by human
 - **Comments-seen:** 12
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/02-public-note-submission.md`
@@ -1544,6 +1543,7 @@ Public endpoint where a friend with a collection link submits a note with text, 
 - 2026-10-09 03:43Z · leader · Leader review OK (head 97ee5a2 = QA head, CI green, no .team changes). Checked: spool to 0600 temp file removed on every exit path, connection caps taken before any read and never counted against request caps, 503 refunds, pace/min-rate, early-error drain, honeypot, validation before any photo decode, photo cleanup on failure, no PII stored or logged. Non-blocking follow-ups: T-074 (startup sweep of orphaned spool files). Note for owner: migration 0010 still uses v1 style (FKs, ENUM, DATETIME); T-066 converts it. Awaiting owner approval: the public upload endpoint POST /v1/public/collect/{token}/notes, its caps (48 global / 8 per IP / 16 KiB/s) and migration 0010.
 - 2026-10-09 03:59Z · human · owner approved merge
 - 2026-10-09 03:59Z · leader · merged 20b5bfc. Review: spool-to-disk upload with connection caps (48/8 per IP), pace limits, early-error drain, honeypot, rate limits, photo cleanup on failure; QA round 3 clean. For owner to check: README/.env.example settings SMEM_PUBLIC_UPLOAD_MAX_CONNS and ..._CONCURRENT_PER_IP, docs/media.md disk sizing (48 x 32 MiB) for T-022. Follow-up T-074.
+- 2026-10-10 03:28Z · human · accepted by owner
 
 ### T-035 — [E05] T-010 follow-ups: template tests iterate templates.List()
 - **Status:** DONE
@@ -1939,7 +1939,7 @@ CI on develop failed once on TestGoogleConcurrentCallbacksCreateOneAccount: goog
 - 2026-10-09 01:42Z · leader · accepted by owner (chat, 2026-10-09: 'team accept T-016, T-046, T-047, T-051')
 
 ### T-048 — [E02] Email one-time codes replace verification and reset links (API) with a dev-only fixed code
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -1950,7 +1950,7 @@ CI on develop failed once on TestGoogleConcurrentCallbacksCreateOneAccount: goog
 - **Assignee:** —
 - **Branch:** task/t-048-e02-email-one-time-codes-replace-verific
 - **PR:** https://github.com/danyaa666/smemories/pull/38
-- **Updated:** 2026-10-09 04:28Z by leader
+- **Updated:** 2026-10-10 03:28Z by human
 - **Comments-seen:** 9
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/08-email-otp-codes-replace-links-api.md`
@@ -1989,9 +1989,10 @@ CI on develop failed once on TestGoogleConcurrentCallbacksCreateOneAccount: goog
   - Newman (real API, SMEM_ENV=dev, SMEM_DEV_FIXED_OTP=123123, scratch DB, Redis db 9, MinIO): auth Full flow + Edge cases 67 requests / 150 assertions, 0 failures, twice back to back; notes (Setup + verify A/B + whole collection incl. T-034 photo notes) 72 requests / 137 assertions, 0 failures, twice back to back; API log had 0 ERROR lines.
   NON-BLOCKING: the Google folder of the auth collection fails without Google configured (expected). The 5/hour/IP in-memory register/forgot limits mean a third Newman run needs an API restart (documented). Notes collection needs SMEM_S3_* set in the API env (otherwise 502 on photo notes), unrelated to this change.
 - 2026-10-09 04:28Z · leader · merged bb6709a. Review: Lua check+attempt script, HMAC with 32-byte key, decoy for unknown emails, fail-closed on Redis down, dev fixed code 123123 guarded (env dev/test, refuses start otherwise, DEV-SHORTCUT(otp) tags registered); migration 0011 drops email_tokens. QA passed twice (second after the T-034 merge). For owner to check: .env.example SMEM_OTP_KEY, docs/auth-otp.md, docs/dev-shortcuts.md. Web code-entry screens are T-049; until then UI sign-up verification uses the removed link flow.
+- 2026-10-10 03:28Z · human · accepted by owner
 
 ### T-049 — [E02] Web: code entry screens for email verification and password reset
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -2002,7 +2003,7 @@ CI on develop failed once on TestGoogleConcurrentCallbacksCreateOneAccount: goog
 - **Assignee:** —
 - **Branch:** task/t-049-e02-web-code-entry-screens-for-email-ver
 - **PR:** https://github.com/danyaa666/smemories/pull/42
-- **Updated:** 2026-10-10 03:28Z by leader
+- **Updated:** 2026-10-10 03:29Z by human
 - **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/09-web-email-code-screens.md`
@@ -2034,6 +2035,7 @@ Code input screens (paste, auto-submit, resend cooldown) replacing the link page
 - 2026-10-09 13:28Z · leader · Leader review OK at head 331ad68 (= QA head, CI green, no .team changes, web only). Verified: no 123123 in web/src or dist, nothing secret in URL/storage/Referer, old token capture code removed, EN/VI parity. Non-blocking items -> T-076. Awaiting owner approval.
 - 2026-10-10 03:26Z · human · owner approved merge
 - 2026-10-10 03:28Z · leader · merged b835af9. Review: code-entry screens (auto-submit, paste, 60 s resend cooldown), two-step reset, EN/VI, old ?token= handling removed, no dev code in the bundle; QA used a real browser. For owner to check: sign up and verify with your 6-digit code (or 123123 locally); polish items are in T-076.
+- 2026-10-10 03:29Z · human · accepted by owner
 
 ### T-050 — [E06] Remove dev-only shortcuts before production (delete the fixed OTP) and add a pipeline check
 - **Status:** BACKLOG
@@ -2103,7 +2105,7 @@ Add a Redis-protocol service (Valkey 8) to the local stack and CI, the go-redis 
 - 2026-10-09 01:42Z · leader · accepted by owner (chat, 2026-10-09: 'team accept T-016, T-046, T-047, T-051')
 
 ### T-052 — [E02] Login sessions move to Redis (drop the sessions table)
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2114,7 +2116,7 @@ Add a Redis-protocol service (Valkey 8) to the local stack and CI, the go-redis 
 - **Assignee:** —
 - **Branch:** task/t-052-e02-login-sessions-move-to-redis-drop-th
 - **PR:** https://github.com/danyaa666/smemories/pull/39
-- **Updated:** 2026-10-10 03:27Z by leader
+- **Updated:** 2026-10-10 03:29Z by human
 - **Comments-seen:** 10
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/10-sessions-in-redis.md`
@@ -2150,9 +2152,10 @@ Sessions with native expiry in Redis, per-user index for delete-all, fail-closed
 - 2026-10-09 10:44Z · leader · Leader review OK at head 881c549 (= QA head, CI green, diff = T-052 only, no .team changes). Sessions in Redis (sha256 keys, atomic scripts, fail-closed 503), migration 0012 drops sessions. Non-blocking items are in the T-031/T-049 specs. Awaiting owner approval; merge order #39 then #40.
 - 2026-10-10 03:26Z · human · owner approved merge
 - 2026-10-10 03:27Z · leader · merged 35298e1. Review: sessions as sess:<sha256> hashes + usess:<uid> index in Redis, atomic scripts, fail-closed 503, reset and pre-hijack delete-all before the MySQL commit, migration 0012 drops sessions; QA passed twice. For owner to check: docs/redis.md, existing logins end after the migration. Follow-ups in T-031 (session cap) and T-049 (web string).
+- 2026-10-10 03:29Z · human · accepted by owner
 
 ### T-053 — [E02] Rate limiters move to Redis (shared limiter for all endpoints)
-- **Status:** CHANGES_REQUESTED
+- **Status:** IN_PROGRESS
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2160,10 +2163,10 @@ Sessions with native expiry in Redis, per-user index for delete-all, fail-closed
 - **Risk:** high
 - **Rework:** 1
 - **Owner-approved:** yes
-- **Assignee:** —
+- **Assignee:** dev
 - **Branch:** task/t-053-e02-rate-limiters-move-to-redis-shared-l
 - **PR:** https://github.com/danyaa666/smemories/pull/41
-- **Updated:** 2026-10-10 03:28Z by leader
+- **Updated:** 2026-10-10 03:28Z by dev
 - **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/11-rate-limiters-in-redis.md`
@@ -2191,7 +2194,7 @@ Redis sliding-window limiter with Take and Refund replacing the in-memory one ev
 - 2026-10-10 03:28Z · leader · T-052, T-057 and T-049 are merged (develop b835af9). Merge develop into the T-053 branch (conflicts: internal/auth/service.go NewService takes both sessions and limiters, handler.go, the integration tests, api/openapi.yaml, docs/redis.md, web/src/api/schema.d.ts: regenerate it), re-run make lint build test test-integration and npm run check:api. Also fix: api/openapi.yaml must list limiter_unavailable among the 503s of /v1/auth/login, /v1/auth/reset-password, /v1/auth/verify-email and every endpoint where a closed limiter applies. Then READY_FOR_QA (short regression pass; already owner-approved).
 
 ### T-054 — [E05] Spike: HTML templates and browser print-to-PDF instead of server rendering
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** spike
 - **Milestone:** M1
@@ -2202,7 +2205,7 @@ Redis sliding-window limiter with Take and Refund replacing the in-memory one ev
 - **Assignee:** —
 - **Branch:** task/t-054-spike-html-templates-and-browser-print-t
 - **PR:** https://github.com/danyaa666/smemories/pull/35
-- **Updated:** 2026-10-09 11:18Z by leader
+- **Updated:** 2026-10-10 03:28Z by human
 - **Comments-seen:** 6
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/06-spike-browser-print-to-pdf.md`
@@ -2226,6 +2229,7 @@ Prototype two designs as HTML/CSS pages printed through the browser (Save as PDF
   7. git diff origin/develop...HEAD has no .team/ paths. 
   Non-blocking: OWNER-TESTS says classic 4 or 5 pages, test asserts 4 on A5 (fine). Branch history contains ~11 MB PDFs: leader must squash-merge. I did not run browsers other than Playwright Chromium; Safari/Android/iOS remain owner tests by design.
 - 2026-10-09 11:18Z · leader · merged 85733f9 (squash, so the 11 MB of PDFs stay out of history). Review: ADR 0003 Accepted, evidence trimmed to 332 KB, PDFs gitignored, prototype only in the dev server (not in dist). For owner to check: docs/spikes/print/OWNER-TESTS.md, the phone/Safari tests are yours (D-24).
+- 2026-10-10 03:28Z · human · accepted by owner
 
 ### T-055 — [E03] Opaque list cursors: do not expose internal ids
 - **Status:** CANCELLED
@@ -2275,7 +2279,7 @@ One owner-only request returns the yearbook, profile and approved notes with ans
 #### Comments
 
 ### T-057 — [E05] Media print-size variant (1800 px) with backfill
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -2286,7 +2290,7 @@ One owner-only request returns the yearbook, profile and approved notes with ans
 - **Assignee:** —
 - **Branch:** task/t-057-e05-media-print-size-variant-1800-px-wit
 - **PR:** https://github.com/danyaa666/smemories/pull/40
-- **Updated:** 2026-10-10 03:27Z by leader
+- **Updated:** 2026-10-10 03:29Z by human
 - **Comments-seen:** 6
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/08-print-size-photo-variant.md`
@@ -2308,6 +2312,7 @@ Third stored size for printing: lighter PDFs and faster print (spike: 63 MB and 
 - 2026-10-09 10:44Z · leader · Leader review OK at head eeb4c51 (= QA head, CI green, no .team changes). Print version (1800 px, q85, PNG stays PNG, reuses display bytes when small), ?size=print same authorisation as display/thumb, delete/purge remove it, idempotent backfill binary, migration 0013 (nullable column, Down drops it). Cost: +1% upload time, +22% single-core, memory flat. Follow-ups: T-075 (backfill hardening). Awaiting owner approval; merge after #39 (migration order 0012 then 0013).
 - 2026-10-10 03:26Z · human · owner approved merge
 - 2026-10-10 03:27Z · leader · merged 487555d. Review: 1800 px print version (JPEG q85, PNG stays PNG, display bytes reused when small), ?size=print with the same authorisation, delete/purge remove it, idempotent backfill command, migration 0013 nullable column. Cost +1% upload time, memory flat. For owner to check: docs/media.md; run smemories-media-backfill (--dry-run first) to fill existing photos. Follow-up T-075 before production.
+- 2026-10-10 03:29Z · human · accepted by owner
 
 ### T-058 — [E05] Web: HTML book renderer core and print preview (browser print-to-PDF)
 - **Status:** BACKLOG
@@ -2713,7 +2718,7 @@ Adds request and pool metrics as be-golang requires; waits for Q-018 (library ch
 #### Comments
 
 ### T-074 — [E04] Sweep orphaned upload spool files at start-up
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2724,7 +2729,7 @@ Adds request and pool metrics as be-golang requires; waits for Q-018 (library ch
 - **Assignee:** —
 - **Branch:** task/t-074-e04-sweep-orphaned-upload-spool-files-at
 - **PR:** https://github.com/danyaa666/smemories/pull/43
-- **Updated:** 2026-10-09 13:53Z by leader
+- **Updated:** 2026-10-10 03:28Z by human
 - **Comments-seen:** 3
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/07-sweep-orphaned-upload-spool-files.md`
@@ -2747,6 +2752,7 @@ T-034 QA finding: a shutdown or crash in the middle of an upload leaves a smem-u
   Non-blocking observations: (1) the two WARN lines carry the Go PathError text, which includes the full path of the file/dir (random temp name, no private content); spec only forbids names in the INFO line, but dev may want to log only the error kind. (2) 'listening' is logged before the sweep line, slightly misleading ordering though accept starts after the sweep. (3) Sweep runs only at start-up, so files orphaned by a drain cut-off live until the next restart (by design).
   Test artefacts: scratchpad only; test user deleted from dev DB. No product code or .team files changed.
 - 2026-10-09 13:53Z · leader · merged 9433726. Review: sweeps only regular smem-upload-* files directly in the spool dir older than route timeout + 1 min, before the listener opens; failures WARN only. QA did a real kill -9 test. For owner to check: docs/media.md spool section.
+- 2026-10-10 03:28Z · human · accepted by owner
 
 ### T-075 — [E05] Media backfill hardening
 - **Status:** BACKLOG
