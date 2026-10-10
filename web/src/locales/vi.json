@@ -60,31 +60,30 @@
   },
   "forgot": {
     "title": "Quên mật khẩu?",
-    "intro": "Nhập email của bạn, chúng tôi sẽ gửi liên kết để đặt mật khẩu mới. Nếu bạn đăng ký bằng Google, đây cũng là cách để đặt mật khẩu.",
-    "submit": "Gửi liên kết đặt lại",
-    "sent": "Nếu địa chỉ này có tài khoản, chúng tôi đã gửi một liên kết. Liên kết có hiệu lực trong 1 giờ.",
+    "intro": "Nhập email của bạn, chúng tôi sẽ gửi mã gồm 6 chữ số để đặt mật khẩu mới. Nếu bạn đăng ký bằng Google, đây cũng là cách để đặt mật khẩu.",
+    "submit": "Gửi mã",
     "back": "Quay lại đăng nhập"
   },
   "reset": {
     "title": "Đặt mật khẩu mới",
     "submit": "Đổi mật khẩu",
     "done": "Mật khẩu đã được đổi. Hãy đăng nhập bằng mật khẩu mới.",
-    "requestNew": "Yêu cầu liên kết mới"
+    "sent": "Nếu địa chỉ này có tài khoản, chúng tôi đã gửi mã gồm 6 chữ số. Mã có hiệu lực trong 15 phút.",
+    "busy": "Máy chủ đang bận và mã của bạn đã bị dùng hết. Hãy gửi mã mới và thử lại."
   },
   "verify": {
     "title": "Xác minh email",
-    "working": "Đang xác minh email…",
     "done": "Email của bạn đã được xác minh.",
-    "continue": "Tiếp tục"
+    "continue": "Tiếp tục",
+    "sentTo": "Chúng tôi đã gửi mã gồm 6 chữ số đến {{email}}. Hãy nhập mã bên dưới. Mã có hiệu lực trong 30 phút.",
+    "submit": "Xác minh email",
+    "resendLimit": "Bạn có thể yêu cầu tối đa 3 mã mỗi giờ."
   },
   "account": {
     "title": "Tài khoản của tôi",
     "verified": "Email đã xác minh",
-    "notVerified": "Email chưa được xác minh. Hãy kiểm tra hộp thư của bạn.",
-    "resend": "Gửi lại liên kết",
-    "resendSent": "Chúng tôi đã gửi liên kết mới.",
-    "resendAlready": "Email của bạn đã được xác minh.",
-    "resendLimit": "Bạn có thể yêu cầu tối đa 3 email mỗi giờ."
+    "notVerified": "Email chưa được xác minh. Hãy nhập mã chúng tôi đã gửi.",
+    "verifyLink": "Xác minh email"
   },
   "errors": {
     "generic": "Đã xảy ra lỗi. Vui lòng thử lại.",
@@ -94,7 +93,6 @@
     "invalid_display_name": "Hãy nhập tên từ 1 đến 100 ký tự, không chứa ký tự ẩn hoặc ký tự điều khiển.",
     "email_taken": "Email này đã được đăng ký. Hãy thử đăng nhập.",
     "invalid_credentials": "Email hoặc mật khẩu không đúng.",
-    "invalid_token": "Liên kết đã hết hạn hoặc đã được sử dụng. Hãy yêu cầu liên kết mới.",
     "rate_limited": "Bạn thử quá nhiều lần. Hãy thử lại sau {{minutes}} phút.",
     "busy": "Máy chủ đang bận. Hãy thử lại sau giây lát.",
     "unauthenticated": "Phiên đăng nhập đã hết. Hãy đăng nhập lại.",
@@ -116,7 +114,12 @@
     "invalid_birthday": "Nhập một ngày có thật trong quá khứ, không sớm hơn năm 1900.",
     "invalid_quote": "Câu nói tối đa 500 ký tự, không chứa ký tự ẩn hoặc ký tự điều khiển.",
     "invalid_hobbies": "Sở thích tối đa 300 ký tự, không chứa ký tự ẩn hoặc ký tự điều khiển.",
-    "invalid_future_plans": "Dự định tối đa 300 ký tự, không chứa ký tự ẩn hoặc ký tự điều khiển."
+    "invalid_future_plans": "Dự định tối đa 300 ký tự, không chứa ký tự ẩn hoặc ký tự điều khiển.",
+    "invalid_code": "Mã không đúng. Hãy kiểm tra email và thử lại.",
+    "code_expired": "Mã đã hết hạn. Hãy gửi mã mới.",
+    "code_locked": "Bạn đã nhập sai quá nhiều lần với mã này. Hãy gửi mã mới.",
+    "code_store_unavailable": "Hiện chúng tôi chưa kiểm tra được mã. Vui lòng thử lại sau giây lát.",
+    "session_store_unavailable": "Hiện chưa kết nối được dịch vụ đăng nhập. Vui lòng thử lại sau giây lát."
   },
   "books": {
     "title": "Kỷ yếu của tôi",
@@ -172,5 +175,12 @@
     "confirmDelete": "Xóa ảnh này? Không thể hoàn tác.",
     "busy": "Máy chủ đang bận, đang thử lại…",
     "dismiss": "Đóng"
+  },
+  "code": {
+    "label": "Mã gồm 6 chữ số",
+    "hint": "Mã trong email.",
+    "resend": "Gửi mã mới",
+    "resendIn": "Gửi mã mới ({{seconds}}s)",
+    "resent": "Chúng tôi đã gửi mã mới."
   }
 }

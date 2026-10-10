@@ -13,7 +13,8 @@ const OIDC_ERRORS = ["oidc_state", "oidc_denied", "oidc_failed", "email_unverifi
 export function Login() {
   const { t } = useTranslation();
   const qc = useQueryClient();
-  const from = safePath((useLocation().state as { from?: unknown } | null)?.from);
+  const state = useLocation().state as { from?: unknown; reset?: boolean } | null;
+  const from = safePath(state?.from);
   const oidc = useSearchParams()[0].get("error");
   const { data: user } = useMe();
   const [email, setEmail] = useState("");
@@ -31,6 +32,7 @@ export function Login() {
   return (
     <>
       <h1>{t("login.title")}</h1>
+      {state?.reset && <p role="status">{t("reset.done")}</p>}
       {oidc && (
         <p role="alert" className="error">
           {t(OIDC_ERRORS.includes(oidc) ? `login.oidc.${oidc}` : "login.oidc.unknown")}

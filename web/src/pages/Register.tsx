@@ -20,7 +20,14 @@ export function Register() {
       register(email, password, displayName, i18n.resolvedLanguage === "vi" ? "vi" : "en"),
     onSuccess: (u) => qc.setQueryData(ME_KEY, u),
   });
-  if (user) return <Navigate to="/account" replace />;
+  if (user) {
+    // Straight after sign-up the code is on its way: land on the code screen (it starts its resend cooldown).
+    return user.email_verified ? (
+      <Navigate to="/account" replace />
+    ) : (
+      <Navigate to="/verify-email" replace state={{ sent: m.isSuccess }} />
+    );
+  }
   const submit = (e: FormEvent) => {
     e.preventDefault();
     m.mutate();
