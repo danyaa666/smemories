@@ -1,5 +1,5 @@
 // Command smemories-media-backfill creates the print-size object (T-057) of photos uploaded before it existed.
-// It reads the same SMEM_* environment as the API (database and S3), is idempotent and can be stopped and
+// It needs only the database and object-store SMEM_* settings (not Redis or the email-code key), is idempotent and can be stopped and
 // restarted at any time. docs/media.md describes the run.
 package main
 
@@ -22,12 +22,13 @@ import (
 func main() {
 	dryRun := flag.Bool("dry-run", false, "count the photos without a print object, write nothing")
 	batch := flag.Int("batch", 100, "photos read from the database at a time")
+	maxFails := flag.Int("max-consecutive-failures", 20, "stop after this many object-store errors in a row")
 	flag.Parse()
-	if *batch < 1 || *batch > 10000 {
-		fmt.Fprintln(os.Stderr, "usage: smemories-media-backfill [--dry-run] [--batch 1..10000]")
+	if *batch < 1 || *batch > 10000 || *maxFails < 1 {
+		fmt.Fprintln(os.Stderr, "usage: smemories-media-backfill [--dry-run] [--batch 1..10000] [--max-consecutive-failures N>=1]")
 		os.Exit(2)
 	}
-	cfg, err := config.Load(os.Getenv)
+	cfg, err := config.LoadMigrate(os.Getenv)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "config error:", err)
 		os.Exit(1)
@@ -51,7 +52,7 @@ func main() {
 		AccessKey: cfg.S3AccessKey, SecretKey: cfg.S3SecretKey, PathStyle: cfg.S3PathStyle}), 1,
 		ratelimit.NewFactory(nil, logger, nil), nil) // Backfill never uploads, so the upload limiter (and Redis) is never touched
 
-	st, err := svc.Backfill(ctx, *batch, *dryRun, logger)
+	st, err := svc.Backfill(ctx, *batch, *maxFails, *dryRun, logger)
 	verb := "created"
 	if *dryRun {
 		verb = "would create"

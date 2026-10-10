@@ -2,6 +2,7 @@ package config
 
 import (
 	"log/slog"
+	"maps"
 	"strconv"
 	"strings"
 	"testing"
@@ -246,6 +247,22 @@ func TestLoadMigrateNeedsNeitherRedisNorOTPKey(t *testing.T) {
 	prod := map[string]string{"SMEM_ENV": "prod", "SMEM_DB_DSN": dsn, "SMEM_ALLOWED_ORIGINS": "https://a.example", "SMEM_PUBLIC_BASE_URL": "https://a.example", "SMEM_S3_BUCKET": "b", "SMEM_REDIS_URL": "", "SMEM_OTP_KEY": ""}
 	if _, err := LoadMigrate(env(prod)); err != nil {
 		t.Fatalf("LoadMigrate: %v", err)
+	}
+	// T-075: the media backfill (database and object store only) needs no web settings either.
+	delete(prod, "SMEM_ALLOWED_ORIGINS")
+	delete(prod, "SMEM_PUBLIC_BASE_URL")
+	if _, err := LoadMigrate(env(prod)); err != nil {
+		t.Fatalf("LoadMigrate without origins and base URL: %v", err)
+	}
+	api := maps.Clone(prod)
+	delete(api, "SMEM_REDIS_URL") // env() then supplies one
+	api["SMEM_OTP_KEY"] = strings.Repeat("k", 32)
+	if _, err := Load(env(api)); err == nil || !strings.Contains(err.Error(), "SMEM_ALLOWED_ORIGINS") {
+		t.Fatalf("Load must still require SMEM_ALLOWED_ORIGINS in prod, got %v", err)
+	}
+	prod["SMEM_PUBLIC_BASE_URL"] = "ftp://bad"
+	if _, err := LoadMigrate(env(prod)); err == nil {
+		t.Fatal("a set but invalid SMEM_PUBLIC_BASE_URL must still be rejected")
 	}
 	if _, err := Load(env(prod)); err == nil {
 		t.Fatal("Load must still require SMEM_REDIS_URL")

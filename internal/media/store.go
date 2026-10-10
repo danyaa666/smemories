@@ -210,3 +210,10 @@ func (s *Store) setPrintKey(ctx context.Context, rowID int64, key string) (bool,
 	n, err := res.RowsAffected()
 	return n == 1, err
 }
+
+// exists reports whether the photo row is still there.
+func (s *Store) exists(ctx context.Context, rowID int64) (bool, error) {
+	var n int
+	err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM media WHERE id = ?`, rowID).Scan(&n)
+	return n == 1, err
+}

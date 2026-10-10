@@ -79,8 +79,9 @@ var logLevels = map[string]slog.Level{
 // variable takes its default; an invalid value returns an error naming the variable.
 func Load(getenv func(string) string) (Config, error) { return load(getenv, true) }
 
-// LoadMigrate is Load for smemories-migrate: it skips the settings only the API needs (Redis, email codes), because
-// the one-off migration task has no access to Redis (T-022) and must not fail on a missing SMEM_REDIS_URL or SMEM_OTP_KEY.
+// LoadMigrate is Load for the one-off tasks (smemories-migrate, smemories-media-backfill): it skips the settings only the API
+// needs (Redis, email codes, allowed origins, public base URL), because those tasks have no access to Redis (T-022) and must not
+// fail on a missing SMEM_REDIS_URL, SMEM_OTP_KEY or SMEM_ALLOWED_ORIGINS. Values that are set are still validated.
 func LoadMigrate(getenv func(string) string) (Config, error) { return load(getenv, false) }
 
 func load(getenv func(string) string, forAPI bool) (Config, error) {
@@ -142,17 +143,17 @@ func load(getenv func(string) string, forAPI bool) (Config, error) {
 		}
 		cfg.AllowedOrigins = append(cfg.AllowedOrigins, strings.ToLower(u.Scheme+"://"+u.Host))
 	}
-	if len(cfg.AllowedOrigins) == 0 {
+	if len(cfg.AllowedOrigins) == 0 && forAPI {
 		return Config{}, fmt.Errorf("SMEM_ALLOWED_ORIGINS is required in prod (e.g. https://app.example.com)")
 	}
 	base := get("SMEM_PUBLIC_BASE_URL", "")
 	if base == "" && cfg.Env != "prod" {
 		base = "http://localhost:5173"
 	}
-	if base == "" {
+	if base == "" && forAPI {
 		return Config{}, fmt.Errorf("SMEM_PUBLIC_BASE_URL is required in prod (e.g. https://app.example.com)")
 	}
-	if u, err := url.Parse(base); err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.RawQuery != "" || u.Fragment != "" || u.User != nil {
+	if u, err := url.Parse(base); base != "" && (err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.RawQuery != "" || u.Fragment != "" || u.User != nil) {
 		return Config{}, fmt.Errorf("SMEM_PUBLIC_BASE_URL=%q: want a URL such as https://app.example.com", base)
 	}
 	cfg.PublicBaseURL = strings.TrimRight(base, "/")

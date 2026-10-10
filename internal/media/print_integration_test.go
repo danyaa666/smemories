@@ -5,6 +5,7 @@ package media
 import (
 	"bytes"
 	"context"
+	"errors"
 	"image"
 	"io"
 	"log/slog"
@@ -106,18 +107,18 @@ func TestBackfillPrint(t *testing.T) {
 	}
 
 	// Dry run writes nothing.
-	st, err := e.svc.Backfill(context.Background(), 2, true, log)
-	if err != nil || st.Created != 4 || e.count(`SELECT COUNT(*) FROM media WHERE print_key IS NOT NULL`) != 0 || e.st.count(yearbookPrefix(book)) != 7 { // 4 photos x 3 objects, minus 4 prints and 1 display
+	st, err := e.svc.Backfill(context.Background(), 2, 1, true, log)
+	if err != nil || st != (BackfillStats{Created: 3, Failed: 1}) || e.count(`SELECT COUNT(*) FROM media WHERE print_key IS NOT NULL`) != 0 || e.st.count(yearbookPrefix(book)) != 7 { // 4 photos x 3 objects, minus 4 prints and 1 display
 		t.Fatalf("dry run %+v err %v", st, err)
 	}
 
 	// The real run (batches of 2) fills three photos and reports the broken one; running again changes nothing.
-	st, err = e.svc.Backfill(context.Background(), 2, false, log)
+	st, err = e.svc.Backfill(context.Background(), 2, 1, false, log)
 	if err != nil || st != (BackfillStats{Created: 3, Failed: 1}) {
 		t.Fatalf("run 1: %+v %v", st, err)
 	}
 	objects := e.st.count(yearbookPrefix(book))
-	st, err = e.svc.Backfill(context.Background(), 2, false, log)
+	st, err = e.svc.Backfill(context.Background(), 2, 1, false, log)
 	if err != nil || st != (BackfillStats{Failed: 1}) || e.st.count(yearbookPrefix(book)) != objects {
 		t.Fatalf("run 2: %+v %v", st, err)
 	}
@@ -143,5 +144,86 @@ func TestBackfillPrint(t *testing.T) {
 	e.json(u, "DELETE", "/v1/media/"+a, "").status(204, "")
 	if _, err := e.st.Get(context.Background(), yearbookPrefix(book)+a+"-print.jpg"); err == nil {
 		t.Fatal("print object survived the delete")
+	}
+}
+
+// backfillFixture is a book with n legacy-style photos (big, no print object) and the media ids.
+func backfillFixture(t *testing.T, e *env, n int) (book string, ids []string) {
+	u := e.register("a@example.com")
+	book = e.newBook(u)
+	for i := range n {
+		ids = append(ids, e.upload(u, book, "a.jpg", "image/jpeg", bigPhoto(t)).status(201, "").mediaID())
+		_ = e.st.Delete(context.Background(), yearbookPrefix(book)+ids[i]+"-print.jpg")
+	}
+	if _, err := e.db.Exec(`UPDATE media SET print_key = NULL`); err != nil {
+		t.Fatal(err)
+	}
+	return book, ids
+}
+
+// T-075: an object-store outage stops the run after N failures in a row, in a dry run too; a photo that fails on its own does not count.
+func TestBackfillStopsAfterConsecutiveStorageFailures(t *testing.T) {
+	e := newEnv(t)
+	_, ids := backfillFixture(t, e, 5)
+	log := slog.New(slog.NewJSONHandler(io.Discard, nil))
+	e.st.mu.Lock()
+	e.st.failGet = true
+	e.st.mu.Unlock()
+	for _, dry := range []bool{true, false} {
+		st, err := e.svc.Backfill(context.Background(), 2, 3, dry, log)
+		if !errors.Is(err, ErrStorageDown) || st != (BackfillStats{Failed: 3}) {
+			t.Fatalf("dry=%v: %+v %v", dry, st, err)
+		}
+	}
+	// The store is back: the run finishes every photo.
+	e.st.mu.Lock()
+	e.st.failGet = false
+	e.st.mu.Unlock()
+	if st, err := e.svc.Backfill(context.Background(), 2, 3, false, log); err != nil || st != (BackfillStats{Created: len(ids)}) {
+		t.Fatalf("after recovery: %+v %v", st, err)
+	}
+}
+
+func TestBackfillPutFailuresCountAndMissingDisplayDoesNot(t *testing.T) {
+	e := newEnv(t)
+	book, ids := backfillFixture(t, e, 4)
+	log := slog.New(slog.NewJSONHandler(io.Discard, nil))
+	_ = e.st.Delete(context.Background(), yearbookPrefix(book)+ids[0]+".jpg") // not a storage outage: the object is simply gone
+	e.st.set(true, false)
+	st, err := e.svc.Backfill(context.Background(), 10, 2, false, log)
+	if !errors.Is(err, ErrStorageDown) || st != (BackfillStats{Failed: 3}) { // 1 missing, then 2 failed writes in a row
+		t.Fatalf("%+v %v", st, err)
+	}
+}
+
+// T-075: a photo deleted between the print write and the row update leaves no print object; a photo filled by a parallel run keeps it.
+func TestBackfillDeleteRace(t *testing.T) {
+	log := slog.New(slog.NewJSONHandler(io.Discard, nil))
+	for _, tc := range []struct {
+		name, sql string
+		kept      bool
+	}{
+		{"deleted", `DELETE FROM media`, false},
+		{"filled by a parallel run", `UPDATE media SET print_key = CONCAT(SUBSTRING(object_key, 1, CHAR_LENGTH(object_key) - 4), '-print.jpg')`, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			e := newEnv(t)
+			book, ids := backfillFixture(t, e, 1)
+			e.st.afterPut = func(key string) {
+				if strings.HasSuffix(key, "-print.jpg") {
+					if _, err := e.db.Exec(tc.sql); err != nil {
+						t.Error(err)
+					}
+				}
+			}
+			st, err := e.svc.Backfill(context.Background(), 10, 1, false, log)
+			if err != nil || st != (BackfillStats{Skipped: 1}) {
+				t.Fatalf("%+v %v", st, err)
+			}
+			_, err = e.st.Get(context.Background(), yearbookPrefix(book)+ids[0]+"-print.jpg")
+			if (err == nil) != tc.kept {
+				t.Fatalf("print object present=%v, want %v", err == nil, tc.kept)
+			}
+		})
 	}
 }
