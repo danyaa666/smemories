@@ -129,6 +129,7 @@ type env struct {
 	svc   *Service
 	h     http.Handler
 	books []string
+	lim   *ratelimit.Factory
 }
 
 func newEnv(t *testing.T) *env {
@@ -143,17 +144,18 @@ func newEnv(t *testing.T) *env {
 	if err != nil {
 		t.Fatal(err)
 	}
+	e.lim = ratelimit.NewFactory(rc, logger, nil)
 	sessions, err := auth.NewSessions(context.Background(), rc, logger)
 	if err != nil {
 		t.Fatal(err)
 	}
 	as, err := auth.NewService(auth.NewStore(d), sessions, hasher, auth.Limits{RegisterPerHour: 1000, LoginFailsPerPair: 1000, LoginFailsPerIP: 1000},
-		auth.Mail{Mailer: mail, Logger: logger}, codes, nil)
+		auth.Mail{Mailer: mail, Logger: logger}, codes, e.lim, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	ah := auth.NewHandler(as, auth.HandlerConfig{AllowedOrigins: []string{origin}}, logger)
-	e.svc = NewService(NewStore(d), e.st, 2, nil) // two at a time, so parallel tests queue on the semaphore
+	e.svc = NewService(NewStore(d), e.st, 2, e.lim, nil) // two at a time, so parallel tests queue on the semaphore
 	mh := NewHandler(e.svc, 10<<20, ah.RequireUser, []string{origin}, logger)
 	yh := yearbook.NewHandler(yearbook.NewStore(d), e.svc, ah.RequireUser, []string{origin}, logger, nil)
 	e.h = httpx.NewRouter(logger, ah.Routes, yh.Routes, mh.Routes)
@@ -485,7 +487,7 @@ func TestQuotas(t *testing.T) {
 
 func TestRateLimit(t *testing.T) {
 	e := newEnv(t)
-	e.svc.limiter = ratelimit.New(3, time.Minute, nil)
+	e.svc.limiter = e.lim.Open("media_upload", 3, time.Minute)
 	u, other := e.register("a@example.com"), e.register("b@example.com")
 	book, book2 := e.newBook(u), e.newBook(other)
 	for range 3 {

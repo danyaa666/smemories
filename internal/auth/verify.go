@@ -12,7 +12,12 @@ func (s *Service) VerifyEmail(ctx context.Context, u User, code string) error {
 	if u.EmailVerified {
 		return nil
 	}
-	if ok, retry := s.verifyTries.Take(u.ID); !ok {
+	// Fails closed (503 limiter_unavailable): this limit bounds code guessing per user.
+	ok, retry, err := s.verifyTries.Take(ctx, u.ID)
+	if err != nil {
+		return err
+	}
+	if !ok {
 		return RateLimitedError{retry}
 	}
 	now := s.now().UTC()
@@ -28,7 +33,8 @@ func (s *Service) ResendVerification(ctx context.Context, u User) (alreadyVerifi
 	if u.EmailVerified {
 		return true, nil
 	}
-	if ok, retry := s.resend.Take(u.ID); !ok {
+	// Fails open: a resend is not a guess.
+	if ok, retry, _ := s.resend.Take(ctx, u.ID); !ok {
 		return false, RateLimitedError{retry}
 	}
 	return false, s.sendCode(ctx, u, purposeVerify)

@@ -5,7 +5,7 @@ with their attempt counters (T-048) and the rate limiters (T-053). MySQL keeps e
 server is **Valkey 8** (BSD licence), pinned by digest in `docker-compose.yml` and `.github/workflows/ci.yml`; the code
 uses only the Redis protocol (client `github.com/redis/go-redis/v9`), so Redis or ElastiCache work too.
 
-T-051 added the plumbing; the data stored so far is the email codes of T-048 (`docs/auth-otp.md`) and the login sessions of T-052 (below).
+T-051 added the plumbing; the data stored so far: the email codes of T-048 (`docs/auth-otp.md`), the login sessions of T-052 and the rate limiters of T-053 (below).
 
 ## Configuration
 
@@ -40,9 +40,8 @@ one server in an emergency without colliding. Parts must come from hashes or num
 | `smem:<env>:sess:<h>` | T-052 | one hash per login session, `<h>` = hex sha256 of the cookie value (the raw token never reaches Redis): `user_id`, `created_at`, `last_seen_at` (unix ms), `user_agent`; `EXPIRE` = remaining lifetime (30 days, slid forward once half has passed) |
 | `smem:<env>:usess:<user id>` | T-052 | set of that user's `<h>` (for "delete every session of the user"); its expiry is pushed to the latest session expiry; a login also removes the user's expired members |
 | `smem:<env>:otp:<purpose>:<user id>` | T-048 | one hash per live email code (`verify` or `reset`): `h` HMAC of the code, `a` wrong attempts, `x` expiry (ms) |
-| `smem:<env>:rl:` | T-053 | rate-limiter windows |
+| `smem:<env>:rl:<limiter>:<key>` | T-053 | one sorted set per limited key (see Rate limiters); the key expires with the window |
 
-(The prefixes of the later tasks are planned; each task documents the final names here.)
 
 ## Sessions (T-052)
 
@@ -63,7 +62,7 @@ Flushing Redis signs everybody out (401, no 500). Operating note: AOF keeps sess
 
 `redis.Classify` (also applied by `Ping` and `LoadScript`) wraps network failures, timeouts and an exhausted pool in
 `redis.ErrUnavailable` (test with `errors.Is`); every other error, such as a server reply error, is returned unchanged.
-Callers decide: sessions and OTP attempts fail closed (503) when Redis is down; the other limiters fail open with an ERROR log.
+Callers decide: sessions and OTP attempts fail closed (503) when Redis is down; the other limiters fail open with an ERROR log (see Rate limiters).
 
 ## Operations
 
@@ -81,3 +80,42 @@ Callers decide: sessions and OTP attempts fail closed (503) when Redis is down; 
 (`smem:test<random>:`) and deletes everything under it in `t.Cleanup`; it fails the test clearly when the server is
 unreachable (run `make up`). Integration tests need the `integration` tag: `make up && make test-integration`.
 Unit tests need no Redis.
+
+## Rate limiters (T-053)
+
+`internal/ratelimit`: a sliding window per key, stored as one sorted set `smem:<env>:rl:<limiter>:<key>` (score = hit time in ms).
+One Lua script per `Take` removes the entries older than the window, counts, and adds the hit, atomically. It reads the time from the
+Redis `TIME` command, so API tasks with skewed clocks agree, and `PEXPIRE`s the key to the window, so idle keys disappear.
+`Refund` removes the most recent hit (`ZPOPMAX`). On a refusal `Take` returns how long until the oldest hit leaves the window, which
+becomes `Retry-After`. `ratelimit.Memory` is the in-process version for unit tests only; `main.go` does not use it.
+
+Keys hold only IPs, numeric or public ids, or a SHA-256 hash of the normalised email (never the address itself).
+
+Fail policy when Redis is unreachable (`ratelimit.Factory`): **open** lets the request through and logs one ERROR per minute
+(`ratelimit: limiter failed`, fields `limiter`, `policy`, `failures` = failures since the last line); **closed** answers
+`503 limiter_unavailable` (`Retry-After: 5`) because the limit protects against guessing. A failed `Refund` is only logged.
+
+| Limiter name | Limit | Window | Key | Fail |
+|---|---|---|---|---|
+| `register` | `SMEM_RATE_REGISTER_PER_HOUR` (5) | 1 h | IP | open |
+| `login_pair` | `SMEM_RATE_LOGIN_FAILS_PER_EMAIL` (10) failures | 15 min | IP + hashed email | closed |
+| `login_ip` | `SMEM_RATE_LOGIN_FAILS_PER_IP` (100) failures | 15 min | IP | closed |
+| `forgot_ip` | 5 | 1 h | IP | open |
+| `forgot_email` | 3 | 1 h | hashed email | open |
+| `reset_tries` | 20 | 1 h | IP | closed |
+| `verify_resend` | 3 | 1 h | user id | open |
+| `verify_tries` | 20 | 1 h | user id | closed |
+| `google_start` | 30 | 15 min | IP | open |
+| `google_callback` | 30 | 15 min | IP | open |
+| `public_misses` | 60 (only misses count) | 15 min | IP | open |
+| `public_all` | 600 | 15 min | IP | open |
+| `submit_ip_hour` | 100 | 1 h | IP | open |
+| `submit_ip_day` | 300 | 24 h | IP | open |
+| `submit_collection_hour` | 60 | 1 h | collection id | open |
+| `media_upload` | 60 | 10 min | owner id | open |
+
+The per-code wrong-guess counter and lockout of the email codes (5 per code) is part of the code hash in Redis
+(`docs/auth-otp.md`) and fails closed as before.
+
+Reset them (dev): `make reset-limits` deletes every `smem:<SMEM_ENV>:rl:*` key of the compose Redis, so repeated Newman runs
+from one address do not hit 429 and the API does not need a restart. Production never does this.

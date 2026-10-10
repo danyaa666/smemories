@@ -179,7 +179,16 @@ paths:
         "413": {$ref: "#/components/responses/PayloadTooLarge"}
         "415": {$ref: "#/components/responses/UnsupportedMediaType"}
         "429": {$ref: "#/components/responses/RateLimited"}
-        "503": {$ref: "#/components/responses/BusyOrSessionStore"}
+        "503":
+          description: >-
+            `busy` (all password-hashing slots stayed taken), `session_store_unavailable` (no session could be created) or
+            `limiter_unavailable` (the sign-in lockout counters in Redis did not answer, so the attempt fails closed); retry after `Retry-After`.
+          headers:
+            Retry-After:
+              schema: {type: integer}
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
   /v1/auth/logout:
     post:
       operationId: logout
@@ -236,7 +245,16 @@ paths:
         "413": {$ref: "#/components/responses/PayloadTooLarge"}
         "415": {$ref: "#/components/responses/UnsupportedMediaType"}
         "429": {$ref: "#/components/responses/RateLimited"}
-        "503": {$ref: "#/components/responses/CodeOrSessionStoreUnavailable"}
+        "503":
+          description: >-
+            `code_store_unavailable`, `session_store_unavailable` or `limiter_unavailable` (the code-guess counter in Redis did not
+            answer, so the attempt fails closed); retry after `Retry-After`.
+          headers:
+            Retry-After:
+              schema: {type: integer}
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
   /v1/auth/verify-email/resend:
     post:
       operationId: resendVerificationEmail
@@ -342,7 +360,7 @@ paths:
         "415": {$ref: "#/components/responses/UnsupportedMediaType"}
         "429": {$ref: "#/components/responses/RateLimited"}
         "503":
-          description: "`busy` (all password-hashing slots stayed taken; the code is already used, ask for a new one), `code_store_unavailable` or `session_store_unavailable` (the sessions could not be deleted, so the password was not changed either)."
+          description: "`busy` (all password-hashing slots stayed taken; the code is already used, ask for a new one), `code_store_unavailable`, `limiter_unavailable` (the code-guess counter in Redis did not answer, so the attempt fails closed) or `session_store_unavailable` (the sessions could not be deleted, so the password was not changed either)."
           content:
             application/json:
               schema: {$ref: "#/components/schemas/Error"}
@@ -1055,7 +1073,7 @@ components:
         application/json:
           schema: {$ref: "#/components/schemas/Error"}
     CodeStoreUnavailable:
-      description: Redis, which holds the email codes, did not answer (`code_store_unavailable`); nothing was accepted, retry shortly.
+      description: Redis, which holds the email codes, did not answer (`code_store_unavailable`), or the rate limiter that guards sign-in, verification and reset did (`limiter_unavailable`); nothing was accepted, retry shortly.
       headers:
         Retry-After:
           schema: {type: integer}
@@ -1317,7 +1335,7 @@ components:
           properties:
             code:
               type: string
-              examples: [not_found, method_not_allowed, payload_too_large, internal_error, not_ready, invalid_credentials, unauthenticated, rate_limited, invalid_code, code_expired, code_locked, code_store_unavailable, session_store_unavailable, limit_reached, unknown_field, unsupported_media_type, invalid_image, quota_exceeded, storage_error, invalid_media, missing_answer, invalid_answer, too_many_photos, collection_full, collection_closed, verification_failed, busy, request_timeout]
+              examples: [not_found, method_not_allowed, payload_too_large, internal_error, not_ready, invalid_credentials, unauthenticated, rate_limited, invalid_code, code_expired, code_locked, code_store_unavailable, session_store_unavailable, limiter_unavailable, limit_reached, unknown_field, unsupported_media_type, invalid_image, quota_exceeded, storage_error, invalid_media, missing_answer, invalid_answer, too_many_photos, collection_full, collection_closed, verification_failed, busy, request_timeout]
             message:
               type: string
             request_id:

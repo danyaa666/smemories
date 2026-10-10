@@ -38,33 +38,34 @@ type Handler struct {
 	requireUser    func(http.Handler) http.Handler // auth.Handler.RequireUser
 	allowedOrigins []string                        // for auth.Guard
 	clientIP       func(*http.Request) string      // auth.Handler.ClientIP
-	misses, all    *ratelimit.Limiter              // public routes, per client IP
+	misses, all    ratelimit.Limiter               // public routes, per client IP
 	logger         *slog.Logger
 	now            func() time.Time
 
 	media                      *media.Service // photos of submissions
 	maxPhoto                   int64          // largest accepted photo, bytes
 	verifier                   Verifier
-	subIPHr, subIPDay, subColl *ratelimit.Limiter // submissions per IP per hour and day, per collection per hour
-	upMu                       sync.Mutex         // guards upTotal and upIP
-	upTotal                    int                // submissions in progress (their bodies spooled to disk)
-	upIP                       map[string]int     // ... per client IP
+	subIPHr, subIPDay, subColl ratelimit.Limiter // submissions per IP per hour and day, per collection per hour
+	upMu                       sync.Mutex        // guards upTotal and upIP
+	upTotal                    int               // submissions in progress (their bodies spooled to disk)
+	upIP                       map[string]int    // ... per client IP
 	upMax, upPerIP             int
 	tmpDir                     string // where bodies are spooled; "" = the OS temp dir
 }
 
 // NewHandler builds the handler; now may be nil (time.Now). svc stores the photos of submissions, each at
 // most maxPhoto bytes.
-func NewHandler(store *Store, svc *media.Service, maxPhoto int64, requireUser func(http.Handler) http.Handler, allowedOrigins []string, clientIP func(*http.Request) string, logger *slog.Logger, now func() time.Time) *Handler {
+// All its limiters fail open when Redis is down: they bound load and cost, not guessing.
+func NewHandler(store *Store, svc *media.Service, maxPhoto int64, requireUser func(http.Handler) http.Handler, allowedOrigins []string, clientIP func(*http.Request) string, limiters *ratelimit.Factory, logger *slog.Logger, now func() time.Time) *Handler {
 	if now == nil {
 		now = time.Now
 	}
 	return &Handler{store: store, requireUser: requireUser, allowedOrigins: allowedOrigins, clientIP: clientIP,
-		misses: ratelimit.New(missesPerWindow, publicWindow, now), all: ratelimit.New(allPerWindow, publicWindow, now),
+		misses: limiters.Open("public_misses", missesPerWindow, publicWindow), all: limiters.Open("public_all", allPerWindow, publicWindow),
 		logger: logger, now: now,
 		media: svc, maxPhoto: maxPhoto, verifier: allowAll{},
-		subIPHr: ratelimit.New(submitPerIPHour, time.Hour, now), subIPDay: ratelimit.New(submitPerIPDay, 24*time.Hour, now),
-		subColl: ratelimit.New(submitPerCollectionHour, time.Hour, now),
+		subIPHr: limiters.Open("submit_ip_hour", submitPerIPHour, time.Hour), subIPDay: limiters.Open("submit_ip_day", submitPerIPDay, 24*time.Hour),
+		subColl: limiters.Open("submit_collection_hour", submitPerCollectionHour, time.Hour),
 		upIP:    map[string]int{}, upMax: defaultUploadConns, upPerIP: defaultUploadsPerIP}
 }
 
@@ -169,11 +170,11 @@ func (h *Handler) revoke(w http.ResponseWriter, r *http.Request) {
 // itself and returns false; on success the collection is open.
 func (h *Handler) resolve(w http.ResponseWriter, r *http.Request) (Public, bool) {
 	ip := h.clientIP(r)
-	if ok, wait := h.all.Take(ip); !ok {
+	if ok, wait, _ := h.all.Take(r.Context(), ip); !ok {
 		tooMany(w, r, wait)
 		return Public{}, false
 	}
-	if ok, wait := h.misses.Take(ip); !ok {
+	if ok, wait, _ := h.misses.Take(r.Context(), ip); !ok {
 		tooMany(w, r, wait)
 		return Public{}, false
 	}
@@ -184,7 +185,7 @@ func (h *Handler) resolve(w http.ResponseWriter, r *http.Request) (Public, bool)
 		p, err = h.store.lookup(r.Context(), hash)
 	}
 	if !errors.Is(err, ErrNotFound) {
-		h.misses.Refund(ip) // a valid token is not a guess
+		_ = h.misses.Refund(r.Context(), ip) // a valid token is not a guess
 	}
 	if err != nil {
 		h.fail(w, r, err)

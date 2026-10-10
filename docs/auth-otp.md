@@ -54,7 +54,7 @@ logs the failure.
 
 A code has 10^6 values. One code allows 5 wrong guesses, and `resend` / `forgot-password` give at most 3 new codes per hour, so an
 attacker gets 15 guesses per hour per account: a chance of about 1.5 x 10^-5 per hour to hit the code. On top of that verify attempts
-are limited to 20 per hour per user and reset attempts to 20 per hour per IP (in-memory limiter until T-053 moves it to Redis).
+are limited to 20 per hour per user and reset attempts to 20 per hour per IP (Redis limiters `verify_tries` and `reset_tries`, which fail closed: `503 limiter_unavailable` when Redis is down; `docs/redis.md`).
 Codes are drawn with `crypto/rand` (uniform, leading zeros kept), compared as HMACs in constant time, and never logged.
 
 ## Configuration

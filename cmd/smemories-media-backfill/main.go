@@ -15,6 +15,7 @@ import (
 	"github.com/danyaa666/smemories/internal/config"
 	"github.com/danyaa666/smemories/internal/db"
 	"github.com/danyaa666/smemories/internal/media"
+	"github.com/danyaa666/smemories/internal/ratelimit"
 	"github.com/danyaa666/smemories/internal/storage"
 )
 
@@ -47,7 +48,8 @@ func main() {
 	defer func() { _ = d.Close() }()
 	svc := media.NewService(media.NewStore(d), storage.NewS3(storage.S3Config{
 		Endpoint: cfg.S3Endpoint, Region: cfg.S3Region, Bucket: cfg.S3Bucket,
-		AccessKey: cfg.S3AccessKey, SecretKey: cfg.S3SecretKey, PathStyle: cfg.S3PathStyle}), 1, nil)
+		AccessKey: cfg.S3AccessKey, SecretKey: cfg.S3SecretKey, PathStyle: cfg.S3PathStyle}), 1,
+		ratelimit.NewFactory(nil, logger, nil), nil) // Backfill never uploads, so the upload limiter (and Redis) is never touched
 
 	st, err := svc.Backfill(ctx, *batch, *dryRun, logger)
 	verb := "created"
