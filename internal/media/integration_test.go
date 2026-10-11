@@ -174,7 +174,7 @@ func newEnv(t *testing.T) *env {
 	mh := NewHandler(e.svc, 10<<20, ah.RequireUser, []string{origin}, logger)
 	bookStore := yearbook.NewStore(d)
 	e.svc.SetRefClearer(bookStore)
-	yh := yearbook.NewHandler(bookStore, yearbook.NewService(bookStore, e.svc), ah.RequireUser, []string{origin}, logger, nil)
+	yh := yearbook.NewHandler(bookStore, yearbook.NewService(bookStore, e.svc, e.svc), ah.RequireUser, []string{origin}, logger, nil)
 	e.h = httpx.NewRouter(logger, ah.Routes, yh.Routes, mh.Routes)
 	t.Cleanup(func() { // objects of every book this test created
 		for _, id := range e.books {
@@ -333,7 +333,7 @@ func TestUploadFetchDelete(t *testing.T) {
 		t.Fatalf("thumb object missing: %v", err)
 	}
 	var key, tkey string
-	_ = e.db.QueryRow(`SELECT object_key, thumb_key FROM media WHERE public_id = ?`, id).Scan(&key, &tkey)
+	_ = e.db.QueryRow(`SELECT object_key, thumb_key FROM media_tab WHERE public_id = ?`, id).Scan(&key, &tkey)
 	if strings.Contains(key+tkey, "evil") || strings.Contains(key+tkey, "php") {
 		t.Fatalf("file name leaked into keys: %s %s", key, tkey)
 	}
@@ -414,7 +414,7 @@ func TestUploadRejections(t *testing.T) {
 	if rec.Code != 403 {
 		t.Fatalf("cross-origin upload: %d", rec.Code)
 	}
-	if n := e.count(`SELECT COUNT(*) FROM media`); n != 0 {
+	if n := e.count(`SELECT COUNT(*) FROM media_tab`); n != 0 {
 		t.Fatalf("%d rows after only rejected uploads", n)
 	}
 }
@@ -451,8 +451,8 @@ func TestQuotas(t *testing.T) {
 	book := e.newBook(u)
 	fill := func(n int, bytes int) {
 		for i := range n {
-			_, err := e.db.Exec(`INSERT INTO media (public_id, yearbook_id, uploader_kind, object_key, thumb_key, content_type, bytes, width, height, sha256, created_at)
-				SELECT ?, id, 'owner', 'k', 't', 'image/jpeg', ?, 1, 1, '', NOW(6) FROM yearbook_tab WHERE public_id = ?`, fmt.Sprintf("FILL%022d", i+e.count(`SELECT COUNT(*) FROM media`)), bytes, book)
+			_, err := e.db.Exec(`INSERT INTO media_tab (public_id, yearbook_id, uploader_kind, object_key, thumb_key, content_type, bytes, width, height, sha256, created_at, updated_at)
+				SELECT ?, id, 'owner', 'k', 't', 'image/jpeg', ?, 1, 1, '', 1, 1 FROM yearbook_tab WHERE public_id = ?`, fmt.Sprintf("FILL%022d", i+e.count(`SELECT COUNT(*) FROM media_tab`)), bytes, book)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -492,11 +492,11 @@ func TestQuotas(t *testing.T) {
 
 	// Bytes per user, across books.
 	book2 := e.newBook(u)
-	if _, err := e.db.Exec(`UPDATE media SET bytes = 500*1024*1024 - 1000 WHERE id = (SELECT id FROM (SELECT MIN(id) AS id FROM media) x)`); err != nil {
+	if _, err := e.db.Exec(`UPDATE media_tab SET bytes = 500*1024*1024 - 1000 WHERE id = (SELECT id FROM (SELECT MIN(id) AS id FROM media_tab) x)`); err != nil {
 		t.Fatal(err)
 	}
 	e.upload(u, book2, "a.jpg", "image/jpeg", photo(t)).status(409, "quota_exceeded")
-	if _, err := e.db.Exec(`UPDATE media SET bytes = 1 WHERE bytes > 1000000`); err != nil {
+	if _, err := e.db.Exec(`UPDATE media_tab SET bytes = 1 WHERE bytes > 1000000`); err != nil {
 		t.Fatal(err)
 	}
 	e.upload(u, book2, "a.jpg", "image/jpeg", photo(t)).status(201, "")
@@ -524,7 +524,7 @@ func TestStorageFailureLeavesNoRow(t *testing.T) {
 	e.st.set(true, false)
 	e.upload(u, book, "a.jpg", "image/jpeg", photo(t)).status(502, "storage_error")
 	e.st.set(false, false)
-	if n := e.count(`SELECT COUNT(*) FROM media`); n != 0 || e.st.count("") != 0 {
+	if n := e.count(`SELECT COUNT(*) FROM media_tab`); n != 0 || e.st.count("") != 0 {
 		t.Fatalf("%d rows and %d objects after a failed upload", n, e.st.count(""))
 	}
 	e.st.set(true, false)
@@ -588,7 +588,7 @@ func TestDeleteYearbookRemovesObjects(t *testing.T) {
 	// Orphans that have no row (a crashed upload) go too.
 	_ = e.st.Storage.Put(context.Background(), yearbookPrefix(book)+"ORPHAN.jpg", "image/jpeg", []byte("x"))
 	e.json(u, "DELETE", "/v1/yearbooks/"+book, "").status(204, "")
-	if n := e.count(`SELECT COUNT(*) FROM media`); n != 0 {
+	if n := e.count(`SELECT COUNT(*) FROM media_tab`); n != 0 {
 		t.Fatalf("%d media rows left", n)
 	}
 	for _, k := range []string{yearbookPrefix(book) + "ORPHAN.jpg", yearbookPrefix(book) + a + ".jpg", yearbookPrefix(book) + b + "-thumb.jpg"} {
@@ -678,7 +678,7 @@ func TestContributorUploadBusyAndDiscard(t *testing.T) {
 	for range cap(e.svc.sem) {
 		<-e.svc.sem
 	}
-	if e.count(`SELECT COUNT(*) FROM media`) != 0 || e.st.count(yearbookPrefix(book)) != 0 {
+	if e.count(`SELECT COUNT(*) FROM media_tab`) != 0 || e.st.count(yearbookPrefix(book)) != 0 {
 		t.Fatal("a busy refusal stored something")
 	}
 
@@ -686,13 +686,13 @@ func TestContributorUploadBusyAndDiscard(t *testing.T) {
 	if err != nil || m.RowID == 0 {
 		t.Fatalf("upload: %v %+v", err, m)
 	}
-	if e.count(`SELECT COUNT(*) FROM media WHERE uploader_kind = 'contributor' AND yearbook_id = ?`, row) != 1 || e.st.count(yearbookPrefix(book)) != 3 {
+	if e.count(`SELECT COUNT(*) FROM media_tab WHERE uploader_kind = 'contributor' AND yearbook_id = ?`, row) != 1 || e.st.count(yearbookPrefix(book)) != 3 {
 		t.Fatal("contributor photo not stored as such")
 	}
 	if err := e.svc.Discard(m); err != nil {
 		t.Fatal(err)
 	}
-	if e.count(`SELECT COUNT(*) FROM media`) != 0 || e.st.count(yearbookPrefix(book)) != 0 {
+	if e.count(`SELECT COUNT(*) FROM media_tab`) != 0 || e.st.count(yearbookPrefix(book)) != 0 {
 		t.Fatal("discard left a row or objects")
 	}
 	if _, err := e.svc.UploadContributor(context.Background(), row+1000, data); !errors.Is(err, ErrNotFound) {

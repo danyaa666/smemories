@@ -115,7 +115,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	}
 	out := make([]item, len(items))
 	for i, m := range items {
-		out[i] = item{m.ID, m.Width, m.Height, m.Bytes, m.UploaderKind, m.CreatedAt}
+		out[i] = item{m.ID, m.Width, m.Height, m.Bytes, m.UploaderKind, time.UnixMilli(m.CreatedAt).UTC()}
 	}
 	var nc *string
 	if next != "" {
@@ -210,7 +210,7 @@ func (h *Handler) content(w http.ResponseWriter, r *http.Request) {
 	hd.Set("ETag", etag+`"`)
 	// ServeContent answers Range, If-Range and If-None-Match.
 	// ponytail: bytes flow through the API (bandwidth ceiling); M2 serves presigned URLs behind CloudFront.
-	http.ServeContent(w, r, "", m.CreatedAt, bytes.NewReader(data))
+	http.ServeContent(w, r, "", time.UnixMilli(m.CreatedAt).UTC(), bytes.NewReader(data))
 }
 
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {

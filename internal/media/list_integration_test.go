@@ -43,8 +43,8 @@ func (e *env) seed(book, kind string, n int) []string {
 	var ids []string
 	for i := 0; i < n; i++ {
 		id := fmt.Sprintf("%s%05d", strings.ToUpper(kind[:1]+book[:20]), len(ids)+i) // 26 chars, unique per book and kind
-		if _, err := e.db.Exec(`INSERT INTO media (public_id, yearbook_id, uploader_kind, object_key, thumb_key, content_type, bytes, width, height, sha256, created_at)
-			VALUES (?,?,?,?,?,'image/jpeg',10,4,3,?,UTC_TIMESTAMP(6))`, id, yid, kind, "k/"+id, "k/"+id+"t", strings.Repeat("a", 64)); err != nil {
+		if _, err := e.db.Exec(`INSERT INTO media_tab (public_id, yearbook_id, uploader_kind, object_key, thumb_key, content_type, bytes, width, height, sha256, created_at, updated_at)
+			VALUES (?,?,?,?,?,'image/jpeg',10,4,3,?,1,1)`, id, yid, kind, "k/"+id, "k/"+id+"t", strings.Repeat("a", 64)); err != nil {
 			e.t.Fatal(err)
 		}
 		ids = append(ids, id)
@@ -168,10 +168,10 @@ func TestListUsesIndex(t *testing.T) {
 	u := e.register("a@example.com")
 	e.seed(e.newBook(u), "owner", 30)
 	var plan string
-	if err := e.db.QueryRow(`EXPLAIN FORMAT=TREE SELECT id FROM media FORCE INDEX (ix_media_yearbook) WHERE yearbook_id = 1 AND uploader_kind IN ('owner') AND id < 100 ORDER BY id DESC LIMIT 51`).Scan(&plan); err != nil {
+	if err := e.db.QueryRow(`EXPLAIN FORMAT=TREE SELECT id FROM media_tab FORCE INDEX (idx_yearbook_id) WHERE yearbook_id = 1 AND uploader_kind IN ('owner') AND id < 100 ORDER BY id DESC LIMIT 51`).Scan(&plan); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(plan, "ix_media_yearbook") || strings.Contains(strings.ToLower(plan), "sort") {
+	if !strings.Contains(plan, "idx_yearbook_id") || strings.Contains(strings.ToLower(plan), "sort") {
 		t.Fatalf("list is not an index range scan without a sort: %s", plan)
 	}
 }

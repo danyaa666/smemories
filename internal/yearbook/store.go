@@ -148,7 +148,7 @@ func fill(ctx context.Context, q querier, books []Yearbook, lock bool) error {
 	if len(media) == 0 {
 		return nil
 	}
-	mrows, err := q.QueryContext(ctx, `SELECT id, public_id FROM media WHERE id IN (`+inList(len(media))+`)`, media...)
+	mrows, err := q.QueryContext(ctx, `SELECT id, public_id FROM media_tab WHERE id IN (`+inList(len(media))+`)`, media...)
 	if err != nil {
 		return err
 	}
@@ -329,7 +329,7 @@ func mediaRow(ctx context.Context, tx *sql.Tx, bookID uint64, publicID *string) 
 		return sql.NullInt64{}, nil
 	}
 	var id int64
-	err := tx.QueryRowContext(ctx, `SELECT id FROM media WHERE yearbook_id = ? AND public_id = ? FOR SHARE`, bookID, *publicID).Scan(&id)
+	err := tx.QueryRowContext(ctx, `SELECT id FROM media_tab WHERE yearbook_id = ? AND public_id = ? FOR SHARE`, bookID, *publicID).Scan(&id)
 	if errors.Is(err, sql.ErrNoRows) {
 		return sql.NullInt64{}, ValidationError{"invalid_media"}
 	}
@@ -357,7 +357,7 @@ func lockBook(ctx context.Context, tx *sql.Tx, ownerID uint64, publicID string) 
 func (s *Store) ClearMediaRefs(ctx context.Context, tx *sql.Tx, mediaID int64) error {
 	var ownerID uint64
 	var publicID string
-	err := tx.QueryRowContext(ctx, `SELECT owner_id, public_id FROM yearbook_tab WHERE id = (SELECT yearbook_id FROM media WHERE id = ?)`, mediaID).Scan(&ownerID, &publicID)
+	err := tx.QueryRowContext(ctx, `SELECT owner_id, public_id FROM yearbook_tab WHERE id = (SELECT yearbook_id FROM media_tab WHERE id = ?)`, mediaID).Scan(&ownerID, &publicID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil // photo or book already gone, nothing refers to it
 	}

@@ -91,7 +91,7 @@ func (s *Service) Upload(ctx context.Context, ownerID uint64, yearbookID string,
 	if ok, retry, _ := s.limiter.Take(ctx, strconv.FormatUint(ownerID, 10)); !ok {
 		return Media{}, RateLimitedError{retry}
 	}
-	return s.save(ctx, ownerID, yb, yearbookID, "owner", func() ([]byte, error) { return data, nil }, 0)
+	return s.save(ctx, ownerID, yb, yearbookID, KindOwner, func() ([]byte, error) { return data, nil }, 0)
 }
 
 // UploadContributor stores a photo sent through a collection link (T-034) in the yearbook with internal
@@ -109,7 +109,7 @@ func (s *Service) UploadContributorFrom(ctx context.Context, yearbookRow uint64,
 	if err != nil {
 		return Media{}, err
 	}
-	return s.save(ctx, ownerID, yearbookRow, publicID, "contributor", load, s.contributorWait)
+	return s.save(ctx, ownerID, yearbookRow, publicID, KindContributor, load, s.contributorWait)
 }
 
 // save is the shared pipeline: quota pre-check, processing slot, load, process, put objects, insert the row.
@@ -144,7 +144,7 @@ func (s *Service) save(ctx context.Context, ownerID, yb uint64, yearbookID, kind
 	id := ulid.New(s.now())
 	sum := sha256.Sum256(p.display)
 	m := Media{ID: id, ObjectKey: yearbookPrefix(yearbookID) + id + "." + p.ext, ThumbKey: yearbookPrefix(yearbookID) + id + "-thumb.jpg",
-		PrintKey: printKey(yearbookPrefix(yearbookID) + id + "." + p.ext), ContentType: p.contentType, Bytes: len(p.display), Width: p.width, Height: p.height, SHA256: hex.EncodeToString(sum[:]), CreatedAt: s.now().UTC()}
+		PrintKey: printKey(yearbookPrefix(yearbookID) + id + "." + p.ext), ContentType: p.contentType, Bytes: len(p.display), Width: p.width, Height: p.height, SHA256: hex.EncodeToString(sum[:]), CreatedAt: s.now().UnixMilli()}
 
 	if err := s.st.Put(ctx, m.ObjectKey, m.ContentType, p.display); err != nil {
 		return Media{}, StorageError{err}
@@ -173,7 +173,7 @@ func (s *Service) Discard(ms ...Media) error {
 	var errs []error
 	for _, m := range ms {
 		// The row goes even when the objects cannot be deleted: a leftover object is removed with the yearbook's prefix.
-		errs = append(errs, s.st.Delete(ctx, m.keys()...), s.store.remove(ctx, m.ID))
+		errs = append(errs, s.st.Delete(ctx, m.keys()...), s.store.removeRow(ctx, m.RowID, s.refs))
 	}
 	return errors.Join(errs...)
 }
@@ -289,6 +289,12 @@ func (s *Service) Delete(ctx context.Context, ownerID uint64, mediaID string) er
 		return StorageError{err} // row stays, so a retry finds it
 	}
 	return s.store.removeRow(ctx, m.RowID, s.refs)
+}
+
+// DeleteByYearbook deletes the photo rows of a yearbook in the yearbook service's delete transaction (yearbook.ChildPurger).
+// The objects were removed before, by PurgeYearbook.
+func (s *Service) DeleteByYearbook(ctx context.Context, tx *sql.Tx, yearbookID uint64) error {
+	return deleteByYearbook(ctx, tx, yearbookID)
 }
 
 // PurgeYearbook removes every stored object of a yearbook (called before its rows are deleted).

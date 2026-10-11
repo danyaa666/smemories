@@ -71,3 +71,29 @@ func New(t testing.TB) *sql.DB {
 	}
 	return d
 }
+
+// orphanPairs lists every "child column refers to parent id" relation that has no foreign key (docs/db-conventions.md).
+// The conversion tasks add their pairs here (T-066 and T-067: notes, collections, users).
+var orphanPairs = []struct{ child, column, parent string }{
+	{"yearbook_tab", "owner_id", "users"},
+	{"yearbook_tab", "cover_media_id", "media_tab"},
+	{"profile_tab", "yearbook_id", "yearbook_tab"},
+	{"profile_tab", "photo_media_id", "media_tab"},
+	{"media_tab", "yearbook_id", "yearbook_tab"},
+}
+
+// AssertNoOrphans fails the test for every row whose reference points at a parent row that does not exist.
+func AssertNoOrphans(t testing.TB, d *sql.DB) {
+	t.Helper()
+	for _, p := range orphanPairs {
+		q := "SELECT COUNT(*) FROM " + p.child + " c LEFT JOIN " + p.parent + " p ON p.id = c." + p.column +
+			" WHERE c." + p.column + " IS NOT NULL AND p.id IS NULL"
+		var n int
+		if err := d.QueryRowContext(context.Background(), q).Scan(&n); err != nil {
+			t.Fatalf("orphan check %s.%s: %v", p.child, p.column, err)
+		}
+		if n != 0 {
+			t.Errorf("%d rows in %s.%s refer to a missing %s row", n, p.child, p.column, p.parent)
+		}
+	}
+}
