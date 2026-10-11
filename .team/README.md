@@ -10,7 +10,7 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 28 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073 |
+| BACKLOG | 29 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-077 |
 | IN_PROGRESS | 1 | T-065 |
 | MERGED | 5 | T-044, T-053, T-064, T-075, T-076 |
 | DONE | 35 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-054, T-057, T-062, T-063, T-074 |
@@ -20,7 +20,7 @@
 
 **Open questions for you:** none
 
-_Board last written 2026-10-11 06:49Z_
+_Board last written 2026-10-11 06:50Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -2898,6 +2898,29 @@ T-049 QA findings: resend button target size, cooldown restarts on reload, short
 - 2026-10-10 05:35Z · dev · All 5 requirements done, web only. One vitest case per requirement (codes.test.tsx), EN+VI code_short, npm test/lint/typecheck/i18n/build green. Test: cd web && npm test. AC2: main already has overflow-wrap:anywhere, not changed; jsdom cannot measure layout, QA please eyeball 375px. Gap: reload after cooldown expiry with router state sent restarts 60s.
 - 2026-10-10 05:39Z · qa · QA_PASS. Real Chrome (Playwright, 375x800) vs dev stack (API SMEM_ENV=dev, SMEM_DEV_FIXED_OTP=123123, Vite from the T-076 worktree, head 882418a). R1 resend target: boundingBox 204x44 (EN) and 161x44 (VI) on verify and reset screens, >=44. R2 cooldown: sessionStorage holds only {resendUntil:verify|reset: <epoch ms>}, localStorage empty; reload keeps 'Send a new code (60s)' disabled; a 3s value survives reload, then unlocks after 3.6s; expired value, 'abc', '', '-1', 'NaN' are ignored (button enabled when no router state); resend click sends exactly one POST and writes a new end time; per-tab. R3: EN 'Enter all 6 digits of the code.' / VI 'Hãy nhập đủ 6 chữ số của mã.' on verify and reset with 0 API requests; wrong code 000000 still shows 'Mã không đúng...'. R4: weak password on reset (EN and VI) -> document.activeElement is the new-password input, also on a repeated weak submit. R5: /verify-email?token=abc123&x=1#h -> /verify-email?x=1#h; /reset-password?token=abc123 -> /reset-password (other params and hash kept, history.state kept). AC2: scrollWidth==innerWidth==375 on verify (125-char email, wraps), verify with error, reset, EN and VI; screenshot checked. Regression T-049: register -> verify with 123123 -> verified; forgot-password -> reset with 123123 -> login with the new password -> /account, EN and VI. make lint build test (run in worktree) exit 0, web 133/133. CI: web and security pass; go and go-integration still pending at the time (web-only diff). Dev gap judged ACCEPTABLE: after expiry a reload of a page reached with router state (history.state.sent survives reload) starts a new 60s; reproduced; fail-safe direction, max 60s, server rate limit still the authority. Non-blocking observations: (1) a tampered sessionStorage value like 99999999999999999999 gives a huge countdown (self-inflicted, own tab only); clamp to now+60s would fix. (2) A stale unexpired stored end time wins over a fresh send from the previous screen, so the new cooldown can be shorter than 60s after the latest send (safe, server enforces). (3) The gap could be closed by clearing history state after first use.
 - 2026-10-10 05:41Z · leader · merged 6764e64. Review: web only; 44 px resend button, cooldown end time kept in sessionStorage, 'Enter all 6 digits' message EN/VI, focus to password after weak_password, leftover ?token= removed; QA checked in real Chrome at 375 px, CI green. For owner to check: the verify and reset screens on your phone. Known minor: a tampered sessionStorage value shows a long countdown in the user's own tab.
+
+### T-077 — [E01] Integration tests: set a timeout and cut the media package time
+- **Status:** BACKLOG
+- **Priority:** P3
+- **Type:** tech-debt
+- **Milestone:** M1
+- **Depends-on:** —
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-11 06:50Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/13-integration-test-time-and-timeout.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E01-foundation · **PRD:** `.team/epics/E01-foundation/PRD.md`
+
+Dev and QA hit the default 10-minute test timeout in internal/media (763-858 s on a loaded machine); set an explicit timeout and cut the package time.
+
+#### Comments
 
 <!-- tasks:end -->
 
