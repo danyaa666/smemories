@@ -1,4 +1,4 @@
-# E03_E03_T-078 — Yearbook reads: a book deleted mid-read is 404, not 500
+# E03_T-078 — Yearbook reads: a book deleted mid-read is 404, not 500
 
 **Epic:** E03-yearbooks · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** low · **Priority:** P2 · **Type:** bug
 **Depends on:** T-064 (merged).
