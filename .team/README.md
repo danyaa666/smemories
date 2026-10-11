@@ -10,17 +10,17 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 29 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-077 |
-| READY_FOR_QA | 1 | T-065 |
+| BACKLOG | 30 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-077, T-078 |
+| QA_PASS | 1 | T-065 |
 | MERGED | 5 | T-044, T-053, T-064, T-075, T-076 |
 | DONE | 35 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-054, T-057, T-062, T-063, T-074 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
 
 **Awaiting your review (MERGED):** T-044 ([E08] Templates declare note fields (format v2.1): note_fields, note_field slot, NoteFields helper); T-053 ([E02] Rate limiters move to Redis (shared limiter for all endpoints)); T-064 ([E10] DB conventions: yearbook and profile tables (no joins, no foreign keys, ms timestamps)); T-075 ([E05] Media backfill hardening); T-076 ([E02] Code screens polish (target size, cooldown reload, messages, focus))
 
-**Open questions for you:** none
+**Open questions for you:** Q-027 (Approve merge of T-065 (E10: media table to the new DB conventions)?)
 
-_Board last written 2026-10-11 07:24Z_
+_Board last written 2026-10-11 07:47Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -361,6 +361,15 @@ QA passed in a real browser (Chromium) with the dev code: register -> verify, fo
 - **Answer:** _(pending)_
 
 First database conversion of epic E10 (D-26). Migration 20261010120000 renames yearbooks/profiles to yearbook_tab/profile_tab, stores created_at/updated_at as BIGINT Unix ms, replaces ENUM columns with VARCHAR validated in Go, and drops the four foreign keys; Down restores the old schema and data. Integrity moves into the yearbook service: one transaction deletes profiles, registered child records and the book, with a documented lock order (a deadlock between delete and edit was found by QA and fixed). Reads use 3 queries, no joins. API/JSON/web unchanged. QA ran the migration on 307 realistic rows (Up/Down/Up clean), race probes (0 5xx over 300+ requests) and Newman. Existing local data converts in place. To approve: team approve T-064. Then T-065 (media table) can start.
+
+### Q-027 — Approve merge of T-065 (E10: media table to the new DB conventions)?
+- **Status:** OPEN
+- **Asked:** 2026-10-11 07:47Z
+- **Blocks:** T-065,T-066
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+Second database conversion of E10. Migration 20261011100000 renames media to media_tab with BIGINT ms timestamps, VARCHAR instead of ENUM, no foreign key to yearbooks (the yearbook delete transaction now removes media rows through a registered child purger); note_photos keeps its FK until T-066/T-067. Down restores the old schema and data. API/JSON unchanged. QA: migration probes on every media shape (Up/Down/Up equal), orphan checker proven with planted orphans, own HTTP storm of uploads/public notes/photo deletes/cover edits/book deletes with no media-related 5xx and no orphan rows or objects. QA found three older bugs that this PR did not cause: tracked as T-078 (read race), T-066 spec (submit vs delete deadlock), T-025 spec (orphan objects). To approve: team approve T-065.
 
 <!-- questions:end -->
 
@@ -2591,7 +2600,7 @@ Converts `yearbooks` and `profiles` to `yearbook_tab` and `profile_tab` per docs
 - 2026-10-11 05:16Z · leader · merged 438d6b7. Review: migration 20261010120000 converts yearbooks/profiles to yearbook_tab/profile_tab (BIGINT ms, VARCHAR instead of ENUM, 4 FKs dropped, Down restores data); yearbook.Service.Delete in one transaction with documented lock order (yearbook_tab then profile_tab then children); 3-query reads; race probes 0 5xx. Combined tree checked: no code refers to the old table names. For owner to check: run make migrate on your dev DB (existing rows convert in place). Next: T-065 (media table).
 
 ### T-065 — [E10] DB conventions: media table
-- **Status:** READY_FOR_QA
+- **Status:** QA_PASS
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2599,10 +2608,10 @@ Converts `yearbooks` and `profiles` to `yearbook_tab` and `profile_tab` per docs
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** leader
 - **Branch:** task/t-065-e10-db-conventions-media-table
 - **PR:** https://github.com/danyaa666/smemories/pull/48
-- **Updated:** 2026-10-11 07:23Z by dev
+- **Updated:** 2026-10-11 07:46Z by qa
 - **Comments-seen:** 3
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/03-db-media.md`
@@ -2615,6 +2624,21 @@ Converts `media` to `media_tab` (ms timestamps, no FK, no ENUM, print columns fr
 - 2026-10-11 06:21Z · dev · Dev claimed this by mistake: the usage gate returned SLEEP (stale usage cache, leader refreshes it) right before. No work was done and no code or branch changes exist (worktree is only the clean develop checkout). Leader: please set it back to TODO; the spec reading (03-db-media.md, db-conventions, T-064 code) is done and notes for the plan are: media FK to yearbook goes in the migration, FORCE INDEX name ix_media_yearbook must become idx_yearbook_id, many tests INSERT INTO media with DATETIME created_at.
 - 2026-10-11 06:21Z · dev · Not started: usage gate SLEEP after claim (see comment). Leader to reset to TODO.
 - 2026-10-11 07:23Z · dev · media -> media_tab migration (Up/Down tested), media.Service is a ChildPurger (registered in main.go), AssertNoOrphans helper, lock order doc on removeRow, Discard goes through removeRow. Tests: TestMigrateMediaTabConventions, TestDeleteYearbookDeletesMediaRows, TestParallelUploadDeleteCoverDeleteBook (0 5xx). Media integration package: 490 s with -race on a loaded machine (new tests ~11 s); needs -timeout 30m when run with all packages in parallel. Lint, unit and full integration green.
+- 2026-10-11 07:46Z · qa · QA_PASS (PR #48; dev head 2f2e98b CI green 7m11s; I added test-only commit a155b72, which has not yet run in CI).
+  EVIDENCE
+  AC1 migration: dev TestMigrateMediaTabConventions passes. My own TestQAMigrateMediaTabReferencesAndNotePhotos (internal/db/media_tab_qa_integration_test.go) passes. It uses both uploader_kinds, print_key set and NULL, micro/sub-ms/1970/2000/leap-year timestamps, and photos that are cover, profile photo and note photo. Results: ids unchanged after Up, refs unchanged, ms values exact (999us before the epoch gives 0), note_photos still cascades from media_tab, a row written while migrated survives Down, an orphan row (missing yearbook) is dropped by Down as documented, and Up/Down/Up gives equal rows. Real schema in a scratch DB: no FK on media_tab, only fk_note_photos_media/note (T-066/067), idx_yearbook_id + uq_media_tab_public_id + PRIMARY, uploader_kind varchar(16), created_at/updated_at bigint, no reserved column names (information_schema.KEYWORDS query is empty).
+  AC2: list created_at is RFC 3339 from ms (e.g. 2026-10-11T07:39:11.15Z; baseline showed microseconds, .787687Z). Shape unchanged, api/openapi.yaml and postman/ not in the diff. Content ETag, Last-Modified, If-None-Match 304 and If-Modified-Since 304 verified live.
+  AC3: DeleteByYearbook is registered (main.go) and the dev zero-rows test passes. In my HTTP storms, after every deleted book: 0 media rows, 0 dangling cover/profile refs, 0 rows with a missing parent. Storage failure on purge answers 502 and changes nothing (dev test).
+  AC4: my TestQAAssertNoOrphansCatchesPlantedOrphans (internal/db/dbtest/orphans_integration_test.go) plants an orphan in each of the 5 pairs; each is reported by name, and NULL refs and a clean DB are not flagged.
+  AC5: full integration suite with the 30m timeout: go test -race -count=1 -timeout 30m -tags integration ./... EXIT 0 (media 928 s on the loaded machine, auth 487 s, notes 288 s, db 81 s, yearbook 76 s). make lint build test EXIT 0. Newman media (70 req/132 assertions), yearbooks (92/189) and notes (72/137): 0 failures, each run twice back to back (notes after clearing the rate-limit keys). Upload caps and key layout were not touched by the diff.
+  updated_at: a print-object backfill raised updated_at above created_at on that row only.
+  LOCK ORDER: I read removeRow, insert, Discard, ClearMediaRefs, DeleteByYearbook, modify and Service.Delete and found no inversion in media code. My own parallel HTTP storm used the real API binary, MySQL and MinIO. Each round has 6 uploads, cover and profile photos, public notes with photos, and then in parallel 3 uploads, 3 public notes, 6 photo deletes, 8 cover/profile edits, list, get, and 3 simultaneous book deletes plus a final one. Rounds ran from 6 workers. No-delete run (25x6 rounds, notes included): 0 5xx, 2250 media rows and 6750 objects, exactly 3 per row, no orphans. Nonotes run with deletes (20x6): no media-related 5xx; all book rows and media rows gone.
+  PRE-EXISTING FINDINGS (also reproduced on a clean origin/develop build, not caused or worsened by T-065, so not blocking; please open follow-ups)
+  1. MAJOR (T-064 code): a book delete that races another request on the same book can answer 500, with 'yearbook without its owner profile' in the log. Store.get/list read the book and then the profile in two non-transactional queries. Under heavy parallel load it happened 2-4 times per 360 deletes, on both develop and T-065. Fix idea: read book and profile in one snapshot (transaction or join) and treat a missing profile as 404, or have Service.Delete take lockBook first. Repro: storm.py-style load with 3 simultaneous DELETEs per book plus other edits.
+  2. MAJOR (notes domain, for T-066/T-067): public note submit racing a book delete answers 500 on MySQL 1213. Note submit locks note_collections then needs a share lock on yearbook_tab through the FK, while the book delete locks yearbook_tab then cascades into note_collections. 36 of 600 submissions in my storm; 31 of 600 on baseline. T-066 should lock the yearbook row first or retry once on 1213 and add the parallel test.
+  3. MINOR (known ponytail in PurgeYearbook): an upload racing a book delete leaves objects without rows. About 470 objects after 120 racing deletes on T-065, 631 on baseline. Needs the M2 sweep.
+  4. Observation: media created_at in JSON now has millisecond precision (was microseconds); still valid RFC 3339.
+- 2026-10-11 07:47Z · leader · Leader review (content) OK: media_tab migration with Down, child purger, AssertNoOrphans (QA planted orphans in all 5 pairs: caught), documented lock order, API unchanged. QA's own storm: no lock-order inversion in media paths. Three PRE-EXISTING issues QA reproduced on clean develop are not caused by this PR: read race with book delete (-> T-078), public submit vs book delete deadlock (-> T-066 spec), upload vs delete orphan objects (-> T-025 spec). Merge after CI is green on QA's test-only commit a155b72. Awaiting owner approval.
 
 ### T-066 — [E10] DB conventions: note collections and notes tables
 - **Status:** BACKLOG
@@ -2920,6 +2944,29 @@ T-049 QA findings: resend button target size, cooldown restarts on reload, short
 **Epic:** E01-foundation · **PRD:** `.team/epics/E01-foundation/PRD.md`
 
 Dev and QA hit the default 10-minute test timeout in internal/media (763-858 s on a loaded machine); set an explicit timeout and cut the package time.
+
+#### Comments
+
+### T-078 — [E03] Yearbook reads: a book deleted mid-read is 404, not 500
+- **Status:** BACKLOG
+- **Priority:** P2
+- **Type:** bug
+- **Milestone:** M1
+- **Depends-on:** T-064
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-11 07:47Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E03-yearbooks/07-read-race-with-delete.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E03-yearbooks · **PRD:** `.team/epics/E03-yearbooks/PRD.md`
+
+T-065 QA found: a book delete racing a read gives 500 'yearbook without its owner profile' (two separate queries since T-064); make it 404 / skip it in lists.
 
 #### Comments
 

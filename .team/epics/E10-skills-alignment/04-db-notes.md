@@ -1,5 +1,7 @@
 # E10_T-066 — DB conventions: note collections and notes tables
 
+> **From T-065 QA (2026-10-11), lock order for notes:** a public note submit racing a book delete answers 500 on MySQL deadlock 1213 (36 of 600 submissions in QA's storm, 31 of 600 on pre-E10 develop). The notes insert transaction (note + note_photos + collection checks) must take the yearbook row lock first (`FOR SHARE` is enough), like every other path (docs/db-conventions.md, Writes), and a book that vanished meanwhile is the same answer as an unknown link (404/410), never a 500. Add a parallel test (submit with photos vs delete book, 0 5xx) and cover `NoteCollection` create/revoke the same way.
+
 **Epic:** E10-skills-alignment · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** high · **Priority:** P1 · **Type:** tech-debt
 **Read first:** `docs/db-conventions.md`, T-064/T-065 specs, the T-034 spec (the tables it created).
 **Depends on:** T-065.
