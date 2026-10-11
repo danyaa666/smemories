@@ -14,3 +14,6 @@ Dev and QA both hit Go's default 10-minute test timeout in `internal/media` on a
 - [ ] AC2 — The PR description lists the 10 slowest tests of `internal/media` before and after, and the package time before and after on the same machine (target: at least 40% less wall time at equal coverage; say honestly if less is possible).
 - [ ] AC3 — No test is removed or weakened; the mutation checks that exist (e.g. T-034 drain/refund) still fail when the code is broken.
 - [ ] AC4 — `make lint build test test-integration` green; CI green.
+
+#### Pointer from T-065 (2026-10-11)
+Dev measured the slow tests: the existing backfill tests with big photos take 110 to 200 s each (for example `TestBackfillStopsAfterConsecutiveStorageFailures`, about 200 s alone because every failing S3 call waits for the AWS client's default timeout); start there. A test that points the storage at a dead endpoint should inject a fake store that fails at once instead of waiting for real network timeouts.

@@ -11,7 +11,7 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 29 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-077 |
-| IN_PROGRESS | 1 | T-065 |
+| READY_FOR_QA | 1 | T-065 |
 | MERGED | 5 | T-044, T-053, T-064, T-075, T-076 |
 | DONE | 35 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-054, T-057, T-062, T-063, T-074 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
@@ -20,7 +20,7 @@
 
 **Open questions for you:** none
 
-_Board last written 2026-10-11 06:50Z_
+_Board last written 2026-10-11 07:24Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -2591,7 +2591,7 @@ Converts `yearbooks` and `profiles` to `yearbook_tab` and `profile_tab` per docs
 - 2026-10-11 05:16Z · leader · merged 438d6b7. Review: migration 20261010120000 converts yearbooks/profiles to yearbook_tab/profile_tab (BIGINT ms, VARCHAR instead of ENUM, 4 FKs dropped, Down restores data); yearbook.Service.Delete in one transaction with documented lock order (yearbook_tab then profile_tab then children); 3-query reads; race probes 0 5xx. Combined tree checked: no code refers to the old table names. For owner to check: run make migrate on your dev DB (existing rows convert in place). Next: T-065 (media table).
 
 ### T-065 — [E10] DB conventions: media table
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2599,11 +2599,11 @@ Converts `yearbooks` and `profiles` to `yearbook_tab` and `profile_tab` per docs
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-065-e10-db-conventions-media-table
-- **PR:** —
-- **Updated:** 2026-10-11 06:21Z by dev
-- **Comments-seen:** 2
+- **PR:** https://github.com/danyaa666/smemories/pull/48
+- **Updated:** 2026-10-11 07:23Z by dev
+- **Comments-seen:** 3
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/03-db-media.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2614,6 +2614,7 @@ Converts `media` to `media_tab` (ms timestamps, no FK, no ENUM, print columns fr
 #### Comments
 - 2026-10-11 06:21Z · dev · Dev claimed this by mistake: the usage gate returned SLEEP (stale usage cache, leader refreshes it) right before. No work was done and no code or branch changes exist (worktree is only the clean develop checkout). Leader: please set it back to TODO; the spec reading (03-db-media.md, db-conventions, T-064 code) is done and notes for the plan are: media FK to yearbook goes in the migration, FORCE INDEX name ix_media_yearbook must become idx_yearbook_id, many tests INSERT INTO media with DATETIME created_at.
 - 2026-10-11 06:21Z · dev · Not started: usage gate SLEEP after claim (see comment). Leader to reset to TODO.
+- 2026-10-11 07:23Z · dev · media -> media_tab migration (Up/Down tested), media.Service is a ChildPurger (registered in main.go), AssertNoOrphans helper, lock order doc on removeRow, Discard goes through removeRow. Tests: TestMigrateMediaTabConventions, TestDeleteYearbookDeletesMediaRows, TestParallelUploadDeleteCoverDeleteBook (0 5xx). Media integration package: 490 s with -race on a loaded machine (new tests ~11 s); needs -timeout 30m when run with all packages in parallel. Lint, unit and full integration green.
 
 ### T-066 — [E10] DB conventions: note collections and notes tables
 - **Status:** BACKLOG
