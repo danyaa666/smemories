@@ -1,4 +1,4 @@
-# E01_E01_T-077 — Integration tests: set a timeout and cut the media package time
+# E01_T-077 — Integration tests: set a timeout and cut the media package time
 
 **Epic:** E01-foundation · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** low · **Priority:** P3 · **Type:** tech-debt
 
