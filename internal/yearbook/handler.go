@@ -5,6 +5,7 @@ package yearbook
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -21,29 +22,28 @@ import (
 const (
 	defaultLimit = 20
 	maxLimit     = 50
-)
 
-// Purger removes a yearbook's stored files; the media package implements it (T-009).
-type Purger interface {
-	PurgeYearbook(ctx context.Context, publicID string) error
-}
+	// A cursor time outside years 1..9999 is a tampered token, not a position in anyone's list.
+	minCursorMs = -62135596800000 // 0001-01-01T00:00:00Z
+	maxCursorMs = 253402300799999 // 9999-12-31T23:59:59.999Z
+)
 
 // Handler serves /v1/yearbooks.
 type Handler struct {
 	store          *Store
-	purger         Purger                          // may be nil (no file storage configured, e.g. in tests)
+	svc            *Service
 	requireUser    func(http.Handler) http.Handler // auth.Handler.RequireUser
 	allowedOrigins []string                        // for auth.Guard
 	logger         *slog.Logger
 	now            func() time.Time
 }
 
-// NewHandler builds the handler; purger and now may be nil (no file cleanup, time.Now).
-func NewHandler(store *Store, purger Purger, requireUser func(http.Handler) http.Handler, allowedOrigins []string, logger *slog.Logger, now func() time.Time) *Handler {
+// NewHandler builds the handler; now may be nil (time.Now). T-070 folds the store calls into the service.
+func NewHandler(store *Store, svc *Service, requireUser func(http.Handler) http.Handler, allowedOrigins []string, logger *slog.Logger, now func() time.Time) *Handler {
 	if now == nil {
 		now = time.Now
 	}
-	return &Handler{store: store, purger: purger, requireUser: requireUser, allowedOrigins: allowedOrigins, logger: logger, now: now}
+	return &Handler{store: store, svc: svc, requireUser: requireUser, allowedOrigins: allowedOrigins, logger: logger, now: now}
 }
 
 // Routes registers the endpoints on mux (pass to httpx.NewRouter).
@@ -68,6 +68,16 @@ type bookEnvelope struct {
 	Yearbook Yearbook `json:"yearbook"`
 }
 
+// MarshalJSON renders the stored milliseconds as RFC 3339 UTC, as the API always has.
+func (y Yearbook) MarshalJSON() ([]byte, error) {
+	type plain Yearbook // no methods, so no recursion
+	return json.Marshal(struct {
+		plain
+		CreatedAt time.Time `json:"created_at"`
+		UpdatedAt time.Time `json:"updated_at"`
+	}{plain(y), time.UnixMilli(y.CreatedAt).UTC(), time.UnixMilli(y.UpdatedAt).UTC()})
+}
+
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	var in bookInput
 	if !httpx.DecodeJSON(w, r, &in, true) {
@@ -75,7 +85,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	}
 	now := h.now().UTC()
 	u, _ := auth.UserFrom(r.Context())
-	y := Yearbook{ID: ulid.New(now), PageSize: "A5", CreatedAt: now, UpdatedAt: now,
+	y := Yearbook{ID: ulid.New(now), PageSize: "A5", CreatedAt: now.UnixMilli(), UpdatedAt: now.UnixMilli(),
 		Profile: Profile{ID: ulid.New(now), IsOwner: true, FullName: u.DisplayName}}
 	if err := in.applyTo(&y); err != nil {
 		h.fail(w, r, err)
@@ -154,7 +164,7 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
 	if !httpx.DecodeJSON(w, r, &in, true) {
 		return
 	}
-	y, err := h.store.modify(r.Context(), owner(r), r.PathValue("id"), h.now(), in.applyTo)
+	y, err := h.store.modify(r.Context(), owner(r), r.PathValue("id"), h.now().UnixMilli(), in.applyTo)
 	if err != nil {
 		h.fail(w, r, err)
 		return
@@ -168,7 +178,7 @@ func (h *Handler) putProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	now := h.now()
-	y, err := h.store.modify(r.Context(), owner(r), r.PathValue("id"), now, func(y *Yearbook) error {
+	y, err := h.store.modify(r.Context(), owner(r), r.PathValue("id"), now.UnixMilli(), func(y *Yearbook) error {
 		return in.applyTo(&y.Profile, now)
 	})
 	if err != nil {
@@ -181,18 +191,7 @@ func (h *Handler) putProfile(w http.ResponseWriter, r *http.Request) {
 // delete removes the book's stored files first: if the store fails, nothing is deleted and the
 // caller can retry (502 storage_error).
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
-	if h.purger != nil {
-		if _, err := h.store.get(r.Context(), owner(r), r.PathValue("id")); err != nil {
-			h.fail(w, r, err)
-			return
-		}
-		if err := h.purger.PurgeYearbook(r.Context(), r.PathValue("id")); err != nil {
-			h.logger.Error("yearbook: storage purge failed", "request_id", httpx.RequestIDFrom(r.Context()), "error", err)
-			httpx.WriteError(w, r, http.StatusBadGateway, "storage_error", "object storage failed")
-			return
-		}
-	}
-	if err := h.store.delete(r.Context(), owner(r), r.PathValue("id")); err != nil {
+	if err := h.svc.Delete(r.Context(), owner(r), r.PathValue("id")); err != nil {
 		h.fail(w, r, err)
 		return
 	}
@@ -203,11 +202,15 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 // (never with field values) and answers 500.
 func (h *Handler) fail(w http.ResponseWriter, r *http.Request, err error) {
 	var ve ValidationError
+	var se StorageError
 	switch {
 	case errors.As(err, &ve):
 		httpx.WriteError(w, r, http.StatusBadRequest, ve.Code, "invalid input: "+ve.Code)
 	case errors.Is(err, ErrNotFound):
 		httpx.WriteError(w, r, http.StatusNotFound, "not_found", "yearbook not found")
+	case errors.As(err, &se):
+		h.logger.Error("yearbook: storage purge failed", "request_id", httpx.RequestIDFrom(r.Context()), "error", err)
+		httpx.WriteError(w, r, http.StatusBadGateway, "storage_error", "object storage failed")
 	case errors.Is(err, ErrLimitReached):
 		httpx.WriteError(w, r, http.StatusConflict, "limit_reached", fmt.Sprintf("at most %d yearbooks per user", maxBooksOwned))
 	default:
@@ -218,10 +221,10 @@ func (h *Handler) fail(w http.ResponseWriter, r *http.Request, err error) {
 	}
 }
 
-// formatCursor / parseCursor: an opaque token "<unix microseconds>.<book id>". Tampering can
+// formatCursor / parseCursor: an opaque token "<unix milliseconds>.<book id>". Tampering can
 // only move the page position inside the caller's own books, since every query is owner-scoped.
 func formatCursor(c cursor) string {
-	return base64.RawURLEncoding.EncodeToString([]byte(strconv.FormatInt(c.updatedAt.UnixMicro(), 10) + "." + c.publicID))
+	return base64.RawURLEncoding.EncodeToString([]byte(strconv.FormatInt(c.updatedAt, 10) + "." + c.publicID))
 }
 
 func parseCursor(s string) (cursor, bool) {
@@ -229,14 +232,10 @@ func parseCursor(s string) (cursor, bool) {
 	if err != nil {
 		return cursor{}, false
 	}
-	us, id, ok := strings.Cut(string(raw), ".")
-	n, perr := strconv.ParseInt(us, 10, 64)
-	if !ok || perr != nil || len(id) != 26 {
+	ms, id, ok := strings.Cut(string(raw), ".")
+	n, perr := strconv.ParseInt(ms, 10, 64)
+	if !ok || perr != nil || len(id) != 26 || n < minCursorMs || n > maxCursorMs {
 		return cursor{}, false
 	}
-	t := time.UnixMicro(n).UTC()
-	if t.Year() < 1 || t.Year() > 9999 { // outside what MySQL DATETIME can compare against
-		return cursor{}, false
-	}
-	return cursor{t, id}, true
+	return cursor{n, id}, true
 }

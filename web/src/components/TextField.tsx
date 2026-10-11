@@ -1,4 +1,4 @@
-import { useId, type ChangeEvent } from "react";
+import { useId, type ChangeEvent, type Ref } from "react";
 
 type Props = {
   label: string;
@@ -9,6 +9,7 @@ type Props = {
   autoComplete: string;
   error?: string | undefined;
   hint?: string;
+  inputRef?: Ref<HTMLInputElement>; // lets a screen move focus here after a server error
 };
 
 /** A labelled input; the error and hint are linked with aria-describedby. */
@@ -21,6 +22,7 @@ export function TextField({
   autoComplete,
   error,
   hint,
+  inputRef,
 }: Props) {
   const id = useId();
   const describedBy = [hint && `${id}-hint`, error && `${id}-error`].filter(Boolean).join(" ");
@@ -37,7 +39,7 @@ export function TextField({
       {multiline ? (
         <textarea id={id} rows={3} {...shared} />
       ) : (
-        <input id={id} type={type} {...shared} />
+        <input id={id} ref={inputRef} type={type} {...shared} />
       )}
       {hint && <small id={`${id}-hint`}>{hint}</small>}
       {error && (

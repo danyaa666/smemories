@@ -37,7 +37,7 @@ func (e *env) list(u user, book, query string) listPage {
 func (e *env) seed(book, kind string, n int) []string {
 	e.t.Helper()
 	var yid uint64
-	if err := e.db.QueryRow(`SELECT id FROM yearbooks WHERE public_id = ?`, book).Scan(&yid); err != nil {
+	if err := e.db.QueryRow(`SELECT id FROM yearbook_tab WHERE public_id = ?`, book).Scan(&yid); err != nil {
 		e.t.Fatal(err)
 	}
 	var ids []string

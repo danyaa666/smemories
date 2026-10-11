@@ -136,9 +136,9 @@ func TestProfileValidation(t *testing.T) {
 }
 
 func TestCursorRoundTripAndTamper(t *testing.T) {
-	c := cursor{time.Date(2026, 10, 7, 12, 0, 0, 123456000, time.UTC), "01J9Z3K6V8Q4M7N2P5R8T0W1XY"}
+	c := cursor{time.Date(2026, 10, 7, 12, 0, 0, 123000000, time.UTC).UnixMilli(), "01J9Z3K6V8Q4M7N2P5R8T0W1XY"}
 	got, ok := parseCursor(formatCursor(c))
-	if !ok || !got.updatedAt.Equal(c.updatedAt) || got.publicID != c.publicID {
+	if !ok || got.updatedAt != c.updatedAt || got.publicID != c.publicID {
 		t.Fatalf("round trip: %+v %v", got, ok)
 	}
 	for _, bad := range []string{"", "!!!", "YWJj", formatCursor(c) + "x", "MTIzLnNob3J0", "OTk5OTk5OTk5OTk5OTk5OTk5LjAxSjlaM0s2VjhRNE03TjJQNVI4VDBXMVhZ"} {

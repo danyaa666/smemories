@@ -135,6 +135,12 @@ button[type="submit"],
   text-decoration: none;
 }
 
+.resend {
+  font: inherit;
+  min-height: 2.75rem; /* 44px: WCAG 2.5.8 asks for 24px, the other buttons use 44 */
+  padding: 0.5rem 1rem;
+}
+
 button:disabled {
   opacity: 0.6;
   cursor: progress;

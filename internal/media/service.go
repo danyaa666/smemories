@@ -6,6 +6,7 @@ package media
 import (
 	"context"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
@@ -51,7 +52,17 @@ type Service struct {
 	now     func() time.Time
 
 	contributorWait time.Duration
+	refs            RefClearer
 }
+
+// RefClearer clears the references other tables hold to a photo, in the caller's transaction, just before the photo row
+// is deleted. The yearbook store implements it (cover and profile photo): the tables have no ON DELETE SET NULL.
+type RefClearer interface {
+	ClearMediaRefs(ctx context.Context, tx *sql.Tx, mediaID int64) error
+}
+
+// SetRefClearer registers who must clear references to a photo before Delete removes it (wired once at start-up).
+func (s *Service) SetRefClearer(r RefClearer) { s.refs = r }
 
 // NewService builds the service; maxConcurrent bounds parallel image decodes; now may be nil.
 // The upload limiter fails open when Redis is down (an upload is not a guess).
@@ -277,7 +288,7 @@ func (s *Service) Delete(ctx context.Context, ownerID uint64, mediaID string) er
 	if err := s.st.Delete(ctx, m.keys()...); err != nil {
 		return StorageError{err} // row stays, so a retry finds it
 	}
-	return s.store.remove(ctx, mediaID)
+	return s.store.removeRow(ctx, m.RowID, s.refs)
 }
 
 // PurgeYearbook removes every stored object of a yearbook (called before its rows are deleted).

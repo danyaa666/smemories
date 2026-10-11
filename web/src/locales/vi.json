@@ -116,6 +116,7 @@
     "invalid_hobbies": "Sở thích tối đa 300 ký tự, không chứa ký tự ẩn hoặc ký tự điều khiển.",
     "invalid_future_plans": "Dự định tối đa 300 ký tự, không chứa ký tự ẩn hoặc ký tự điều khiển.",
     "invalid_code": "Mã không đúng. Hãy kiểm tra email và thử lại.",
+    "code_short": "Hãy nhập đủ 6 chữ số của mã.",
     "code_expired": "Mã đã hết hạn. Hãy gửi mã mới.",
     "code_locked": "Bạn đã nhập sai quá nhiều lần với mã này. Hãy gửi mã mới.",
     "code_store_unavailable": "Hiện chúng tôi chưa kiểm tra được mã. Vui lòng thử lại sau giây lát.",
