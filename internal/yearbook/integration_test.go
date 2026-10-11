@@ -62,7 +62,10 @@ func (s *syncWriter) Write(b []byte) (int, error) {
 	return s.w.Write(b)
 }
 
-func newEnv(t *testing.T) *env {
+func newEnv(t *testing.T) *env { return newEnvWith(t) }
+
+// newEnvWith registers child purgers with the yearbook service.
+func newEnvWith(t *testing.T, children ...ChildPurger) *env {
 	t.Helper()
 	d := dbtest.New(t)
 	e := &env{t: t, db: d, logs: &bytes.Buffer{}, clock: time.Date(2026, 10, 7, 12, 0, 0, 0, time.UTC)}
@@ -84,7 +87,8 @@ func newEnv(t *testing.T) *env {
 		t.Fatal(err)
 	}
 	ah := auth.NewHandler(svc, auth.HandlerConfig{AllowedOrigins: []string{origin}}, logger)
-	yh := NewHandler(NewStore(d), nil, ah.RequireUser, []string{origin}, logger, e.now)
+	st := NewStore(d)
+	yh := NewHandler(st, NewService(st, nil, children...), ah.RequireUser, []string{origin}, logger, e.now)
 	e.h = httpx.NewRouter(logger, ah.Routes, yh.Routes)
 	return e
 }
@@ -370,7 +374,7 @@ func TestOwnershipMatrix(t *testing.T) {
 	if b["title"] != "Alice's book" || b["profile"].(map[string]any)["full_name"] != "Alice" {
 		t.Fatalf("book changed: %v", b)
 	}
-	if e.count(`SELECT COUNT(*) FROM yearbooks`) != 1 {
+	if e.count(`SELECT COUNT(*) FROM yearbook_tab`) != 1 {
 		t.Fatal("book count changed")
 	}
 }
@@ -420,7 +424,7 @@ func TestPatchAndProfile(t *testing.T) {
 		e.do(alice, "PUT", "/v1/yearbooks/"+id+"/profile", body).status(400, code)
 	}
 	// Exactly one profile, still the owner's.
-	if e.count(`SELECT COUNT(*) FROM profiles WHERE is_owner`) != 1 || e.count(`SELECT COUNT(*) FROM profiles`) != 1 {
+	if e.count(`SELECT COUNT(*) FROM profile_tab WHERE is_owner`) != 1 || e.count(`SELECT COUNT(*) FROM profile_tab`) != 1 {
 		t.Fatal("profile rows changed")
 	}
 	// A profile edit counts as an edit of the book: it moves to the front.
@@ -438,7 +442,7 @@ func TestPatchAndProfile(t *testing.T) {
 	}
 }
 
-// AC6: delete cascades, then the id is gone; recreate works; the limit is 20 per user.
+// AC6: delete removes the profile too, then the id is gone; recreate works; the limit is 20 per user.
 func TestDeleteAndLimit(t *testing.T) {
 	e := newEnv(t)
 	alice := e.register("alice@example.com", "Alice")
@@ -447,7 +451,7 @@ func TestDeleteAndLimit(t *testing.T) {
 	e.do(alice, "DELETE", "/v1/yearbooks/"+id, "").status(204, "")
 	e.do(alice, "GET", "/v1/yearbooks/"+id, "").status(404, "not_found")
 	e.do(alice, "DELETE", "/v1/yearbooks/"+id, "").status(404, "not_found")
-	if e.count(`SELECT COUNT(*) FROM yearbooks`) != 0 || e.count(`SELECT COUNT(*) FROM profiles`) != 0 {
+	if e.count(`SELECT COUNT(*) FROM yearbook_tab`) != 0 || e.count(`SELECT COUNT(*) FROM profile_tab`) != 0 {
 		t.Fatal("rows left after delete")
 	}
 	e.create(alice, "Recreated")
@@ -466,14 +470,6 @@ func TestDeleteAndLimit(t *testing.T) {
 	_ = json.Unmarshal([]byte(first), &out)
 	e.do(alice, "DELETE", "/v1/yearbooks/"+out.Yearbooks[0]["id"].(string), "").status(204, "")
 	e.do(alice, "POST", "/v1/yearbooks", `{"title":"21st","language":"en"}`).status(201, "")
-
-	// Deleting the account removes its books and profiles (foreign-key cascade).
-	if _, err := e.db.Exec(`DELETE FROM users WHERE email = 'alice@example.com'`); err != nil {
-		t.Fatal(err)
-	}
-	if e.count(`SELECT COUNT(*) FROM yearbooks`) != 1 || e.count(`SELECT COUNT(*) FROM profiles`) != 1 {
-		t.Fatal("cascade from users did not remove alice's books")
-	}
 }
 
 // The limit holds under concurrent creates.
@@ -501,7 +497,7 @@ func TestLimitConcurrent(t *testing.T) {
 			t.Fatalf("unexpected status %d", c)
 		}
 	}
-	if created != 20 || e.count(`SELECT COUNT(*) FROM yearbooks`) != 20 {
+	if created != 20 || e.count(`SELECT COUNT(*) FROM yearbook_tab`) != 20 {
 		t.Fatalf("created %d, want 20", created)
 	}
 }

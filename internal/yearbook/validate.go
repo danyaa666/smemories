@@ -26,8 +26,11 @@ const (
 	maxBooksOwned = 20
 )
 
-// pageSizes are the accepted page_size values (the yearbooks.page_size enum).
-var pageSizes = []string{"A5", "A4", "Letter"}
+// Accepted values of the VARCHAR columns language and page_size (no database ENUM: a new value needs no ALTER).
+var (
+	languages = []string{"en", "vi"}
+	pageSizes = []string{"A5", "A4", "Letter"}
+)
 
 // ValidationError carries the stable API error code (invalid_<field>) for a rejected input.
 type ValidationError struct{ Code string }
@@ -106,7 +109,7 @@ func (in bookInput) applyTo(y *Yearbook) error {
 		}
 	}
 	if in.Language != nil {
-		if *in.Language != "en" && *in.Language != "vi" {
+		if !slices.Contains(languages, *in.Language) {
 			return ValidationError{"invalid_language"}
 		}
 		y.Language = *in.Language

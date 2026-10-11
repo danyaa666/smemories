@@ -32,7 +32,7 @@ type Collection struct {
 	NoteCount  int        `json:"note_count"` // notes in any status
 }
 
-// Store persists collections. Every owner query is scoped by yearbooks.owner_id: a row is never fetched by id and compared afterwards.
+// Store persists collections. Every owner query is scoped by yearbook_tab.owner_id: a row is never fetched by id and compared afterwards.
 type Store struct{ db *sql.DB }
 
 func NewStore(db *sql.DB) *Store { return &Store{db: db} }
@@ -45,7 +45,7 @@ func (s *Store) create(ctx context.Context, ownerID uint64, bookID string, c Col
 	}
 	defer func() { _ = tx.Rollback() }()
 	var id uint64
-	err = tx.QueryRowContext(ctx, `SELECT id FROM yearbooks WHERE owner_id = ? AND public_id = ? FOR UPDATE`, ownerID, bookID).Scan(&id)
+	err = tx.QueryRowContext(ctx, `SELECT id FROM yearbook_tab WHERE owner_id = ? AND public_id = ? FOR UPDATE`, ownerID, bookID).Scan(&id)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ErrNotFound
 	}
@@ -70,7 +70,7 @@ func (s *Store) create(ctx context.Context, ownerID uint64, bookID string, c Col
 // list returns the book's collections, newest first. ponytail: unpaged; revoked links stay in the list, add a cursor if that gets long.
 func (s *Store) list(ctx context.Context, ownerID uint64, bookID string) ([]Collection, error) {
 	var id uint64
-	err := s.db.QueryRowContext(ctx, `SELECT id FROM yearbooks WHERE owner_id = ? AND public_id = ?`, ownerID, bookID).Scan(&id)
+	err := s.db.QueryRowContext(ctx, `SELECT id FROM yearbook_tab WHERE owner_id = ? AND public_id = ?`, ownerID, bookID).Scan(&id)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -108,7 +108,7 @@ func (s *Store) revoke(ctx context.Context, ownerID uint64, id string, now time.
 	var rowID uint64
 	var revoked sql.NullTime
 	err = tx.QueryRowContext(ctx,
-		`SELECT c.id, c.revoked_at FROM note_collections c JOIN yearbooks y ON y.id = c.yearbook_id WHERE y.owner_id = ? AND c.public_id = ? FOR UPDATE`,
+		`SELECT c.id, c.revoked_at FROM note_collections c JOIN yearbook_tab y ON y.id = c.yearbook_id WHERE y.owner_id = ? AND c.public_id = ? FOR UPDATE`,
 		ownerID, id).Scan(&rowID, &revoked)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ErrNotFound
@@ -139,7 +139,7 @@ func (s *Store) lookup(ctx context.Context, hash [32]byte) (Public, error) {
 	var deadline sql.NullTime
 	err := s.db.QueryRowContext(ctx,
 		`SELECT y.title, u.display_name, c.deadline_at, c.id, y.id FROM note_collections c
-		 JOIN yearbooks y ON y.id = c.yearbook_id JOIN users u ON u.id = y.owner_id
+		 JOIN yearbook_tab y ON y.id = c.yearbook_id JOIN users u ON u.id = y.owner_id
 		 WHERE c.token_hash = ? AND c.revoked_at IS NULL`, hash[:]).Scan(&p.Title, &p.DisplayName, &deadline, &p.CollectionID, &p.YearbookID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Public{}, ErrNotFound

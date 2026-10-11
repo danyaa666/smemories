@@ -105,7 +105,9 @@ func newEnv(t *testing.T) *env {
 	ah := auth.NewHandler(svc, auth.HandlerConfig{AllowedOrigins: []string{origin}}, logger)
 	e.st = &flakyStore{Storage: storagetest.New(t), keys: map[string]bool{}}
 	e.svc = media.NewService(media.NewStore(d), e.st, 2, e.lim, nil)
-	yh := yearbook.NewHandler(yearbook.NewStore(d), e.svc, ah.RequireUser, []string{origin}, logger, e.now)
+	bookStore := yearbook.NewStore(d)
+	e.svc.SetRefClearer(bookStore)
+	yh := yearbook.NewHandler(bookStore, yearbook.NewService(bookStore, e.svc), ah.RequireUser, []string{origin}, logger, e.now)
 	e.nh = NewHandler(NewStore(d), e.svc, 10<<20, ah.RequireUser, []string{origin}, ah.ClientIP, e.lim, logger, e.now)
 	e.tmp = t.TempDir()
 	e.nh.SetUploadLimits(defaultUploadConns, defaultUploadsPerIP, e.tmp)
@@ -368,7 +370,7 @@ func TestLimit(t *testing.T) {
 			t.Fatalf("unexpected status %d", c)
 		}
 	}
-	if ok != 5 || e.count(`SELECT COUNT(*) FROM note_collections c JOIN yearbooks y ON y.id = c.yearbook_id WHERE y.public_id = ?`, book2) != 5 {
+	if ok != 5 || e.count(`SELECT COUNT(*) FROM note_collections c JOIN yearbook_tab y ON y.id = c.yearbook_id WHERE y.public_id = ?`, book2) != 5 {
 		t.Fatalf("%d concurrent creates succeeded, want 5", ok)
 	}
 }
