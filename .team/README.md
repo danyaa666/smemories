@@ -10,18 +10,18 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 29 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073 |
-| IN_QA | 1 | T-044 |
-| QA_PASS | 1 | T-064 |
-| MERGED | 3 | T-053, T-075, T-076 |
+| BACKLOG | 28 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073 |
+| TODO | 1 | T-065 |
+| CHANGES_REQUESTED | 1 | T-044 |
+| MERGED | 4 | T-053, T-064, T-075, T-076 |
 | DONE | 35 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-054, T-057, T-062, T-063, T-074 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
 
-**Awaiting your review (MERGED):** T-053 ([E02] Rate limiters move to Redis (shared limiter for all endpoints)); T-075 ([E05] Media backfill hardening); T-076 ([E02] Code screens polish (target size, cooldown reload, messages, focus))
+**Awaiting your review (MERGED):** T-053 ([E02] Rate limiters move to Redis (shared limiter for all endpoints)); T-064 ([E10] DB conventions: yearbook and profile tables (no joins, no foreign keys, ms timestamps)); T-075 ([E05] Media backfill hardening); T-076 ([E02] Code screens polish (target size, cooldown reload, messages, focus))
 
-**Open questions for you:** Q-026 (Approve merge of T-064 (E10: yearbook and profile tables to the new DB conventions)?)
+**Open questions for you:** none
 
-_Board last written 2026-10-10 05:41Z_
+_Board last written 2026-10-11 05:16Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -355,7 +355,7 @@ QA passed. All 16 limiters move from per-process memory to Redis sliding windows
 QA passed in a real browser (Chromium) with the dev code: register -> verify, forgot -> reset, resend cooldown, EN/VI, 375 px with a long email, nothing secret in URL/storage/Referer, the dev code is not in the web bundle. Not tested: a real screen reader (ARIA/focus checked instead). Small polish items are T-076. Without this merge the UI cannot verify email or reset a password (the API already needs codes since T-048). To approve: team approve T-049.
 
 ### Q-026 — Approve merge of T-064 (E10: yearbook and profile tables to the new DB conventions)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-10 04:38Z
 - **Blocks:** T-064,T-065
 - **Recommendation:** approve
@@ -1817,19 +1817,19 @@ Closed catalogue of note form fields (name, relationship, message, how we met, .
 - 2026-10-08 09:29Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-037, T-038, T-043, T-045')
 
 ### T-044 — [E08] Templates declare note fields (format v2.1): note_fields, note_field slot, NoteFields helper
-- **Status:** IN_QA
+- **Status:** CHANGES_REQUESTED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
 - **Depends-on:** T-038, T-043
 - **Risk:** low
-- **Rework:** 0
+- **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** —
 - **Branch:** task/t-044-e08-templates-declare-note-fields-format
 - **PR:** https://github.com/danyaa666/smemories/pull/47
-- **Updated:** 2026-10-10 05:40Z by qa
-- **Comments-seen:** 3
+- **Updated:** 2026-10-11 05:16Z by leader
+- **Comments-seen:** 6
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E08-designer-templates/07-templates-declare-note-fields.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1841,6 +1841,21 @@ A template lists which note fields its friend pages ask for and where each answe
 - 2026-10-08 09:14Z · leader · T-038 and T-043 are merged: ready.
 - 2026-10-08 13:31Z · leader · On hold: owner proposed browser print-to-PDF (HTML templates). Spike T-054 decides; resume or retire after ADR 0003 / D-24.
 - 2026-10-10 05:39Z · dev · Scope after D-24: AC1/4/6/7/8 done (AC2/3/5 dropped). note_fields + validation, templates.NoteFields, html manifest (no pages), List() has Renderer, pdf.Render refuses html, notes.FieldsFor reads the book's template (lookup query adds y.template_id). Test: go test ./..., go test -tags integration ./internal/notes, golangci-lint. Probe: html manifest with pages/theme, 10 or duplicate note_fields, book with NULL/unknown template_id.
+- 2026-10-10 05:52Z · qa · QA_PASS at 22bf321 (PR #47, CI go/go-integration/security/web all green). Scope per D-24: AC1, AC4, AC6, AC7, AC8 (AC2/3/5 dropped).
+  Evidence:
+  - AC1 validator: table tests green; I also checked text. Unknown id, duplicate, 0 entries, 10 entries, unknown key, unknown renderer all rejected with 'template "x", note_fields entry N ("id")' wording; 1..9 accepted; required flag round-trips (live lookup showed name/message required=true, others false). Absent note_fields -> default set (name req, relationship, message req).
+  - AC4: templates.NoteFields classic/modern = default set; unknown id -> (nil,false); result is a copy (mutating it leaves the registry intact); custom fixture covered (TestNoteFieldsCustomAndDefault).
+  - AC6: docs/templates.md matches the code (limits, error text, default set, renderer html, no-loss rule, List().Renderer, pdf.Render refusal).
+  - AC7: html manifest with no pages parses; with pages/unit/theme -> error; no/empty/unknown page_sizes -> error; missing vi name -> error; List() returns classic:go + polaroid:html in a fixture registry; classic/modern still renderer go.
+  - AC8: notes.FieldsFor(templateID) falls back to default for '' , NULL, unknown ('removed-tpl') and html-without-note_fields.
+  - classic/modern unchanged: make test (all pdf tests) green; regenerated docs/templates/{classic,modern}.pdf with -write-samples: git status clean, i.e. byte-identical to the committed samples.
+  - pdf.Render on an html template: returns error 'template "web" is an html template: the web app draws it...' and writes 0 bytes (test). Judged good: fail-clear beats an empty PDF. Non-blocking: uses fmt.Errorf like the other 6 in render.go (E10 will convert).
+  - Public lookup: diff adds only y.template_id to the same single token-scoped query (still one query, same WHERE c.revoked_at IS NULL); NULL handled via sql.NullString; response keys unchanged (deadline_at, fields, open, owner, yearbook{title}); no template id in the body. Revoked/unknown/expired paths unchanged (Newman steps 11/12/15 pass).
+  - End-to-end on a real API (isolated DB, scratch build with two extra embedded templates 'friends' (name*, how_we_met, message*) and 'web1' html (name, best_memory*); nothing committed): none/classic/unknown template -> fields name,relationship,message, how_we_met => 400 unknown_field; friends -> lookup shows name,how_we_met,message; {name,how_we_met,message} 201, best_memory/wish 400 unknown_field, missing message 400 missing_answer; web1 -> best_memory accepted, message 400; 501-char how_we_met and control char -> 400 invalid_answer; 2 photos 201 (2 rows saved), 4 photos 400 too_many_photos, html-as-jpg 415; switching a book friends->classic: lookup reverts, old note with how_we_met stays stored, new how_we_met rejected.
+  Commands: make lint build test (green), make test-integration (all pkgs ok, -race), newman notes collection x2 back to back on the branch binary: 72 requests, 137 assertions, 0 failed both times (no new endpoint; no collection change needed).
+  Non-blocking: (1) no committed integration test exercises a non-default field set through the HTTP handlers (only my manual run did); the registry is not injectable, so add one when the first non-default template ships. (2) the local .env lacks the SMEM_S3_* keys of .env.example (photo upload returns 502 until added), environment only.
+- 2026-10-10 05:52Z · leader · Leader review OK at head 22bf321 (= QA head, CI green, no .team changes). HOLD, do not merge yet: the public lookup query in internal/notes/store.go (JOIN yearbooks y ...) is also changed by T-064 (PR #44, waiting for the owner; renames yearbooks to yearbook_tab). Merging T-044 first would make T-064 conflict again and it has no rework left. Order: T-064 first; then T-044 gets a develop merge (use yearbook_tab in the new query), a short QA regression and merges.
+- 2026-10-11 05:16Z · leader · T-064 is merged (438d6b7). Merge develop into the T-044 branch; in internal/notes/store.go the public lookup now reads from yearbook_tab (rename yearbooks y to yearbook_tab y and keep the new y.template_id column); re-run make lint build test test-integration, push, confirm CI green, READY_FOR_QA (short regression for QA).
 
 ### T-045 — [E02] Register accepts a locale; verification email in the student's language
 - **Status:** DONE
@@ -2502,18 +2517,18 @@ Adds the tools the rest of E10 uses: the typed error package, the v2 envelope he
 - 2026-10-09 03:05Z · human · accepted by owner
 
 ### T-064 — [E10] DB conventions: yearbook and profile tables (no joins, no foreign keys, ms timestamps)
-- **Status:** QA_PASS
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
 - **Depends-on:** T-063, T-034, T-048, T-052, T-057
 - **Risk:** high
 - **Rework:** 2
-- **Owner-approved:** —
-- **Assignee:** leader
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-064-e10-db-conventions-yearbook-and-profile-
 - **PR:** https://github.com/danyaa666/smemories/pull/44
-- **Updated:** 2026-10-10 04:38Z by qa
+- **Updated:** 2026-10-11 05:16Z by leader
 - **Comments-seen:** 10
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/02-db-yearbook-profile.md`
@@ -2563,9 +2578,11 @@ Converts `yearbooks` and `profiles` to `yearbook_tab` and `profile_tab` per docs
   Newman (limits reset with make-reset-limits equivalent between runs): yearbooks 189/0, media 126/0, notes x2 137/0 (a and b verified), auth 174 assertions with the same 20 failures, all in the Google folder (Google unconfigured, expected).
   Owner approval needed (high risk).
 - 2026-10-10 04:38Z · leader · Leader review OK at head 2aabc37 (= QA head, CI green, mergeable, no .team changes). Migration yearbooks/profiles -> yearbook_tab/profile_tab (ms timestamps, VARCHAR instead of ENUM, 4 FKs dropped, owner_flag rebuilt), yearbook.Service.Delete in one transaction with documented lock order, ClearMediaRefs, 3-query reads. Race probes 0 5xx. Awaiting owner approval.
+- 2026-10-11 05:16Z · human · owner approved merge
+- 2026-10-11 05:16Z · leader · merged 438d6b7. Review: migration 20261010120000 converts yearbooks/profiles to yearbook_tab/profile_tab (BIGINT ms, VARCHAR instead of ENUM, 4 FKs dropped, Down restores data); yearbook.Service.Delete in one transaction with documented lock order (yearbook_tab then profile_tab then children); 3-query reads; race probes 0 5xx. Combined tree checked: no code refers to the old table names. For owner to check: run make migrate on your dev DB (existing rows convert in place). Next: T-065 (media table).
 
 ### T-065 — [E10] DB conventions: media table
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2576,7 +2593,7 @@ Converts `yearbooks` and `profiles` to `yearbook_tab` and `profile_tab` per docs
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
+- **Updated:** 2026-10-11 05:16Z by leader
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/03-db-media.md`
