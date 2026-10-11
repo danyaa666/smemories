@@ -17,6 +17,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/danyaa666/smemories/internal/notefields"
 	"github.com/danyaa666/smemories/internal/pdf/fonts"
 )
 
@@ -26,6 +27,7 @@ const pngInterlaceOffset = 8 + 8 + 12
 // Bounds that keep a (future, user-supplied) template from exhausting memory.
 const (
 	maxPages      = 16
+	maxNoteFields = 9 // the size of the catalogue
 	maxElements   = 64
 	minFontSize   = 4.0
 	maxFontSize   = 96.0
@@ -93,6 +95,16 @@ func (v *validator) template() {
 			v.errf("", "missing name for language %q", l)
 		}
 	}
+	v.noteFields()
+	switch t.Renderer {
+	case "", RendererGo:
+	case RendererHTML:
+		v.html()
+		return
+	default:
+		v.errf("", "unknown renderer %q (use %s or %s)", t.Renderer, RendererGo, RendererHTML)
+		return
+	}
 	if t.Unit != "mm" {
 		v.errf("", "invalid unit %q: only \"mm\" is supported", t.Unit)
 	}
@@ -139,6 +151,45 @@ func (v *validator) template() {
 		}
 	}
 	v.assetTotal()
+}
+
+// html checks the manifest of a web-app template: it draws itself, so it has no pages, theme, unit or
+// reference page; only the page sizes it supports (any known size) matter.
+func (v *validator) html() {
+	t := v.t
+	if len(t.Pages) > 0 || t.Unit != "" || t.Reference != "" || t.Theme.Font != "" || len(t.Theme.Fonts) > 0 || len(t.Theme.Colors) > 0 {
+		v.errf("", "an html template has no pages, unit, reference or theme")
+	}
+	if len(t.PageSizes) == 0 {
+		v.errf("", "page_sizes is empty")
+	}
+	for _, s := range t.PageSizes {
+		if _, ok := dims[s]; !ok {
+			v.errf("", "unknown page size %q", s)
+		}
+	}
+}
+
+// noteFields checks the declared note form: 1..maxNoteFields catalogue ids, no duplicates.
+func (v *validator) noteFields() {
+	refs := v.t.NoteFields
+	if refs == nil {
+		return
+	}
+	if len(refs) == 0 || len(refs) > maxNoteFields {
+		v.errf("", "note_fields needs 1..%d entries, has %d (leave it out for the default set)", maxNoteFields, len(refs))
+		return
+	}
+	seen := map[string]bool{}
+	for i, r := range refs {
+		where := fmt.Sprintf(", note_fields entry %d (%q)", i+1, r.ID)
+		if _, err := notefields.Info([]notefields.FieldRef{r}); err != nil {
+			v.errf(where, "not in the note field catalogue")
+		} else if seen[r.ID] {
+			v.errf(where, "listed twice")
+		}
+		seen[r.ID] = true
+	}
 }
 
 // assetTotal checks the size of all distinct background files together.

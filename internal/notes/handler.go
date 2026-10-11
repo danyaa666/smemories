@@ -208,11 +208,7 @@ func (h *Handler) lookup(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	refs, err := FieldsFor(r.Context(), p.YearbookID)
-	var fields []notefields.FieldInfo
-	if err == nil {
-		fields, err = notefields.Info(refs)
-	}
+	fields, err := notefields.Info(FieldsFor(p.TemplateID))
 	if err != nil {
 		h.fail(w, r, err)
 		return

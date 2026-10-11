@@ -312,11 +312,7 @@ func (h *Handler) validate(w http.ResponseWriter, r *http.Request, p Public, raw
 		httpx.WriteError(w, r, http.StatusBadRequest, "invalid_body", "answers must be a JSON object of strings")
 		return nil, false
 	}
-	refs, err := FieldsFor(r.Context(), p.YearbookID)
-	var clean map[string]string
-	if err == nil {
-		clean, err = notefields.Validate(refs, answers)
-	}
+	clean, err := notefields.Validate(FieldsFor(p.TemplateID), answers)
 	var fe *notefields.FieldError
 	if errors.As(err, &fe) {
 		msg := fe.Code // never the value; the id only when it is one of ours or plainly harmless
