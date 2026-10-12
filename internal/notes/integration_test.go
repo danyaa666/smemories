@@ -702,8 +702,8 @@ func TestPublicRoutesIgnoreOriginAndCookie(t *testing.T) {
 				t.Errorf("Origin %q: CORS header %s", origin, k)
 			}
 		}
-		body, ct := multipartOf(text("token", token), answers("A", "m"))
-		r = httptest.NewRequest("POST", submitPath, body)
+		body, ct := multipartOf(answers("A", "m"))
+		r = httptest.NewRequest("POST", submitURL(token), body)
 		r.Header.Set("Content-Type", ct)
 		if origin != "" {
 			r.Header.Set("Origin", origin)

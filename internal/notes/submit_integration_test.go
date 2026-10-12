@@ -20,12 +20,14 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/textproto"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -153,10 +155,13 @@ func multipartOf(parts ...part) (*bytes.Buffer, string) {
 
 const submitPath = "/api/public-collect/submit-note"
 
+// submitURL puts the token in the query, where the route reads it.
+func submitURL(token string) string { return submitPath + "?token=" + url.QueryEscape(token) }
+
 func (e *env) postFrom(ctx context.Context, ip, token string, parts ...part) resp {
 	e.t.Helper()
-	body, ct := multipartOf(append([]part{text("token", token)}, parts...)...)
-	r := httptest.NewRequest("POST", submitPath, body).WithContext(ctx)
+	body, ct := multipartOf(parts...)
+	r := httptest.NewRequest("POST", submitURL(token), body).WithContext(ctx)
 	r.Header.Set("Content-Type", ct)
 	r.RemoteAddr = ip + ":4000"
 	rec := httptest.NewRecorder()
@@ -294,12 +299,12 @@ func TestSubmitValidation(t *testing.T) {
 	e.nothingKept()
 
 	// the 415s: anything but multipart/form-data
-	r := httptest.NewRequest("POST", submitPath, strings.NewReader(`{"token":"`+l.token+`","answers":{}}`))
+	r := httptest.NewRequest("POST", submitURL(l.token), strings.NewReader(`{"answers":{}}`))
 	r.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	e.h.ServeHTTP(rec, r)
 	resp{rec, t}.status(415, "ERROR_UNSUPPORTED_MEDIA_TYPE")
-	r = httptest.NewRequest("POST", submitPath, nil)
+	r = httptest.NewRequest("POST", submitURL(l.token), nil)
 	rec = httptest.NewRecorder()
 	e.h.ServeHTTP(rec, r)
 	resp{rec, t}.status(415, "ERROR_UNSUPPORTED_MEDIA_TYPE")
@@ -574,8 +579,8 @@ func TestSubmitPrivacy(t *testing.T) {
 	e := newEnv(t)
 	l := e.newOpenLink()
 	bob := e.register("bob@example.com", "Bob", true)
-	body, ct := multipartOf(text("token", l.token), answers("Ánh", "UNIQUE-MESSAGE-TEXT"), part{"photos", "secret-holiday-name.jpg", "image/jpeg", jpegOf(t, 3)})
-	r := httptest.NewRequest("POST", submitPath, body)
+	body, ct := multipartOf(answers("Ánh", "UNIQUE-MESSAGE-TEXT"), part{"photos", "secret-holiday-name.jpg", "image/jpeg", jpegOf(t, 3)})
+	r := httptest.NewRequest("POST", submitURL(l.token), body)
 	r.Header.Set("Content-Type", ct)
 	r.Header.Set("Origin", "https://evil.example")
 	r.Header.Set("User-Agent", "UNIQUE-UA-STRING")
@@ -700,8 +705,8 @@ func dial(t testing.TB, srv *httptest.Server) net.Conn {
 	return conn
 }
 
-func sendHead(conn net.Conn, ip, ctype string, length int) {
-	fmt.Fprintf(conn, "POST %s HTTP/1.1\r\nHost: x\r\nX-Test-IP: %s\r\nContent-Type: %s\r\nContent-Length: %d\r\n\r\n", submitPath, ip, ctype, length)
+func sendHead(conn net.Conn, ip, token, ctype string, length int) {
+	fmt.Fprintf(conn, "POST %s?token="+url.QueryEscape(token)+" HTTP/1.1\r\nHost: x\r\nX-Test-IP: %s\r\nContent-Type: %s\r\nContent-Length: %d\r\n\r\n", submitPath, ip, ctype, length)
 }
 
 func readResponse(t testing.TB, conn net.Conn, within time.Duration) (status int, header http.Header, body string) {
@@ -721,9 +726,9 @@ var bigBody, bigType = multipartOf(answers("A", "m"), photoPart(make([]byte, 4<<
 
 // stall opens a connection that sends the answers, the head of a photo and then extra more bytes of an upload that
 // promises 4 MiB, and goes silent. It returns the connection.
-func (e *env) stall(srv *httptest.Server, ip string, extra int) net.Conn {
+func (e *env) stall(srv *httptest.Server, ip, token string, extra int) net.Conn {
 	conn := dial(e.t, srv)
-	sendHead(conn, ip, bigType, bigBody.Len())
+	sendHead(conn, ip, token, bigType, bigBody.Len())
 	if _, err := conn.Write(bigBody.Bytes()[:600+extra]); err != nil {
 		e.t.Fatal(err)
 	}
@@ -743,10 +748,10 @@ func TestIdleBodyIsDropped(t *testing.T) {
 	submitPace.Idle = 300 * time.Millisecond
 	t.Cleanup(func() { submitPace = old })
 	e := newEnv(t)
-	e.newOpenLink()
+	l := e.newOpenLink()
 	srv := e.serve()
 
-	conn := e.stall(srv, "10.0.0.1", 100)
+	conn := e.stall(srv, "10.0.0.1", l.token, 100)
 	e.waitFor("upload in progress", func() bool { return e.inProgress() == 1 && len(e.spooled()) == 1 })
 	start := time.Now()
 	if got := statusOf(t, conn, 5*time.Second); got != 408 || time.Since(start) > 3*time.Second {
@@ -764,10 +769,10 @@ func TestSlowDripIsDropped(t *testing.T) {
 	submitPace = httpx.BodyPace{Idle: time.Second, Total: 30 * time.Second, MinRate: 1000, Grace: 500 * time.Millisecond}
 	t.Cleanup(func() { submitPace = old })
 	e := newEnv(t)
-	e.newOpenLink()
+	l := e.newOpenLink()
 	srv := e.serve()
 
-	conn := e.stall(srv, "10.0.0.1", 0)
+	conn := e.stall(srv, "10.0.0.1", l.token, 0)
 	start := time.Now()
 	stop := make(chan struct{})
 	go func() {
@@ -800,21 +805,21 @@ func TestStalledUploadsDoNotBlockOthers(t *testing.T) {
 	var conns []net.Conn
 	for _, ip := range []string{"198.51.100.1", "198.51.100.2"} {
 		for range 8 {
-			conns = append(conns, e.stall(srv, ip, 100))
+			conns = append(conns, e.stall(srv, ip, l.token, 100))
 		}
 	}
 	e.waitFor("16 uploads in progress", func() bool { return e.inProgress() == 16 && len(e.spooled()) == 16 })
 
 	extra := dial(t, srv)
-	sendHead(extra, "198.51.100.1", bigType, bigBody.Len())
+	sendHead(extra, "198.51.100.1", l.token, bigType, bigBody.Len())
 	code, header, _ := readResponse(t, extra, 3*time.Second)
 	if ra, _ := strconv.Atoi(header.Get("Retry-After")); code != 503 || ra < 2 || ra > 6 {
 		t.Fatalf("ninth upload from one address: %d, Retry-After %q", code, header.Get("Retry-After"))
 	}
 	// a normal 3-photo submission from a third address, and a text-only one from an attacker's address, both succeed
-	body, ct := multipartOf(text("token", l.token), answers("Real", "hi"), photoPart(jpegOf(t, 1)), photoPart(jpegOf(t, 2)), photoPart(jpegOf(t, 3)))
+	body, ct := multipartOf(answers("Real", "hi"), photoPart(jpegOf(t, 1)), photoPart(jpegOf(t, 2)), photoPart(jpegOf(t, 3)))
 	c3 := dial(t, srv)
-	sendHead(c3, "203.0.113.7", ct, body.Len())
+	sendHead(c3, "203.0.113.7", l.token, ct, body.Len())
 	_, _ = c3.Write(body.Bytes())
 	if got := statusOf(t, c3, 5*time.Second); got != 200 {
 		t.Fatalf("third address: %d", got)
@@ -838,7 +843,7 @@ func TestStalledUploadsDoNotBlockOthers(t *testing.T) {
 // The 49th concurrent upload is turned away while 48 are in progress, and holding 48 uploads costs disk, not memory.
 func TestConnectionCapAndFlatMemory(t *testing.T) {
 	e := newEnv(t)
-	e.newOpenLink()
+	l := e.newOpenLink()
 	e.nh.SetUploadLimits(48, 8, e.tmp)
 	srv := e.serve()
 	runtime.GC()
@@ -848,7 +853,7 @@ func TestConnectionCapAndFlatMemory(t *testing.T) {
 	const each = 1 << 20
 	var conns []net.Conn
 	for i := range 48 {
-		conns = append(conns, e.stall(srv, fmt.Sprintf("10.9.%d.1", i), each))
+		conns = append(conns, e.stall(srv, fmt.Sprintf("10.9.%d.1", i), l.token, each))
 	}
 	var spooledBytes int64
 	e.waitFor("48 MiB on disk", func() bool {
@@ -867,7 +872,7 @@ func TestConnectionCapAndFlatMemory(t *testing.T) {
 		t.Fatalf("heap grew by %d MiB while 48 MiB were being uploaded: the body is not spooled", grown>>20)
 	}
 	over := dial(t, srv)
-	sendHead(over, "10.9.99.1", bigType, bigBody.Len())
+	sendHead(over, "10.9.99.1", l.token, bigType, bigBody.Len())
 	if got := statusOf(t, over, 3*time.Second); got != 503 {
 		t.Fatalf("49th upload: %d, want 503", got)
 	}
@@ -883,6 +888,8 @@ func TestConnectionCapAndFlatMemory(t *testing.T) {
 func TestEarlyRejectionDrainsTheBody(t *testing.T) {
 	e := newEnv(t)
 	l := e.newOpenLink()
+	_, closed := e.newLink(l.owner, l.book, fmt.Sprintf(`{"deadline_at":%d}`, e.now().Add(time.Hour).UnixMilli()))
+	e.advance(time.Hour)
 	srv := e.serve()
 	photo := part{"photos", "a.jpg", "image/jpeg", make([]byte, 1<<20)}
 	cases := []struct {
@@ -891,14 +898,14 @@ func TestEarlyRejectionDrainsTheBody(t *testing.T) {
 		status      int
 		code        string
 	}{
-		{"unknown link", "ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ", []part{answers("A", "m"), photo}, 404, "ERROR_NOT_FOUND"},
+		{"closed link", closed, []part{answers("A", "m"), photo}, 410, "ERROR_COLLECTION_CLOSED"},
 		{"missing answer", l.token, []part{text("answers", `{"name":"A"}`), photo}, 400, "ERROR_MISSING_ANSWER"},
 		{"answers after photos", l.token, []part{photo, answers("A", "m")}, 400, "ERROR_PARAM"},
 	}
 	for _, c := range cases {
-		body, ct := multipartOf(append([]part{text("token", c.token)}, c.parts...)...)
+		body, ct := multipartOf(c.parts...)
 		conn := dial(t, srv)
-		sendHead(conn, "10.0.0.5", ct, body.Len())
+		sendHead(conn, "10.0.0.5", c.token, ct, body.Len())
 		half := body.Len() / 2
 		_, _ = conn.Write(body.Bytes()[:half])
 		_ = conn.SetReadDeadline(time.Now().Add(300 * time.Millisecond))
@@ -915,6 +922,58 @@ func TestEarlyRejectionDrainsTheBody(t *testing.T) {
 	e.nothingKept()
 }
 
+// readCounter counts what the handler read of a body that never ends.
+type readCounter struct{ n atomic.Int64 }
+
+func (c *readCounter) Read(p []byte) (int, error) { c.n.Add(int64(len(p))); return len(p), nil }
+
+// T-034 DoS design: an unknown, malformed or revoked token (in the query) is answered 404 before the body is touched:
+// nothing is read or spooled, the connection is not held while the client is still uploading, and the token is not logged.
+func TestUnknownTokenIsAnsweredWithoutReadingTheBody(t *testing.T) {
+	e := newEnv(t)
+	l := e.newOpenLink()
+	revID, revoked := e.newLink(l.owner, l.book, `{}`)
+	e.revoke(l.owner, revID).status(200, "")
+	const secret = "SECRET-TOKEN-NEVER-LOGGED-0123456"
+	tokens := []string{secret, "short", strings.Repeat("a", 5000), revoked, ""}
+	_, ct := multipartOf(answers("A", "m"))
+	for _, tok := range tokens {
+		rc := &readCounter{}
+		r := httptest.NewRequest("POST", submitURL(tok), io.LimitReader(rc, 20<<20))
+		r.ContentLength = 20 << 20
+		r.Header.Set("Content-Type", ct)
+		r.RemoteAddr = "192.0.2.9:4000"
+		rec := httptest.NewRecorder()
+		e.h.ServeHTTP(rec, r)
+		resp{rec, t}.status(404, "ERROR_NOT_FOUND")
+		if n := rc.n.Load(); n != 0 {
+			t.Fatalf("token %.8q: %d bytes of the body were read", tok, n)
+		}
+		if len(e.spooled()) != 0 {
+			t.Fatalf("token %.8q: spool not empty", tok)
+		}
+	}
+	if strings.Contains(e.logs.String(), secret) {
+		t.Fatal("the token reached the logs")
+	}
+
+	// over a real socket: the answer arrives while the client has sent a few KB of its 20 MiB
+	srv := e.serve()
+	conn := dial(t, srv)
+	sendHead(conn, "192.0.2.10", secret, ct, 20<<20)
+	_, _ = conn.Write(make([]byte, 4<<10))
+	if code, _, out := readResponse(t, conn, 2*time.Second); code != 404 || !strings.Contains(out, "ERROR_NOT_FOUND") {
+		t.Fatalf("%d %s", code, out)
+	}
+	if len(e.spooled()) != 0 || e.inProgress() != 0 {
+		t.Fatal("an unknown token held a slot or a spool file")
+	}
+	e.nothingKept()
+	if strings.Contains(e.logs.String(), secret) {
+		t.Fatal("the token reached the logs")
+	}
+}
+
 // The spooled body is removed after success, rejection, a client that hangs up and a panic in the handler.
 func TestSpoolIsAlwaysRemoved(t *testing.T) {
 	e := newEnv(t)
@@ -927,7 +986,7 @@ func TestSpoolIsAlwaysRemoved(t *testing.T) {
 	e.noSpool()
 
 	srv := e.serve()
-	conn := e.stall(srv, "10.0.0.2", 100)
+	conn := e.stall(srv, "10.0.0.2", l.token, 100)
 	e.waitFor("spooling", func() bool { return len(e.spooled()) == 1 })
 	_ = conn.Close()
 	e.waitFor("released", func() bool { return e.inProgress() == 0 })
@@ -993,11 +1052,11 @@ func TestFortyStudentsAtOneMBps(t *testing.T) {
 				_, _ = io.Copy(io.Discard, res.Body)
 				_ = res.Body.Close()
 			}
-			body, ct := multipartOf(text("token", l.token), answers(fmt.Sprintf("Student %d", i), "hi"), photoPart(photos[0]), photoPart(photos[1]), photoPart(photos[2]))
+			body, ct := multipartOf(answers(fmt.Sprintf("Student %d", i), "hi"), photoPart(photos[0]), photoPart(photos[1]), photoPart(photos[2]))
 			status, tries := 0, 0
 			for tries < 300 {
 				tries++
-				req, _ := http.NewRequest("POST", srv.URL+submitPath, io.NopCloser(&throttled{bytes.NewReader(body.Bytes()), 1 << 20}))
+				req, _ := http.NewRequest("POST", srv.URL+submitURL(l.token), io.NopCloser(&throttled{bytes.NewReader(body.Bytes()), 1 << 20}))
 				req.ContentLength = int64(body.Len())
 				req.Header.Set("Content-Type", ct)
 				req.Header.Set("X-Test-IP", "10.70.0.1")
@@ -1080,9 +1139,9 @@ func TestMediaBusyIsRefunded(t *testing.T) {
 // directory, but the file of an upload still arriving (fresh) is not.
 func TestSweepSpoolAtStartup(t *testing.T) {
 	e := newEnv(t)
-	e.newOpenLink()
+	l := e.newOpenLink()
 	srv := e.serve()
-	conn := e.stall(srv, "10.0.0.1", 100)
+	conn := e.stall(srv, "10.0.0.1", l.token, 100)
 	e.waitFor("upload in progress", func() bool { return e.inProgress() == 1 && len(e.spooled()) == 1 })
 
 	next := NewHandler(e.ns, 10<<20, nil, nil, nil, e.nh.logger)
@@ -1114,9 +1173,9 @@ func TestSubmitOutlivesServerTimeouts(t *testing.T) {
 	srv.Config.ReadTimeout, srv.Config.WriteTimeout = 700*time.Millisecond, 700*time.Millisecond
 	srv.Start()
 	t.Cleanup(srv.Close)
-	body, ct := multipartOf(text("token", l.token), answers("Slow", "phone"), photoPart(photoNoise(t, 5)))
+	body, ct := multipartOf(answers("Slow", "phone"), photoPart(photoNoise(t, 5)))
 	rate := body.Len() / 2 // bytes per second: about two seconds
-	req, _ := http.NewRequest("POST", srv.URL+submitPath, io.NopCloser(&throttled{bytes.NewReader(body.Bytes()), rate}))
+	req, _ := http.NewRequest("POST", srv.URL+submitURL(l.token), io.NopCloser(&throttled{bytes.NewReader(body.Bytes()), rate}))
 	req.ContentLength = int64(body.Len())
 	req.Header.Set("Content-Type", ct)
 	start := time.Now()

@@ -20,7 +20,7 @@ const (
 	maxBody         = 32 << 20 // whole request
 	maxAnswersBytes = 16 << 10
 	maxPhotos       = 3
-	maxParts        = 12 // token, answers, website, photos and a few strays; more is hostile
+	maxParts        = 12 // answers, website, photos and a few strays; more is hostile
 	maxHoneypot     = 1 << 10
 
 	// Slow phone uploads: the body is spooled to disk while it arrives, so a slow client costs a socket and some disk,
@@ -37,8 +37,6 @@ var submitPace = httpx.BodyPace{Idle: 10 * time.Second, Total: 120 * time.Second
 
 // scan is what the multipart body held, without the photo bytes.
 type scan struct {
-	token      string
-	hasToken   bool
 	answers    []byte
 	hasAnswers bool
 	honeypot   bool
@@ -47,8 +45,9 @@ type scan struct {
 }
 
 // submit stores a friend's note as pending. Order matters: a slot for the network phase is taken before anything
-// is read; the body is spooled to disk (the token is one of its fields); the link is checked and the text validated
-// before any photo is decoded; every failure after a photo was stored deletes what was stored.
+// is read; the link is resolved from the query token before the body is touched (an unknown token costs no disk and no
+// connection time, T-034); the body is spooled to disk; the text is validated before any photo is decoded; every failure
+// after a photo was stored deletes what was stored.
 func (h *Handler) submit(w http.ResponseWriter, r *http.Request) {
 	ip := h.clientIP(r)
 	if !h.acquire(ip) { // nothing was read or counted, so a busy answer costs the client nothing
@@ -60,8 +59,17 @@ func (h *Handler) submit(w http.ResponseWriter, r *http.Request) {
 	httpx.PaceBody(w, r, submitPace)
 	rec := &errRecorder{r: r.Body}
 	r.Body = io.NopCloser(rec)
+	raw := w
 	w = &drainWriter{ResponseWriter: w, rec: rec} // an early answer first swallows the rest of the body, so a browser can read it
 
+	p, err := h.svc.Resolve(r.Context(), ip, r.URL.Query().Get("token")) // the token is in the query, never in the body or the logs
+	if err != nil {
+		if apperr.Is(err, apperr.NotFound) { // a guess or a revoked link: answer at once, do not read the body
+			w = raw
+		}
+		h.fail(w, r, err)
+		return
+	}
 	mt, params, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
 	if err != nil || mt != "multipart/form-data" {
 		h.fail(w, r, apperr.New(CodeUnsupportedMediaType, "send multipart/form-data"))
@@ -99,11 +107,6 @@ func (h *Handler) submit(w http.ResponseWriter, r *http.Request) {
 	}
 	if sc.honeypot { // a bot filled the hidden field: look successful, keep nothing
 		httpx.OK(w, r, noteCreated{ulid.New(time.Now())})
-		return
-	}
-	p, err := h.svc.Resolve(r.Context(), ip, sc.token)
-	if err != nil {
-		h.fail(w, r, err)
 		return
 	}
 	if sc.photoFirst || (len(sc.photos) > 0 && !sc.hasAnswers) {
@@ -175,14 +178,6 @@ func (h *Handler) scan(f *os.File, boundary string) (*scan, error) {
 			return nil, apperr.New(apperr.Param, "too many parts")
 		}
 		switch part.FormName() { // the file name and the part's Content-Type are never looked at
-		case "token":
-			b, err := io.ReadAll(io.LimitReader(part, tokenLen+1)) // one byte over: it can only be a miss
-			if err != nil {
-				return nil, malformed
-			}
-			if !sc.hasToken {
-				sc.token, sc.hasToken = string(b), true
-			}
 		case "answers":
 			b, err := io.ReadAll(io.LimitReader(part, maxAnswersBytes+1))
 			if err != nil {
