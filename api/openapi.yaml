@@ -4,7 +4,8 @@ info:
   version: 0.1.0
   description: >-
     Hand-written contract for the SMemories API. Infrastructure routes live at the
-    root; business routes live under /v1 (the web app reaches them as /api/v1/*).
+    root; business routes live under /api/<namespace>/<action> (v2, docs/api-contract.md) or,
+    until epic E10 moves their domain, under /v1 (the web app reaches them as /api/v1/*).
 servers:
   - url: http://localhost:8080
     description: Local development
@@ -766,247 +767,264 @@ paths:
         "503": {$ref: "#/components/responses/SessionStoreUnavailable"}
         "403": {$ref: "#/components/responses/CsrfOriginMismatch"}
         "502": {$ref: "#/components/responses/StorageError"}
-  /v1/yearbooks/{id}/collections:
-    parameters:
-      - {name: id, in: path, required: true, schema: {type: string}, description: Yearbook ULID.}
+  /api/note-collection/create:
     post:
-      operationId: createCollection
+      operationId: createNoteCollection
       tags: [notes]
       summary: Create a collection link for a yearbook
       description: >-
-        Creates a private link friends can use to leave notes. The body is a JSON object (send `{}` for no options).
-        The response carries the link `token` once; only its SHA-256 is stored and it can never be shown again
-        (revoke the link and create a new one instead). The token is a bearer secret of 192 random bits (32 base64url
-        characters); the web link is `<app>/c/<token>`. `label` is optional, at most 60 characters, NFC and trimmed
-        (`invalid_label` for control or format characters). `deadline_at` is optional, RFC 3339, in the future and at
-        most one year ahead (`invalid_deadline`). Unknown fields are `400 unknown_field`. Needs a verified email
-        (`403 email_not_verified`). A missing book and one owned by someone else both answer `404 not_found`.
-        At most 5 active (not revoked) links per book (`409 limit_reached`).
+        Called by the signed-in owner of a yearbook (the web app's "share" screen). Creates a private link friends can use
+        to leave notes. The body is a JSON object with the `yearbook_id` and optional options. The response carries the link
+        `token` once; only its SHA-256 is stored and it can never be shown again (revoke the link and create a new one instead).
+        The token is a bearer secret of 192 random bits (32 base64url characters); the web link is `<app>/c/<token>`.
+        `label` is optional, at most 60 characters, NFC and trimmed (`ERROR_INVALID_LABEL` for control or format characters).
+        `deadline_at` is optional, Unix ms, in the future and at most one year ahead (`ERROR_INVALID_DEADLINE`); `null` or
+        absent means no deadline. Unknown fields, a missing `yearbook_id` and values of the wrong type are `ERROR_PARAM`.
+        Needs a verified email (`ERROR_EMAIL_NOT_VERIFIED`). A missing yearbook and one owned by someone else both answer
+        `ERROR_NOT_FOUND`. At most 5 active (not revoked) links per yearbook (`ERROR_LIMIT_REACHED`). A request with the
+        session cookie must come from an allowed Origin. Not idempotent: retrying after a lost answer may create a second link.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: The yearbook does not exist or belongs to someone else; the two cannot be told apart.}
+        - {code: ERROR_EMAIL_NOT_VERIFIED, description: The owner's email address is not verified yet.}
+        - {code: ERROR_INVALID_LABEL, description: The label is longer than 60 characters or contains control or format characters.}
+        - {code: ERROR_INVALID_DEADLINE, description: "`deadline_at` is not in the future or is more than one year ahead."}
+        - {code: ERROR_LIMIT_REACHED, description: The yearbook already has 5 active links.}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
       security:
         - sessionCookie: []
       requestBody:
         required: true
         content:
           application/json:
-            schema: {$ref: "#/components/schemas/CollectionCreate"}
+            schema: {$ref: "#/components/schemas/NoteCollectionCreateRequest"}
+            examples:
+              withDeadline:
+                value: {yearbook_id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, label: Cafe friends, deadline_at: 1761000000000}
+              noOptions:
+                value: {yearbook_id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E}
       responses:
-        "201":
+        "200":
           description: Created. The only response that ever contains the token.
           content:
             application/json:
-              schema:
-                type: object
-                required: [collection]
-                properties:
-                  collection: {$ref: "#/components/schemas/CollectionCreated"}
-        "400":
-          description: "`invalid_label`, `invalid_deadline`, `unknown_field` or `invalid_body`."
-          content:
-            application/json:
-              schema: {$ref: "#/components/schemas/Error"}
-        "401": {$ref: "#/components/responses/Unauthenticated"}
-        "503": {$ref: "#/components/responses/SessionStoreUnavailable"}
-        "403":
-          description: >-
-            `email_not_verified` (the owner's email is not verified) or `csrf_origin_mismatch` (the request carries
-            the session cookie but its Origin is not allowed).
-          content:
-            application/json:
-              schema: {$ref: "#/components/schemas/Error"}
-        "404": {$ref: "#/components/responses/YearbookNotFound"}
-        "409":
-          description: The book already has 5 active links (`limit_reached`).
-          content:
-            application/json:
-              schema: {$ref: "#/components/schemas/Error"}
-        "413": {$ref: "#/components/responses/PayloadTooLarge"}
-        "415": {$ref: "#/components/responses/UnsupportedMediaType"}
+              schema: {$ref: "#/components/schemas/NoteCollectionCreateResponse"}
+              examples:
+                created:
+                  value:
+                    status: OK
+                    data: {id: 01K7QA1B2C3D4E5F6G7H8J9K0M, label: Cafe friends, deadline_at: 1761000000000, created_at: 1760000000000, token: q3Zp0Vn8xYk2LwR5tB7mJc9aHdE4sUgF}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "409": {$ref: "#/components/responses/ApiConflict"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/note-collection/get-list:
     get:
-      operationId: listCollections
+      operationId: listNoteCollections
       tags: [notes]
       summary: List a yearbook's collection links
       description: >-
-        Newest first, revoked ones included (`revoked_at` set). Never contains a token or a token hash.
-        `note_count` counts the link's notes in any status.
+        Called by the signed-in owner to show the links of a yearbook, newest first, revoked ones included (`revoked_at` set).
+        Never contains a token or a token hash. `note_count` counts the link's notes in any status. At most 5 links are active, but
+        revoked ones stay, so the list is returned whole: `next_id` is always the empty string and there is no `limit` yet.
+        A missing `yearbook_id` is `ERROR_PARAM`; a missing yearbook and one owned by someone else both answer `ERROR_NOT_FOUND`.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: The yearbook does not exist or belongs to someone else; the two cannot be told apart.}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
       security:
         - sessionCookie: []
+      parameters:
+        - {name: yearbook_id, in: query, required: true, schema: {type: string}, description: Yearbook ULID.}
       responses:
         "200":
           description: The links.
           content:
             application/json:
-              schema:
-                type: object
-                required: [collections]
-                properties:
-                  collections:
-                    type: array
-                    items: {$ref: "#/components/schemas/Collection"}
-        "401": {$ref: "#/components/responses/Unauthenticated"}
-        "503": {$ref: "#/components/responses/SessionStoreUnavailable"}
-        "404": {$ref: "#/components/responses/YearbookNotFound"}
-  /v1/collections/{id}:
-    parameters:
-      - {name: id, in: path, required: true, schema: {type: string}, description: Collection ULID.}
-    delete:
-      operationId: revokeCollection
+              schema: {$ref: "#/components/schemas/NoteCollectionListResponse"}
+              examples:
+                list:
+                  value:
+                    status: OK
+                    data:
+                      items:
+                        - {id: 01K7QA1B2C3D4E5F6G7H8J9K0M, label: Cafe friends, deadline_at: 1761000000000, created_at: 1760000000000, revoked_at: null, note_count: 3}
+                      next_id: ""
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/note-collection/revoke:
+    post:
+      operationId: revokeNoteCollection
       tags: [notes]
       summary: Revoke a collection link
       description: >-
-        Sets `revoked_at`; the link stops working at once and never becomes active again. Repeating it is `204` as
-        well. A missing link and someone else's both answer `404 not_found`.
+        Called by the signed-in owner to stop a link. Sets `revoked_at`; the link stops working at once and never becomes active
+        again, but its notes are kept. Idempotent: repeating it succeeds and keeps the first `revoked_at`, so a lost answer can be
+        retried. A missing link and someone else's both answer `ERROR_NOT_FOUND`. A request with the session cookie must come from
+        an allowed Origin.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: The link does not exist or belongs to someone else; the two cannot be told apart.}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
       security:
         - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/NoteCollectionRevokeRequest"}
+            examples:
+              revoke: {value: {id: 01K7QA1B2C3D4E5F6G7H8J9K0M}}
       responses:
-        "204": {description: Revoked (or already revoked).}
-        "401": {$ref: "#/components/responses/Unauthenticated"}
-        "503": {$ref: "#/components/responses/SessionStoreUnavailable"}
-        "403": {$ref: "#/components/responses/CsrfOriginMismatch"}
-        "404": {$ref: "#/components/responses/NotFound"}
-  /v1/public/collect/{token}:
-    parameters:
-      - {name: token, in: path, required: true, schema: {type: string}, description: The link token, a bearer secret.}
+        "200":
+          description: Revoked (or already revoked).
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/EmptyResponse"}
+              examples:
+                revoked: {value: {status: OK, data: {}}}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/public-collect/get:
     get:
-      operationId: lookupCollection
+      operationId: getPublicCollect
       tags: [notes]
       summary: Look up a collection link (public)
       description: >-
-        For the contributor form. No session is needed and none is read; no cookie is set and no CORS headers are
-        sent. An unknown, malformed or revoked token all answer the same `404 not_found`. Once the deadline has
-        passed the answer is `410 collection_closed`. The answer also carries `fields`, the questions of the note form
-        in order (`notefields.Info`), so the page can render the form. Only requests that miss (unknown, malformed
-        or revoked token) count against the tight limit of 60 per client IP per 15 minutes, so a class behind one
-        address can open the same link; all requests together are capped at 600 per client IP per 15 minutes
-        (`429 rate_limited`, with `Retry-After`). The token never appears in logs.
+        Called by the public note form (a friend's browser) when the page opens. No session is needed and none is read; no cookie
+        is set and no CORS headers are sent. An unknown, malformed, missing or revoked `token` all answer the same `ERROR_NOT_FOUND`.
+        Once the deadline has passed the answer is `ERROR_COLLECTION_CLOSED`. The answer also carries `fields`, the questions of the
+        note form in order, so the page can render the form. Only requests that miss (unknown, malformed or revoked token) count
+        against the tight limit of 60 per client IP per 15 minutes, so a class behind one address can open the same link; all requests
+        together are capped at 600 per client IP per 15 minutes (`ERROR_RATE_LIMITED`, with `Retry-After`: wait that many seconds).
+        The token is a credential in the URL: the access log records the route only, never the query string.
+      x-auth: public
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: "The token is missing, malformed, unknown or revoked; the four cannot be told apart."}
+        - {code: ERROR_COLLECTION_CLOSED, description: The deadline of the link has passed.}
+        - {code: ERROR_RATE_LIMITED, description: "Too many requests from this client IP; wait `Retry-After` seconds."}
       security: []
+      parameters:
+        - {name: token, in: query, required: true, schema: {type: string}, description: The link token, a bearer secret of 32 base64url characters.}
       responses:
         "200":
           description: The link is active.
           content:
             application/json:
-              schema: {$ref: "#/components/schemas/CollectionPublic"}
-        "404": {$ref: "#/components/responses/NotFound"}
-        "410":
-          description: The deadline has passed (`collection_closed`).
-          content:
-            application/json:
-              schema: {$ref: "#/components/schemas/Error"}
-        "429": {$ref: "#/components/responses/RateLimited"}
-  /v1/public/collect/{token}/notes:
-    parameters:
-      - {name: token, in: path, required: true, schema: {type: string}, description: The link token, a bearer secret.}
+              schema: {$ref: "#/components/schemas/PublicCollectGetResponse"}
+              examples:
+                open:
+                  value:
+                    status: OK
+                    data:
+                      yearbook: {title: Class 12A}
+                      owner: {display_name: Linh}
+                      deadline_at: 1761000000000
+                      open: true
+                      fields:
+                        - {id: name, kind: short_text, label: {en: Your name, vi: Tên của bạn}, hint: {en: "", vi: ""}, required: true, max_length: 60}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "410": {$ref: "#/components/responses/ApiGone"}
+        "429": {$ref: "#/components/responses/ApiRateLimited"}
+  /api/public-collect/submit-note:
     post:
-      operationId: submitNote
+      operationId: submitPublicCollectNote
       tags: [notes]
       summary: Submit a note through a collection link (public)
       description: >-
-        A friend sends answers to the form fields (`fields` of the lookup) and up to three photos, without an account.
-        The note is stored as `pending` for the owner to moderate; nothing about it is returned except its id.
-        No session is read, no cookie is set, no CORS headers are sent, and neither the client IP nor the user agent
-        is stored. The body is spooled to a temporary file on the server while it arrives (nothing is decoded and no
-        image-processing slot is held during the upload); the server removes the file in every case. The link, the
-        note limit and the text are checked once the body has arrived, and a rejection (`404 not_found` for an unknown,
-        malformed or revoked token, `410 collection_closed` after the deadline, `400`, `429`) is sent only after the rest
-        of the body has been read, so a browser can show it. Send `answers` before the first `photos` part
-        (otherwise `400 invalid_body`). Unknown parts are ignored. A body that delivers no byte for 10 seconds, or
-        averages under 16 KiB/s once 15 seconds have passed, or takes over 120 seconds, is dropped
-        (`408 request_timeout`, nothing stored).
+        Called by the public note form (a friend's browser). A friend sends the link `token`, answers to the form fields (`fields` of
+        the lookup) and up to three photos, without an account, as `multipart/form-data`. The token is a form field, not part of the
+        URL. The note is stored as `pending` for the owner to moderate; nothing about it is returned except its id. No session is read,
+        no cookie is set, no CORS headers are sent, and neither the client IP nor the user agent is stored. The body is spooled to a
+        temporary file on the server while it arrives (nothing is decoded and no image-processing slot is held during the upload); the
+        server removes the file in every case. The link, the note limit and the text are checked once the body has arrived, and a
+        rejection (`ERROR_NOT_FOUND` for an unknown, malformed, missing or revoked token, `ERROR_COLLECTION_CLOSED` after the deadline,
+        `ERROR_PARAM`, `ERROR_RATE_LIMITED`) is sent only after the rest of the body has been read, so a browser can show it. Send
+        `answers` before the first `photos` part (otherwise `ERROR_PARAM`). Unknown parts are ignored. A body that delivers no byte for 10
+        seconds, or averages under 16 KiB/s once 15 seconds have passed, or takes over 120 seconds, is dropped (`ERROR_REQUEST_TIMEOUT`,
+        nothing stored).
 
-        Answers are validated against the set of fields in force at submission time (text rules of
-        `docs/note-fields.md`: NFC, trimmed, control and format characters rejected except ZWJ and variation
-        selectors, limits in characters). Each photo goes through the same pipeline as owner uploads (content sniffing,
-        decode limits, metadata stripped, display, print and thumbnail versions); a rejected photo rejects the whole
-        submission and nothing is stored. Photos are processed one at a time, each waiting up to 10 seconds for a free
-        image-processing slot. A submission is refused at once, before any byte of the body is read, with `503 busy`
-        and a `Retry-After` of 2 to 6 seconds (random) when the server already has `SMEM_PUBLIC_UPLOAD_MAX_CONNS`
-        uploads in progress or the client IP has `SMEM_PUBLIC_UPLOAD_CONCURRENT_PER_IP`; `503 busy` is also the answer when
-        no processing slot frees up in 10 seconds. A `503` costs the client nothing against the request limits below.
-        The server does not read the body of an immediate `503`, so a client that is still uploading may see the
-        connection reset instead of the answer: treat a network error exactly like `503` and retry with the same data.
 
-        Limits: request body 32 MiB, each photo `SMEM_MEDIA_MAX_BYTES` (default 10 MiB), `answers` 16 KiB, 300 notes
-        per link in any status, the yearbook's photo quota. Submissions that passed text validation are counted per
-        client IP (100 per hour, 300 per day) and per link (60 per hour): `429 rate_limited` with `Retry-After`.
-        A non-empty `website` field is a honeypot: the answer is a normal `201` and nothing is stored.
+        Answers are validated against the set of fields in force at submission time (text rules of `docs/note-fields.md`: NFC, trimmed,
+        control and format characters rejected except ZWJ and variation selectors, limits in characters). Each photo goes through the same
+        pipeline as owner uploads (content sniffing, decode limits, metadata stripped, display, print and thumbnail versions); a rejected
+        photo rejects the whole submission and nothing is stored. Photos are processed one at a time, each waiting up to 10 seconds for a
+        free image-processing slot. A submission is refused at once, before any byte of the body is read, with `ERROR_BUSY` and a
+        `Retry-After` of 2 to 6 seconds (random) when the server already has `SMEM_PUBLIC_UPLOAD_MAX_CONNS` uploads in progress or the
+        client IP has `SMEM_PUBLIC_UPLOAD_CONCURRENT_PER_IP`; `ERROR_BUSY` is also the answer when no processing slot frees up in 10
+        seconds. A `503` costs the client nothing against the request limits below. The server does not read the body of an immediate
+        `503`, so a client that is still uploading may see the connection reset instead of the answer: treat a network error exactly
+        like `503` and retry with the same data. Retrying after any other failure may store a second note; a success is final.
+
+
+        Limits: request body 32 MiB, each photo `SMEM_MEDIA_MAX_BYTES` (default 10 MiB), `answers` 16 KiB, 300 notes per link in any status,
+        the yearbook's photo quota. Submissions that passed text validation are counted per client IP (100 per hour, 300 per day) and per
+        link (60 per hour): `ERROR_RATE_LIMITED` with `Retry-After`. A non-empty `website` field is a honeypot: the answer is a normal
+        success and nothing is stored.
+      x-auth: public
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: "The token is missing, malformed, unknown or revoked; the four cannot be told apart."}
+        - {code: ERROR_COLLECTION_CLOSED, description: The deadline of the link has passed.}
+        - {code: ERROR_COLLECTION_FULL, description: The link already holds 300 notes.}
+        - {code: ERROR_MISSING_ANSWER, description: "A required field is missing or blank; the message names the field id, never the value."}
+        - {code: ERROR_INVALID_ANSWER, description: "An answer breaks the text rules or the field's length limit; the message names the field id, never the value."}
+        - {code: ERROR_TOO_MANY_PHOTOS, description: More than three photos were sent.}
+        - {code: ERROR_INVALID_IMAGE, description: "A photo is corrupt, over 12000 px on a side, over 50 megapixels for JPEG or 25 megapixels for PNG and WebP, or its estimated decoded size is over 128 MiB."}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: The request is not multipart/form-data, or a photo is not a JPEG, PNG or WebP image.}
+        - {code: ERROR_VERIFICATION_FAILED, description: The abuse check refused the submission.}
+        - {code: ERROR_QUOTA_EXCEEDED, description: The yearbook's photo quota is reached.}
+        - {code: ERROR_TOO_LARGE, description: The request body is over 32 MiB or a photo is over the per-photo cap.}
+        - {code: ERROR_REQUEST_TIMEOUT, description: "No body byte arrived for 10 seconds, the average rate stayed under 16 KiB/s after 15 seconds, or the upload took over 120 seconds; nothing was stored."}
+        - {code: ERROR_RATE_LIMITED, description: "Too many requests from this client IP or for this link; wait `Retry-After` seconds."}
+        - {code: ERROR_BUSY, description: "The upload slots or the image-processing slots are full; retry after `Retry-After`."}
+        - {code: ERROR_STORAGE_ERROR, description: The object store failed; nothing was kept, retry later.}
       security: []
       requestBody:
         required: true
         content:
           multipart/form-data:
-            schema:
-              type: object
-              required: [answers]
-              properties:
-                answers:
-                  type: string
-                  description: >-
-                    A JSON object `{"<field id>":"<text>"}` of at most 16 KiB. Keys must be fields of the form;
-                    required fields must be present and not blank.
-                  examples: ['{"name":"Linh","message":"Nhớ các bạn nhiều 🎓"}']
-                photos:
-                  type: array
-                  maxItems: 3
-                  items: {type: string, format: binary}
-                  description: Up to three JPEG, PNG or WebP images (the content decides, not the name or Content-Type).
-                website: {type: string, description: Honeypot. Leave empty.}
+            schema: {$ref: "#/components/schemas/PublicCollectSubmitNoteRequest"}
+            examples:
+              textOnly:
+                value: {token: q3Zp0Vn8xYk2LwR5tB7mJc9aHdE4sUgF, answers: '{"name":"Linh","message":"Nhớ các bạn nhiều 🎓"}'}
       responses:
-        "201":
+        "200":
           description: Stored as pending.
           content:
             application/json:
-              schema: {$ref: "#/components/schemas/NoteCreated"}
-        "400":
-          description: >-
-            `unknown_field`, `missing_answer` or `invalid_answer` (the message names the field id, never the value),
-            `invalid_body` (not multipart, no `answers` part, `answers` over 16 KiB or not a JSON object of strings),
-            `too_many_photos`, or `invalid_image` (corrupt, over 12000 px on a side, over 50 megapixels for JPEG or
-            25 megapixels for PNG and WebP, or an estimated decoded size over 128 MiB).
-          content:
-            application/json:
-              schema: {$ref: "#/components/schemas/Error"}
-        "403":
-          description: The abuse check refused the submission (`verification_failed`).
-          content:
-            application/json:
-              schema: {$ref: "#/components/schemas/Error"}
-        "404": {$ref: "#/components/responses/NotFound"}
-        "409":
-          description: The link holds 300 notes (`collection_full`) or the yearbook's photo quota is reached (`quota_exceeded`).
-          content:
-            application/json:
-              schema: {$ref: "#/components/schemas/Error"}
-        "410":
-          description: The deadline has passed (`collection_closed`).
-          content:
-            application/json:
-              schema: {$ref: "#/components/schemas/Error"}
-        "408":
-          description: >-
-            No body byte arrived for 10 seconds, the average rate stayed under 16 KiB/s after 15 seconds, or the upload took
-            over 120 seconds (`request_timeout`); nothing was stored.
-          content:
-            application/json:
-              schema: {$ref: "#/components/schemas/Error"}
-        "413":
-          description: The request body is over 32 MiB or a photo is over the per-photo cap (`payload_too_large`).
-          content:
-            application/json:
-              schema: {$ref: "#/components/schemas/Error"}
-        "415":
-          description: >-
-            The request is not `multipart/form-data`, or a photo is not a JPEG, PNG or WebP image
-            (`unsupported_media_type`).
-          content:
-            application/json:
-              schema: {$ref: "#/components/schemas/Error"}
-        "429": {$ref: "#/components/responses/RateLimited"}
-        "500":
-          description: Unexpected failure (`internal_error`); nothing was kept.
-          content:
-            application/json:
-              schema: {$ref: "#/components/schemas/Error"}
-        "502": {$ref: "#/components/responses/StorageError"}
-        "503": {$ref: "#/components/responses/Busy"}
+              schema: {$ref: "#/components/schemas/PublicCollectSubmitNoteResponse"}
+              examples:
+                stored:
+                  value: {status: OK, data: {id: 01K7QB4C5D6E7F8G9H0J1K2M3N}}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "408": {$ref: "#/components/responses/ApiRequestTimeout"}
+        "409": {$ref: "#/components/responses/ApiConflict"}
+        "410": {$ref: "#/components/responses/ApiGone"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "429": {$ref: "#/components/responses/ApiRateLimited"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "502": {$ref: "#/components/responses/ApiBadGateway"}
+        "503": {$ref: "#/components/responses/ApiBusy"}
 components:
   securitySchemes:
     sessionCookie:
@@ -1137,6 +1155,92 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/Error"
+    ApiBadRequest:
+      description: >-
+        `ERROR_PARAM` (malformed body or query, unknown field, wrong type, a missing required parameter) or one of the field-level
+        codes listed in the operation's `x-error-codes`.
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ApiError"}
+    ApiUnauthorized:
+      description: No, unknown or expired session (`ERROR_UNAUTHORIZED`).
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ApiError"}
+    ApiForbidden:
+      description: A business code listed in the operation's `x-error-codes` (for example `ERROR_CSRF_ORIGIN_MISMATCH`, `ERROR_EMAIL_NOT_VERIFIED`, `ERROR_VERIFICATION_FAILED`).
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ApiError"}
+    ApiNotFound:
+      description: "`ERROR_NOT_FOUND`: the thing does not exist or is not the caller's; the two cannot be told apart."
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ApiError"}
+    ApiConflict:
+      description: A business code listed in the operation's `x-error-codes` (`ERROR_LIMIT_REACHED`, `ERROR_COLLECTION_FULL`, `ERROR_QUOTA_EXCEEDED`).
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ApiError"}
+    ApiGone:
+      description: The deadline of the link has passed (`ERROR_COLLECTION_CLOSED`).
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ApiError"}
+    ApiRequestTimeout:
+      description: The request body arrived too slowly (`ERROR_REQUEST_TIMEOUT`); nothing was stored.
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ApiError"}
+    ApiTooLarge:
+      description: The body, or a photo in it, is over its cap (`ERROR_TOO_LARGE`).
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ApiError"}
+    ApiUnsupportedMediaType:
+      description: The Content-Type is not the one the operation takes, or a photo is not a JPEG, PNG or WebP image (`ERROR_UNSUPPORTED_MEDIA_TYPE`).
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ApiError"}
+    ApiRateLimited:
+      description: Too many requests (`ERROR_RATE_LIMITED`).
+      headers:
+        Retry-After:
+          description: Seconds until the oldest counted request leaves the window.
+          schema: {type: integer, minimum: 1}
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ApiError"}
+    ApiInternal:
+      description: Unexpected failure (`ERROR_INTERNAL`); nothing was kept.
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ApiError"}
+    ApiBadGateway:
+      description: The object store failed (`ERROR_STORAGE_ERROR`); nothing was changed, retry later.
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ApiError"}
+    ApiBusy:
+      description: The upload slots or the image-processing slots are full (`ERROR_BUSY`); retry after `Retry-After`.
+      headers:
+        Retry-After:
+          description: Seconds to wait before retrying.
+          schema: {type: integer, minimum: 1}
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ApiError"}
+    ApiSessionStoreUnavailable:
+      description: >-
+        Redis, which holds the login sessions, did not answer (`ERROR_SESSION_STORE_UNAVAILABLE`). Sessions have no copy elsewhere, so
+        the request fails closed. Retry after `Retry-After`.
+      headers:
+        Retry-After:
+          description: Seconds to wait before retrying.
+          schema: {type: integer, minimum: 1}
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ApiError"}
   schemas:
     User:
       type: object
@@ -1252,73 +1356,157 @@ components:
       required: [media]
       properties:
         media: {$ref: "#/components/schemas/Media"}
-    CollectionCreate:
+    ApiError:
+      type: object
+      description: >-
+        The v2 error envelope (docs/api-contract.md section 2). The HTTP status is kept as well; `status` is the contract clients
+        localise on.
+      required: [status, error_message, request_id]
+      properties:
+        status:
+          type: string
+          description: The error code, `ERROR_` + SCREAMING_SNAKE_CASE. Never `OK` here.
+          examples: [ERROR_NOT_FOUND]
+        error_message:
+          type: string
+          description: English text for logs and support; never shown to people and never contains secrets.
+        request_id:
+          type: string
+          description: Same value as the X-Request-Id response header; quote it to support.
+    EmptyResponse:
+      type: object
+      required: [status, data]
+      properties:
+        status: {type: string, const: OK, description: Always `OK` on success.}
+        data: {type: object, description: Always an empty object., additionalProperties: false}
+    NoteCollectionCreateRequest:
       type: object
       additionalProperties: false
+      required: [yearbook_id]
       properties:
-        label: {type: string, maxLength: 60}
-        deadline_at: {type: string, format: date-time, description: In the future, at most one year ahead.}
-    CollectionCreated:
+        yearbook_id: {type: string, description: Required. ULID of a yearbook the caller owns.}
+        label: {type: string, maxLength: 60, description: "Optional, default empty. At most 60 characters, NFC and trimmed, no control or format characters."}
+        deadline_at: {type: [integer, "null"], format: int64, description: "Optional, default null (no deadline). Unix ms; must be in the future and at most one year ahead."}
+    NoteCollectionCreateResponse:
       type: object
+      required: [status, data]
+      properties:
+        status: {type: string, const: OK, description: Always `OK` on success.}
+        data: {$ref: "#/components/schemas/NoteCollectionCreated"}
+    NoteCollectionCreated:
+      type: object
+      description: The new link, with its token.
       required: [id, label, deadline_at, created_at, token]
       properties:
         id: {type: string, description: Collection ULID.}
-        label: {type: string}
-        deadline_at: {type: [string, "null"], format: date-time}
-        created_at: {type: string, format: date-time}
-        token: {type: string, description: Shown only in this response.}
-    Collection:
+        label: {type: string, description: The cleaned label; an empty string when none was given.}
+        deadline_at: {type: [integer, "null"], format: int64, description: "Deadline, Unix ms; null when the link has none."}
+        created_at: {type: integer, format: int64, description: "Creation time, Unix ms."}
+        token: {type: string, description: "The bearer secret of the link, 32 base64url characters. Shown only in this response."}
+    NoteCollection:
       type: object
+      description: One link as the owner's list shows it. Never contains the token.
       required: [id, label, deadline_at, created_at, revoked_at, note_count]
       properties:
-        id: {type: string}
-        label: {type: string}
-        deadline_at: {type: [string, "null"], format: date-time}
-        created_at: {type: string, format: date-time}
-        revoked_at: {type: [string, "null"], format: date-time}
-        note_count: {type: integer, minimum: 0}
-    CollectionPublic:
+        id: {type: string, description: Collection ULID.}
+        label: {type: string, description: The label; an empty string when none was given.}
+        deadline_at: {type: [integer, "null"], format: int64, description: "Deadline, Unix ms; null when the link has none."}
+        created_at: {type: integer, format: int64, description: "Creation time, Unix ms."}
+        revoked_at: {type: [integer, "null"], format: int64, description: "When the owner revoked the link, Unix ms; null while it is active."}
+        note_count: {type: integer, minimum: 0, description: Number of notes of the link in any status.}
+    NoteCollectionListResponse:
       type: object
+      required: [status, data]
+      properties:
+        status: {type: string, const: OK, description: Always `OK` on success.}
+        data:
+          type: object
+          description: The page; the list is returned whole, so it is always the only page.
+          required: [items, next_id]
+          properties:
+            items:
+              type: array
+              description: The links, newest first.
+              items: {$ref: "#/components/schemas/NoteCollection"}
+            next_id: {type: string, description: Opaque cursor; always the empty string (no more pages).}
+    NoteCollectionRevokeRequest:
+      type: object
+      additionalProperties: false
+      required: [id]
+      properties:
+        id: {type: string, description: Required. ULID of a collection of one of the caller's yearbooks.}
+    PublicCollectGetResponse:
+      type: object
+      required: [status, data]
+      properties:
+        status: {type: string, const: OK, description: Always `OK` on success.}
+        data: {$ref: "#/components/schemas/PublicCollect"}
+    PublicCollect:
+      type: object
+      description: What a visitor with a valid link may learn.
       required: [yearbook, owner, deadline_at, open, fields]
       properties:
         yearbook:
           type: object
+          description: The yearbook the notes are for.
           required: [title]
           properties:
-            title: {type: string}
+            title: {type: string, description: The yearbook's title.}
         owner:
           type: object
+          description: The person who made the link.
           required: [display_name]
           properties:
-            display_name: {type: string}
-        deadline_at: {type: [string, "null"], format: date-time}
-        open: {type: boolean, const: true}
+            display_name: {type: string, description: The owner's display name.}
+        deadline_at: {type: [integer, "null"], format: int64, description: "Deadline, Unix ms; null when the link has none."}
+        open: {type: boolean, const: true, description: Always true; a closed link answers `ERROR_COLLECTION_CLOSED` instead.}
         fields:
           type: array
           description: The questions of the note form, in order.
           items: {$ref: "#/components/schemas/NoteField"}
     NoteField:
       type: object
+      description: One question of the note form.
       required: [id, kind, label, hint, required, max_length]
       properties:
-        id: {type: string, examples: [name]}
-        kind: {type: string, enum: [short_text, long_text], description: A short text is a single line.}
+        id: {type: string, description: Field id; the key of the answer in `answers`., examples: [name]}
+        kind: {type: string, enum: [short_text, long_text], description: "`short_text` is a single line, `long_text` may contain line breaks."}
         label: {$ref: "#/components/schemas/LocalizedText"}
         hint: {$ref: "#/components/schemas/LocalizedText"}
-        required: {type: boolean}
-        max_length: {type: integer, minimum: 1, description: In characters, after normalisation.}
+        required: {type: boolean, description: True when the answer must be present and not blank.}
+        max_length: {type: integer, minimum: 1, description: Longest answer, in characters after normalisation.}
     LocalizedText:
       type: object
+      description: A text in each supported language.
       required: [en, vi]
       properties:
-        en: {type: string}
-        vi: {type: string}
-    NoteCreated:
+        en: {type: string, description: English text.}
+        vi: {type: string, description: Vietnamese text.}
+    PublicCollectSubmitNoteRequest:
       type: object
-      required: [note]
+      required: [token, answers]
       properties:
-        note:
+        token: {type: string, description: Required. The link token (32 base64url characters); the first `token` part counts.}
+        answers:
+          type: string
+          description: >-
+            Required. A JSON object `{"<field id>":"<text>"}` of at most 16 KiB. Keys must be fields of the form;
+            required fields must be present and not blank. Send it before the first `photos` part.
+          examples: ['{"name":"Linh","message":"Nhớ các bạn nhiều 🎓"}']
+        photos:
+          type: array
+          maxItems: 3
+          items: {type: string, format: binary}
+          description: Optional. Up to three JPEG, PNG or WebP images (the content decides, not the name or Content-Type).
+        website: {type: string, description: Honeypot. Leave empty; a non-empty value makes the answer a fake success.}
+    PublicCollectSubmitNoteResponse:
+      type: object
+      required: [status, data]
+      properties:
+        status: {type: string, const: OK, description: Always `OK` on success.}
+        data:
           type: object
+          description: The stored note.
           required: [id]
           properties:
             id: {type: string, description: Note ULID.}
