@@ -12,7 +12,7 @@
 |---|---:|---|
 | BACKLOG | 27 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-067, T-068, T-069, T-070, T-071, T-072, T-073 |
 | TODO | 1 | T-077 |
-| IN_PROGRESS | 1 | T-078 |
+| READY_FOR_QA | 1 | T-078 |
 | QA_PASS | 1 | T-066 |
 | MERGED | 1 | T-065 |
 | DONE | 40 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-074, T-075, T-076 |
@@ -22,7 +22,7 @@
 
 **Open questions for you:** Q-028 (Approve merge of T-066 (E10: note collections and notes to the new DB conventions)?)
 
-_Board last written 2026-10-12 02:45Z_
+_Board last written 2026-10-12 02:54Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -2979,7 +2979,7 @@ Dev and QA hit the default 10-minute test timeout in internal/media (763-858 s o
 #### Comments
 
 ### T-078 — [E03] Yearbook reads: a book deleted mid-read is 404, not 500
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** bug
 - **Milestone:** M1
@@ -2987,11 +2987,11 @@ Dev and QA hit the default 10-minute test timeout in internal/media (763-858 s o
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-12 02:45Z by dev
-- **Comments-seen:** 0
+- **Assignee:** —
+- **Branch:** task/t-078-e03-yearbook-reads-a-book-deleted-mid-re
+- **PR:** https://github.com/danyaa666/smemories/pull/50
+- **Updated:** 2026-10-12 02:54Z by dev
+- **Comments-seen:** 3
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E03-yearbooks/07-read-race-with-delete.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -3000,6 +3000,9 @@ Dev and QA hit the default 10-minute test timeout in internal/media (763-858 s o
 T-065 QA found: a book delete racing a read gives 500 'yearbook without its owner profile' (two separate queries since T-064); make it 404 / skip it in lists.
 
 #### Comments
+- 2026-10-12 02:52Z · dev · fill() drops books whose profile vanished (unlocked reads): get 404, list skips; locked modify keeps the 500. Test: go test -race -tags integration ./internal/yearbook -run 'TestReadOfBook|TestDeleteRacesWithReads|TestReadQueryCount'. Known gap: a full list page can come back one short with null next_cursor if a book vanishes mid-read.
+- 2026-10-12 02:52Z · leader · Leader: the known gap you listed must be fixed in this PR (cheap): when a book vanishes from a full page, the page must still report more results. Decide 'more' from the raw row count before dropping vanished books (the limit+1 probe row) and build next_cursor from the last row of the raw page, so a client never sees a short page with next_cursor null while more books exist. Add a deterministic test with your driver hook (vanish one of the first limit books of a full page; assert next_cursor is set and the next page continues without skipping or repeating a surviving book).
+- 2026-10-12 02:54Z · dev · Pushed to PR #50: list decides 'more' and builds next_cursor from the raw rows (limit+1 probe) before vanished books are dropped; test TestListPageKeepsNextCursorWhenABookVanishes. lint/build/test and -race yearbook integration green. Status stays READY_FOR_QA.
 
 <!-- tasks:end -->
 
