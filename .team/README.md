@@ -11,18 +11,17 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 27 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-067, T-068, T-069, T-070, T-071, T-072, T-073 |
-| TODO | 1 | T-077 |
-| READY_FOR_QA | 1 | T-078 |
-| QA_PASS | 1 | T-066 |
-| MERGED | 1 | T-065 |
+| IN_PROGRESS | 1 | T-066 |
+| READY_FOR_QA | 1 | T-077 |
+| MERGED | 2 | T-065, T-078 |
 | DONE | 40 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-074, T-075, T-076 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
 
-**Awaiting your review (MERGED):** T-065 ([E10] DB conventions: media table)
+**Awaiting your review (MERGED):** T-065 ([E10] DB conventions: media table); T-078 ([E03] Yearbook reads: a book deleted mid-read is 404, not 500)
 
-**Open questions for you:** Q-028 (Approve merge of T-066 (E10: note collections and notes to the new DB conventions)?)
+**Open questions for you:** none
 
-_Board last written 2026-10-12 02:54Z_
+_Board last written 2026-10-12 03:35Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -374,7 +373,7 @@ First database conversion of epic E10 (D-26). Migration 20261010120000 renames y
 Second database conversion of E10. Migration 20261011100000 renames media to media_tab with BIGINT ms timestamps, VARCHAR instead of ENUM, no foreign key to yearbooks (the yearbook delete transaction now removes media rows through a registered child purger); note_photos keeps its FK until T-066/T-067. Down restores the old schema and data. API/JSON unchanged. QA: migration probes on every media shape (Up/Down/Up equal), orphan checker proven with planted orphans, own HTTP storm of uploads/public notes/photo deletes/cover edits/book deletes with no media-related 5xx and no orphan rows or objects. QA found three older bugs that this PR did not cause: tracked as T-078 (read race), T-066 spec (submit vs delete deadlock), T-025 spec (orphan objects). To approve: team approve T-065.
 
 ### Q-028 — Approve merge of T-066 (E10: note collections and notes to the new DB conventions)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-12 02:40Z
 - **Blocks:** T-066,T-067
 - **Recommendation:** approve
@@ -2657,19 +2656,19 @@ Converts `media` to `media_tab` (ms timestamps, no FK, no ENUM, print columns fr
 - 2026-10-12 02:11Z · leader · merged d93ab34. Review: media_tab migration (BIGINT ms, VARCHAR, no FK to yearbooks; note_photos keeps its FK until T-066/T-067), media registered as yearbook child purger, AssertNoOrphans, documented lock order; QA storm found no media lock inversion and no orphans. Combined tree checked: no code refers to the old media table name. For owner to check: run make migrate on your dev DB. Older bugs found by QA: T-078, T-066 spec, T-025 spec.
 
 ### T-066 — [E10] DB conventions: note collections and notes tables
-- **Status:** QA_PASS
+- **Status:** IN_PROGRESS
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
 - **Depends-on:** T-065
 - **Risk:** high
-- **Rework:** 0
-- **Owner-approved:** —
-- **Assignee:** leader
+- **Rework:** 1
+- **Owner-approved:** yes
+- **Assignee:** dev
 - **Branch:** task/t-066-e10-db-conventions-note-collections-and-
 - **PR:** https://github.com/danyaa666/smemories/pull/49
-- **Updated:** 2026-10-12 02:39Z by qa
-- **Comments-seen:** 3
+- **Updated:** 2026-10-12 03:26Z by dev
+- **Comments-seen:** 6
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/04-db-notes.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2691,6 +2690,9 @@ Converts `note_collections` and the notes tables created by T-034 to the `_tab` 
   COMMANDS: make lint build (green); go test -race ./... (green); go test -race -count=1 -timeout 30m -tags integration ./... (all 20 packages ok; db, notes, media, yearbook re-run with my tests ok); Newman against the built API on a scratch DB, 2 runs each back to back: notes 137/137, yearbooks 189/189, media 132/132, 0 failures.
   NON-BLOCKING: (1) the clearer order invariant (yearbook store first) is only a comment plus my storm test, consider a dev test with photo deletes in TestDeleteRacesWithSubmitsAndCollections. (2) status has no Go-side validation function yet (no write path besides insert; do it with the moderation task). (3) pre-1970 values with sub-ms digits truncate toward zero (documented). (4) tabTables excludes any name starting 'user', so a future user_*-prefixed non-user table would be skipped. Tests added: internal/db/note_tab_qa_integration_test.go, internal/notes/qa_storm_integration_test.go (committed and pushed to the task branch).
 - 2026-10-12 02:40Z · leader · Leader review (content) OK at head 2d28198: three migrations with Down, no FK left on the note tables, FOR SHARE yearbook lock first in insertNote (test fails without it: QA 6, dev 13 5xx), notes.Service child purger, zero-rows registry from information_schema (QA planted a table: it fails), AssertNoOrphans for 5 new pairs. QA storm 40 rounds: 0 5xx, zero rows and objects. QA's extra tests are on the branch. Non-blocking: clearer order (SetRefClearer(notesSvc, bookStore)) is guarded by a comment and QA's storm test; note status Go validation goes into T-013's spec. Merge after CI is green. Awaiting owner approval.
+- 2026-10-12 03:21Z · human · owner approved merge
+- 2026-10-12 03:22Z · leader · Owner approved, but the merge is blocked: GitHub go-integration FAILED on head 2d28198 (run 38196434434): QA's own test internal/notes TestQAStormBookDelete (qa_storm_integration_test.go:179) saw status codes map[200:223 201:167 204:129 404:439 500:2] in CI: 2 server errors. It passed with 0 5xx locally in 40 rounds, so a rare lock/ordering race remains (CI runner timing differs). Dev: find the cause before changing anything: run the storm test many times (-count=30, also with GOMAXPROCS=2 and with the CPU loaded) and capture the API/server ERROR log lines and response bodies of the 500s (MySQL 1213 deadlock? 'yearbook without its owner profile' from the T-078 read race? something else). Candidates to check: S-to-X lock upgrade conflicts around FOR SHARE in insertNote against the FOR UPDATE in Service.Delete / ClearMediaRefs / lockBook, and any path that reads yearbook_tab and profile_tab separately. Fix at the root (same order everywhere, parent lock first, FOR UPDATE where a later write needs it), keep the storm test strict (0 5xx) and make it stable in CI (loop it enough rounds to be meaningful, not flaky). Report the failing error text. Merge develop first if needed, re-run make lint build test test-integration (-timeout 30m), confirm GitHub CI is green, then READY_FOR_QA.
+- 2026-10-12 03:22Z · leader · CI go-integration failed on QA's TestQAStormBookDelete (2 x 500 in CI, 0 locally): find and fix the remaining race at its root; see the comment above. Already owner-approved.
 
 ### T-067 — [E10] DB conventions: user and identity tables
 - **Status:** BACKLOG
@@ -2956,19 +2958,19 @@ T-049 QA findings: resend button target size, cooldown restarts on reload, short
 - 2026-10-12 02:10Z · human · accepted by owner
 
 ### T-077 — [E01] Integration tests: set a timeout and cut the media package time
-- **Status:** TODO
+- **Status:** READY_FOR_QA
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
 - **Depends-on:** —
-- **Risk:** low
+- **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-12 02:45Z by leader
-- **Comments-seen:** 0
+- **Branch:** task/t-077-e01-integration-tests-set-a-timeout-and-
+- **PR:** https://github.com/danyaa666/smemories/pull/51
+- **Updated:** 2026-10-12 03:26Z by leader
+- **Comments-seen:** 2
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/13-integration-test-time-and-timeout.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2977,9 +2979,11 @@ T-049 QA findings: resend button target size, cooldown restarts on reload, short
 Dev and QA hit the default 10-minute test timeout in internal/media (763-858 s on a loaded machine); set an explicit timeout and cut the package time.
 
 #### Comments
+- 2026-10-12 03:26Z · dev · media integration package 189s -> 47s (-75%) same machine (76s inside full make test-integration); -timeout 30m in Makefile, ci.yml job timeout 15 -> 40 (CI touched); newEnv t.Parallel, bigPhoto 2000x1000, no assertions weakened, printEdge mutation still fails. Test: make test-integration. No fake-store change needed: the 43s backfill test already uses flaky (fails at once), time is -race image work.
+- 2026-10-12 03:26Z · leader · Leader: risk raised to high because the PR touches CI (ci.yml go-integration timeout-minutes 15 -> 40), per L-06; the change is small. QA verifies as usual; the owner approves the merge. Also QA should confirm the parallel tests pass on GitHub CI (more simultaneous load on MySQL/MinIO) and not only locally.
 
 ### T-078 — [E03] Yearbook reads: a book deleted mid-read is 404, not 500
-- **Status:** READY_FOR_QA
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** bug
 - **Milestone:** M1
@@ -2990,7 +2994,7 @@ Dev and QA hit the default 10-minute test timeout in internal/media (763-858 s o
 - **Assignee:** —
 - **Branch:** task/t-078-e03-yearbook-reads-a-book-deleted-mid-re
 - **PR:** https://github.com/danyaa666/smemories/pull/50
-- **Updated:** 2026-10-12 02:54Z by dev
+- **Updated:** 2026-10-12 03:35Z by leader
 - **Comments-seen:** 3
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E03-yearbooks/07-read-race-with-delete.md`
@@ -3003,6 +3007,17 @@ T-065 QA found: a book delete racing a read gives 500 'yearbook without its owne
 - 2026-10-12 02:52Z · dev · fill() drops books whose profile vanished (unlocked reads): get 404, list skips; locked modify keeps the 500. Test: go test -race -tags integration ./internal/yearbook -run 'TestReadOfBook|TestDeleteRacesWithReads|TestReadQueryCount'. Known gap: a full list page can come back one short with null next_cursor if a book vanishes mid-read.
 - 2026-10-12 02:52Z · leader · Leader: the known gap you listed must be fixed in this PR (cheap): when a book vanishes from a full page, the page must still report more results. Decide 'more' from the raw row count before dropping vanished books (the limit+1 probe row) and build next_cursor from the last row of the raw page, so a client never sees a short page with next_cursor null while more books exist. Add a deterministic test with your driver hook (vanish one of the first limit books of a full page; assert next_cursor is set and the next page continues without skipping or repeating a surviving book).
 - 2026-10-12 02:54Z · dev · Pushed to PR #50: list decides 'more' and builds next_cursor from the raw rows (limit+1 probe) before vanished books are dropped; test TestListPageKeepsNextCursorWhenABookVanishes. lint/build/test and -race yearbook integration green. Status stays READY_FOR_QA.
+- 2026-10-12 03:26Z · qa · PR #50 head 70945bf (+ my test-only commit 1b79d36 pushed). CI green (go, go-integration, security, web).
+  Evidence:
+  - AC1 hook test on OLD code: scratch copy of the branch with develop's store.go/handler.go (list wrapped in a shim for the new signature): TestReadOfBookDeletedMidReadIsNotFound FAILS ('yearbook without its owner profile', want ErrNotFound); TestListPageKeepsNextCursorWhenABookVanishes FAILS (500 same message). Against the intermediate commit 16b362e (fix without cursor change) the short-page test still FAILS ('first page = 2 books, want only the newest', next cursor lost), so it does detect the gap the leader flagged. On the branch both PASS (-race, 3 runs).
+  - Query count: TestReadQueryCountIsConstant passes (get 3, list 3 queries, plan checks).
+  - Locked modify: my new TestQAMissingProfileLockedEditStaysLoud: profile row removed by hand -> GET 404, list omits it with no ERROR log, PATCH still 500 internal_error and logs 'yearbook without its owner profile'. PASS.
+  - AC2 own HTTP storm (python script, real API binary on its own migrated DB smem_test_qa078, 360 rounds, 10 looping hammer threads: get/list/patch/put-profile/paginated walks vs one DELETE per round): OLD binary 495 5xx (get 181, list 204, walk 110) + 656 ERROR log lines 'yearbook without its owner profile'; NEW binary 0 5xx, 0 ERROR lines, 0 status 5xx in the request log; get/patch/put-profile 404 as expected (4921/3799/3810), 10238 list walks with no repeated book.
+  - Pagination: my TestQAPaginationWalkAcrossDeletions (HTTP, 25 rounds x sequential and concurrent deletion between/during pages, random limit 1-4): never repeats or skips a survivor, never next_cursor null while a surviving book is unseen. PASS x3.
+  - JSON/openapi: diff touches only handler.go/store.go + tests, no api/openapi.yaml change; Newman yearbooks twice back to back: 92 requests, 189 assertions, 0 failed each run.
+  - AC3: make lint build test green (0 lint issues, web checks ok); go test -race -tags integration ./internal/yearbook/... ./internal/notes/... -timeout 30m ok (33s / 65s).
+  Non-blocking: dev's TestDeleteRacesWithReads (in-process, 40 rounds) does not fail on the old code (I ran it 3x), so the real regression guard is the deterministic hook tests; an empty page with a non-null next_cursor is possible if every raw row vanished (valid, client keeps walking). Note for the leader: the dev stack's default database 'smemories' was not migrated to the T-064 schema (yearbook_tab missing), so I used a scratch DB; 'make migrate' is needed before using the dev DB.
+- 2026-10-12 03:35Z · leader · merged 1c033da. Review: fill drops a book whose profile vanished mid-read (get 404, list skips it) with no extra query; list reads the limit+1 probe itself so the next cursor never disappears from a short page; modify keeps the loud 500 for a missing profile of a locked book. QA: both hook tests fail on old code, 360-delete storm gave 495 5xx on old and 0 on new, pagination walk with deletions never skipped or repeated. For owner to check: nothing to run; run make migrate on your default dev DB (smemories lacks yearbook_tab).
 
 <!-- tasks:end -->
 
