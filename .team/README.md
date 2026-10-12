@@ -10,17 +10,17 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 27 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-067, T-068, T-069, T-070, T-071, T-072, T-073 |
+| BACKLOG | 28 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-079 |
 | READY_FOR_QA | 1 | T-066 |
-| IN_QA | 1 | T-077 |
+| QA_PASS | 1 | T-077 |
 | DONE | 42 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-074, T-075, T-076, T-078 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
 
 **Awaiting your review (MERGED):** nothing
 
-**Open questions for you:** none
+**Open questions for you:** Q-029 (Approve merge of T-077 (integration tests: 30 min timeout, faster media tests, CI job timeout 40 min)?)
 
-_Board last written 2026-10-12 04:00Z_
+_Board last written 2026-10-12 04:21Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -379,6 +379,15 @@ Second database conversion of E10. Migration 20261011100000 renames media to med
 - **Answer:** _(pending)_
 
 Third database conversion of E10. Three migrations rename note_collections, notes and note_photos to note_collection_tab, note_tab and note_photo_tab with BIGINT ms timestamps, updated_at, a plain status column, no foreign keys (photo rows get their own id; position is now sort_order); Down restores the old schema and data. Notes join the yearbook delete transaction as a child purger; the public-note submit now takes the book lock first, which fixes the deadlock QA measured in earlier code (31-36 of 600 submissions answered 500). Public JSON unchanged. QA: migration probes with Vietnamese/emoji answers and boundary dates (Up/Down/Up equal), planted-orphan and planted-table checks, 40-round storm of submits/revokes/photo deletes/book deletes with 0 5xx and nothing left behind. To approve: team approve T-066. Then T-067 (users and identities) and the API conversions start.
+
+### Q-029 — Approve merge of T-077 (integration tests: 30 min timeout, faster media tests, CI job timeout 40 min)?
+- **Status:** OPEN
+- **Asked:** 2026-10-12 04:21Z
+- **Blocks:** T-077
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+Small CI-file change (go-integration timeout-minutes 15 -> 40) plus 'make test-integration' now passes -timeout 30m, and the internal/media integration tests run in parallel: 189-198 s -> 44-48 s locally (-76%); on GitHub CI the media package drops from 277-343 s to 150-222 s and the job from 6.5-7.5 to 5.5 min. QA: same 44 tests before and after, only a fixture size changed (2000 px, still above the 1800 px print edge), 7 mutations still fail, parallel runs repeated with -race/-count=5/GOMAXPROCS=2 without flakes. Caveats found by QA: one unrelated ratelimit timing test failed once on CI under the new load and passed on re-run, and the media test binary peaks at 1.9 GB (was 0.7 GB). Both are handled by follow-up T-079 (deterministic timing, cap parallelism). To approve: team approve T-077.
 
 <!-- questions:end -->
 
@@ -2961,7 +2970,7 @@ T-049 QA findings: resend button target size, cooldown restarts on reload, short
 - 2026-10-12 02:10Z · human · accepted by owner
 
 ### T-077 — [E01] Integration tests: set a timeout and cut the media package time
-- **Status:** IN_QA
+- **Status:** QA_PASS
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2969,11 +2978,11 @@ T-049 QA findings: resend button target size, cooldown restarts on reload, short
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** leader
 - **Branch:** task/t-077-e01-integration-tests-set-a-timeout-and-
 - **PR:** https://github.com/danyaa666/smemories/pull/51
-- **Updated:** 2026-10-12 03:35Z by qa
-- **Comments-seen:** 2
+- **Updated:** 2026-10-12 04:20Z by qa
+- **Comments-seen:** 4
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/13-integration-test-time-and-timeout.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2984,6 +2993,17 @@ Dev and QA hit the default 10-minute test timeout in internal/media (763-858 s o
 #### Comments
 - 2026-10-12 03:26Z · dev · media integration package 189s -> 47s (-75%) same machine (76s inside full make test-integration); -timeout 30m in Makefile, ci.yml job timeout 15 -> 40 (CI touched); newEnv t.Parallel, bigPhoto 2000x1000, no assertions weakened, printEdge mutation still fails. Test: make test-integration. No fake-store change needed: the 43s backfill test already uses flaky (fails at once), time is -race image work.
 - 2026-10-12 03:26Z · leader · Leader: risk raised to high because the PR touches CI (ci.yml go-integration timeout-minutes 15 -> 40), per L-06; the change is small. QA verifies as usual; the owner approves the merge. Also QA should confirm the parallel tests pass on GitHub CI (more simultaneous load on MySQL/MinIO) and not only locally.
+- 2026-10-12 04:20Z · qa · QA_PASS (risk HIGH, owner approves merge). Evidence, all produced by me on PR head 4e3d4c4:
+  AC1 Diff vs origin/develop: Makefile test-integration now 'go test -race -count=1 -timeout 30m -tags integration ./...' with a comment saying why; ci.yml changes ONLY go-integration timeout-minutes 15->40 plus a comment (3 lines +/-); CI runs make test-integration so it gets -timeout 30m (CI log shows the command line). OK.
+  AC2 Same machine, same compiled-binary method, -race -count=1, internal/media: BEFORE (7765e59) 198 s (go test) / 197 s (binary); AFTER 44 s / 48 s = -76..78%. Inside full make test-integration: media 54.8 s, whole run 103 s, rc 0. PR body lists the top-10 before/after. Caveat, honest: on the 4-core GitHub runner the gain is smaller (media 150-222 s vs 277-343 s on recent develop runs; go-integration job 5m35s vs 6m30-7m30s).
+  AC3 go test -list: identical 44 tests before/after, none removed; only 5 deleted lines, all fixture numbers (2600->2000) or the CI timeout. 2000x1000 is wider than the 1800 px print edge and below the 3000 px display edge, so print is still a real downscale (asserted pw==1800, dw==2000, differing ETags). Mutation checks (copy of the branch, one change each, whole media package): printEdge 1800->1700 FAILS TestUploadStoresPrintVersion, TestProcessPrintVersion, TestBackfillPrint; T-036/T-034 slot-wait ErrBusy changed FAILS TestContributorUploadBusyAndDiscard; maxPerYearbook 200->201 and maxBytesPerUser 500->501 MiB FAIL TestQuotas; backfill stop-after-N disabled FAILS TestBackfillStopsAfterConsecutiveStorageFailures + TestBackfillPutFailuresCountAndMissingDisplayDoesNot; print row update skipped FAILS TestBackfillPrint + ...StopsAfter...; orphan print delete removed FAILS TestBackfillDeleteRace; withoutPrint filter 'print_key IS NULL' removed FAILS TestBackfillPrint.
+  t.Parallel safety: read newEnv/dbtest/redistest/storagetest. Each env has own DB (smem_test_<random>), own Redis key prefix (random Env), ULID-keyed objects deleted by yearbook prefix, own Service and semaphore (cap 2), own flaky wrapper; no package-level mutable vars, no t.Setenv/os.Setenv, no listeners, no seeds (rand uses fixed local PCG). Run: -race -count=5 media = pass (259 s); GOMAXPROCS=2 -race -count=3 = pass (279 s); 3 concurrent full media runs = all pass (~90 s each). No flake found.
+  AC4 make lint build test: rc 0 (web tests 133 pass). make test-integration: all packages ok. CI on PR head: go, security, web green; go-integration FAILED on attempt 1 (5m30s) then PASSED on re-run of the failed job (5m35s).
+  Non-blocking observations:
+  1) Attempt-1 CI failure was internal/ratelimit TestRedisLimitRetryAfterAndWindow: 'retry=689ms, want about 850ms' (timing test: 3 takes + 2x50 ms sleeps, expects oldest hit ~150 ms old). Code untouched by this PR; passed 4 of 4 recent develop runs and on the re-run. Likely CPU starvation: ratelimit ran at the same time as media/notes/pdf, and media now runs up to GOMAXPROCS race-image tests in parallel. I could NOT reproduce locally (120+ runs, GOMAXPROCS=1, with 3 and 6 concurrent media runs, load avg up to 23). Suggest a small follow-up: widen that test's tolerance or measure the age of the first hit instead of assuming 150 ms. If the leader wants it as a condition, treat it as such.
+  2) Peak RSS of the media test binary rose 710 MB -> 1.92 GB (/usr/bin/time -l, -race). Fine on a 7 GB CI runner; 6 concurrent local runs were OOM-killed ('signal: killed'), so do not run several media suites at once on a small machine.
+  3) TestContributorUploadBusyAndDiscard has a 2 s wall-clock assertion that could flake on a very starved machine; it did not in any of my runs.
+- 2026-10-12 04:20Z · leader · Leader review OK at head 4e3d4c4 (= QA head, CI green after a re-run of one unrelated flaky test, only the intended CI line changed: go-integration timeout-minutes 15 -> 40, Makefile -timeout 30m, media tests parallel, 7 mutations still fail). Follow-up T-079 (P3): deterministic timing in the ratelimit/media tests and a cap on the media test parallelism (peak memory 710 MB -> 1.92 GB). Awaiting owner approval (CI file change).
 
 ### T-078 — [E03] Yearbook reads: a book deleted mid-read is 404, not 500
 - **Status:** DONE
@@ -3022,6 +3042,29 @@ T-065 QA found: a book delete racing a read gives 500 'yearbook without its owne
   Non-blocking: dev's TestDeleteRacesWithReads (in-process, 40 rounds) does not fail on the old code (I ran it 3x), so the real regression guard is the deterministic hook tests; an empty page with a non-null next_cursor is possible if every raw row vanished (valid, client keeps walking). Note for the leader: the dev stack's default database 'smemories' was not migrated to the T-064 schema (yearbook_tab missing), so I used a scratch DB; 'make migrate' is needed before using the dev DB.
 - 2026-10-12 03:35Z · leader · merged 1c033da. Review: fill drops a book whose profile vanished mid-read (get 404, list skips it) with no extra query; list reads the limit+1 probe itself so the next cursor never disappears from a short page; modify keeps the loud 500 for a missing profile of a locked book. QA: both hook tests fail on old code, 360-delete storm gave 495 5xx on old and 0 on new, pagination walk with deletions never skipped or repeated. For owner to check: nothing to run; run make migrate on your default dev DB (smemories lacks yearbook_tab).
 - 2026-10-12 04:00Z · human · accepted by owner
+
+### T-079 — [E01] Make the timing-sensitive integration tests tolerant of a starved CI runner
+- **Status:** BACKLOG
+- **Priority:** P3
+- **Type:** tech-debt
+- **Milestone:** M1
+- **Depends-on:** T-077
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-12 04:20Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/14-timing-sensitive-integration-tests.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E01-foundation · **PRD:** `.team/epics/E01-foundation/PRD.md`
+
+T-077 QA: a ratelimit retry-after test failed once on the CI runner (689 ms vs about 850 ms) and the media test binary now peaks at 1.9 GB; make timing assertions deterministic and cap media test parallelism.
+
+#### Comments
 
 <!-- tasks:end -->
 
