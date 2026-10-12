@@ -12,7 +12,7 @@
 |---|---:|---|
 | BACKLOG | 24 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-069, T-070, T-071, T-072 |
 | TODO | 2 | T-073, T-079 |
-| CHANGES_REQUESTED | 1 | T-068 |
+| IN_PROGRESS | 1 | T-068 |
 | DONE | 45 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-074, T-075, T-076, T-077, T-078 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
 
@@ -2755,7 +2755,7 @@ Converts `users` and `user_identities` (the sessions and email_tokens tables are
 - 2026-10-12 09:04Z · human · accepted by owner
 
 ### T-068 — [E10] API v2: notes domain (collections, public lookup and submission) with a service layer
-- **Status:** CHANGES_REQUESTED
+- **Status:** IN_PROGRESS
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2763,10 +2763,10 @@ Converts `users` and `user_identities` (the sessions and email_tokens tables are
 - **Risk:** high
 - **Rework:** 1
 - **Owner-approved:** yes
-- **Assignee:** —
+- **Assignee:** dev
 - **Branch:** task/t-068-e10-api-v2-notes-domain-collections-publ
 - **PR:** https://github.com/danyaa666/smemories/pull/53
-- **Updated:** 2026-10-12 09:10Z by leader
+- **Updated:** 2026-10-12 13:15Z by dev
 - **Comments-seen:** 6
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/06-api-notes.md`
