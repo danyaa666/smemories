@@ -1,5 +1,7 @@
 # E04_T-013 — Notes moderation API (approve, hide, reorder, delete)
 
+> **From T-066 QA (2026-10-12):** the note `status` column is now a plain VARCHAR(16) (`pending`, `approved`, `hidden`) with no database check. Validate it in Go against named constants in the store/service (reject unknown values with a 400 before any write; unknown values read from the table are an internal error, not a silent default), and add a test. Moderation transactions that touch notes and photos must take the `yearbook_tab` row lock first (docs/db-conventions.md, Writes).
+
 > **E10 contract note (2026-10-09, D-25..D-27):** this task is built on the v2 API contract and database conventions, not the v1 ones written below. Read `docs/api-contract.md`, `docs/db-conventions.md` and `docs/go-conventions.md` first. Wherever this spec names a `/v1/...` path, an old error code, an RFC 3339 time, a `cursor`, a foreign key or a `DATETIME` column, use the v2 equivalent (route map: `docs/api-contract.md` section 8). New tables are `_tab` tables with BIGINT ms timestamps and no foreign keys. Epic: `.team/epics/E10-skills-alignment/PRD.md`.
 
 **Epic:** E04-friends-notes · **PRD:** [PRD.md](PRD.md) · **Milestone:** M1 · **Risk:** low · **Priority:** P2 · **Type:** feature

@@ -11,16 +11,17 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 28 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-077 |
-| TODO | 2 | T-066, T-078 |
+| TODO | 1 | T-078 |
+| QA_PASS | 1 | T-066 |
 | MERGED | 1 | T-065 |
 | DONE | 40 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-074, T-075, T-076 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
 
 **Awaiting your review (MERGED):** T-065 ([E10] DB conventions: media table)
 
-**Open questions for you:** none
+**Open questions for you:** Q-028 (Approve merge of T-066 (E10: note collections and notes to the new DB conventions)?)
 
-_Board last written 2026-10-12 02:11Z_
+_Board last written 2026-10-12 02:40Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -370,6 +371,15 @@ First database conversion of epic E10 (D-26). Migration 20261010120000 renames y
 - **Answer:** _(pending)_
 
 Second database conversion of E10. Migration 20261011100000 renames media to media_tab with BIGINT ms timestamps, VARCHAR instead of ENUM, no foreign key to yearbooks (the yearbook delete transaction now removes media rows through a registered child purger); note_photos keeps its FK until T-066/T-067. Down restores the old schema and data. API/JSON unchanged. QA: migration probes on every media shape (Up/Down/Up equal), orphan checker proven with planted orphans, own HTTP storm of uploads/public notes/photo deletes/cover edits/book deletes with no media-related 5xx and no orphan rows or objects. QA found three older bugs that this PR did not cause: tracked as T-078 (read race), T-066 spec (submit vs delete deadlock), T-025 spec (orphan objects). To approve: team approve T-065.
+
+### Q-028 — Approve merge of T-066 (E10: note collections and notes to the new DB conventions)?
+- **Status:** OPEN
+- **Asked:** 2026-10-12 02:40Z
+- **Blocks:** T-066,T-067
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+Third database conversion of E10. Three migrations rename note_collections, notes and note_photos to note_collection_tab, note_tab and note_photo_tab with BIGINT ms timestamps, updated_at, a plain status column, no foreign keys (photo rows get their own id; position is now sort_order); Down restores the old schema and data. Notes join the yearbook delete transaction as a child purger; the public-note submit now takes the book lock first, which fixes the deadlock QA measured in earlier code (31-36 of 600 submissions answered 500). Public JSON unchanged. QA: migration probes with Vietnamese/emoji answers and boundary dates (Up/Down/Up equal), planted-orphan and planted-table checks, 40-round storm of submits/revokes/photo deletes/book deletes with 0 5xx and nothing left behind. To approve: team approve T-066. Then T-067 (users and identities) and the API conversions start.
 
 <!-- questions:end -->
 
@@ -2646,7 +2656,7 @@ Converts `media` to `media_tab` (ms timestamps, no FK, no ENUM, print columns fr
 - 2026-10-12 02:11Z · leader · merged d93ab34. Review: media_tab migration (BIGINT ms, VARCHAR, no FK to yearbooks; note_photos keeps its FK until T-066/T-067), media registered as yearbook child purger, AssertNoOrphans, documented lock order; QA storm found no media lock inversion and no orphans. Combined tree checked: no code refers to the old media table name. For owner to check: run make migrate on your dev DB. Older bugs found by QA: T-078, T-066 spec, T-025 spec.
 
 ### T-066 — [E10] DB conventions: note collections and notes tables
-- **Status:** TODO
+- **Status:** QA_PASS
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2654,11 +2664,11 @@ Converts `media` to `media_tab` (ms timestamps, no FK, no ENUM, print columns fr
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-12 02:11Z by leader
-- **Comments-seen:** 0
+- **Assignee:** leader
+- **Branch:** task/t-066-e10-db-conventions-note-collections-and-
+- **PR:** https://github.com/danyaa666/smemories/pull/49
+- **Updated:** 2026-10-12 02:39Z by qa
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/04-db-notes.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2667,6 +2677,19 @@ Converts `media` to `media_tab` (ms timestamps, no FK, no ENUM, print columns fr
 Converts `note_collections` and the notes tables created by T-034 to the `_tab` conventions, registers as a yearbook child purger, and adds the full-book delete zero-rows test.
 
 #### Comments
+- 2026-10-12 02:24Z · dev · PR #49. 3 timestamp migrations (collection/note/photo) with Down + round-trip test; notes.Service purger registered; insertNote/revoke take yearbook FOR SHARE first (vanished book = 404); parallel test submit+photos/create/revoke vs delete (0 5xx, fails 11-13 5xx without the lock); full-book zero-rows test from information_schema; AssertNoOrphans +5 pairs. Lint, race unit and full integration (-timeout 30m) green. QA: Down/Up on populated data, revoked collection with notes, deadline in the past, photo delete keeps note. Known: revoke's book lock is order hygiene, not test-discriminating.
+- 2026-10-12 02:39Z · qa · PR #49 head 514b7fd + my test commit; CI go/go-integration/security/web green.
+  EVIDENCE (AC -> how -> result)
+  AC1 migrations: dev's TestMigrateNoteTabConventions passes; my new TestQAMigrateNoteTabRealisticData (internal/db/note_tab_qa_integration_test.go): 5 collections (no/with deadline, revoked, deadline long past, 1000-01-01 and 9999-12-31 23:59:59.999999 boundaries, 1970 epoch), 20 notes in all 3 statuses with Vietnamese/emoji/ZWJ answers, 0-3 photos each (30 links); Up/Down/Up: non-time columns and photo ids/positions identical, ms values exact (e.g. C4 -30610224000000, 9999 => 253402300799999, 999us => 0), Down restores DATETIME(6) values (ms precision), a row written while migrated survives Down, second Up equals first Up. PASS.
+  No FK: schema scan shows 0 FKs except user_identities->users (T-067 scope); none from/to the 3 note tables. note_photo_tab has surrogate id PK, sort_order, UNIQUE(media_id) and UNIQUE(note_id,sort_order): inserts of a photo on 2 notes and of a duplicate position are rejected (tested). Every *_id indexed (SHOW CREATE TABLE on a freshly migrated DB). status VARCHAR(16) with Go constants; no reserved-word/ENUM/DATETIME columns. PASS.
+  AC2/AC5: handler JSON still RFC 3339 (RFC3339 assertions in existing tests, api/openapi.yaml and web untouched), caps/pace/honeypot/rate-limit/privacy tests (TestSubmitPrivacy: column list has no IP) pass.
+  AC3: notes.Service is the yearbook child purger and media RefClearer; main.go wires SetRefClearer(bookStore, notesSvc) variadic. Deleting a media photo removes its note link and keeps the note (dev test + my storm).
+  AC4: AssertNoOrphans has the 5 new pairs; dev's orphans_integration_test plants an orphan for each pair and passes. Full-book zero-rows test: tables from information_schema; my TestQAUnregisteredTableIsCaught plants zz_planted_tab and the list no longer equals the registry, so TestDeleteBookLeavesNoRows would fail. PASS.
+  LOCK ORDER: dev's race test plus my TestQAStormBookDelete (40 rounds x 10 public submits with 0-3 photos, 3 lookups, repeated revokes, creates, lists, concurrent photo deletes, 2 book deletes): 0 5xx, zero rows in all 6 tables and zero storage objects after each round, vanished book => 404 on lookup/submit/revoke. Mutation check in a scratch copy: removing lockBook from insertNote gives 13 5xx (dev test) / 6 5xx (mine): fix confirmed. Removing it from revoke gives 0 5xx in 4 runs (hygiene only, as dev said; safe either way). Extra finding: swapping the clearer order to SetRefClearer(notesSvc, bookStore) gives MySQL 1213 on photo delete vs book delete (2-3 per run); the dev test does NOT catch it but my TestQAStormBookDelete does. main.go order is correct. TestQAStormRevokeAndPhotoDelete: submits racing revoke give only 201/404, a submit that started after the revoke answered never lands, rows == links and objects == 3 x media.
+  Judged: T-065 tests no longer expecting note_photos FK, correct since T-066 drops it. 'Insert fails after photos stored' now uses ALTER ... ADD CONSTRAINT CHECK (sort_order > 100) on note_photo_tab: fails the same insert inside the same transaction (500, rollback, compensation) while keeping the table, equivalent to DROP TABLE. Both fine.
+  COMMANDS: make lint build (green); go test -race ./... (green); go test -race -count=1 -timeout 30m -tags integration ./... (all 20 packages ok; db, notes, media, yearbook re-run with my tests ok); Newman against the built API on a scratch DB, 2 runs each back to back: notes 137/137, yearbooks 189/189, media 132/132, 0 failures.
+  NON-BLOCKING: (1) the clearer order invariant (yearbook store first) is only a comment plus my storm test, consider a dev test with photo deletes in TestDeleteRacesWithSubmitsAndCollections. (2) status has no Go-side validation function yet (no write path besides insert; do it with the moderation task). (3) pre-1970 values with sub-ms digits truncate toward zero (documented). (4) tabTables excludes any name starting 'user', so a future user_*-prefixed non-user table would be skipped. Tests added: internal/db/note_tab_qa_integration_test.go, internal/notes/qa_storm_integration_test.go (committed and pushed to the task branch).
+- 2026-10-12 02:40Z · leader · Leader review (content) OK at head 2d28198: three migrations with Down, no FK left on the note tables, FOR SHARE yearbook lock first in insertNote (test fails without it: QA 6, dev 13 5xx), notes.Service child purger, zero-rows registry from information_schema (QA planted a table: it fails), AssertNoOrphans for 5 new pairs. QA storm 40 rounds: 0 5xx, zero rows and objects. QA's extra tests are on the branch. Non-blocking: clearer order (SetRefClearer(notesSvc, bookStore)) is guarded by a comment and QA's storm test; note status Go validation goes into T-013's spec. Merge after CI is green. Awaiting owner approval.
 
 ### T-067 — [E10] DB conventions: user and identity tables
 - **Status:** BACKLOG
