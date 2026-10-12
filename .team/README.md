@@ -12,7 +12,7 @@
 |---|---:|---|
 | BACKLOG | 25 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-069, T-070, T-071, T-072, T-073 |
 | TODO | 1 | T-079 |
-| IN_QA | 1 | T-068 |
+| CHANGES_REQUESTED | 1 | T-068 |
 | DONE | 45 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-074, T-075, T-076, T-077, T-078 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
 
@@ -20,7 +20,7 @@
 
 **Open questions for you:** none
 
-_Board last written 2026-10-12 09:04Z_
+_Board last written 2026-10-12 09:10Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -2728,7 +2728,7 @@ Converts `note_collections` and the notes tables created by T-034 to the `_tab` 
 - **Branch:** task/t-067-e10-db-conventions-user-and-identity-tab
 - **PR:** https://github.com/danyaa666/smemories/pull/52
 - **Updated:** 2026-10-12 09:04Z by human
-- **Comments-seen:** 7
+- **Comments-seen:** 8
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/05-db-auth.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2755,19 +2755,19 @@ Converts `users` and `user_identities` (the sessions and email_tokens tables are
 - 2026-10-12 09:04Z · human · accepted by owner
 
 ### T-068 — [E10] API v2: notes domain (collections, public lookup and submission) with a service layer
-- **Status:** IN_QA
+- **Status:** CHANGES_REQUESTED
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
 - **Depends-on:** T-063, T-066
 - **Risk:** high
-- **Rework:** 0
+- **Rework:** 1
 - **Owner-approved:** yes
-- **Assignee:** qa
+- **Assignee:** —
 - **Branch:** task/t-068-e10-api-v2-notes-domain-collections-publ
 - **PR:** https://github.com/danyaa666/smemories/pull/53
-- **Updated:** 2026-10-12 08:57Z by qa
-- **Comments-seen:** 3
+- **Updated:** 2026-10-12 09:10Z by leader
+- **Comments-seen:** 6
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/06-api-notes.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2780,6 +2780,40 @@ Moves the notes endpoints to /api/note-collection/* and /api/public-collect/*, i
 - 2026-10-12 08:37Z · leader · Leader review of dev's 'please review' points: (1) submit token as a multipart field is NOT accepted: it makes unknown/revoked-token requests spool up to 32 MiB before any check, undoing T-034's DoS design. Decision: token is the query parameter POST /api/public-collect/submit-note?token=..., link resolved BEFORE spooling, counters (public_all/public_misses) and the honeypot order exactly as in T-034 (honeypot only after a valid token). docs/api-contract.md and the spec are updated. (2) flat data for create/submit and unpaged get-list {items, next_id:''}: accepted. Add a test that an unknown token with a 20 MiB body is answered 404 without reading/spooling it (spool dir stays empty, connection not held) and that the token never reaches logs. Re-run everything, push, confirm CI, keep READY_FOR_QA (QA has not started: not a rework).
 - 2026-10-12 08:48Z · dev · Dev: token moved to the query (POST /api/public-collect/submit-note?token=). Resolve runs before content-type/spool; NotFound is answered on the raw writer (no drain, body unread), other early rejections still drain. New test TestUnknownTokenIsAnsweredWithoutReadingTheBody (20 MiB body: 0 bytes read, spool empty, 404 over a real socket mid-upload, token not in logs; fails without the change). openapi (token query param, lint green), Postman (21 submit requests converted), schema.d.ts, docs/media.md, note-fields.md updated; merged develop for the api-contract row. make lint build test + go test -race -tags integration ./internal/notes green. NOT done: newman re-run (no dev env access) - QA please run postman/notes. Also removed a stray web/node_modules symlink that my first commit had added (net PR diff clean).
 - 2026-10-12 09:02Z · human · owner approved merge
+- 2026-10-12 09:08Z · qa · QA_PASS on head 4d5401d (PR #53). All evidence is from my own runs. API built from the branch and run on a fresh migrated DB (own Redis db, own spool dir), probed with curl and raw sockets.
+  
+  CI and mechanical
+  - gh pr checks 53: go, go-integration, security, web all pass.
+  - make lint build test: exit 0, 0 lint issues. check:api ok, tsc ok, go vet -tags integration ok.
+  - make test-integration (go test -race -tags integration ./..., -timeout 30m): all 20 packages ok (auth 158s, notes 140s, yearbook 75s, media 65s).
+  - go test ./api (contract lint) green. api/openapi.yaml has the 5 routes with summary, description, x-auth, x-error-codes, examples. Live responses match the examples (key names, numbers, null).
+  - Newman: postman/notes run twice back to back (--working-dir ., baseUrl overridden): 74 requests / 141 assertions / 0 failed, both runs.
+  
+  Routes and envelope (AC1-AC3, req 1-4)
+  - Exactly the 5 routes. Wrong method -> 405 ERROR_METHOD_NOT_ALLOWED. All old /v1 notes routes (GET/POST/DELETE, with and without session) -> 404 old envelope {"error":{"code":"not_found",...}}. Web has no calls to these routes (grep: only web/src/api/schema.d.ts).
+  - Success is {status:"OK",data}. Errors are {status:"ERROR_*",error_message,request_id} with the HTTP status kept: 400 ERROR_PARAM / INVALID_LABEL / INVALID_DEADLINE, 401, 403 ERROR_EMAIL_NOT_VERIFIED / ERROR_CSRF_ORIGIN_MISMATCH, 404, 409 ERROR_LIMIT_REACHED (6th active link), 413 ERROR_TOO_LARGE, 415, 408 ERROR_REQUEST_TIMEOUT, 429 with Retry-After, 503 ERROR_BUSY with Retry-After.
+  - created_at, deadline_at, revoked_at are JSON numbers (Unix ms), null when unset. get-list is {items,next_id:""}. Owner A vs B: B gets 404 on A's yearbook list, create and revoke.
+  - CSRF: POST create/revoke without Origin or with evil Origin -> 403 ERROR_CSRF_ORIGIN_MISMATCH. The public routes work with no cookie and with an evil Origin, send no Set-Cookie and no Access-Control-*. OPTIONS preflight is 405, identical to develop (checked against a develop build).
+  
+  T-034 protections (all re-verified live)
+  - Token unknown / malformed / missing / revoked with a 20 MiB body (raw socket, curl with Expect: 100-continue, chunked, and curl -F): 404 in 2-3 ms, uploaded=0 bytes, the client could push only about 0.8 MiB into the socket buffer before BrokenPipe, spool dir empty, connection closed by the server. Control with a valid token: spool file created. A token only in the multipart body -> 404.
+  - Honeypot answers 200 only with a valid token; with an unknown token it is 404. Answers-after-photos -> 400. Field catalogue errors (missing, invalid, unknown field) -> 400 codes as documented. 4 photos -> ERROR_TOO_MANY_PHOTOS. Bad or bomb image -> rejected, media_tab and note_photo_tab unchanged (good+bomb stores nothing; good+good adds 2 rows).
+  - Spool file mode 0600. Removed on idle drop, slow-rate drop, 413, normal finish and client disconnect (spool dir empty after each).
+  - Pace: idle -> 408 after 10.0 s; 6 KiB/s -> 408 after 15.5 s; Content-Length 40 MiB with 34 MiB sent -> 413 ERROR_TOO_LARGE. A slow upload at 22 KiB/s of a 2.32 MB body (103 s, avg 22.0 KiB/s) completes with 200 and the note id, so WithTimeout(180s) and the WriteTimeout do not cut it.
+  - Connection caps: 8 stalled uploads from one IP -> the 9th gets 503 ERROR_BUSY with Retry-After in {2..6} (12 samples 2,3,4,5,6 seen); 48 slots held by 6 IPs (second instance, SMEM_TRUST_PROXY=true) -> 49th from a fresh IP is 503. Slots free again after close. The Redis rate-limit keys are unchanged by the 503s. The GET lookup still works while the slots are full.
+  - Rate limits: per link 60/h (61st -> 429, Retry-After 3600); per IP 100/h (100 successes in total, 101st -> 429); public misses 60 per 15 min (61st unknown token -> 429, Retry-After 900).
+  - Timing: 19-25 samples each, GET and POST. unknown 1.33 ms vs revoked 1.33 ms vs another unknown 1.32 ms (medians): no oracle. Malformed is faster (no DB lookup, 0.7 ms), but it reveals only the token format, same as T-034. Expired is a different status by design (410 ERROR_COLLECTION_CLOSED, needs a valid token) and the body is drained like T-034.
+  - Token never in logs: the debug-level API log contains none of the used tokens or a token= string (only the route patterns). The ?token=SECRET test (incl. 429 and storage failure paths) passes. Recover logs a stack, which has no string contents. I could not trigger a real panic without changing code.
+  
+  Architecture (req 2, AC6)
+  - service.go, errors.go and store.go have no net/http import. handler.go and submit.go do not reference the store (go list -f imports; grep). No fmt.Errorf or errors.New in internal/notes outside tests. Service unit tests with a fake store (create, resolve, revoke ownership, submit rules, photo failures, takeSubmit) pass under -race.
+  
+  Non-blocking observations (no AC violated)
+  1. ERROR_COLLECTION_FULL (noteCount) now runs inside Service.SubmitNote, i.e. after the body is spooled and scanned. In T-034 it ran before the spool. So a link with 300 notes now spools a body before the 409, and a honeypot hit on a full link answers 200 instead of 409. Only a valid-token holder can do this, so low risk. Consider a Service.CheckOpen(p) call right after Resolve in submit() if you want T-034's exact order.
+  2. The package imports media for types, and media imports net/http transitively. Not a direct import in notes.Service, so the SHALL holds as written.
+  3. A valid token is answered 429 once the 60-per-15-min misses limit of the IP is used up. Same as T-034 (Take before Refund).
+  I added no test files. Cleaned up (processes stopped, test DB dropped, Redis db 7 flushed).
+- 2026-10-12 09:10Z · leader · Leader review of head 4d5401d: code and QA evidence accepted, but PR #53 is CONFLICTING with develop (T-067 merged). Blocking: 1) Merge origin/develop into the branch. The only conflict is the one-line 'description' in postman/notes.postman_collection.json: keep develop's SQL (UPDATE user_tab SET email_verified_at = UNIX_TIMESTAMP(NOW(3)) * 1000 WHERE email IN (...)) and keep this branch's v2 content everywhere else. 2) Restore T-034 order for ERROR_COLLECTION_FULL (QA observation 1): the full-link check (noteCount) must run right after Resolve and BEFORE the body is spooled (e.g. Service.CheckOpen(p) called in submit() before content-type/spool), so a full link answers 409 ERROR_COLLECTION_FULL without reading the body, and the honeypot still answers 200 only after the full check passes, as in T-034. Add a test (full link + large body: 409, 0 bytes read, spool dir empty). 3) After the merge re-run make lint build test, go test -race -tags integration ./internal/notes ./api, check:api, confirm CI green on the exact head, then READY_FOR_QA. Nothing else changes; the owner already approved the merge of T-068, so it merges right after QA re-passes. This is rework 1 of 2.
 
 ### T-069 — [E10] API v2: media domain
 - **Status:** BACKLOG
@@ -3050,7 +3084,7 @@ Dev and QA hit the default 10-minute test timeout in internal/media (763-858 s o
 - **Branch:** task/t-078-e03-yearbook-reads-a-book-deleted-mid-re
 - **PR:** https://github.com/danyaa666/smemories/pull/50
 - **Updated:** 2026-10-12 04:00Z by human
-- **Comments-seen:** 5
+- **Comments-seen:** 6
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E03-yearbooks/07-read-race-with-delete.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
