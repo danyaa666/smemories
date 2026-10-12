@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/danyaa666/smemories/internal/apperr"
 	"github.com/danyaa666/smemories/internal/auth"
 	"github.com/danyaa666/smemories/internal/httpx"
 )
@@ -20,36 +21,61 @@ const (
 	// multipartOverhead is room, on top of the file cap, for the multipart framing and any small extra fields.
 	multipartOverhead = 64 << 10
 	maxParts          = 8
-	// The global server timeouts (15 s read, 30 s write) are too short for a 10 MiB upload over a phone
-	// connection or a large download, so these routes extend their own deadlines.
-	uploadReadTimeout = 2 * time.Minute
-	routeWriteTimeout = 2 * time.Minute
+	maxIDBytes        = 64 // a yearbook id is 26 characters; anything longer is not one
+
+	// The global server timeouts (15 s read, 30 s write) are too short for a 10 MiB upload over a phone connection or a
+	// large download, so these routes carry their own: the request context ends at the route timeout, and the connection's
+	// write deadline is moved past it (writeSlack) so the answer to a request that used all its time can still be sent.
+	// Without that the server's WriteTimeout would cut the response off first.
+	uploadReadTimeout   = 2 * time.Minute
+	uploadProcessing    = 30 * time.Second
+	uploadRouteTimeout  = uploadReadTimeout + uploadProcessing
+	contentRouteTimeout = 2 * time.Minute
+	writeSlack          = 10 * time.Second
+
+	busyRetryAfter = "2" // seconds, for a refused upload
+
+	// clientClosed is nginx's 499: the client went away, nobody reads the answer.
+	clientClosed = 499
 )
 
-// Handler serves the media endpoints.
+var codeClientClosed = apperr.NewCode("ERROR_CLIENT_CLOSED", clientClosed)
+
+// Handler serves the media endpoints: it decodes, validates the shape, calls the Service and writes the answer.
 type Handler struct {
 	svc            *Service
 	maxBytes       int64
 	requireUser    func(http.Handler) http.Handler
 	allowedOrigins []string
+	cursors        *httpx.Cursors
 	logger         *slog.Logger
 	inflight       chan struct{} // uploads being read or processed; bounds the memory held in request buffers
 }
 
 // NewHandler builds the handler. At most 4x the service's processing slots of uploads are in flight at
-// once (each buffers up to maxBytes); more get 503 busy.
-func NewHandler(svc *Service, maxBytes int64, requireUser func(http.Handler) http.Handler, allowedOrigins []string, logger *slog.Logger) *Handler {
-	return &Handler{svc: svc, maxBytes: maxBytes, requireUser: requireUser, allowedOrigins: allowedOrigins, logger: logger,
+// once (each buffers up to maxBytes); more get 503 ERROR_BUSY.
+func NewHandler(svc *Service, maxBytes int64, requireUser func(http.Handler) http.Handler, allowedOrigins []string, cursors *httpx.Cursors, logger *slog.Logger) *Handler {
+	return &Handler{svc: svc, maxBytes: maxBytes, requireUser: requireUser, allowedOrigins: allowedOrigins, cursors: cursors, logger: logger,
 		inflight: make(chan struct{}, 4*cap(svc.sem))}
 }
 
 // Routes registers the endpoints on mux (pass to httpx.NewRouter).
 func (h *Handler) Routes(mux *http.ServeMux) {
-	mux.Handle("POST /v1/yearbooks/{id}/media", auth.GuardMultipart(h.allowedOrigins, h.requireUser(
-		httpx.WithBodyLimit(h.maxBytes+multipartOverhead, http.HandlerFunc(h.upload)))))
-	mux.Handle("GET /v1/yearbooks/{id}/media", h.requireUser(http.HandlerFunc(h.list)))
-	mux.Handle("GET /v1/media/{id}/content", h.requireUser(http.HandlerFunc(h.content)))
-	mux.Handle("DELETE /v1/media/{id}", auth.Guard(h.allowedOrigins, h.requireUser(http.HandlerFunc(h.delete))))
+	mux.Handle("POST /api/media/create", auth.GuardMultipart(h.allowedOrigins, h.requireUser(
+		slowRoute(uploadRouteTimeout, uploadReadTimeout, httpx.WithBodyLimit(h.maxBytes+multipartOverhead, http.HandlerFunc(h.create))))))
+	mux.Handle("GET /api/media/get-list", h.requireUser(http.HandlerFunc(h.list)))
+	mux.Handle("GET /api/media/get-content", h.requireUser(slowRoute(contentRouteTimeout, 0, http.HandlerFunc(h.content))))
+	mux.Handle("POST /api/media/delete", auth.Guard(h.allowedOrigins, h.requireUser(http.HandlerFunc(h.delete))))
+}
+
+// slowRoute gives a route its own request deadline (httpx.WithTimeout) and moves the connection's deadlines out to fit it:
+// the write deadline to timeout+writeSlack, the read deadline to read (0 = leave it). A server or writer that does not
+// support deadlines keeps the global ones.
+func slowRoute(timeout, read time.Duration, next http.Handler) http.Handler {
+	return httpx.WithTimeout(timeout, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		httpx.ExtendDeadlines(w, read, timeout+writeSlack)
+		next.ServeHTTP(w, r)
+	}))
 }
 
 func owner(r *http.Request) uint64 {
@@ -57,88 +83,104 @@ func owner(r *http.Request) uint64 {
 	return u.InternalID
 }
 
-// extend moves the connection deadlines of this request out; servers that do not support it keep the global ones.
-func extend(w http.ResponseWriter, read bool) {
-	rc := http.NewResponseController(w)
-	now := time.Now()
-	if read {
-		_ = rc.SetReadDeadline(now.Add(uploadReadTimeout))
-	}
-	_ = rc.SetWriteDeadline(now.Add(routeWriteTimeout))
+// mediaJSON is a photo as the API shows it: no storage keys, no URLs (the client builds the content URL from id).
+type mediaJSON struct {
+	ID          string `json:"id"`
+	YearbookID  string `json:"yearbook_id"`
+	ContentType string `json:"content_type"`
+	Bytes       int    `json:"bytes"`
+	Width       int    `json:"width"`
+	Height      int    `json:"height"`
+	CreatedAt   int64  `json:"created_at"` // Unix ms
 }
 
-func (h *Handler) upload(w http.ResponseWriter, r *http.Request) {
+func toJSON(m *Media, yearbookID string) mediaJSON {
+	return mediaJSON{m.ID, yearbookID, m.ContentType, m.Bytes, m.Width, m.Height, m.CreatedAt}
+}
+
+func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	select {
 	case h.inflight <- struct{}{}:
 		defer func() { <-h.inflight }()
 	default:
-		w.Header().Set("Retry-After", "2")
-		httpx.WriteError(w, r, http.StatusServiceUnavailable, "busy", "too many uploads in progress, retry shortly")
+		w.Header().Set("Retry-After", busyRetryAfter)
+		h.fail(w, r, ErrBusy)
 		return
 	}
-	extend(w, true)
-	data, ok := h.readFile(w, r)
+	yearbookID, data, ok := h.readForm(w, r)
 	if !ok {
 		return
 	}
-	m, err := h.svc.Upload(r.Context(), owner(r), r.PathValue("id"), data)
+	m, err := h.svc.Upload(r.Context(), owner(r), yearbookID, data)
 	if err != nil {
 		h.fail(w, r, err)
 		return
 	}
-	httpx.WriteJSON(w, http.StatusCreated, map[string]any{"media": map[string]any{"id": m.ID, "width": m.Width, "height": m.Height, "bytes": m.Bytes}})
+	httpx.OK(w, r, toJSON(&m, yearbookID))
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
-	limit := DefaultListLimit
-	if s := q.Get("limit"); s != "" {
-		n, err := strconv.Atoi(s)
-		if err != nil || n < 1 || n > MaxListLimit {
-			h.fail(w, r, ValidationError{"invalid_limit"})
-			return
-		}
-		limit = n
+	yearbookID := q.Get("yearbook_id")
+	if yearbookID == "" {
+		h.fail(w, r, apperr.New(apperr.Param, "yearbook_id is required"))
+		return
 	}
-	items, next, err := h.svc.List(r.Context(), owner(r), r.PathValue("id"), q.Get("uploader"), limit, q.Get("cursor"))
+	limit, err := httpx.ParseLimit(r, DefaultListLimit, MaxListLimit)
 	if err != nil {
 		h.fail(w, r, err)
 		return
 	}
-	type item struct {
-		ID           string    `json:"id"`
-		Width        int       `json:"width"`
-		Height       int       `json:"height"`
-		Bytes        int       `json:"bytes"`
-		UploaderKind string    `json:"uploader_kind"`
-		CreatedAt    time.Time `json:"created_at"`
+	scope := "media/get-list:" + yearbookID // a token from another yearbook (or another list) is refused
+	var before uint64
+	if token := q.Get("next_id"); token != "" {
+		pos, err := h.cursors.Open(scope, token)
+		if err == nil {
+			before, err = parsePosition(pos)
+		}
+		if err != nil {
+			h.fail(w, r, err)
+			return
+		}
 	}
-	out := make([]item, len(items))
-	for i, m := range items {
-		out[i] = item{m.ID, m.Width, m.Height, m.Bytes, m.UploaderKind, time.UnixMilli(m.CreatedAt).UTC()}
+	items, next, err := h.svc.List(r.Context(), owner(r), yearbookID, q.Get("uploader"), limit, before)
+	if err != nil {
+		h.fail(w, r, err)
+		return
 	}
-	var nc *string
-	if next != "" {
-		nc = &next
+	page := httpx.Page[mediaJSON]{Items: make([]mediaJSON, len(items))}
+	for i := range items {
+		page.Items[i] = toJSON(&items[i], yearbookID)
 	}
-	httpx.WriteJSON(w, http.StatusOK, struct {
-		Media      []item  `json:"media"`
-		NextCursor *string `json:"next_cursor"`
-	}{out, nc})
+	if next != 0 {
+		page.NextID = h.cursors.Seal(scope, strconv.FormatUint(next, 10))
+	}
+	httpx.OK(w, r, page)
 }
 
-// readFile streams the multipart body (nothing spills to disk) and returns the content of the part
-// named "file", at most h.maxBytes. The client-supplied file name is never looked at.
-func (h *Handler) readFile(w http.ResponseWriter, r *http.Request) ([]byte, bool) {
+// parsePosition reads the position inside a page token. A token we sealed always parses; the check is for a bug or a key
+// that signs something else.
+func parsePosition(pos string) (uint64, error) {
+	n, err := strconv.ParseUint(pos, 10, 63)
+	if err != nil || n == 0 {
+		return 0, apperr.New(apperr.Param, "next_id is not a valid page token")
+	}
+	return n, nil
+}
+
+// readForm streams the multipart body (nothing spills to disk) and returns the form field "yearbook_id" and the content of
+// the part named "file" (at most h.maxBytes), in either order. The client-supplied file name is never looked at.
+func (h *Handler) readForm(w http.ResponseWriter, r *http.Request) (yearbookID string, data []byte, ok bool) {
 	// The multipart parser does not always wrap a body-cap error, so remember what the body returned.
 	body := &errRecorder{r: r.Body}
 	r.Body = io.NopCloser(body)
 	bodyErr := func(err error) error { return cmp.Or(body.err, err) }
 	mr, err := r.MultipartReader()
 	if err != nil {
-		httpx.WriteError(w, r, http.StatusBadRequest, "invalid_body", "expected a multipart/form-data body")
-		return nil, false
+		h.fail(w, r, apperr.New(apperr.Param, "expected a multipart/form-data body"))
+		return "", nil, false
 	}
+	haveFile := false
 	for range maxParts {
 		part, err := mr.NextPart()
 		if errors.Is(err, io.EOF) {
@@ -146,24 +188,45 @@ func (h *Handler) readFile(w http.ResponseWriter, r *http.Request) ([]byte, bool
 		}
 		if err != nil {
 			httpx.WriteBodyError(w, r, bodyErr(err))
-			return nil, false
+			return "", nil, false
 		}
-		if part.FormName() != "file" {
-			continue
+		switch name := part.FormName(); {
+		case name == "yearbook_id" && yearbookID == "":
+			b, err := io.ReadAll(io.LimitReader(part, maxIDBytes+1))
+			if err != nil {
+				httpx.WriteBodyError(w, r, bodyErr(err))
+				return "", nil, false
+			}
+			if len(b) > maxIDBytes {
+				h.fail(w, r, apperr.New(apperr.Param, "yearbook_id is not a yearbook id"))
+				return "", nil, false
+			}
+			yearbookID = string(b)
+		case name == "file" && !haveFile:
+			data, err = io.ReadAll(io.LimitReader(part, h.maxBytes+1))
+			if err != nil {
+				httpx.WriteBodyError(w, r, bodyErr(err))
+				return "", nil, false
+			}
+			if int64(len(data)) > h.maxBytes {
+				h.fail(w, r, apperr.New(apperr.TooLarge, "file too large"))
+				return "", nil, false
+			}
+			haveFile = true
 		}
-		data, err := io.ReadAll(io.LimitReader(part, h.maxBytes+1))
-		if err != nil {
-			httpx.WriteBodyError(w, r, bodyErr(err))
-			return nil, false
+		if haveFile && yearbookID != "" {
+			break
 		}
-		if int64(len(data)) > h.maxBytes {
-			httpx.WriteError(w, r, http.StatusRequestEntityTooLarge, "payload_too_large", "file too large")
-			return nil, false
-		}
-		return data, true
 	}
-	httpx.WriteError(w, r, http.StatusBadRequest, "invalid_body", "missing form field \"file\"")
-	return nil, false
+	switch {
+	case yearbookID == "":
+		h.fail(w, r, apperr.New(apperr.Param, "missing form field \"yearbook_id\""))
+	case !haveFile:
+		h.fail(w, r, apperr.New(apperr.Param, "missing form field \"file\""))
+	default:
+		return yearbookID, data, true
+	}
+	return "", nil, false
 }
 
 // errRecorder remembers the first non-EOF error of the reader it wraps.
@@ -181,19 +244,24 @@ func (e *errRecorder) Read(p []byte) (int, error) {
 }
 
 func (h *Handler) content(w http.ResponseWriter, r *http.Request) {
-	extend(w, false)
-	size := r.URL.Query().Get("size")
-	switch size {
-	case "":
-		size = SizeDisplay
-	case SizeDisplay, SizeThumb, SizePrint:
-	default:
-		httpx.WriteError(w, r, http.StatusBadRequest, "invalid_size", "size must be thumb, display or print")
+	q := r.URL.Query()
+	id := q.Get("id")
+	if id == "" {
+		h.fail(w, r, apperr.New(apperr.Param, "id is required"))
 		return
 	}
-	m, data, ct, size, err := h.svc.Content(r.Context(), owner(r), r.PathValue("id"), size)
+	variant := q.Get("variant")
+	switch variant {
+	case "":
+		variant = SizeDisplay
+	case SizeDisplay, SizeThumb, SizePrint:
+	default:
+		h.fail(w, r, apperr.New(apperr.Param, "variant must be thumb, display or print"))
+		return
+	}
+	m, data, ct, variant, err := h.svc.Content(r.Context(), owner(r), id, variant)
 	if err != nil {
-		h.fail(w, r, err)
+		h.fail(w, r, err) // an error is the JSON envelope with no-store (SecurityHeaders): an <img> only needs the status, and nothing is cached
 		return
 	}
 	hd := w.Header()
@@ -201,7 +269,7 @@ func (h *Handler) content(w http.ResponseWriter, r *http.Request) {
 	hd.Set("X-Content-Type-Options", "nosniff")
 	hd.Set("Cache-Control", "private, max-age=3600")
 	etag := `"` + m.SHA256[:32]
-	switch size {
+	switch variant {
 	case SizeThumb:
 		etag += "-t"
 	case SizePrint:
@@ -213,39 +281,40 @@ func (h *Handler) content(w http.ResponseWriter, r *http.Request) {
 	http.ServeContent(w, r, "", time.UnixMilli(m.CreatedAt).UTC(), bytes.NewReader(data))
 }
 
+type deleteInput struct {
+	ID string `json:"id"`
+}
+
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
-	if err := h.svc.Delete(r.Context(), owner(r), r.PathValue("id")); err != nil {
+	var in deleteInput
+	if !httpx.DecodeJSON(w, r, &in, true) {
+		return
+	}
+	if in.ID == "" {
+		h.fail(w, r, apperr.New(apperr.Param, "id is required"))
+		return
+	}
+	if err := h.svc.Delete(r.Context(), owner(r), in.ID); err != nil {
 		h.fail(w, r, err)
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	httpx.OK(w, r, nil)
 }
 
+// fail answers err. A request whose client went away gets 499 and a debug line; a *RateLimitedError sets Retry-After; a
+// storage failure is logged (Fail logs only the codes that are our fault by default); the rest is httpx.Fail.
 func (h *Handler) fail(w http.ResponseWriter, r *http.Request, err error) {
-	var rl RateLimitedError
-	var se StorageError
-	var ve ValidationError
-	switch {
-	case errors.As(err, &ve):
-		httpx.WriteError(w, r, http.StatusBadRequest, ve.Code, "invalid query parameter")
-	case errors.Is(err, ErrNotFound):
-		httpx.WriteError(w, r, http.StatusNotFound, "not_found", "not found")
-	case errors.Is(err, ErrUnsupported):
-		httpx.WriteError(w, r, http.StatusUnsupportedMediaType, "unsupported_media_type", "only JPEG, PNG and WebP images are accepted")
-	case errors.Is(err, ErrInvalidImage):
-		httpx.WriteError(w, r, http.StatusBadRequest, "invalid_image", "the image is corrupt or too large")
-	case errors.Is(err, ErrQuota):
-		httpx.WriteError(w, r, http.StatusConflict, "quota_exceeded", "storage quota reached")
-	case errors.As(err, &rl):
-		w.Header().Set("Retry-After", strconv.Itoa(int(math.Ceil(rl.RetryAfter.Seconds()))))
-		httpx.WriteError(w, r, http.StatusTooManyRequests, "rate_limited", "too many uploads, try again later")
-	case errors.As(err, &se):
-		h.logger.Error("media: storage failed", "request_id", httpx.RequestIDFrom(r.Context()), "error", err)
-		httpx.WriteError(w, r, http.StatusBadGateway, "storage_error", "object storage failed")
-	default:
-		if !errors.Is(err, context.Canceled) {
-			h.logger.Error("media: request failed", "request_id", httpx.RequestIDFrom(r.Context()), "error", err)
-		}
-		httpx.WriteError(w, r, http.StatusInternalServerError, "internal_error", "internal server error")
+	if errors.Is(err, context.Canceled) { // nobody reads the answer and nothing is wrong on our side
+		h.logger.Debug("media: client gone", "request_id", httpx.RequestIDFrom(r.Context()), "error", err)
+		httpx.Fail(w, r, apperr.New(codeClientClosed, "client closed the request"))
+		return
 	}
+	var rl *RateLimitedError
+	if errors.As(err, &rl) {
+		w.Header().Set("Retry-After", strconv.Itoa(int(math.Ceil(rl.RetryAfter.Seconds()))))
+	}
+	if apperr.Is(err, CodeStorage) {
+		h.logger.Error("media: storage failed", "request_id", httpx.RequestIDFrom(r.Context()), "error", err)
+	}
+	httpx.Fail(w, r, err)
 }

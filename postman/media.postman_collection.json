@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "SMemories - media",
-    "description": "Photo upload, list, download and delete (T-009, T-046). Run from the postman/ directory (newman run media.postman_collection.json --working-dir .) against an API started with SMEM_ENV=dev and a reachable MinIO (make up). Each run registers 2 users (limit 5 per hour per IP; run `make reset-limits` or raise SMEM_RATE_REGISTER_PER_HOUR before a third run in the hour). Run the whole collection in order: Edge cases reuses the two users of the Full flow. Not covered here because a collection cannot generate files: the 11 MiB size cap (413), quotas and the upload rate limit; the Go integration tests cover them.",
+    "description": "Photo upload, list, download and delete (T-009, T-046), on the v2 contract since T-069 (`/api/media/create`, `/api/media/get-list`, `/api/media/get-content`, `/api/media/delete`; `{status,data}` envelope, `ERROR_*` codes, Unix ms timestamps; `get-content` is binary on success and the error envelope on failure). Accounts and yearbooks still use the v1 routes until their own tasks. Run from the postman/ directory (newman run media.postman_collection.json --working-dir .) against an API started with SMEM_ENV=dev and a reachable MinIO (make up). Each run registers 2 users (limit 5 per hour per IP; run `make reset-limits` or raise SMEM_RATE_REGISTER_PER_HOUR before a third run in the hour). Run the whole collection in order: Edge cases reuses the two users of the Full flow. Not covered here because a collection cannot generate files: the 11 MiB size cap (413), quotas and the upload rate limit; the Go integration tests cover them.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -242,20 +242,24 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/media",
+              "raw": "{{baseUrl}}/api/media/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "media"
+                "api",
+                "media",
+                "create"
               ]
             },
             "body": {
               "mode": "formdata",
               "formdata": [
+                {
+                  "key": "yearbook_id",
+                  "type": "text",
+                  "value": "{{bookId}}"
+                },
                 {
                   "key": "file",
                   "type": "file",
@@ -270,9 +274,10 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 201', () => pm.response.to.have.status(201));",
-                  "const m = pm.response.json().media;",
-                  "pm.test('shape', () => { pm.expect(m.id).to.match(/^[0-9A-Z]{26}$/); pm.expect(m).to.have.all.keys('id','width','height','bytes'); });",
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const m = pm.response.json().data;",
+                  "pm.test('shape', () => { pm.expect(m.id).to.match(/^[0-9A-Z]{26}$/); pm.expect(m).to.have.all.keys('id','yearbook_id','content_type','bytes','width','height','created_at'); });",
+                  "pm.test('created_at is Unix ms, content type from the server', () => { pm.expect(m.created_at).to.be.above(1.7e12); pm.expect(m.content_type).to.eql('image/jpeg'); pm.expect(m.yearbook_id).to.eql(pm.collectionVariables.get('bookId')); });",
                   "pm.test('rotated upright', () => { pm.expect(m.width).to.eql(100); pm.expect(m.height).to.eql(200); });",
                   "pm.collectionVariables.set('mediaId', m.id);"
                 ]
@@ -291,15 +296,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/media/{{mediaId}}/content",
+              "raw": "{{baseUrl}}/api/media/get-content?id={{mediaId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
+                "api",
                 "media",
-                "{{mediaId}}",
-                "content"
+                "get-content"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{mediaId}}"
+                }
               ]
             }
           },
@@ -330,19 +340,22 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/media/{{mediaId}}/content?size=thumb",
+              "raw": "{{baseUrl}}/api/media/get-content?id={{mediaId}}&variant=thumb",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
+                "api",
                 "media",
-                "{{mediaId}}",
-                "content"
+                "get-content"
               ],
               "query": [
                 {
-                  "key": "size",
+                  "key": "id",
+                  "value": "{{mediaId}}"
+                },
+                {
+                  "key": "variant",
                   "value": "thumb"
                 }
               ]
@@ -373,19 +386,22 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/media/{{mediaId}}/content?size=print",
+              "raw": "{{baseUrl}}/api/media/get-content?id={{mediaId}}&variant=print",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
+                "api",
                 "media",
-                "{{mediaId}}",
-                "content"
+                "get-content"
               ],
               "query": [
                 {
-                  "key": "size",
+                  "key": "id",
+                  "value": "{{mediaId}}"
+                },
+                {
+                  "key": "variant",
                   "value": "print"
                 }
               ]
@@ -421,20 +437,24 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/media",
+              "raw": "{{baseUrl}}/api/media/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "media"
+                "api",
+                "media",
+                "create"
               ]
             },
             "body": {
               "mode": "formdata",
               "formdata": [
+                {
+                  "key": "yearbook_id",
+                  "type": "text",
+                  "value": "{{bookId}}"
+                },
                 {
                   "key": "file",
                   "type": "file",
@@ -449,8 +469,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 201', () => pm.response.to.have.status(201));",
-                  "const m = pm.response.json().media;",
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const m = pm.response.json().data;",
                   "pm.test('display keeps 2400x1200', () => { pm.expect(m.width).to.eql(2400); pm.expect(m.height).to.eql(1200); });",
                   "pm.collectionVariables.set('bigMediaId', m.id);"
                 ]
@@ -469,19 +489,22 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/media/{{bigMediaId}}/content?size=print",
+              "raw": "{{baseUrl}}/api/media/get-content?id={{bigMediaId}}&variant=print",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
+                "api",
                 "media",
-                "{{bigMediaId}}",
-                "content"
+                "get-content"
               ],
               "query": [
                 {
-                  "key": "size",
+                  "key": "id",
+                  "value": "{{bigMediaId}}"
+                },
+                {
+                  "key": "variant",
                   "value": "print"
                 }
               ]
@@ -504,7 +527,7 @@
         {
           "name": "6e. A deletes the large photo (keeps the later list steps unchanged)",
           "request": {
-            "method": "DELETE",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -513,18 +536,31 @@
               {
                 "key": "Origin",
                 "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/media/{{bigMediaId}}",
+              "raw": "{{baseUrl}}/api/media/delete",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
+                "api",
                 "media",
-                "{{bigMediaId}}"
+                "delete"
               ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\": \"{{bigMediaId}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
           },
           "event": [
@@ -533,7 +569,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 204', () => pm.response.to.have.status(204));"
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
                 ]
               }
             }
@@ -554,15 +590,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/media/{{mediaId}}/content",
+              "raw": "{{baseUrl}}/api/media/get-content?id={{mediaId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
+                "api",
                 "media",
-                "{{mediaId}}",
-                "content"
+                "get-content"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{mediaId}}"
+                }
               ]
             }
           },
@@ -574,6 +615,47 @@
                 "exec": [
                   "pm.test('status 206', () => pm.response.to.have.status(206));",
                   "pm.test('range', () => { pm.expect(pm.response.headers.get('Content-Range')).to.match(/^bytes 0-9\\//); pm.expect(pm.response.stream.length).to.eql(10); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "7b. HEAD answers the headers and no body",
+          "request": {
+            "method": "HEAD",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/media/get-content?id={{mediaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "media",
+                "get-content"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{mediaId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('headers, no body', () => { pm.expect(pm.response.headers.get('Content-Type')).to.eql('image/jpeg'); pm.expect(pm.response.headers.get('ETag')).to.be.a('string'); pm.expect(pm.response.stream.length).to.eql(0); });"
                 ]
               }
             }
@@ -685,15 +767,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/media/{{mediaId}}/content",
+              "raw": "{{baseUrl}}/api/media/get-content?id={{mediaId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
+                "api",
                 "media",
-                "{{mediaId}}",
-                "content"
+                "get-content"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{mediaId}}"
+                }
               ]
             }
           },
@@ -704,16 +791,16 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 404', () => pm.response.to.have.status(404));",
-                  "pm.test('error code not_found', () => pm.expect(pm.response.json().error.code).to.eql('not_found'));"
+                  "pm.test('error ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "11. B deleting A's photo answers 204 but deletes nothing",
+          "name": "11. B deleting A's photo answers 200 but deletes nothing",
           "request": {
-            "method": "DELETE",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -722,18 +809,31 @@
               {
                 "key": "Origin",
                 "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/media/{{mediaId}}",
+              "raw": "{{baseUrl}}/api/media/delete",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
+                "api",
                 "media",
-                "{{mediaId}}"
+                "delete"
               ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\": \"{{mediaId}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
           },
           "event": [
@@ -742,7 +842,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 204', () => pm.response.to.have.status(204));"
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
                 ]
               }
             }
@@ -759,15 +859,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/media/{{mediaId}}/content",
+              "raw": "{{baseUrl}}/api/media/get-content?id={{mediaId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
+                "api",
                 "media",
-                "{{mediaId}}",
-                "content"
+                "get-content"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{mediaId}}"
+                }
               ]
             }
           },
@@ -786,7 +891,7 @@
         {
           "name": "13. A deletes the photo",
           "request": {
-            "method": "DELETE",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -795,18 +900,31 @@
               {
                 "key": "Origin",
                 "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/media/{{mediaId}}",
+              "raw": "{{baseUrl}}/api/media/delete",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
+                "api",
                 "media",
-                "{{mediaId}}"
+                "delete"
               ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\": \"{{mediaId}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
           },
           "event": [
@@ -815,7 +933,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 204', () => pm.response.to.have.status(204));"
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
                 ]
               }
             }
@@ -824,7 +942,7 @@
         {
           "name": "14. Deleting again is idempotent",
           "request": {
-            "method": "DELETE",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -833,18 +951,31 @@
               {
                 "key": "Origin",
                 "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/media/{{mediaId}}",
+              "raw": "{{baseUrl}}/api/media/delete",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
+                "api",
                 "media",
-                "{{mediaId}}"
+                "delete"
               ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\": \"{{mediaId}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
           },
           "event": [
@@ -853,7 +984,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 204', () => pm.response.to.have.status(204));"
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
                 ]
               }
             }
@@ -870,15 +1001,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/media/{{mediaId}}/content",
+              "raw": "{{baseUrl}}/api/media/get-content?id={{mediaId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
+                "api",
                 "media",
-                "{{mediaId}}",
-                "content"
+                "get-content"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{mediaId}}"
+                }
               ]
             }
           },
@@ -889,7 +1025,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 404', () => pm.response.to.have.status(404));",
-                  "pm.test('error code not_found', () => pm.expect(pm.response.json().error.code).to.eql('not_found'));"
+                  "pm.test('error ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));",
+                  "pm.test('the error is uncacheable JSON, never an image', () => { pm.expect(pm.response.headers.get('Cache-Control')).to.eql('no-store'); pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json/); pm.expect(pm.response.json().request_id).to.be.a('string'); });"
                 ]
               }
             }
@@ -945,20 +1082,24 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/media",
+              "raw": "{{baseUrl}}/api/media/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "media"
+                "api",
+                "media",
+                "create"
               ]
             },
             "body": {
               "mode": "formdata",
               "formdata": [
+                {
+                  "key": "yearbook_id",
+                  "type": "text",
+                  "value": "{{bookId}}"
+                },
                 {
                   "key": "file",
                   "type": "file",
@@ -973,8 +1114,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 201', () => pm.response.to.have.status(201));",
-                  "pm.collectionVariables.set('mediaId2', pm.response.json().media.id);"
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('mediaId2', pm.response.json().data.id);"
                 ]
               }
             }
@@ -991,15 +1132,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/media/{{mediaId2}}/content",
+              "raw": "{{baseUrl}}/api/media/get-content?id={{mediaId2}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
+                "api",
                 "media",
-                "{{mediaId2}}",
-                "content"
+                "get-content"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{mediaId2}}"
+                }
               ]
             }
           },
@@ -1031,20 +1177,24 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/media",
+              "raw": "{{baseUrl}}/api/media/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "media"
+                "api",
+                "media",
+                "create"
               ]
             },
             "body": {
               "mode": "formdata",
               "formdata": [
+                {
+                  "key": "yearbook_id",
+                  "type": "text",
+                  "value": "{{bookId}}"
+                },
                 {
                   "key": "file",
                   "type": "file",
@@ -1059,8 +1209,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 201', () => pm.response.to.have.status(201));",
-                  "pm.collectionVariables.set('mediaId3', pm.response.json().media.id);"
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('mediaId3', pm.response.json().data.id);"
                 ]
               }
             }
@@ -1077,17 +1227,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/media?limit=1",
+              "raw": "{{baseUrl}}/api/media/get-list?yearbook_id={{bookId}}&limit=1",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "media"
+                "api",
+                "media",
+                "get-list"
               ],
               "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookId}}"
+                },
                 {
                   "key": "limit",
                   "value": "1"
@@ -1103,11 +1256,11 @@
                 "exec": [
                   "pm.test('status 200', () => pm.response.to.have.status(200));",
                   "const b = pm.response.json();",
-                  "const m = b.media[0];",
-                  "pm.test('one item, the newest', () => { pm.expect(b.media).to.have.length(1); pm.expect(m.id).to.eql(pm.collectionVariables.get('mediaId3')); });",
-                  "pm.test('item shape: no storage keys, hashes or URLs', () => { pm.expect(m).to.have.all.keys('id','width','height','bytes','uploader_kind','created_at'); pm.expect(m.uploader_kind).to.eql('owner'); pm.expect(pm.response.text()).to.not.match(/object_key|thumb_key|sha256|yearbooks\\//); });",
-                  "pm.test('more pages', () => pm.expect(b.next_cursor).to.be.a('string').and.not.empty);",
-                  "pm.collectionVariables.set('mediaCursor', b.next_cursor);"
+                  "const m = b.data.items[0];",
+                  "pm.test('one item, the newest', () => { pm.expect(b.data.items).to.have.length(1); pm.expect(m.id).to.eql(pm.collectionVariables.get('mediaId3')); });",
+                  "pm.test('item shape: no storage keys, hashes or URLs', () => { pm.expect(m).to.have.all.keys('id','yearbook_id','content_type','bytes','width','height','created_at'); pm.expect(m.yearbook_id).to.eql(pm.collectionVariables.get('bookId')); pm.expect(m.created_at).to.be.a('number'); pm.expect(pm.response.text()).to.not.match(/object_key|thumb_key|sha256|yearbooks\\//); });",
+                  "pm.test('more pages', () => pm.expect(b.data.next_id).to.be.a('string').and.not.empty);",
+                  "pm.collectionVariables.set('mediaCursor', b.data.next_id);"
                 ]
               }
             }
@@ -1124,23 +1277,26 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/media?limit=1&cursor={{mediaCursor}}",
+              "raw": "{{baseUrl}}/api/media/get-list?yearbook_id={{bookId}}&limit=1&next_id={{mediaCursor}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "media"
+                "api",
+                "media",
+                "get-list"
               ],
               "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookId}}"
+                },
                 {
                   "key": "limit",
                   "value": "1"
                 },
                 {
-                  "key": "cursor",
+                  "key": "next_id",
                   "value": "{{mediaCursor}}"
                 }
               ]
@@ -1154,8 +1310,8 @@
                 "exec": [
                   "pm.test('status 200', () => pm.response.to.have.status(200));",
                   "const b = pm.response.json();",
-                  "pm.test('the older photo', () => pm.expect(b.media.map(m => m.id)).to.eql([pm.collectionVariables.get('mediaId2')]));",
-                  "pm.test('last page', () => pm.expect(b.next_cursor).to.be.null);"
+                  "pm.test('the older photo', () => pm.expect(b.data.items.map(m => m.id)).to.eql([pm.collectionVariables.get('mediaId2')]));",
+                  "pm.test('last page', () => pm.expect(b.data.next_id).to.eql(''));"
                 ]
               }
             }
@@ -1172,15 +1328,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/media",
+              "raw": "{{baseUrl}}/api/media/get-list?yearbook_id={{bookId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "media"
+                "api",
+                "media",
+                "get-list"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookId}}"
+                }
               ]
             }
           },
@@ -1191,8 +1352,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('both, newest first', () => pm.expect(pm.response.json().media.map(m => m.id)).to.eql([pm.collectionVariables.get('mediaId3'), pm.collectionVariables.get('mediaId2')]));",
-                  "pm.test('no next cursor', () => pm.expect(pm.response.json().next_cursor).to.be.null);"
+                  "pm.test('both, newest first', () => pm.expect(pm.response.json().data.items.map(m => m.id)).to.eql([pm.collectionVariables.get('mediaId3'), pm.collectionVariables.get('mediaId2')]));",
+                  "pm.test('no next cursor', () => pm.expect(pm.response.json().data.next_id).to.eql(''));"
                 ]
               }
             }
@@ -1209,17 +1370,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/media?uploader=contributor",
+              "raw": "{{baseUrl}}/api/media/get-list?yearbook_id={{bookId}}&uploader=contributor",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "media"
+                "api",
+                "media",
+                "get-list"
               ],
               "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookId}}"
+                },
                 {
                   "key": "uploader",
                   "value": "contributor"
@@ -1234,7 +1398,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('empty array, not null', () => pm.expect(pm.response.json()).to.eql({media: [], next_cursor: null}));"
+                  "pm.test('empty array, not null', () => pm.expect(pm.response.json()).to.eql({status: 'OK', data: {items: [], next_id: ''}}));"
                 ]
               }
             }
@@ -1251,17 +1415,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/media?uploader=all",
+              "raw": "{{baseUrl}}/api/media/get-list?yearbook_id={{bookId}}&uploader=all",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "media"
+                "api",
+                "media",
+                "get-list"
               ],
               "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookId}}"
+                },
                 {
                   "key": "uploader",
                   "value": "all"
@@ -1276,7 +1443,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('two photos', () => pm.expect(pm.response.json().media).to.have.length(2));"
+                  "pm.test('two photos', () => pm.expect(pm.response.json().data.items).to.have.length(2));"
                 ]
               }
             }
@@ -1285,7 +1452,7 @@
         {
           "name": "25. A deletes the photo the cursor points at",
           "request": {
-            "method": "DELETE",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -1294,18 +1461,31 @@
               {
                 "key": "Origin",
                 "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/media/{{mediaId3}}",
+              "raw": "{{baseUrl}}/api/media/delete",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
+                "api",
                 "media",
-                "{{mediaId3}}"
+                "delete"
               ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\": \"{{mediaId3}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
           },
           "event": [
@@ -1314,7 +1494,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 204', () => pm.response.to.have.status(204));"
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
                 ]
               }
             }
@@ -1331,23 +1511,26 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/media?limit=1&cursor={{mediaCursor}}",
+              "raw": "{{baseUrl}}/api/media/get-list?yearbook_id={{bookId}}&limit=1&next_id={{mediaCursor}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "media"
+                "api",
+                "media",
+                "get-list"
               ],
               "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookId}}"
+                },
                 {
                   "key": "limit",
                   "value": "1"
                 },
                 {
-                  "key": "cursor",
+                  "key": "next_id",
                   "value": "{{mediaCursor}}"
                 }
               ]
@@ -1360,7 +1543,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('the older photo, nothing skipped or repeated', () => { pm.expect(pm.response.json().media.map(m => m.id)).to.eql([pm.collectionVariables.get('mediaId2')]); pm.expect(pm.response.json().next_cursor).to.be.null; });"
+                  "pm.test('the older photo, nothing skipped or repeated', () => { pm.expect(pm.response.json().data.items.map(m => m.id)).to.eql([pm.collectionVariables.get('mediaId2')]); pm.expect(pm.response.json().data.next_id).to.eql(''); });"
                 ]
               }
             }
@@ -1415,15 +1598,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/media/{{mediaId2}}/content",
+              "raw": "{{baseUrl}}/api/media/get-content?id={{mediaId2}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
+                "api",
                 "media",
-                "{{mediaId2}}",
-                "content"
+                "get-content"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{mediaId2}}"
+                }
               ]
             }
           },
@@ -1434,7 +1622,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 404', () => pm.response.to.have.status(404));",
-                  "pm.test('error code not_found', () => pm.expect(pm.response.json().error.code).to.eql('not_found'));"
+                  "pm.test('error ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
                 ]
               }
             }
@@ -1552,20 +1740,24 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookIdB}}/media",
+              "raw": "{{baseUrl}}/api/media/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookIdB}}",
-                "media"
+                "api",
+                "media",
+                "create"
               ]
             },
             "body": {
               "mode": "formdata",
               "formdata": [
+                {
+                  "key": "yearbook_id",
+                  "type": "text",
+                  "value": "{{bookIdB}}"
+                },
                 {
                   "key": "file",
                   "type": "file",
@@ -1580,8 +1772,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 201', () => pm.response.to.have.status(201));",
-                  "pm.collectionVariables.set('mediaIdB', pm.response.json().media.id);"
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('mediaIdB', pm.response.json().data.id);"
                 ]
               }
             }
@@ -1602,20 +1794,24 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/media",
+              "raw": "{{baseUrl}}/api/media/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "media"
+                "api",
+                "media",
+                "create"
               ]
             },
             "body": {
               "mode": "formdata",
               "formdata": [
+                {
+                  "key": "yearbook_id",
+                  "type": "text",
+                  "value": "{{bookId}}"
+                },
                 {
                   "key": "file",
                   "type": "file",
@@ -1651,20 +1847,24 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/media",
+              "raw": "{{baseUrl}}/api/media/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "media"
+                "api",
+                "media",
+                "create"
               ]
             },
             "body": {
               "mode": "formdata",
               "formdata": [
+                {
+                  "key": "yearbook_id",
+                  "type": "text",
+                  "value": "{{bookId}}"
+                },
                 {
                   "key": "file",
                   "type": "file",
@@ -1680,7 +1880,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 404', () => pm.response.to.have.status(404));",
-                  "pm.test('error code not_found', () => pm.expect(pm.response.json().error.code).to.eql('not_found'));"
+                  "pm.test('error ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
                 ]
               }
             }
@@ -1701,20 +1901,24 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/01ARZ3NDEKTSV4RRFFQ69G5FAV/media",
+              "raw": "{{baseUrl}}/api/media/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "01ARZ3NDEKTSV4RRFFQ69G5FAV",
-                "media"
+                "api",
+                "media",
+                "create"
               ]
             },
             "body": {
               "mode": "formdata",
               "formdata": [
+                {
+                  "key": "yearbook_id",
+                  "type": "text",
+                  "value": "01ARZ3NDEKTSV4RRFFQ69G5FAV"
+                },
                 {
                   "key": "file",
                   "type": "file",
@@ -1730,7 +1934,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 404', () => pm.response.to.have.status(404));",
-                  "pm.test('error code not_found', () => pm.expect(pm.response.json().error.code).to.eql('not_found'));"
+                  "pm.test('error ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
                 ]
               }
             }
@@ -1751,20 +1955,24 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/media",
+              "raw": "{{baseUrl}}/api/media/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "media"
+                "api",
+                "media",
+                "create"
               ]
             },
             "body": {
               "mode": "formdata",
               "formdata": [
+                {
+                  "key": "yearbook_id",
+                  "type": "text",
+                  "value": "{{bookId}}"
+                },
                 {
                   "key": "file",
                   "type": "file",
@@ -1780,7 +1988,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 403', () => pm.response.to.have.status(403));",
-                  "pm.test('error code csrf_origin_mismatch', () => pm.expect(pm.response.json().error.code).to.eql('csrf_origin_mismatch'));"
+                  "pm.test('error ERROR_CSRF_ORIGIN_MISMATCH', () => pm.expect(pm.response.json().status).to.eql('ERROR_CSRF_ORIGIN_MISMATCH'));"
                 ]
               }
             }
@@ -1801,20 +2009,24 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/media",
+              "raw": "{{baseUrl}}/api/media/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "media"
+                "api",
+                "media",
+                "create"
               ]
             },
             "body": {
               "mode": "formdata",
               "formdata": [
+                {
+                  "key": "yearbook_id",
+                  "type": "text",
+                  "value": "{{bookId}}"
+                },
                 {
                   "key": "file",
                   "type": "file",
@@ -1830,7 +2042,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 415', () => pm.response.to.have.status(415));",
-                  "pm.test('error code unsupported_media_type', () => pm.expect(pm.response.json().error.code).to.eql('unsupported_media_type'));"
+                  "pm.test('error ERROR_UNSUPPORTED_MEDIA_TYPE', () => pm.expect(pm.response.json().status).to.eql('ERROR_UNSUPPORTED_MEDIA_TYPE'));"
                 ]
               }
             }
@@ -1851,20 +2063,24 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/media",
+              "raw": "{{baseUrl}}/api/media/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "media"
+                "api",
+                "media",
+                "create"
               ]
             },
             "body": {
               "mode": "formdata",
               "formdata": [
+                {
+                  "key": "yearbook_id",
+                  "type": "text",
+                  "value": "{{bookId}}"
+                },
                 {
                   "key": "file",
                   "type": "file",
@@ -1880,7 +2096,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 415', () => pm.response.to.have.status(415));",
-                  "pm.test('error code unsupported_media_type', () => pm.expect(pm.response.json().error.code).to.eql('unsupported_media_type'));"
+                  "pm.test('error ERROR_UNSUPPORTED_MEDIA_TYPE', () => pm.expect(pm.response.json().status).to.eql('ERROR_UNSUPPORTED_MEDIA_TYPE'));"
                 ]
               }
             }
@@ -1901,20 +2117,24 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/media",
+              "raw": "{{baseUrl}}/api/media/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "media"
+                "api",
+                "media",
+                "create"
               ]
             },
             "body": {
               "mode": "formdata",
               "formdata": [
+                {
+                  "key": "yearbook_id",
+                  "type": "text",
+                  "value": "{{bookId}}"
+                },
                 {
                   "key": "file",
                   "type": "file",
@@ -1930,7 +2150,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 415', () => pm.response.to.have.status(415));",
-                  "pm.test('error code unsupported_media_type', () => pm.expect(pm.response.json().error.code).to.eql('unsupported_media_type'));"
+                  "pm.test('error ERROR_UNSUPPORTED_MEDIA_TYPE', () => pm.expect(pm.response.json().status).to.eql('ERROR_UNSUPPORTED_MEDIA_TYPE'));"
                 ]
               }
             }
@@ -1951,20 +2171,24 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/media",
+              "raw": "{{baseUrl}}/api/media/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "media"
+                "api",
+                "media",
+                "create"
               ]
             },
             "body": {
               "mode": "formdata",
               "formdata": [
+                {
+                  "key": "yearbook_id",
+                  "type": "text",
+                  "value": "{{bookId}}"
+                },
                 {
                   "key": "file",
                   "type": "file",
@@ -1980,7 +2204,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_image', () => pm.expect(pm.response.json().error.code).to.eql('invalid_image'));"
+                  "pm.test('error ERROR_INVALID_IMAGE', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_IMAGE'));"
                 ]
               }
             }
@@ -2005,15 +2229,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/media",
+              "raw": "{{baseUrl}}/api/media/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "media"
+                "api",
+                "media",
+                "create"
               ]
             },
             "body": {
@@ -2028,7 +2251,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 415', () => pm.response.to.have.status(415));",
-                  "pm.test('error code unsupported_media_type', () => pm.expect(pm.response.json().error.code).to.eql('unsupported_media_type'));"
+                  "pm.test('error ERROR_UNSUPPORTED_MEDIA_TYPE', () => pm.expect(pm.response.json().status).to.eql('ERROR_UNSUPPORTED_MEDIA_TYPE'));"
                 ]
               }
             }
@@ -2049,20 +2272,24 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/media",
+              "raw": "{{baseUrl}}/api/media/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "media"
+                "api",
+                "media",
+                "create"
               ]
             },
             "body": {
               "mode": "formdata",
               "formdata": [
+                {
+                  "key": "yearbook_id",
+                  "type": "text",
+                  "value": "{{bookId}}"
+                },
                 {
                   "key": "caption",
                   "type": "text",
@@ -2078,7 +2305,56 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_body', () => pm.expect(pm.response.json().error.code).to.eql('invalid_body'));"
+                  "pm.test('error ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E13b. Upload without yearbook_id - 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/media/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "media",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "fixtures/media/photo-gps.jpg"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
                 ]
               }
             }
@@ -2099,20 +2375,24 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/media",
+              "raw": "{{baseUrl}}/api/media/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "media"
+                "api",
+                "media",
+                "create"
               ]
             },
             "body": {
               "mode": "formdata",
               "formdata": [
+                {
+                  "key": "yearbook_id",
+                  "type": "text",
+                  "value": "{{bookId}}"
+                },
                 {
                   "key": "photo",
                   "type": "file",
@@ -2128,7 +2408,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_body', () => pm.expect(pm.response.json().error.code).to.eql('invalid_body'));"
+                  "pm.test('error ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
                 ]
               }
             }
@@ -2145,19 +2425,22 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/media/{{mediaIdB}}/content?size=huge",
+              "raw": "{{baseUrl}}/api/media/get-content?id={{mediaIdB}}&variant=huge",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
+                "api",
                 "media",
-                "{{mediaIdB}}",
-                "content"
+                "get-content"
               ],
               "query": [
                 {
-                  "key": "size",
+                  "key": "id",
+                  "value": "{{mediaIdB}}"
+                },
+                {
+                  "key": "variant",
                   "value": "huge"
                 }
               ]
@@ -2170,7 +2453,42 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_size', () => pm.expect(pm.response.json().error.code).to.eql('invalid_size'));"
+                  "pm.test('error ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E15b. Download without id - 400",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/media/get-content",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "media",
+                "get-content"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
                 ]
               }
             }
@@ -2187,15 +2505,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/media/{{mediaIdB}}/content",
+              "raw": "{{baseUrl}}/api/media/get-content?id={{mediaIdB}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
+                "api",
                 "media",
-                "{{mediaIdB}}",
-                "content"
+                "get-content"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{mediaIdB}}"
+                }
               ]
             }
           },
@@ -2222,15 +2545,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/media/{{mediaIdB}}/content",
+              "raw": "{{baseUrl}}/api/media/get-content?id={{mediaIdB}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
+                "api",
                 "media",
-                "{{mediaIdB}}",
-                "content"
+                "get-content"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{mediaIdB}}"
+                }
               ]
             }
           },
@@ -2241,7 +2569,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 404', () => pm.response.to.have.status(404));",
-                  "pm.test('error code not_found', () => pm.expect(pm.response.json().error.code).to.eql('not_found'));"
+                  "pm.test('error ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
                 ]
               }
             }
@@ -2390,9 +2718,9 @@
           ]
         },
         {
-          "name": "E21. Deleting an unknown media id - 204 (idempotent)",
+          "name": "E21. Deleting an unknown media id - 200 (idempotent)",
           "request": {
-            "method": "DELETE",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -2401,18 +2729,31 @@
               {
                 "key": "Origin",
                 "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/media/01ARZ3NDEKTSV4RRFFQ69G5FAV",
+              "raw": "{{baseUrl}}/api/media/delete",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
+                "api",
                 "media",
-                "01ARZ3NDEKTSV4RRFFQ69G5FAV"
+                "delete"
               ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\": \"01ARZ3NDEKTSV4RRFFQ69G5FAV\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
           },
           "event": [
@@ -2421,7 +2762,59 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 204', () => pm.response.to.have.status(204));"
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E21b. Delete without id - 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/media/delete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "media",
+                "delete"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
                 ]
               }
             }
@@ -2430,7 +2823,7 @@
         {
           "name": "E22. Delete without a session - 401",
           "request": {
-            "method": "DELETE",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -2439,18 +2832,31 @@
               {
                 "key": "Origin",
                 "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/media/{{mediaIdB}}",
+              "raw": "{{baseUrl}}/api/media/delete",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
+                "api",
                 "media",
-                "{{mediaIdB}}"
+                "delete"
               ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\": \"{{mediaIdB}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
           },
           "event": [
@@ -2476,15 +2882,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/media",
+              "raw": "{{baseUrl}}/api/media/get-list?yearbook_id={{bookId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "media"
+                "api",
+                "media",
+                "get-list"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookId}}"
+                }
               ]
             }
           },
@@ -2511,15 +2922,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/media",
+              "raw": "{{baseUrl}}/api/media/get-list?yearbook_id={{bookId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "media"
+                "api",
+                "media",
+                "get-list"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookId}}"
+                }
               ]
             }
           },
@@ -2530,7 +2946,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 404', () => pm.response.to.have.status(404));",
-                  "pm.test('error code not_found', () => pm.expect(pm.response.json().error.code).to.eql('not_found'));"
+                  "pm.test('error ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
                 ]
               }
             }
@@ -2547,15 +2963,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookIdB}}/media",
+              "raw": "{{baseUrl}}/api/media/get-list?yearbook_id={{bookIdB}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookIdB}}",
-                "media"
+                "api",
+                "media",
+                "get-list"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookIdB}}"
+                }
               ]
             }
           },
@@ -2566,7 +2987,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 404', () => pm.response.to.have.status(404));",
-                  "pm.test('error code not_found', () => pm.expect(pm.response.json().error.code).to.eql('not_found'));"
+                  "pm.test('error ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
                 ]
               }
             }
@@ -2583,15 +3004,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/01ARZ3NDEKTSV4RRFFQ69G5FAV/media",
+              "raw": "{{baseUrl}}/api/media/get-list?yearbook_id=01ARZ3NDEKTSV4RRFFQ69G5FAV",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "01ARZ3NDEKTSV4RRFFQ69G5FAV",
-                "media"
+                "api",
+                "media",
+                "get-list"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "01ARZ3NDEKTSV4RRFFQ69G5FAV"
+                }
               ]
             }
           },
@@ -2602,14 +3028,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 404', () => pm.response.to.have.status(404));",
-                  "pm.test('error code not_found', () => pm.expect(pm.response.json().error.code).to.eql('not_found'));"
+                  "pm.test('error ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "E27. List with limit=0 - 400 invalid_limit",
+          "name": "E27. List with limit=0 - 400 ERROR_PARAM",
           "request": {
             "method": "GET",
             "header": [
@@ -2619,17 +3045,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/media?limit=0",
+              "raw": "{{baseUrl}}/api/media/get-list?yearbook_id={{bookId}}&limit=0",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "media"
+                "api",
+                "media",
+                "get-list"
               ],
               "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookId}}"
+                },
                 {
                   "key": "limit",
                   "value": "0"
@@ -2644,14 +3073,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_limit', () => pm.expect(pm.response.json().error.code).to.eql('invalid_limit'));"
+                  "pm.test('error ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "E28. List with limit=-1 - 400 invalid_limit",
+          "name": "E28. List with limit=-1 - 400 ERROR_PARAM",
           "request": {
             "method": "GET",
             "header": [
@@ -2661,17 +3090,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/media?limit=-1",
+              "raw": "{{baseUrl}}/api/media/get-list?yearbook_id={{bookId}}&limit=-1",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "media"
+                "api",
+                "media",
+                "get-list"
               ],
               "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookId}}"
+                },
                 {
                   "key": "limit",
                   "value": "-1"
@@ -2686,14 +3118,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_limit', () => pm.expect(pm.response.json().error.code).to.eql('invalid_limit'));"
+                  "pm.test('error ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "E29. List with limit=101 - 400 invalid_limit",
+          "name": "E29. List with limit=101 - 400 ERROR_PARAM",
           "request": {
             "method": "GET",
             "header": [
@@ -2703,17 +3135,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/media?limit=101",
+              "raw": "{{baseUrl}}/api/media/get-list?yearbook_id={{bookId}}&limit=101",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "media"
+                "api",
+                "media",
+                "get-list"
               ],
               "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookId}}"
+                },
                 {
                   "key": "limit",
                   "value": "101"
@@ -2728,14 +3163,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_limit', () => pm.expect(pm.response.json().error.code).to.eql('invalid_limit'));"
+                  "pm.test('error ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "E30. List with limit=abc - 400 invalid_limit",
+          "name": "E30. List with limit=abc - 400 ERROR_PARAM",
           "request": {
             "method": "GET",
             "header": [
@@ -2745,17 +3180,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/media?limit=abc",
+              "raw": "{{baseUrl}}/api/media/get-list?yearbook_id={{bookId}}&limit=abc",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "media"
+                "api",
+                "media",
+                "get-list"
               ],
               "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookId}}"
+                },
                 {
                   "key": "limit",
                   "value": "abc"
@@ -2770,14 +3208,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_limit', () => pm.expect(pm.response.json().error.code).to.eql('invalid_limit'));"
+                  "pm.test('error ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "E31. List with uploader=everyone - 400 invalid_uploader",
+          "name": "E31. List with uploader=everyone - 400 ERROR_PARAM",
           "request": {
             "method": "GET",
             "header": [
@@ -2787,17 +3225,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/media?uploader=everyone",
+              "raw": "{{baseUrl}}/api/media/get-list?yearbook_id={{bookId}}&uploader=everyone",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "media"
+                "api",
+                "media",
+                "get-list"
               ],
               "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookId}}"
+                },
                 {
                   "key": "uploader",
                   "value": "everyone"
@@ -2812,14 +3253,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_uploader', () => pm.expect(pm.response.json().error.code).to.eql('invalid_uploader'));"
+                  "pm.test('error ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "E32. List with cursor=!!! - 400 invalid_cursor",
+          "name": "E32. List with next_id=!!! - 400 ERROR_PARAM",
           "request": {
             "method": "GET",
             "header": [
@@ -2829,19 +3270,22 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/media?cursor=!!!",
+              "raw": "{{baseUrl}}/api/media/get-list?yearbook_id={{bookId}}&next_id=!!!",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "media"
+                "api",
+                "media",
+                "get-list"
               ],
               "query": [
                 {
-                  "key": "cursor",
+                  "key": "yearbook_id",
+                  "value": "{{bookId}}"
+                },
+                {
+                  "key": "next_id",
                   "value": "!!!"
                 }
               ]
@@ -2854,14 +3298,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_cursor', () => pm.expect(pm.response.json().error.code).to.eql('invalid_cursor'));"
+                  "pm.test('error ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "E33. List with cursor=YWJj - 400 invalid_cursor",
+          "name": "E33. List with next_id=YWJj - 400 ERROR_PARAM",
           "request": {
             "method": "GET",
             "header": [
@@ -2871,19 +3315,22 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/media?cursor=YWJj",
+              "raw": "{{baseUrl}}/api/media/get-list?yearbook_id={{bookId}}&next_id=YWJj",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "media"
+                "api",
+                "media",
+                "get-list"
               ],
               "query": [
                 {
-                  "key": "cursor",
+                  "key": "yearbook_id",
+                  "value": "{{bookId}}"
+                },
+                {
+                  "key": "next_id",
                   "value": "YWJj"
                 }
               ]
@@ -2896,14 +3343,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_cursor', () => pm.expect(pm.response.json().error.code).to.eql('invalid_cursor'));"
+                  "pm.test('error ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "E34. Largest limit with a cursor below every photo - 200, empty",
+          "name": "E34. An old-style plain-number next_id (MQ) is refused - 400",
           "request": {
             "method": "GET",
             "header": [
@@ -2913,23 +3360,26 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/media?limit=100&cursor=MQ",
+              "raw": "{{baseUrl}}/api/media/get-list?yearbook_id={{bookId}}&limit=100&next_id=MQ",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "media"
+                "api",
+                "media",
+                "get-list"
               ],
               "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookId}}"
+                },
                 {
                   "key": "limit",
                   "value": "100"
                 },
                 {
-                  "key": "cursor",
+                  "key": "next_id",
                   "value": "MQ"
                 }
               ]
@@ -2941,8 +3391,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('empty page', () => pm.expect(pm.response.json()).to.eql({media: [], next_cursor: null}));"
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
                 ]
               }
             }
@@ -2959,56 +3409,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookIdB}}/media",
+              "raw": "{{baseUrl}}/api/media/get-list?yearbook_id={{bookIdB}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookIdB}}",
-                "media"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('only B photo', () => pm.expect(pm.response.json().media.map(m => m.id)).to.eql([pm.collectionVariables.get('mediaIdB')]));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "E36. A's cursor on B's yearbook only narrows B's own photos",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Cookie",
-                "value": "smem_session={{tokenB}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookIdB}}/media?cursor={{mediaCursor}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "v1",
-                "yearbooks",
-                "{{bookIdB}}",
-                "media"
+                "api",
+                "media",
+                "get-list"
               ],
               "query": [
                 {
-                  "key": "cursor",
-                  "value": "{{mediaCursor}}"
+                  "key": "yearbook_id",
+                  "value": "{{bookIdB}}"
                 }
               ]
             }
@@ -3020,7 +3433,97 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('never lists a photo of another yearbook', () => pm.expect(pm.response.json().media.map(m => m.id).filter(i => i !== pm.collectionVariables.get('mediaIdB'))).to.eql([]));"
+                  "pm.test('only B photo', () => pm.expect(pm.response.json().data.items.map(m => m.id)).to.eql([pm.collectionVariables.get('mediaIdB')]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E36. A's next_id on B's yearbook is refused - 400 (a token is bound to its yearbook)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/media/get-list?yearbook_id={{bookIdB}}&next_id={{mediaCursor}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "media",
+                "get-list"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookIdB}}"
+                },
+                {
+                  "key": "next_id",
+                  "value": "{{mediaCursor}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E36b. A tampered next_id is refused - 400",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/media/get-list?yearbook_id={{bookId}}&next_id={{mediaCursor}}x",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "media",
+                "get-list"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookId}}"
+                },
+                {
+                  "key": "next_id",
+                  "value": "{{mediaCursor}}x"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
                 ]
               }
             }

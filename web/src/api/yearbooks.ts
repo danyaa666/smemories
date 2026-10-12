@@ -5,7 +5,6 @@ type S = components["schemas"];
 export type Yearbook = S["Yearbook"];
 export type Profile = S["Profile"];
 export type Media = S["Media"];
-export type MediaItem = S["MediaItem"];
 export type YearbookCreate = S["YearbookCreate"];
 export type YearbookPatch = S["YearbookPatch"];
 export type ProfileInput = S["ProfileInput"];
@@ -42,18 +41,17 @@ export const profileInput = (p: Profile): ProfileInput => ({
 });
 
 export const deleteYearbook = (id: string) => sendJson<void>("DELETE", book(id));
-/** One page of the owner's own photos, newest first. */
-export const listMedia = (id: string, cursor?: string) =>
-  request<{ media: MediaItem[]; next_cursor: string | null }>(
-    `${book(id)}/media${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`,
+/** One page of the owner's own photos, newest first; `nextId` is the previous page's `next_id` (omitted for the first page). */
+export const listMedia = (id: string, nextId?: string) =>
+  request<S["MediaListResponse"]["data"]>(
+    `/media/get-list?yearbook_id=${encodeURIComponent(id)}${nextId ? `&next_id=${encodeURIComponent(nextId)}` : ""}`,
   );
 
-export const deleteMedia = (id: string) =>
-  sendJson<void>("DELETE", `/v1/media/${encodeURIComponent(id)}`);
+export const deleteMedia = (id: string) => postJson<void>("/media/delete", { id });
 
-/** Same-origin image URL; the session cookie authorises it. */
-export const mediaUrl = (id: string, size: "thumb" | "display" = "thumb") =>
-  `/api/v1/media/${encodeURIComponent(id)}/content?size=${size}`;
+/** Same-origin image URL; the session cookie authorises it. The path is built from the photo id only. */
+export const mediaUrl = (id: string, variant: "thumb" | "display" = "thumb") =>
+  `/api/media/get-content?id=${encodeURIComponent(id)}&variant=${variant}`;
 
 const DEFAULT_MAX_BYTES = 10 * 1024 * 1024; // SMEM_MEDIA_MAX_BYTES default
 
@@ -65,7 +63,7 @@ export function uploadMedia(
 ): Promise<Media> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", `/api/${book(yearbookId).slice(1)}/media`);
+    xhr.open("POST", "/api/media/create");
     xhr.setRequestHeader("Accept", "application/json");
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) onProgress(e.loaded / e.total);
@@ -84,11 +82,11 @@ export function uploadMedia(
       } catch {
         body = undefined;
       }
-      if (xhr.status >= 200 && xhr.status < 300)
-        resolve((unwrapSuccess(body) as S["MediaEnvelope"]).media);
+      if (xhr.status >= 200 && xhr.status < 300) resolve(unwrapSuccess(body) as Media);
       else reject(apiErrorFrom(xhr.status, body, (n) => xhr.getResponseHeader(n)));
     };
     const form = new FormData();
+    form.append("yearbook_id", yearbookId); // before the file, so the server knows the target without buffering first
     form.append("file", file);
     xhr.send(form);
   });

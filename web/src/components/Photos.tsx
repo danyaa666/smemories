@@ -58,9 +58,9 @@ export function Photos({
     queryKey: listKey,
     queryFn: ({ pageParam }) => listMedia(yearbook.id, pageParam),
     initialPageParam: undefined as string | undefined,
-    getNextPageParam: (last) => last.next_cursor ?? undefined,
+    getNextPageParam: (last) => last.next_id || undefined,
   });
-  const ids = list.data?.pages.flatMap((p) => p.media.map((m) => m.id)) ?? [];
+  const ids = list.data?.pages.flatMap((p) => p.items.map((m) => m.id)) ?? [];
   const refresh = () => void qc.invalidateQueries({ queryKey: listKey });
 
   const act = useMutation({

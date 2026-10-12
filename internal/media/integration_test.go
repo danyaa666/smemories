@@ -4,6 +4,7 @@ package media
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -138,13 +139,14 @@ func (d *deadlines) SetReadDeadline(time.Time) error  { d.read = true; return ni
 func (d *deadlines) SetWriteDeadline(time.Time) error { d.write = true; return nil }
 
 type env struct {
-	t     *testing.T
-	db    *sql.DB
-	st    *flaky
-	svc   *Service
-	h     http.Handler
-	books []string
-	lim   *ratelimit.Factory
+	t       *testing.T
+	db      *sql.DB
+	st      *flaky
+	svc     *Service
+	h       http.Handler
+	books   []string
+	lim     *ratelimit.Factory
+	cursors *httpx.Cursors
 }
 
 func newEnv(t *testing.T) *env {
@@ -172,7 +174,8 @@ func newEnv(t *testing.T) *env {
 	}
 	ah := auth.NewHandler(as, auth.HandlerConfig{AllowedOrigins: []string{origin}}, logger)
 	e.svc = NewService(NewStore(d), e.st, 2, e.lim, nil) // two at a time, so parallel tests queue on the semaphore
-	mh := NewHandler(e.svc, 10<<20, ah.RequireUser, []string{origin}, logger)
+	e.cursors = httpx.NewCursors([]byte(strings.Repeat("c", 32)))
+	mh := NewHandler(e.svc, 10<<20, ah.RequireUser, []string{origin}, e.cursors, logger)
 	bookStore := yearbook.NewStore(d)
 	e.svc.SetRefClearer(bookStore)
 	yh := yearbook.NewHandler(bookStore, yearbook.NewService(bookStore, e.svc, e.svc), ah.RequireUser, []string{origin}, logger, nil)
@@ -232,10 +235,14 @@ func (e *env) json(u user, method, path, body string) resp {
 	return e.send(u, r)
 }
 
-// multipartBody builds a body with one file part; filename and partType are attacker-controlled in real life.
-func multipartBody(field, filename, partType string, data []byte) (*bytes.Buffer, string) {
+// multipartBody builds a body with the yearbook_id field (omitted when book is "") and one file part; filename and
+// partType are attacker-controlled in real life.
+func multipartBody(book, field, filename, partType string, data []byte) (*bytes.Buffer, string) {
 	var b bytes.Buffer
 	mw := multipart.NewWriter(&b)
+	if book != "" {
+		_ = mw.WriteField("yearbook_id", book)
+	}
 	h := textproto.MIMEHeader{}
 	h.Set("Content-Disposition", fmt.Sprintf(`form-data; name=%q; filename=%q`, field, filename))
 	h.Set("Content-Type", partType)
@@ -246,8 +253,8 @@ func multipartBody(field, filename, partType string, data []byte) (*bytes.Buffer
 }
 
 func (e *env) upload(u user, book, filename, partType string, data []byte) resp {
-	body, ct := multipartBody("file", filename, partType, data)
-	r := httptest.NewRequest("POST", "/v1/yearbooks/"+book+"/media", body)
+	body, ct := multipartBody(book, "file", filename, partType, data)
+	r := httptest.NewRequest("POST", "/api/media/create", body)
 	r.Header.Set("Content-Type", ct)
 	return e.send(u, r)
 }
@@ -258,9 +265,17 @@ func (r resp) status(want int, code string) resp {
 		r.t.Fatalf("status %d, want %d (%s)", r.Code, want, r.Body)
 	}
 	if code != "" {
-		var env struct{ Error struct{ Code string } }
-		if err := json.Unmarshal(r.Body.Bytes(), &env); err != nil || env.Error.Code != code {
-			r.t.Fatalf("code %q (err %v), want %q: %s", env.Error.Code, err, code, r.Body)
+		// The yearbook routes are still v1 ({"error":{"code"}}), the media routes v2 ({"status":"ERROR_..."}).
+		var env struct {
+			Status string
+			Error  struct{ Code string }
+		}
+		got := ""
+		if err := json.Unmarshal(r.Body.Bytes(), &env); err == nil {
+			got = cmp.Or(env.Status, env.Error.Code)
+		}
+		if got != code {
+			r.t.Fatalf("code %q, want %q: %s", got, code, r.Body)
 		}
 	}
 	return r
@@ -275,20 +290,35 @@ func (e *env) newBook(u user) string {
 	return out.Yearbook.ID
 }
 
-func (r resp) mediaID() string {
+// deleteMedia calls POST /api/media/delete.
+func (e *env) deleteMedia(u user, id string) resp {
+	return e.json(u, "POST", "/api/media/delete", fmt.Sprintf(`{"id":%q}`, id))
+}
+
+// mediaBody is the data of a v2 media object (create answers with it, get-list has it per item).
+type mediaBody struct {
+	ID          string `json:"id"`
+	YearbookID  string `json:"yearbook_id"`
+	ContentType string `json:"content_type"`
+	Bytes       int
+	Width       int
+	Height      int
+	CreatedAt   int64 `json:"created_at"`
+}
+
+func (r resp) media() mediaBody {
 	r.t.Helper()
 	var out struct {
-		Media struct {
-			ID            string
-			Width, Height int
-			Bytes         int
-		}
+		Status string
+		Data   mediaBody
 	}
-	if err := json.Unmarshal(r.Body.Bytes(), &out); err != nil || out.Media.ID == "" || out.Media.Width == 0 || out.Media.Bytes == 0 {
+	if err := json.Unmarshal(r.Body.Bytes(), &out); err != nil || out.Status != "OK" || out.Data.ID == "" || out.Data.Width == 0 || out.Data.Bytes == 0 {
 		r.t.Fatalf("bad media body %s", r.Body)
 	}
-	return out.Media.ID
+	return out.Data
 }
+
+func (r resp) mediaID() string { return r.media().ID }
 
 func (r resp) book() map[string]any {
 	var out struct{ Yearbook map[string]any }
@@ -308,18 +338,32 @@ func (e *env) count(q string, args ...any) int {
 	return n
 }
 
+func stored(t *testing.T, e *env, book, id string) []byte {
+	t.Helper()
+	b, err := e.st.Get(context.Background(), "yearbooks/"+book+"/"+id+".jpg")
+	if err != nil {
+		t.Fatalf("display object missing: %v", err)
+	}
+	return b
+}
+
 func TestUploadFetchDelete(t *testing.T) {
 	e := newEnv(t)
 	u, other := e.register("a@example.com"), e.register("b@example.com")
 	book := e.newBook(u)
 
 	in := photo(t)
-	r := e.upload(u, book, "../../evil.php", "text/html", in).status(201, "") // name and part type are ignored
+	r := e.upload(u, book, "../../evil.php", "text/html", in).status(200, "") // name and part type are ignored
 	id := r.mediaID()
-	var m struct{ Media struct{ Width, Height int } }
-	_ = json.Unmarshal(r.Body.Bytes(), &m)
-	if m.Media.Width != 64 || m.Media.Height != 32 {
-		t.Fatalf("dimensions %+v", m)
+	m := r.media()
+	if m.Width != 64 || m.Height != 32 || m.YearbookID != book || m.ContentType != "image/jpeg" || m.Bytes != len(stored(t, e, book, id)) {
+		t.Fatalf("media %+v", m)
+	}
+	if now := time.Now().UnixMilli(); m.CreatedAt < now-time.Minute.Milliseconds() || m.CreatedAt > now+time.Minute.Milliseconds() {
+		t.Fatalf("created_at %d is not Unix ms near %d", m.CreatedAt, now)
+	}
+	if strings.Contains(r.Body.String(), "yearbooks/") || strings.Contains(r.Body.String(), "sha256") {
+		t.Fatalf("create leaks a storage key or hash: %s", r.Body)
 	}
 
 	// Keys are generated from ids only (AC4), and the stored bytes carry no EXIF (AC3).
@@ -340,7 +384,7 @@ func TestUploadFetchDelete(t *testing.T) {
 	}
 
 	// Fetch: headers, thumb, range.
-	got := e.json(u, "GET", "/v1/media/"+id+"/content?size=display", "").status(200, "")
+	got := e.json(u, "GET", "/api/media/get-content?id="+id+"&variant=display", "").status(200, "")
 	h := got.Header()
 	if h.Get("Content-Type") != "image/jpeg" || h.Get("X-Content-Type-Options") != "nosniff" || h.Get("Cache-Control") != "private, max-age=3600" {
 		t.Fatalf("headers: %v", h)
@@ -348,30 +392,30 @@ func TestUploadFetchDelete(t *testing.T) {
 	if !bytes.Equal(got.Body.Bytes(), stored) {
 		t.Fatal("served bytes differ from stored bytes")
 	}
-	th := e.json(u, "GET", "/v1/media/"+id+"/content?size=thumb", "").status(200, "")
+	th := e.json(u, "GET", "/api/media/get-content?id="+id+"&variant=thumb", "").status(200, "")
 	if cfg, _, err := image.DecodeConfig(th.Body); err != nil || cfg.Width != 64 {
 		t.Fatalf("thumb: %v %v", cfg, err)
 	}
-	rr := httptest.NewRequest("GET", "/v1/media/"+id+"/content", nil)
+	rr := httptest.NewRequest("GET", "/api/media/get-content?id="+id, nil)
 	rr.Header.Set("Range", "bytes=0-9")
 	part := e.send(u, rr).status(206, "")
 	if part.Body.Len() != 10 || !strings.HasPrefix(part.Header().Get("Content-Range"), "bytes 0-9/") || !bytes.Equal(part.Body.Bytes(), stored[:10]) {
 		t.Fatalf("range: %d bytes, %q", part.Body.Len(), part.Header().Get("Content-Range"))
 	}
-	e.json(u, "GET", "/v1/media/"+id+"/content?size=huge", "").status(400, "invalid_size")
+	e.json(u, "GET", "/api/media/get-content?id="+id+"&variant=huge", "").status(400, "ERROR_PARAM")
 
 	// Another user sees nothing, and cannot delete.
-	e.json(other, "GET", "/v1/media/"+id+"/content", "").status(404, "not_found")
-	e.upload(other, book, "a.jpg", "image/jpeg", in).status(404, "not_found")
-	e.json(other, "DELETE", "/v1/media/"+id, "").status(204, "")
-	e.json(u, "GET", "/v1/media/"+id+"/content", "").status(200, "")
-	e.json(user{}, "GET", "/v1/media/"+id+"/content", "").status(401, "")
+	e.json(other, "GET", "/api/media/get-content?id="+id, "").status(404, "ERROR_NOT_FOUND")
+	e.upload(other, book, "a.jpg", "image/jpeg", in).status(404, "ERROR_NOT_FOUND")
+	e.deleteMedia(other, id).status(200, "")
+	e.json(u, "GET", "/api/media/get-content?id="+id, "").status(200, "")
+	e.json(user{}, "GET", "/api/media/get-content?id="+id, "").status(401, "")
 	e.upload(user{}, book, "a.jpg", "image/jpeg", in).status(401, "")
 
 	// Delete removes row and both objects; repeating it is fine.
-	e.json(u, "DELETE", "/v1/media/"+id, "").status(204, "")
-	e.json(u, "DELETE", "/v1/media/"+id, "").status(204, "")
-	e.json(u, "GET", "/v1/media/"+id+"/content", "").status(404, "not_found")
+	e.deleteMedia(u, id).status(200, "")
+	e.deleteMedia(u, id).status(200, "")
+	e.json(u, "GET", "/api/media/get-content?id="+id, "").status(404, "ERROR_NOT_FOUND")
 	for _, k := range []string{key, tkey} {
 		if _, err := e.st.Get(context.Background(), k); !errors.Is(err, storage.ErrNotFound) {
 			t.Fatalf("%s survived the delete: %v", k, err)
@@ -379,33 +423,76 @@ func TestUploadFetchDelete(t *testing.T) {
 	}
 }
 
+// get-content is binary on success and the v2 error envelope on failure; an <img> only needs the status, and an error must
+// never be cached as if it were the image.
+func TestContentErrorsAreEnvelopesAndNotCached(t *testing.T) {
+	e := newEnv(t)
+	u, other := e.register("a@example.com"), e.register("b@example.com")
+	book := e.newBook(u)
+	id := e.upload(u, book, "a.jpg", "image/jpeg", photo(t)).status(200, "").mediaID()
+
+	for name, r := range map[string]resp{
+		"unknown id":      e.json(u, "GET", "/api/media/get-content?id=01J9Z3K6V8Q4M7N2P5R8T0ZZZZ", "").status(404, "ERROR_NOT_FOUND"),
+		"foreign id":      e.json(other, "GET", "/api/media/get-content?id="+id, "").status(404, "ERROR_NOT_FOUND"),
+		"no session":      e.json(user{}, "GET", "/api/media/get-content?id="+id, "").status(401, "ERROR_UNAUTHORIZED"),
+		"no id":           e.json(u, "GET", "/api/media/get-content", "").status(400, "ERROR_PARAM"),
+		"unknown variant": e.json(u, "GET", "/api/media/get-content?id="+id+"&variant=huge", "").status(400, "ERROR_PARAM"),
+	} {
+		h := r.Header()
+		if h.Get("Cache-Control") != "no-store" || !strings.HasPrefix(h.Get("Content-Type"), "application/json") || h.Get("ETag") != "" {
+			t.Errorf("%s: an error must be uncacheable JSON, got %v", name, h)
+		}
+	}
+
+	// HEAD and conditional requests work on the success path.
+	head := e.send(u, httptest.NewRequest("HEAD", "/api/media/get-content?id="+id, nil)).status(200, "")
+	if head.Body.Len() != 0 || head.Header().Get("Content-Length") == "" || head.Header().Get("ETag") == "" {
+		t.Fatalf("HEAD: %d body bytes, headers %v", head.Body.Len(), head.Header())
+	}
+	cond := httptest.NewRequest("GET", "/api/media/get-content?id="+id, nil)
+	cond.Header.Set("If-None-Match", head.Header().Get("ETag"))
+	e.send(u, cond).status(304, "")
+	// The old routes are gone.
+	e.json(u, "GET", "/v1/media/"+id+"/content", "").status(404, "")
+	e.json(u, "DELETE", "/v1/media/"+id, "").status(404, "")
+	e.json(u, "GET", "/v1/yearbooks/"+book+"/media", "").status(404, "")
+	// Deleting needs a body with an id and the origin check.
+	e.json(u, "POST", "/api/media/delete", `{}`).status(400, "ERROR_PARAM")
+	e.json(u, "POST", "/api/media/delete", `{"id":"x","extra":1}`).status(400, "ERROR_PARAM")
+	e.json(user{}, "POST", "/api/media/delete", `{"id":"`+id+`"}`).status(401, "ERROR_UNAUTHORIZED")
+}
+
 func TestUploadRejections(t *testing.T) {
 	e := newEnv(t)
 	u := e.register("a@example.com")
 	book := e.newBook(u)
-	path := "/v1/yearbooks/" + book + "/media"
+	path := "/api/media/create"
 
 	html := []byte("<html><script>alert(1)</script></html>")
-	e.upload(u, book, "x.jpg", "image/jpeg", html).status(415, "unsupported_media_type") // renamed HTML
-	e.upload(u, book, "x.jpg", "image/jpeg", []byte(`<svg xmlns="http://www.w3.org/2000/svg"/>`)).status(415, "unsupported_media_type")
-	e.upload(u, book, "x.jpg", "image/jpeg", nil).status(415, "unsupported_media_type") // 0 bytes
-	e.upload(u, book, "x.exe", "application/octet-stream", append([]byte("MZ\x90\x00"), make([]byte, 600)...)).status(415, "unsupported_media_type")
-	e.upload(u, book, "x.jpg", "image/jpeg", pngHeaderClaiming(t, 60000, 60000)).status(400, "invalid_image")
+	e.upload(u, book, "x.jpg", "image/jpeg", html).status(415, "ERROR_UNSUPPORTED_MEDIA_TYPE") // renamed HTML
+	e.upload(u, book, "x.jpg", "image/jpeg", []byte(`<svg xmlns="http://www.w3.org/2000/svg"/>`)).status(415, "ERROR_UNSUPPORTED_MEDIA_TYPE")
+	e.upload(u, book, "x.jpg", "image/jpeg", nil).status(415, "ERROR_UNSUPPORTED_MEDIA_TYPE") // 0 bytes
+	e.upload(u, book, "x.exe", "application/octet-stream", append([]byte("MZ\x90\x00"), make([]byte, 600)...)).status(415, "ERROR_UNSUPPORTED_MEDIA_TYPE")
+	e.upload(u, book, "x.jpg", "image/jpeg", pngHeaderClaiming(t, 60000, 60000)).status(400, "ERROR_INVALID_IMAGE")
 	good := photo(t)
-	e.upload(u, book, "x.jpg", "image/jpeg", good[:len(good)/2]).status(400, "invalid_image")
+	e.upload(u, book, "x.jpg", "image/jpeg", good[:len(good)/2]).status(400, "ERROR_INVALID_IMAGE")
 
 	big := bytes.Repeat([]byte{0xFF, 0xD8}, 11<<19) // 11 MiB
-	e.upload(u, book, "big.jpg", "image/jpeg", big).status(413, "payload_too_large")
+	e.upload(u, book, "big.jpg", "image/jpeg", big).status(413, "ERROR_TOO_LARGE")
 
 	// Wrong request shapes.
 	r := httptest.NewRequest("POST", path, strings.NewReader(`{"file":"x"}`))
 	r.Header.Set("Content-Type", "application/json")
-	e.send(u, r).status(415, "unsupported_media_type")
-	body, ct := multipartBody("photo", "a.jpg", "image/jpeg", good) // wrong field name
+	e.send(u, r).status(415, "ERROR_UNSUPPORTED_MEDIA_TYPE")
+	body, ct := multipartBody(book, "photo", "a.jpg", "image/jpeg", good) // wrong field name
 	r = httptest.NewRequest("POST", path, body)
 	r.Header.Set("Content-Type", ct)
-	e.send(u, r).status(400, "invalid_body")
-	body, ct = multipartBody("file", "a.jpg", "image/jpeg", good)
+	e.send(u, r).status(400, "ERROR_PARAM")
+	body, ct = multipartBody("", "file", "a.jpg", "image/jpeg", good) // no yearbook_id
+	r = httptest.NewRequest("POST", path, body)
+	r.Header.Set("Content-Type", ct)
+	e.send(u, r).status(400, "ERROR_PARAM")
+	body, ct = multipartBody(book, "file", "a.jpg", "image/jpeg", good)
 	r = httptest.NewRequest("POST", path, body)
 	r.Header.Set("Content-Type", ct)
 	r.AddCookie(&http.Cookie{Name: auth.CookieName, Value: u.cookie})
@@ -424,14 +511,14 @@ func TestRouteDeadlinesAreExtended(t *testing.T) {
 	e := newEnv(t)
 	u := e.register("a@example.com")
 	book := e.newBook(u)
-	id := e.upload(u, book, "a.jpg", "image/jpeg", photo(t)).status(201, "").mediaID()
+	id := e.upload(u, book, "a.jpg", "image/jpeg", photo(t)).status(200, "").mediaID()
 
-	body, ct := multipartBody("file", "a.jpg", "image/jpeg", photo(t))
-	up := httptest.NewRequest("POST", "/v1/yearbooks/"+book+"/media", body)
+	body, ct := multipartBody(book, "file", "a.jpg", "image/jpeg", photo(t))
+	up := httptest.NewRequest("POST", "/api/media/create", body)
 	up.Header.Set("Content-Type", ct)
 	up.AddCookie(&http.Cookie{Name: auth.CookieName, Value: u.cookie})
 	up.Header.Set("Origin", origin)
-	dl := httptest.NewRequest("GET", "/v1/media/"+id+"/content", nil)
+	dl := httptest.NewRequest("GET", "/api/media/get-content?id="+id, nil)
 	dl.AddCookie(&http.Cookie{Name: auth.CookieName, Value: u.cookie})
 	for name, c := range map[string]struct {
 		r         *http.Request
@@ -475,7 +562,7 @@ func TestQuotas(t *testing.T) {
 	ok, full := 0, 0
 	for _, c := range codes {
 		switch c {
-		case 201:
+		case 200:
 			ok++
 		case 409:
 			full++
@@ -484,23 +571,23 @@ func TestQuotas(t *testing.T) {
 		}
 	}
 	if ok != 3 || full != 3 {
-		t.Fatalf("statuses %v, want 3x201 and 3x409", codes)
+		t.Fatalf("statuses %v, want 3x200 and 3x409", codes)
 	}
 	if n := e.st.count(yearbookPrefix(book)); n != 9 { // 3 photos x (display + thumb + print)
 		t.Fatalf("%d objects, want 9", n)
 	}
-	e.upload(u, book, "a.jpg", "image/jpeg", photo(t)).status(409, "quota_exceeded")
+	e.upload(u, book, "a.jpg", "image/jpeg", photo(t)).status(409, "ERROR_QUOTA_EXCEEDED")
 
 	// Bytes per user, across books.
 	book2 := e.newBook(u)
 	if _, err := e.db.Exec(`UPDATE media_tab SET bytes = 500*1024*1024 - 1000 WHERE id = (SELECT id FROM (SELECT MIN(id) AS id FROM media_tab) x)`); err != nil {
 		t.Fatal(err)
 	}
-	e.upload(u, book2, "a.jpg", "image/jpeg", photo(t)).status(409, "quota_exceeded")
+	e.upload(u, book2, "a.jpg", "image/jpeg", photo(t)).status(409, "ERROR_QUOTA_EXCEEDED")
 	if _, err := e.db.Exec(`UPDATE media_tab SET bytes = 1 WHERE bytes > 1000000`); err != nil {
 		t.Fatal(err)
 	}
-	e.upload(u, book2, "a.jpg", "image/jpeg", photo(t)).status(201, "")
+	e.upload(u, book2, "a.jpg", "image/jpeg", photo(t)).status(200, "")
 }
 
 func TestRateLimit(t *testing.T) {
@@ -509,13 +596,13 @@ func TestRateLimit(t *testing.T) {
 	u, other := e.register("a@example.com"), e.register("b@example.com")
 	book, book2 := e.newBook(u), e.newBook(other)
 	for range 3 {
-		e.upload(u, book, "a.jpg", "image/jpeg", photo(t)).status(201, "")
+		e.upload(u, book, "a.jpg", "image/jpeg", photo(t)).status(200, "")
 	}
-	r := e.upload(u, book, "a.jpg", "image/jpeg", photo(t)).status(429, "rate_limited")
+	r := e.upload(u, book, "a.jpg", "image/jpeg", photo(t)).status(429, "ERROR_RATE_LIMITED")
 	if r.Header().Get("Retry-After") == "" {
 		t.Fatal("no Retry-After")
 	}
-	e.upload(other, book2, "a.jpg", "image/jpeg", photo(t)).status(201, "") // per user
+	e.upload(other, book2, "a.jpg", "image/jpeg", photo(t)).status(200, "") // per user
 }
 
 func TestStorageFailureLeavesNoRow(t *testing.T) {
@@ -523,14 +610,14 @@ func TestStorageFailureLeavesNoRow(t *testing.T) {
 	u := e.register("a@example.com")
 	book := e.newBook(u)
 	e.st.set(true, false)
-	e.upload(u, book, "a.jpg", "image/jpeg", photo(t)).status(502, "storage_error")
+	e.upload(u, book, "a.jpg", "image/jpeg", photo(t)).status(502, "ERROR_STORAGE_ERROR")
 	e.st.set(false, false)
 	if n := e.count(`SELECT COUNT(*) FROM media_tab`); n != 0 || e.st.count("") != 0 {
 		t.Fatalf("%d rows and %d objects after a failed upload", n, e.st.count(""))
 	}
 	e.st.set(true, false)
 	e.st.thumbOnly = true // the display object is written first, then the thumbnail fails: nothing may stay behind
-	e.upload(u, book, "a.jpg", "image/jpeg", photo(t)).status(502, "storage_error")
+	e.upload(u, book, "a.jpg", "image/jpeg", photo(t)).status(502, "ERROR_STORAGE_ERROR")
 	e.st.thumbOnly = false
 	e.st.set(false, false)
 	if n := e.st.count(""); n != 0 {
@@ -538,13 +625,13 @@ func TestStorageFailureLeavesNoRow(t *testing.T) {
 	}
 	e.st.set(true, false)
 	e.st.printOnly = true // display and thumbnail are written, then the print object fails
-	e.upload(u, book, "a.jpg", "image/jpeg", photo(t)).status(502, "storage_error")
+	e.upload(u, book, "a.jpg", "image/jpeg", photo(t)).status(502, "ERROR_STORAGE_ERROR")
 	e.st.printOnly = false
 	e.st.set(false, false)
 	if n := e.st.count(""); n != 0 {
 		t.Fatalf("%d orphan objects after a failed print write", n)
 	}
-	e.upload(u, book, "a.jpg", "image/jpeg", photo(t)).status(201, "") // and a retry works
+	e.upload(u, book, "a.jpg", "image/jpeg", photo(t)).status(200, "") // and a retry works
 }
 
 // T-064 AC5: deleting a photo that is the cover and the profile photo clears both references (no ON DELETE SET NULL any more).
@@ -552,16 +639,16 @@ func TestDeleteMediaClearsCoverAndPhoto(t *testing.T) {
 	e := newEnv(t)
 	u := e.register("a@example.com")
 	book := e.newBook(u)
-	a := e.upload(u, book, "a.jpg", "image/jpeg", photo(t)).status(201, "").mediaID()
-	b := e.upload(u, book, "b.jpg", "image/jpeg", photo(t)).status(201, "").mediaID()
+	a := e.upload(u, book, "a.jpg", "image/jpeg", photo(t)).status(200, "").mediaID()
+	b := e.upload(u, book, "b.jpg", "image/jpeg", photo(t)).status(200, "").mediaID()
 	e.json(u, "PATCH", "/v1/yearbooks/"+book, fmt.Sprintf(`{"cover_media_id":%q}`, a)).status(200, "")
 	e.json(u, "PUT", "/v1/yearbooks/"+book+"/profile", fmt.Sprintf(`{"full_name":"A","photo_media_id":%q}`, a)).status(200, "")
-	e.json(u, "DELETE", "/v1/media/"+b, "").status(204, "") // another photo: the references stay
+	e.deleteMedia(u, b).status(200, "") // another photo: the references stay
 	got := e.json(u, "GET", "/v1/yearbooks/"+book, "").status(200, "").book()
 	if got["cover_media_id"] != a || got["profile"].(map[string]any)["photo_media_id"] != a {
 		t.Fatalf("references lost by deleting another photo: %v", got)
 	}
-	e.json(u, "DELETE", "/v1/media/"+a, "").status(204, "")
+	e.deleteMedia(u, a).status(200, "")
 	got = e.json(u, "GET", "/v1/yearbooks/"+book, "").status(200, "").book()
 	if got["cover_media_id"] != nil || got["profile"].(map[string]any)["photo_media_id"] != nil {
 		t.Fatalf("dangling references after the photo was deleted: %v", got)
@@ -575,8 +662,8 @@ func TestDeleteYearbookRemovesObjects(t *testing.T) {
 	e := newEnv(t)
 	u := e.register("a@example.com")
 	book := e.newBook(u)
-	a := e.upload(u, book, "a.jpg", "image/jpeg", photo(t)).status(201, "").mediaID()
-	b := e.upload(u, book, "b.jpg", "image/jpeg", photo(t)).status(201, "").mediaID()
+	a := e.upload(u, book, "a.jpg", "image/jpeg", photo(t)).status(200, "").mediaID()
+	b := e.upload(u, book, "b.jpg", "image/jpeg", photo(t)).status(200, "").mediaID()
 	e.json(u, "PATCH", "/v1/yearbooks/"+book, fmt.Sprintf(`{"cover_media_id":%q}`, a)).status(200, "") // book -> media -> book reference cycle
 
 	// A failing store blocks the delete and keeps everything.
@@ -584,7 +671,7 @@ func TestDeleteYearbookRemovesObjects(t *testing.T) {
 	e.json(u, "DELETE", "/v1/yearbooks/"+book, "").status(502, "storage_error")
 	e.st.set(false, false)
 	e.json(u, "GET", "/v1/yearbooks/"+book, "").status(200, "")
-	e.json(u, "GET", "/v1/media/"+b+"/content", "").status(200, "")
+	e.json(u, "GET", "/api/media/get-content?id="+b, "").status(200, "")
 
 	// Orphans that have no row (a crashed upload) go too.
 	_ = e.st.Storage.Put(context.Background(), yearbookPrefix(book)+"ORPHAN.jpg", "image/jpeg", []byte("x"))
@@ -607,9 +694,9 @@ func TestProfilePhotoAndCover(t *testing.T) {
 	e := newEnv(t)
 	u, other := e.register("a@example.com"), e.register("b@example.com")
 	book, book2, foreign := e.newBook(u), e.newBook(u), e.newBook(other)
-	mine := e.upload(u, book, "a.jpg", "image/jpeg", photo(t)).status(201, "").mediaID()
-	inBook2 := e.upload(u, book2, "a.jpg", "image/jpeg", photo(t)).status(201, "").mediaID()
-	theirs := e.upload(other, foreign, "a.jpg", "image/jpeg", photo(t)).status(201, "").mediaID()
+	mine := e.upload(u, book, "a.jpg", "image/jpeg", photo(t)).status(200, "").mediaID()
+	inBook2 := e.upload(u, book2, "a.jpg", "image/jpeg", photo(t)).status(200, "").mediaID()
+	theirs := e.upload(other, foreign, "a.jpg", "image/jpeg", photo(t)).status(200, "").mediaID()
 
 	profile := func(media string) string {
 		return fmt.Sprintf(`{"full_name":"Tester","photo_media_id":%s}`, media)
@@ -641,7 +728,7 @@ func TestProfilePhotoAndCover(t *testing.T) {
 	e.json(u, "PUT", "/v1/yearbooks/"+book+"/profile", profile(quote(mine))).status(200, "")
 	e.json(u, "PATCH", "/v1/yearbooks/"+book, fmt.Sprintf(`{"cover_media_id":%q}`, mine)).status(200, "")
 	// Deleting the media clears both references.
-	e.json(u, "DELETE", "/v1/media/"+mine, "").status(204, "")
+	e.deleteMedia(u, mine).status(200, "")
 	b = e.json(u, "GET", "/v1/yearbooks/"+book, "").status(200, "").book()
 	if b["cover_media_id"] != nil || b["profile"].(map[string]any)["photo_media_id"] != nil {
 		t.Fatalf("references survived the media delete: %v", b)
