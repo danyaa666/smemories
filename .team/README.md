@@ -20,7 +20,7 @@
 
 **Open questions for you:** none
 
-_Board last written 2026-10-12 06:44Z_
+_Board last written 2026-10-12 08:15Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -2633,7 +2633,7 @@ Converts `yearbooks` and `profiles` to `yearbook_tab` and `profile_tab` per docs
 - **Branch:** task/t-065-e10-db-conventions-media-table
 - **PR:** https://github.com/danyaa666/smemories/pull/48
 - **Updated:** 2026-10-12 04:00Z by human
-- **Comments-seen:** 7
+- **Comments-seen:** 8
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/03-db-media.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2677,7 +2677,7 @@ Converts `media` to `media_tab` (ms timestamps, no FK, no ENUM, print columns fr
 - **Branch:** task/t-066-e10-db-conventions-note-collections-and-
 - **PR:** https://github.com/danyaa666/smemories/pull/49
 - **Updated:** 2026-10-12 06:44Z by human
-- **Comments-seen:** 11
+- **Comments-seen:** 12
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/04-db-notes.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2992,7 +2992,7 @@ T-049 QA findings: resend button target size, cooldown restarts on reload, short
 - **Branch:** task/t-077-e01-integration-tests-set-a-timeout-and-
 - **PR:** https://github.com/danyaa666/smemories/pull/51
 - **Updated:** 2026-10-12 06:44Z by human
-- **Comments-seen:** 6
+- **Comments-seen:** 7
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/13-integration-test-time-and-timeout.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
