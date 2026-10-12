@@ -19,3 +19,7 @@ The form is generated from the `fields` array returned by `GET /v1/public/collec
 
 #### Leader notes from the T-034 rework (2026-10-08)
 The API (T-034) now requires the multipart part `answers` to come **before** the `photos` parts, otherwise `400 invalid_body`: append `answers` to the `FormData` first. A photo-bearing submission can answer `503 busy` + `Retry-After` immediately, because only a few photo uploads are processed at once (2 per client IP, 4 in total by default): retry it automatically after `Retry-After` (2 s if absent) up to 3 times with a friendly "still sending" message, as the owner photo upload in `web/src/components/Photos.tsx` does, then show the error. A stalled connection is dropped by the server after 10 s without data (`408 request_timeout`): show a retry button and keep the typed answers and chosen photos. Show the upload progress.
+
+
+#### Leader note (2026-10-12, from T-068 review)
+The public form SHALL show the localised "this link is full" message when the GET lookup (`/api/public-collect/get`) says the link is full or closed, **before** the friend fills the form, and SHALL treat a network error on submit as a generic "try again" message. T-080 makes the full-link submit answer readable by the browser; do not rely on it alone.

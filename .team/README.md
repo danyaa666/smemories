@@ -10,9 +10,9 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 24 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-069, T-070, T-071, T-072 |
+| BACKLOG | 25 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-069, T-070, T-071, T-072, T-080 |
 | TODO | 2 | T-073, T-079 |
-| IN_PROGRESS | 1 | T-068 |
+| IN_QA | 1 | T-068 |
 | DONE | 45 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-074, T-075, T-076, T-077, T-078 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
 
@@ -20,7 +20,7 @@
 
 **Open questions for you:** none
 
-_Board last written 2026-10-12 13:15Z_
+_Board last written 2026-10-12 13:28Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -2755,7 +2755,7 @@ Converts `users` and `user_identities` (the sessions and email_tokens tables are
 - 2026-10-12 09:04Z · human · accepted by owner
 
 ### T-068 — [E10] API v2: notes domain (collections, public lookup and submission) with a service layer
-- **Status:** IN_PROGRESS
+- **Status:** IN_QA
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2763,10 +2763,10 @@ Converts `users` and `user_identities` (the sessions and email_tokens tables are
 - **Risk:** high
 - **Rework:** 1
 - **Owner-approved:** yes
-- **Assignee:** dev
+- **Assignee:** qa
 - **Branch:** task/t-068-e10-api-v2-notes-domain-collections-publ
 - **PR:** https://github.com/danyaa666/smemories/pull/53
-- **Updated:** 2026-10-12 13:15Z by dev
+- **Updated:** 2026-10-12 13:28Z by qa
 - **Comments-seen:** 6
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/06-api-notes.md`
@@ -2814,6 +2814,8 @@ Moves the notes endpoints to /api/note-collection/* and /api/public-collect/*, i
   3. A valid token is answered 429 once the 60-per-15-min misses limit of the IP is used up. Same as T-034 (Take before Refund).
   I added no test files. Cleaned up (processes stopped, test DB dropped, Redis db 7 flushed).
 - 2026-10-12 09:10Z · leader · Leader review of head 4d5401d: code and QA evidence accepted, but PR #53 is CONFLICTING with develop (T-067 merged). Blocking: 1) Merge origin/develop into the branch. The only conflict is the one-line 'description' in postman/notes.postman_collection.json: keep develop's SQL (UPDATE user_tab SET email_verified_at = UNIX_TIMESTAMP(NOW(3)) * 1000 WHERE email IN (...)) and keep this branch's v2 content everywhere else. 2) Restore T-034 order for ERROR_COLLECTION_FULL (QA observation 1): the full-link check (noteCount) must run right after Resolve and BEFORE the body is spooled (e.g. Service.CheckOpen(p) called in submit() before content-type/spool), so a full link answers 409 ERROR_COLLECTION_FULL without reading the body, and the honeypot still answers 200 only after the full check passes, as in T-034. Add a test (full link + large body: 409, 0 bytes read, spool dir empty). 3) After the merge re-run make lint build test, go test -race -tags integration ./internal/notes ./api, check:api, confirm CI green on the exact head, then READY_FOR_QA. Nothing else changes; the owner already approved the merge of T-068, so it merges right after QA re-passes. This is rework 1 of 2.
+- 2026-10-12 13:27Z · dev · Rework 1 on head 59d8d25, CI all green, PR MERGEABLE. (1) Merged origin/develop; only conflict was the Postman description, kept develop's SQL (user_tab, UNIX_TIMESTAMP(NOW(3))*1000) and v2 text. (2) New Service.CheckOpen called in submit() right after Resolve, before content-type/spool: a full link answers 409 ERROR_COLLECTION_FULL on the raw writer (body unread, no drain, like unknown token); honeypot on a full link is 409, honeypot only after the full check. SubmitNote keeps its own check for the race. Test: TestFullLinkIsAnsweredWithoutReadingTheBody (20 MiB body: 0 bytes read, spool empty, honeypot on full link 409, still 300 notes). Note: T-034 drained the body before a 409 full; I used the raw writer because the leader asked for 0 bytes read - a browser may show a reset instead of the message on a full link; say if you want drain back. Ran: make lint build test, go test -race -tags integration ./internal/notes ./api, check:api all green.
+- 2026-10-12 13:27Z · leader · Leader: raw-writer 409 on a full link accepted for this PR (0 bytes read is what I asked for); the browser-reset side effect becomes a P3 follow-up, not a reason to hold. QA: head is 59d8d25 (merge of develop + CheckOpen before spool + TestFullLinkIsAnsweredWithoutReadingTheBody). Re-verify: the conflict resolution (postman description keeps user_tab SQL), full link + large body = 409 with 0 bytes read and empty spool, honeypot on full link = 409, valid-token happy path still spools and returns 200, plus a full re-run of the earlier checklist items that the merge of develop could touch (go-integration, Newman notes x2). Also confirm the new test fails on 4d5401d order (revert CheckOpen locally) so it guards the order.
 
 ### T-069 — [E10] API v2: media domain
 - **Status:** BACKLOG
@@ -3130,6 +3132,29 @@ T-065 QA found: a book delete racing a read gives 500 'yearbook without its owne
 **Epic:** E01-foundation · **PRD:** `.team/epics/E01-foundation/PRD.md`
 
 T-077 QA: a ratelimit retry-after test failed once on the CI runner (689 ms vs about 850 ms) and the media test binary now peaks at 1.9 GB; make timing assertions deterministic and cap media test parallelism.
+
+#### Comments
+
+### T-080 — [E04] Public submit: show 'link full' instead of a connection reset
+- **Status:** BACKLOG
+- **Priority:** P3
+- **Type:** tech-debt
+- **Milestone:** M1
+- **Depends-on:** T-068
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-12 13:28Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/08-full-link-reset.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E04-friends-notes · **PRD:** `.team/epics/E04-friends-notes/PRD.md`
+
+T-068 answers a full public link on the raw writer without reading the body; a friend with a valid token may then see a connection reset instead of the "link full" message. Drain the body (bounded, nothing on disk) and show the message in the public form.
 
 #### Comments
 
