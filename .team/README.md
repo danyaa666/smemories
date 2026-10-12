@@ -13,15 +13,14 @@
 | BACKLOG | 25 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-069, T-070, T-071, T-072, T-073 |
 | TODO | 1 | T-079 |
 | IN_QA | 1 | T-068 |
-| MERGED | 1 | T-067 |
-| DONE | 44 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-074, T-075, T-076, T-077, T-078 |
+| DONE | 45 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-074, T-075, T-076, T-077, T-078 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
 
-**Awaiting your review (MERGED):** T-067 ([E10] DB conventions: user and identity tables)
+**Awaiting your review (MERGED):** nothing
 
 **Open questions for you:** none
 
-_Board last written 2026-10-12 09:02Z_
+_Board last written 2026-10-12 09:04Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -2717,7 +2716,7 @@ Converts `note_collections` and the notes tables created by T-034 to the `_tab` 
 - 2026-10-12 06:44Z · human · accepted by owner
 
 ### T-067 — [E10] DB conventions: user and identity tables
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2728,7 +2727,7 @@ Converts `note_collections` and the notes tables created by T-034 to the `_tab` 
 - **Assignee:** —
 - **Branch:** task/t-067-e10-db-conventions-user-and-identity-tab
 - **PR:** https://github.com/danyaa666/smemories/pull/52
-- **Updated:** 2026-10-12 09:02Z by leader
+- **Updated:** 2026-10-12 09:04Z by human
 - **Comments-seen:** 7
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/05-db-auth.md`
@@ -2753,6 +2752,7 @@ Converts `users` and `user_identities` (the sessions and email_tokens tables are
 - 2026-10-12 08:57Z · qa · Regression on head 8242ac8 (rework 1). Evidence: (1) gh pr checks 52: go, go-integration, security, web all pass. (2) cd web && npm run check:api -> 'api schema ok'. (3) diff vs develop = 26 files, all T-067 (migration, internal/{auth,db,media,notes,yearbook}, Makefile verify-newman-users, openapi/schema.d.ts/postman description renames users->user_tab, my QA test); rework delta 78d2b0b..8242ac8 is only schema.d.ts + the comment line. (4) make lint build test green. (5) Migration Up/Down/Up: go test -tags integration ./internal/db -run 'UserTab|MigrateUserTab' -> TestMigrateUserTabConventions + TestQAUserTabBulkRoundTrip PASS. (6) codes.test.tsx: 20 sequential runs 38/38 pass each, plus 6 parallel loops x3 under CPU contention (18 runs) all pass: 38 runs, 0 failures, so no flake reproduced; dev's single CI failure (forgot-password focus assertion) looks like a rare timing issue on a slow runner, non-blocking. Previous full evidence (AC1-AC4, integration suites, newman) stands from first QA note; the changed lines cannot affect it.
 - 2026-10-12 09:02Z · human · owner approved merge
 - 2026-10-12 09:02Z · leader · merged a02a7ca. Review: users/user_identities -> user_tab/user_identity_tab (BIGINT ms, VARCHAR locale/provider, updated_at on identities, binary email collation kept, last foreign key dropped: no FK left in the schema), explicit userTables list in the zero-rows test, v1 JSON shape pinned. QA: 38-user/20-identity round trip, Google concurrency x12, planted checks. Database conversion lane (T-064..T-067) is complete. For owner to check: run make migrate on your dev DB. Next: T-068 (notes API, in QA), T-069 media API, T-070 yearbook API, T-071 auth API.
+- 2026-10-12 09:04Z · human · accepted by owner
 
 ### T-068 — [E10] API v2: notes domain (collections, public lookup and submission) with a service layer
 - **Status:** IN_QA
