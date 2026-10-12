@@ -73,13 +73,18 @@ func New(t testing.TB) *sql.DB {
 }
 
 // orphanPairs lists every "child column refers to parent id" relation that has no foreign key (docs/db-conventions.md).
-// The conversion tasks add their pairs here (T-066 and T-067: notes, collections, users).
+// The conversion tasks add their pairs here (T-067: users).
 var orphanPairs = []struct{ child, column, parent string }{
 	{"yearbook_tab", "owner_id", "users"},
 	{"yearbook_tab", "cover_media_id", "media_tab"},
 	{"profile_tab", "yearbook_id", "yearbook_tab"},
 	{"profile_tab", "photo_media_id", "media_tab"},
 	{"media_tab", "yearbook_id", "yearbook_tab"},
+	{"note_collection_tab", "yearbook_id", "yearbook_tab"},
+	{"note_tab", "collection_id", "note_collection_tab"},
+	{"note_tab", "yearbook_id", "yearbook_tab"},
+	{"note_photo_tab", "note_id", "note_tab"},
+	{"note_photo_tab", "media_id", "media_tab"},
 }
 
 // AssertNoOrphans fails the test for every row whose reference points at a parent row that does not exist.

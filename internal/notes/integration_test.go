@@ -106,9 +106,11 @@ func newEnv(t *testing.T) *env {
 	e.st = &flakyStore{Storage: storagetest.New(t), keys: map[string]bool{}}
 	e.svc = media.NewService(media.NewStore(d), e.st, 2, e.lim, nil)
 	bookStore := yearbook.NewStore(d)
-	e.svc.SetRefClearer(bookStore)
-	yh := yearbook.NewHandler(bookStore, yearbook.NewService(bookStore, e.svc, e.svc), ah.RequireUser, []string{origin}, logger, e.now)
-	e.nh = NewHandler(NewStore(d), e.svc, 10<<20, ah.RequireUser, []string{origin}, ah.ClientIP, e.lim, logger, e.now)
+	notesStore := NewStore(d)
+	notesSvc := NewService(notesStore)
+	e.svc.SetRefClearer(bookStore, notesSvc)
+	yh := yearbook.NewHandler(bookStore, yearbook.NewService(bookStore, e.svc, e.svc, notesSvc), ah.RequireUser, []string{origin}, logger, e.now)
+	e.nh = NewHandler(notesStore, e.svc, 10<<20, ah.RequireUser, []string{origin}, ah.ClientIP, e.lim, logger, e.now)
 	e.tmp = t.TempDir()
 	e.nh.SetUploadLimits(defaultUploadConns, defaultUploadsPerIP, e.tmp)
 	e.h = httpx.NewRouter(logger, ah.Routes, yh.Routes, e.nh.Routes)
@@ -223,11 +225,11 @@ func TestCreate(t *testing.T) {
 		t.Fatalf("unexpected collection %v", c)
 	}
 	hash := sha256.Sum256([]byte(token))
-	if e.count(`SELECT COUNT(*) FROM note_collections WHERE token_hash = ?`, hash[:]) != 1 {
+	if e.count(`SELECT COUNT(*) FROM note_collection_tab WHERE token_hash = ?`, hash[:]) != 1 {
 		t.Fatal("sha256 of the token is not stored")
 	}
 	var stored int
-	if err := e.db.QueryRow(`SELECT COUNT(*) FROM note_collections WHERE ? IN (public_id, label) OR HEX(token_hash) = ?`, token, token).Scan(&stored); err != nil || stored != 0 {
+	if err := e.db.QueryRow(`SELECT COUNT(*) FROM note_collection_tab WHERE ? IN (public_id, label) OR HEX(token_hash) = ?`, token, token).Scan(&stored); err != nil || stored != 0 {
 		t.Fatalf("raw token stored: %d %v", stored, err)
 	}
 	// no label, no deadline: both come back empty/null
@@ -272,7 +274,7 @@ func TestCreateValidation(t *testing.T) {
 	for _, c := range bad {
 		e.do(alice, "POST", "/v1/yearbooks/"+book+"/collections", c.body).status(400, c.code)
 	}
-	if n := e.count(`SELECT COUNT(*) FROM note_collections`); n != 0 {
+	if n := e.count(`SELECT COUNT(*) FROM note_collection_tab`); n != 0 {
 		t.Fatalf("%d rows created by rejected requests", n)
 	}
 	// edges that are accepted: 1 s ahead, a time zone offset, 60-character label, exactly one year
@@ -304,7 +306,7 @@ func TestOwnership(t *testing.T) {
 		e.do(alice, "DELETE", "/v1/collections/"+missing, "").status(404, "not_found")
 	}
 	e.lookup(token).status(200, "") // nothing above touched the link
-	if e.count(`SELECT COUNT(*) FROM note_collections WHERE revoked_at IS NOT NULL`) != 0 {
+	if e.count(`SELECT COUNT(*) FROM note_collection_tab WHERE revoked_at IS NOT NULL`) != 0 {
 		t.Fatal("a foreign request revoked a link")
 	}
 	// anonymous callers and callers using the link token as a credential
@@ -319,7 +321,7 @@ func TestOwnership(t *testing.T) {
 	cBook := e.book(carol, "Carol's book")
 	e.do(carol, "POST", "/v1/yearbooks/"+cBook+"/collections", `{}`).status(403, "email_not_verified")
 	e.do(carol, "GET", "/v1/yearbooks/"+cBook+"/collections", "").status(200, "")
-	if e.count(`SELECT COUNT(*) FROM note_collections`) != 1 {
+	if e.count(`SELECT COUNT(*) FROM note_collection_tab`) != 1 {
 		t.Fatal("unverified owner created a link")
 	}
 }
@@ -370,7 +372,7 @@ func TestLimit(t *testing.T) {
 			t.Fatalf("unexpected status %d", c)
 		}
 	}
-	if ok != 5 || e.count(`SELECT COUNT(*) FROM note_collections c JOIN yearbook_tab y ON y.id = c.yearbook_id WHERE y.public_id = ?`, book2) != 5 {
+	if ok != 5 || e.count(`SELECT COUNT(*) FROM note_collection_tab c JOIN yearbook_tab y ON y.id = c.yearbook_id WHERE y.public_id = ?`, book2) != 5 {
 		t.Fatalf("%d concurrent creates succeeded, want 5", ok)
 	}
 }
@@ -423,14 +425,14 @@ func TestRevoke(t *testing.T) {
 	id, token := e.newLink(alice, book, `{}`)
 	e.lookup(token).status(200, "")
 	e.do(alice, "DELETE", "/v1/collections/"+id, "").status(204, "")
-	var first time.Time
-	if err := e.db.QueryRow(`SELECT revoked_at FROM note_collections WHERE public_id = ?`, id).Scan(&first); err != nil {
+	var first int64
+	if err := e.db.QueryRow(`SELECT revoked_at FROM note_collection_tab WHERE public_id = ?`, id).Scan(&first); err != nil {
 		t.Fatal(err)
 	}
 	e.advance(time.Hour)
 	e.do(alice, "DELETE", "/v1/collections/"+id, "").status(204, "")
-	var second time.Time
-	if err := e.db.QueryRow(`SELECT revoked_at FROM note_collections WHERE public_id = ?`, id).Scan(&second); err != nil || !first.Equal(second) {
+	var second int64
+	if err := e.db.QueryRow(`SELECT revoked_at FROM note_collection_tab WHERE public_id = ?`, id).Scan(&second); err != nil || first != second || first != e.now().Add(-time.Hour).UnixMilli() {
 		t.Fatalf("revoked_at moved: %v -> %v (%v)", first, second, err)
 	}
 	e.lookup(token).status(404, "not_found")
@@ -559,7 +561,7 @@ func TestYearbookDeleteCascades(t *testing.T) {
 	_, t1 := e.newLink(alice, b1, `{}`)
 	_, t2 := e.newLink(alice, b2, `{}`)
 	e.do(alice, "DELETE", "/v1/yearbooks/"+b1, "").status(204, "")
-	if n := e.count(`SELECT COUNT(*) FROM note_collections`); n != 1 {
+	if n := e.count(`SELECT COUNT(*) FROM note_collection_tab`); n != 1 {
 		t.Fatalf("%d links left, want 1", n)
 	}
 	e.lookup(t1).status(404, "not_found")

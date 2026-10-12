@@ -71,9 +71,9 @@ func TestMigrateMediaTabConventions(t *testing.T) {
 	if n := dump(t, ctx, d, `SELECT COUNT(*) FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME = 'media_tab'`); n[0] != "0" {
 		t.Fatalf("foreign keys left on media_tab: %v", n)
 	}
-	// The photo-of-a-note table still points at the renamed table until the notes conversion task.
-	if n := dump(t, ctx, d, `SELECT COUNT(*) FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() AND REFERENCED_TABLE_NAME = 'media_tab'`); n[0] != "1" {
-		t.Fatalf("foreign keys into media_tab: %v, want note_photos only", n)
+	// The photo-of-a-note table pointed at the renamed table until T-066 dropped its foreign keys.
+	if n := dump(t, ctx, d, `SELECT COUNT(*) FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() AND REFERENCED_TABLE_NAME = 'media_tab'`); n[0] != "0" {
+		t.Fatalf("foreign keys into media_tab: %v, want none", n)
 	}
 	if n := dump(t, ctx, d, `SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'media_tab' AND INDEX_NAME = 'idx_yearbook_id' AND COLUMN_NAME = 'yearbook_id' AND SEQ_IN_INDEX = 1`); n[0] != "1" {
 		t.Fatalf("idx_yearbook_id missing: %v", n)

@@ -192,7 +192,7 @@ func (h *Handler) submit(w http.ResponseWriter, r *http.Request) {
 	}
 	answers, err := json.Marshal(clean)
 	if err == nil {
-		err = h.store.insertNote(r.Context(), newNote{ID: id, Answers: answers, MediaRows: rows, CreatedAt: now, Collection: p.CollectionID, Yearbook: p.YearbookID})
+		err = h.store.insertNote(r.Context(), newNote{ID: id, Answers: answers, MediaRows: rows, CreatedAt: now.UnixMilli(), Collection: p.CollectionID, Yearbook: p.YearbookID})
 	}
 	if err != nil {
 		fail(err)
