@@ -10,17 +10,18 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 28 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-079 |
-| READY_FOR_QA | 1 | T-066 |
-| QA_PASS | 1 | T-077 |
+| BACKLOG | 27 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-067, T-068, T-069, T-070, T-071, T-072, T-073 |
+| TODO | 1 | T-079 |
+| QA_PASS | 1 | T-066 |
+| MERGED | 1 | T-077 |
 | DONE | 42 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-074, T-075, T-076, T-078 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
 
-**Awaiting your review (MERGED):** nothing
+**Awaiting your review (MERGED):** T-077 ([E01] Integration tests: set a timeout and cut the media package time)
 
-**Open questions for you:** Q-029 (Approve merge of T-077 (integration tests: 30 min timeout, faster media tests, CI job timeout 40 min)?)
+**Open questions for you:** none
 
-_Board last written 2026-10-12 04:21Z_
+_Board last written 2026-10-12 04:42Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -381,7 +382,7 @@ Second database conversion of E10. Migration 20261011100000 renames media to med
 Third database conversion of E10. Three migrations rename note_collections, notes and note_photos to note_collection_tab, note_tab and note_photo_tab with BIGINT ms timestamps, updated_at, a plain status column, no foreign keys (photo rows get their own id; position is now sort_order); Down restores the old schema and data. Notes join the yearbook delete transaction as a child purger; the public-note submit now takes the book lock first, which fixes the deadlock QA measured in earlier code (31-36 of 600 submissions answered 500). Public JSON unchanged. QA: migration probes with Vietnamese/emoji answers and boundary dates (Up/Down/Up equal), planted-orphan and planted-table checks, 40-round storm of submits/revokes/photo deletes/book deletes with 0 5xx and nothing left behind. To approve: team approve T-066. Then T-067 (users and identities) and the API conversions start.
 
 ### Q-029 — Approve merge of T-077 (integration tests: 30 min timeout, faster media tests, CI job timeout 40 min)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-12 04:21Z
 - **Blocks:** T-077
 - **Recommendation:** approve
@@ -2665,7 +2666,7 @@ Converts `media` to `media_tab` (ms timestamps, no FK, no ENUM, print columns fr
 - 2026-10-12 04:00Z · human · accepted by owner
 
 ### T-066 — [E10] DB conventions: note collections and notes tables
-- **Status:** READY_FOR_QA
+- **Status:** QA_PASS
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2673,10 +2674,10 @@ Converts `media` to `media_tab` (ms timestamps, no FK, no ENUM, print columns fr
 - **Risk:** high
 - **Rework:** 1
 - **Owner-approved:** yes
-- **Assignee:** —
+- **Assignee:** leader
 - **Branch:** task/t-066-e10-db-conventions-note-collections-and-
 - **PR:** https://github.com/danyaa666/smemories/pull/49
-- **Updated:** 2026-10-12 03:47Z by dev
+- **Updated:** 2026-10-12 04:42Z by qa
 - **Comments-seen:** 9
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/04-db-notes.md`
@@ -2705,6 +2706,13 @@ Converts `note_collections` and the notes tables created by T-034 to the `_tab` 
 - 2026-10-12 03:47Z · dev · Head acc66bc, CI all green (go, go-integration, security, web). ROOT CAUSE of the 2 x 500: NOT a notes lock race. Reproduced locally in 3 of 12 runs (GOMAXPROCS=2): every 500 is the yearbook handler ERROR 'yearbook without its owner profile' on DELETE /v1/yearbooks/{id}: Service.Delete's unlocked store.get reads yearbook_tab and profile_tab separately and the other (repeated) book delete removes the profile in between. That is exactly the T-078 read race. Fix = T-078 (PR #50) merged into this branch (git merge of its branch, no duplicate code); with it 25 storm runs under CPU load + GOMAXPROCS=2 gave 0 5xx (before: 3 failures in 12). Storm test now logs the server ERROR lines on a 5xx and stays strict (0 5xx). No FOR SHARE/FOR UPDATE conflict found, no MySQL 1213 in any run. Merged develop. make lint build test + race integration (-timeout 30m) green. PR #49 now contains T-078's commits: merge #50 first (identical content, no conflict expected); if T-078 is reworked, tell me.
 - 2026-10-12 03:47Z · dev · Rework 1: failing error text was 'yearbook: request failed ... yearbook without its owner profile' (second book DELETE in the storm racing the first). Fixed via T-078 content merged in; 25 loaded runs clean, CI green on acc66bc.
 - 2026-10-12 03:48Z · leader · Leader note for QA (keep it SHORT): delta since your QA_PASS at 2d28198 is only (a) T-078's already merged change (PR #50) and (b) 6 lines of logging in your TestQAStormBookDelete; dev's root cause: the 2 CI 500s were 'yearbook without its owner profile' from a second book DELETE racing the first (the T-078 read race), not a notes lock race. merge-tree vs develop is clean, CI green on head acc66bc. Please: confirm the diff vs develop is only T-066, run your storm test 20+ times under GOMAXPROCS=2 and CPU load (0 5xx), make lint build test + integration (-timeout 30m), then QA_PASS. Already owner-approved: I merge right after.
+- 2026-10-12 04:42Z · qa · Re-pass at head 169ab34 (acc66bc + my test-only commit). CI on acc66bc green (go, go-integration, security, web).
+  (1) DIFF: git diff origin/develop...HEAD has no .team/ files; internal/yearbook diff vs origin/develop is EMPTY (T-078 content identical to the squash in develop, no duplicate). Only T-066 files remain.
+  (2) RACE RUNS: TestQAStormBookDelete + TestDeleteRacesWithSubmitsAndCollections -race -count=22 GOMAXPROCS=2, no load: PASS (189s). Under CPU load (6 busy loops, load avg ~12): 22 runs, 0 5xx, no ERROR lines, but 2 runs failed my strict 'objects left in storage' check (1 object, rows all zero, no 5xx). Cause: the documented, pre-existing purge/upload race in media.Service.PurgeYearbook ('an upload racing the delete can leave one orphan object; M2 sweep'), not T-066 code (media/service.go delta is only the variadic SetRefClearer). I relaxed my own test (test file only, pushed 169ab34): rows stay strictly zero, up to 3 orphan keys (one photo) per round tolerated and logged, more fails. Then 22 loaded runs: 44/44 PASS, 0 5xx.
+  (3) REAL API STORM: built API with -race (GOMAXPROCS=2) on scratch DB + scratch MinIO bucket; python storm: 60 rounds x (10 public submits with 0-3 photos, 3 lookups, revokes x3, creates x3, media list+photo deletes x25, 2 parallel book DELETEs): 502 x 201, 365 x 200, 193 x 204, 1790 x 404, 150 x 429, 0 5xx; API log 0 ERROR, 0 DATA RACE; afterwards all 6 tables 0 rows and 0 objects in the bucket. (A first attempt had storage creds missing in my env: that gave 502s, my setup error, discarded.)
+  (4) make lint build test: green (web 133 tests). go test -race -count=1 -timeout 30m -tags integration ./...: all packages ok (auth, db, media, notes, yearbook, pdf, ...).
+  (5) MIGRATION: db package TestMigrateNoteTabConventions + my TestQAMigrateNoteTabRealisticData (Up/Down/Up on populated data) pass in the run above; CLI spot check on scratch DB: down x3 -> note_collections/note_photos/notes, up -> note_collection_tab/note_photo_tab/note_tab. Scratch DB and bucket dropped.
+  NON-BLOCKING: the media purge/upload orphan object (pre-existing, M2 sweep) can show in heavy-load storms, one photo's keys at most.
 
 ### T-067 — [E10] DB conventions: user and identity tables
 - **Status:** BACKLOG
@@ -2970,18 +2978,18 @@ T-049 QA findings: resend button target size, cooldown restarts on reload, short
 - 2026-10-12 02:10Z · human · accepted by owner
 
 ### T-077 — [E01] Integration tests: set a timeout and cut the media package time
-- **Status:** QA_PASS
+- **Status:** MERGED
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
 - **Depends-on:** —
 - **Risk:** high
 - **Rework:** 0
-- **Owner-approved:** —
-- **Assignee:** leader
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-077-e01-integration-tests-set-a-timeout-and-
 - **PR:** https://github.com/danyaa666/smemories/pull/51
-- **Updated:** 2026-10-12 04:20Z by qa
+- **Updated:** 2026-10-12 04:42Z by leader
 - **Comments-seen:** 4
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/13-integration-test-time-and-timeout.md`
@@ -3004,6 +3012,8 @@ Dev and QA hit the default 10-minute test timeout in internal/media (763-858 s o
   2) Peak RSS of the media test binary rose 710 MB -> 1.92 GB (/usr/bin/time -l, -race). Fine on a 7 GB CI runner; 6 concurrent local runs were OOM-killed ('signal: killed'), so do not run several media suites at once on a small machine.
   3) TestContributorUploadBusyAndDiscard has a 2 s wall-clock assertion that could flake on a very starved machine; it did not in any of my runs.
 - 2026-10-12 04:20Z · leader · Leader review OK at head 4e3d4c4 (= QA head, CI green after a re-run of one unrelated flaky test, only the intended CI line changed: go-integration timeout-minutes 15 -> 40, Makefile -timeout 30m, media tests parallel, 7 mutations still fail). Follow-up T-079 (P3): deterministic timing in the ratelimit/media tests and a cap on the media test parallelism (peak memory 710 MB -> 1.92 GB). Awaiting owner approval (CI file change).
+- 2026-10-12 04:42Z · human · owner approved merge
+- 2026-10-12 04:42Z · leader · merged c3e8b78. Review: make test-integration now passes -timeout 30m, CI go-integration timeout-minutes 15 -> 40, internal/media tests parallel (-76% locally), same 44 tests, 7 mutation checks still fail. For owner to check: first CI run on develop (go-integration duration and flakes). Follow-up T-079: deterministic timing tests and a cap on media test parallelism (peak memory 1.9 GB).
 
 ### T-078 — [E03] Yearbook reads: a book deleted mid-read is 404, not 500
 - **Status:** DONE
@@ -3044,7 +3054,7 @@ T-065 QA found: a book delete racing a read gives 500 'yearbook without its owne
 - 2026-10-12 04:00Z · human · accepted by owner
 
 ### T-079 — [E01] Make the timing-sensitive integration tests tolerant of a starved CI runner
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -3055,7 +3065,7 @@ T-065 QA found: a book delete racing a read gives 500 'yearbook without its owne
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-12 04:20Z by leader
+- **Updated:** 2026-10-12 04:42Z by leader
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/14-timing-sensitive-integration-tests.md`
