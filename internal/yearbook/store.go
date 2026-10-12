@@ -92,9 +92,13 @@ func inList(n int) string { return strings.TrimSuffix(strings.Repeat("?,", n), "
 
 // fill adds the owner profile and the media public ids to books: two queries (three when a book has media), whatever
 // the number of books. lock makes the profile query a locking read (inside a transaction that edits the book).
-func fill(ctx context.Context, q querier, books []Yearbook, lock bool) error {
+//
+// It returns the books that still have their profile. Delete removes the profiles and the book in one transaction, so
+// a book whose profile is gone was deleted after the book query: it is dropped (get: not found, list: absent) instead
+// of failing the request. With lock the book row is held by the caller, so a missing profile is a real data error.
+func fill(ctx context.Context, q querier, books []Yearbook, lock bool) ([]Yearbook, error) {
 	if len(books) == 0 {
-		return nil
+		return books, nil
 	}
 	ids := make([]any, len(books))
 	at := make(map[uint64]int, len(books))
@@ -108,7 +112,7 @@ func fill(ctx context.Context, q querier, books []Yearbook, lock bool) error {
 	}
 	rows, err := q.QueryContext(ctx, query, ids...)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer func() { _ = rows.Close() }()
 	var media []any
@@ -126,7 +130,7 @@ func fill(ctx context.Context, q querier, books []Yearbook, lock bool) error {
 		var bday sql.NullTime
 		var photo sql.Null[uint64]
 		if err := rows.Scan(&bookID, &p.ID, &p.IsOwner, &p.FullName, &p.Nickname, &bday, &p.Quote, &p.Hobbies, &p.FuturePlans, &photo); err != nil {
-			return err
+			return nil, err
 		}
 		if bday.Valid {
 			b := bday.Time.Format(dateLayout)
@@ -140,17 +144,26 @@ func fill(ctx context.Context, q querier, books []Yearbook, lock bool) error {
 		want(p.photoRow)
 	}
 	if err := rows.Err(); err != nil {
-		return err
+		return nil, err
 	}
-	if found != len(books) { // no foreign key guarantees the profile, so say so loudly instead of showing a half book
-		return apperr.New(apperr.Internal, "yearbook without its owner profile")
+	if found != len(books) {
+		if lock { // no foreign key guarantees the profile, so say so loudly instead of showing a half book
+			return nil, apperr.New(apperr.Internal, "yearbook without its owner profile")
+		}
+		kept := books[:0]
+		for _, y := range books {
+			if y.Profile.ID != "" {
+				kept = append(kept, y)
+			}
+		}
+		books = kept
 	}
 	if len(media) == 0 {
-		return nil
+		return books, nil
 	}
 	mrows, err := q.QueryContext(ctx, `SELECT id, public_id FROM media_tab WHERE id IN (`+inList(len(media))+`)`, media...)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer func() { _ = mrows.Close() }()
 	public := map[uint64]string{}
@@ -158,12 +171,12 @@ func fill(ctx context.Context, q querier, books []Yearbook, lock bool) error {
 		var id uint64
 		var pub string
 		if err := mrows.Scan(&id, &pub); err != nil {
-			return err
+			return nil, err
 		}
 		public[id] = pub
 	}
 	if err := mrows.Err(); err != nil {
-		return err
+		return nil, err
 	}
 	for i := range books {
 		y := &books[i]
@@ -174,7 +187,7 @@ func fill(ctx context.Context, q querier, books []Yearbook, lock bool) error {
 			y.Profile.PhotoMediaID = &pub
 		}
 	}
-	return nil
+	return books, nil
 }
 
 // create inserts the book and its owner profile atomically. The owner's user row is locked
@@ -230,9 +243,12 @@ func (s *Store) get(ctx context.Context, ownerID uint64, publicID string) (Yearb
 	if err != nil {
 		return Yearbook{}, err
 	}
-	books := []Yearbook{y}
-	if err := fill(ctx, s.db, books, false); err != nil {
+	books, err := fill(ctx, s.db, []Yearbook{y}, false)
+	if err != nil {
 		return Yearbook{}, err
+	}
+	if len(books) == 0 { // deleted between the book query and the profile query
+		return Yearbook{}, ErrNotFound
 	}
 	return books[0], nil
 }
@@ -267,7 +283,7 @@ func (s *Store) list(ctx context.Context, ownerID uint64, c *cursor, limit int) 
 		return nil, err
 	}
 	_ = rows.Close() // the connection is free for the next two queries
-	return out, fill(ctx, s.db, out, false)
+	return fill(ctx, s.db, out, false)
 }
 
 // modify locks the owner's book, lets change edit it (and write the profile through the same
@@ -289,8 +305,8 @@ func (s *Store) modify(ctx context.Context, ownerID uint64, publicID string, now
 	if err != nil {
 		return Yearbook{}, err
 	}
-	books := []Yearbook{y}
-	if err := fill(ctx, tx, books, true); err != nil {
+	books, err := fill(ctx, tx, []Yearbook{y}, true)
+	if err != nil {
 		return Yearbook{}, err
 	}
 	y = books[0]

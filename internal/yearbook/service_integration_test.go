@@ -157,27 +157,31 @@ func TestMediaReferences(t *testing.T) {
 // optional driver interfaces, so database/sql always prepares and executes through a statement we can see.
 type countingConnector struct {
 	driver.Connector
-	n *atomic.Int64
+	n    *atomic.Int64
+	hook func(query string) // optional: runs before each statement, to race a write in between two reads
 }
 
 type countingConn struct {
 	driver.Conn
-	n *atomic.Int64
+	n    *atomic.Int64
+	hook func(query string)
 }
 
 type countingStmt struct {
 	driver.Stmt
-	n *atomic.Int64
+	n     *atomic.Int64
+	hook  func(query string)
+	query string
 }
 
 func (c countingConnector) Connect(ctx context.Context) (driver.Conn, error) {
 	conn, err := c.Connector.Connect(ctx)
-	return countingConn{conn, c.n}, err
+	return countingConn{conn, c.n, c.hook}, err
 }
 
 func (c countingConn) PrepareContext(ctx context.Context, q string) (driver.Stmt, error) {
 	st, err := c.Conn.(driver.ConnPrepareContext).PrepareContext(ctx, q)
-	return countingStmt{st, c.n}, err
+	return countingStmt{st, c.n, c.hook, q}, err
 }
 
 func (c countingConn) BeginTx(ctx context.Context, o driver.TxOptions) (driver.Tx, error) {
@@ -190,6 +194,9 @@ func (c countingConn) CheckNamedValue(nv *driver.NamedValue) error {
 
 func (s countingStmt) QueryContext(ctx context.Context, args []driver.NamedValue) (driver.Rows, error) {
 	s.n.Add(1)
+	if s.hook != nil {
+		s.hook(s.query)
+	}
 	return s.Stmt.(driver.StmtQueryContext).QueryContext(ctx, args)
 }
 
@@ -204,6 +211,12 @@ func (s countingStmt) CheckNamedValue(nv *driver.NamedValue) error {
 
 // countingDB opens a second pool on the test database of d.
 func countingDB(t *testing.T, d *sql.DB, n *atomic.Int64) *sql.DB {
+	t.Helper()
+	return hookedDB(t, d, n, nil)
+}
+
+// hookedDB is countingDB with a hook that runs before every statement of the returned pool.
+func hookedDB(t *testing.T, d *sql.DB, n *atomic.Int64, hook func(query string)) *sql.DB {
 	t.Helper()
 	var name string
 	if err := d.QueryRow(`SELECT DATABASE()`).Scan(&name); err != nil {
@@ -222,7 +235,7 @@ func countingDB(t *testing.T, d *sql.DB, n *atomic.Int64) *sql.DB {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c := sql.OpenDB(countingConnector{inner, n})
+	c := sql.OpenDB(countingConnector{inner, n, hook})
 	t.Cleanup(func() { _ = c.Close() })
 	return c
 }
@@ -310,5 +323,48 @@ func TestReadQueryCountIsConstant(t *testing.T) {
 	}
 	if seen != 1 {
 		t.Fatalf("%d plan rows", seen)
+	}
+}
+
+// T-078: a book deleted between the book query and the profile query is "not found" on get and absent from list,
+// never the 500 "yearbook without its owner profile". The hook deletes the book (profiles and book, as Service.Delete
+// does) right before the profile query, which is the exact window of the old bug.
+func TestReadOfBookDeletedMidReadIsNotFound(t *testing.T) {
+	e := newEnv(t)
+	alice := e.register("alice@example.com", "Alice")
+	var owner uint64
+	if err := e.db.QueryRow(`SELECT id FROM users WHERE email = 'alice@example.com'`).Scan(&owner); err != nil {
+		t.Fatal(err)
+	}
+	keep, gone := e.create(alice, "Keep"), e.create(alice, "Gone")
+	deleteGone := func(row uint64) func(string) {
+		return func(query string) {
+			if !strings.Contains(query, "FROM profile_tab") {
+				return
+			}
+			for _, q := range []string{`DELETE FROM profile_tab WHERE yearbook_id = ?`, `DELETE FROM yearbook_tab WHERE id = ?`} {
+				if _, err := e.db.Exec(q, row); err != nil {
+					t.Error(err)
+				}
+			}
+		}
+	}
+	var n atomic.Int64
+	ctx := context.Background()
+
+	st := NewStore(hookedDB(t, e.db, &n, deleteGone(e.bookRow(gone))))
+	if _, err := st.get(ctx, owner, gone); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("get of a book deleted mid-read: %v, want ErrNotFound", err)
+	}
+
+	// Recreate the doomed book and list: the survivor stays, the deleted one is absent.
+	gone = e.create(alice, "Gone")
+	st = NewStore(hookedDB(t, e.db, &n, deleteGone(e.bookRow(gone))))
+	books, err := st.list(ctx, owner, nil, 10)
+	if err != nil {
+		t.Fatalf("list with a book deleted mid-read: %v", err)
+	}
+	if len(books) != 1 || books[0].ID != keep {
+		t.Fatalf("list = %d books, want only %s", len(books), keep)
 	}
 }
