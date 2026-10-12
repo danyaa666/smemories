@@ -61,8 +61,21 @@ type RefClearer interface {
 	ClearMediaRefs(ctx context.Context, tx *sql.Tx, mediaID int64) error
 }
 
-// SetRefClearer registers who must clear references to a photo before Delete removes it (wired once at start-up).
-func (s *Service) SetRefClearer(r RefClearer) { s.refs = r }
+// refClearers calls each clearer in order; the first one must be the yearbook's, which takes the yearbook lock.
+type refClearers []RefClearer
+
+func (c refClearers) ClearMediaRefs(ctx context.Context, tx *sql.Tx, mediaID int64) error {
+	for _, r := range c {
+		if err := r.ClearMediaRefs(ctx, tx, mediaID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// SetRefClearer registers who must clear references to a photo before Delete removes it (wired once at start-up). The yearbook
+// store goes first: it locks the photo's yearbook row, and the others (notes) run under that lock.
+func (s *Service) SetRefClearer(r ...RefClearer) { s.refs = refClearers(r) }
 
 // NewService builds the service; maxConcurrent bounds parallel image decodes; now may be nil.
 // The upload limiter fails open when Redis is down (an upload is not a guess).

@@ -102,6 +102,25 @@ type createdCollection struct {
 	Token      string     `json:"token"` // shown here and nowhere else
 }
 
+// collectionJSON is a Collection as the owner's list shows it; the store keeps Unix milliseconds, the API still sends RFC 3339.
+type collectionJSON struct {
+	ID         string     `json:"id"`
+	Label      string     `json:"label"`
+	DeadlineAt *time.Time `json:"deadline_at"`
+	CreatedAt  time.Time  `json:"created_at"`
+	RevokedAt  *time.Time `json:"revoked_at"`
+	NoteCount  int        `json:"note_count"`
+}
+
+// instant turns Unix milliseconds into the UTC time the API prints; nil stays nil.
+func instant(ms *int64) *time.Time {
+	if ms == nil {
+		return nil
+	}
+	t := time.UnixMilli(*ms).UTC()
+	return &t
+}
+
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	u, _ := auth.UserFrom(r.Context())
 	if !u.EmailVerified {
@@ -113,7 +132,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	now := h.now().UTC()
-	c := Collection{ID: ulid.New(now), CreatedAt: now}
+	c := Collection{ID: ulid.New(now), CreatedAt: now.UnixMilli()}
 	if in.Label != nil {
 		l, ok := textx.Clean(*in.Label, 0, maxLabel)
 		if !ok {
@@ -128,8 +147,8 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteError(w, r, http.StatusBadRequest, "invalid_deadline", "invalid input: invalid_deadline")
 			return
 		}
-		t = t.UTC()
-		c.DeadlineAt = &t
+		d := t.UnixMilli()
+		c.DeadlineAt = &d
 	}
 	token, hash, err := newToken()
 	if err != nil {
@@ -142,7 +161,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	}
 	httpx.WriteJSON(w, http.StatusCreated, struct {
 		Collection createdCollection `json:"collection"`
-	}{createdCollection{c.ID, c.Label, c.DeadlineAt, c.CreatedAt, token}})
+	}{createdCollection{c.ID, c.Label, instant(c.DeadlineAt), time.UnixMilli(c.CreatedAt).UTC(), token}})
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
@@ -152,14 +171,18 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 		h.fail(w, r, err)
 		return
 	}
+	out := make([]collectionJSON, len(cs))
+	for i, c := range cs {
+		out[i] = collectionJSON{c.ID, c.Label, instant(c.DeadlineAt), time.UnixMilli(c.CreatedAt).UTC(), instant(c.RevokedAt), c.NoteCount}
+	}
 	httpx.WriteJSON(w, http.StatusOK, struct {
-		Collections []Collection `json:"collections"`
-	}{cs})
+		Collections []collectionJSON `json:"collections"`
+	}{out})
 }
 
 func (h *Handler) revoke(w http.ResponseWriter, r *http.Request) {
 	u, _ := auth.UserFrom(r.Context())
-	if err := h.store.revoke(r.Context(), u.InternalID, r.PathValue("id"), h.now()); err != nil {
+	if err := h.store.revoke(r.Context(), u.InternalID, r.PathValue("id"), h.now().UnixMilli()); err != nil {
 		h.fail(w, r, err)
 		return
 	}
@@ -191,7 +214,7 @@ func (h *Handler) resolve(w http.ResponseWriter, r *http.Request) (Public, bool)
 		h.fail(w, r, err)
 		return Public{}, false
 	}
-	if p.DeadlineAt != nil && !h.now().Before(*p.DeadlineAt) {
+	if p.DeadlineAt != nil && h.now().UnixMilli() >= *p.DeadlineAt {
 		httpx.WriteError(w, r, http.StatusGone, "collection_closed", "this link no longer accepts notes")
 		return Public{}, false
 	}
@@ -227,7 +250,7 @@ func (h *Handler) lookup(w http.ResponseWriter, r *http.Request) {
 		Title string `json:"title"`
 	}{p.Title}, struct {
 		DisplayName string `json:"display_name"`
-	}{p.DisplayName}, p.DeadlineAt, true, fields})
+	}{p.DisplayName}, instant(p.DeadlineAt), true, fields})
 }
 
 // fail maps a store error to the shared envelope; anything else is logged (never with the token) and answers 500.

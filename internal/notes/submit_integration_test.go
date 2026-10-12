@@ -183,12 +183,12 @@ func (e *env) newOpenLink() link {
 	return link{owner, book, token, id}
 }
 
-func (e *env) noteCount() int { return e.count(`SELECT COUNT(*) FROM notes`) }
+func (e *env) noteCount() int { return e.count(`SELECT COUNT(*) FROM note_tab`) }
 
 // nothingKept asserts a failed submission left no note, photo row, media row or object behind.
 func (e *env) nothingKept() {
 	e.t.Helper()
-	for _, q := range []string{`SELECT COUNT(*) FROM notes`, `SELECT COUNT(*) FROM note_photos`, `SELECT COUNT(*) FROM media_tab`} {
+	for _, q := range []string{`SELECT COUNT(*) FROM note_tab`, `SELECT COUNT(*) FROM note_photo_tab`, `SELECT COUNT(*) FROM media_tab`} {
 		if n := e.count(q); n != 0 {
 			e.t.Fatalf("%s = %d, want 0", q, n)
 		}
@@ -210,7 +210,7 @@ func TestSubmitTextAndEmojiRoundTrip(t *testing.T) {
 	}
 	var raw, status string
 	var sortOrder *int
-	if err := e.db.QueryRow(`SELECT answers, status, sort_order FROM notes WHERE public_id = ?`, out.Note.ID).Scan(&raw, &status, &sortOrder); err != nil {
+	if err := e.db.QueryRow(`SELECT answers, status, sort_order FROM note_tab WHERE public_id = ?`, out.Note.ID).Scan(&raw, &status, &sortOrder); err != nil {
 		t.Fatal(err)
 	}
 	var got map[string]string
@@ -236,7 +236,7 @@ func TestSubmitWithPhotos(t *testing.T) {
 	if n := e.count(`SELECT COUNT(*) FROM media_tab WHERE uploader_kind = 'contributor'`); n != 2 {
 		t.Fatalf("%d contributor media", n)
 	}
-	if n := e.count(`SELECT COUNT(*) FROM note_photos np JOIN notes n ON n.id = np.note_id WHERE n.public_id = ? AND np.position IN (0, 1)`, id); n != 2 {
+	if n := e.count(`SELECT COUNT(*) FROM note_photo_tab np JOIN note_tab n ON n.id = np.note_id WHERE n.public_id = ? AND np.sort_order IN (0, 1)`, id); n != 2 {
 		t.Fatalf("%d photo links", n)
 	}
 	if e.st.count() != 6 { // display + print + thumbnail each
@@ -348,11 +348,11 @@ func TestSubmitCompensation(t *testing.T) {
 	t.Run("insert fails after the photos were stored", func(t *testing.T) {
 		e := newEnv(t)
 		l := e.newOpenLink()
-		if _, err := e.db.Exec(`DROP TABLE note_photos`); err != nil {
+		if _, err := e.db.Exec(`ALTER TABLE note_photo_tab ADD CONSTRAINT chk_never CHECK (sort_order > 100)`); err != nil {
 			t.Fatal(err)
 		}
 		e.post(l.token, answers("A", "m"), photoPart(jpegOf(t, 1)), photoPart(jpegOf(t, 2))).status(500, "internal_error")
-		if e.count(`SELECT COUNT(*) FROM notes`) != 0 || e.count(`SELECT COUNT(*) FROM media_tab`) != 0 || e.st.count() != 0 {
+		if e.count(`SELECT COUNT(*) FROM note_tab`) != 0 || e.count(`SELECT COUNT(*) FROM media_tab`) != 0 || e.st.count() != 0 {
 			t.Fatal("note, media or objects left behind")
 		}
 	})
@@ -413,13 +413,13 @@ func TestSubmitClosedLinks(t *testing.T) {
 func (e *env) fillCollection(l link, n int) {
 	e.t.Helper()
 	var coll, book uint64
-	if err := e.db.QueryRow(`SELECT c.id, c.yearbook_id FROM note_collections c WHERE c.public_id = ?`, l.collection).Scan(&coll, &book); err != nil {
+	if err := e.db.QueryRow(`SELECT c.id, c.yearbook_id FROM note_collection_tab c WHERE c.public_id = ?`, l.collection).Scan(&coll, &book); err != nil {
 		e.t.Fatal(err)
 	}
 	tx, _ := e.db.Begin()
 	for range n {
-		if _, err := tx.Exec(`INSERT INTO notes (public_id, collection_id, yearbook_id, answers, status, created_at) VALUES (?,?,?,?,?,?)`,
-			ulid.New(e.now()), coll, book, `{"name":"x","message":"y"}`, []string{"pending", "approved", "hidden"}[n%3], e.now()); err != nil {
+		if _, err := tx.Exec(`INSERT INTO note_tab (public_id, collection_id, yearbook_id, answers, status, created_at, updated_at) VALUES (?,?,?,?,?,?,?)`,
+			ulid.New(e.now()), coll, book, `{"name":"x","message":"y"}`, []string{StatusPending, StatusApproved, StatusHidden}[n%3], e.now().UnixMilli(), e.now().UnixMilli()); err != nil {
 			e.t.Fatal(err)
 		}
 	}
@@ -590,7 +590,7 @@ func TestSubmitPrivacy(t *testing.T) {
 			t.Fatalf("CORS header %s", k)
 		}
 	}
-	rows, err := e.db.Query(`SELECT column_name FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'notes' ORDER BY ordinal_position`)
+	rows, err := e.db.Query(`SELECT column_name FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'note_tab' ORDER BY ordinal_position`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -601,11 +601,11 @@ func TestSubmitPrivacy(t *testing.T) {
 		cols = append(cols, c)
 	}
 	_ = rows.Close()
-	if got := strings.Join(cols, ","); got != "id,public_id,collection_id,yearbook_id,answers,status,sort_order,created_at" {
+	if got := strings.Join(cols, ","); got != "id,public_id,collection_id,yearbook_id,answers,status,sort_order,created_at,updated_at" {
 		t.Fatalf("notes columns: %s", got)
 	}
 	// the stored text does not hold the address or agent either
-	if e.count(`SELECT COUNT(*) FROM notes WHERE answers LIKE '%198.51%' OR answers LIKE '%UNIQUE-UA%'`) != 0 {
+	if e.count(`SELECT COUNT(*) FROM note_tab WHERE answers LIKE '%198.51%' OR answers LIKE '%UNIQUE-UA%'`) != 0 {
 		t.Fatal("client data stored")
 	}
 	// provoke an error log too
@@ -628,7 +628,7 @@ func TestYearbookDeleteRemovesNotes(t *testing.T) {
 	l := e.newOpenLink()
 	e.post(l.token, answers("A", "m"), photoPart(jpegOf(t, 1))).status(201, "")
 	e.do(l.owner, "DELETE", "/v1/yearbooks/"+l.book, "").status(204, "")
-	for _, q := range []string{`SELECT COUNT(*) FROM notes`, `SELECT COUNT(*) FROM note_photos`, `SELECT COUNT(*) FROM media_tab`} {
+	for _, q := range []string{`SELECT COUNT(*) FROM note_tab`, `SELECT COUNT(*) FROM note_photo_tab`, `SELECT COUNT(*) FROM media_tab`} {
 		if n := e.count(q); n != 0 {
 			t.Fatalf("%s = %d", q, n)
 		}

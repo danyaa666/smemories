@@ -11,7 +11,7 @@ import (
 )
 
 // QA T-065: the media -> media_tab migration with photos that are also cover, profile photo and note photo. Ids must survive
-// (the references are plain ids now), the note photo keeps its foreign key (cascade), a row added while migrated survives Down,
+// (the references are plain ids now), a row added while migrated survives Down,
 // and Up/Down/Up gives the same rows.
 func TestQAMigrateMediaTabReferencesAndNotePhotos(t *testing.T) {
 	ctx := context.Background()
@@ -43,27 +43,30 @@ func TestQAMigrateMediaTabReferencesAndNotePhotos(t *testing.T) {
 	exec(`INSERT INTO notes (public_id, collection_id, yearbook_id, answers, created_at) SELECT 'N1', c.id, c.yearbook_id, '{}', NOW(6) FROM note_collections c`)
 	exec(`INSERT INTO note_photos (note_id, media_id, position) SELECT n.id, m.id, 0 FROM notes n, media m WHERE m.public_id = 'M3'`)
 
-	const refsQ = `SELECT (SELECT cover_media_id FROM yearbook_tab WHERE public_id='B1'), (SELECT photo_media_id FROM profile_tab WHERE public_id='P1'),
-		(SELECT GROUP_CONCAT(media_id) FROM note_photos)`
-	refs := dump(t, ctx, d, refsQ)
+	refsQ := func(photos string) string {
+		return `SELECT (SELECT cover_media_id FROM yearbook_tab WHERE public_id='B1'), (SELECT photo_media_id FROM profile_tab WHERE public_id='P1'),
+		(SELECT GROUP_CONCAT(media_id) FROM ` + photos + `)`
+	}
+	refs := dump(t, ctx, d, refsQ("note_photos"))
 	idsOld := dump(t, ctx, d, `SELECT public_id, id FROM media ORDER BY id`)
 
 	if err := db.MigrateUp(ctx, d); err != nil {
 		t.Fatalf("up: %v", err)
 	}
 	equalLines(t, "ids after up", dump(t, ctx, d, `SELECT public_id, id FROM media_tab ORDER BY id`), idsOld)
-	equalLines(t, "refs after up", dump(t, ctx, d, refsQ), refs)
+	equalLines(t, "refs after up", dump(t, ctx, d, refsQ("note_photo_tab")), refs) // T-066 renamed note_photos
 	if got := dump(t, ctx, d, `SELECT created_at FROM media_tab WHERE public_id = 'M5'`); got[0] != "0" {
 		t.Fatalf("M5 (999 microseconds after the epoch) = %v ms, want 0", got)
 	}
 	if got := dump(t, ctx, d, `SELECT created_at FROM media_tab WHERE public_id = 'M1'`); got[0] != "1791376496999" {
 		t.Fatalf("M1 = %v", got)
 	}
-	// The note photo still cascades from its media row; the cover and profile references do not (cleared by the service).
+	// Since T-066 no foreign key is left: the note link, like the cover and profile references, is cleared by the services.
 	exec(`DELETE FROM media_tab WHERE public_id = 'M3'`)
-	if got := dump(t, ctx, d, `SELECT COUNT(*) FROM note_photos`); got[0] != "0" {
-		t.Fatalf("note_photos did not cascade: %v", got)
+	if got := dump(t, ctx, d, `SELECT COUNT(*) FROM note_photo_tab`); got[0] != "1" {
+		t.Fatalf("note_photo_tab cascaded without a foreign key: %v", got)
 	}
+	exec(`DELETE FROM note_photo_tab`)
 	exec(`DELETE FROM media_tab WHERE public_id = 'M2'`) // no FK: the profile keeps naming the id until ClearMediaRefs does it
 	exec(`DELETE FROM profile_tab`)
 	// A row written by the new code, and an orphan row that only the old foreign key would have prevented.
