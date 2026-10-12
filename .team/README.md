@@ -10,8 +10,9 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 28 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-077 |
-| TODO | 1 | T-078 |
+| BACKLOG | 27 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-067, T-068, T-069, T-070, T-071, T-072, T-073 |
+| TODO | 1 | T-077 |
+| IN_PROGRESS | 1 | T-078 |
 | QA_PASS | 1 | T-066 |
 | MERGED | 1 | T-065 |
 | DONE | 40 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-074, T-075, T-076 |
@@ -21,7 +22,7 @@
 
 **Open questions for you:** Q-028 (Approve merge of T-066 (E10: note collections and notes to the new DB conventions)?)
 
-_Board last written 2026-10-12 02:40Z_
+_Board last written 2026-10-12 02:45Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -1847,7 +1848,7 @@ Closed catalogue of note form fields (name, relationship, message, how we met, .
 - **Branch:** task/t-044-e08-templates-declare-note-fields-format
 - **PR:** https://github.com/danyaa666/smemories/pull/47
 - **Updated:** 2026-10-12 02:10Z by human
-- **Comments-seen:** 9
+- **Comments-seen:** 10
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E08-designer-templates/07-templates-declare-note-fields.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2222,7 +2223,7 @@ Sessions with native expiry in Redis, per-user index for delete-all, fail-closed
 - **Branch:** task/t-053-e02-rate-limiters-move-to-redis-shared-l
 - **PR:** https://github.com/danyaa666/smemories/pull/41
 - **Updated:** 2026-10-12 02:10Z by human
-- **Comments-seen:** 10
+- **Comments-seen:** 11
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/11-rate-limiters-in-redis.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2559,7 +2560,7 @@ Adds the tools the rest of E10 uses: the typed error package, the v2 envelope he
 - **Branch:** task/t-064-e10-db-conventions-yearbook-and-profile-
 - **PR:** https://github.com/danyaa666/smemories/pull/44
 - **Updated:** 2026-10-12 02:10Z by human
-- **Comments-seen:** 10
+- **Comments-seen:** 13
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/02-db-yearbook-profile.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2625,7 +2626,7 @@ Converts `yearbooks` and `profiles` to `yearbook_tab` and `profile_tab` per docs
 - **Branch:** task/t-065-e10-db-conventions-media-table
 - **PR:** https://github.com/danyaa666/smemories/pull/48
 - **Updated:** 2026-10-12 02:11Z by leader
-- **Comments-seen:** 3
+- **Comments-seen:** 7
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/03-db-media.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2668,7 +2669,7 @@ Converts `media` to `media_tab` (ms timestamps, no FK, no ENUM, print columns fr
 - **Branch:** task/t-066-e10-db-conventions-note-collections-and-
 - **PR:** https://github.com/danyaa666/smemories/pull/49
 - **Updated:** 2026-10-12 02:39Z by qa
-- **Comments-seen:** 1
+- **Comments-seen:** 3
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/04-db-notes.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2902,7 +2903,7 @@ T-034 QA finding: a shutdown or crash in the middle of an upload leaves a smem-u
 - **Branch:** task/t-075-e05-media-backfill-hardening
 - **PR:** https://github.com/danyaa666/smemories/pull/45
 - **Updated:** 2026-10-12 02:10Z by human
-- **Comments-seen:** 3
+- **Comments-seen:** 4
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/13-media-backfill-hardening.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2938,7 +2939,7 @@ T-057 QA findings: backfill config loader, stop after consecutive storage failur
 - **Branch:** task/t-076-e02-code-screens-polish-target-size-cool
 - **PR:** https://github.com/danyaa666/smemories/pull/46
 - **Updated:** 2026-10-12 02:10Z by human
-- **Comments-seen:** 5
+- **Comments-seen:** 6
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/12-code-screens-polish.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2955,7 +2956,7 @@ T-049 QA findings: resend button target size, cooldown restarts on reload, short
 - 2026-10-12 02:10Z · human · accepted by owner
 
 ### T-077 — [E01] Integration tests: set a timeout and cut the media package time
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2966,7 +2967,7 @@ T-049 QA findings: resend button target size, cooldown restarts on reload, short
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-11 06:50Z by leader
+- **Updated:** 2026-10-12 02:45Z by leader
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/13-integration-test-time-and-timeout.md`
@@ -2978,7 +2979,7 @@ Dev and QA hit the default 10-minute test timeout in internal/media (763-858 s o
 #### Comments
 
 ### T-078 — [E03] Yearbook reads: a book deleted mid-read is 404, not 500
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** bug
 - **Milestone:** M1
@@ -2986,10 +2987,10 @@ Dev and QA hit the default 10-minute test timeout in internal/media (763-858 s o
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** dev
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-12 02:11Z by leader
+- **Updated:** 2026-10-12 02:45Z by dev
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E03-yearbooks/07-read-race-with-delete.md`
