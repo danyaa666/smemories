@@ -12,16 +12,16 @@
 |---|---:|---|
 | BACKLOG | 25 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-069, T-070, T-071, T-072, T-073 |
 | TODO | 1 | T-079 |
-| READY_FOR_QA | 1 | T-068 |
-| QA_FAIL | 1 | T-067 |
+| IN_QA | 1 | T-068 |
+| MERGED | 1 | T-067 |
 | DONE | 44 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-074, T-075, T-076, T-077, T-078 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
 
-**Awaiting your review (MERGED):** nothing
+**Awaiting your review (MERGED):** T-067 ([E10] DB conventions: user and identity tables)
 
 **Open questions for you:** none
 
-_Board last written 2026-10-12 08:37Z_
+_Board last written 2026-10-12 09:02Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -2717,19 +2717,19 @@ Converts `note_collections` and the notes tables created by T-034 to the `_tab` 
 - 2026-10-12 06:44Z · human · accepted by owner
 
 ### T-067 — [E10] DB conventions: user and identity tables
-- **Status:** QA_FAIL
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
 - **Depends-on:** T-066, T-048, T-052
 - **Risk:** high
 - **Rework:** 1
-- **Owner-approved:** —
+- **Owner-approved:** yes
 - **Assignee:** —
 - **Branch:** task/t-067-e10-db-conventions-user-and-identity-tab
 - **PR:** https://github.com/danyaa666/smemories/pull/52
-- **Updated:** 2026-10-12 08:24Z by qa
-- **Comments-seen:** 3
+- **Updated:** 2026-10-12 09:02Z by leader
+- **Comments-seen:** 7
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/05-db-auth.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2749,21 +2749,25 @@ Converts `users` and `user_identities` (the sessions and email_tokens tables are
   Mechanical: go build, go vet (+integration tag), gofmt, golangci-lint 0 issues; go test -race ./... green; make test-integration (-timeout 30m) all 20 packages ok (auth 205s, notes 150s). Newman: auth 74 req, only the 20 Google-folder assertions fail (Google unconfigured, expected); yearbooks 92 req 0 fail; media 70 req 0 fail; notes 72 req/137 assertions 0 fail, run twice back to back.
   Non-blocking: Down would fail (MySQL ENUM narrowing, DDL not transactional) if a locale/provider outside en,vi/google ever existed; unreachable via the API (validated), only by hand-edited rows. created_at in the API loses microseconds (now ms), within RFC 3339.
 - 2026-10-12 08:24Z · leader · Leader: QA_FAIL is mechanical only (rework 1 of 2): run 'cd web && npm run gen:api' and commit web/src/api/schema.d.ts (the openapi description change users.locale -> user_tab.locale left it stale; CI web job is red on bea6e71), fix the stale comment at internal/auth/verify_reset_integration_test.go:533 (users.locale), then make lint build test, push, confirm all 4 GitHub checks are green on the new head, READY_FOR_QA. Everything else QA probed passed (migration round trip on 38 users/20 identities, no FK left in the schema, Google concurrency x12, dbtest planted checks). QA's test file user_tab_qa_integration_test.go is on the branch: keep it.
+- 2026-10-12 08:48Z · dev · Rework 1: regenerated web/src/api/schema.d.ts (npm run gen:api, 1 description line), fixed users.locale comment at verify_reset_integration_test.go:533; QA's user_tab_qa_integration_test.go kept. make lint build test green locally; head 8242ac8: all 4 GitHub checks green (web job had one unrelated flake in codes.test.tsx forgot-password focus assertion on first run, passed on rerun and 6x locally).
+- 2026-10-12 08:57Z · qa · Regression on head 8242ac8 (rework 1). Evidence: (1) gh pr checks 52: go, go-integration, security, web all pass. (2) cd web && npm run check:api -> 'api schema ok'. (3) diff vs develop = 26 files, all T-067 (migration, internal/{auth,db,media,notes,yearbook}, Makefile verify-newman-users, openapi/schema.d.ts/postman description renames users->user_tab, my QA test); rework delta 78d2b0b..8242ac8 is only schema.d.ts + the comment line. (4) make lint build test green. (5) Migration Up/Down/Up: go test -tags integration ./internal/db -run 'UserTab|MigrateUserTab' -> TestMigrateUserTabConventions + TestQAUserTabBulkRoundTrip PASS. (6) codes.test.tsx: 20 sequential runs 38/38 pass each, plus 6 parallel loops x3 under CPU contention (18 runs) all pass: 38 runs, 0 failures, so no flake reproduced; dev's single CI failure (forgot-password focus assertion) looks like a rare timing issue on a slow runner, non-blocking. Previous full evidence (AC1-AC4, integration suites, newman) stands from first QA note; the changed lines cannot affect it.
+- 2026-10-12 09:02Z · human · owner approved merge
+- 2026-10-12 09:02Z · leader · merged a02a7ca. Review: users/user_identities -> user_tab/user_identity_tab (BIGINT ms, VARCHAR locale/provider, updated_at on identities, binary email collation kept, last foreign key dropped: no FK left in the schema), explicit userTables list in the zero-rows test, v1 JSON shape pinned. QA: 38-user/20-identity round trip, Google concurrency x12, planted checks. Database conversion lane (T-064..T-067) is complete. For owner to check: run make migrate on your dev DB. Next: T-068 (notes API, in QA), T-069 media API, T-070 yearbook API, T-071 auth API.
 
 ### T-068 — [E10] API v2: notes domain (collections, public lookup and submission) with a service layer
-- **Status:** READY_FOR_QA
+- **Status:** IN_QA
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
 - **Depends-on:** T-063, T-066
 - **Risk:** high
 - **Rework:** 0
-- **Owner-approved:** —
-- **Assignee:** —
+- **Owner-approved:** yes
+- **Assignee:** qa
 - **Branch:** task/t-068-e10-api-v2-notes-domain-collections-publ
 - **PR:** https://github.com/danyaa666/smemories/pull/53
-- **Updated:** 2026-10-12 08:36Z by dev
-- **Comments-seen:** 2
+- **Updated:** 2026-10-12 08:57Z by qa
+- **Comments-seen:** 3
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/06-api-notes.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2774,6 +2778,8 @@ Moves the notes endpoints to /api/note-collection/* and /api/public-collect/*, i
 #### Comments
 - 2026-10-12 08:36Z · dev · Notes v2: 5 routes /api/note-collection/{create,get-list,revoke}, /api/public-collect/{get,submit-note}; notes.Service + fake-store unit tests; apperr/envelope/ms; openapi lint ok; Postman newman 74 req/141 asserts ok; schema.d.ts regenerated; docs paths. Behaviour change to review: submit token is a multipart field so the link is resolved after the body spool (PR section Design notes). No web call existed to convert. Test: go test -race -tags integration ./internal/notes.
 - 2026-10-12 08:37Z · leader · Leader review of dev's 'please review' points: (1) submit token as a multipart field is NOT accepted: it makes unknown/revoked-token requests spool up to 32 MiB before any check, undoing T-034's DoS design. Decision: token is the query parameter POST /api/public-collect/submit-note?token=..., link resolved BEFORE spooling, counters (public_all/public_misses) and the honeypot order exactly as in T-034 (honeypot only after a valid token). docs/api-contract.md and the spec are updated. (2) flat data for create/submit and unpaged get-list {items, next_id:''}: accepted. Add a test that an unknown token with a 20 MiB body is answered 404 without reading/spooling it (spool dir stays empty, connection not held) and that the token never reaches logs. Re-run everything, push, confirm CI, keep READY_FOR_QA (QA has not started: not a rework).
+- 2026-10-12 08:48Z · dev · Dev: token moved to the query (POST /api/public-collect/submit-note?token=). Resolve runs before content-type/spool; NotFound is answered on the raw writer (no drain, body unread), other early rejections still drain. New test TestUnknownTokenIsAnsweredWithoutReadingTheBody (20 MiB body: 0 bytes read, spool empty, 404 over a real socket mid-upload, token not in logs; fails without the change). openapi (token query param, lint green), Postman (21 submit requests converted), schema.d.ts, docs/media.md, note-fields.md updated; merged develop for the api-contract row. make lint build test + go test -race -tags integration ./internal/notes green. NOT done: newman re-run (no dev env access) - QA please run postman/notes. Also removed a stray web/node_modules symlink that my first commit had added (net PR diff clean).
+- 2026-10-12 09:02Z · human · owner approved merge
 
 ### T-069 — [E10] API v2: media domain
 - **Status:** BACKLOG
