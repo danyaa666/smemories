@@ -22,8 +22,8 @@ Short text is one line; long text may contain `\n`. The default set (`Default()`
 `relationship` (optional), `message` (required). Photos are separate (up to three per note), and no
 personal-data field (phone, birthday, address, social handles) belongs in the catalogue.
 
-The form is read with `GET /api/public-collect/get?token=` (`data.fields`) and answered with `POST /api/public-collect/submit-note` (multipart
-fields `token`, `answers` as a JSON object of field id to text, up to three `photos`). A rejected answer is `ERROR_MISSING_ANSWER` or
+The form is read with `GET /api/public-collect/get?token=` (`data.fields`) and answered with `POST /api/public-collect/submit-note?token=` (multipart
+fields `answers` as a JSON object of field id to text, up to three `photos`). A rejected answer is `ERROR_MISSING_ANSWER` or
 `ERROR_INVALID_ANSWER` (the message names the field id, never the value); an id that is not in the form is `ERROR_PARAM`.
 
 ## Adding a field

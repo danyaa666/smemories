@@ -949,14 +949,16 @@ paths:
       tags: [notes]
       summary: Submit a note through a collection link (public)
       description: >-
-        Called by the public note form (a friend's browser). A friend sends the link `token`, answers to the form fields (`fields` of
-        the lookup) and up to three photos, without an account, as `multipart/form-data`. The token is a form field, not part of the
-        URL. The note is stored as `pending` for the owner to moderate; nothing about it is returned except its id. No session is read,
+        Called by the public note form (a friend's browser). A friend sends answers to the form fields (`fields` of
+        the lookup) and up to three photos, without an account, as `multipart/form-data`; the link `token` is the query parameter
+        `token` (the one exception to "parameters go in the body": the link is checked before the body is read, so a request with an
+        unknown token costs no disk and no connection time). The note is stored as `pending` for the owner to moderate; nothing about it is returned except its id. No session is read,
         no cookie is set, no CORS headers are sent, and neither the client IP nor the user agent is stored. The body is spooled to a
         temporary file on the server while it arrives (nothing is decoded and no image-processing slot is held during the upload); the
-        server removes the file in every case. The link, the note limit and the text are checked once the body has arrived, and a
-        rejection (`ERROR_NOT_FOUND` for an unknown, malformed, missing or revoked token, `ERROR_COLLECTION_CLOSED` after the deadline,
-        `ERROR_PARAM`, `ERROR_RATE_LIMITED`) is sent only after the rest of the body has been read, so a browser can show it. Send
+        server removes the file in every case. The link is resolved first: `ERROR_NOT_FOUND` for an unknown, malformed, missing or revoked token is answered at once without
+        reading the body (a client that is still uploading may see the connection reset instead of the answer). The other rejections
+        (`ERROR_COLLECTION_CLOSED` after the deadline, `ERROR_RATE_LIMITED`, then the note limit and the text: `ERROR_PARAM`, ...) are sent
+        only after the rest of the body has been read, so a browser can show them. Send
         `answers` before the first `photos` part (otherwise `ERROR_PARAM`). Unknown parts are ignored. A body that delivers no byte for 10
         seconds, or averages under 16 KiB/s once 15 seconds have passed, or takes over 120 seconds, is dropped (`ERROR_REQUEST_TIMEOUT`,
         nothing stored).
@@ -996,6 +998,8 @@ paths:
         - {code: ERROR_BUSY, description: "The upload slots or the image-processing slots are full; retry after `Retry-After`."}
         - {code: ERROR_STORAGE_ERROR, description: The object store failed; nothing was kept, retry later.}
       security: []
+      parameters:
+        - {name: token, in: query, required: true, schema: {type: string}, description: The link token, a bearer secret of 32 base64url characters. Never logged.}
       requestBody:
         required: true
         content:
@@ -1003,7 +1007,7 @@ paths:
             schema: {$ref: "#/components/schemas/PublicCollectSubmitNoteRequest"}
             examples:
               textOnly:
-                value: {token: q3Zp0Vn8xYk2LwR5tB7mJc9aHdE4sUgF, answers: '{"name":"Linh","message":"Nhớ các bạn nhiều 🎓"}'}
+                value: {answers: '{"name":"Linh","message":"Nhớ các bạn nhiều 🎓"}'}
       responses:
         "200":
           description: Stored as pending.
@@ -1484,9 +1488,8 @@ components:
         vi: {type: string, description: Vietnamese text.}
     PublicCollectSubmitNoteRequest:
       type: object
-      required: [token, answers]
+      required: [answers]
       properties:
-        token: {type: string, description: Required. The link token (32 base64url characters); the first `token` part counts.}
         answers:
           type: string
           description: >-
