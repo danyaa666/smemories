@@ -149,6 +149,7 @@ type env struct {
 
 func newEnv(t *testing.T) *env {
 	t.Helper()
+	t.Parallel() // T-077: every env has its own database, Redis prefix, ULID-keyed objects and processing semaphore, so tests never share state
 	d := dbtest.New(t)
 	e := &env{t: t, db: d, st: &flaky{Storage: storagetest.New(t), keys: map[string]bool{}}}
 	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))

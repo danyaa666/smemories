@@ -65,7 +65,8 @@ jobs:
 
   go-integration:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    # T-077: above `make test-integration`'s -timeout 30m plus the service start-up, so a hang ends in Go's goroutine dump, not in a cancelled job.
+    timeout-minutes: 40
     env:
       # Throwaway MySQL on the runner, reachable only from the runner. Obviously fake, not a secret.
       SMEM_TEST_DB_DSN: root:ci-only-fake-root-pw@tcp(127.0.0.1:3306)/smemories

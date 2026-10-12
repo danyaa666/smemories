@@ -13,7 +13,8 @@ import (
 	"testing"
 )
 
-func bigPhoto(t *testing.T) []byte { return jpegWith(t, quad(2600, 1300, false)) }
+// bigPhoto is just wider than the 1800 px print edge, so the print version is a real downscale of the display (T-077: 2600 px was more pixels than that needs).
+func bigPhoto(t *testing.T) []byte { return jpegWith(t, quad(2000, 1000, false)) }
 
 func (e *env) width(u user, id, size string) (int, string) {
 	r := e.json(u, "GET", "/v1/media/"+id+"/content?size="+size, "").status(200, "")
@@ -40,7 +41,7 @@ func TestUploadStoresPrintVersion(t *testing.T) {
 	}
 	pw, petag := e.width(u, id, "print")
 	dw, detag := e.width(u, id, "display")
-	if pw != 1800 || dw != 2600 || petag == detag {
+	if pw != 1800 || dw != 2000 || petag == detag {
 		t.Fatalf("print %d px %s, display %d px %s", pw, petag, dw, detag)
 	}
 	got := e.json(u, "GET", "/v1/media/"+id+"/content?size=print", "").status(200, "")
@@ -102,7 +103,7 @@ func TestBackfillPrint(t *testing.T) {
 
 	// Until then print falls back to display, with the display ETag.
 	w, etag := e.width(u, a, "print")
-	if _, detag := e.width(u, a, "display"); w != 2600 || etag != detag {
+	if _, detag := e.width(u, a, "display"); w != 2000 || etag != detag {
 		t.Fatalf("fallback served %d px (%s, display %s)", w, etag, detag)
 	}
 

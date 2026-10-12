@@ -72,8 +72,10 @@ migrate-down:
 	go run ./cmd/smemories-migrate down
 
 # Needs `make up` first.
+# -timeout 30m (T-077): Go's default is 10m per package, and internal/media took 763-858 s on a loaded machine before its tests ran in parallel;
+# a slow machine must fail on a real hang, not on the default.
 test-integration:
-	go test -race -count=1 -tags integration ./...
+	go test -race -count=1 -timeout 30m -tags integration ./...
 
 # Marks the Newman test accounts A and B of postman/notes.postman_collection.json as email-verified (the dev mail only goes to the API's stdout).
 .PHONY: verify-newman-users
