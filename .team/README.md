@@ -11,7 +11,8 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 24 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-070, T-071, T-072, T-080 |
-| TODO | 3 | T-069, T-073, T-079 |
+| TODO | 2 | T-073, T-079 |
+| READY_FOR_QA | 1 | T-069 |
 | MERGED | 1 | T-068 |
 | DONE | 45 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-074, T-075, T-076, T-077, T-078 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
@@ -20,7 +21,7 @@
 
 **Open questions for you:** none
 
-_Board last written 2026-10-12 14:09Z_
+_Board last written 2026-10-12 16:08Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -2830,7 +2831,7 @@ Moves the notes endpoints to /api/note-collection/* and /api/public-collect/*, i
 - 2026-10-12 14:09Z · leader · merged 1dfffac. Review: 5 routes /api/note-collection/*, /api/public-collect/*; notes.Service + apperr + v2 envelope; token in query so unknown/revoked/full links are answered before the body is read (20 MiB tests, spool empty); T-034 protections re-verified live by QA; Newman 141 assertions x2. For owner to check: a full link now answers 409 on the raw writer, so a browser may show a reset instead of the message (T-080 fixes it); the web has no call to these routes yet (T-018).
 
 ### T-069 — [E10] API v2: media domain
-- **Status:** TODO
+- **Status:** READY_FOR_QA
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2839,9 +2840,9 @@ Moves the notes endpoints to /api/note-collection/* and /api/public-collect/*, i
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-12 14:09Z by leader
+- **Branch:** task/t-069-e10-api-v2-media-domain
+- **PR:** https://github.com/danyaa666/smemories/pull/54
+- **Updated:** 2026-10-12 15:51Z by dev
 - **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/07-api-media.md`
@@ -2852,6 +2853,9 @@ Moves the media endpoints to /api/media/* (multipart create, binary get-content)
 
 #### Comments
 - 2026-10-12 14:09Z · leader · T-065 done, T-068 merged: unblocked. Spec note: route timeout must fit WriteTimeout. Keep media/get-content binary (no success envelope).
+- 2026-10-12 15:51Z · dev · Decisions to confirm: (1) next_id key is derived from SMEM_OTP_KEY (HMAC label), no new env var; T-070 reuses httpx.Cursors. (2) Storage code is ERROR_STORAGE_ERROR (as in notes and the web locale), not ERROR_STORAGE. (3) get-list keeps the optional uploader filter (owner default) and drops uploader_kind from items.
+- 2026-10-12 15:51Z · dev · Media v2 done: 4 routes under /api/media, thin handler, apperr, signed page tokens, per-route deadlines with real-server test. Tests: full integration suite + lint green, vitest 133, newman 75 req/0 failed. See PR #54 for changed existing tests. Gap: none known.
+- 2026-10-12 16:08Z · leader · Leader answers to dev's 3 points: (1) cursor key derived from SMEM_OTP_KEY with a domain label (HMAC-SHA256 of 'smemories/cursor/v1') + AES-GCM with the scope as AAD: accepted; key separation holds, rotation only restarts lists. QA: check a token from another yearbook/endpoint and a bit-flipped token give 400 ERROR_PARAM, and that no internal numeric id appears in next_id. (2) ERROR_STORAGE_ERROR (matches notes + web locale keys): accepted, spec 07 corrected. (3) dropping uploader_kind from get-list items: accepted (nothing in web reads it; the default filter is owner). QA focus: get-content stays binary (Content-Type, Cache-Control, no envelope on success; v2 JSON envelope + no-store on errors), per-route timeout + write deadline fit (slow 8 MiB upload must not be cut at 30 s WriteTimeout), /v1 media routes 404, T-034 note-photo storage untouched, web upload/library/pickers work against the new routes (Newman media x2 + a manual web smoke if possible). Risk:high: after QA_PASS I review and wait for the owner's approve.
 
 ### T-070 — [E10] API v2: yearbook domain with a service layer
 - **Status:** BACKLOG
