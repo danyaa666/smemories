@@ -18,7 +18,7 @@ Move the media endpoints to `/api/media/*`: multipart `create`, `get-list`, bina
 - [ ] AC1 — Contract lint passes for the four operations; multipart and binary responses documented (content types, `variant` enum values explained).
 - [ ] AC2 — All existing media integration tests pass with only path/envelope/code/time changes (listed in the PR); upload caps (size, pixels, concurrency, slow body) unchanged.
 - [ ] AC3 — Web: upload (XHR progress), photo library, cover and profile photo pickers use the new paths; `<img src="/api/media/get-content?id=...&variant=thumb">`; no screen changes; vitest updated.
-- [ ] AC4 — `media.Service` is free of `net/http`; storage and DB errors are `apperr` (`ERROR_STORAGE` 502 = `BadGateway` family, listed in `x-error-codes`).
+- [ ] AC4 — `media.Service` is free of `net/http`; storage and DB errors are `apperr` (`ERROR_STORAGE_ERROR` 502 = `BadGateway` family, listed in `x-error-codes`).
 - [ ] AC5 — Postman, openapi, `docs/media.md` paths updated.
 
 #### Risk
