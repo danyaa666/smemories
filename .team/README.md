@@ -10,17 +10,17 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 25 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-069, T-070, T-071, T-072, T-080 |
-| TODO | 2 | T-073, T-079 |
-| IN_QA | 1 | T-068 |
+| BACKLOG | 24 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-070, T-071, T-072, T-080 |
+| TODO | 3 | T-069, T-073, T-079 |
+| MERGED | 1 | T-068 |
 | DONE | 45 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-074, T-075, T-076, T-077, T-078 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
 
-**Awaiting your review (MERGED):** nothing
+**Awaiting your review (MERGED):** T-068 ([E10] API v2: notes domain (collections, public lookup and submission) with a service layer)
 
 **Open questions for you:** none
 
-_Board last written 2026-10-12 13:28Z_
+_Board last written 2026-10-12 14:09Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -2755,7 +2755,7 @@ Converts `users` and `user_identities` (the sessions and email_tokens tables are
 - 2026-10-12 09:04Z · human · accepted by owner
 
 ### T-068 — [E10] API v2: notes domain (collections, public lookup and submission) with a service layer
-- **Status:** IN_QA
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2763,11 +2763,11 @@ Converts `users` and `user_identities` (the sessions and email_tokens tables are
 - **Risk:** high
 - **Rework:** 1
 - **Owner-approved:** yes
-- **Assignee:** qa
+- **Assignee:** —
 - **Branch:** task/t-068-e10-api-v2-notes-domain-collections-publ
 - **PR:** https://github.com/danyaa666/smemories/pull/53
-- **Updated:** 2026-10-12 13:28Z by qa
-- **Comments-seen:** 6
+- **Updated:** 2026-10-12 14:09Z by leader
+- **Comments-seen:** 10
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/06-api-notes.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2816,9 +2816,21 @@ Moves the notes endpoints to /api/note-collection/* and /api/public-collect/*, i
 - 2026-10-12 09:10Z · leader · Leader review of head 4d5401d: code and QA evidence accepted, but PR #53 is CONFLICTING with develop (T-067 merged). Blocking: 1) Merge origin/develop into the branch. The only conflict is the one-line 'description' in postman/notes.postman_collection.json: keep develop's SQL (UPDATE user_tab SET email_verified_at = UNIX_TIMESTAMP(NOW(3)) * 1000 WHERE email IN (...)) and keep this branch's v2 content everywhere else. 2) Restore T-034 order for ERROR_COLLECTION_FULL (QA observation 1): the full-link check (noteCount) must run right after Resolve and BEFORE the body is spooled (e.g. Service.CheckOpen(p) called in submit() before content-type/spool), so a full link answers 409 ERROR_COLLECTION_FULL without reading the body, and the honeypot still answers 200 only after the full check passes, as in T-034. Add a test (full link + large body: 409, 0 bytes read, spool dir empty). 3) After the merge re-run make lint build test, go test -race -tags integration ./internal/notes ./api, check:api, confirm CI green on the exact head, then READY_FOR_QA. Nothing else changes; the owner already approved the merge of T-068, so it merges right after QA re-passes. This is rework 1 of 2.
 - 2026-10-12 13:27Z · dev · Rework 1 on head 59d8d25, CI all green, PR MERGEABLE. (1) Merged origin/develop; only conflict was the Postman description, kept develop's SQL (user_tab, UNIX_TIMESTAMP(NOW(3))*1000) and v2 text. (2) New Service.CheckOpen called in submit() right after Resolve, before content-type/spool: a full link answers 409 ERROR_COLLECTION_FULL on the raw writer (body unread, no drain, like unknown token); honeypot on a full link is 409, honeypot only after the full check. SubmitNote keeps its own check for the race. Test: TestFullLinkIsAnsweredWithoutReadingTheBody (20 MiB body: 0 bytes read, spool empty, honeypot on full link 409, still 300 notes). Note: T-034 drained the body before a 409 full; I used the raw writer because the leader asked for 0 bytes read - a browser may show a reset instead of the message on a full link; say if you want drain back. Ran: make lint build test, go test -race -tags integration ./internal/notes ./api, check:api all green.
 - 2026-10-12 13:27Z · leader · Leader: raw-writer 409 on a full link accepted for this PR (0 bytes read is what I asked for); the browser-reset side effect becomes a P3 follow-up, not a reason to hold. QA: head is 59d8d25 (merge of develop + CheckOpen before spool + TestFullLinkIsAnsweredWithoutReadingTheBody). Re-verify: the conflict resolution (postman description keeps user_tab SQL), full link + large body = 409 with 0 bytes read and empty spool, honeypot on full link = 409, valid-token happy path still spools and returns 200, plus a full re-run of the earlier checklist items that the merge of develop could touch (go-integration, Newman notes x2). Also confirm the new test fails on 4d5401d order (revert CheckOpen locally) so it guards the order.
+- 2026-10-12 14:08Z · qa · QA_PASS on head 59d8d25 (PR #53, rework 1). All evidence from my own runs; API built from the branch on a fresh migrated DB (own Redis db 7, own spool dir, MinIO).
+  Re-verify list from leader:
+  - CI on exact head: go, go-integration, security, web all pass; PR MERGEABLE.
+  - Postman conflict resolution: notes collection description keeps develop's SQL (UPDATE user_tab SET email_verified_at = UNIX_TIMESTAMP(NOW(3)) * 1000 WHERE email IN (...)) and v2 text; Makefile verify-newman-users unchanged vs develop.
+  - Full link (300 notes) + 20 MiB multipart body: 409 ERROR_COLLECTION_FULL in 6 ms, curl uploaded 0 bytes, spool dir empty, note count stays 300.
+  - Honeypot (website field) on a full link: 409 ERROR_COLLECTION_FULL (not 200). Small valid post on a full link: 409.
+  - Happy path: 299 notes -> valid post 200 with note id (the 300th is accepted, the 301st is 409); valid post with a real JPEG on a fresh link -> 200, spool dir empty afterwards. Unknown token + 20 MiB body: 404 in 3 ms, 0 bytes uploaded (T-034/T-068 first rework behaviour intact). Token string not in the debug log (grep count 0).
+  - Guard test: with CheckOpen removed from submit() locally, TestFullLinkIsAnsweredWithoutReadingTheBody FAILS (status 400 ERROR_PARAM, want 409); restored, it passes together with TestUnknownTokenIsAnsweredWithoutReadingTheBody. Worktree clean afterwards.
+  Mechanical: make lint build test exit 0 (web 133 tests ok). go test -race -count=1 -tags integration ./... : all packages ok (auth 179s, notes 146s, yearbook 78s, db 82s, media 59s, pdf 53s). 
+  Newman: postman/notes run twice back to back (Setup once, verify users via the SQL, --working-dir ., baseUrl overridden): 74 requests / 141 assertions / 0 failed on both runs.
+  Non-blocking: (1) CheckOpen now runs before the Content-Type/boundary checks (T-034 ran them first), so a full link with a non-multipart body answers 409 instead of 415/400; harmless. (2) Raw-writer 409 means no body drain: browsers may show a connection reset instead of the message on a full link (leader already logged as P3 follow-up). I added no test files. Cleaned up: API stopped, test DB dropped, Redis db 7 flushed.
+- 2026-10-12 14:09Z · leader · merged 1dfffac. Review: 5 routes /api/note-collection/*, /api/public-collect/*; notes.Service + apperr + v2 envelope; token in query so unknown/revoked/full links are answered before the body is read (20 MiB tests, spool empty); T-034 protections re-verified live by QA; Newman 141 assertions x2. For owner to check: a full link now answers 409 on the raw writer, so a browser may show a reset instead of the message (T-080 fixes it); the web has no call to these routes yet (T-018).
 
 ### T-069 — [E10] API v2: media domain
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2829,8 +2841,8 @@ Moves the notes endpoints to /api/note-collection/* and /api/public-collect/*, i
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-12 14:09Z by leader
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/07-api-media.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2839,6 +2851,7 @@ Moves the notes endpoints to /api/note-collection/* and /api/public-collect/*, i
 Moves the media endpoints to /api/media/* (multipart create, binary get-content), v2 envelope and codes, openapi, Postman, web upload and photo library.
 
 #### Comments
+- 2026-10-12 14:09Z · leader · T-065 done, T-068 merged: unblocked. Spec note: route timeout must fit WriteTimeout. Keep media/get-content binary (no success envelope).
 
 ### T-070 — [E10] API v2: yearbook domain with a service layer
 - **Status:** BACKLOG
@@ -3181,4 +3194,4 @@ T-068 answers a full public link on the raw writer without reading the body; a f
 - 2026-10-09 — Owner asked for task codes with the epic prefix. `board.py` hard-codes `T-nnn` (headings, dependencies, branches), so ids are unchanged; every title now starts with `[E##]`, spec headers read `# E##_T-nnn`, and `.team/TASKS.md` lists tasks by epic as `E##_T-nnn` (tool: `.team/epic_index.py`).
 - 2026-10-09 — T-062 (CI takes the newest Go patch from go.dev; owner-approved, merged 0c1e2d4) and T-063 (E10 foundation: apperr, v2 helpers, timeout and client-IP middleware, contract lint; merged bb5143f) merged; both await owner acceptance. The required `security` job had been red on every PR because setup-go lagged Go 1.26.9; T-062 fixed it. T-063's QA found no issues; T-062 needed one rework (malformed go.dev answer aborted the step).
 - 2026-10-10 — Owner approved T-052, T-057, T-053, T-049. Merged: T-052 (35298e1, sessions in Redis, migration 0012), T-057 (487555d, print-size photos, migration 0013), T-049 (b835af9, web code screens). T-053 conflicted with develop and went back to dev for a mechanical merge plus the openapi 503 fix. E10 database lane started: T-064 is TODO. Follow-ups created: T-074 (done), T-075 (backfill hardening), T-076 (code screens polish); T-055 cancelled and folded into T-069/T-070.
-
+- 2026-10-12 — T-068 (API v2 notes, PR #53) merged 1dfffac after rework 1 (conflict with T-067, full-link check restored before the body is spooled); T-080 added (P3) for the browser reset on a full link; T-069 promoted to TODO; T-073 promoted to TODO.
