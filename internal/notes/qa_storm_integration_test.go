@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -178,6 +179,11 @@ func TestQAStormBookDelete(t *testing.T) {
 	}
 	t.Logf("status codes: %v; landed before delete: %d; 404/410 seen: %d", seen, landed.Load(), gone.Load())
 	if bad5xx.Load() != 0 {
+		for _, l := range strings.Split(e.logs.String(), "\n") { // the server's own account of each failure
+			if strings.Contains(l, `"level":"ERROR"`) {
+				t.Log(l)
+			}
+		}
 		t.Fatalf("%d 5xx / errors", bad5xx.Load())
 	}
 	dbtest.AssertNoOrphans(t, e.db)
