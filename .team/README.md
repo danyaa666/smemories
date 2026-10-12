@@ -11,8 +11,9 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 25 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-069, T-070, T-071, T-072, T-073 |
-| TODO | 2 | T-068, T-079 |
-| READY_FOR_QA | 1 | T-067 |
+| TODO | 1 | T-079 |
+| READY_FOR_QA | 1 | T-068 |
+| QA_FAIL | 1 | T-067 |
 | DONE | 44 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-074, T-075, T-076, T-077, T-078 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
 
@@ -20,7 +21,7 @@
 
 **Open questions for you:** none
 
-_Board last written 2026-10-12 08:15Z_
+_Board last written 2026-10-12 08:37Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -2716,19 +2717,19 @@ Converts `note_collections` and the notes tables created by T-034 to the `_tab` 
 - 2026-10-12 06:44Z · human · accepted by owner
 
 ### T-067 — [E10] DB conventions: user and identity tables
-- **Status:** READY_FOR_QA
+- **Status:** QA_FAIL
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
 - **Depends-on:** T-066, T-048, T-052
 - **Risk:** high
-- **Rework:** 0
+- **Rework:** 1
 - **Owner-approved:** —
 - **Assignee:** —
 - **Branch:** task/t-067-e10-db-conventions-user-and-identity-tab
 - **PR:** https://github.com/danyaa666/smemories/pull/52
-- **Updated:** 2026-10-12 04:53Z by dev
-- **Comments-seen:** 1
+- **Updated:** 2026-10-12 08:24Z by qa
+- **Comments-seen:** 3
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/05-db-auth.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2738,9 +2739,19 @@ Converts `users` and `user_identities` (the sessions and email_tokens tables are
 
 #### Comments
 - 2026-10-12 04:53Z · dev · Migration 20261012120000 + auth/store ms; dbtest registry gets user pairs; zero-rows test now uses explicit userTables list and asserts account survives book delete. make test-integration all green. QA: Down/Up with identities, Google race (T-047), email case/accent. T-025 note verified present in E06 spec 05.
+- 2026-10-12 08:24Z · qa · 1 BLOCKER (red CI, mechanical): PR #52 check 'web' fails on head bea6e71 (run 38205607046). Cause: the PR edits a description in api/openapi.yaml (line ~109: users.locale -> user_tab.locale) but web/src/api/schema.d.ts (generated from it) was not regenerated; it still says `users.locale` at line 963. Repro: cd web && npm ci && npm run check:api -> 'src/api/schema.d.ts is stale: run npm run gen:api and commit the result' (also part of 'make lint'). Fix: run 'npm run gen:api' in web/ and commit web/src/api/schema.d.ts (only that description line should change). Minor, non-blocking: internal/auth/verify_reset_integration_test.go:533 comment still says users.locale.
+  Everything else PASSED (evidence, my own runs on bea6e71, so after the fix only a re-check of CI + check:api is needed):
+  AC1 migration: new internal/db/user_tab_qa_integration_test.go (committed, task branch) TestQAUserTabBulkRoundTrip: 38 users (random instants -100000s..2106, microsecond digits, verified/unverified, NULL password hash, accent/case emails e/é/E/É/ë/ê/ß/İ/ı/fullwidth, vi+en locales, 19 identities + user with 2 identities) Up -> values equal old DATETIME DIV 1000; Down -> identical to original rows, column types/collation/comment/defaults of untouched columns and all indexes identical to pre-migration; Up again identical. Binary collation survives: case/accent twins of an existing email are accepted, exact duplicate email and duplicate public_id rejected. Dev test TestMigrateUserTabConventions also green (1969 -> -877 truncation, 2106, 2038).
+  Schema: information_schema TABLE_CONSTRAINTS FOREIGN KEY = 0 rows in the migrated schema; no datetime/timestamp/enum columns (only profile_tab.birthday DATE, pre-existing); no reserved-word column names; unique keys uq_user_tab_public_id, uq_user_tab_email, uq_user_identity_provider_subject and idx_user_id present; updated_at has no leftover default; locale default 'en' kept.
+  AC2 auth live (API built from branch on a fresh migrated DB): register (201, created_at RFC 3339 '2026-10-12T08:19:41.07Z'), locale 'fr' -> 400 invalid_locale, same email with other case -> 409 email_taken, e@ and é@ distinct accounts, login, /v1/me identical shape, verify-email wrong code 400 / 123123 204 (email_verified_at stored as ms), logout then /v1/me 401, forgot+reset-password 204, old password rejected, new works. Provider is the literal 'google' in SQL, locale validated in Go. TestUserJSONKeepsV1Shape green. Google: TestGoogleConcurrentCallbacksCreateOneAccount -count=12 -race green; all Google*/pre-hijack tests green; TestGoogleConcurrentCallbacksStress green.
+  AC3 dbtest: orphan pairs include user_identity_tab.user_id and yearbook_tab.owner_id -> user_tab, planted-orphan test green. I planted a missing user table in userTables (user_zzz_tab) in TestDeleteBookLeavesNoRows -> fails with 'user table user_zzz_tab is missing: update userTables' (reverted). Book delete keeps user_tab count (asserted).
+  AC4: git grep FOREIGN KEY|DATETIME|TIMESTAMP|ENUM( in migrations/internal: only old migrations, the new migration (Down) and migration tests; every SQL string uses the new names (grep for users/user_identities over the tree: only old migrations, prose, the sql-injection test payload); PR body has SHOW CREATE TABLE; T-025 note present in E06 spec 05.
+  Mechanical: go build, go vet (+integration tag), gofmt, golangci-lint 0 issues; go test -race ./... green; make test-integration (-timeout 30m) all 20 packages ok (auth 205s, notes 150s). Newman: auth 74 req, only the 20 Google-folder assertions fail (Google unconfigured, expected); yearbooks 92 req 0 fail; media 70 req 0 fail; notes 72 req/137 assertions 0 fail, run twice back to back.
+  Non-blocking: Down would fail (MySQL ENUM narrowing, DDL not transactional) if a locale/provider outside en,vi/google ever existed; unreachable via the API (validated), only by hand-edited rows. created_at in the API loses microseconds (now ms), within RFC 3339.
+- 2026-10-12 08:24Z · leader · Leader: QA_FAIL is mechanical only (rework 1 of 2): run 'cd web && npm run gen:api' and commit web/src/api/schema.d.ts (the openapi description change users.locale -> user_tab.locale left it stale; CI web job is red on bea6e71), fix the stale comment at internal/auth/verify_reset_integration_test.go:533 (users.locale), then make lint build test, push, confirm all 4 GitHub checks are green on the new head, READY_FOR_QA. Everything else QA probed passed (migration round trip on 38 users/20 identities, no FK left in the schema, Google concurrency x12, dbtest planted checks). QA's test file user_tab_qa_integration_test.go is on the branch: keep it.
 
 ### T-068 — [E10] API v2: notes domain (collections, public lookup and submission) with a service layer
-- **Status:** TODO
+- **Status:** READY_FOR_QA
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2749,10 +2760,10 @@ Converts `users` and `user_identities` (the sessions and email_tokens tables are
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-12 04:44Z by leader
-- **Comments-seen:** 0
+- **Branch:** task/t-068-e10-api-v2-notes-domain-collections-publ
+- **PR:** https://github.com/danyaa666/smemories/pull/53
+- **Updated:** 2026-10-12 08:36Z by dev
+- **Comments-seen:** 2
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/06-api-notes.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2761,6 +2772,8 @@ Converts `users` and `user_identities` (the sessions and email_tokens tables are
 Moves the notes endpoints to /api/note-collection/* and /api/public-collect/*, introduces notes.Service, apperr and the v2 envelope, updates openapi, Postman, the web calls and tests.
 
 #### Comments
+- 2026-10-12 08:36Z · dev · Notes v2: 5 routes /api/note-collection/{create,get-list,revoke}, /api/public-collect/{get,submit-note}; notes.Service + fake-store unit tests; apperr/envelope/ms; openapi lint ok; Postman newman 74 req/141 asserts ok; schema.d.ts regenerated; docs paths. Behaviour change to review: submit token is a multipart field so the link is resolved after the body spool (PR section Design notes). No web call existed to convert. Test: go test -race -tags integration ./internal/notes.
+- 2026-10-12 08:37Z · leader · Leader review of dev's 'please review' points: (1) submit token as a multipart field is NOT accepted: it makes unknown/revoked-token requests spool up to 32 MiB before any check, undoing T-034's DoS design. Decision: token is the query parameter POST /api/public-collect/submit-note?token=..., link resolved BEFORE spooling, counters (public_all/public_misses) and the honeypot order exactly as in T-034 (honeypot only after a valid token). docs/api-contract.md and the spec are updated. (2) flat data for create/submit and unpaged get-list {items, next_id:''}: accepted. Add a test that an unknown token with a 20 MiB body is answered 404 without reading/spooling it (spool dir stays empty, connection not held) and that the token never reaches logs. Re-run everything, push, confirm CI, keep READY_FOR_QA (QA has not started: not a rework).
 
 ### T-069 — [E10] API v2: media domain
 - **Status:** BACKLOG

@@ -31,3 +31,6 @@ First domain on the v2 contract. Move every notes endpoint (collection links, pu
 
 #### Test plan
 - QA should probe: old `/v1/public/collect/...` is gone (404 old envelope), token in query vs body, revoked/expired/unknown token give the same status and no timing difference beyond noise, 429 body and `Retry-After`, Unix-ms values round-trip as numbers (no float rounding), a very long label, OPTIONS/preflight behaviour unchanged.
+
+#### Decision on the submit token (leader, 2026-10-12, after dev's first PR)
+`POST /api/public-collect/submit-note?token=<token>`: the token stays in the **query** (like the GET lookup), not in the multipart body. Reason: T-034's DoS design resolves and checks the link BEFORE spooling the body, so an unknown or revoked token costs a 404/410 and no disk or connection time; a token inside the multipart form would force the server to spool up to 32 MiB per garbage request. Order of checks stays exactly as in T-034: connection caps -> resolve link (token from the query; public_all/public_misses counters) -> content type -> spool -> scan (honeypot) -> validate -> rate limits -> photos. The honeypot never answers before the token is valid. The token never appears in logs (test `?token=SECRET`). Documented as the one exception to 'POST parameters go in the body' in docs/api-contract.md.
