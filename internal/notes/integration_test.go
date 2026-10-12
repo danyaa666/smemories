@@ -107,7 +107,7 @@ func newEnv(t *testing.T) *env {
 	e.svc = media.NewService(media.NewStore(d), e.st, 2, e.lim, nil)
 	bookStore := yearbook.NewStore(d)
 	e.svc.SetRefClearer(bookStore)
-	yh := yearbook.NewHandler(bookStore, yearbook.NewService(bookStore, e.svc), ah.RequireUser, []string{origin}, logger, e.now)
+	yh := yearbook.NewHandler(bookStore, yearbook.NewService(bookStore, e.svc, e.svc), ah.RequireUser, []string{origin}, logger, e.now)
 	e.nh = NewHandler(NewStore(d), e.svc, 10<<20, ah.RequireUser, []string{origin}, ah.ClientIP, e.lim, logger, e.now)
 	e.tmp = t.TempDir()
 	e.nh.SetUploadLimits(defaultUploadConns, defaultUploadsPerIP, e.tmp)

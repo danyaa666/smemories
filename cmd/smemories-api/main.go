@@ -119,7 +119,7 @@ func main() {
 	mediaH := media.NewHandler(mediaSvc, cfg.MediaMaxBytes, authH.RequireUser, cfg.AllowedOrigins, logger)
 	bookStore := yearbook.NewStore(d)
 	mediaSvc.SetRefClearer(bookStore)
-	bookH := yearbook.NewHandler(bookStore, yearbook.NewService(bookStore, mediaSvc), authH.RequireUser, cfg.AllowedOrigins, logger, nil)
+	bookH := yearbook.NewHandler(bookStore, yearbook.NewService(bookStore, mediaSvc, mediaSvc), authH.RequireUser, cfg.AllowedOrigins, logger, nil)
 	notesH := notes.NewHandler(notes.NewStore(d), mediaSvc, cfg.MediaMaxBytes, authH.RequireUser, cfg.AllowedOrigins, authH.ClientIP, limiters, logger, nil)
 	notesH.SetUploadLimits(cfg.PublicUploadConns, cfg.PublicUploadsPerIP, cfg.UploadTmpDir)
 	notesH.SweepSpool() // files a crash or kill left behind; before the listener accepts traffic

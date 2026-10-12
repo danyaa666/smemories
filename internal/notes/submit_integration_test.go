@@ -188,7 +188,7 @@ func (e *env) noteCount() int { return e.count(`SELECT COUNT(*) FROM notes`) }
 // nothingKept asserts a failed submission left no note, photo row, media row or object behind.
 func (e *env) nothingKept() {
 	e.t.Helper()
-	for _, q := range []string{`SELECT COUNT(*) FROM notes`, `SELECT COUNT(*) FROM note_photos`, `SELECT COUNT(*) FROM media`} {
+	for _, q := range []string{`SELECT COUNT(*) FROM notes`, `SELECT COUNT(*) FROM note_photos`, `SELECT COUNT(*) FROM media_tab`} {
 		if n := e.count(q); n != 0 {
 			e.t.Fatalf("%s = %d, want 0", q, n)
 		}
@@ -233,7 +233,7 @@ func TestSubmitWithPhotos(t *testing.T) {
 	l := e.newOpenLink()
 	rec := e.post(l.token, answers("An", "hello"), photoPart(jpegOf(t, 10)), photoPart(jpegOf(t, 200))).status(201, "")
 	id := rec.json()["note"].(map[string]any)["id"].(string)
-	if n := e.count(`SELECT COUNT(*) FROM media WHERE uploader_kind = 'contributor'`); n != 2 {
+	if n := e.count(`SELECT COUNT(*) FROM media_tab WHERE uploader_kind = 'contributor'`); n != 2 {
 		t.Fatalf("%d contributor media", n)
 	}
 	if n := e.count(`SELECT COUNT(*) FROM note_photos np JOIN notes n ON n.id = np.note_id WHERE n.public_id = ? AND np.position IN (0, 1)`, id); n != 2 {
@@ -246,8 +246,8 @@ func TestSubmitWithPhotos(t *testing.T) {
 	e.post(l.token, answers("B", "m"), part{name: "photos", filename: "", ctype: "application/octet-stream"},
 		photoPart(jpegOf(t, 1)), photoPart(jpegOf(t, 2)), photoPart(jpegOf(t, 3))).status(201, "")
 	e.post(l.token, answers("C", "m"), photoPart(jpegOf(t, 1)), photoPart(jpegOf(t, 2)), photoPart(jpegOf(t, 3)), photoPart(jpegOf(t, 4))).status(400, "too_many_photos")
-	if e.noteCount() != 2 || e.count(`SELECT COUNT(*) FROM media`) != 5 {
-		t.Fatalf("notes %d media %d", e.noteCount(), e.count(`SELECT COUNT(*) FROM media`))
+	if e.noteCount() != 2 || e.count(`SELECT COUNT(*) FROM media_tab`) != 5 {
+		t.Fatalf("notes %d media %d", e.noteCount(), e.count(`SELECT COUNT(*) FROM media_tab`))
 	}
 }
 
@@ -352,7 +352,7 @@ func TestSubmitCompensation(t *testing.T) {
 			t.Fatal(err)
 		}
 		e.post(l.token, answers("A", "m"), photoPart(jpegOf(t, 1)), photoPart(jpegOf(t, 2))).status(500, "internal_error")
-		if e.count(`SELECT COUNT(*) FROM notes`) != 0 || e.count(`SELECT COUNT(*) FROM media`) != 0 || e.st.count() != 0 {
+		if e.count(`SELECT COUNT(*) FROM notes`) != 0 || e.count(`SELECT COUNT(*) FROM media_tab`) != 0 || e.st.count() != 0 {
 			t.Fatal("note, media or objects left behind")
 		}
 	})
@@ -395,7 +395,7 @@ func TestSubmitClosedLinks(t *testing.T) {
 	e.post(withDeadline, answers("A", "m")).status(201, "")
 	e.advance(time.Hour)
 	e.post(withDeadline, answers("A", "m"), photoPart(jpegOf(t, 1))).status(410, "collection_closed")
-	if e.noteCount() != 1 || e.count(`SELECT COUNT(*) FROM media`) != 0 || e.st.count() != 0 {
+	if e.noteCount() != 1 || e.count(`SELECT COUNT(*) FROM media_tab`) != 0 || e.st.count() != 0 {
 		t.Fatal("a closed link stored something")
 	}
 	// the owner revokes the link while a submission is being processed: nothing is kept
@@ -405,7 +405,7 @@ func TestSubmitClosedLinks(t *testing.T) {
 		}
 	}
 	e.post(l.token, answers("A", "m"), photoPart(jpegOf(t, 1))).status(404, "not_found")
-	if e.noteCount() != 1 || e.count(`SELECT COUNT(*) FROM media`) != 0 || e.st.count() != 0 {
+	if e.noteCount() != 1 || e.count(`SELECT COUNT(*) FROM media_tab`) != 0 || e.st.count() != 0 {
 		t.Fatal("a link revoked mid-flight kept a photo or a note")
 	}
 }
@@ -462,7 +462,7 @@ func TestSubmitLimits(t *testing.T) {
 		t.Fatalf("%d created, %d notes", created, e.noteCount())
 	}
 	e.post(l.token, answers("A", "m"), photoPart(jpegOf(t, 1))).status(409, "collection_full")
-	if e.count(`SELECT COUNT(*) FROM media`) != 0 || e.st.count() != 0 {
+	if e.count(`SELECT COUNT(*) FROM media_tab`) != 0 || e.st.count() != 0 {
 		t.Fatal("a full collection processed a photo")
 	}
 	// another collection of the same book is unaffected
@@ -477,13 +477,13 @@ func TestSubmitLimits(t *testing.T) {
 		t.Fatal(err)
 	}
 	for range 200 {
-		if _, err := e2.db.Exec(`INSERT INTO media (public_id, yearbook_id, uploader_kind, object_key, thumb_key, content_type, bytes, width, height, sha256, created_at)
-			VALUES (?,?,'owner','k','t','image/jpeg',1,1,1,'x',?)`, ulid.New(e2.now()), yb, e2.now()); err != nil {
+		if _, err := e2.db.Exec(`INSERT INTO media_tab (public_id, yearbook_id, uploader_kind, object_key, thumb_key, content_type, bytes, width, height, sha256, created_at, updated_at)
+			VALUES (?,?,'owner','k','t','image/jpeg',1,1,1,'x',?,?)`, ulid.New(e2.now()), yb, e2.now().UnixMilli(), e2.now().UnixMilli()); err != nil {
 			t.Fatal(err)
 		}
 	}
 	e2.post(l2.token, answers("A", "m"), photoPart(jpegOf(t, 1))).status(409, "quota_exceeded")
-	if e2.noteCount() != 0 || e2.st.count() != 0 || e2.count(`SELECT COUNT(*) FROM media`) != 200 {
+	if e2.noteCount() != 0 || e2.st.count() != 0 || e2.count(`SELECT COUNT(*) FROM media_tab`) != 200 {
 		t.Fatal("quota failure kept something")
 	}
 	e2.post(l2.token, answers("A", "m")).status(201, "") // text-only still fits
@@ -532,7 +532,7 @@ func TestHoneypotAndVerifier(t *testing.T) {
 
 	e.nh.SetVerifier(verifierFunc(func(context.Context, *http.Request) error { return errors.New("no") }))
 	e.post(l.token, answers("Human", "hi"), photoPart(jpegOf(t, 1))).status(403, "verification_failed")
-	if e.noteCount() != 1 || e.count(`SELECT COUNT(*) FROM media`) != 0 || e.st.count() != 0 {
+	if e.noteCount() != 1 || e.count(`SELECT COUNT(*) FROM media_tab`) != 0 || e.st.count() != 0 {
 		t.Fatal("a rejected verification stored or processed something")
 	}
 	// the honeypot is checked before the verifier, so a bot does not learn it was caught
@@ -628,7 +628,7 @@ func TestYearbookDeleteRemovesNotes(t *testing.T) {
 	l := e.newOpenLink()
 	e.post(l.token, answers("A", "m"), photoPart(jpegOf(t, 1))).status(201, "")
 	e.do(l.owner, "DELETE", "/v1/yearbooks/"+l.book, "").status(204, "")
-	for _, q := range []string{`SELECT COUNT(*) FROM notes`, `SELECT COUNT(*) FROM note_photos`, `SELECT COUNT(*) FROM media`} {
+	for _, q := range []string{`SELECT COUNT(*) FROM notes`, `SELECT COUNT(*) FROM note_photos`, `SELECT COUNT(*) FROM media_tab`} {
 		if n := e.count(q); n != 0 {
 			t.Fatalf("%s = %d", q, n)
 		}
@@ -828,7 +828,7 @@ func TestStalledUploadsDoNotBlockOthers(t *testing.T) {
 	if n := e.noteCount(); n != 1 {
 		t.Fatalf("%d notes, want 1 (the stalled uploads keep nothing)", n)
 	}
-	if e.count(`SELECT COUNT(*) FROM media`) != 3 || e.st.count() != 9 {
+	if e.count(`SELECT COUNT(*) FROM media_tab`) != 3 || e.st.count() != 9 {
 		t.Fatal("only the real submission's 3 photos (9 objects) should exist")
 	}
 }

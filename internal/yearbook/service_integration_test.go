@@ -52,8 +52,8 @@ func (e *env) bookRow(publicID string) uint64 {
 // insertMedia adds a photo row to a book and returns its row id and public id (the media package is not wired here).
 func (e *env) insertMedia(bookRow uint64, publicID string) uint64 {
 	e.t.Helper()
-	res, err := e.db.Exec(`INSERT INTO media (public_id, yearbook_id, uploader_kind, object_key, thumb_key, content_type, bytes, width, height, sha256, created_at)
-		VALUES (?, ?, 'owner', 'k', 't', 'image/jpeg', 1, 1, 1, '', NOW(6))`, publicID, bookRow)
+	res, err := e.db.Exec(`INSERT INTO media_tab (public_id, yearbook_id, uploader_kind, object_key, thumb_key, content_type, bytes, width, height, sha256, created_at, updated_at)
+		VALUES (?, ?, 'owner', 'k', 't', 'image/jpeg', 1, 1, 1, '', 1, 1)`, publicID, bookRow)
 	if err != nil {
 		e.t.Fatal(err)
 	}
@@ -64,7 +64,7 @@ func (e *env) insertMedia(bookRow uint64, publicID string) uint64 {
 // T-064 AC4: Delete removes the profile, calls each registered child with the book's row id inside the same transaction,
 // then removes the book. A failing child rolls everything back; a book of someone else is never touched.
 func TestDeleteCallsChildrenAndRollsBack(t *testing.T) {
-	child := &fakeChild{childRows: "media"}
+	child := &fakeChild{childRows: "media_tab"}
 	e := newEnvWith(t, child)
 	alice := e.register("alice@example.com", "Alice")
 	bob := e.register("bob@example.com", "Bob")
@@ -83,7 +83,7 @@ func TestDeleteCallsChildrenAndRollsBack(t *testing.T) {
 	child.fail = errors.New("child exploded")
 	e.do(alice, "DELETE", "/v1/yearbooks/"+doomed, "").status(500, "internal_error")
 	if e.count(`SELECT COUNT(*) FROM yearbook_tab WHERE public_id = ?`, doomed) != 1 || e.count(`SELECT COUNT(*) FROM profile_tab WHERE yearbook_id = ?`, row) != 1 ||
-		e.count(`SELECT COUNT(*) FROM media`) != 1 {
+		e.count(`SELECT COUNT(*) FROM media_tab`) != 1 {
 		t.Fatal("a failed child purger left the delete half done")
 	}
 	e.do(alice, "GET", "/v1/yearbooks/"+doomed, "").status(200, "")
@@ -100,13 +100,14 @@ func TestDeleteCallsChildrenAndRollsBack(t *testing.T) {
 			t.Fatalf("%s: %d rows left", q, n)
 		}
 	}
-	if n := e.count(`SELECT COUNT(*) FROM media`); n != 0 {
+	if n := e.count(`SELECT COUNT(*) FROM media_tab`); n != 0 {
 		t.Fatalf("child's delete did not commit: %d media rows", n)
 	}
 	e.do(bob, "GET", "/v1/yearbooks/"+bobs, "").status(200, "")
 	if e.count(`SELECT COUNT(*) FROM profile_tab`) != 1 {
 		t.Fatal("another book's profile was deleted")
 	}
+	dbtest.AssertNoOrphans(t, e.db)
 }
 
 // T-064 AC5: a cover or profile photo must be a photo of the same book; ClearMediaRefs nulls both references.
@@ -135,7 +136,7 @@ func TestMediaReferences(t *testing.T) {
 		t.Fatalf("photo not set (or cover lost): %v", b)
 	}
 
-	mediaRow := e.count(`SELECT id FROM media WHERE public_id = ?`, mine)
+	mediaRow := e.count(`SELECT id FROM media_tab WHERE public_id = ?`, mine)
 	tx, err := e.db.Begin()
 	if err != nil {
 		t.Fatal(err)

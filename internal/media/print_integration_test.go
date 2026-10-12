@@ -31,7 +31,7 @@ func TestUploadStoresPrintVersion(t *testing.T) {
 	id := e.upload(u, book, "a.jpg", "image/jpeg", bigPhoto(t)).status(201, "").mediaID()
 
 	var pk string
-	_ = e.db.QueryRow(`SELECT print_key FROM media WHERE public_id = ?`, id).Scan(&pk)
+	_ = e.db.QueryRow(`SELECT print_key FROM media_tab WHERE public_id = ?`, id).Scan(&pk)
 	if pk != "yearbooks/"+book+"/"+id+"-print.jpg" {
 		t.Fatalf("print_key %q", pk)
 	}
@@ -92,7 +92,7 @@ func TestBackfillPrint(t *testing.T) {
 	broken := e.upload(u, book, "d.jpg", "image/jpeg", bigPhoto(t)).status(201, "").mediaID()
 
 	// Make them look like photos from before T-057: no print object, no print_key.
-	if _, err := e.db.Exec(`UPDATE media SET print_key = NULL`); err != nil {
+	if _, err := e.db.Exec(`UPDATE media_tab SET print_key = NULL`); err != nil {
 		t.Fatal(err)
 	}
 	_ = e.st.Delete(context.Background(), yearbookPrefix(book)+a+"-print.jpg", yearbookPrefix(book)+b+"-print.png",
@@ -108,7 +108,7 @@ func TestBackfillPrint(t *testing.T) {
 
 	// Dry run writes nothing.
 	st, err := e.svc.Backfill(context.Background(), 2, 1, true, log)
-	if err != nil || st != (BackfillStats{Created: 3, Failed: 1}) || e.count(`SELECT COUNT(*) FROM media WHERE print_key IS NOT NULL`) != 0 || e.st.count(yearbookPrefix(book)) != 7 { // 4 photos x 3 objects, minus 4 prints and 1 display
+	if err != nil || st != (BackfillStats{Created: 3, Failed: 1}) || e.count(`SELECT COUNT(*) FROM media_tab WHERE print_key IS NOT NULL`) != 0 || e.st.count(yearbookPrefix(book)) != 7 { // 4 photos x 3 objects, minus 4 prints and 1 display
 		t.Fatalf("dry run %+v err %v", st, err)
 	}
 
@@ -129,7 +129,7 @@ func TestBackfillPrint(t *testing.T) {
 		t.Fatalf("print of b: %d px", w)
 	}
 	var key string
-	_ = e.db.QueryRow(`SELECT print_key FROM media WHERE public_id = ?`, b).Scan(&key)
+	_ = e.db.QueryRow(`SELECT print_key FROM media_tab WHERE public_id = ?`, b).Scan(&key)
 	if !strings.HasSuffix(key, "-print.png") {
 		t.Fatalf("print key of the PNG: %q", key)
 	}
@@ -155,7 +155,7 @@ func backfillFixture(t *testing.T, e *env, n int) (book string, ids []string) {
 		ids = append(ids, e.upload(u, book, "a.jpg", "image/jpeg", bigPhoto(t)).status(201, "").mediaID())
 		_ = e.st.Delete(context.Background(), yearbookPrefix(book)+ids[i]+"-print.jpg")
 	}
-	if _, err := e.db.Exec(`UPDATE media SET print_key = NULL`); err != nil {
+	if _, err := e.db.Exec(`UPDATE media_tab SET print_key = NULL`); err != nil {
 		t.Fatal(err)
 	}
 	return book, ids
@@ -203,8 +203,8 @@ func TestBackfillDeleteRace(t *testing.T) {
 		name, sql string
 		kept      bool
 	}{
-		{"deleted", `DELETE FROM media`, false},
-		{"filled by a parallel run", `UPDATE media SET print_key = CONCAT(SUBSTRING(object_key, 1, CHAR_LENGTH(object_key) - 4), '-print.jpg')`, true},
+		{"deleted", `DELETE FROM media_tab`, false},
+		{"filled by a parallel run", `UPDATE media_tab SET print_key = CONCAT(SUBSTRING(object_key, 1, CHAR_LENGTH(object_key) - 4), '-print.jpg')`, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			e := newEnv(t)

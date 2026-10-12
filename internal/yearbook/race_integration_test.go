@@ -61,7 +61,7 @@ func TestMediaDeleteRacesWithCoverEdits(t *testing.T) {
 			if err == nil {
 				defer func() { _ = tx.Rollback() }()
 				if err = NewStore(e.db).ClearMediaRefs(context.Background(), tx, int64(row)); err == nil {
-					_, err = tx.Exec(`DELETE FROM media WHERE id = ?`, row)
+					_, err = tx.Exec(`DELETE FROM media_tab WHERE id = ?`, row)
 				}
 				if err == nil {
 					err = tx.Commit()
