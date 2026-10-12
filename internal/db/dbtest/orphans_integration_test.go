@@ -43,8 +43,9 @@ func TestQAAssertNoOrphansCatchesPlantedOrphans(t *testing.T) {
 		}
 	}
 	check("")
-	exec(`INSERT INTO users (public_id, email, display_name, created_at, updated_at) VALUES ('U1', 'a@example.com', 'A', NOW(6), NOW(6))`)
-	exec(`INSERT INTO yearbook_tab (public_id, owner_id, title, language, created_at, updated_at) SELECT 'B1', id, 'One', 'en', 1, 1 FROM users`)
+	exec(`INSERT INTO user_tab (public_id, email, display_name, created_at, updated_at) VALUES ('U1', 'a@example.com', 'A', 1, 1)`)
+	exec(`INSERT INTO user_identity_tab (user_id, provider, subject, email, created_at, updated_at) SELECT id, 'google', 'sub-1', 'a@example.com', 1, 1 FROM user_tab`)
+	exec(`INSERT INTO yearbook_tab (public_id, owner_id, title, language, created_at, updated_at) SELECT 'B1', id, 'One', 'en', 1, 1 FROM user_tab`)
 	exec(`INSERT INTO profile_tab (public_id, yearbook_id, is_owner, full_name, created_at, updated_at) SELECT 'P1', id, 1, 'N', 1, 1 FROM yearbook_tab`)
 	exec(`INSERT INTO media_tab (public_id, yearbook_id, uploader_kind, object_key, thumb_key, content_type, bytes, width, height, sha256, created_at, updated_at)
 		SELECT 'M1', id, 'owner', 'k', 't', 'image/png', 1, 1, 1, REPEAT('a', 64), 1, 1 FROM yearbook_tab`)
@@ -56,7 +57,8 @@ func TestQAAssertNoOrphansCatchesPlantedOrphans(t *testing.T) {
 	for _, c := range []struct{ plant, undo, want string }{
 		{`UPDATE yearbook_tab SET cover_media_id = 4242`, `UPDATE yearbook_tab SET cover_media_id = NULL`, "yearbook_tab.cover_media_id"},
 		{`UPDATE profile_tab SET photo_media_id = 4242`, `UPDATE profile_tab SET photo_media_id = NULL`, "profile_tab.photo_media_id"},
-		{`UPDATE yearbook_tab SET owner_id = 4242`, `UPDATE yearbook_tab SET owner_id = (SELECT id FROM users)`, "yearbook_tab.owner_id"},
+		{`UPDATE user_identity_tab SET user_id = 4242`, `UPDATE user_identity_tab SET user_id = (SELECT id FROM user_tab)`, "user_identity_tab.user_id"},
+		{`UPDATE yearbook_tab SET owner_id = 4242`, `UPDATE yearbook_tab SET owner_id = (SELECT id FROM user_tab)`, "yearbook_tab.owner_id"},
 		{`UPDATE profile_tab SET yearbook_id = 4242`, `UPDATE profile_tab SET yearbook_id = (SELECT id FROM yearbook_tab)`, "profile_tab.yearbook_id"},
 		{`UPDATE media_tab SET yearbook_id = 4242`, `UPDATE media_tab SET yearbook_id = (SELECT id FROM yearbook_tab)`, "media_tab.yearbook_id"},
 		{`UPDATE note_collection_tab SET yearbook_id = 4242`, `UPDATE note_collection_tab SET yearbook_id = (SELECT id FROM yearbook_tab)`, "note_collection_tab.yearbook_id"},

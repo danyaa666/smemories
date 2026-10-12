@@ -246,7 +246,7 @@ func TestReadQueryCountIsConstant(t *testing.T) {
 	e := newEnv(t)
 	e.register("alice@example.com", "Alice")
 	var owner uint64
-	if err := e.db.QueryRow(`SELECT id FROM users WHERE email = 'alice@example.com'`).Scan(&owner); err != nil {
+	if err := e.db.QueryRow(`SELECT id FROM user_tab WHERE email = 'alice@example.com'`).Scan(&owner); err != nil {
 		t.Fatal(err)
 	}
 	// 50 books straight into the tables (the 20-book limit lives in the create path), each with a cover and a photo.
@@ -333,7 +333,7 @@ func TestReadOfBookDeletedMidReadIsNotFound(t *testing.T) {
 	e := newEnv(t)
 	alice := e.register("alice@example.com", "Alice")
 	var owner uint64
-	if err := e.db.QueryRow(`SELECT id FROM users WHERE email = 'alice@example.com'`).Scan(&owner); err != nil {
+	if err := e.db.QueryRow(`SELECT id FROM user_tab WHERE email = 'alice@example.com'`).Scan(&owner); err != nil {
 		t.Fatal(err)
 	}
 	keep, gone := e.create(alice, "Keep"), e.create(alice, "Gone")
@@ -375,7 +375,7 @@ func TestListPageKeepsNextCursorWhenABookVanishes(t *testing.T) {
 	e := newEnv(t)
 	alice := e.register("alice@example.com", "Alice")
 	var owner uint64
-	if err := e.db.QueryRow(`SELECT id FROM users WHERE email = 'alice@example.com'`).Scan(&owner); err != nil {
+	if err := e.db.QueryRow(`SELECT id FROM user_tab WHERE email = 'alice@example.com'`).Scan(&owner); err != nil {
 		t.Fatal(err)
 	}
 	var ids []string // oldest first; the list is newest first
