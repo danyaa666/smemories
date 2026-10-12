@@ -5,7 +5,9 @@ package yearbook
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 )
 
@@ -90,5 +92,37 @@ func TestMediaDeleteRacesWithCoverEdits(t *testing.T) {
 			t.Fatalf("round %d: %d dangling references to the deleted photo", round, n)
 		}
 		e.do(alice, "DELETE", "/v1/yearbooks/"+id, "").status(204, "") // keeps the user under the 20-book limit
+	}
+}
+
+// T-078: reads and edits racing a delete answer 200 or 404, never 5xx, and log no ERROR line.
+func TestDeleteRacesWithReads(t *testing.T) {
+	e := newEnv(t)
+	alice := e.register("alice@example.com", "Alice")
+	var bad atomic.Int64
+	for round := 0; round < 40; round++ {
+		id := e.create(alice, "Race")
+		var wg sync.WaitGroup
+		run := func(method, path, body string) {
+			defer wg.Done()
+			if c := e.do(alice, method, path, body).Code; c >= 500 {
+				bad.Add(1)
+			}
+		}
+		wg.Add(7)
+		go run("DELETE", "/v1/yearbooks/"+id, "")
+		for i := 0; i < 2; i++ {
+			go run("GET", "/v1/yearbooks/"+id, "")
+			go run("GET", "/v1/yearbooks", "")
+		}
+		go run("PATCH", "/v1/yearbooks/"+id, `{"motto":"a"}`)
+		go run("PUT", "/v1/yearbooks/"+id+"/profile", `{"full_name":"x"}`)
+		wg.Wait()
+	}
+	if n := bad.Load(); n != 0 {
+		t.Fatalf("%d requests answered 5xx", n)
+	}
+	if strings.Contains(e.logs.String(), `"level":"ERROR"`) {
+		t.Fatalf("an ERROR line was logged:\n%s", e.logs.String())
 	}
 }
