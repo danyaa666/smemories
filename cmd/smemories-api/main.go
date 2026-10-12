@@ -119,10 +119,10 @@ func main() {
 	mediaH := media.NewHandler(mediaSvc, cfg.MediaMaxBytes, authH.RequireUser, cfg.AllowedOrigins, logger)
 	bookStore := yearbook.NewStore(d)
 	notesStore := notes.NewStore(d)
-	notesSvc := notes.NewService(notesStore)
+	notesSvc := notes.NewService(notesStore, mediaSvc, limiters, logger, nil)
 	mediaSvc.SetRefClearer(bookStore, notesSvc) // the yearbook store first: it locks the photo's book
 	bookH := yearbook.NewHandler(bookStore, yearbook.NewService(bookStore, mediaSvc, mediaSvc, notesSvc), authH.RequireUser, cfg.AllowedOrigins, logger, nil)
-	notesH := notes.NewHandler(notesStore, mediaSvc, cfg.MediaMaxBytes, authH.RequireUser, cfg.AllowedOrigins, authH.ClientIP, limiters, logger, nil)
+	notesH := notes.NewHandler(notesSvc, cfg.MediaMaxBytes, authH.RequireUser, cfg.AllowedOrigins, authH.ClientIP, logger)
 	notesH.SetUploadLimits(cfg.PublicUploadConns, cfg.PublicUploadsPerIP, cfg.UploadTmpDir)
 	notesH.SweepSpool() // files a crash or kill left behind; before the listener accepts traffic
 

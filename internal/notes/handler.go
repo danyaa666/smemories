@@ -1,72 +1,50 @@
 package notes
 
 import (
-	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
 	"sync"
 	"time"
 
+	"github.com/danyaa666/smemories/internal/apperr"
 	"github.com/danyaa666/smemories/internal/auth"
 	"github.com/danyaa666/smemories/internal/httpx"
-	"github.com/danyaa666/smemories/internal/media"
 	"github.com/danyaa666/smemories/internal/notefields"
-	"github.com/danyaa666/smemories/internal/ratelimit"
-	"github.com/danyaa666/smemories/internal/textx"
-	"github.com/danyaa666/smemories/internal/ulid"
 )
 
 const (
-	maxLabel = 60
-
-	// Public routes. A class behind one campus address opens the same link, so only requests that miss (unknown,
-	// malformed or revoked token) count against the tight per-IP limit; the generous one is a cost guard.
-	missesPerWindow = 60
-	allPerWindow    = 600
-	publicWindow    = 15 * time.Minute
-
 	defaultUploadsPerIP = 8
 	defaultUploadConns  = 48
+
+	// clientClosed is nginx's 499: the client went away, nobody reads the answer.
+	clientClosed = 499
 )
 
-// Handler serves the owner endpoints for collection links and the public lookup.
+// Handler serves the owner endpoints for collection links and the public lookup and submission. It decodes, validates the
+// shape, calls the Service and writes the envelope; the rules live in the Service.
 type Handler struct {
-	store          *Store
+	svc            *Service
 	requireUser    func(http.Handler) http.Handler // auth.Handler.RequireUser
 	allowedOrigins []string                        // for auth.Guard
 	clientIP       func(*http.Request) string      // auth.Handler.ClientIP
-	misses, all    ratelimit.Limiter               // public routes, per client IP
 	logger         *slog.Logger
-	now            func() time.Time
 
-	media                      *media.Service // photos of submissions
-	maxPhoto                   int64          // largest accepted photo, bytes
-	verifier                   Verifier
-	subIPHr, subIPDay, subColl ratelimit.Limiter // submissions per IP per hour and day, per collection per hour
-	upMu                       sync.Mutex        // guards upTotal and upIP
-	upTotal                    int               // submissions in progress (their bodies spooled to disk)
-	upIP                       map[string]int    // ... per client IP
-	upMax, upPerIP             int
-	tmpDir                     string // where bodies are spooled; "" = the OS temp dir
+	maxPhoto       int64 // largest accepted photo, bytes
+	verifier       Verifier
+	upMu           sync.Mutex     // guards upTotal and upIP
+	upTotal        int            // submissions in progress (their bodies spooled to disk)
+	upIP           map[string]int // ... per client IP
+	upMax, upPerIP int
+	tmpDir         string // where bodies are spooled; "" = the OS temp dir
 }
 
-// NewHandler builds the handler; now may be nil (time.Now). svc stores the photos of submissions, each at
-// most maxPhoto bytes.
-// All its limiters fail open when Redis is down: they bound load and cost, not guessing.
-func NewHandler(store *Store, svc *media.Service, maxPhoto int64, requireUser func(http.Handler) http.Handler, allowedOrigins []string, clientIP func(*http.Request) string, limiters *ratelimit.Factory, logger *slog.Logger, now func() time.Time) *Handler {
-	if now == nil {
-		now = time.Now
-	}
-	return &Handler{store: store, requireUser: requireUser, allowedOrigins: allowedOrigins, clientIP: clientIP,
-		misses: limiters.Open("public_misses", missesPerWindow, publicWindow), all: limiters.Open("public_all", allPerWindow, publicWindow),
-		logger: logger, now: now,
-		media: svc, maxPhoto: maxPhoto, verifier: allowAll{},
-		subIPHr: limiters.Open("submit_ip_hour", submitPerIPHour, time.Hour), subIPDay: limiters.Open("submit_ip_day", submitPerIPDay, 24*time.Hour),
-		subColl: limiters.Open("submit_collection_hour", submitPerCollectionHour, time.Hour),
-		upIP:    map[string]int{}, upMax: defaultUploadConns, upPerIP: defaultUploadsPerIP}
+// NewHandler builds the handler. Photos of submissions are at most maxPhoto bytes each.
+func NewHandler(svc *Service, maxPhoto int64, requireUser func(http.Handler) http.Handler, allowedOrigins []string, clientIP func(*http.Request) string, logger *slog.Logger) *Handler {
+	return &Handler{svc: svc, requireUser: requireUser, allowedOrigins: allowedOrigins, clientIP: clientIP, logger: logger,
+		maxPhoto: maxPhoto, verifier: allowAll{},
+		upIP: map[string]int{}, upMax: defaultUploadConns, upPerIP: defaultUploadsPerIP}
 }
 
 // SetUploadLimits sets how many public submissions may be in progress at once (default 48) and how many of those
@@ -81,208 +59,122 @@ func (h *Handler) SetVerifier(v Verifier) { h.verifier = v }
 // Routes registers the endpoints on mux (pass to httpx.NewRouter).
 func (h *Handler) Routes(mux *http.ServeMux) {
 	write := func(f http.HandlerFunc) http.Handler { return auth.Guard(h.allowedOrigins, h.requireUser(f)) }
-	mux.Handle("POST /v1/yearbooks/{id}/collections", write(h.create))
-	mux.Handle("GET /v1/yearbooks/{id}/collections", h.requireUser(http.HandlerFunc(h.list)))
-	mux.Handle("DELETE /v1/collections/{id}", write(h.revoke))
-	// Public routes: no session, no cookie, no CORS; the token is the credential.
-	mux.HandleFunc("GET /v1/public/collect/{token}", h.lookup)
-	mux.Handle("POST /v1/public/collect/{token}/notes", httpx.WithTimeout(submitRouteTimeout, httpx.WithBodyLimit(maxBody, http.HandlerFunc(h.submit))))
+	mux.Handle("POST /api/note-collection/create", write(h.create))
+	mux.Handle("GET /api/note-collection/get-list", h.requireUser(http.HandlerFunc(h.list)))
+	mux.Handle("POST /api/note-collection/revoke", write(h.revoke))
+	// Public routes: no session, no cookie, no CORS; the token is the credential. The access log records the route, never the query.
+	mux.HandleFunc("GET /api/public-collect/get", h.lookup)
+	mux.Handle("POST /api/public-collect/submit-note", httpx.WithTimeout(submitRouteTimeout, httpx.WithBodyLimit(maxBody, http.HandlerFunc(h.submit))))
 }
 
 type createInput struct {
+	YearbookID string  `json:"yearbook_id"`
 	Label      *string `json:"label"`
-	DeadlineAt *string `json:"deadline_at"`
+	DeadlineAt *int64  `json:"deadline_at"` // Unix ms
+}
+
+// collectionJSON is a Collection as the owner's list shows it; instants are Unix ms.
+type collectionJSON struct {
+	ID         string `json:"id"`
+	Label      string `json:"label"`
+	DeadlineAt *int64 `json:"deadline_at"`
+	CreatedAt  int64  `json:"created_at"`
+	RevokedAt  *int64 `json:"revoked_at"`
+	NoteCount  int    `json:"note_count"`
 }
 
 type createdCollection struct {
-	ID         string     `json:"id"`
-	Label      string     `json:"label"`
-	DeadlineAt *time.Time `json:"deadline_at"`
-	CreatedAt  time.Time  `json:"created_at"`
-	Token      string     `json:"token"` // shown here and nowhere else
+	ID         string `json:"id"`
+	Label      string `json:"label"`
+	DeadlineAt *int64 `json:"deadline_at"`
+	CreatedAt  int64  `json:"created_at"`
+	Token      string `json:"token"` // shown here and nowhere else
 }
 
-// collectionJSON is a Collection as the owner's list shows it; the store keeps Unix milliseconds, the API still sends RFC 3339.
-type collectionJSON struct {
-	ID         string     `json:"id"`
-	Label      string     `json:"label"`
-	DeadlineAt *time.Time `json:"deadline_at"`
-	CreatedAt  time.Time  `json:"created_at"`
-	RevokedAt  *time.Time `json:"revoked_at"`
-	NoteCount  int        `json:"note_count"`
-}
-
-// instant turns Unix milliseconds into the UTC time the API prints; nil stays nil.
-func instant(ms *int64) *time.Time {
-	if ms == nil {
-		return nil
-	}
-	t := time.UnixMilli(*ms).UTC()
-	return &t
+type idInput struct {
+	ID string `json:"id"`
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	u, _ := auth.UserFrom(r.Context())
-	if !u.EmailVerified {
-		httpx.WriteError(w, r, http.StatusForbidden, "email_not_verified", "verify your email first")
-		return
-	}
 	var in createInput
 	if !httpx.DecodeJSON(w, r, &in, true) {
 		return
 	}
-	now := h.now().UTC()
-	c := Collection{ID: ulid.New(now), CreatedAt: now.UnixMilli()}
-	if in.Label != nil {
-		l, ok := textx.Clean(*in.Label, 0, maxLabel)
-		if !ok {
-			httpx.WriteError(w, r, http.StatusBadRequest, "invalid_label", "invalid input: invalid_label")
-			return
-		}
-		c.Label = l
-	}
-	if in.DeadlineAt != nil {
-		t, err := time.Parse(time.RFC3339, *in.DeadlineAt)
-		if err != nil || !t.After(now) || t.After(now.AddDate(1, 0, 0)) {
-			httpx.WriteError(w, r, http.StatusBadRequest, "invalid_deadline", "invalid input: invalid_deadline")
-			return
-		}
-		d := t.UnixMilli()
-		c.DeadlineAt = &d
-	}
-	token, hash, err := newToken()
+	c, err := h.svc.CreateCollection(r.Context(), u.InternalID, u.EmailVerified, &CreateInput{YearbookID: in.YearbookID, Label: in.Label, DeadlineAt: in.DeadlineAt})
 	if err != nil {
 		h.fail(w, r, err)
 		return
 	}
-	if err := h.store.create(r.Context(), u.InternalID, r.PathValue("id"), c, hash); err != nil {
-		h.fail(w, r, err)
-		return
-	}
-	httpx.WriteJSON(w, http.StatusCreated, struct {
-		Collection createdCollection `json:"collection"`
-	}{createdCollection{c.ID, c.Label, instant(c.DeadlineAt), time.UnixMilli(c.CreatedAt).UTC(), token}})
+	httpx.OK(w, r, &createdCollection{c.ID, c.Label, c.DeadlineAt, c.CreatedAt, c.Token})
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	u, _ := auth.UserFrom(r.Context())
-	cs, err := h.store.list(r.Context(), u.InternalID, r.PathValue("id"))
+	cs, err := h.svc.ListCollections(r.Context(), u.InternalID, r.URL.Query().Get("yearbook_id"))
 	if err != nil {
 		h.fail(w, r, err)
 		return
 	}
-	out := make([]collectionJSON, len(cs))
+	items := make([]collectionJSON, len(cs))
 	for i, c := range cs {
-		out[i] = collectionJSON{c.ID, c.Label, instant(c.DeadlineAt), time.UnixMilli(c.CreatedAt).UTC(), instant(c.RevokedAt), c.NoteCount}
+		items[i] = collectionJSON{ID: c.ID, Label: c.Label, DeadlineAt: c.DeadlineAt, CreatedAt: c.CreatedAt, RevokedAt: c.RevokedAt, NoteCount: c.NoteCount}
 	}
-	httpx.WriteJSON(w, http.StatusOK, struct {
-		Collections []collectionJSON `json:"collections"`
-	}{out})
+	httpx.OK(w, r, httpx.Page[collectionJSON]{Items: items}) // not paginated yet: the whole list is one page
 }
 
 func (h *Handler) revoke(w http.ResponseWriter, r *http.Request) {
 	u, _ := auth.UserFrom(r.Context())
-	if err := h.store.revoke(r.Context(), u.InternalID, r.PathValue("id"), h.now().UnixMilli()); err != nil {
+	var in idInput
+	if !httpx.DecodeJSON(w, r, &in, true) {
+		return
+	}
+	if err := h.svc.RevokeCollection(r.Context(), u.InternalID, in.ID); err != nil {
 		h.fail(w, r, err)
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	httpx.OK(w, r, nil)
 }
 
-// resolve is the front of both public routes: the per-IP limits, then the token. It answers 429, 404 or 410
-// itself and returns false; on success the collection is open.
-func (h *Handler) resolve(w http.ResponseWriter, r *http.Request) (Public, bool) {
-	ip := h.clientIP(r)
-	if ok, wait, _ := h.all.Take(r.Context(), ip); !ok {
-		tooMany(w, r, wait)
-		return Public{}, false
-	}
-	if ok, wait, _ := h.misses.Take(r.Context(), ip); !ok {
-		tooMany(w, r, wait)
-		return Public{}, false
-	}
-	var p Public
-	hash, valid := tokenHash(r.PathValue("token"))
-	err := ErrNotFound
-	if valid {
-		p, err = h.store.lookup(r.Context(), hash)
-	}
-	if !errors.Is(err, ErrNotFound) {
-		_ = h.misses.Refund(r.Context(), ip) // a valid token is not a guess
-	}
-	if err != nil {
-		h.fail(w, r, err)
-		return Public{}, false
-	}
-	if p.DeadlineAt != nil && h.now().UnixMilli() >= *p.DeadlineAt {
-		httpx.WriteError(w, r, http.StatusGone, "collection_closed", "this link no longer accepts notes")
-		return Public{}, false
-	}
-	return p, true
+type lookupJSON struct {
+	Yearbook   titleJSON              `json:"yearbook"`
+	Owner      ownerJSON              `json:"owner"`
+	DeadlineAt *int64                 `json:"deadline_at"`
+	Open       bool                   `json:"open"`
+	Fields     []notefields.FieldInfo `json:"fields"`
 }
 
-func tooMany(w http.ResponseWriter, r *http.Request, wait time.Duration) {
-	w.Header().Set("Retry-After", strconv.Itoa(max(int((wait+time.Second-1)/time.Second), 1)))
-	httpx.WriteError(w, r, http.StatusTooManyRequests, "rate_limited", "too many requests")
+type titleJSON struct {
+	Title string `json:"title"`
+}
+
+type ownerJSON struct {
+	DisplayName string `json:"display_name"`
 }
 
 func (h *Handler) lookup(w http.ResponseWriter, r *http.Request) {
-	p, ok := h.resolve(w, r)
-	if !ok {
-		return
-	}
-	fields, err := notefields.Info(FieldsFor(p.TemplateID))
+	p, fields, err := h.svc.Lookup(r.Context(), h.clientIP(r), r.URL.Query().Get("token"))
 	if err != nil {
 		h.fail(w, r, err)
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, struct {
-		Yearbook struct {
-			Title string `json:"title"`
-		} `json:"yearbook"`
-		Owner struct {
-			DisplayName string `json:"display_name"`
-		} `json:"owner"`
-		DeadlineAt *time.Time             `json:"deadline_at"`
-		Open       bool                   `json:"open"`
-		Fields     []notefields.FieldInfo `json:"fields"`
-	}{struct {
-		Title string `json:"title"`
-	}{p.Title}, struct {
-		DisplayName string `json:"display_name"`
-	}{p.DisplayName}, instant(p.DeadlineAt), true, fields})
+	httpx.OK(w, r, &lookupJSON{titleJSON{p.Title}, ownerJSON{p.DisplayName}, p.DeadlineAt, true, fields})
 }
 
-// fail maps a store error to the shared envelope; anything else is logged (never with the token) and answers 500.
+// fail answers err. A request whose client went away gets 499 and a debug line; a *RetryAfterError sets Retry-After; the
+// rest is httpx.Fail. Nothing logged here contains the token: errors never carry the URL.
 func (h *Handler) fail(w http.ResponseWriter, r *http.Request, err error) {
-	if r.Context().Err() != nil { // the client went away: nobody reads the answer and nothing is wrong on our side
+	if r.Context().Err() != nil { // nobody reads the answer and nothing is wrong on our side
 		h.logger.Debug("notes: client gone", "request_id", httpx.RequestIDFrom(r.Context()), "error", err)
-		httpx.WriteError(w, r, 499, "client_closed", "client closed the request")
+		httpx.WriteError(w, r, clientClosed, "client_closed", "client closed the request")
 		return
 	}
-	if status, code, msg, ok := mediaStatus(err); ok {
-		if status == http.StatusServiceUnavailable {
-			w.Header().Set("Retry-After", "2")
-		}
-		if status == http.StatusBadGateway {
-			h.logger.Error("notes: storage failed", "request_id", httpx.RequestIDFrom(r.Context()), "error", err)
-		}
-		httpx.WriteError(w, r, status, code, msg)
-		return
+	var ra *RetryAfterError
+	if errors.As(err, &ra) {
+		w.Header().Set("Retry-After", strconv.Itoa(max(int((ra.After+time.Second-1)/time.Second), 1)))
 	}
-	switch {
-	case errors.Is(err, ErrNotFound), errors.Is(err, media.ErrNotFound):
-		httpx.WriteError(w, r, http.StatusNotFound, "not_found", "not found")
-	case errors.Is(err, ErrClosed):
-		httpx.WriteError(w, r, http.StatusGone, "collection_closed", "this link no longer accepts notes")
-	case errors.Is(err, ErrFull):
-		httpx.WriteError(w, r, http.StatusConflict, "collection_full", "this link has reached its limit of notes")
-	case errors.Is(err, ErrLimitReached):
-		httpx.WriteError(w, r, http.StatusConflict, "limit_reached", fmt.Sprintf("at most %d active links per yearbook", maxActive))
-	default:
-		if !errors.Is(err, context.Canceled) {
-			h.logger.Error("notes: request failed", "request_id", httpx.RequestIDFrom(r.Context()), "error", err)
-		}
-		httpx.WriteError(w, r, http.StatusInternalServerError, "internal_error", "internal server error")
+	if apperr.Is(err, CodeStorage) { // Fail logs only the codes that are our fault by default
+		h.logger.Error("notes: storage failed", "request_id", httpx.RequestIDFrom(r.Context()), "error", err)
 	}
+	httpx.Fail(w, r, err)
 }

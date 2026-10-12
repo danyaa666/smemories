@@ -21,7 +21,7 @@ var qaIP atomic.Int64
 // lookupFrom is a public lookup from a fresh client address (the per-IP miss limit is not what is under test).
 func (e *env) lookupFrom(token string) resp {
 	n := qaIP.Add(1)
-	r := httptest.NewRequest("GET", "/v1/public/collect/"+token, nil)
+	r := httptest.NewRequest("GET", lookupPath(token), nil)
 	r.RemoteAddr = fmt.Sprintf("100.64.%d.%d:4000", n/250, n%250+1)
 	rec := httptest.NewRecorder()
 	e.h.ServeHTTP(rec, r)
@@ -84,7 +84,7 @@ func TestQAStormBookDelete(t *testing.T) {
 				was := deleted.Load()
 				code := e.postFrom(context.Background(), ip, tokens[i%3], parts...).Code
 				rec(code)
-				if code == 201 {
+				if code == 200 {
 					landed.Add(1)
 				}
 				if was {
@@ -108,21 +108,21 @@ func TestQAStormBookDelete(t *testing.T) {
 			defer wg.Done()
 			for _, id := range []string{ids[0], ids[0], ids[1]} {
 				time.Sleep(time.Duration(rand.Intn(15)) * time.Millisecond)
-				rec(e.do(alice, "DELETE", "/v1/collections/"+id, "").Code)
+				rec(e.revoke(alice, id).Code)
 			}
 		}()
 		go func() { // new links
 			defer wg.Done()
 			for range 3 {
 				time.Sleep(time.Duration(rand.Intn(15)) * time.Millisecond)
-				rec(e.do(alice, "POST", "/v1/yearbooks/"+book+"/collections", `{}`).Code)
+				rec(e.create(alice, book, `{}`).Code)
 			}
 		}()
 		go func() { // list
 			defer wg.Done()
 			for range 3 {
 				time.Sleep(time.Duration(rand.Intn(15)) * time.Millisecond)
-				rec(e.do(alice, "GET", "/v1/yearbooks/"+book+"/collections", "").Code)
+				rec(e.list(alice, book).Code)
 			}
 		}()
 		go func() { // photo deletes: whatever note photos exist, over and over
@@ -180,7 +180,7 @@ func TestQAStormBookDelete(t *testing.T) {
 		// a fresh request on the vanished book
 		e.lookupFrom(tokens[2]).status(404, "")
 		e.postFrom(context.Background(), fmt.Sprintf("198.18.%d.1", round), tokens[2], answers("A", "m"), photoPart(jpegs[0])).status(404, "")
-		e.do(alice, "DELETE", "/v1/collections/"+ids[2], "").status(404, "")
+		e.revoke(alice, ids[2]).status(404, "")
 	}
 	t.Logf("status codes: %v; landed before delete: %d; 404/410 seen: %d", seen, landed.Load(), gone.Load())
 	if bad5xx.Load() != 0 {
@@ -227,7 +227,7 @@ func TestQAStormRevokeAndPhotoDelete(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			time.Sleep(time.Duration(rand.Intn(250)) * time.Millisecond)
-			if c := e.do(alice, "DELETE", "/v1/collections/"+id, "").Code; c != 204 {
+			if c := e.revoke(alice, id).Code; c != 200 {
 				bad.Add(1)
 			}
 			revokedAt.Store(time.Now().UnixNano())

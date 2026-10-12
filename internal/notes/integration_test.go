@@ -13,6 +13,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"sync"
 	"testing"
@@ -47,6 +48,7 @@ type env struct {
 	db    *sql.DB
 	h     http.Handler
 	nh    *Handler
+	ns    *Service
 	st    *flakyStore
 	svc   *media.Service
 	books []string // public ids, for object cleanup
@@ -107,10 +109,11 @@ func newEnv(t *testing.T) *env {
 	e.svc = media.NewService(media.NewStore(d), e.st, 2, e.lim, nil)
 	bookStore := yearbook.NewStore(d)
 	notesStore := NewStore(d)
-	notesSvc := NewService(notesStore)
+	notesSvc := NewService(notesStore, e.svc, e.lim, logger, e.now)
+	e.ns = notesSvc
 	e.svc.SetRefClearer(bookStore, notesSvc)
 	yh := yearbook.NewHandler(bookStore, yearbook.NewService(bookStore, e.svc, e.svc, notesSvc), ah.RequireUser, []string{origin}, logger, e.now)
-	e.nh = NewHandler(notesStore, e.svc, 10<<20, ah.RequireUser, []string{origin}, ah.ClientIP, e.lim, logger, e.now)
+	e.nh = NewHandler(notesSvc, 10<<20, ah.RequireUser, []string{origin}, ah.ClientIP, logger)
 	e.tmp = t.TempDir()
 	e.nh.SetUploadLimits(defaultUploadConns, defaultUploadsPerIP, e.tmp)
 	e.h = httpx.NewRouter(logger, ah.Routes, yh.Routes, e.nh.Routes)
@@ -172,18 +175,50 @@ func (e *env) do(u user, method, path, body string) resp {
 	return resp{rec, e.t}
 }
 
+// code is the error code of a response body in the v2 spelling ("" when the body is no error): the v2 envelope's status, or
+// the code of a legacy {"error":{"code"}} body (the /v1 endpoints that have not moved yet) mapped the way the contract maps it.
+func (r resp) code() string {
+	var b struct {
+		Status string
+		Error  struct{ Code string }
+	}
+	_ = json.Unmarshal(r.Body.Bytes(), &b)
+	switch {
+	case strings.HasPrefix(b.Status, "ERROR_"):
+		return b.Status
+	case b.Error.Code == "":
+		return ""
+	case b.Error.Code == "invalid_body" || b.Error.Code == "unknown_field":
+		return "ERROR_PARAM"
+	case b.Error.Code == "payload_too_large":
+		return "ERROR_TOO_LARGE"
+	case b.Error.Code == "unauthenticated":
+		return "ERROR_UNAUTHORIZED"
+	}
+	return "ERROR_" + strings.ToUpper(b.Error.Code)
+}
+
+// status asserts the HTTP status and, when code is not empty, the error code (v2 spelling). A v2 success must say status "OK".
 func (r resp) status(want int, code string) resp {
 	r.t.Helper()
 	if r.Code != want {
 		r.t.Fatalf("status %d, want %d (%s)", r.Code, want, r.Body.String())
 	}
-	if code != "" {
-		var env struct{ Error struct{ Code string } }
-		if err := json.Unmarshal(r.Body.Bytes(), &env); err != nil || env.Error.Code != code {
-			r.t.Fatalf("code %q (err %v), want %q: %s", env.Error.Code, err, code, r.Body.String())
-		}
+	if code != "" && r.code() != code {
+		r.t.Fatalf("code %q, want %q: %s", r.code(), code, r.Body.String())
 	}
 	return r
+}
+
+// data is the "data" object of a v2 success body; it fails unless the body is {"status":"OK","data":{...}}.
+func (r resp) data() map[string]any {
+	r.t.Helper()
+	b := r.json()
+	d, ok := b["data"].(map[string]any)
+	if b["status"] != "OK" || !ok || len(b) != 2 {
+		r.t.Fatalf("not a v2 success body: %s", r.Body.String())
+	}
+	return d
 }
 
 func (r resp) json() map[string]any {
@@ -203,25 +238,52 @@ func (e *env) book(u user, title string) string {
 	return id
 }
 
+// create calls POST /api/note-collection/create for a book; body is a JSON object of the other fields ("{}" for none).
+func (e *env) create(u user, bookID, body string) resp {
+	e.t.Helper()
+	if strings.HasPrefix(body, "{") { // anything else is sent as it is (a malformed body)
+		rest := "}"
+		if body != "{}" {
+			rest = "," + body[1:]
+		}
+		body = fmt.Sprintf(`{"yearbook_id":%q`, bookID) + rest
+	}
+	return e.do(u, "POST", "/api/note-collection/create", body)
+}
+
+func (e *env) list(u user, bookID string) resp {
+	e.t.Helper()
+	return e.do(u, "GET", "/api/note-collection/get-list?yearbook_id="+url.QueryEscape(bookID), "")
+}
+
+func (e *env) revoke(u user, id string) resp {
+	e.t.Helper()
+	return e.do(u, "POST", "/api/note-collection/revoke", fmt.Sprintf(`{"id":%q}`, id))
+}
+
 // newLink creates a link and returns its collection id and token.
 func (e *env) newLink(u user, bookID, body string) (id, token string) {
 	e.t.Helper()
-	c := e.do(u, "POST", "/v1/yearbooks/"+bookID+"/collections", body).status(201, "").json()["collection"].(map[string]any)
+	c := e.create(u, bookID, body).status(200, "").data()
 	return c["id"].(string), c["token"].(string)
 }
 
-func (e *env) lookup(token string) resp { return e.do(user{}, "GET", "/v1/public/collect/"+token, "") }
+func lookupPath(token string) string {
+	return "/api/public-collect/get?token=" + url.QueryEscape(token)
+}
+
+func (e *env) lookup(token string) resp { return e.do(user{}, "GET", lookupPath(token), "") }
 
 // AC1: the response, the stored hash, label and deadline handling.
 func TestCreate(t *testing.T) {
 	e := newEnv(t)
 	alice := e.register("alice@example.com", "Đặng Thị Hồng", true)
 	book := e.book(alice, "Class 12A")
-	deadline := e.now().Add(48 * time.Hour).Format(time.RFC3339)
-	rec := e.do(alice, "POST", "/v1/yearbooks/"+book+"/collections", fmt.Sprintf(`{"label":"  Café friends 🎓 ","deadline_at":%q}`, deadline)).status(201, "")
-	c := rec.json()["collection"].(map[string]any)
+	deadline := e.now().Add(48 * time.Hour).UnixMilli()
+	rec := e.create(alice, book, fmt.Sprintf(`{"label":"  Café friends 🎓 ","deadline_at":%d}`, deadline)).status(200, "")
+	c := rec.data()
 	token := c["token"].(string)
-	if len(token) != 32 || len(c["id"].(string)) != 26 || c["label"] != "Café friends 🎓" || c["deadline_at"] != deadline || c["created_at"] == nil || len(c) != 5 {
+	if len(token) != 32 || len(c["id"].(string)) != 26 || c["label"] != "Café friends 🎓" || c["deadline_at"] != float64(deadline) || c["created_at"] != float64(e.now().UnixMilli()) || len(c) != 5 {
 		t.Fatalf("unexpected collection %v", c)
 	}
 	hash := sha256.Sum256([]byte(token))
@@ -233,7 +295,7 @@ func TestCreate(t *testing.T) {
 		t.Fatalf("raw token stored: %d %v", stored, err)
 	}
 	// no label, no deadline: both come back empty/null
-	c2 := e.do(alice, "POST", "/v1/yearbooks/"+book+"/collections", `{}`).status(201, "").json()["collection"].(map[string]any)
+	c2 := e.create(alice, book, `{}`).status(200, "").data()
 	if c2["label"] != "" || c2["deadline_at"] != nil || c2["token"] == token {
 		t.Fatalf("unexpected %v", c2)
 	}
@@ -253,37 +315,41 @@ func TestCreateValidation(t *testing.T) {
 	e := newEnv(t)
 	alice := e.register("alice@example.com", "Alice", true)
 	book := e.book(alice, "Book")
-	at := func(d time.Duration) string { return e.now().Add(d).Format(time.RFC3339) }
+	at := func(d time.Duration) int64 { return e.now().Add(d).UnixMilli() }
 	bad := []struct{ body, code string }{
-		{`{"label":"` + strings.Repeat("a", 61) + `"}`, "invalid_label"},
-		{`{"label":"bell\u0007"}`, "invalid_label"},
-		{"{\"label\":\"zero\\u200bwidth\"}", "invalid_label"},
-		{"{\"label\":\"rtl\\u202eoverride\"}", "invalid_label"},
-		{`{"deadline_at":"` + at(-time.Hour) + `"}`, "invalid_deadline"},
-		{`{"deadline_at":"` + at(0) + `"}`, "invalid_deadline"},
-		{`{"deadline_at":"` + at(366*24*time.Hour+time.Hour) + `"}`, "invalid_deadline"},
-		{`{"deadline_at":"2100-01-01T00:00:00Z"}`, "invalid_deadline"},
-		{`{"deadline_at":"tomorrow"}`, "invalid_deadline"},
-		{`{"deadline_at":"2026-10-09"}`, "invalid_deadline"},
-		{`{"deadline_at":""}`, "invalid_deadline"},
-		{`{"deadline_at":5}`, "invalid_body"},
-		{`{"revoked_at":"2026-10-09T00:00:00Z"}`, "unknown_field"},
-		{`{"token":"x"}`, "unknown_field"},
-		{`not json`, "invalid_body"},
+		{`{"label":"` + strings.Repeat("a", 61) + `"}`, "ERROR_INVALID_LABEL"},
+		{`{"label":"bell\u0007"}`, "ERROR_INVALID_LABEL"},
+		{"{\"label\":\"zero\\u200bwidth\"}", "ERROR_INVALID_LABEL"},
+		{"{\"label\":\"rtl\\u202eoverride\"}", "ERROR_INVALID_LABEL"},
+		{fmt.Sprintf(`{"deadline_at":%d}`, at(-time.Hour)), "ERROR_INVALID_DEADLINE"},
+		{fmt.Sprintf(`{"deadline_at":%d}`, at(0)), "ERROR_INVALID_DEADLINE"},
+		{fmt.Sprintf(`{"deadline_at":%d}`, at(366*24*time.Hour+time.Hour)), "ERROR_INVALID_DEADLINE"},
+		{`{"deadline_at":4102444800000}`, "ERROR_INVALID_DEADLINE"},
+		{`{"deadline_at":0}`, "ERROR_INVALID_DEADLINE"},
+		{`{"deadline_at":-1}`, "ERROR_INVALID_DEADLINE"},
+		{`{"deadline_at":"2026-10-09T00:00:00Z"}`, "ERROR_PARAM"}, // the old RFC 3339 string is not a number
+		{`{"deadline_at":1.5e12}`, "ERROR_PARAM"},                 // an integer only
+		{`{"deadline_at":""}`, "ERROR_PARAM"},
+		{`{"yearbook_id":5}`, "ERROR_PARAM"},
+		{`{"label":5}`, "ERROR_PARAM"},
+		{`{"revoked_at":"2026-10-09T00:00:00Z"}`, "ERROR_PARAM"},
+		{`{"token":"x"}`, "ERROR_PARAM"},
+		{`not json`, "ERROR_PARAM"},
 	}
 	for _, c := range bad {
-		e.do(alice, "POST", "/v1/yearbooks/"+book+"/collections", c.body).status(400, c.code)
+		e.create(alice, book, c.body).status(400, c.code)
 	}
 	if n := e.count(`SELECT COUNT(*) FROM note_collection_tab`); n != 0 {
 		t.Fatalf("%d rows created by rejected requests", n)
 	}
 	// edges that are accepted: 1 s ahead, a time zone offset, 60-character label, exactly one year
-	e.do(alice, "POST", "/v1/yearbooks/"+book+"/collections", `{"deadline_at":"`+e.now().Add(time.Second).Format(time.RFC3339)+`"}`).status(201, "")
-	c := e.do(alice, "POST", "/v1/yearbooks/"+book+"/collections", `{"deadline_at":"2026-10-09T09:00:00+07:00","label":"`+strings.Repeat("ế", 60)+`"}`).status(201, "").json()["collection"].(map[string]any)
-	if c["deadline_at"] != "2026-10-09T02:00:00Z" {
-		t.Fatalf("deadline not normalised to UTC: %v", c["deadline_at"])
+	e.create(alice, book, fmt.Sprintf(`{"deadline_at":%d}`, e.now().Add(time.Second).UnixMilli())).status(200, "")
+	c := e.create(alice, book, fmt.Sprintf(`{"deadline_at":null,"label":"%s"}`, strings.Repeat("ế", 60))).status(200, "").data()
+	if c["deadline_at"] != nil || c["label"] != strings.Repeat("ế", 60) {
+		t.Fatalf("null deadline or 60-character label: %v", c)
 	}
-	e.do(alice, "POST", "/v1/yearbooks/"+book+"/collections", `{"deadline_at":"`+e.now().AddDate(1, 0, 0).Format(time.RFC3339)+`"}`).status(201, "")
+	e.create(alice, book, fmt.Sprintf(`{"deadline_at":%d}`, e.now().AddDate(1, 0, 0).UnixMilli())).status(200, "")
+	e.do(alice, "POST", "/api/note-collection/create", `{"label":"x"}`).status(400, "ERROR_PARAM") // no yearbook_id
 }
 
 // AC2, AC4: ownership matrix across every owner endpoint, and the verified-email rule.
@@ -296,31 +362,31 @@ func TestOwnership(t *testing.T) {
 	id, token := e.newLink(alice, aBook, `{}`)
 
 	for _, who := range []user{bob, carol} {
-		e.do(who, "GET", "/v1/yearbooks/"+aBook+"/collections", "").status(404, "not_found")
-		e.do(who, "DELETE", "/v1/collections/"+id, "").status(404, "not_found")
+		e.list(who, aBook).status(404, "ERROR_NOT_FOUND")
+		e.revoke(who, id).status(404, "ERROR_NOT_FOUND")
 	}
-	e.do(bob, "POST", "/v1/yearbooks/"+aBook+"/collections", `{}`).status(404, "not_found")
+	e.create(bob, aBook, `{}`).status(404, "ERROR_NOT_FOUND")
 	for _, missing := range []string{"01ARZ3NDEKTSV4RRFFQ69G5FAV", "nope", strings.Repeat("x", 500)} {
-		e.do(alice, "POST", "/v1/yearbooks/"+missing+"/collections", `{}`).status(404, "not_found")
-		e.do(alice, "GET", "/v1/yearbooks/"+missing+"/collections", "").status(404, "not_found")
-		e.do(alice, "DELETE", "/v1/collections/"+missing, "").status(404, "not_found")
+		e.create(alice, missing, `{}`).status(404, "ERROR_NOT_FOUND")
+		e.list(alice, missing).status(404, "ERROR_NOT_FOUND")
+		e.revoke(alice, missing).status(404, "ERROR_NOT_FOUND")
 	}
 	e.lookup(token).status(200, "") // nothing above touched the link
 	if e.count(`SELECT COUNT(*) FROM note_collection_tab WHERE revoked_at IS NOT NULL`) != 0 {
 		t.Fatal("a foreign request revoked a link")
 	}
 	// anonymous callers and callers using the link token as a credential
-	e.do(user{}, "POST", "/v1/yearbooks/"+aBook+"/collections", `{}`).status(401, "unauthenticated")
-	e.do(user{}, "GET", "/v1/yearbooks/"+aBook+"/collections", "").status(401, "unauthenticated")
-	e.do(user{}, "DELETE", "/v1/collections/"+id, "").status(401, "unauthenticated")
-	if rec := e.do(user{token}, "GET", "/v1/yearbooks/"+aBook+"/collections", ""); rec.Code != 401 {
+	e.create(user{}, aBook, `{}`).status(401, "ERROR_UNAUTHORIZED")
+	e.list(user{}, aBook).status(401, "ERROR_UNAUTHORIZED")
+	e.revoke(user{}, id).status(401, "ERROR_UNAUTHORIZED")
+	if rec := e.list(user{token}, aBook); rec.Code != 401 {
 		t.Fatalf("token accepted as a session: %d", rec.Code)
 	}
 
 	// unverified owner: 403 on create only; own book, so nothing else is in the way
 	cBook := e.book(carol, "Carol's book")
-	e.do(carol, "POST", "/v1/yearbooks/"+cBook+"/collections", `{}`).status(403, "email_not_verified")
-	e.do(carol, "GET", "/v1/yearbooks/"+cBook+"/collections", "").status(200, "")
+	e.create(carol, cBook, `{}`).status(403, "ERROR_EMAIL_NOT_VERIFIED")
+	e.list(carol, cBook).status(200, "")
 	if e.count(`SELECT COUNT(*) FROM note_collection_tab`) != 1 {
 		t.Fatal("unverified owner created a link")
 	}
@@ -338,13 +404,13 @@ func TestLimit(t *testing.T) {
 			first, firstToken = id, tok
 		}
 	}
-	e.do(alice, "POST", "/v1/yearbooks/"+book+"/collections", `{}`).status(409, "limit_reached")
-	e.do(alice, "DELETE", "/v1/collections/"+first, "").status(204, "")
+	e.create(alice, book, `{}`).status(409, "ERROR_LIMIT_REACHED")
+	e.revoke(alice, first).status(200, "")
 	_, tok := e.newLink(alice, book, `{}`)
 	if tok == firstToken {
 		t.Fatal("new link reuses the revoked token")
 	}
-	e.do(alice, "POST", "/v1/yearbooks/"+book+"/collections", `{}`).status(409, "limit_reached")
+	e.create(alice, book, `{}`).status(409, "ERROR_LIMIT_REACHED")
 
 	// another book of the same owner has its own budget
 	other := e.book(alice, "Other")
@@ -357,7 +423,7 @@ func TestLimit(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			codes <- e.do(alice, "POST", "/v1/yearbooks/"+book2+"/collections", `{}`).Code
+			codes <- e.create(alice, book2, `{}`).Code
 		}()
 	}
 	wg.Wait()
@@ -365,7 +431,7 @@ func TestLimit(t *testing.T) {
 	ok := 0
 	for c := range codes {
 		switch c {
-		case 201:
+		case 200:
 			ok++
 		case 409:
 		default:
@@ -382,8 +448,8 @@ func TestList(t *testing.T) {
 	e := newEnv(t)
 	alice := e.register("alice@example.com", "Alice", true)
 	book := e.book(alice, "Book")
-	e.do(alice, "GET", "/v1/yearbooks/"+book+"/collections", "").status(200, "")
-	if got := e.do(alice, "GET", "/v1/yearbooks/"+book+"/collections", "").Body.String(); !strings.Contains(got, `"collections":[]`) {
+	e.list(alice, book).status(200, "")
+	if got := e.list(alice, book).Body.String(); !strings.Contains(got, `"items":[]`) {
 		t.Fatalf("empty list should be []: %s", got)
 	}
 	var ids, tokens []string
@@ -393,9 +459,13 @@ func TestList(t *testing.T) {
 		ids, tokens = append(ids, id), append(tokens, tok)
 	}
 	e.advance(time.Minute)
-	e.do(alice, "DELETE", "/v1/collections/"+ids[1], "").status(204, "")
-	rec := e.do(alice, "GET", "/v1/yearbooks/"+book+"/collections", "").status(200, "")
-	list := rec.json()["collections"].([]any)
+	e.revoke(alice, ids[1]).status(200, "")
+	rec := e.list(alice, book).status(200, "")
+	data := rec.data()
+	list := data["items"].([]any)
+	if data["next_id"] != "" || len(data) != 2 {
+		t.Fatalf("list data: %v", data)
+	}
 	if len(list) != 3 {
 		t.Fatalf("got %d collections", len(list))
 	}
@@ -424,18 +494,18 @@ func TestRevoke(t *testing.T) {
 	book := e.book(alice, "Book")
 	id, token := e.newLink(alice, book, `{}`)
 	e.lookup(token).status(200, "")
-	e.do(alice, "DELETE", "/v1/collections/"+id, "").status(204, "")
+	e.revoke(alice, id).status(200, "")
 	var first int64
 	if err := e.db.QueryRow(`SELECT revoked_at FROM note_collection_tab WHERE public_id = ?`, id).Scan(&first); err != nil {
 		t.Fatal(err)
 	}
 	e.advance(time.Hour)
-	e.do(alice, "DELETE", "/v1/collections/"+id, "").status(204, "")
+	e.revoke(alice, id).status(200, "")
 	var second int64
 	if err := e.db.QueryRow(`SELECT revoked_at FROM note_collection_tab WHERE public_id = ?`, id).Scan(&second); err != nil || first != second || first != e.now().Add(-time.Hour).UnixMilli() {
 		t.Fatalf("revoked_at moved: %v -> %v (%v)", first, second, err)
 	}
-	e.lookup(token).status(404, "not_found")
+	e.lookup(token).status(404, "ERROR_NOT_FOUND")
 }
 
 // AC5, AC6: the public lookup. Unknown, malformed and revoked tokens look the same; an expired one is 410.
@@ -443,21 +513,21 @@ func TestPublicLookup(t *testing.T) {
 	e := newEnv(t)
 	alice := e.register("alice@example.com", "Đặng Thị Hồng", true)
 	book := e.book(alice, "Class 12A")
-	deadline := e.now().Add(time.Hour).Format(time.RFC3339)
-	_, token := e.newLink(alice, book, fmt.Sprintf(`{"deadline_at":%q}`, deadline))
+	deadline := e.now().Add(time.Hour).UnixMilli()
+	_, token := e.newLink(alice, book, fmt.Sprintf(`{"deadline_at":%d}`, deadline))
 	rec := e.lookup(token).status(200, "")
-	want := fmt.Sprintf(`{"yearbook":{"title":"Class 12A"},"owner":{"display_name":"Đặng Thị Hồng"},"deadline_at":%q,"open":true,"fields":%s}`, deadline, defaultFieldsJSON)
+	want := fmt.Sprintf(`{"status":"OK","data":{"yearbook":{"title":"Class 12A"},"owner":{"display_name":"Đặng Thị Hồng"},"deadline_at":%d,"open":true,"fields":%s}}`, deadline, defaultFieldsJSON)
 	if strings.TrimSpace(rec.Body.String()) != want {
 		t.Fatalf("body %s\nwant %s", rec.Body.String(), want)
 	}
 	_, noDeadline := e.newLink(alice, book, `{}`)
-	if got := e.lookup(noDeadline).status(200, "").json(); got["deadline_at"] != nil || got["open"] != true {
+	if got := e.lookup(noDeadline).status(200, "").data(); got["deadline_at"] != nil || got["open"] != true {
 		t.Fatalf("no-deadline lookup: %v", got)
 	}
 
 	// a session cookie is ignored: another user's, or a broken one, changes nothing and nothing is set
 	bob := e.register("bob@example.com", "Bob", true)
-	r := e.do(bob, "GET", "/v1/public/collect/"+token, "").status(200, "")
+	r := e.do(bob, "GET", lookupPath(token), "").status(200, "")
 	for _, rr := range []resp{rec, r} {
 		if len(rr.Result().Cookies()) != 0 || rr.Header().Get("Set-Cookie") != "" {
 			t.Fatal("public lookup set a cookie")
@@ -468,19 +538,19 @@ func TestPublicLookup(t *testing.T) {
 			}
 		}
 	}
-	if rec := e.do(user{"garbage"}, "GET", "/v1/public/collect/"+token, ""); rec.Code != 200 {
+	if rec := e.do(user{"garbage"}, "GET", lookupPath(token), ""); rec.Code != 200 {
 		t.Fatalf("bad session cookie broke the public lookup: %d", rec.Code)
 	}
 
 	// 404s are indistinguishable (compared without the per-request id)
 	revID, revoked := e.newLink(alice, book, `{}`)
-	e.do(alice, "DELETE", "/v1/collections/"+revID, "").status(204, "")
+	e.revoke(alice, revID).status(200, "")
 	var bodies []string
 	for _, tok := range []string{"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "short", strings.Repeat("a", 10_000), "a%2Fb", "%00", token + "x", strings.Repeat("-", 32), revoked} {
-		rec := e.lookup(tok).status(404, "not_found")
-		var env map[string]map[string]string
+		rec := e.lookup(tok).status(404, "ERROR_NOT_FOUND")
+		var env map[string]string
 		_ = json.Unmarshal(rec.Body.Bytes(), &env)
-		delete(env["error"], "request_id")
+		delete(env, "request_id")
 		bodies = append(bodies, fmt.Sprint(env))
 	}
 	for _, b := range bodies {
@@ -493,7 +563,7 @@ func TestPublicLookup(t *testing.T) {
 	e.advance(time.Hour - time.Second)
 	e.lookup(token).status(200, "")
 	e.advance(time.Second)
-	e.lookup(token).status(410, "collection_closed")
+	e.lookup(token).status(410, "ERROR_COLLECTION_CLOSED")
 	e.lookup(noDeadline).status(200, "")
 }
 
@@ -505,13 +575,13 @@ func TestPublicRateLimitAndLogs(t *testing.T) {
 	book := e.book(alice, "Book")
 	id, token := e.newLink(alice, book, `{}`)
 	for i := range 59 { // 59 misses and 500 hits from one IP: still fine
-		e.lookup(fmt.Sprintf("%032d", i)).status(404, "not_found")
+		e.lookup(fmt.Sprintf("%032d", i)).status(404, "ERROR_NOT_FOUND")
 	}
 	for range 500 {
 		e.lookup(token).status(200, "")
 	}
-	e.lookup("x").status(404, "not_found") // the 60th miss
-	rec := e.lookup(token).status(429, "rate_limited")
+	e.lookup("x").status(404, "ERROR_NOT_FOUND") // the 60th miss
+	rec := e.lookup(token).status(429, "ERROR_RATE_LIMITED")
 	if rec.Header().Get("Retry-After") == "" {
 		t.Fatal("no Retry-After")
 	}
@@ -521,18 +591,18 @@ func TestPublicRateLimitAndLogs(t *testing.T) {
 	for range 599 {
 		e.lookup(token)
 	}
-	e.lookup(token).status(429, "rate_limited")
+	e.lookup(token).status(429, "ERROR_RATE_LIMITED")
 	e.advance(15*time.Minute + time.Second)
 	// the owner endpoints are not limited by the public counters
-	e.do(alice, "GET", "/v1/yearbooks/"+book+"/collections", "").status(200, "")
-	e.do(alice, "DELETE", "/v1/collections/"+id, "").status(204, "")
+	e.list(alice, book).status(200, "")
+	e.revoke(alice, id).status(200, "")
 
 	hash := sha256.Sum256([]byte(token))
 	logs := e.logs.String()
 	if strings.Contains(logs, token) || strings.Contains(logs, fmt.Sprintf("%x", hash)) {
 		t.Fatal("token or hash in the logs")
 	}
-	if !strings.Contains(logs, "GET /v1/public/collect/{token}") {
+	if !strings.Contains(logs, "GET /api/public-collect/get") {
 		t.Fatal("access log should record the route pattern")
 	}
 }
@@ -543,8 +613,8 @@ func TestPublicRateLimitPerIP(t *testing.T) {
 	for range 60 {
 		e.lookup("x")
 	}
-	e.lookup("x").status(429, "rate_limited")
-	r := httptest.NewRequest("GET", "/v1/public/collect/x", nil)
+	e.lookup("x").status(429, "ERROR_RATE_LIMITED")
+	r := httptest.NewRequest("GET", lookupPath("x"), nil)
 	r.RemoteAddr = "198.51.100.7:4000"
 	rec := httptest.NewRecorder()
 	e.h.ServeHTTP(rec, r)
@@ -564,7 +634,7 @@ func TestYearbookDeleteCascades(t *testing.T) {
 	if n := e.count(`SELECT COUNT(*) FROM note_collection_tab`); n != 1 {
 		t.Fatalf("%d links left, want 1", n)
 	}
-	e.lookup(t1).status(404, "not_found")
+	e.lookup(t1).status(404, "ERROR_NOT_FOUND")
 	e.lookup(t2).status(200, "")
 }
 
@@ -574,8 +644,8 @@ func TestCSRFGuard(t *testing.T) {
 	alice := e.register("alice@example.com", "Alice", true)
 	book := e.book(alice, "Book")
 	id, _ := e.newLink(alice, book, `{}`)
-	for _, c := range [][2]string{{"POST", "/v1/yearbooks/" + book + "/collections"}, {"DELETE", "/v1/collections/" + id}} {
-		r := httptest.NewRequest(c[0], c[1], strings.NewReader(`{}`))
+	for _, c := range [][2]string{{"POST", "/api/note-collection/create"}, {"POST", "/api/note-collection/revoke"}} {
+		r := httptest.NewRequest(c[0], c[1], strings.NewReader(fmt.Sprintf(`{"yearbook_id":%q,"id":%q}`, book, id)))
 		r.Header.Set("Content-Type", "application/json")
 		r.Header.Set("Origin", "https://evil.example")
 		r.AddCookie(&http.Cookie{Name: auth.CookieName, Value: alice.cookie})
@@ -585,4 +655,128 @@ func TestCSRFGuard(t *testing.T) {
 			t.Fatalf("%s %s from a foreign origin: %d", c[0], c[1], rec.Code)
 		}
 	}
+}
+
+// The v1 routes are gone: they answer the router's 404 (the old envelope, they are not under /api), whatever the method.
+func TestV1NotesRoutesAreGone(t *testing.T) {
+	e := newEnv(t)
+	alice := e.register("alice@example.com", "Alice", true)
+	book := e.book(alice, "Book")
+	id, token := e.newLink(alice, book, `{}`)
+	for _, c := range [][2]string{
+		{"GET", "/v1/yearbooks/" + book + "/collections"}, {"POST", "/v1/yearbooks/" + book + "/collections"},
+		{"DELETE", "/v1/collections/" + id}, {"GET", "/v1/public/collect/" + token}, {"POST", "/v1/public/collect/" + token + "/notes"},
+	} {
+		rec := e.do(alice, c[0], c[1], "")
+		if rec.Code != 404 && rec.Code != 405 {
+			t.Errorf("%s %s: %d, want 404 or 405", c[0], c[1], rec.Code)
+		}
+		var b map[string]map[string]string
+		if err := json.Unmarshal(rec.Body.Bytes(), &b); err != nil || b["error"]["code"] == "" {
+			t.Errorf("%s %s: not the legacy envelope: %s", c[0], c[1], rec.Body.String())
+		}
+	}
+	// the new routes accept their own method only
+	e.do(alice, "GET", "/api/note-collection/create", "").status(405, "ERROR_METHOD_NOT_ALLOWED")
+	e.do(alice, "POST", "/api/note-collection/get-list", "{}").status(405, "ERROR_METHOD_NOT_ALLOWED")
+	e.do(alice, "DELETE", "/api/note-collection/revoke", "").status(405, "ERROR_METHOD_NOT_ALLOWED")
+	e.do(alice, "POST", "/api/public-collect/get", "{}").status(405, "ERROR_METHOD_NOT_ALLOWED")
+}
+
+// AC3: the public routes need no cookie and send no CORS headers, with or without an Origin; a preflight is not answered.
+func TestPublicRoutesIgnoreOriginAndCookie(t *testing.T) {
+	e := newEnv(t)
+	alice := e.register("alice@example.com", "Alice", true)
+	book := e.book(alice, "Book")
+	_, token := e.newLink(alice, book, `{}`)
+	for _, origin := range []string{"", "https://evil.example", "null"} {
+		r := httptest.NewRequest("GET", lookupPath(token), nil)
+		if origin != "" {
+			r.Header.Set("Origin", origin)
+		}
+		rec := httptest.NewRecorder()
+		e.h.ServeHTTP(rec, r)
+		resp{rec, t}.status(200, "")
+		for k := range rec.Header() {
+			if strings.HasPrefix(strings.ToLower(k), "access-control-") {
+				t.Errorf("Origin %q: CORS header %s", origin, k)
+			}
+		}
+		body, ct := multipartOf(text("token", token), answers("A", "m"))
+		r = httptest.NewRequest("POST", submitPath, body)
+		r.Header.Set("Content-Type", ct)
+		if origin != "" {
+			r.Header.Set("Origin", origin)
+		}
+		rec = httptest.NewRecorder()
+		e.h.ServeHTTP(rec, r)
+		resp{rec, t}.status(200, "")
+	}
+	for _, path := range []string{lookupPath(token), submitPath} {
+		r := httptest.NewRequest("OPTIONS", path, nil)
+		r.Header.Set("Origin", "https://evil.example")
+		r.Header.Set("Access-Control-Request-Method", "POST")
+		rec := httptest.NewRecorder()
+		e.h.ServeHTTP(rec, r)
+		if rec.Code != 405 || rec.Header().Get("Access-Control-Allow-Origin") != "" {
+			t.Errorf("preflight %s: %d %v", path, rec.Code, rec.Header())
+		}
+	}
+	// the owner endpoints keep their guard: a session cookie from a foreign or missing origin is refused, a JSON body is required
+	for _, origin := range []string{"https://evil.example", ""} {
+		r := httptest.NewRequest("POST", "/api/note-collection/revoke", strings.NewReader(`{"id":"x"}`))
+		r.Header.Set("Content-Type", "application/json")
+		if origin != "" {
+			r.Header.Set("Origin", origin)
+		}
+		r.AddCookie(&http.Cookie{Name: auth.CookieName, Value: alice.cookie})
+		rec := httptest.NewRecorder()
+		e.h.ServeHTTP(rec, r)
+		resp{rec, t}.status(403, "ERROR_CSRF_ORIGIN_MISMATCH")
+	}
+	r := httptest.NewRequest("POST", "/api/note-collection/revoke", strings.NewReader(`{"id":"x"}`))
+	r.Header.Set("Content-Type", "text/plain")
+	rec := httptest.NewRecorder()
+	e.h.ServeHTTP(rec, r)
+	resp{rec, t}.status(415, "ERROR_UNSUPPORTED_MEDIA_TYPE") // checked before the session, as in every guard
+}
+
+// The token is a credential in the URL: whatever happens to the request, it never reaches the logs, and the access log
+// names the route only (docs/api-contract.md section 6).
+func TestTokenInQueryNeverLogged(t *testing.T) {
+	e := newEnv(t)
+	alice := e.register("alice@example.com", "Alice", true)
+	book := e.book(alice, "Book")
+	_, token := e.newLink(alice, book, `{}`)
+	const secret = "SECRET-QUERY-TOKEN-0123456789ab" // 31 characters: not a valid token, a plain miss
+	e.do(user{}, "GET", "/api/public-collect/get?token="+secret, "").status(404, "ERROR_NOT_FOUND")
+	e.do(user{}, "GET", "/api/public-collect/get?token="+secret+"&limit=abc", "").status(404, "ERROR_NOT_FOUND")
+	e.lookup(token).status(200, "")
+	for range missesPerWindow { // and the 429 path
+		e.do(user{}, "GET", "/api/public-collect/get?token="+secret, "")
+	}
+	e.do(user{}, "GET", "/api/public-collect/get?token="+secret, "").status(429, "ERROR_RATE_LIMITED")
+	e.advance(16 * time.Minute)
+	// a failing photo store logs an error line: the body token must not be in it either
+	e.st.failAt = e.st.puts + 1
+	e.post(token, answers("A", "m"), photoPart(jpegOf(t, 1))).status(502, "ERROR_STORAGE_ERROR")
+	e.post(secret, answers("A", "m")).status(404, "ERROR_NOT_FOUND")
+	logs := e.logs.String()
+	if strings.Contains(logs, secret) || strings.Contains(logs, token) || strings.Contains(logs, "SECRET") {
+		t.Fatalf("a token is in the logs:\n%s", logs)
+	}
+	if !strings.Contains(logs, "GET /api/public-collect/get") || !strings.Contains(logs, "POST /api/public-collect/submit-note") {
+		t.Fatal("the access log should record the route patterns")
+	}
+}
+
+// A mistake in the query is a 404 like any other miss; the owner endpoints report their missing parameters.
+func TestMissingParameters(t *testing.T) {
+	e := newEnv(t)
+	alice := e.register("alice@example.com", "Alice", true)
+	e.do(user{}, "GET", "/api/public-collect/get", "").status(404, "ERROR_NOT_FOUND")
+	e.do(alice, "GET", "/api/note-collection/get-list", "").status(400, "ERROR_PARAM")
+	e.do(alice, "POST", "/api/note-collection/revoke", `{}`).status(400, "ERROR_PARAM")
+	e.do(alice, "POST", "/api/note-collection/revoke", `{"id":"x","extra":1}`).status(400, "ERROR_PARAM")
+	e.do(alice, "POST", "/api/note-collection/create", "").status(400, "ERROR_PARAM")
 }

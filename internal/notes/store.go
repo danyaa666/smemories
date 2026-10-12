@@ -6,16 +6,6 @@ import (
 	"errors"
 )
 
-var (
-	// ErrNotFound covers a missing collection or yearbook and one owned by someone else: callers cannot tell them apart.
-	ErrNotFound     = errors.New("notes: not found")
-	ErrLimitReached = errors.New("notes: collection limit reached")
-	// ErrFull: the collection already holds maxNotes notes.
-	ErrFull = errors.New("notes: collection full")
-	// ErrClosed: the collection's deadline has passed.
-	ErrClosed = errors.New("notes: collection closed")
-)
-
 const (
 	maxActive = 5   // not-revoked collections per yearbook
 	maxNotes  = 300 // notes per collection, in any status
@@ -47,7 +37,7 @@ func NewStore(db *sql.DB) *Store { return &Store{db: db} }
 //
 // Lock order (docs/db-conventions.md, Writes): yearbook_tab row first, then note_collection_tab, then note_tab and note_photo_tab.
 // insertNote, revoke and the yearbook delete take the same order.
-func (s *Store) create(ctx context.Context, ownerID uint64, bookID string, c Collection, hash [32]byte) error {
+func (s *Store) create(ctx context.Context, ownerID uint64, bookID string, c *Collection, hash [32]byte) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -77,7 +67,7 @@ func (s *Store) create(ctx context.Context, ownerID uint64, bookID string, c Col
 }
 
 // list returns the book's collections, newest first. ponytail: unpaged; revoked links stay in the list, add a cursor if that gets long.
-func (s *Store) list(ctx context.Context, ownerID uint64, bookID string) ([]Collection, error) {
+func (s *Store) list(ctx context.Context, ownerID uint64, bookID string) ([]*Collection, error) {
 	var id uint64
 	err := s.db.QueryRowContext(ctx, `SELECT id FROM yearbook_tab WHERE owner_id = ? AND public_id = ?`, ownerID, bookID).Scan(&id)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -93,9 +83,9 @@ func (s *Store) list(ctx context.Context, ownerID uint64, bookID string) ([]Coll
 		return nil, err
 	}
 	defer func() { _ = rows.Close() }()
-	out := []Collection{}
+	out := []*Collection{}
 	for rows.Next() {
-		var c Collection
+		c := &Collection{}
 		var deadline, revoked sql.NullInt64
 		if err := rows.Scan(&c.ID, &c.Label, &deadline, &c.CreatedAt, &revoked, &c.NoteCount); err != nil {
 			return nil, err
@@ -167,8 +157,8 @@ type Public struct {
 }
 
 // lookup finds an active collection by token hash with one indexed query; unknown and revoked are both ErrNotFound.
-func (s *Store) lookup(ctx context.Context, hash [32]byte) (Public, error) {
-	var p Public
+func (s *Store) lookup(ctx context.Context, hash [32]byte) (*Public, error) {
+	p := &Public{}
 	var deadline sql.NullInt64
 	var tmpl sql.NullString
 	err := s.db.QueryRowContext(ctx,
@@ -176,10 +166,13 @@ func (s *Store) lookup(ctx context.Context, hash [32]byte) (Public, error) {
 		 JOIN yearbook_tab y ON y.id = c.yearbook_id JOIN users u ON u.id = y.owner_id
 		 WHERE c.token_hash = ? AND c.revoked_at IS NULL`, hash[:]).Scan(&p.Title, &p.DisplayName, &deadline, &p.CollectionID, &p.YearbookID, &tmpl)
 	if errors.Is(err, sql.ErrNoRows) {
-		return Public{}, ErrNotFound
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
 	}
 	p.DeadlineAt, p.TemplateID = ms(deadline), tmpl.String
-	return p, err
+	return p, nil
 }
 
 // noteCount is how many notes the collection holds, in any status.
@@ -206,7 +199,7 @@ type newNote struct {
 // and photo links, so a submit racing it either commits first or finds the book gone (ErrNotFound, 404) and never deadlocks.
 // The collection lock makes the revoked, deadline and 300-note checks hold for the state the insert commits into: parallel
 // submissions cannot all slip under the cap and a link revoked while photos were processed stores nothing.
-func (s *Store) insertNote(ctx context.Context, n newNote) error {
+func (s *Store) insertNote(ctx context.Context, n *newNote) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
