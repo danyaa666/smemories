@@ -259,31 +259,40 @@ type cursor struct {
 	publicID  string
 }
 
-// list returns up to limit books, newest updated_at first, starting after c (nil = first page).
-func (s *Store) list(ctx context.Context, ownerID uint64, c *cursor, limit int) ([]Yearbook, error) {
+// list returns up to limit books, newest updated_at first, starting after c (nil = first page), and the cursor of the
+// next page (nil on the last page). "More" is decided from the raw rows (one extra row is read as a probe) and the cursor
+// is the last raw row of the page, before fill drops a book deleted mid-read: a vanished book may shorten the page but
+// never hides that another page exists.
+func (s *Store) list(ctx context.Context, ownerID uint64, c *cursor, limit int) ([]Yearbook, *cursor, error) {
 	q, args := `SELECT `+bookCols+` FROM yearbook_tab WHERE owner_id = ?`, []any{ownerID}
 	if c != nil {
 		q += ` AND (updated_at < ? OR (updated_at = ? AND public_id < ?))`
 		args = append(args, c.updatedAt, c.updatedAt, c.publicID)
 	}
-	rows, err := s.db.QueryContext(ctx, q+` ORDER BY updated_at DESC, public_id DESC LIMIT ?`, append(args, limit)...)
+	rows, err := s.db.QueryContext(ctx, q+` ORDER BY updated_at DESC, public_id DESC LIMIT ?`, append(args, limit+1)...)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer func() { _ = rows.Close() }()
 	var out []Yearbook
 	for rows.Next() {
 		y, err := scanBook(rows)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		out = append(out, y)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	_ = rows.Close() // the connection is free for the next two queries
-	return fill(ctx, s.db, out, false)
+	var next *cursor
+	if len(out) > limit {
+		out = out[:limit]
+		next = &cursor{out[limit-1].UpdatedAt, out[limit-1].ID}
+	}
+	out, err = fill(ctx, s.db, out, false)
+	return out, next, err
 }
 
 // modify locks the owner's book, lets change edit it (and write the profile through the same

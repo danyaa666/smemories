@@ -273,7 +273,7 @@ func TestReadQueryCountIsConstant(t *testing.T) {
 
 	for _, limit := range []int{1, 50} {
 		n.Store(0)
-		books, err := st.list(ctx, owner, nil, limit)
+		books, _, err := st.list(ctx, owner, nil, limit)
 		if err != nil || len(books) != limit {
 			t.Fatalf("list(%d): %d books, %v", limit, len(books), err)
 		}
@@ -360,11 +360,66 @@ func TestReadOfBookDeletedMidReadIsNotFound(t *testing.T) {
 	// Recreate the doomed book and list: the survivor stays, the deleted one is absent.
 	gone = e.create(alice, "Gone")
 	st = NewStore(hookedDB(t, e.db, &n, deleteGone(e.bookRow(gone))))
-	books, err := st.list(ctx, owner, nil, 10)
+	books, _, err := st.list(ctx, owner, nil, 10)
 	if err != nil {
 		t.Fatalf("list with a book deleted mid-read: %v", err)
 	}
 	if len(books) != 1 || books[0].ID != keep {
 		t.Fatalf("list = %d books, want only %s", len(books), keep)
+	}
+}
+
+// T-078: a book that vanishes from a full page shortens it but must not hide the next page: next_cursor comes from the
+// raw rows, and the following pages neither skip nor repeat a surviving book.
+func TestListPageKeepsNextCursorWhenABookVanishes(t *testing.T) {
+	e := newEnv(t)
+	alice := e.register("alice@example.com", "Alice")
+	var owner uint64
+	if err := e.db.QueryRow(`SELECT id FROM users WHERE email = 'alice@example.com'`).Scan(&owner); err != nil {
+		t.Fatal(err)
+	}
+	var ids []string // oldest first; the list is newest first
+	for i := 0; i < 5; i++ {
+		ids = append(ids, e.create(alice, fmt.Sprintf("B%d", i)))
+	}
+	newest, vanishing := ids[4], ids[3]
+	row := e.bookRow(vanishing)
+	var n atomic.Int64
+	ctx := context.Background()
+	st := NewStore(hookedDB(t, e.db, &n, func(query string) {
+		if !strings.Contains(query, "FROM profile_tab") {
+			return
+		}
+		for _, q := range []string{`DELETE FROM profile_tab WHERE yearbook_id = ?`, `DELETE FROM yearbook_tab WHERE id = ?`} {
+			if _, err := e.db.Exec(q, row); err != nil {
+				t.Error(err)
+			}
+		}
+	}))
+
+	page, next, err := st.list(ctx, owner, nil, 2) // raw page: newest, vanishing; probe row: ids[2]
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(page) != 1 || page[0].ID != newest {
+		t.Fatalf("first page = %d books, want only the newest", len(page))
+	}
+	if next == nil {
+		t.Fatal("next cursor is nil although two more books exist")
+	}
+
+	var got []string
+	plain := NewStore(e.db)
+	for next != nil {
+		page, next, err = plain.list(ctx, owner, next, 2)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, b := range page {
+			got = append(got, b.ID)
+		}
+	}
+	if want := []string{ids[2], ids[1], ids[0]}; fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Fatalf("following pages = %v, want %v", got, want)
 	}
 }

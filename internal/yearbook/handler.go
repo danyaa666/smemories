@@ -129,16 +129,14 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 		}
 		cur = &c
 	}
-	books, err := h.store.list(r.Context(), owner(r), cur, limit+1) // one extra row says whether another page exists
+	books, nextCur, err := h.store.list(r.Context(), owner(r), cur, limit)
 	if err != nil {
 		h.fail(w, r, err)
 		return
 	}
 	var next *string
-	if len(books) > limit {
-		books = books[:limit]
-		last := books[limit-1]
-		c := formatCursor(cursor{last.UpdatedAt, last.ID})
+	if nextCur != nil {
+		c := formatCursor(*nextCur)
 		next = &c
 	}
 	if books == nil {
