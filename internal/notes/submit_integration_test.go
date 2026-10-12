@@ -176,7 +176,7 @@ type link struct {
 
 func (e *env) newOpenLink() link {
 	e.t.Helper()
-	n := e.count(`SELECT COUNT(*) FROM users`)
+	n := e.count(`SELECT COUNT(*) FROM user_tab`)
 	owner := e.register(fmt.Sprintf("owner%d@example.com", n), "Owner", true)
 	book := e.book(owner, "Class 12A")
 	id, token := e.newLink(owner, book, `{}`)

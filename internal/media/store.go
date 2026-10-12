@@ -94,7 +94,7 @@ func (s *Store) insert(ctx context.Context, ownerID, yearbookID uint64, kind str
 	}
 	defer func() { _ = tx.Rollback() }()
 	var locked uint64
-	if err := tx.QueryRowContext(ctx, `SELECT id FROM users WHERE id = ? FOR UPDATE`, ownerID).Scan(&locked); err != nil {
+	if err := tx.QueryRowContext(ctx, `SELECT id FROM user_tab WHERE id = ? FOR UPDATE`, ownerID).Scan(&locked); err != nil {
 		return Media{}, err
 	}
 	err = tx.QueryRowContext(ctx, `SELECT id FROM yearbook_tab WHERE id = ? AND owner_id = ? FOR SHARE`, yearbookID, ownerID).Scan(&locked)

@@ -347,7 +347,7 @@ func TestRegisterValidation(t *testing.T) {
 			t.Errorf("%s: no cookie on failure", c.name)
 		}
 	}
-	if n := e.count("SELECT COUNT(*) FROM users"); n != 0 {
+	if n := e.count("SELECT COUNT(*) FROM user_tab"); n != 0 {
 		t.Fatalf("rejected registrations created %d users", n)
 	}
 	// Boundaries that are valid: 10 and 128 characters, 100-character name.
@@ -379,7 +379,7 @@ func TestDuplicateEmailIsCaseInsensitive(t *testing.T) {
 	for _, em := range []string{"dup@example.com", "DUP@EXAMPLE.COM", " dup@Example.com "} {
 		want(t, e.register(em, testPW, "Two"), 409, "email_taken")
 	}
-	if n := e.count("SELECT COUNT(*) FROM users"); n != 1 {
+	if n := e.count("SELECT COUNT(*) FROM user_tab"); n != 1 {
 		t.Fatalf("%d users", n)
 	}
 	// Accents are not folded: they are different addresses.
@@ -410,7 +410,7 @@ func TestConcurrentDuplicateRegistrations(t *testing.T) {
 	if created != 1 || taken != 7 {
 		t.Fatalf("created=%d taken=%d", created, taken)
 	}
-	if n := e.count("SELECT COUNT(*) FROM users"); n != 1 {
+	if n := e.count("SELECT COUNT(*) FROM user_tab"); n != 1 {
 		t.Fatalf("%d users", n)
 	}
 }
@@ -420,7 +420,7 @@ func TestPasswordStoredAsArgon2id(t *testing.T) {
 	e := newEnv(t, opts{hashMemKiB: 1024})
 	want(t, e.register(testMail, testPW, "A"), 201, "")
 	var phc string
-	if err := e.db.QueryRow("SELECT password_hash FROM users").Scan(&phc); err != nil {
+	if err := e.db.QueryRow("SELECT password_hash FROM user_tab").Scan(&phc); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.HasPrefix(phc, "$argon2id$v=19$m=1024,t=1,p=1$") || strings.Contains(phc, testPW) {
@@ -480,7 +480,7 @@ func TestUnicodeNormalisation(t *testing.T) {
 	want(t, e.login("nfd@example.com", nfc, ""), 200, "")
 	// Stored hash is over the NFKC form: it verifies the NFC bytes directly.
 	var phc string
-	if err := e.db.QueryRow("SELECT password_hash FROM users WHERE email=?", "nfd@example.com").Scan(&phc); err != nil {
+	if err := e.db.QueryRow("SELECT password_hash FROM user_tab WHERE email=?", "nfd@example.com").Scan(&phc); err != nil {
 		t.Fatal(err)
 	}
 	if ok, err := e.hasher.Verify(context.Background(), nfc, phc); err != nil || !ok {
@@ -504,7 +504,7 @@ func TestUnicodeNormalisation(t *testing.T) {
 		t.Fatalf("response display_name %q (%v)", out.User.DisplayName, err)
 	}
 	var name string
-	if err := e.db.QueryRow("SELECT display_name FROM users WHERE email=?", "name@example.com").Scan(&name); err != nil || name != "Vi\u1ec7t" {
+	if err := e.db.QueryRow("SELECT display_name FROM user_tab WHERE email=?", "name@example.com").Scan(&name); err != nil || name != "Vi\u1ec7t" {
 		t.Fatalf("stored display_name %q (%v)", name, err)
 	}
 }
@@ -518,11 +518,11 @@ func TestEmailNFCvsNFD(t *testing.T) {
 	e := newEnv(t, opts{})
 	want(t, e.register(nfc, testPW, "A"), 201, "")
 	want(t, e.register(nfd, testPW, "B"), 409, "email_taken")
-	if n := e.count("SELECT COUNT(*) FROM users"); n != 1 {
+	if n := e.count("SELECT COUNT(*) FROM user_tab"); n != 1 {
 		t.Fatalf("%d users", n)
 	}
 	var stored string
-	if err := e.db.QueryRow("SELECT email FROM users").Scan(&stored); err != nil || stored != nfc {
+	if err := e.db.QueryRow("SELECT email FROM user_tab").Scan(&stored); err != nil || stored != nfc {
 		t.Fatalf("stored email %q (%v)", stored, err)
 	}
 	want(t, e.login(nfc, testPW, ""), 200, "")
@@ -817,7 +817,7 @@ func TestSecretsNeverLogged(t *testing.T) {
 	e.do(req{method: "GET", path: "/v1/me", cookie: c.Value})
 	e.do(req{method: "POST", path: "/v1/auth/logout", cookie: c.Value, origin: origin})
 	var phc string
-	_ = e.db.QueryRow("SELECT password_hash FROM users").Scan(&phc)
+	_ = e.db.QueryRow("SELECT password_hash FROM user_tab").Scan(&phc)
 
 	logs := e.logs.String()
 	if logs == "" {

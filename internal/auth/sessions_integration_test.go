@@ -257,7 +257,7 @@ func TestSessionStoreDownFailsClosed(t *testing.T) {
 
 	// Register: rules first, then the session; a failure leaves no account behind.
 	want(t, e.register("bob@example.com", testPW, "Bob"), 503, "session_store_unavailable")
-	if n := e.count(`SELECT COUNT(*) FROM users WHERE email = 'bob@example.com'`); n != 0 {
+	if n := e.count(`SELECT COUNT(*) FROM user_tab WHERE email = 'bob@example.com'`); n != 0 {
 		t.Fatalf("%d accounts left behind by a failed register", n)
 	}
 	want(t, e.register("not-an-email", testPW, "Bob"), 400, "invalid_email")
@@ -287,7 +287,7 @@ func TestGooglePreHijackingRollsBackWhenSessionsCannotBeDeleted(t *testing.T) {
 	if rec := f.callback(""); rec.Code != 302 || !strings.Contains(rec.Header().Get("Location"), "error=") {
 		t.Fatalf("callback with Redis down: %d %q", rec.Code, rec.Header().Get("Location"))
 	}
-	if n := e.count(`SELECT COUNT(*) FROM users WHERE password_hash IS NOT NULL AND email_verified_at IS NULL`); n != 1 {
+	if n := e.count(`SELECT COUNT(*) FROM user_tab WHERE password_hash IS NOT NULL AND email_verified_at IS NULL`); n != 1 {
 		t.Fatal("the account was taken over although the squatter's sessions could not be removed")
 	}
 

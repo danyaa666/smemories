@@ -160,7 +160,7 @@ func (s *Service) Register(ctx context.Context, ip, userAgent, email, password, 
 		return User{}, Session{}, err
 	}
 	now := s.now().UTC()
-	u := User{ID: ulid.New(now), Email: email, DisplayName: name, Locale: locale, CreatedAt: now}
+	u := User{ID: ulid.New(now), Email: email, DisplayName: name, Locale: locale, CreatedAt: now.UnixMilli()}
 	sess, row, err := s.newSession(now, userAgent)
 	if err != nil {
 		return User{}, Session{}, err

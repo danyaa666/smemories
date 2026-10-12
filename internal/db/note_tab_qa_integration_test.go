@@ -143,7 +143,7 @@ func TestQAMigrateNoteTabRealisticData(t *testing.T) {
 		}
 	}
 	// Reserved words / FK / indexes: a hostile scan of the live schema.
-	if n := dump(t, ctx, d, `SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() AND CONSTRAINT_TYPE = 'FOREIGN KEY' AND TABLE_NAME <> 'user_identities'`); n[0] != "0" {
+	if n := dump(t, ctx, d, `SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() AND CONSTRAINT_TYPE = 'FOREIGN KEY'`); n[0] != "0" {
 		t.Errorf("foreign keys anywhere in the schema: %v", n)
 	}
 	// Unique constraints still hold.

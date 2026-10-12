@@ -80,7 +80,7 @@ test-integration:
 # Marks the Newman test accounts A and B of postman/notes.postman_collection.json as email-verified (the dev mail only goes to the API's stdout).
 .PHONY: verify-newman-users
 verify-newman-users:
-	docker compose exec -T mysql sh -c 'mysql -u"$$MYSQL_USER" -p"$$MYSQL_PASSWORD" "$$MYSQL_DATABASE" -e "UPDATE users SET email_verified_at = NOW(6) WHERE email IN (\"newman-notes-a@example.com\",\"newman-notes-b@example.com\") AND email_verified_at IS NULL"'
+	docker compose exec -T mysql sh -c 'mysql -u"$$MYSQL_USER" -p"$$MYSQL_PASSWORD" "$$MYSQL_DATABASE" -e "UPDATE user_tab SET email_verified_at = UNIX_TIMESTAMP(NOW(3)) * 1000 WHERE email IN (\"newman-notes-a@example.com\",\"newman-notes-b@example.com\") AND email_verified_at IS NULL"'
 
 # Dev only: forgets every rate-limiter window (keys smem:<SMEM_ENV>:rl:*) in the compose Redis, so Newman can be re-run from one address.
 reset-limits:
