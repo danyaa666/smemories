@@ -10,18 +10,17 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 27 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-067, T-068, T-069, T-070, T-071, T-072, T-073 |
-| TODO | 1 | T-079 |
-| QA_PASS | 1 | T-066 |
-| MERGED | 1 | T-077 |
+| BACKLOG | 25 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-069, T-070, T-071, T-072, T-073 |
+| TODO | 3 | T-067, T-068, T-079 |
+| MERGED | 2 | T-066, T-077 |
 | DONE | 42 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-074, T-075, T-076, T-078 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
 
-**Awaiting your review (MERGED):** T-077 ([E01] Integration tests: set a timeout and cut the media package time)
+**Awaiting your review (MERGED):** T-066 ([E10] DB conventions: note collections and notes tables); T-077 ([E01] Integration tests: set a timeout and cut the media package time)
 
 **Open questions for you:** none
 
-_Board last written 2026-10-12 04:42Z_
+_Board last written 2026-10-12 04:44Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -2666,7 +2665,7 @@ Converts `media` to `media_tab` (ms timestamps, no FK, no ENUM, print columns fr
 - 2026-10-12 04:00Z · human · accepted by owner
 
 ### T-066 — [E10] DB conventions: note collections and notes tables
-- **Status:** QA_PASS
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2674,11 +2673,11 @@ Converts `media` to `media_tab` (ms timestamps, no FK, no ENUM, print columns fr
 - **Risk:** high
 - **Rework:** 1
 - **Owner-approved:** yes
-- **Assignee:** leader
+- **Assignee:** —
 - **Branch:** task/t-066-e10-db-conventions-note-collections-and-
 - **PR:** https://github.com/danyaa666/smemories/pull/49
-- **Updated:** 2026-10-12 04:42Z by qa
-- **Comments-seen:** 9
+- **Updated:** 2026-10-12 04:44Z by leader
+- **Comments-seen:** 11
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/04-db-notes.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2713,9 +2712,10 @@ Converts `note_collections` and the notes tables created by T-034 to the `_tab` 
   (4) make lint build test: green (web 133 tests). go test -race -count=1 -timeout 30m -tags integration ./...: all packages ok (auth, db, media, notes, yearbook, pdf, ...).
   (5) MIGRATION: db package TestMigrateNoteTabConventions + my TestQAMigrateNoteTabRealisticData (Up/Down/Up on populated data) pass in the run above; CLI spot check on scratch DB: down x3 -> note_collections/note_photos/notes, up -> note_collection_tab/note_photo_tab/note_tab. Scratch DB and bucket dropped.
   NON-BLOCKING: the media purge/upload orphan object (pre-existing, M2 sweep) can show in heavy-load storms, one photo's keys at most.
+- 2026-10-12 04:44Z · leader · merged 4d9dab6. Review: three migrations convert note_collections/notes/note_photos to note_collection_tab/note_tab/note_photo_tab (BIGINT ms, updated_at, VARCHAR status, no FKs; photo rows get their own id; position is now sort_order), notes.Service child purger, insertNote takes the yearbook row FOR SHARE first and a vanished book is 404/410, zero-rows registry from information_schema, AssertNoOrphans pairs. QA: migration probes with Vietnamese/emoji, planted orphan and planted-table checks, storms with 0 5xx. The two CI 500s were the T-078 read race (fixed by merging T-078). For owner to check: run make migrate on your dev DB. Note: clearer order SetRefClearer(notesSvc, bookStore) in main.go matters (guarded by a comment and QA's storm test). Next: T-067 (users and identities), T-068 (notes API).
 
 ### T-067 — [E10] DB conventions: user and identity tables
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2726,7 +2726,7 @@ Converts `note_collections` and the notes tables created by T-034 to the `_tab` 
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
+- **Updated:** 2026-10-12 04:44Z by leader
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/05-db-auth.md`
@@ -2738,7 +2738,7 @@ Converts `users` and `user_identities` (the sessions and email_tokens tables are
 #### Comments
 
 ### T-068 — [E10] API v2: notes domain (collections, public lookup and submission) with a service layer
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2749,7 +2749,7 @@ Converts `users` and `user_identities` (the sessions and email_tokens tables are
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
+- **Updated:** 2026-10-12 04:44Z by leader
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/06-api-notes.md`
@@ -2990,7 +2990,7 @@ T-049 QA findings: resend button target size, cooldown restarts on reload, short
 - **Branch:** task/t-077-e01-integration-tests-set-a-timeout-and-
 - **PR:** https://github.com/danyaa666/smemories/pull/51
 - **Updated:** 2026-10-12 04:42Z by leader
-- **Comments-seen:** 4
+- **Comments-seen:** 6
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/13-integration-test-time-and-timeout.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
