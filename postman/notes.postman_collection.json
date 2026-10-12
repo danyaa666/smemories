@@ -2,7 +2,7 @@
   "info": {
     "name": "SMemories - notes",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Collection links for friends' notes (T-012) and public note submission (T-034): create, list, revoke, the public lookup and the multipart note form. Run against an API started with SMEM_ENV=dev.\n\nSetup, once per database: the owner endpoints need a verified email, and the dev mail is only printed to the API's stdout, which Newman cannot read. So the collection uses three fixed accounts (A, B verified, C never verified): run `newman run postman/notes.postman_collection.json --folder \"Setup (once per database)\"`, then `make verify-newman-users` (marks A and B verified in the dev database; for another database run `UPDATE user_tab SET email_verified_at = UNIX_TIMESTAMP(NOW(3)) * 1000 WHERE email IN ('newman-notes-a@example.com','newman-notes-b@example.com')`). After that run the whole collection as often as you like: Setup tolerates accounts that already exist (409, or 429 once the register limit of 5 per hour per IP is used up) and everything else only logs in. Run it in order: Edge cases reuses the users and the yearbook of the Full flow, and ends by deleting the yearbook. Run it from the postman/ directory (`newman run notes.postman_collection.json --working-dir .`) because the note requests upload the photo fixtures of fixtures/media/ (and the Setup command above then needs the same flags). The public routes count only misses (unknown tokens) against 60 per IP per 15 minutes, and a run makes about 8 of them; submissions are limited to 100 per IP per hour, a run makes about 14, so run the whole collection at most 6 times an hour from one address or run `make reset-limits`. Each run creates its own links, so it can run twice back to back."
+    "description": "Collection links for friends' notes (T-012) and public note submission (T-034), on the v2 contract since T-068 (`/api/note-collection/*`, `/api/public-collect/*`, `{status,data}` envelope, `ERROR_*` codes, Unix ms timestamps): create, list, revoke, the public lookup and the multipart note form (the link token is the query parameter `token` of the submit route). Run against an API started with SMEM_ENV=dev.\n\nSetup, once per database: the owner endpoints need a verified email, and the dev mail is only printed to the API's stdout, which Newman cannot read. So the collection uses three fixed accounts (A, B verified, C never verified): run `newman run postman/notes.postman_collection.json --folder \"Setup (once per database)\"`, then `make verify-newman-users` (marks A and B verified in the dev database; for another database run `UPDATE user_tab SET email_verified_at = UNIX_TIMESTAMP(NOW(3)) * 1000 WHERE email IN ('newman-notes-a@example.com','newman-notes-b@example.com')`). After that run the whole collection as often as you like: Setup tolerates accounts that already exist (409, or 429 once the register limit of 5 per hour per IP is used up) and everything else only logs in. Run it in order: Edge cases reuses the users and the yearbook of the Full flow, and ends by deleting the yearbook. Run it from the postman/ directory (`newman run notes.postman_collection.json --working-dir .`) because the note requests upload the photo fixtures of fixtures/media/ (and the Setup command above then needs the same flags). The public routes count only misses (unknown tokens) against 60 per IP per 15 minutes, and a run makes about 8 of them; submissions are limited to 100 per IP per hour, a run makes about 14, so run the whole collection at most 6 times an hour from one address or run `make reset-limits`. Each run creates its own links, so it can run twice back to back."
   },
   "variable": [
     {
@@ -236,7 +236,7 @@
             "exec": [
               "// Once per run, before the first request: a deadline a week ahead for the main link.",
               "if (pm.info.requestName.startsWith('1. ')) {",
-              "  pm.collectionVariables.set('deadline', new Date(Date.now() + 7 * 864e5).toISOString().replace(/\\.\\d+Z$/, 'Z'));",
+              "  pm.collectionVariables.set('deadline', Date.now() + 7 * 864e5);",
               "}"
             ]
           }
@@ -406,20 +406,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/collections",
+              "raw": "{{baseUrl}}/api/note-collection/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "collections"
+                "api",
+                "note-collection",
+                "create"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"label\":\"  Cafe\\u0301 friends \",\"deadline_at\":\"{{deadline}}\"}"
+              "raw": "{\"yearbook_id\":\"{{bookId}}\",\"label\":\"  Cafe\\u0301 friends \",\"deadline_at\":{{deadline}}}"
             }
           },
           "event": [
@@ -428,10 +427,10 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 201', () => pm.response.to.have.status(201));",
-                  "const c = pm.response.json().collection;",
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const c = pm.response.json().data;",
                   "pm.test('shape', () => { pm.expect(Object.keys(c).sort()).to.eql(['created_at','deadline_at','id','label','token']); pm.expect(c.id).to.match(/^[0-9A-Z]{26}$/); pm.expect(c.token).to.match(/^[A-Za-z0-9_-]{32}$/); });",
-                  "pm.test('values', () => { pm.expect(c.label).to.eql('Caf\\u00e9 friends'); pm.expect(c.deadline_at).to.eql(pm.collectionVariables.get('deadline')); });",
+                  "pm.test('values', () => { pm.expect(c.label).to.eql('Caf\\u00e9 friends'); pm.expect(c.deadline_at).to.eql(Number(pm.collectionVariables.get('deadline'))); });",
                   "pm.collectionVariables.set('collId', c.id);",
                   "pm.collectionVariables.set('linkToken', c.token);"
                 ]
@@ -454,15 +453,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/collections",
+              "raw": "{{baseUrl}}/api/note-collection/get-list?yearbook_id={{bookId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "collections"
+                "api",
+                "note-collection",
+                "get-list"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookId}}"
+                }
               ]
             }
           },
@@ -473,7 +477,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 200', () => pm.response.to.have.status(200));",
-                  "const cs = pm.response.json().collections;",
+                  "const cs = pm.response.json().data.items;",
                   "pm.test('one link', () => { pm.expect(cs).to.have.length(1); pm.expect(cs[0].id).to.eql(pm.collectionVariables.get('collId')); pm.expect(cs[0].revoked_at).to.eql(null); pm.expect(cs[0].note_count).to.eql(0); });",
                   "pm.test('no secret', () => { pm.expect(Object.keys(cs[0]).sort()).to.eql(['created_at','deadline_at','id','label','note_count','revoked_at']); pm.expect(pm.response.text()).to.not.include(pm.collectionVariables.get('linkToken')); });"
                 ]
@@ -492,15 +496,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/public/collect/{{linkToken}}",
+              "raw": "{{baseUrl}}/api/public-collect/get?token={{linkToken}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "public",
-                "collect",
-                "{{linkToken}}"
+                "api",
+                "public-collect",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
               ]
             }
           },
@@ -511,8 +520,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('body', () => pm.expect(pm.response.json()).to.eql({yearbook: {title: 'Newman notes book'}, owner: {display_name: pm.collectionVariables.get('nameA')}, deadline_at: pm.collectionVariables.get('deadline'), open: true, fields: pm.response.json().fields}));",
-                  "pm.test('form fields', () => { const f = pm.response.json().fields; pm.expect(f.map(x => x.id + ':' + x.required)).to.eql(['name:true', 'relationship:false', 'message:true']); pm.expect(f[0]).to.have.keys(['id','kind','label','hint','required','max_length']); pm.expect(f[2].kind).to.eql('long_text'); });",
+                  "pm.test('body', () => pm.expect(pm.response.json().data).to.eql({yearbook: {title: 'Newman notes book'}, owner: {display_name: pm.collectionVariables.get('nameA')}, deadline_at: Number(pm.collectionVariables.get('deadline')), open: true, fields: pm.response.json().data.fields}));",
+                  "pm.test('form fields', () => { const f = pm.response.json().data.fields; pm.expect(f.map(x => x.id + ':' + x.required)).to.eql(['name:true', 'relationship:false', 'message:true']); pm.expect(f[0]).to.have.keys(['id','kind','label','hint','required','max_length']); pm.expect(f[2].kind).to.eql('long_text'); });",
                   "pm.test('no cookie set, no CORS', () => { pm.expect(pm.response.headers.has('Set-Cookie')).to.eql(false); pm.expect(pm.response.headers.has('Access-Control-Allow-Origin')).to.eql(false); });"
                 ]
               }
@@ -530,15 +539,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/public/collect/{{linkToken}}",
+              "raw": "{{baseUrl}}/api/public-collect/get?token={{linkToken}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "public",
-                "collect",
-                "{{linkToken}}"
+                "api",
+                "public-collect",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
               ]
             }
           },
@@ -549,7 +563,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('same body', () => { pm.expect(pm.response.json().owner.display_name).to.eql(pm.collectionVariables.get('nameA')); pm.expect(pm.response.headers.has('Set-Cookie')).to.eql(false); });"
+                  "pm.test('same body', () => { pm.expect(pm.response.json().data.owner.display_name).to.eql(pm.collectionVariables.get('nameA')); pm.expect(pm.response.headers.has('Set-Cookie')).to.eql(false); });"
                 ]
               }
             }
@@ -574,20 +588,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/collections",
+              "raw": "{{baseUrl}}/api/note-collection/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "collections"
+                "api",
+                "note-collection",
+                "create"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{}"
+              "raw": "{\"yearbook_id\":\"{{bookId}}\"}"
             }
           },
           "event": [
@@ -596,8 +609,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 201', () => pm.response.to.have.status(201));",
-                  "const c = pm.response.json().collection;",
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const c = pm.response.json().data;",
                   "pm.test('empty label, null deadline, a different token', () => { pm.expect(c.label).to.eql(''); pm.expect(c.deadline_at).to.eql(null); pm.expect(c.token).to.not.eql(pm.collectionVariables.get('linkToken')); });",
                   "pm.collectionVariables.set('collId2', c.id);",
                   "pm.collectionVariables.set('linkToken2', c.token);"
@@ -607,9 +620,9 @@
           ]
         },
         {
-          "name": "9. A revokes the first link - 204",
+          "name": "9. A revokes the first link - 200",
           "request": {
-            "method": "DELETE",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -618,18 +631,26 @@
               {
                 "key": "Origin",
                 "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/collections/{{collId}}",
+              "raw": "{{baseUrl}}/api/note-collection/revoke",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "collections",
-                "{{collId}}"
+                "api",
+                "note-collection",
+                "revoke"
               ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{collId}}\"}"
             }
           },
           "event": [
@@ -638,16 +659,16 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 204', () => pm.response.to.have.status(204));"
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "10. Revoking again - 204",
+          "name": "10. Revoking again - 200",
           "request": {
-            "method": "DELETE",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -656,18 +677,26 @@
               {
                 "key": "Origin",
                 "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/collections/{{collId}}",
+              "raw": "{{baseUrl}}/api/note-collection/revoke",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "collections",
-                "{{collId}}"
+                "api",
+                "note-collection",
+                "revoke"
               ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{collId}}\"}"
             }
           },
           "event": [
@@ -676,7 +705,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 204', () => pm.response.to.have.status(204));"
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
                 ]
               }
             }
@@ -693,15 +722,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/public/collect/{{linkToken}}",
+              "raw": "{{baseUrl}}/api/public-collect/get?token={{linkToken}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "public",
-                "collect",
-                "{{linkToken}}"
+                "api",
+                "public-collect",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
               ]
             }
           },
@@ -712,7 +746,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 404', () => pm.response.to.have.status(404));",
-                  "pm.test('error code not_found', () => pm.expect(pm.response.json().error.code).to.eql('not_found'));"
+                  "pm.test('error code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
                 ]
               }
             }
@@ -729,15 +763,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/public/collect/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+              "raw": "{{baseUrl}}/api/public-collect/get?token=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "public",
-                "collect",
-                "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+                "api",
+                "public-collect",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+                }
               ]
             }
           },
@@ -748,8 +787,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 404', () => pm.response.to.have.status(404));",
-                  "pm.test('error code not_found', () => pm.expect(pm.response.json().error.code).to.eql('not_found'));",
-                  "pm.test('same message as for a revoked token', () => pm.expect(pm.response.json().error.message).to.eql('not found'));"
+                  "pm.test('error code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));",
+                  "pm.test('same message as for a revoked token', () => pm.expect(pm.response.json().error_message).to.eql('not found'));"
                 ]
               }
             }
@@ -770,15 +809,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/collections",
+              "raw": "{{baseUrl}}/api/note-collection/get-list?yearbook_id={{bookId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "collections"
+                "api",
+                "note-collection",
+                "get-list"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookId}}"
+                }
               ]
             }
           },
@@ -789,9 +833,9 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 200', () => pm.response.to.have.status(200));",
-                  "const cs = pm.response.json().collections;",
+                  "const cs = pm.response.json().data.items;",
                   "pm.test('two links, newest first', () => { pm.expect(cs).to.have.length(2); pm.expect(cs[0].id).to.eql(pm.collectionVariables.get('collId2')); pm.expect(cs[1].id).to.eql(pm.collectionVariables.get('collId')); });",
-                  "pm.test('revoked_at', () => { pm.expect(cs[0].revoked_at).to.eql(null); pm.expect(cs[1].revoked_at).to.be.a('string'); });"
+                  "pm.test('revoked_at', () => { pm.expect(cs[0].revoked_at).to.eql(null); pm.expect(cs[1].revoked_at).to.be.a('number'); });"
                 ]
               }
             }
@@ -816,20 +860,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/collections",
+              "raw": "{{baseUrl}}/api/note-collection/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "collections"
+                "api",
+                "note-collection",
+                "create"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"deadline_at\":\"{{shortDeadline}}\"}"
+              "raw": "{\"yearbook_id\":\"{{bookId}}\",\"deadline_at\":{{shortDeadline}}}"
             }
           },
           "event": [
@@ -838,8 +881,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 201', () => pm.response.to.have.status(201));",
-                  "pm.collectionVariables.set('shortToken', pm.response.json().collection.token);"
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('shortToken', pm.response.json().data.token);"
                 ]
               }
             },
@@ -848,15 +891,15 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.collectionVariables.set('shortDeadline', new Date(Date.now() + 2000).toISOString().replace(/\\.\\d+Z$/, 'Z'));",
-                  "// the API compares whole seconds against the clock, so give it a deadline that is still in the future now"
+                  "pm.collectionVariables.set('shortDeadline', Date.now() + 2000);",
+                  "// a deadline (Unix ms) that is still in the future when the request arrives"
                 ]
               }
             }
           ]
         },
         {
-          "name": "15. Lookup after the deadline - 410 collection_closed",
+          "name": "15. Lookup after the deadline - 410 ERROR_COLLECTION_CLOSED",
           "request": {
             "method": "GET",
             "header": [
@@ -866,15 +909,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/public/collect/{{shortToken}}",
+              "raw": "{{baseUrl}}/api/public-collect/get?token={{shortToken}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "public",
-                "collect",
-                "{{shortToken}}"
+                "api",
+                "public-collect",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{shortToken}}"
+                }
               ]
             }
           },
@@ -885,7 +933,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 410', () => pm.response.to.have.status(410));",
-                  "pm.test('error code collection_closed', () => pm.expect(pm.response.json().error.code).to.eql('collection_closed'));"
+                  "pm.test('error code ERROR_COLLECTION_CLOSED', () => pm.expect(pm.response.json().status).to.eql('ERROR_COLLECTION_CLOSED'));"
                 ]
               }
             },
@@ -901,7 +949,7 @@
           ]
         },
         {
-          "name": "16. Friend sends a text-only note - 201, only the id comes back",
+          "name": "16. Friend sends a text-only note - 200, only the id comes back",
           "request": {
             "method": "POST",
             "header": [
@@ -911,16 +959,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/public/collect/{{linkToken2}}/notes",
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{linkToken2}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "public",
-                "collect",
-                "{{linkToken2}}",
-                "notes"
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken2}}"
+                }
               ]
             },
             "body": {
@@ -940,9 +992,9 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 201', () => pm.response.to.have.status(201));",
-                  "const b = pm.response.json(); pm.test('only the id', () => { pm.expect(Object.keys(b)).to.eql(['note']); pm.expect(Object.keys(b.note)).to.eql(['id']); pm.expect(b.note.id).to.match(/^[0-9A-Z]{26}$/); });",
-                  "pm.collectionVariables.set('noteId', b.note.id);",
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json(); pm.test('only the id', () => { pm.expect(b.status).to.eql('OK'); pm.expect(Object.keys(b.data)).to.eql(['id']); pm.expect(b.data.id).to.match(/^[0-9A-Z]{26}$/); });",
+                  "pm.collectionVariables.set('noteId', b.data.id);",
                   "pm.test('no cookie set, no CORS', () => { pm.expect(pm.response.headers.has('Set-Cookie')).to.eql(false); pm.expect(pm.response.headers.has('Access-Control-Allow-Origin')).to.eql(false); });"
                 ]
               }
@@ -950,7 +1002,7 @@
           ]
         },
         {
-          "name": "17. Friend sends emoji, Vietnamese text and two photos - 201",
+          "name": "17. Friend sends emoji, Vietnamese text and two photos - 200",
           "request": {
             "method": "POST",
             "header": [
@@ -960,16 +1012,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/public/collect/{{linkToken2}}/notes",
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{linkToken2}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "public",
-                "collect",
-                "{{linkToken2}}",
-                "notes"
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken2}}"
+                }
               ]
             },
             "body": {
@@ -1004,8 +1060,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 201', () => pm.response.to.have.status(201));",
-                  "pm.collectionVariables.set('photoNoteId', pm.response.json().note.id);",
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('photoNoteId', pm.response.json().data.id);",
                   "pm.test('a different note', () => pm.expect(pm.collectionVariables.get('photoNoteId')).to.not.eql(pm.collectionVariables.get('noteId')));"
                 ]
               }
@@ -1013,7 +1069,7 @@
           ]
         },
         {
-          "name": "18. A bot fills the honeypot - 201 as if stored (nothing is)",
+          "name": "18. A bot fills the honeypot - 200 as if stored (nothing is)",
           "request": {
             "method": "POST",
             "header": [
@@ -1023,16 +1079,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/public/collect/{{linkToken2}}/notes",
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{linkToken2}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "public",
-                "collect",
-                "{{linkToken2}}",
-                "notes"
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken2}}"
+                }
               ]
             },
             "body": {
@@ -1057,8 +1117,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 201', () => pm.response.to.have.status(201));",
-                  "pm.test('looks like a note', () => pm.expect(pm.response.json().note.id).to.match(/^[0-9A-Z]{26}$/));"
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('looks like a note', () => pm.expect(pm.response.json().data.id).to.match(/^[0-9A-Z]{26}$/));"
                 ]
               }
             }
@@ -1075,15 +1135,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/collections",
+              "raw": "{{baseUrl}}/api/note-collection/get-list?yearbook_id={{bookId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "collections"
+                "api",
+                "note-collection",
+                "get-list"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookId}}"
+                }
               ]
             }
           },
@@ -1094,7 +1159,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 200', () => pm.response.to.have.status(200));",
-                  "const c = pm.response.json().collections.find(x => x.id === pm.collectionVariables.get('collId2'));",
+                  "const c = pm.response.json().data.items.find(x => x.id === pm.collectionVariables.get('collId2'));",
                   "pm.test('two notes', () => pm.expect(c.note_count).to.eql(2));"
                 ]
               }
@@ -1125,20 +1190,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/collections",
+              "raw": "{{baseUrl}}/api/note-collection/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "collections"
+                "api",
+                "note-collection",
+                "create"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{}"
+              "raw": "{\"yearbook_id\":\"{{bookId}}\"}"
             }
           },
           "event": [
@@ -1148,7 +1212,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 401', () => pm.response.to.have.status(401));",
-                  "pm.test('error code unauthenticated', () => pm.expect(pm.response.json().error.code).to.eql('unauthenticated'));"
+                  "pm.test('error code ERROR_UNAUTHORIZED', () => pm.expect(pm.response.json().status).to.eql('ERROR_UNAUTHORIZED'));"
                 ]
               }
             }
@@ -1169,15 +1233,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/collections",
+              "raw": "{{baseUrl}}/api/note-collection/get-list?yearbook_id={{bookId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "collections"
+                "api",
+                "note-collection",
+                "get-list"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookId}}"
+                }
               ]
             }
           },
@@ -1188,7 +1257,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 401', () => pm.response.to.have.status(401));",
-                  "pm.test('error code unauthenticated', () => pm.expect(pm.response.json().error.code).to.eql('unauthenticated'));"
+                  "pm.test('error code ERROR_UNAUTHORIZED', () => pm.expect(pm.response.json().status).to.eql('ERROR_UNAUTHORIZED'));"
                 ]
               }
             }
@@ -1197,7 +1266,7 @@
         {
           "name": "Revoke without a session - 401",
           "request": {
-            "method": "DELETE",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -1206,18 +1275,26 @@
               {
                 "key": "Origin",
                 "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/collections/{{collId2}}",
+              "raw": "{{baseUrl}}/api/note-collection/revoke",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "collections",
-                "{{collId2}}"
+                "api",
+                "note-collection",
+                "revoke"
               ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{collId2}}\"}"
             }
           },
           "event": [
@@ -1227,7 +1304,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 401', () => pm.response.to.have.status(401));",
-                  "pm.test('error code unauthenticated', () => pm.expect(pm.response.json().error.code).to.eql('unauthenticated'));"
+                  "pm.test('error code ERROR_UNAUTHORIZED', () => pm.expect(pm.response.json().status).to.eql('ERROR_UNAUTHORIZED'));"
                 ]
               }
             }
@@ -1248,15 +1325,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/collections",
+              "raw": "{{baseUrl}}/api/note-collection/get-list?yearbook_id={{bookId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "collections"
+                "api",
+                "note-collection",
+                "get-list"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookId}}"
+                }
               ]
             }
           },
@@ -1267,14 +1349,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 401', () => pm.response.to.have.status(401));",
-                  "pm.test('error code unauthenticated', () => pm.expect(pm.response.json().error.code).to.eql('unauthenticated'));"
+                  "pm.test('error code ERROR_UNAUTHORIZED', () => pm.expect(pm.response.json().status).to.eql('ERROR_UNAUTHORIZED'));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Create with the session cookie but no Origin - 403 csrf_origin_mismatch",
+          "name": "Create with the session cookie but no Origin - 403 ERROR_CSRF_ORIGIN_MISMATCH",
           "request": {
             "method": "POST",
             "header": [
@@ -1288,20 +1370,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/collections",
+              "raw": "{{baseUrl}}/api/note-collection/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "collections"
+                "api",
+                "note-collection",
+                "create"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{}"
+              "raw": "{\"yearbook_id\":\"{{bookId}}\"}"
             }
           },
           "event": [
@@ -1311,32 +1392,40 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 403', () => pm.response.to.have.status(403));",
-                  "pm.test('error code csrf_origin_mismatch', () => pm.expect(pm.response.json().error.code).to.eql('csrf_origin_mismatch'));"
+                  "pm.test('error code ERROR_CSRF_ORIGIN_MISMATCH', () => pm.expect(pm.response.json().status).to.eql('ERROR_CSRF_ORIGIN_MISMATCH'));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Revoke with the session cookie but no Origin - 403 csrf_origin_mismatch",
+          "name": "Revoke with the session cookie but no Origin - 403 ERROR_CSRF_ORIGIN_MISMATCH",
           "request": {
-            "method": "DELETE",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
                 "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/collections/{{collId2}}",
+              "raw": "{{baseUrl}}/api/note-collection/revoke",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "collections",
-                "{{collId2}}"
+                "api",
+                "note-collection",
+                "revoke"
               ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{collId2}}\"}"
             }
           },
           "event": [
@@ -1346,7 +1435,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 403', () => pm.response.to.have.status(403));",
-                  "pm.test('error code csrf_origin_mismatch', () => pm.expect(pm.response.json().error.code).to.eql('csrf_origin_mismatch'));"
+                  "pm.test('error code ERROR_CSRF_ORIGIN_MISMATCH', () => pm.expect(pm.response.json().status).to.eql('ERROR_CSRF_ORIGIN_MISMATCH'));"
                 ]
               }
             }
@@ -1402,7 +1491,7 @@
           ]
         },
         {
-          "name": "Unverified owner creates a link - 403 email_not_verified",
+          "name": "Unverified owner creates a link - 403 ERROR_EMAIL_NOT_VERIFIED",
           "request": {
             "method": "POST",
             "header": [
@@ -1420,20 +1509,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookIdC}}/collections",
+              "raw": "{{baseUrl}}/api/note-collection/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookIdC}}",
-                "collections"
+                "api",
+                "note-collection",
+                "create"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{}"
+              "raw": "{\"yearbook_id\":\"{{bookIdC}}\"}"
             }
           },
           "event": [
@@ -1443,7 +1531,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 403', () => pm.response.to.have.status(403));",
-                  "pm.test('error code email_not_verified', () => pm.expect(pm.response.json().error.code).to.eql('email_not_verified'));"
+                  "pm.test('error code ERROR_EMAIL_NOT_VERIFIED', () => pm.expect(pm.response.json().status).to.eql('ERROR_EMAIL_NOT_VERIFIED'));"
                 ]
               }
             }
@@ -1468,20 +1556,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/collections",
+              "raw": "{{baseUrl}}/api/note-collection/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "collections"
+                "api",
+                "note-collection",
+                "create"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{}"
+              "raw": "{\"yearbook_id\":\"{{bookId}}\"}"
             }
           },
           "event": [
@@ -1491,7 +1578,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 404', () => pm.response.to.have.status(404));",
-                  "pm.test('error code not_found', () => pm.expect(pm.response.json().error.code).to.eql('not_found'));"
+                  "pm.test('error code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
                 ]
               }
             }
@@ -1512,15 +1599,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/collections",
+              "raw": "{{baseUrl}}/api/note-collection/get-list?yearbook_id={{bookId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "collections"
+                "api",
+                "note-collection",
+                "get-list"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookId}}"
+                }
               ]
             }
           },
@@ -1531,7 +1623,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 404', () => pm.response.to.have.status(404));",
-                  "pm.test('error code not_found', () => pm.expect(pm.response.json().error.code).to.eql('not_found'));"
+                  "pm.test('error code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
                 ]
               }
             }
@@ -1540,7 +1632,7 @@
         {
           "name": "B revokes A's link - 404",
           "request": {
-            "method": "DELETE",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -1549,18 +1641,26 @@
               {
                 "key": "Origin",
                 "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/collections/{{collId2}}",
+              "raw": "{{baseUrl}}/api/note-collection/revoke",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "collections",
-                "{{collId2}}"
+                "api",
+                "note-collection",
+                "revoke"
               ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{collId2}}\"}"
             }
           },
           "event": [
@@ -1570,7 +1670,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 404', () => pm.response.to.have.status(404));",
-                  "pm.test('error code not_found', () => pm.expect(pm.response.json().error.code).to.eql('not_found'));"
+                  "pm.test('error code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
                 ]
               }
             }
@@ -1587,15 +1687,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/public/collect/{{linkToken2}}",
+              "raw": "{{baseUrl}}/api/public-collect/get?token={{linkToken2}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "public",
-                "collect",
-                "{{linkToken2}}"
+                "api",
+                "public-collect",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken2}}"
+                }
               ]
             }
           },
@@ -1630,20 +1735,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/01ARZ3NDEKTSV4RRFFQ69G5FAV/collections",
+              "raw": "{{baseUrl}}/api/note-collection/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "01ARZ3NDEKTSV4RRFFQ69G5FAV",
-                "collections"
+                "api",
+                "note-collection",
+                "create"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{}"
+              "raw": "{\"yearbook_id\":\"01ARZ3NDEKTSV4RRFFQ69G5FAV\"}"
             }
           },
           "event": [
@@ -1653,7 +1757,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 404', () => pm.response.to.have.status(404));",
-                  "pm.test('error code not_found', () => pm.expect(pm.response.json().error.code).to.eql('not_found'));"
+                  "pm.test('error code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
                 ]
               }
             }
@@ -1662,7 +1766,7 @@
         {
           "name": "Revoke a link that does not exist - 404",
           "request": {
-            "method": "DELETE",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -1671,18 +1775,26 @@
               {
                 "key": "Origin",
                 "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/collections/01ARZ3NDEKTSV4RRFFQ69G5FAV",
+              "raw": "{{baseUrl}}/api/note-collection/revoke",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "collections",
-                "01ARZ3NDEKTSV4RRFFQ69G5FAV"
+                "api",
+                "note-collection",
+                "revoke"
               ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"01ARZ3NDEKTSV4RRFFQ69G5FAV\"}"
             }
           },
           "event": [
@@ -1692,14 +1804,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 404', () => pm.response.to.have.status(404));",
-                  "pm.test('error code not_found', () => pm.expect(pm.response.json().error.code).to.eql('not_found'));"
+                  "pm.test('error code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Label over 60 characters - 400 invalid_label",
+          "name": "Label over 60 characters - 400 ERROR_INVALID_LABEL",
           "request": {
             "method": "POST",
             "header": [
@@ -1717,20 +1829,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/collections",
+              "raw": "{{baseUrl}}/api/note-collection/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "collections"
+                "api",
+                "note-collection",
+                "create"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"label\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}"
+              "raw": "{\"yearbook_id\":\"{{bookId}}\",\"label\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}"
             }
           },
           "event": [
@@ -1740,14 +1851,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_label', () => pm.expect(pm.response.json().error.code).to.eql('invalid_label'));"
+                  "pm.test('error code ERROR_INVALID_LABEL', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_LABEL'));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Label with a control character - 400 invalid_label",
+          "name": "Label with a control character - 400 ERROR_INVALID_LABEL",
           "request": {
             "method": "POST",
             "header": [
@@ -1765,20 +1876,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/collections",
+              "raw": "{{baseUrl}}/api/note-collection/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "collections"
+                "api",
+                "note-collection",
+                "create"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"label\":\"bell\\u0007\"}"
+              "raw": "{\"yearbook_id\":\"{{bookId}}\",\"label\":\"bell\\u0007\"}"
             }
           },
           "event": [
@@ -1788,14 +1898,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_label', () => pm.expect(pm.response.json().error.code).to.eql('invalid_label'));"
+                  "pm.test('error code ERROR_INVALID_LABEL', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_LABEL'));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Deadline in the past - 400 invalid_deadline",
+          "name": "Deadline in the past - 400 ERROR_INVALID_DEADLINE",
           "request": {
             "method": "POST",
             "header": [
@@ -1813,20 +1923,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/collections",
+              "raw": "{{baseUrl}}/api/note-collection/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "collections"
+                "api",
+                "note-collection",
+                "create"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"deadline_at\":\"2020-01-01T00:00:00Z\"}"
+              "raw": "{\"yearbook_id\":\"{{bookId}}\",\"deadline_at\":1577836800000}"
             }
           },
           "event": [
@@ -1836,14 +1945,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_deadline', () => pm.expect(pm.response.json().error.code).to.eql('invalid_deadline'));"
+                  "pm.test('error code ERROR_INVALID_DEADLINE', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_DEADLINE'));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Deadline more than a year ahead - 400 invalid_deadline",
+          "name": "Deadline more than a year ahead - 400 ERROR_INVALID_DEADLINE",
           "request": {
             "method": "POST",
             "header": [
@@ -1861,20 +1970,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/collections",
+              "raw": "{{baseUrl}}/api/note-collection/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "collections"
+                "api",
+                "note-collection",
+                "create"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"deadline_at\":\"2100-01-01T00:00:00Z\"}"
+              "raw": "{\"yearbook_id\":\"{{bookId}}\",\"deadline_at\":4102444800000}"
             }
           },
           "event": [
@@ -1884,14 +1992,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_deadline', () => pm.expect(pm.response.json().error.code).to.eql('invalid_deadline'));"
+                  "pm.test('error code ERROR_INVALID_DEADLINE', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_DEADLINE'));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Deadline that is not RFC 3339 - 400 invalid_deadline",
+          "name": "Deadline that is not a number (an RFC 3339 string) - 400 ERROR_PARAM",
           "request": {
             "method": "POST",
             "header": [
@@ -1909,20 +2017,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/collections",
+              "raw": "{{baseUrl}}/api/note-collection/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "collections"
+                "api",
+                "note-collection",
+                "create"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"deadline_at\":\"next friday\"}"
+              "raw": "{\"yearbook_id\":\"{{bookId}}\",\"deadline_at\":\"2030-01-01T00:00:00Z\"}"
             }
           },
           "event": [
@@ -1932,14 +2039,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_deadline', () => pm.expect(pm.response.json().error.code).to.eql('invalid_deadline'));"
+                  "pm.test('error code ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Unknown field - 400 unknown_field",
+          "name": "Unknown field - 400 ERROR_PARAM",
           "request": {
             "method": "POST",
             "header": [
@@ -1957,20 +2064,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/collections",
+              "raw": "{{baseUrl}}/api/note-collection/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "collections"
+                "api",
+                "note-collection",
+                "create"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"token\":\"mine\"}"
+              "raw": "{\"yearbook_id\":\"{{bookId}}\",\"token\":\"mine\"}"
             }
           },
           "event": [
@@ -1980,14 +2086,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code unknown_field', () => pm.expect(pm.response.json().error.code).to.eql('unknown_field'));"
+                  "pm.test('error code ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Malformed JSON - 400 invalid_body",
+          "name": "Malformed JSON - 400 ERROR_PARAM",
           "request": {
             "method": "POST",
             "header": [
@@ -2005,15 +2111,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/collections",
+              "raw": "{{baseUrl}}/api/note-collection/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "collections"
+                "api",
+                "note-collection",
+                "create"
               ]
             },
             "body": {
@@ -2028,7 +2133,42 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_body', () => pm.expect(pm.response.json().error.code).to.eql('invalid_body'));"
+                  "pm.test('error code ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lookup without a token - 404 ERROR_NOT_FOUND",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-collect/get",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-collect",
+                "get"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('error code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
                 ]
               }
             }
@@ -2045,15 +2185,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/public/collect/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "raw": "{{baseUrl}}/api/public-collect/get?token=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "public",
-                "collect",
-                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                "api",
+                "public-collect",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                }
               ]
             }
           },
@@ -2064,7 +2209,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 404', () => pm.response.to.have.status(404));",
-                  "pm.test('error code not_found', () => pm.expect(pm.response.json().error.code).to.eql('not_found'));"
+                  "pm.test('error code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
                 ]
               }
             }
@@ -2081,15 +2226,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/public/collect/%E2%82%AC%00%2F..",
+              "raw": "{{baseUrl}}/api/public-collect/get?token=%E2%82%AC%00%2F..",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "public",
-                "collect",
-                "%E2%82%AC%00%2F.."
+                "api",
+                "public-collect",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "%E2%82%AC%00%2F.."
+                }
               ]
             }
           },
@@ -2100,7 +2250,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 404', () => pm.response.to.have.status(404));",
-                  "pm.test('error code not_found', () => pm.expect(pm.response.json().error.code).to.eql('not_found'));"
+                  "pm.test('error code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
                 ]
               }
             }
@@ -2125,20 +2275,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/collections",
+              "raw": "{{baseUrl}}/api/note-collection/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "collections"
+                "api",
+                "note-collection",
+                "create"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{}"
+              "raw": "{\"yearbook_id\":\"{{bookId}}\"}"
             }
           },
           "event": [
@@ -2147,8 +2296,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 201', () => pm.response.to.have.status(201));",
-                  "pm.collectionVariables.set('fillId', pm.response.json().collection.id);"
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('fillId', pm.response.json().data.id);"
                 ]
               }
             }
@@ -2173,20 +2322,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/collections",
+              "raw": "{{baseUrl}}/api/note-collection/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "collections"
+                "api",
+                "note-collection",
+                "create"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{}"
+              "raw": "{\"yearbook_id\":\"{{bookId}}\"}"
             }
           },
           "event": [
@@ -2195,7 +2343,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 201', () => pm.response.to.have.status(201));"
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
                 ]
               }
             }
@@ -2220,20 +2368,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/collections",
+              "raw": "{{baseUrl}}/api/note-collection/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "collections"
+                "api",
+                "note-collection",
+                "create"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{}"
+              "raw": "{\"yearbook_id\":\"{{bookId}}\"}"
             }
           },
           "event": [
@@ -2242,14 +2389,14 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 201', () => pm.response.to.have.status(201));"
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "A sixth active link - 409 limit_reached",
+          "name": "A sixth active link - 409 ERROR_LIMIT_REACHED",
           "request": {
             "method": "POST",
             "header": [
@@ -2267,20 +2414,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/collections",
+              "raw": "{{baseUrl}}/api/note-collection/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "collections"
+                "api",
+                "note-collection",
+                "create"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{}"
+              "raw": "{\"yearbook_id\":\"{{bookId}}\"}"
             }
           },
           "event": [
@@ -2290,52 +2436,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 409', () => pm.response.to.have.status(409));",
-                  "pm.test('error code limit_reached', () => pm.expect(pm.response.json().error.code).to.eql('limit_reached'));"
+                  "pm.test('error code ERROR_LIMIT_REACHED', () => pm.expect(pm.response.json().status).to.eql('ERROR_LIMIT_REACHED'));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Revoke one link - 204",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Cookie",
-                "value": "smem_session={{tokenA}}"
-              },
-              {
-                "key": "Origin",
-                "value": "{{origin}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/v1/collections/{{fillId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "v1",
-                "collections",
-                "{{fillId}}"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('status 204', () => pm.response.to.have.status(204));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "The slot is free again - 201 (a new token)",
+          "name": "Revoke one link - 200",
           "request": {
             "method": "POST",
             "header": [
@@ -2353,20 +2461,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/collections",
+              "raw": "{{baseUrl}}/api/note-collection/revoke",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "collections"
+                "api",
+                "note-collection",
+                "revoke"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{}"
+              "raw": "{\"id\":\"{{fillId}}\"}"
             }
           },
           "event": [
@@ -2375,14 +2482,60 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 201', () => pm.response.to.have.status(201));"
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Submit: unknown field - 400 unknown_field",
+          "name": "The slot is free again - 200 (a new token)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/note-collection/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "note-collection",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"yearbook_id\":\"{{bookId}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit: unknown field - 400 ERROR_PARAM",
           "request": {
             "method": "POST",
             "header": [
@@ -2392,16 +2545,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/public/collect/{{linkToken2}}/notes",
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{linkToken2}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "public",
-                "collect",
-                "{{linkToken2}}",
-                "notes"
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken2}}"
+                }
               ]
             },
             "body": {
@@ -2422,14 +2579,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code unknown_field', () => pm.expect(pm.response.json().error.code).to.eql('unknown_field'));"
+                  "pm.test('error code ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Submit: required field missing - 400 missing_answer",
+          "name": "Submit: required field missing - 400 ERROR_MISSING_ANSWER",
           "request": {
             "method": "POST",
             "header": [
@@ -2439,16 +2596,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/public/collect/{{linkToken2}}/notes",
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{linkToken2}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "public",
-                "collect",
-                "{{linkToken2}}",
-                "notes"
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken2}}"
+                }
               ]
             },
             "body": {
@@ -2469,14 +2630,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code missing_answer', () => pm.expect(pm.response.json().error.code).to.eql('missing_answer'));"
+                  "pm.test('error code ERROR_MISSING_ANSWER', () => pm.expect(pm.response.json().status).to.eql('ERROR_MISSING_ANSWER'));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Submit: control character in a name - 400 invalid_answer",
+          "name": "Submit: control character in a name - 400 ERROR_INVALID_ANSWER",
           "request": {
             "method": "POST",
             "header": [
@@ -2486,16 +2647,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/public/collect/{{linkToken2}}/notes",
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{linkToken2}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "public",
-                "collect",
-                "{{linkToken2}}",
-                "notes"
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken2}}"
+                }
               ]
             },
             "body": {
@@ -2516,14 +2681,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_answer', () => pm.expect(pm.response.json().error.code).to.eql('invalid_answer'));"
+                  "pm.test('error code ERROR_INVALID_ANSWER', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_ANSWER'));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Submit: answers is not a JSON object - 400 invalid_body",
+          "name": "Submit: answers is not a JSON object - 400 ERROR_PARAM",
           "request": {
             "method": "POST",
             "header": [
@@ -2533,16 +2698,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/public/collect/{{linkToken2}}/notes",
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{linkToken2}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "public",
-                "collect",
-                "{{linkToken2}}",
-                "notes"
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken2}}"
+                }
               ]
             },
             "body": {
@@ -2563,14 +2732,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_body', () => pm.expect(pm.response.json().error.code).to.eql('invalid_body'));"
+                  "pm.test('error code ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Submit: answers is not JSON - 400 invalid_body",
+          "name": "Submit: answers is not JSON - 400 ERROR_PARAM",
           "request": {
             "method": "POST",
             "header": [
@@ -2580,16 +2749,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/public/collect/{{linkToken2}}/notes",
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{linkToken2}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "public",
-                "collect",
-                "{{linkToken2}}",
-                "notes"
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken2}}"
+                }
               ]
             },
             "body": {
@@ -2610,14 +2783,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_body', () => pm.expect(pm.response.json().error.code).to.eql('invalid_body'));"
+                  "pm.test('error code ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Submit: no answers part - 400 invalid_body",
+          "name": "Submit: no answers part - 400 ERROR_PARAM",
           "request": {
             "method": "POST",
             "header": [
@@ -2627,16 +2800,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/public/collect/{{linkToken2}}/notes",
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{linkToken2}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "public",
-                "collect",
-                "{{linkToken2}}",
-                "notes"
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken2}}"
+                }
               ]
             },
             "body": {
@@ -2657,14 +2834,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_body', () => pm.expect(pm.response.json().error.code).to.eql('invalid_body'));"
+                  "pm.test('error code ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Submit: answers after the photos - 400 invalid_body",
+          "name": "Submit: answers after the photos - 400 ERROR_PARAM",
           "request": {
             "method": "POST",
             "header": [
@@ -2674,16 +2851,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/public/collect/{{linkToken2}}/notes",
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{linkToken2}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "public",
-                "collect",
-                "{{linkToken2}}",
-                "notes"
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken2}}"
+                }
               ]
             },
             "body": {
@@ -2709,14 +2890,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_body', () => pm.expect(pm.response.json().error.code).to.eql('invalid_body'));"
+                  "pm.test('error code ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Submit: four photos - 400 too_many_photos",
+          "name": "Submit: four photos - 400 ERROR_TOO_MANY_PHOTOS",
           "request": {
             "method": "POST",
             "header": [
@@ -2726,16 +2907,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/public/collect/{{linkToken2}}/notes",
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{linkToken2}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "public",
-                "collect",
-                "{{linkToken2}}",
-                "notes"
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken2}}"
+                }
               ]
             },
             "body": {
@@ -2776,14 +2961,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code too_many_photos', () => pm.expect(pm.response.json().error.code).to.eql('too_many_photos'));"
+                  "pm.test('error code ERROR_TOO_MANY_PHOTOS', () => pm.expect(pm.response.json().status).to.eql('ERROR_TOO_MANY_PHOTOS'));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Submit: an HTML page named .jpg - 415 unsupported_media_type",
+          "name": "Submit: an HTML page named .jpg - 415 ERROR_UNSUPPORTED_MEDIA_TYPE",
           "request": {
             "method": "POST",
             "header": [
@@ -2793,16 +2978,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/public/collect/{{linkToken2}}/notes",
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{linkToken2}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "public",
-                "collect",
-                "{{linkToken2}}",
-                "notes"
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken2}}"
+                }
               ]
             },
             "body": {
@@ -2828,14 +3017,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 415', () => pm.response.to.have.status(415));",
-                  "pm.test('error code unsupported_media_type', () => pm.expect(pm.response.json().error.code).to.eql('unsupported_media_type'));"
+                  "pm.test('error code ERROR_UNSUPPORTED_MEDIA_TYPE', () => pm.expect(pm.response.json().status).to.eql('ERROR_UNSUPPORTED_MEDIA_TYPE'));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Submit: an empty file - 415 unsupported_media_type",
+          "name": "Submit: an empty file - 415 ERROR_UNSUPPORTED_MEDIA_TYPE",
           "request": {
             "method": "POST",
             "header": [
@@ -2845,16 +3034,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/public/collect/{{linkToken2}}/notes",
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{linkToken2}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "public",
-                "collect",
-                "{{linkToken2}}",
-                "notes"
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken2}}"
+                }
               ]
             },
             "body": {
@@ -2880,14 +3073,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 415', () => pm.response.to.have.status(415));",
-                  "pm.test('error code unsupported_media_type', () => pm.expect(pm.response.json().error.code).to.eql('unsupported_media_type'));"
+                  "pm.test('error code ERROR_UNSUPPORTED_MEDIA_TYPE', () => pm.expect(pm.response.json().status).to.eql('ERROR_UNSUPPORTED_MEDIA_TYPE'));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Submit: a GIF - 415 unsupported_media_type",
+          "name": "Submit: a GIF - 415 ERROR_UNSUPPORTED_MEDIA_TYPE",
           "request": {
             "method": "POST",
             "header": [
@@ -2897,16 +3090,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/public/collect/{{linkToken2}}/notes",
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{linkToken2}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "public",
-                "collect",
-                "{{linkToken2}}",
-                "notes"
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken2}}"
+                }
               ]
             },
             "body": {
@@ -2932,14 +3129,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 415', () => pm.response.to.have.status(415));",
-                  "pm.test('error code unsupported_media_type', () => pm.expect(pm.response.json().error.code).to.eql('unsupported_media_type'));"
+                  "pm.test('error code ERROR_UNSUPPORTED_MEDIA_TYPE', () => pm.expect(pm.response.json().status).to.eql('ERROR_UNSUPPORTED_MEDIA_TYPE'));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Submit: a decompression bomb PNG - 400 invalid_image",
+          "name": "Submit: a decompression bomb PNG - 400 ERROR_INVALID_IMAGE",
           "request": {
             "method": "POST",
             "header": [
@@ -2949,16 +3146,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/public/collect/{{linkToken2}}/notes",
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{linkToken2}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "public",
-                "collect",
-                "{{linkToken2}}",
-                "notes"
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken2}}"
+                }
               ]
             },
             "body": {
@@ -2984,14 +3185,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_image', () => pm.expect(pm.response.json().error.code).to.eql('invalid_image'));"
+                  "pm.test('error code ERROR_INVALID_IMAGE', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_IMAGE'));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Submit: JSON instead of multipart - 415 unsupported_media_type",
+          "name": "Submit: JSON instead of multipart - 415 ERROR_UNSUPPORTED_MEDIA_TYPE",
           "request": {
             "method": "POST",
             "header": [
@@ -3005,16 +3206,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/public/collect/{{linkToken2}}/notes",
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{linkToken2}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "public",
-                "collect",
-                "{{linkToken2}}",
-                "notes"
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken2}}"
+                }
               ]
             },
             "body": {
@@ -3029,14 +3234,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 415', () => pm.response.to.have.status(415));",
-                  "pm.test('error code unsupported_media_type', () => pm.expect(pm.response.json().error.code).to.eql('unsupported_media_type'));"
+                  "pm.test('error code ERROR_UNSUPPORTED_MEDIA_TYPE', () => pm.expect(pm.response.json().status).to.eql('ERROR_UNSUPPORTED_MEDIA_TYPE'));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Submit: a revoked link - 404 not_found",
+          "name": "Submit: a revoked link - 404 ERROR_NOT_FOUND",
           "request": {
             "method": "POST",
             "header": [
@@ -3046,16 +3251,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/public/collect/{{linkToken}}/notes",
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{linkToken}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "public",
-                "collect",
-                "{{linkToken}}",
-                "notes"
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
               ]
             },
             "body": {
@@ -3076,14 +3285,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 404', () => pm.response.to.have.status(404));",
-                  "pm.test('error code not_found', () => pm.expect(pm.response.json().error.code).to.eql('not_found'));"
+                  "pm.test('error code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Submit: an unknown token - 404 not_found",
+          "name": "Submit: an unknown token - 404 ERROR_NOT_FOUND",
           "request": {
             "method": "POST",
             "header": [
@@ -3093,16 +3302,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/public/collect/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/notes",
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "public",
-                "collect",
-                "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
-                "notes"
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+                }
               ]
             },
             "body": {
@@ -3123,14 +3336,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 404', () => pm.response.to.have.status(404));",
-                  "pm.test('error code not_found', () => pm.expect(pm.response.json().error.code).to.eql('not_found'));"
+                  "pm.test('error code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Submit: a malformed token - 404 not_found",
+          "name": "Submit: a malformed token - 404 ERROR_NOT_FOUND",
           "request": {
             "method": "POST",
             "header": [
@@ -3140,16 +3353,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/public/collect/short/notes",
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token=short",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "public",
-                "collect",
-                "short",
-                "notes"
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "short"
+                }
               ]
             },
             "body": {
@@ -3170,14 +3387,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 404', () => pm.response.to.have.status(404));",
-                  "pm.test('error code not_found', () => pm.expect(pm.response.json().error.code).to.eql('not_found'));"
+                  "pm.test('error code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Submit: an expired link - 410 collection_closed",
+          "name": "Submit: the token in the form body is ignored - 404 ERROR_NOT_FOUND",
           "request": {
             "method": "POST",
             "header": [
@@ -3187,16 +3404,70 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/public/collect/{{shortToken}}/notes",
+              "raw": "{{baseUrl}}/api/public-collect/submit-note",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "public",
-                "collect",
-                "{{shortToken}}",
-                "notes"
+                "api",
+                "public-collect",
+                "submit-note"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken2}}",
+                  "type": "text"
+                },
+                {
+                  "key": "answers",
+                  "value": "{\"name\":\"Minh\",\"message\":\"hi\"}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('error code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit: an expired link - 410 ERROR_COLLECTION_CLOSED",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{shortToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{shortToken}}"
+                }
               ]
             },
             "body": {
@@ -3217,14 +3488,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 410', () => pm.response.to.have.status(410));",
-                  "pm.test('error code collection_closed', () => pm.expect(pm.response.json().error.code).to.eql('collection_closed'));"
+                  "pm.test('error code ERROR_COLLECTION_CLOSED', () => pm.expect(pm.response.json().status).to.eql('ERROR_COLLECTION_CLOSED'));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Submit: GET on the route - 405 method_not_allowed",
+          "name": "Submit: GET on the route - 405 ERROR_METHOD_NOT_ALLOWED",
           "request": {
             "method": "GET",
             "header": [
@@ -3234,16 +3505,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/public/collect/{{linkToken2}}/notes",
+              "raw": "{{baseUrl}}/api/public-collect/submit-note",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "public",
-                "collect",
-                "{{linkToken2}}",
-                "notes"
+                "api",
+                "public-collect",
+                "submit-note"
               ]
             }
           },
@@ -3254,7 +3523,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 405', () => pm.response.to.have.status(405));",
-                  "pm.test('error code method_not_allowed', () => pm.expect(pm.response.json().error.code).to.eql('method_not_allowed'));"
+                  "pm.test('error code ERROR_METHOD_NOT_ALLOWED', () => pm.expect(pm.response.json().status).to.eql('ERROR_METHOD_NOT_ALLOWED'));"
                 ]
               }
             }
@@ -3271,15 +3540,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/collections",
+              "raw": "{{baseUrl}}/api/note-collection/get-list?yearbook_id={{bookId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "collections"
+                "api",
+                "note-collection",
+                "get-list"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookId}}"
+                }
               ]
             }
           },
@@ -3290,7 +3564,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 200', () => pm.response.to.have.status(200));",
-                  "const c = pm.response.json().collections.find(x => x.id === pm.collectionVariables.get('collId2'));",
+                  "const c = pm.response.json().data.items.find(x => x.id === pm.collectionVariables.get('collId2'));",
                   "pm.test('still two notes', () => pm.expect(c.note_count).to.eql(2));"
                 ]
               }
@@ -3346,15 +3620,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/public/collect/{{linkToken2}}",
+              "raw": "{{baseUrl}}/api/public-collect/get?token={{linkToken2}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "public",
-                "collect",
-                "{{linkToken2}}"
+                "api",
+                "public-collect",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken2}}"
+                }
               ]
             }
           },
@@ -3365,7 +3644,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 404', () => pm.response.to.have.status(404));",
-                  "pm.test('error code not_found', () => pm.expect(pm.response.json().error.code).to.eql('not_found'));"
+                  "pm.test('error code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
                 ]
               }
             }

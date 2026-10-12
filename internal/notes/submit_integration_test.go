@@ -20,12 +20,14 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/textproto"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -151,10 +153,15 @@ func multipartOf(parts ...part) (*bytes.Buffer, string) {
 	return &b, mw.FormDataContentType()
 }
 
+const submitPath = "/api/public-collect/submit-note"
+
+// submitURL puts the token in the query, where the route reads it.
+func submitURL(token string) string { return submitPath + "?token=" + url.QueryEscape(token) }
+
 func (e *env) postFrom(ctx context.Context, ip, token string, parts ...part) resp {
 	e.t.Helper()
 	body, ct := multipartOf(parts...)
-	r := httptest.NewRequest("POST", "/v1/public/collect/"+token+"/notes", body).WithContext(ctx)
+	r := httptest.NewRequest("POST", submitURL(token), body).WithContext(ctx)
 	r.Header.Set("Content-Type", ct)
 	r.RemoteAddr = ip + ":4000"
 	rec := httptest.NewRecorder()
@@ -203,14 +210,14 @@ func TestSubmitTextAndEmojiRoundTrip(t *testing.T) {
 	e := newEnv(t)
 	l := e.newOpenLink()
 	msg := "Chúc bạn mãi vui 🎉👨‍👩‍👧‍👦🏳️‍🌈 ❤️ Ắ \"quoted\" <b>&</b> \\ \n\nline 2 end"
-	rec := e.post(l.token, answers("  Nguyễn Văn Ánh  ", msg), text("answers2", "ignored")).status(201, "")
-	var out struct{ Note struct{ ID string } }
-	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil || len(out.Note.ID) != 26 || strings.TrimSpace(rec.Body.String()) != fmt.Sprintf(`{"note":{"id":%q}}`, out.Note.ID) {
+	rec := e.post(l.token, answers("  Nguyễn Văn Ánh  ", msg), text("answers2", "ignored")).status(200, "")
+	var out struct{ Data struct{ ID string } }
+	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil || len(out.Data.ID) != 26 || strings.TrimSpace(rec.Body.String()) != fmt.Sprintf(`{"status":"OK","data":{"id":%q}}`, out.Data.ID) {
 		t.Fatalf("body %s", rec.Body.String())
 	}
 	var raw, status string
 	var sortOrder *int
-	if err := e.db.QueryRow(`SELECT answers, status, sort_order FROM note_tab WHERE public_id = ?`, out.Note.ID).Scan(&raw, &status, &sortOrder); err != nil {
+	if err := e.db.QueryRow(`SELECT answers, status, sort_order FROM note_tab WHERE public_id = ?`, out.Data.ID).Scan(&raw, &status, &sortOrder); err != nil {
 		t.Fatal(err)
 	}
 	var got map[string]string
@@ -221,7 +228,7 @@ func TestSubmitTextAndEmojiRoundTrip(t *testing.T) {
 		t.Fatalf("stored %q status %s sort %v", got, status, sortOrder)
 	}
 	// the owner's list now counts it
-	list := e.do(l.owner, "GET", "/v1/yearbooks/"+l.book+"/collections", "").status(200, "").json()["collections"].([]any)
+	list := e.list(l.owner, l.book).status(200, "").data()["items"].([]any)
 	if list[0].(map[string]any)["note_count"] != float64(1) {
 		t.Fatalf("note_count: %v", list[0])
 	}
@@ -231,8 +238,8 @@ func TestSubmitTextAndEmojiRoundTrip(t *testing.T) {
 func TestSubmitWithPhotos(t *testing.T) {
 	e := newEnv(t)
 	l := e.newOpenLink()
-	rec := e.post(l.token, answers("An", "hello"), photoPart(jpegOf(t, 10)), photoPart(jpegOf(t, 200))).status(201, "")
-	id := rec.json()["note"].(map[string]any)["id"].(string)
+	rec := e.post(l.token, answers("An", "hello"), photoPart(jpegOf(t, 10)), photoPart(jpegOf(t, 200))).status(200, "")
+	id := rec.data()["id"].(string)
 	if n := e.count(`SELECT COUNT(*) FROM media_tab WHERE uploader_kind = 'contributor'`); n != 2 {
 		t.Fatalf("%d contributor media", n)
 	}
@@ -244,8 +251,8 @@ func TestSubmitWithPhotos(t *testing.T) {
 	}
 	// an empty file input of a browser (no file name, no bytes) is not a photo; three real photos are the maximum
 	e.post(l.token, answers("B", "m"), part{name: "photos", filename: "", ctype: "application/octet-stream"},
-		photoPart(jpegOf(t, 1)), photoPart(jpegOf(t, 2)), photoPart(jpegOf(t, 3))).status(201, "")
-	e.post(l.token, answers("C", "m"), photoPart(jpegOf(t, 1)), photoPart(jpegOf(t, 2)), photoPart(jpegOf(t, 3)), photoPart(jpegOf(t, 4))).status(400, "too_many_photos")
+		photoPart(jpegOf(t, 1)), photoPart(jpegOf(t, 2)), photoPart(jpegOf(t, 3))).status(200, "")
+	e.post(l.token, answers("C", "m"), photoPart(jpegOf(t, 1)), photoPart(jpegOf(t, 2)), photoPart(jpegOf(t, 3)), photoPart(jpegOf(t, 4))).status(400, "ERROR_TOO_MANY_PHOTOS")
 	if e.noteCount() != 2 || e.count(`SELECT COUNT(*) FROM media_tab`) != 5 {
 		t.Fatalf("notes %d media %d", e.noteCount(), e.count(`SELECT COUNT(*) FROM media_tab`))
 	}
@@ -263,23 +270,23 @@ func TestSubmitValidation(t *testing.T) {
 		code    string
 		message string // substring of the error message
 	}{
-		{"unknown field", []part{text("answers", `{"name":"A","message":"m","nickname":"n"}`)}, 400, "unknown_field", "nickname"},
-		{"hostile unknown id is not echoed", []part{text("answers", `{"name":"A","message":"m","<script>":"n"}`)}, 400, "unknown_field", ""},
-		{"missing required", []part{text("answers", `{"name":"A"}`)}, 400, "missing_answer", "message"},
-		{"blank required", []part{text("answers", `{"name":"  ","message":"m"}`)}, 400, "missing_answer", "name"},
-		{"too long", []part{text("answers", `{"name":"`+secret+`","message":"m"}`)}, 400, "invalid_answer", "name"},
-		{"control character", []part{text("answers", `{"name":"A\u0000","message":"m"}`)}, 400, "invalid_answer", "name"},
-		{"bidi override", []part{text("answers", `{"name":"A\u202eB","message":"m"}`)}, 400, "invalid_answer", "name"},
-		{"newline in a short field", []part{text("answers", `{"name":"A\nB","message":"m"}`)}, 400, "invalid_answer", "name"},
-		{"not an object", []part{text("answers", `["a"]`)}, 400, "invalid_body", ""},
-		{"null", []part{text("answers", `null`)}, 400, "invalid_body", ""},
-		{"non-string value", []part{text("answers", `{"name":"A","message":5}`)}, 400, "invalid_body", ""},
-		{"not json", []part{text("answers", `name=A`)}, 400, "invalid_body", ""},
-		{"invalid utf-8", []part{{name: "answers", data: []byte("{\"name\":\"A\xff\",\"message\":\"m\"}")}}, 400, "invalid_body", ""},
-		{"over 16 KiB", []part{text("answers", `{"name":"A","message":"`+strings.Repeat("a", 16<<10)+`"}`)}, 400, "invalid_body", ""},
-		{"answers twice", []part{answers("A", "m"), answers("A", "m")}, 400, "invalid_body", ""},
-		{"no answers", []part{photoPart(jpegOf(t, 1))}, 400, "invalid_body", ""},
-		{"no parts", nil, 400, "invalid_body", ""},
+		{"unknown field", []part{text("answers", `{"name":"A","message":"m","nickname":"n"}`)}, 400, "ERROR_PARAM", "nickname"},
+		{"hostile unknown id is not echoed", []part{text("answers", `{"name":"A","message":"m","<script>":"n"}`)}, 400, "ERROR_PARAM", ""},
+		{"missing required", []part{text("answers", `{"name":"A"}`)}, 400, "ERROR_MISSING_ANSWER", "message"},
+		{"blank required", []part{text("answers", `{"name":"  ","message":"m"}`)}, 400, "ERROR_MISSING_ANSWER", "name"},
+		{"too long", []part{text("answers", `{"name":"`+secret+`","message":"m"}`)}, 400, "ERROR_INVALID_ANSWER", "name"},
+		{"control character", []part{text("answers", `{"name":"A\u0000","message":"m"}`)}, 400, "ERROR_INVALID_ANSWER", "name"},
+		{"bidi override", []part{text("answers", `{"name":"A\u202eB","message":"m"}`)}, 400, "ERROR_INVALID_ANSWER", "name"},
+		{"newline in a short field", []part{text("answers", `{"name":"A\nB","message":"m"}`)}, 400, "ERROR_INVALID_ANSWER", "name"},
+		{"not an object", []part{text("answers", `["a"]`)}, 400, "ERROR_PARAM", ""},
+		{"null", []part{text("answers", `null`)}, 400, "ERROR_PARAM", ""},
+		{"non-string value", []part{text("answers", `{"name":"A","message":5}`)}, 400, "ERROR_PARAM", ""},
+		{"not json", []part{text("answers", `name=A`)}, 400, "ERROR_PARAM", ""},
+		{"invalid utf-8", []part{{name: "answers", data: []byte("{\"name\":\"A\xff\",\"message\":\"m\"}")}}, 400, "ERROR_PARAM", ""},
+		{"over 16 KiB", []part{text("answers", `{"name":"A","message":"`+strings.Repeat("a", 16<<10)+`"}`)}, 400, "ERROR_PARAM", ""},
+		{"answers twice", []part{answers("A", "m"), answers("A", "m")}, 400, "ERROR_PARAM", ""},
+		{"no answers", []part{photoPart(jpegOf(t, 1))}, 400, "ERROR_PARAM", ""},
+		{"no parts", nil, 400, "ERROR_PARAM", ""},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -292,15 +299,15 @@ func TestSubmitValidation(t *testing.T) {
 	e.nothingKept()
 
 	// the 415s: anything but multipart/form-data
-	r := httptest.NewRequest("POST", "/v1/public/collect/"+l.token+"/notes", strings.NewReader(`{"answers":{}}`))
+	r := httptest.NewRequest("POST", submitURL(l.token), strings.NewReader(`{"answers":{}}`))
 	r.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	e.h.ServeHTTP(rec, r)
-	resp{rec, t}.status(415, "unsupported_media_type")
-	r = httptest.NewRequest("POST", "/v1/public/collect/"+l.token+"/notes", nil)
+	resp{rec, t}.status(415, "ERROR_UNSUPPORTED_MEDIA_TYPE")
+	r = httptest.NewRequest("POST", submitURL(l.token), nil)
 	rec = httptest.NewRecorder()
 	e.h.ServeHTTP(rec, r)
-	resp{rec, t}.status(415, "unsupported_media_type")
+	resp{rec, t}.status(415, "ERROR_UNSUPPORTED_MEDIA_TYPE")
 }
 
 // AC3: one bad photo rejects the whole submission and nothing is stored, whatever came before it.
@@ -313,9 +320,9 @@ func TestSubmitBadPhotoRejectsAll(t *testing.T) {
 		status int
 		code   string
 	}{
-		"html named jpg": {[]byte("<html><script>alert(1)</script></html>"), 415, "unsupported_media_type"},
-		"empty file":     {nil, 415, "unsupported_media_type"},
-		"truncated jpeg": {good[:len(good)/2], 400, "invalid_image"},
+		"html named jpg": {[]byte("<html><script>alert(1)</script></html>"), 415, "ERROR_UNSUPPORTED_MEDIA_TYPE"},
+		"empty file":     {nil, 415, "ERROR_UNSUPPORTED_MEDIA_TYPE"},
+		"truncated jpeg": {good[:len(good)/2], 400, "ERROR_INVALID_IMAGE"},
 	}
 	for name, b := range bad {
 		t.Run(name, func(t *testing.T) {
@@ -325,7 +332,7 @@ func TestSubmitBadPhotoRejectsAll(t *testing.T) {
 	}
 	// a photo over the per-file cap
 	big := append([]byte{0xff, 0xd8, 0xff}, make([]byte, 10<<20)...)
-	e.post(l.token, answers("A", "m"), photoPart(good), photoPart(big)).status(413, "payload_too_large")
+	e.post(l.token, answers("A", "m"), photoPart(good), photoPart(big)).status(413, "ERROR_TOO_LARGE")
 	e.nothingKept()
 }
 
@@ -335,14 +342,14 @@ func TestSubmitCompensation(t *testing.T) {
 		e := newEnv(t)
 		l := e.newOpenLink()
 		e.st.failAt = 3 // photo 1 takes puts 1-2
-		e.post(l.token, answers("A", "m"), photoPart(jpegOf(t, 1)), photoPart(jpegOf(t, 2))).status(502, "storage_error")
+		e.post(l.token, answers("A", "m"), photoPart(jpegOf(t, 1)), photoPart(jpegOf(t, 2))).status(502, "ERROR_STORAGE_ERROR")
 		e.nothingKept()
 	})
 	t.Run("thumbnail of the last photo fails", func(t *testing.T) {
 		e := newEnv(t)
 		l := e.newOpenLink()
 		e.st.failAt = 4
-		e.post(l.token, answers("A", "m"), photoPart(jpegOf(t, 1)), photoPart(jpegOf(t, 2))).status(502, "storage_error")
+		e.post(l.token, answers("A", "m"), photoPart(jpegOf(t, 1)), photoPart(jpegOf(t, 2))).status(502, "ERROR_STORAGE_ERROR")
 		e.nothingKept()
 	})
 	t.Run("insert fails after the photos were stored", func(t *testing.T) {
@@ -351,7 +358,7 @@ func TestSubmitCompensation(t *testing.T) {
 		if _, err := e.db.Exec(`ALTER TABLE note_photo_tab ADD CONSTRAINT chk_never CHECK (sort_order > 100)`); err != nil {
 			t.Fatal(err)
 		}
-		e.post(l.token, answers("A", "m"), photoPart(jpegOf(t, 1)), photoPart(jpegOf(t, 2))).status(500, "internal_error")
+		e.post(l.token, answers("A", "m"), photoPart(jpegOf(t, 1)), photoPart(jpegOf(t, 2))).status(500, "ERROR_INTERNAL")
 		if e.count(`SELECT COUNT(*) FROM note_tab`) != 0 || e.count(`SELECT COUNT(*) FROM media_tab`) != 0 || e.st.count() != 0 {
 			t.Fatal("note, media or objects left behind")
 		}
@@ -375,7 +382,7 @@ func TestSubmitCompensation(t *testing.T) {
 		l := e.newOpenLink()
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
-		e.postFrom(ctx, "192.0.2.1", l.token, answers("A", "m"), photoPart(jpegOf(t, 1))).status(499, "client_closed")
+		e.postFrom(ctx, "192.0.2.1", l.token, answers("A", "m"), photoPart(jpegOf(t, 1))).status(499, "ERROR_CLIENT_CLOSED")
 		e.nothingKept()
 		noErrorLogged(t, e)
 	})
@@ -386,25 +393,25 @@ func TestSubmitClosedLinks(t *testing.T) {
 	e := newEnv(t)
 	l := e.newOpenLink()
 	deadline := e.now().Add(time.Hour)
-	_, withDeadline := e.newLink(l.owner, l.book, fmt.Sprintf(`{"deadline_at":%q}`, deadline.Format(time.RFC3339)))
+	_, withDeadline := e.newLink(l.owner, l.book, fmt.Sprintf(`{"deadline_at":%d}`, deadline.UnixMilli()))
 	revID, revoked := e.newLink(l.owner, l.book, `{}`)
-	e.do(l.owner, "DELETE", "/v1/collections/"+revID, "").status(204, "")
+	e.revoke(l.owner, revID).status(200, "")
 	for _, tok := range []string{"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "short", strings.Repeat("a", 5000), revoked} {
-		e.post(tok, answers("A", "m"), photoPart(jpegOf(t, 1))).status(404, "not_found")
+		e.post(tok, answers("A", "m"), photoPart(jpegOf(t, 1))).status(404, "ERROR_NOT_FOUND")
 	}
-	e.post(withDeadline, answers("A", "m")).status(201, "")
+	e.post(withDeadline, answers("A", "m")).status(200, "")
 	e.advance(time.Hour)
-	e.post(withDeadline, answers("A", "m"), photoPart(jpegOf(t, 1))).status(410, "collection_closed")
+	e.post(withDeadline, answers("A", "m"), photoPart(jpegOf(t, 1))).status(410, "ERROR_COLLECTION_CLOSED")
 	if e.noteCount() != 1 || e.count(`SELECT COUNT(*) FROM media_tab`) != 0 || e.st.count() != 0 {
 		t.Fatal("a closed link stored something")
 	}
 	// the owner revokes the link while a submission is being processed: nothing is kept
 	e.st.afterFn = func(puts int) {
 		if puts == 2 {
-			e.do(l.owner, "DELETE", "/v1/collections/"+l.collection, "").status(204, "")
+			e.revoke(l.owner, l.collection).status(200, "")
 		}
 	}
-	e.post(l.token, answers("A", "m"), photoPart(jpegOf(t, 1))).status(404, "not_found")
+	e.post(l.token, answers("A", "m"), photoPart(jpegOf(t, 1))).status(404, "ERROR_NOT_FOUND")
 	if e.noteCount() != 1 || e.count(`SELECT COUNT(*) FROM media_tab`) != 0 || e.st.count() != 0 {
 		t.Fatal("a link revoked mid-flight kept a photo or a note")
 	}
@@ -434,7 +441,7 @@ func TestSubmitLimits(t *testing.T) {
 	l := e.newOpenLink()
 
 	// the whole body is capped at 32 MiB, wherever the excess is
-	e.post(l.token, answers("A", "m"), part{name: "padding", data: make([]byte, 33<<20)}).status(413, "payload_too_large")
+	e.post(l.token, answers("A", "m"), part{name: "padding", data: make([]byte, 33<<20)}).status(413, "ERROR_TOO_LARGE")
 
 	e.fillCollection(l, 295)
 	var wg sync.WaitGroup
@@ -451,7 +458,7 @@ func TestSubmitLimits(t *testing.T) {
 	created := 0
 	for c := range codes {
 		switch c {
-		case 201:
+		case 200:
 			created++
 		case 409:
 		default:
@@ -461,13 +468,13 @@ func TestSubmitLimits(t *testing.T) {
 	if created != 5 || e.noteCount() != 300 {
 		t.Fatalf("%d created, %d notes", created, e.noteCount())
 	}
-	e.post(l.token, answers("A", "m"), photoPart(jpegOf(t, 1))).status(409, "collection_full")
+	e.post(l.token, answers("A", "m"), photoPart(jpegOf(t, 1))).status(409, "ERROR_COLLECTION_FULL")
 	if e.count(`SELECT COUNT(*) FROM media_tab`) != 0 || e.st.count() != 0 {
 		t.Fatal("a full collection processed a photo")
 	}
 	// another collection of the same book is unaffected
 	_, other := e.newLink(l.owner, l.book, `{}`)
-	e.post(other, answers("A", "m")).status(201, "")
+	e.post(other, answers("A", "m")).status(200, "")
 
 	// the yearbook's media quota (200 photos) counts contributor photos
 	e2 := newEnv(t)
@@ -482,11 +489,11 @@ func TestSubmitLimits(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	e2.post(l2.token, answers("A", "m"), photoPart(jpegOf(t, 1))).status(409, "quota_exceeded")
+	e2.post(l2.token, answers("A", "m"), photoPart(jpegOf(t, 1))).status(409, "ERROR_QUOTA_EXCEEDED")
 	if e2.noteCount() != 0 || e2.st.count() != 0 || e2.count(`SELECT COUNT(*) FROM media_tab`) != 200 {
 		t.Fatal("quota failure kept something")
 	}
-	e2.post(l2.token, answers("A", "m")).status(201, "") // text-only still fits
+	e2.post(l2.token, answers("A", "m")).status(200, "") // text-only still fits
 }
 
 // AC7: per-collection and per-IP limits count only requests that passed validation; a class behind one address fits.
@@ -494,49 +501,49 @@ func TestSubmitRateLimits(t *testing.T) {
 	e := newEnv(t)
 	l := e.newOpenLink()
 	for range 40 { // 40 different students, one campus IP, one submission each
-		e.post(l.token, answers("Student", "hi")).status(201, "")
+		e.post(l.token, answers("Student", "hi")).status(200, "")
 	}
 	for range 5 { // invalid requests are not counted
-		e.post(l.token, text("answers", `{"name":"A"}`)).status(400, "missing_answer")
+		e.post(l.token, text("answers", `{"name":"A"}`)).status(400, "ERROR_MISSING_ANSWER")
 	}
 	for range 20 {
-		e.post(l.token, answers("Student", "hi")).status(201, "")
+		e.post(l.token, answers("Student", "hi")).status(200, "")
 	}
-	rec := e.post(l.token, answers("Student", "hi")).status(429, "rate_limited") // 61st in the hour for this collection
+	rec := e.post(l.token, answers("Student", "hi")).status(429, "ERROR_RATE_LIMITED") // 61st in the hour for this collection
 	if rec.Header().Get("Retry-After") == "" {
 		t.Fatal("no Retry-After")
 	}
 	// the same address on another collection has 40 of its 100 hourly submissions left
 	_, other := e.newLink(l.owner, l.book, `{}`)
 	for range 40 {
-		e.post(other, answers("S", "hi")).status(201, "")
+		e.post(other, answers("S", "hi")).status(200, "")
 	}
-	e.post(other, answers("S", "hi")).status(429, "rate_limited")
-	e.postFrom(context.Background(), "203.0.113.9", other, answers("S", "hi")).status(201, "") // another IP is fine
+	e.post(other, answers("S", "hi")).status(429, "ERROR_RATE_LIMITED")
+	e.postFrom(context.Background(), "203.0.113.9", other, answers("S", "hi")).status(200, "") // another IP is fine
 	e.advance(time.Hour + time.Second)
-	e.post(other, answers("S", "hi")).status(201, "")
+	e.post(other, answers("S", "hi")).status(200, "")
 }
 
 // AC8: a filled honeypot looks like success and keeps nothing; the verifier runs before any photo is processed.
 func TestHoneypotAndVerifier(t *testing.T) {
 	e := newEnv(t)
 	l := e.newOpenLink()
-	rec := e.post(l.token, answers("Bot", "buy now"), text("website", "http://spam.example"), photoPart(jpegOf(t, 1))).status(201, "")
-	if id := rec.json()["note"].(map[string]any)["id"].(string); len(id) != 26 {
+	rec := e.post(l.token, answers("Bot", "buy now"), text("website", "http://spam.example"), photoPart(jpegOf(t, 1))).status(200, "")
+	if id := rec.data()["id"].(string); len(id) != 26 {
 		t.Fatalf("honeypot body %s", rec.Body.String())
 	}
 	// even without a valid answers part
-	e.post(l.token, text("website", "x")).status(201, "")
+	e.post(l.token, text("website", "x")).status(200, "")
 	e.nothingKept()
-	e.post(l.token, answers("Human", "hi"), text("website", "")).status(201, "")
+	e.post(l.token, answers("Human", "hi"), text("website", "")).status(200, "")
 
 	e.nh.SetVerifier(verifierFunc(func(context.Context, *http.Request) error { return errors.New("no") }))
-	e.post(l.token, answers("Human", "hi"), photoPart(jpegOf(t, 1))).status(403, "verification_failed")
+	e.post(l.token, answers("Human", "hi"), photoPart(jpegOf(t, 1))).status(403, "ERROR_VERIFICATION_FAILED")
 	if e.noteCount() != 1 || e.count(`SELECT COUNT(*) FROM media_tab`) != 0 || e.st.count() != 0 {
 		t.Fatal("a rejected verification stored or processed something")
 	}
 	// the honeypot is checked before the verifier, so a bot does not learn it was caught
-	e.post(l.token, answers("Bot", "x"), text("website", "y")).status(201, "")
+	e.post(l.token, answers("Bot", "x"), text("website", "y")).status(200, "")
 }
 
 type verifierFunc func(context.Context, *http.Request) error
@@ -553,13 +560,13 @@ func TestSubmitBusy(t *testing.T) {
 		t.Fatal("could not take the slots")
 	}
 	for range allPerWindow + 100 {
-		rec := e.post(l.token, answers("A", "m"), photoPart(jpegOf(t, 1))).status(503, "busy")
+		rec := e.post(l.token, answers("A", "m"), photoPart(jpegOf(t, 1))).status(503, "ERROR_BUSY")
 		if ra, _ := strconv.Atoi(rec.Header().Get("Retry-After")); ra < 2 || ra > 6 {
 			t.Fatalf("Retry-After %q, want 2 to 6", rec.Header().Get("Retry-After"))
 		}
 	}
 	e.nh.release("x")
-	e.post(l.token, answers("A", "m"), photoPart(jpegOf(t, 1))).status(201, "")
+	e.post(l.token, answers("A", "m"), photoPart(jpegOf(t, 1))).status(200, "")
 	e.nh.release("y")
 	if e.inProgress() != 0 {
 		t.Fatal("slot not released")
@@ -573,7 +580,7 @@ func TestSubmitPrivacy(t *testing.T) {
 	l := e.newOpenLink()
 	bob := e.register("bob@example.com", "Bob", true)
 	body, ct := multipartOf(answers("Ánh", "UNIQUE-MESSAGE-TEXT"), part{"photos", "secret-holiday-name.jpg", "image/jpeg", jpegOf(t, 3)})
-	r := httptest.NewRequest("POST", "/v1/public/collect/"+l.token+"/notes", body)
+	r := httptest.NewRequest("POST", submitURL(l.token), body)
 	r.Header.Set("Content-Type", ct)
 	r.Header.Set("Origin", "https://evil.example")
 	r.Header.Set("User-Agent", "UNIQUE-UA-STRING")
@@ -581,7 +588,7 @@ func TestSubmitPrivacy(t *testing.T) {
 	r.RemoteAddr = "198.51.100.77:5000"
 	rec := httptest.NewRecorder()
 	e.h.ServeHTTP(rec, r)
-	resp{rec, t}.status(201, "")
+	resp{rec, t}.status(200, "")
 	if rec.Header().Get("Set-Cookie") != "" {
 		t.Fatal("cookie set")
 	}
@@ -610,14 +617,14 @@ func TestSubmitPrivacy(t *testing.T) {
 	}
 	// provoke an error log too
 	e.st.failAt = e.st.puts + 1
-	e.post(l.token, answers("Ánh", "UNIQUE-MESSAGE-TEXT"), part{"photos", "secret-holiday-name.jpg", "image/jpeg", jpegOf(t, 4)}).status(502, "storage_error")
+	e.post(l.token, answers("Ánh", "UNIQUE-MESSAGE-TEXT"), part{"photos", "secret-holiday-name.jpg", "image/jpeg", jpegOf(t, 4)}).status(502, "ERROR_STORAGE_ERROR")
 	logs := e.logs.String()
 	for _, s := range []string{l.token, "UNIQUE-MESSAGE-TEXT", "secret-holiday-name", "UNIQUE-UA", "198.51.100.77", "Ánh"} {
 		if strings.Contains(logs, s) {
 			t.Fatalf("logs contain %q", s)
 		}
 	}
-	if !strings.Contains(logs, "POST /v1/public/collect/{token}/notes") {
+	if !strings.Contains(logs, "POST /api/public-collect/submit-note") {
 		t.Fatal("access log should record the route pattern")
 	}
 }
@@ -626,7 +633,7 @@ func TestSubmitPrivacy(t *testing.T) {
 func TestYearbookDeleteRemovesNotes(t *testing.T) {
 	e := newEnv(t)
 	l := e.newOpenLink()
-	e.post(l.token, answers("A", "m"), photoPart(jpegOf(t, 1))).status(201, "")
+	e.post(l.token, answers("A", "m"), photoPart(jpegOf(t, 1))).status(200, "")
 	e.do(l.owner, "DELETE", "/v1/yearbooks/"+l.book, "").status(204, "")
 	for _, q := range []string{`SELECT COUNT(*) FROM note_tab`, `SELECT COUNT(*) FROM note_photo_tab`, `SELECT COUNT(*) FROM media_tab`} {
 		if n := e.count(q); n != 0 {
@@ -698,8 +705,8 @@ func dial(t testing.TB, srv *httptest.Server) net.Conn {
 	return conn
 }
 
-func sendHead(conn net.Conn, token, ip, ctype string, length int) {
-	fmt.Fprintf(conn, "POST /v1/public/collect/%s/notes HTTP/1.1\r\nHost: x\r\nX-Test-IP: %s\r\nContent-Type: %s\r\nContent-Length: %d\r\n\r\n", token, ip, ctype, length)
+func sendHead(conn net.Conn, ip, token, ctype string, length int) {
+	fmt.Fprintf(conn, "POST %s?token="+url.QueryEscape(token)+" HTTP/1.1\r\nHost: x\r\nX-Test-IP: %s\r\nContent-Type: %s\r\nContent-Length: %d\r\n\r\n", submitPath, ip, ctype, length)
 }
 
 func readResponse(t testing.TB, conn net.Conn, within time.Duration) (status int, header http.Header, body string) {
@@ -719,9 +726,9 @@ var bigBody, bigType = multipartOf(answers("A", "m"), photoPart(make([]byte, 4<<
 
 // stall opens a connection that sends the answers, the head of a photo and then extra more bytes of an upload that
 // promises 4 MiB, and goes silent. It returns the connection.
-func (e *env) stall(srv *httptest.Server, token, ip string, extra int) net.Conn {
+func (e *env) stall(srv *httptest.Server, ip, token string, extra int) net.Conn {
 	conn := dial(e.t, srv)
-	sendHead(conn, token, ip, bigType, bigBody.Len())
+	sendHead(conn, ip, token, bigType, bigBody.Len())
 	if _, err := conn.Write(bigBody.Bytes()[:600+extra]); err != nil {
 		e.t.Fatal(err)
 	}
@@ -744,7 +751,7 @@ func TestIdleBodyIsDropped(t *testing.T) {
 	l := e.newOpenLink()
 	srv := e.serve()
 
-	conn := e.stall(srv, l.token, "10.0.0.1", 100)
+	conn := e.stall(srv, "10.0.0.1", l.token, 100)
 	e.waitFor("upload in progress", func() bool { return e.inProgress() == 1 && len(e.spooled()) == 1 })
 	start := time.Now()
 	if got := statusOf(t, conn, 5*time.Second); got != 408 || time.Since(start) > 3*time.Second {
@@ -765,7 +772,7 @@ func TestSlowDripIsDropped(t *testing.T) {
 	l := e.newOpenLink()
 	srv := e.serve()
 
-	conn := e.stall(srv, l.token, "10.0.0.1", 0)
+	conn := e.stall(srv, "10.0.0.1", l.token, 0)
 	start := time.Now()
 	stop := make(chan struct{})
 	go func() {
@@ -798,13 +805,13 @@ func TestStalledUploadsDoNotBlockOthers(t *testing.T) {
 	var conns []net.Conn
 	for _, ip := range []string{"198.51.100.1", "198.51.100.2"} {
 		for range 8 {
-			conns = append(conns, e.stall(srv, l.token, ip, 100))
+			conns = append(conns, e.stall(srv, ip, l.token, 100))
 		}
 	}
 	e.waitFor("16 uploads in progress", func() bool { return e.inProgress() == 16 && len(e.spooled()) == 16 })
 
 	extra := dial(t, srv)
-	sendHead(extra, l.token, "198.51.100.1", bigType, bigBody.Len())
+	sendHead(extra, "198.51.100.1", l.token, bigType, bigBody.Len())
 	code, header, _ := readResponse(t, extra, 3*time.Second)
 	if ra, _ := strconv.Atoi(header.Get("Retry-After")); code != 503 || ra < 2 || ra > 6 {
 		t.Fatalf("ninth upload from one address: %d, Retry-After %q", code, header.Get("Retry-After"))
@@ -812,9 +819,9 @@ func TestStalledUploadsDoNotBlockOthers(t *testing.T) {
 	// a normal 3-photo submission from a third address, and a text-only one from an attacker's address, both succeed
 	body, ct := multipartOf(answers("Real", "hi"), photoPart(jpegOf(t, 1)), photoPart(jpegOf(t, 2)), photoPart(jpegOf(t, 3)))
 	c3 := dial(t, srv)
-	sendHead(c3, l.token, "203.0.113.7", ct, body.Len())
+	sendHead(c3, "203.0.113.7", l.token, ct, body.Len())
 	_, _ = c3.Write(body.Bytes())
-	if got := statusOf(t, c3, 5*time.Second); got != 201 {
+	if got := statusOf(t, c3, 5*time.Second); got != 200 {
 		t.Fatalf("third address: %d", got)
 	}
 	for _, c := range conns {
@@ -846,7 +853,7 @@ func TestConnectionCapAndFlatMemory(t *testing.T) {
 	const each = 1 << 20
 	var conns []net.Conn
 	for i := range 48 {
-		conns = append(conns, e.stall(srv, l.token, fmt.Sprintf("10.9.%d.1", i), each))
+		conns = append(conns, e.stall(srv, fmt.Sprintf("10.9.%d.1", i), l.token, each))
 	}
 	var spooledBytes int64
 	e.waitFor("48 MiB on disk", func() bool {
@@ -865,7 +872,7 @@ func TestConnectionCapAndFlatMemory(t *testing.T) {
 		t.Fatalf("heap grew by %d MiB while 48 MiB were being uploaded: the body is not spooled", grown>>20)
 	}
 	over := dial(t, srv)
-	sendHead(over, l.token, "10.9.99.1", bigType, bigBody.Len())
+	sendHead(over, "10.9.99.1", l.token, bigType, bigBody.Len())
 	if got := statusOf(t, over, 3*time.Second); got != 503 {
 		t.Fatalf("49th upload: %d, want 503", got)
 	}
@@ -881,6 +888,8 @@ func TestConnectionCapAndFlatMemory(t *testing.T) {
 func TestEarlyRejectionDrainsTheBody(t *testing.T) {
 	e := newEnv(t)
 	l := e.newOpenLink()
+	_, closed := e.newLink(l.owner, l.book, fmt.Sprintf(`{"deadline_at":%d}`, e.now().Add(time.Hour).UnixMilli()))
+	e.advance(time.Hour)
 	srv := e.serve()
 	photo := part{"photos", "a.jpg", "image/jpeg", make([]byte, 1<<20)}
 	cases := []struct {
@@ -889,14 +898,14 @@ func TestEarlyRejectionDrainsTheBody(t *testing.T) {
 		status      int
 		code        string
 	}{
-		{"unknown link", "ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ", []part{answers("A", "m"), photo}, 404, "not_found"},
-		{"missing answer", l.token, []part{text("answers", `{"name":"A"}`), photo}, 400, "missing_answer"},
-		{"answers after photos", l.token, []part{photo, answers("A", "m")}, 400, "invalid_body"},
+		{"closed link", closed, []part{answers("A", "m"), photo}, 410, "ERROR_COLLECTION_CLOSED"},
+		{"missing answer", l.token, []part{text("answers", `{"name":"A"}`), photo}, 400, "ERROR_MISSING_ANSWER"},
+		{"answers after photos", l.token, []part{photo, answers("A", "m")}, 400, "ERROR_PARAM"},
 	}
 	for _, c := range cases {
 		body, ct := multipartOf(c.parts...)
 		conn := dial(t, srv)
-		sendHead(conn, c.token, "10.0.0.5", ct, body.Len())
+		sendHead(conn, "10.0.0.5", c.token, ct, body.Len())
 		half := body.Len() / 2
 		_, _ = conn.Write(body.Bytes()[:half])
 		_ = conn.SetReadDeadline(time.Now().Add(300 * time.Millisecond))
@@ -913,11 +922,91 @@ func TestEarlyRejectionDrainsTheBody(t *testing.T) {
 	e.nothingKept()
 }
 
+// readCounter counts what the handler read of a body that never ends.
+type readCounter struct{ n atomic.Int64 }
+
+func (c *readCounter) Read(p []byte) (int, error) { c.n.Add(int64(len(p))); return len(p), nil }
+
+// T-034 DoS design: an unknown, malformed or revoked token (in the query) is answered 404 before the body is touched:
+// nothing is read or spooled, the connection is not held while the client is still uploading, and the token is not logged.
+func TestUnknownTokenIsAnsweredWithoutReadingTheBody(t *testing.T) {
+	e := newEnv(t)
+	l := e.newOpenLink()
+	revID, revoked := e.newLink(l.owner, l.book, `{}`)
+	e.revoke(l.owner, revID).status(200, "")
+	const secret = "SECRET-TOKEN-NEVER-LOGGED-0123456"
+	tokens := []string{secret, "short", strings.Repeat("a", 5000), revoked, ""}
+	_, ct := multipartOf(answers("A", "m"))
+	for _, tok := range tokens {
+		rc := &readCounter{}
+		r := httptest.NewRequest("POST", submitURL(tok), io.LimitReader(rc, 20<<20))
+		r.ContentLength = 20 << 20
+		r.Header.Set("Content-Type", ct)
+		r.RemoteAddr = "192.0.2.9:4000"
+		rec := httptest.NewRecorder()
+		e.h.ServeHTTP(rec, r)
+		resp{rec, t}.status(404, "ERROR_NOT_FOUND")
+		if n := rc.n.Load(); n != 0 {
+			t.Fatalf("token %.8q: %d bytes of the body were read", tok, n)
+		}
+		if len(e.spooled()) != 0 {
+			t.Fatalf("token %.8q: spool not empty", tok)
+		}
+	}
+	if strings.Contains(e.logs.String(), secret) {
+		t.Fatal("the token reached the logs")
+	}
+
+	// over a real socket: the answer arrives while the client has sent a few KB of its 20 MiB
+	srv := e.serve()
+	conn := dial(t, srv)
+	sendHead(conn, "192.0.2.10", secret, ct, 20<<20)
+	_, _ = conn.Write(make([]byte, 4<<10))
+	if code, _, out := readResponse(t, conn, 2*time.Second); code != 404 || !strings.Contains(out, "ERROR_NOT_FOUND") {
+		t.Fatalf("%d %s", code, out)
+	}
+	if len(e.spooled()) != 0 || e.inProgress() != 0 {
+		t.Fatal("an unknown token held a slot or a spool file")
+	}
+	e.nothingKept()
+	if strings.Contains(e.logs.String(), secret) {
+		t.Fatal("the token reached the logs")
+	}
+}
+
+// T-034 order: a full link (a valid token) is answered 409 right after the lookup, before the body is read or spooled,
+// and a filled honeypot on a full link is also 409 (the honeypot is only looked at after the full check).
+func TestFullLinkIsAnsweredWithoutReadingTheBody(t *testing.T) {
+	e := newEnv(t)
+	l := e.newOpenLink()
+	e.fillCollection(l, 300)
+	_, ct := multipartOf(answers("A", "m"))
+	rc := &readCounter{}
+	r := httptest.NewRequest("POST", submitURL(l.token), io.LimitReader(rc, 20<<20))
+	r.ContentLength = 20 << 20
+	r.Header.Set("Content-Type", ct)
+	r.RemoteAddr = "192.0.2.9:4000"
+	rec := httptest.NewRecorder()
+	e.h.ServeHTTP(rec, r)
+	resp{rec, t}.status(409, "ERROR_COLLECTION_FULL")
+	if n := rc.n.Load(); n != 0 {
+		t.Fatalf("%d bytes of the body were read", n)
+	}
+	if len(e.spooled()) != 0 {
+		t.Fatal("spool not empty")
+	}
+	e.post(l.token, answers("Bot", "x"), text("website", "http://spam.example")).status(409, "ERROR_COLLECTION_FULL")
+	e.noSpool()
+	if e.noteCount() != 300 {
+		t.Fatal("a note was stored on a full link")
+	}
+}
+
 // The spooled body is removed after success, rejection, a client that hangs up and a panic in the handler.
 func TestSpoolIsAlwaysRemoved(t *testing.T) {
 	e := newEnv(t)
 	l := e.newOpenLink()
-	e.post(l.token, answers("A", "m"), photoPart(jpegOf(t, 1))).status(201, "")
+	e.post(l.token, answers("A", "m"), photoPart(jpegOf(t, 1))).status(200, "")
 	e.noSpool()
 	e.post(l.token, answers("A", "m"), photoPart([]byte("not an image"))).status(415, "")
 	e.noSpool()
@@ -925,7 +1014,7 @@ func TestSpoolIsAlwaysRemoved(t *testing.T) {
 	e.noSpool()
 
 	srv := e.serve()
-	conn := e.stall(srv, l.token, "10.0.0.2", 100)
+	conn := e.stall(srv, "10.0.0.2", l.token, 100)
 	e.waitFor("spooling", func() bool { return len(e.spooled()) == 1 })
 	_ = conn.Close()
 	e.waitFor("released", func() bool { return e.inProgress() == 0 })
@@ -967,7 +1056,7 @@ func (t *throttled) Read(p []byte) (int, error) {
 }
 
 // The 40-students case: one campus address, every student looks the link up and uploads 3 photos at 1 MB/s, and
-// retries like the web form (on 503 and on a network error, after Retry-After). Everybody gets a 201 and nobody a
+// retries like the web form (on 503 and on a network error, after Retry-After). Everybody gets a 200 and nobody a
 // 429. Retry-After is honoured at 1/10 of its value so that the test is quick.
 func TestFortyStudentsAtOneMBps(t *testing.T) {
 	e := newEnv(t)
@@ -985,7 +1074,7 @@ func TestFortyStudentsAtOneMBps(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			client := &http.Client{Timeout: 60 * time.Second}
-			get, _ := http.NewRequest("GET", srv.URL+"/v1/public/collect/"+l.token, nil)
+			get, _ := http.NewRequest("GET", srv.URL+lookupPath(l.token), nil)
 			get.Header.Set("X-Test-IP", "10.70.0.1")
 			if res, err := client.Do(get); err == nil {
 				_, _ = io.Copy(io.Discard, res.Body)
@@ -995,7 +1084,7 @@ func TestFortyStudentsAtOneMBps(t *testing.T) {
 			status, tries := 0, 0
 			for tries < 300 {
 				tries++
-				req, _ := http.NewRequest("POST", srv.URL+"/v1/public/collect/"+l.token+"/notes", io.NopCloser(&throttled{bytes.NewReader(body.Bytes()), 1 << 20}))
+				req, _ := http.NewRequest("POST", srv.URL+submitURL(l.token), io.NopCloser(&throttled{bytes.NewReader(body.Bytes()), 1 << 20}))
 				req.ContentLength = int64(body.Len())
 				req.Header.Set("Content-Type", ct)
 				req.Header.Set("X-Test-IP", "10.70.0.1")
@@ -1021,8 +1110,8 @@ func TestFortyStudentsAtOneMBps(t *testing.T) {
 	}
 	wg.Wait()
 	t.Logf("results %v, most tries %d", got, maxTries)
-	if got[201] != 40 {
-		t.Fatalf("results %v, want 40 x 201 and no 429", got)
+	if got[200] != 40 {
+		t.Fatalf("results %v, want 40 x 200 and no 429", got)
 	}
 	if n := e.noteCount(); n != 40 {
 		t.Fatalf("%d notes", n)
@@ -1037,7 +1126,7 @@ func TestMediaBusyIsRefunded(t *testing.T) {
 	l := e.newOpenLink()
 	svc := media.NewService(media.NewStore(e.db), e.st, 1, e.lim, nil)
 	svc.SetContributorWait(time.Millisecond)
-	e.nh.media = svc
+	e.ns.media = svc
 	big := image.NewNRGBA(image.Rect(0, 0, 2000, 2000)) // decoding 4 MP keeps the only slot busy for a while
 	var buf bytes.Buffer
 	if err := png.Encode(&buf, big); err != nil {
@@ -1064,7 +1153,7 @@ func TestMediaBusyIsRefunded(t *testing.T) {
 	// the busy answers did not use up the address' submissions: only the stored notes count
 	left := 0
 	for {
-		if ok, _, _ := e.nh.subIPHr.Take(context.Background(), "192.0.2.50"); !ok {
+		if ok, _, _ := e.ns.subIPHr.Take(context.Background(), "192.0.2.50"); !ok {
 			break
 		}
 		left++
@@ -1080,10 +1169,10 @@ func TestSweepSpoolAtStartup(t *testing.T) {
 	e := newEnv(t)
 	l := e.newOpenLink()
 	srv := e.serve()
-	conn := e.stall(srv, l.token, "10.0.0.1", 100)
+	conn := e.stall(srv, "10.0.0.1", l.token, 100)
 	e.waitFor("upload in progress", func() bool { return e.inProgress() == 1 && len(e.spooled()) == 1 })
 
-	next := NewHandler(NewStore(e.db), e.svc, 10<<20, nil, nil, nil, e.lim, e.nh.logger, e.now)
+	next := NewHandler(e.ns, 10<<20, nil, nil, nil, e.nh.logger)
 	next.SetUploadLimits(defaultUploadConns, defaultUploadsPerIP, e.tmp)
 	if n := next.SweepSpool(); n != 0 || len(e.spooled()) != 1 {
 		t.Fatalf("a live upload's file was swept (removed %d)", n)
@@ -1100,4 +1189,33 @@ func TestSweepSpoolAtStartup(t *testing.T) {
 	e.noSpool()
 	_ = conn.Close()
 	e.waitFor("slot released", func() bool { return e.inProgress() == 0 })
+}
+
+// The route extends its own deadlines (ExtendDeadlines, PaceBody), so an upload that outlives the server's global
+// ReadTimeout and WriteTimeout still gets its answer on the v2 path. Here the server timeouts are 700 ms and the
+// upload takes about 2 s.
+func TestSubmitOutlivesServerTimeouts(t *testing.T) {
+	e := newEnv(t)
+	l := e.newOpenLink()
+	srv := httptest.NewUnstartedServer(e.h)
+	srv.Config.ReadTimeout, srv.Config.WriteTimeout = 700*time.Millisecond, 700*time.Millisecond
+	srv.Start()
+	t.Cleanup(srv.Close)
+	body, ct := multipartOf(answers("Slow", "phone"), photoPart(photoNoise(t, 5)))
+	rate := body.Len() / 2 // bytes per second: about two seconds
+	req, _ := http.NewRequest("POST", srv.URL+submitURL(l.token), io.NopCloser(&throttled{bytes.NewReader(body.Bytes()), rate}))
+	req.ContentLength = int64(body.Len())
+	req.Header.Set("Content-Type", ct)
+	start := time.Now()
+	res, err := (&http.Client{Timeout: 30 * time.Second}).Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != 200 || time.Since(start) < 1500*time.Millisecond {
+		t.Fatalf("status %d after %v", res.StatusCode, time.Since(start))
+	}
+	if e.noteCount() != 1 {
+		t.Fatalf("%d notes", e.noteCount())
+	}
 }

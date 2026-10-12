@@ -39,17 +39,17 @@ func TestDeleteBookLeavesNoRows(t *testing.T) {
 	e.do(alice, "PUT", "/v1/yearbooks/"+book+"/profile", fmt.Sprintf(`{"full_name":"Alice","photo_media_id":%q}`, cover.ID)).status(200, "")
 
 	_, token1 := e.newLink(alice, book, `{"label":"first"}`)
-	id2, token2 := e.newLink(alice, book, fmt.Sprintf(`{"deadline_at":%q}`, e.now().Add(48*time.Hour).Format(time.RFC3339)))
-	e.post(token1, answers("A", "plain")).status(201, "")
-	e.post(token1, answers("B", "one photo"), photoPart(jpegOf(t, 2))).status(201, "")
-	e.post(token1, answers("C", "two photos"), photoPart(jpegOf(t, 3)), photoPart(jpegOf(t, 4))).status(201, "")
-	e.post(token2, answers("D", "second link")).status(201, "")
+	id2, token2 := e.newLink(alice, book, fmt.Sprintf(`{"deadline_at":%d}`, e.now().Add(48*time.Hour).UnixMilli()))
+	e.post(token1, answers("A", "plain")).status(200, "")
+	e.post(token1, answers("B", "one photo"), photoPart(jpegOf(t, 2))).status(200, "")
+	e.post(token1, answers("C", "two photos"), photoPart(jpegOf(t, 3)), photoPart(jpegOf(t, 4))).status(200, "")
+	e.post(token2, answers("D", "second link")).status(200, "")
 	for i, status := range []string{StatusPending, StatusApproved, StatusHidden} { // one note per status, on the first link
 		if _, err := e.db.Exec(`UPDATE note_tab SET status = ? WHERE id = (SELECT id FROM (SELECT id FROM note_tab ORDER BY id LIMIT 1 OFFSET ?) x)`, status, i); err != nil {
 			t.Fatal(err)
 		}
 	}
-	e.do(alice, "DELETE", "/v1/collections/"+id2, "").status(204, "")
+	e.revoke(alice, id2).status(200, "")
 	// Requirement 3: revoking keeps the notes.
 	if n := e.count(`SELECT COUNT(*) FROM note_tab`); n != 4 {
 		t.Fatalf("%d notes after the revoke, want 4", n)
@@ -116,8 +116,8 @@ func (e *env) tabTables() []string {
 func TestDeleteBookAndPhotoScopes(t *testing.T) {
 	e := newEnv(t)
 	a, b := e.newOpenLink(), e.newOpenLink()
-	e.post(a.token, answers("A", "m"), photoPart(jpegOf(t, 1))).status(201, "")
-	e.post(b.token, answers("B", "m"), photoPart(jpegOf(t, 2))).status(201, "")
+	e.post(a.token, answers("A", "m"), photoPart(jpegOf(t, 1))).status(200, "")
+	e.post(b.token, answers("B", "m"), photoPart(jpegOf(t, 2))).status(200, "")
 	e.do(a.owner, "DELETE", "/v1/yearbooks/"+a.book, "").status(204, "")
 	for _, tb := range []string{"note_collection_tab", "note_tab", "note_photo_tab"} {
 		if n := e.count(`SELECT COUNT(*) FROM ` + tb); n != 1 {
@@ -165,16 +165,16 @@ func TestDeleteRacesWithSubmitsAndCollections(t *testing.T) {
 			go do(func() int { return e.postFrom(context.Background(), ip, token2, answers("B", "m")).Code })
 		}
 		go do(func() int { return e.do(alice, "DELETE", "/v1/yearbooks/"+book, "").Code })
-		go do(func() int { return e.do(alice, "POST", "/v1/yearbooks/"+book+"/collections", `{}`).Code })
-		go do(func() int { return e.do(alice, "POST", "/v1/yearbooks/"+book+"/collections", `{}`).Code })
-		go do(func() int { return e.do(alice, "DELETE", "/v1/collections/"+id1, "").Code })
+		go do(func() int { return e.create(alice, book, `{}`).Code })
+		go do(func() int { return e.create(alice, book, `{}`).Code })
+		go do(func() int { return e.revoke(alice, id1).Code })
 		wg.Wait()
 		close(codes)
 		for c := range codes {
 			if c >= 500 {
 				bad++
 			}
-			if c == 201 {
+			if c == 200 {
 				landed++
 			}
 		}

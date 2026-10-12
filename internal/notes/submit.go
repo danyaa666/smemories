@@ -1,10 +1,7 @@
 package notes
 
 import (
-	"bytes"
-	"cmp"
 	"context"
-	"encoding/json"
 	"errors"
 	"io"
 	"math/rand/v2"
@@ -12,14 +9,10 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
-	"regexp"
-	"strconv"
 	"time"
-	"unicode/utf8"
 
+	"github.com/danyaa666/smemories/internal/apperr"
 	"github.com/danyaa666/smemories/internal/httpx"
-	"github.com/danyaa666/smemories/internal/media"
-	"github.com/danyaa666/smemories/internal/notefields"
 	"github.com/danyaa666/smemories/internal/ulid"
 )
 
@@ -36,24 +29,11 @@ const (
 	submitProcessing   = 60 * time.Second
 	submitRouteTimeout = 120*time.Second + submitProcessing
 	submitWriteTimeout = submitRouteTimeout + 10*time.Second
-
-	// Submission limits count requests that passed text validation. They are sized for a class behind one
-	// campus address (40 students each submit once); the per-collection limit and the 300-note cap are the real brakes.
-	submitPerIPHour         = 100
-	submitPerIPDay          = 300
-	submitPerCollectionHour = 60
 )
 
 // submitPace is a variable only so that a test can shorten it: 10 s without a byte, 120 s in total, and after a
 // 15 s grace period at least 16 KiB/s on average.
 var submitPace = httpx.BodyPace{Idle: 10 * time.Second, Total: 120 * time.Second, MinRate: 16 << 10, Grace: 15 * time.Second}
-
-// plainID matches the ids worth echoing back in an error; an unknown id chosen by the client is not echoed otherwise.
-var plainID = regexp.MustCompile(`^[a-z_]{1,40}$`)
-
-// retryJitter is the Retry-After of a 503 busy: 2 to 6 seconds at random, so a class that was turned away does not
-// come back in one wave.
-func retryJitter() string { return strconv.Itoa(2 + rand.IntN(5)) } //nolint:gosec // spreading retries, not a secret
 
 // scan is what the multipart body held, without the photo bytes.
 type scan struct {
@@ -65,12 +45,13 @@ type scan struct {
 }
 
 // submit stores a friend's note as pending. Order matters: a slot for the network phase is taken before anything
-// is read; the body is spooled to disk; the link is checked and the text validated before any photo is decoded;
-// every failure after a photo was stored deletes what was stored.
+// is read; the link is resolved from the query token before the body is touched (an unknown token costs no disk and no
+// connection time, T-034); the body is spooled to disk; the text is validated before any photo is decoded; every failure
+// after a photo was stored deletes what was stored.
 func (h *Handler) submit(w http.ResponseWriter, r *http.Request) {
 	ip := h.clientIP(r)
 	if !h.acquire(ip) { // nothing was read or counted, so a busy answer costs the client nothing
-		busy(w, r)
+		h.fail(w, r, &RetryAfterError{Err: apperr.New(CodeBusy, "too many uploads in progress, retry shortly"), After: retryJitter()})
 		return
 	}
 	defer h.release(ip)
@@ -78,155 +59,115 @@ func (h *Handler) submit(w http.ResponseWriter, r *http.Request) {
 	httpx.PaceBody(w, r, submitPace)
 	rec := &errRecorder{r: r.Body}
 	r.Body = io.NopCloser(rec)
+	raw := w
 	w = &drainWriter{ResponseWriter: w, rec: rec} // an early answer first swallows the rest of the body, so a browser can read it
 
-	p, ok := h.resolve(w, r)
-	if !ok {
+	p, err := h.svc.Resolve(r.Context(), ip, r.URL.Query().Get("token")) // the token is in the query, never in the body or the logs
+	if err != nil {
+		if apperr.Is(err, apperr.NotFound) { // a guess or a revoked link: answer at once, do not read the body
+			w = raw
+		}
+		h.fail(w, r, err)
+		return
+	}
+	if err := h.svc.CheckOpen(r.Context(), p); err != nil { // a full link: answer at once, do not read the body (T-034 order)
+		h.fail(raw, r, err)
 		return
 	}
 	mt, params, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
 	if err != nil || mt != "multipart/form-data" {
-		httpx.WriteError(w, r, http.StatusUnsupportedMediaType, "unsupported_media_type", "send multipart/form-data")
+		h.fail(w, r, apperr.New(CodeUnsupportedMediaType, "send multipart/form-data"))
 		return
 	}
 	if params["boundary"] == "" {
-		httpx.WriteError(w, r, http.StatusBadRequest, "invalid_body", "expected a multipart/form-data body")
-		return
-	}
-	if n, err := h.store.noteCount(r.Context(), p.CollectionID); err != nil || n >= maxNotes {
-		h.fail(w, r, cmp.Or(err, ErrFull))
+		h.fail(w, r, apperr.New(apperr.Param, "expected a multipart/form-data body"))
 		return
 	}
 
 	f, err := os.CreateTemp(h.tmpDir, "smem-upload-*") // 0600
 	if err != nil {
-		h.fail(w, r, err)
+		h.fail(w, r, apperr.Wrap(apperr.Internal, err, "create upload spool file"))
 		return
 	}
 	defer func() { // also on error, panic and client disconnect
 		_ = f.Close()
 		_ = os.Remove(f.Name())
 	}()
-	if _, err := io.Copy(f, r.Body); err != nil {
+	size, err := io.Copy(f, r.Body)
+	if err != nil {
 		if rec.err != nil {
 			httpx.WriteBodyError(w, r, rec.err)
 		} else {
-			h.fail(w, r, err) // the disk
+			h.fail(w, r, apperr.Wrap(apperr.Internal, err, "spool upload")) // the disk
 		}
 		return
 	}
 	httpx.ExtendDeadlines(w, 0, submitProcessing)
 
-	sc, ok := h.scan(w, r, f, params["boundary"])
-	if !ok {
+	sc, err := h.scan(f, params["boundary"])
+	if err != nil {
+		h.fail(w, r, err)
 		return
 	}
-	now := h.now().UTC()
-	id := ulid.New(now)
 	if sc.honeypot { // a bot filled the hidden field: look successful, keep nothing
-		writeCreated(w, id)
+		httpx.OK(w, r, noteCreated{ulid.New(time.Now())})
 		return
 	}
 	if sc.photoFirst || (len(sc.photos) > 0 && !sc.hasAnswers) {
-		httpx.WriteError(w, r, http.StatusBadRequest, "invalid_body", "send the answers part before the photos")
+		h.fail(w, r, apperr.New(apperr.Param, "send the answers part before the photos"))
 		return
 	}
 	if !sc.hasAnswers {
-		httpx.WriteError(w, r, http.StatusBadRequest, "invalid_body", "missing form field \"answers\"")
+		h.fail(w, r, apperr.New(apperr.Param, "missing form field \"answers\""))
 		return
 	}
-	clean, ok := h.validate(w, r, p, sc.answers)
-	if !ok {
-		return
+	in := &Submission{IP: ip, Answers: sc.answers, Photos: make([]func() ([]byte, error), len(sc.photos)),
+		Verify: func(ctx context.Context) error { return h.verifier.Verify(ctx, r) }}
+	for i, n := range sc.photos {
+		in.Photos[i] = h.loadPhoto(f, size, params["boundary"], n)
 	}
-	if err := h.verifier.Verify(r.Context(), r); err != nil {
-		httpx.WriteError(w, r, http.StatusForbidden, "verification_failed", "verification failed")
-		return
-	}
-	coll := strconv.FormatUint(p.CollectionID, 10)
-	if ok, wait := h.takeSubmit(r.Context(), ip, coll); !ok {
-		tooMany(w, r, wait)
-		return
-	}
-
-	var stored []media.Media
-	fail := func(err error) {
-		if errors.Is(err, media.ErrBusy) { // turned away, not misused: give back what the request cost
-			_ = h.all.Refund(r.Context(), ip)
-			_ = h.subIPHr.Refund(r.Context(), ip)
-			_ = h.subIPDay.Refund(r.Context(), ip)
-			_ = h.subColl.Refund(r.Context(), coll)
-		}
-		if derr := h.media.Discard(stored...); derr != nil {
-			h.logger.Error("notes: could not remove the photos of a failed submission", "request_id", httpx.RequestIDFrom(r.Context()), "error", derr)
-		}
+	id, err := h.svc.SubmitNote(r.Context(), p, in)
+	if err != nil {
 		h.fail(w, r, err)
+		return
 	}
-	rows := make([]int64, 0, len(sc.photos))
-	if len(sc.photos) > 0 {
-		if _, err := f.Seek(0, io.SeekStart); err != nil {
-			fail(err)
-			return
-		}
-		mr := multipart.NewReader(f, params["boundary"])
-		for n, i := 0, 0; i < len(sc.photos); n++ { // one photo at a time; the media service bounds decoding and memory
+	httpx.OK(w, r, noteCreated{id})
+}
+
+type noteCreated struct {
+	ID string `json:"id"`
+}
+
+// loadPhoto returns the loader of the photo that is part number n of the spooled body; it reads the part when called.
+func (h *Handler) loadPhoto(f *os.File, size int64, boundary string, n int) func() ([]byte, error) {
+	return func() ([]byte, error) {
+		mr := multipart.NewReader(io.NewSectionReader(f, 0, size), boundary)
+		for i := 0; ; i++ {
 			part, err := mr.NextPart()
 			if err != nil {
-				fail(err) // cannot happen: the scan read the same bytes
-				return
+				return nil, apperr.Wrap(apperr.Internal, err, "read spooled photo") // cannot happen: the scan read the same bytes
 			}
-			if n != sc.photos[i] {
-				continue
-			}
-			i++
-			m, err := h.media.UploadContributorFrom(r.Context(), p.YearbookID, func() ([]byte, error) {
+			if i == n {
 				return io.ReadAll(io.LimitReader(part, h.maxPhoto+1))
-			})
-			if err != nil {
-				fail(err)
-				return
 			}
-			stored = append(stored, m)
-			rows = append(rows, m.RowID)
 		}
 	}
-	answers, err := json.Marshal(clean)
-	if err == nil {
-		err = h.store.insertNote(r.Context(), newNote{ID: id, Answers: answers, MediaRows: rows, CreatedAt: now.UnixMilli(), Collection: p.CollectionID, Yearbook: p.YearbookID})
-	}
-	if err != nil {
-		fail(err)
-		return
-	}
-	writeCreated(w, id)
 }
 
-func busy(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Retry-After", retryJitter())
-	httpx.WriteError(w, r, http.StatusServiceUnavailable, "busy", "too many uploads in progress, retry shortly")
+// retryJitter is the Retry-After of a 503 busy: 2 to 6 seconds at random, so a class that was turned away does not
+// come back in one wave.
+func retryJitter() time.Duration {
+	return time.Duration(2+rand.IntN(5)) * time.Second //nolint:gosec // spreading retries, not a secret
 }
 
-func writeCreated(w http.ResponseWriter, id string) {
-	type note struct {
-		ID string `json:"id"`
-	}
-	httpx.WriteJSON(w, http.StatusCreated, struct {
-		Note note `json:"note"`
-	}{note{id}})
-}
-
-// scan walks the spooled body once and answers the error itself (false) when the structure is wrong: a part too
+// scan walks the spooled body once and returns the error to answer (false) when the structure is wrong: a part too
 // large, too many photos, a body that is not multipart. Photos are only measured here, never decoded.
 // A filled honeypot field ends the scan early with sc.honeypot set.
-func (h *Handler) scan(w http.ResponseWriter, r *http.Request, f *os.File, boundary string) (*scan, bool) {
+func (h *Handler) scan(f *os.File, boundary string) (*scan, error) {
 	sc := &scan{}
-	invalid := func(msg string) (*scan, bool) {
-		httpx.WriteError(w, r, http.StatusBadRequest, "invalid_body", msg)
-		return nil, false
-	}
+	malformed := apperr.New(apperr.Param, "the multipart body is malformed or incomplete")
 	if _, err := f.Seek(0, io.SeekStart); err != nil {
-		h.fail(w, r, err)
-		return nil, false
+		return nil, apperr.Wrap(apperr.Internal, err, "rewind spooled upload")
 	}
 	mr := multipart.NewReader(f, boundary)
 	for n := 0; ; n++ {
@@ -235,51 +176,49 @@ func (h *Handler) scan(w http.ResponseWriter, r *http.Request, f *os.File, bound
 			break
 		}
 		if err != nil {
-			return invalid("the multipart body is malformed or incomplete")
+			return nil, malformed
 		}
 		if n >= maxParts {
-			return invalid("too many parts")
+			return nil, apperr.New(apperr.Param, "too many parts")
 		}
 		switch part.FormName() { // the file name and the part's Content-Type are never looked at
 		case "answers":
 			b, err := io.ReadAll(io.LimitReader(part, maxAnswersBytes+1))
 			if err != nil {
-				return invalid("the multipart body is malformed or incomplete")
+				return nil, malformed
 			}
 			if sc.hasAnswers || len(b) > maxAnswersBytes {
-				return invalid("answers must be sent once and be at most 16 KiB")
+				return nil, apperr.New(apperr.Param, "answers must be sent once and be at most 16 KiB")
 			}
 			sc.answers, sc.hasAnswers = b, true
 			sc.photoFirst = len(sc.photos) > 0
 		case "website":
 			b, err := io.ReadAll(io.LimitReader(part, maxHoneypot))
 			if err != nil {
-				return invalid("the multipart body is malformed or incomplete")
+				return nil, malformed
 			}
 			if len(b) > 0 {
 				sc.honeypot = true
-				return sc, true
+				return sc, nil
 			}
 		case "photos":
 			size, err := io.Copy(io.Discard, io.LimitReader(part, h.maxPhoto+1))
 			if err != nil {
-				return invalid("the multipart body is malformed or incomplete")
+				return nil, malformed
 			}
 			if size > h.maxPhoto {
-				httpx.WriteError(w, r, http.StatusRequestEntityTooLarge, "payload_too_large", "photo too large")
-				return nil, false
+				return nil, apperr.New(apperr.TooLarge, "photo too large")
 			}
 			if size == 0 && part.FileName() == "" { // a browser's empty file input
 				continue
 			}
 			if len(sc.photos) == maxPhotos {
-				httpx.WriteError(w, r, http.StatusBadRequest, "too_many_photos", "at most 3 photos")
-				return nil, false
+				return nil, apperr.New(CodeTooManyPhotos, "at most 3 photos")
 			}
 			sc.photos = append(sc.photos, n)
 		}
 	}
-	return sc, true
+	return sc, nil
 }
 
 // acquire takes a submission slot for ip: one of upMax in total (each holds a socket and up to 32 MiB of disk) and
@@ -303,47 +242,6 @@ func (h *Handler) release(ip string) {
 	if h.upIP[ip]--; h.upIP[ip] <= 0 {
 		delete(h.upIP, ip)
 	}
-}
-
-// validate parses the answers part and checks it against the form's fields. It returns the cleaned answers.
-func (h *Handler) validate(w http.ResponseWriter, r *http.Request, p Public, raw []byte) (map[string]string, bool) {
-	var answers map[string]string
-	if b := bytes.TrimSpace(raw); !utf8.Valid(b) || len(b) == 0 || b[0] != '{' || json.Unmarshal(b, &answers) != nil {
-		httpx.WriteError(w, r, http.StatusBadRequest, "invalid_body", "answers must be a JSON object of strings")
-		return nil, false
-	}
-	clean, err := notefields.Validate(FieldsFor(p.TemplateID), answers)
-	var fe *notefields.FieldError
-	if errors.As(err, &fe) {
-		msg := fe.Code // never the value; the id only when it is one of ours or plainly harmless
-		if fe.Code != notefields.CodeUnknownField || plainID.MatchString(fe.ID) {
-			msg += ": " + fe.ID
-		}
-		httpx.WriteError(w, r, http.StatusBadRequest, fe.Code, msg)
-		return nil, false
-	}
-	if err != nil {
-		h.fail(w, r, err)
-		return nil, false
-	}
-	return clean, true
-}
-
-// takeSubmit counts a submission against the per-IP and per-collection limits; none is counted unless all allow it.
-func (h *Handler) takeSubmit(ctx context.Context, ip, collection string) (bool, time.Duration) {
-	if ok, wait, _ := h.subIPHr.Take(ctx, ip); !ok {
-		return false, wait
-	}
-	if ok, wait, _ := h.subIPDay.Take(ctx, ip); !ok {
-		_ = h.subIPHr.Refund(ctx, ip)
-		return false, wait
-	}
-	if ok, wait, _ := h.subColl.Take(ctx, collection); !ok {
-		_ = h.subIPHr.Refund(ctx, ip)
-		_ = h.subIPDay.Refund(ctx, ip)
-		return false, wait
-	}
-	return true, 0
 }
 
 // errRecorder remembers the first non-EOF error of the reader it wraps.
@@ -390,21 +288,3 @@ func (d *drainWriter) Write(b []byte) (int, error) {
 }
 
 func (d *drainWriter) Unwrap() http.ResponseWriter { return d.ResponseWriter }
-
-// mediaStatus maps the errors of the photo pipeline to the shared envelope; ok is false for any other error.
-func mediaStatus(err error) (status int, code, msg string, ok bool) {
-	var se media.StorageError
-	switch {
-	case errors.Is(err, media.ErrUnsupported):
-		return http.StatusUnsupportedMediaType, "unsupported_media_type", "only JPEG, PNG and WebP images are accepted", true
-	case errors.Is(err, media.ErrInvalidImage):
-		return http.StatusBadRequest, "invalid_image", "the image is corrupt or too large", true
-	case errors.Is(err, media.ErrQuota):
-		return http.StatusConflict, "quota_exceeded", "storage quota reached", true
-	case errors.Is(err, media.ErrBusy):
-		return http.StatusServiceUnavailable, "busy", "too many uploads in progress, retry shortly", true
-	case errors.As(err, &se):
-		return http.StatusBadGateway, "storage_error", "object storage failed", true
-	}
-	return 0, "", "", false
-}
