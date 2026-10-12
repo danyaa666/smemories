@@ -530,7 +530,7 @@ func TestConcurrentResetHasOneWinner(t *testing.T) {
 	}
 }
 
-// AC6: users.locale picks the language and the mail carries the code, in both languages.
+// AC6: user_tab.locale picks the language and the mail carries the code, in both languages.
 func TestEmailLocale(t *testing.T) {
 	e := newEnv(t, opts{})
 	want(t, e.register(testMail, testPW, "Hồng"), 201, "")
