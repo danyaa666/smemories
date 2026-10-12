@@ -11,17 +11,16 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 27 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-067, T-068, T-069, T-070, T-071, T-072, T-073 |
-| IN_PROGRESS | 1 | T-066 |
-| READY_FOR_QA | 1 | T-077 |
-| MERGED | 2 | T-065, T-078 |
-| DONE | 40 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-074, T-075, T-076 |
+| READY_FOR_QA | 1 | T-066 |
+| IN_QA | 1 | T-077 |
+| DONE | 42 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-074, T-075, T-076, T-078 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
 
-**Awaiting your review (MERGED):** T-065 ([E10] DB conventions: media table); T-078 ([E03] Yearbook reads: a book deleted mid-read is 404, not 500)
+**Awaiting your review (MERGED):** nothing
 
 **Open questions for you:** none
 
-_Board last written 2026-10-12 03:35Z_
+_Board last written 2026-10-12 04:00Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -2613,7 +2612,7 @@ Converts `yearbooks` and `profiles` to `yearbook_tab` and `profile_tab` per docs
 - 2026-10-12 02:10Z · human · accepted by owner
 
 ### T-065 — [E10] DB conventions: media table
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2624,7 +2623,7 @@ Converts `yearbooks` and `profiles` to `yearbook_tab` and `profile_tab` per docs
 - **Assignee:** —
 - **Branch:** task/t-065-e10-db-conventions-media-table
 - **PR:** https://github.com/danyaa666/smemories/pull/48
-- **Updated:** 2026-10-12 02:11Z by leader
+- **Updated:** 2026-10-12 04:00Z by human
 - **Comments-seen:** 7
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/03-db-media.md`
@@ -2654,9 +2653,10 @@ Converts `media` to `media_tab` (ms timestamps, no FK, no ENUM, print columns fr
 - 2026-10-11 07:47Z · leader · Leader review (content) OK: media_tab migration with Down, child purger, AssertNoOrphans (QA planted orphans in all 5 pairs: caught), documented lock order, API unchanged. QA's own storm: no lock-order inversion in media paths. Three PRE-EXISTING issues QA reproduced on clean develop are not caused by this PR: read race with book delete (-> T-078), public submit vs book delete deadlock (-> T-066 spec), upload vs delete orphan objects (-> T-025 spec). Merge after CI is green on QA's test-only commit a155b72. Awaiting owner approval.
 - 2026-10-12 02:10Z · human · owner approved merge
 - 2026-10-12 02:11Z · leader · merged d93ab34. Review: media_tab migration (BIGINT ms, VARCHAR, no FK to yearbooks; note_photos keeps its FK until T-066/T-067), media registered as yearbook child purger, AssertNoOrphans, documented lock order; QA storm found no media lock inversion and no orphans. Combined tree checked: no code refers to the old media table name. For owner to check: run make migrate on your dev DB. Older bugs found by QA: T-078, T-066 spec, T-025 spec.
+- 2026-10-12 04:00Z · human · accepted by owner
 
 ### T-066 — [E10] DB conventions: note collections and notes tables
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2664,11 +2664,11 @@ Converts `media` to `media_tab` (ms timestamps, no FK, no ENUM, print columns fr
 - **Risk:** high
 - **Rework:** 1
 - **Owner-approved:** yes
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-066-e10-db-conventions-note-collections-and-
 - **PR:** https://github.com/danyaa666/smemories/pull/49
-- **Updated:** 2026-10-12 03:26Z by dev
-- **Comments-seen:** 6
+- **Updated:** 2026-10-12 03:47Z by dev
+- **Comments-seen:** 9
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/04-db-notes.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2693,6 +2693,9 @@ Converts `note_collections` and the notes tables created by T-034 to the `_tab` 
 - 2026-10-12 03:21Z · human · owner approved merge
 - 2026-10-12 03:22Z · leader · Owner approved, but the merge is blocked: GitHub go-integration FAILED on head 2d28198 (run 38196434434): QA's own test internal/notes TestQAStormBookDelete (qa_storm_integration_test.go:179) saw status codes map[200:223 201:167 204:129 404:439 500:2] in CI: 2 server errors. It passed with 0 5xx locally in 40 rounds, so a rare lock/ordering race remains (CI runner timing differs). Dev: find the cause before changing anything: run the storm test many times (-count=30, also with GOMAXPROCS=2 and with the CPU loaded) and capture the API/server ERROR log lines and response bodies of the 500s (MySQL 1213 deadlock? 'yearbook without its owner profile' from the T-078 read race? something else). Candidates to check: S-to-X lock upgrade conflicts around FOR SHARE in insertNote against the FOR UPDATE in Service.Delete / ClearMediaRefs / lockBook, and any path that reads yearbook_tab and profile_tab separately. Fix at the root (same order everywhere, parent lock first, FOR UPDATE where a later write needs it), keep the storm test strict (0 5xx) and make it stable in CI (loop it enough rounds to be meaningful, not flaky). Report the failing error text. Merge develop first if needed, re-run make lint build test test-integration (-timeout 30m), confirm GitHub CI is green, then READY_FOR_QA.
 - 2026-10-12 03:22Z · leader · CI go-integration failed on QA's TestQAStormBookDelete (2 x 500 in CI, 0 locally): find and fix the remaining race at its root; see the comment above. Already owner-approved.
+- 2026-10-12 03:47Z · dev · Head acc66bc, CI all green (go, go-integration, security, web). ROOT CAUSE of the 2 x 500: NOT a notes lock race. Reproduced locally in 3 of 12 runs (GOMAXPROCS=2): every 500 is the yearbook handler ERROR 'yearbook without its owner profile' on DELETE /v1/yearbooks/{id}: Service.Delete's unlocked store.get reads yearbook_tab and profile_tab separately and the other (repeated) book delete removes the profile in between. That is exactly the T-078 read race. Fix = T-078 (PR #50) merged into this branch (git merge of its branch, no duplicate code); with it 25 storm runs under CPU load + GOMAXPROCS=2 gave 0 5xx (before: 3 failures in 12). Storm test now logs the server ERROR lines on a 5xx and stays strict (0 5xx). No FOR SHARE/FOR UPDATE conflict found, no MySQL 1213 in any run. Merged develop. make lint build test + race integration (-timeout 30m) green. PR #49 now contains T-078's commits: merge #50 first (identical content, no conflict expected); if T-078 is reworked, tell me.
+- 2026-10-12 03:47Z · dev · Rework 1: failing error text was 'yearbook: request failed ... yearbook without its owner profile' (second book DELETE in the storm racing the first). Fixed via T-078 content merged in; 25 loaded runs clean, CI green on acc66bc.
+- 2026-10-12 03:48Z · leader · Leader note for QA (keep it SHORT): delta since your QA_PASS at 2d28198 is only (a) T-078's already merged change (PR #50) and (b) 6 lines of logging in your TestQAStormBookDelete; dev's root cause: the 2 CI 500s were 'yearbook without its owner profile' from a second book DELETE racing the first (the T-078 read race), not a notes lock race. merge-tree vs develop is clean, CI green on head acc66bc. Please: confirm the diff vs develop is only T-066, run your storm test 20+ times under GOMAXPROCS=2 and CPU load (0 5xx), make lint build test + integration (-timeout 30m), then QA_PASS. Already owner-approved: I merge right after.
 
 ### T-067 — [E10] DB conventions: user and identity tables
 - **Status:** BACKLOG
@@ -2958,7 +2961,7 @@ T-049 QA findings: resend button target size, cooldown restarts on reload, short
 - 2026-10-12 02:10Z · human · accepted by owner
 
 ### T-077 — [E01] Integration tests: set a timeout and cut the media package time
-- **Status:** READY_FOR_QA
+- **Status:** IN_QA
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2966,10 +2969,10 @@ T-049 QA findings: resend button target size, cooldown restarts on reload, short
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** qa
 - **Branch:** task/t-077-e01-integration-tests-set-a-timeout-and-
 - **PR:** https://github.com/danyaa666/smemories/pull/51
-- **Updated:** 2026-10-12 03:26Z by leader
+- **Updated:** 2026-10-12 03:35Z by qa
 - **Comments-seen:** 2
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/13-integration-test-time-and-timeout.md`
@@ -2983,7 +2986,7 @@ Dev and QA hit the default 10-minute test timeout in internal/media (763-858 s o
 - 2026-10-12 03:26Z · leader · Leader: risk raised to high because the PR touches CI (ci.yml go-integration timeout-minutes 15 -> 40), per L-06; the change is small. QA verifies as usual; the owner approves the merge. Also QA should confirm the parallel tests pass on GitHub CI (more simultaneous load on MySQL/MinIO) and not only locally.
 
 ### T-078 — [E03] Yearbook reads: a book deleted mid-read is 404, not 500
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P2
 - **Type:** bug
 - **Milestone:** M1
@@ -2994,8 +2997,8 @@ Dev and QA hit the default 10-minute test timeout in internal/media (763-858 s o
 - **Assignee:** —
 - **Branch:** task/t-078-e03-yearbook-reads-a-book-deleted-mid-re
 - **PR:** https://github.com/danyaa666/smemories/pull/50
-- **Updated:** 2026-10-12 03:35Z by leader
-- **Comments-seen:** 3
+- **Updated:** 2026-10-12 04:00Z by human
+- **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E03-yearbooks/07-read-race-with-delete.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -3018,6 +3021,7 @@ T-065 QA found: a book delete racing a read gives 500 'yearbook without its owne
   - AC3: make lint build test green (0 lint issues, web checks ok); go test -race -tags integration ./internal/yearbook/... ./internal/notes/... -timeout 30m ok (33s / 65s).
   Non-blocking: dev's TestDeleteRacesWithReads (in-process, 40 rounds) does not fail on the old code (I ran it 3x), so the real regression guard is the deterministic hook tests; an empty page with a non-null next_cursor is possible if every raw row vanished (valid, client keeps walking). Note for the leader: the dev stack's default database 'smemories' was not migrated to the T-064 schema (yearbook_tab missing), so I used a scratch DB; 'make migrate' is needed before using the dev DB.
 - 2026-10-12 03:35Z · leader · merged 1c033da. Review: fill drops a book whose profile vanished mid-read (get 404, list skips it) with no extra query; list reads the limit+1 probe itself so the next cursor never disappears from a short page; modify keeps the loud 500 for a missing profile of a locked book. QA: both hook tests fail on old code, 360-delete storm gave 495 5xx on old and 0 on new, pagination walk with deletions never skipped or repeated. For owner to check: nothing to run; run make migrate on your default dev DB (smemories lacks yearbook_tab).
+- 2026-10-12 04:00Z · human · accepted by owner
 
 <!-- tasks:end -->
 
