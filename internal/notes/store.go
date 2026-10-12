@@ -163,7 +163,7 @@ func (s *Store) lookup(ctx context.Context, hash [32]byte) (*Public, error) {
 	var tmpl sql.NullString
 	err := s.db.QueryRowContext(ctx,
 		`SELECT y.title, u.display_name, c.deadline_at, c.id, y.id, y.template_id FROM note_collection_tab c
-		 JOIN yearbook_tab y ON y.id = c.yearbook_id JOIN users u ON u.id = y.owner_id
+		 JOIN yearbook_tab y ON y.id = c.yearbook_id JOIN user_tab u ON u.id = y.owner_id
 		 WHERE c.token_hash = ? AND c.revoked_at IS NULL`, hash[:]).Scan(&p.Title, &p.DisplayName, &deadline, &p.CollectionID, &p.YearbookID, &tmpl)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound

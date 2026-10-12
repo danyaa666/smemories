@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"math/rand/v2"
 	"strings"
@@ -30,13 +31,22 @@ const (
 // User is the account as the API shows it. InternalID is the BIGINT key other tables
 // reference; it is never serialised (L-05).
 type User struct {
-	ID            string    `json:"id"`
-	Email         string    `json:"email"`
-	EmailVerified bool      `json:"email_verified"`
-	DisplayName   string    `json:"display_name"`
-	Locale        string    `json:"locale"`
-	CreatedAt     time.Time `json:"created_at"`
-	InternalID    uint64    `json:"-"`
+	ID            string `json:"id"`
+	Email         string `json:"email"`
+	EmailVerified bool   `json:"email_verified"`
+	DisplayName   string `json:"display_name"`
+	Locale        string `json:"locale"`
+	CreatedAt     int64  `json:"-"` // Unix ms; rendered as RFC 3339 by MarshalJSON until the auth API moves to v2
+	InternalID    uint64 `json:"-"`
+}
+
+// MarshalJSON keeps the v1 shape: created_at is an RFC 3339 string.
+func (u User) MarshalJSON() ([]byte, error) {
+	type plain User // no methods, so no recursion
+	return json.Marshal(struct {
+		plain
+		CreatedAt time.Time `json:"created_at"`
+	}{plain(u), time.UnixMilli(u.CreatedAt).UTC()})
 }
 
 // Store is the users persistence (sessions live in Redis, see sessions.go). Every query is parameterised.
@@ -52,7 +62,6 @@ func scanUser(sc interface{ Scan(...any) error }, extra ...any) (User, error) {
 	if err := sc.Scan(dest...); err != nil {
 		return User{}, err
 	}
-	u.CreatedAt = u.CreatedAt.UTC()
 	return u, nil
 }
 
@@ -65,7 +74,7 @@ func (s *Store) createUser(ctx context.Context, u *User, passwordHash string, wi
 	}
 	defer func() { _ = tx.Rollback() }()
 	res, err := tx.ExecContext(ctx,
-		`INSERT INTO users (public_id, email, password_hash, display_name, locale, created_at, updated_at) VALUES (?,?,?,?,?,?,?)`,
+		`INSERT INTO user_tab (public_id, email, password_hash, display_name, locale, created_at, updated_at) VALUES (?,?,?,?,?,?,?)`,
 		u.ID, u.Email, passwordHash, u.DisplayName, u.Locale, u.CreatedAt, u.CreatedAt)
 	if err != nil {
 		var me *mysql.MySQLError
@@ -91,7 +100,7 @@ func (s *Store) createUser(ctx context.Context, u *User, passwordHash string, wi
 // userByEmail returns the user and their password hash ("" when the account has none).
 func (s *Store) userByEmail(ctx context.Context, email string) (User, string, error) {
 	var hash sql.NullString
-	u, err := scanUser(s.db.QueryRowContext(ctx, `SELECT `+userCols+`, u.password_hash FROM users u WHERE u.email = ?`, email), &hash)
+	u, err := scanUser(s.db.QueryRowContext(ctx, `SELECT `+userCols+`, u.password_hash FROM user_tab u WHERE u.email = ?`, email), &hash)
 	if errors.Is(err, sql.ErrNoRows) {
 		return User{}, "", errNotFound
 	}
@@ -118,7 +127,7 @@ func cleanUserAgent(ua string) string {
 
 // userByID returns the user with the given internal id (the owner of a session).
 func (s *Store) userByID(ctx context.Context, id uint64) (User, error) {
-	u, err := scanUser(s.db.QueryRowContext(ctx, `SELECT `+userCols+` FROM users u WHERE u.id = ?`, id))
+	u, err := scanUser(s.db.QueryRowContext(ctx, `SELECT `+userCols+` FROM user_tab u WHERE u.id = ?`, id))
 	if errors.Is(err, sql.ErrNoRows) {
 		return User{}, errNotFound
 	}
@@ -171,14 +180,16 @@ func sleepCtx(ctx context.Context, d time.Duration) error {
 }
 
 func (s *Store) googleUserTx(ctx context.Context, id GoogleIdentity, want User, now time.Time, dropSessions func(ctx context.Context, userID uint64) error) (User, error) {
+	ms := now.UnixMilli()
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return User{}, err
 	}
 	defer func() { _ = tx.Rollback() }()
 
+	// 1:1 primary-key join inside the sign-in transaction (docs/db-conventions.md allows it); see T-047.
 	u, err := scanUser(tx.QueryRowContext(ctx,
-		`SELECT `+userCols+` FROM user_identities i JOIN users u ON u.id = i.user_id WHERE i.provider = 'google' AND i.subject = ?`, id.Subject))
+		`SELECT `+userCols+` FROM user_identity_tab i JOIN user_tab u ON u.id = i.user_id WHERE i.provider = 'google' AND i.subject = ?`, id.Subject))
 	if err == nil {
 		return u, nil // known identity
 	}
@@ -186,12 +197,12 @@ func (s *Store) googleUserTx(ctx context.Context, id GoogleIdentity, want User, 
 		return User{}, err
 	}
 
-	u, err = scanUser(tx.QueryRowContext(ctx, `SELECT `+userCols+` FROM users u WHERE u.email = ? FOR UPDATE`, id.Email))
+	u, err = scanUser(tx.QueryRowContext(ctx, `SELECT `+userCols+` FROM user_tab u WHERE u.email = ? FOR UPDATE`, id.Email))
 	switch {
 	case err == nil && !u.EmailVerified:
 		// Pre-hijacking defence: whoever registered this address never proved they own it, so
 		// their password and sessions go before the real owner is linked.
-		if _, err = tx.ExecContext(ctx, `UPDATE users SET password_hash = NULL, email_verified_at = ?, updated_at = ? WHERE id = ?`, now, now, u.InternalID); err != nil {
+		if _, err = tx.ExecContext(ctx, `UPDATE user_tab SET password_hash = NULL, email_verified_at = ?, updated_at = ? WHERE id = ?`, ms, ms, u.InternalID); err != nil {
 			return User{}, err
 		}
 		// Before the commit, so a Redis failure rolls everything back and the next try still finds the account unverified.
@@ -201,10 +212,10 @@ func (s *Store) googleUserTx(ctx context.Context, id GoogleIdentity, want User, 
 		u.EmailVerified = true
 	case err == nil:
 	case errors.Is(err, sql.ErrNoRows):
-		u = User{ID: ulid.New(now), Email: id.Email, EmailVerified: true, DisplayName: want.DisplayName, Locale: want.Locale, CreatedAt: now}
+		u = User{ID: ulid.New(now), Email: id.Email, EmailVerified: true, DisplayName: want.DisplayName, Locale: want.Locale, CreatedAt: ms}
 		res, err := tx.ExecContext(ctx,
-			`INSERT INTO users (public_id, email, password_hash, email_verified_at, display_name, locale, created_at, updated_at) VALUES (?,?,NULL,?,?,?,?,?)`,
-			u.ID, u.Email, now, u.DisplayName, u.Locale, now, now)
+			`INSERT INTO user_tab (public_id, email, password_hash, email_verified_at, display_name, locale, created_at, updated_at) VALUES (?,?,NULL,?,?,?,?,?)`,
+			u.ID, u.Email, ms, u.DisplayName, u.Locale, ms, ms)
 		if err != nil {
 			return User{}, err
 		}
@@ -217,7 +228,7 @@ func (s *Store) googleUserTx(ctx context.Context, id GoogleIdentity, want User, 
 		return User{}, err
 	}
 	if _, err := tx.ExecContext(ctx,
-		`INSERT INTO user_identities (user_id, provider, subject, email, created_at) VALUES (?,'google',?,?,?)`, u.InternalID, id.Subject, id.Email, now); err != nil {
+		`INSERT INTO user_identity_tab (user_id, provider, subject, email, created_at, updated_at) VALUES (?,'google',?,?,?,?)`, u.InternalID, id.Subject, id.Email, ms, ms); err != nil {
 		return User{}, err
 	}
 	return u, tx.Commit()

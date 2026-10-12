@@ -95,13 +95,13 @@ func (e *env) me(session string) *httptest.ResponseRecorder {
 
 func (e *env) nothingCreated() {
 	e.t.Helper()
-	if n := e.count(`SELECT COUNT(*) FROM users`); n != 0 {
+	if n := e.count(`SELECT COUNT(*) FROM user_tab`); n != 0 {
 		e.t.Errorf("%d users created", n)
 	}
 	if n := e.sessionCount(); n != 0 {
 		e.t.Errorf("%d sessions created", n)
 	}
-	if n := e.count(`SELECT COUNT(*) FROM user_identities`); n != 0 {
+	if n := e.count(`SELECT COUNT(*) FROM user_identity_tab`); n != 0 {
 		e.t.Errorf("%d identities created", n)
 	}
 }
@@ -173,10 +173,10 @@ func TestGoogleCreatesSocialOnlyAccount(t *testing.T) {
 			t.Errorf("/v1/me lacks %s: %s", s, me.Body.String())
 		}
 	}
-	if n := e.count(`SELECT COUNT(*) FROM users WHERE password_hash IS NULL AND email_verified_at IS NOT NULL`); n != 1 {
+	if n := e.count(`SELECT COUNT(*) FROM user_tab WHERE password_hash IS NULL AND email_verified_at IS NOT NULL`); n != 1 {
 		t.Errorf("want one verified social-only user, got %d", n)
 	}
-	if n := e.count(`SELECT COUNT(*) FROM user_identities WHERE provider='google' AND subject='sub-vi' AND email='linh.nguyen@example.com'`); n != 1 {
+	if n := e.count(`SELECT COUNT(*) FROM user_identity_tab WHERE provider='google' AND subject='sub-vi' AND email='linh.nguyen@example.com'`); n != 1 {
 		t.Errorf("identity row missing")
 	}
 	// A social-only account cannot sign in with a password and looks like an unknown account.
@@ -198,7 +198,7 @@ func TestGoogleNameAndLocaleFallbacks(t *testing.T) {
 		wantRedirect(t, rec, "/")
 		wantName := strings.Replace(c.wantName, "kim", fmt.Sprintf("kim%d", i), 1)
 		var name, locale string
-		if err := e.db.QueryRow(`SELECT display_name, locale FROM users WHERE email = ?`, email).Scan(&name, &locale); err != nil {
+		if err := e.db.QueryRow(`SELECT display_name, locale FROM user_tab WHERE email = ?`, email).Scan(&name, &locale); err != nil {
 			t.Fatal(err)
 		}
 		if name != wantName || locale != c.wantLocale {
@@ -222,10 +222,10 @@ func TestGoogleKnownIdentitySignsInAndRevokesOldSession(t *testing.T) {
 	}
 	want(t, e.me(old), 401, "unauthenticated")
 	want(t, e.me(fresh), 200, "")
-	if n := e.count(`SELECT COUNT(*) FROM users`); n != 1 {
+	if n := e.count(`SELECT COUNT(*) FROM user_tab`); n != 1 {
 		t.Errorf("%d users, want 1", n)
 	}
-	if n := e.count(`SELECT COUNT(*) FROM user_identities`); n != 1 {
+	if n := e.count(`SELECT COUNT(*) FROM user_identity_tab`); n != 1 {
 		t.Errorf("%d identities, want 1", n)
 	}
 }
@@ -234,21 +234,21 @@ func TestGoogleKnownIdentitySignsInAndRevokesOldSession(t *testing.T) {
 func TestGoogleLinksVerifiedLocalAccount(t *testing.T) {
 	e, p := newGoogleEnv(t, opts{})
 	want(t, e.register("alice@example.com", testPW, "Alice Local"), 201, "")
-	if _, err := e.db.Exec(`UPDATE users SET email_verified_at = NOW(6)`); err != nil {
+	if _, err := e.db.Exec(`UPDATE user_tab SET email_verified_at = 1`); err != nil {
 		t.Fatal(err)
 	}
 	rec := e.google(p, "", oidctest.Claims{Sub: "alice-sub", Email: "Alice@EXAMPLE.com", Name: "Alice Google"})
 	wantRedirect(t, rec, "/")
 	want(t, e.me(sessionCookie(t, rec).Value), 200, "")
-	if n := e.count(`SELECT COUNT(*) FROM users`); n != 1 {
+	if n := e.count(`SELECT COUNT(*) FROM user_tab`); n != 1 {
 		t.Fatalf("%d users, want 1", n)
 	}
 	var name string
-	_ = e.db.QueryRow(`SELECT display_name FROM users`).Scan(&name)
+	_ = e.db.QueryRow(`SELECT display_name FROM user_tab`).Scan(&name)
 	if name != "Alice Local" {
 		t.Errorf("display name overwritten: %q", name)
 	}
-	if n := e.count(`SELECT COUNT(*) FROM user_identities WHERE subject = 'alice-sub'`); n != 1 {
+	if n := e.count(`SELECT COUNT(*) FROM user_identity_tab WHERE subject = 'alice-sub'`); n != 1 {
 		t.Error("identity not linked")
 	}
 	// The password keeps working: the account was verified, nothing was taken over.
@@ -273,10 +273,10 @@ func TestGoogleDefeatsPreHijacking(t *testing.T) {
 	want(t, e.login("victim@example.com", testPW, ""), 401, "invalid_credentials")
 	want(t, e.me(attacker), 401, "unauthenticated")
 	want(t, e.me(attacker2), 401, "unauthenticated")
-	if n := e.count(`SELECT COUNT(*) FROM users WHERE password_hash IS NULL AND email_verified_at IS NOT NULL`); n != 1 {
+	if n := e.count(`SELECT COUNT(*) FROM user_tab WHERE password_hash IS NULL AND email_verified_at IS NOT NULL`); n != 1 {
 		t.Errorf("account must be social-only and verified")
 	}
-	if n := e.count(`SELECT COUNT(*) FROM users`); n != 1 {
+	if n := e.count(`SELECT COUNT(*) FROM user_tab`); n != 1 {
 		t.Errorf("%d users, want 1", n)
 	}
 	if n := e.sessionCount(); n != 1 {
@@ -488,7 +488,7 @@ func concurrentCreate(t *testing.T) {
 			t.Errorf("callback %d: %d %s", i, rec.Code, rec.Header().Get("Location"))
 		}
 	}
-	if u, id := e.count(`SELECT COUNT(*) FROM users`), e.count(`SELECT COUNT(*) FROM user_identities`); u != 1 || id != 1 {
+	if u, id := e.count(`SELECT COUNT(*) FROM user_tab`), e.count(`SELECT COUNT(*) FROM user_identity_tab`); u != 1 || id != 1 {
 		t.Errorf("%d users, %d identities, want 1 and 1", u, id)
 	}
 }
@@ -516,7 +516,7 @@ func concurrentLink(t *testing.T) {
 			t.Errorf("callback %d: %d", i, c)
 		}
 	}
-	if u, id := e.count(`SELECT COUNT(*) FROM users`), e.count(`SELECT COUNT(*) FROM user_identities`); u != 1 || id != 1 {
+	if u, id := e.count(`SELECT COUNT(*) FROM user_tab`), e.count(`SELECT COUNT(*) FROM user_identity_tab`); u != 1 || id != 1 {
 		t.Errorf("%d users, %d identities, want 1 and 1", u, id)
 	}
 	want(t, e.login("race@example.com", testPW, ""), 401, "invalid_credentials")

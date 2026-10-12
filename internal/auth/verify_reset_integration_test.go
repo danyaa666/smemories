@@ -85,7 +85,7 @@ func wrongFor(c string) string {
 
 func (e *env) otpKey(purpose, email string) string {
 	e.t.Helper()
-	return e.rc.Key("otp", purpose, fmt.Sprint(e.count("SELECT id FROM users WHERE email = ?", email)))
+	return e.rc.Key("otp", purpose, fmt.Sprint(e.count("SELECT id FROM user_tab WHERE email = ?", email)))
 }
 
 // otpField reads a field of the code hash in Redis ("" when the key or field is missing).
@@ -530,11 +530,11 @@ func TestConcurrentResetHasOneWinner(t *testing.T) {
 	}
 }
 
-// AC6: users.locale picks the language and the mail carries the code, in both languages.
+// AC6: user_tab.locale picks the language and the mail carries the code, in both languages.
 func TestEmailLocale(t *testing.T) {
 	e := newEnv(t, opts{})
 	want(t, e.register(testMail, testPW, "Hồng"), 201, "")
-	if _, err := e.db.Exec("UPDATE users SET locale = 'vi'"); err != nil {
+	if _, err := e.db.Exec("UPDATE user_tab SET locale = 'vi'"); err != nil {
 		t.Fatal(err)
 	}
 	want(t, e.forgot(testMail, ""), 202, "")
@@ -653,7 +653,7 @@ func TestRegisterLocale(t *testing.T) {
 		if !strings.Contains(rec.Body.String(), `"locale":"`+c.stored+`"`) {
 			t.Errorf("%q: response %s, want locale %s", c.field, rec.Body.String(), c.stored)
 		}
-		if n := e.count("SELECT COUNT(*) FROM users WHERE email = ? AND locale = ?", mail, c.stored); n != 1 {
+		if n := e.count("SELECT COUNT(*) FROM user_tab WHERE email = ? AND locale = ?", mail, c.stored); n != 1 {
 			t.Errorf("%q: stored locale is not %s", c.field, c.stored)
 		}
 		me := e.do(req{method: "GET", path: "/v1/me", cookie: sessionCookie(t, rec).Value})
@@ -679,7 +679,7 @@ func TestRegisterLocale(t *testing.T) {
 		t.Errorf("en mail subject %q", en.Subject)
 	}
 
-	before := e.count("SELECT COUNT(*) FROM users")
+	before := e.count("SELECT COUNT(*) FROM user_tab")
 	for name, f := range map[string]string{
 		"fr": `,"locale":"fr"`, "upper case": `,"locale":"VI"`, "empty": `,"locale":""`,
 		"number": `,"locale":1`, "bool": `,"locale":false`, "object": `,"locale":{}`, "array": `,"locale":["vi"]`,
@@ -689,7 +689,7 @@ func TestRegisterLocale(t *testing.T) {
 			t.Errorf("%s: %d %s", name, rec.Code, rec.Body.String())
 		}
 	}
-	if n := e.count("SELECT COUNT(*) FROM users"); n != before || e.mailCount("bad@example.com") != 0 {
+	if n := e.count("SELECT COUNT(*) FROM user_tab"); n != before || e.mailCount("bad@example.com") != 0 {
 		t.Fatal("rejected locale created a user or sent mail")
 	}
 }

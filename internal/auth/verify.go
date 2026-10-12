@@ -42,6 +42,6 @@ func (s *Service) ResendVerification(ctx context.Context, u User) (alreadyVerifi
 
 func (s *Store) markEmailVerified(ctx context.Context, userID uint64, now time.Time) error {
 	_, err := s.db.ExecContext(ctx,
-		`UPDATE users SET email_verified_at = ?, updated_at = ? WHERE id = ? AND email_verified_at IS NULL`, now, now, userID)
+		`UPDATE user_tab SET email_verified_at = ?, updated_at = ? WHERE id = ? AND email_verified_at IS NULL`, now.UnixMilli(), now.UnixMilli(), userID)
 	return err
 }

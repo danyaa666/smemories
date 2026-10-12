@@ -198,6 +198,15 @@ type Submission struct {
 	Verify  func(ctx context.Context) error
 }
 
+// CheckOpen reports ErrFull when the link p already holds maxNotes notes. The handler calls it right after Resolve,
+// before the body is read, so a full link costs no disk (T-034); SubmitNote checks again for the race.
+func (s *Service) CheckOpen(ctx context.Context, p *Public) error {
+	if n, err := s.store.noteCount(ctx, p.CollectionID); err != nil || n >= maxNotes {
+		return cmp.Or(err, ErrFull)
+	}
+	return nil
+}
+
 // SubmitNote stores a note as pending in the link p (from Resolve). Order matters: the note limit and the text are checked
 // before any photo is decoded, the rate limits count only requests that passed text validation, and every failure after a
 // photo was stored deletes what was stored. It returns the id of the note.

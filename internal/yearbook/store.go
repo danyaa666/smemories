@@ -199,7 +199,7 @@ func (s *Store) create(ctx context.Context, ownerID uint64, y Yearbook) error {
 	}
 	defer func() { _ = tx.Rollback() }()
 	var locked uint64
-	if err := tx.QueryRowContext(ctx, `SELECT id FROM users WHERE id = ? FOR UPDATE`, ownerID).Scan(&locked); err != nil {
+	if err := tx.QueryRowContext(ctx, `SELECT id FROM user_tab WHERE id = ? FOR UPDATE`, ownerID).Scan(&locked); err != nil {
 		return err
 	}
 	var n int

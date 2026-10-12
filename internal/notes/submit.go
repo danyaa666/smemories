@@ -70,6 +70,10 @@ func (h *Handler) submit(w http.ResponseWriter, r *http.Request) {
 		h.fail(w, r, err)
 		return
 	}
+	if err := h.svc.CheckOpen(r.Context(), p); err != nil { // a full link: answer at once, do not read the body (T-034 order)
+		h.fail(raw, r, err)
+		return
+	}
 	mt, params, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
 	if err != nil || mt != "multipart/form-data" {
 		h.fail(w, r, apperr.New(CodeUnsupportedMediaType, "send multipart/form-data"))

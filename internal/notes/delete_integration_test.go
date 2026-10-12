@@ -16,7 +16,7 @@ import (
 func (e *env) ownerID(email string) uint64 {
 	e.t.Helper()
 	var id uint64
-	if err := e.db.QueryRow(`SELECT id FROM users WHERE email = ?`, email).Scan(&id); err != nil {
+	if err := e.db.QueryRow(`SELECT id FROM user_tab WHERE email = ?`, email).Scan(&id); err != nil {
 		e.t.Fatal(err)
 	}
 	return id
@@ -66,7 +66,14 @@ func TestDeleteBookLeavesNoRows(t *testing.T) {
 		}
 	}
 
+	usersBefore := e.count(`SELECT COUNT(*) FROM user_tab`)
+	if usersBefore == 0 {
+		t.Fatal("the test needs an account")
+	}
 	e.do(alice, "DELETE", "/v1/yearbooks/"+book, "").status(204, "")
+	if n := e.count(`SELECT COUNT(*) FROM user_tab`); n != usersBefore {
+		t.Errorf("user_tab holds %d rows after the book was deleted, want the account kept (%d)", n, usersBefore)
+	}
 	for _, tb := range tables {
 		if n := e.count(`SELECT COUNT(*) FROM ` + tb); n != 0 {
 			t.Errorf("%s holds %d rows after the book was deleted", tb, n)
@@ -75,10 +82,14 @@ func TestDeleteBookLeavesNoRows(t *testing.T) {
 	dbtest.AssertNoOrphans(t, e.db)
 }
 
-// tabTables lists the *_tab tables of the test database, the user family excluded (account deletion is T-025).
+// userTables is the account family. A book delete must leave it alone, so it is not in the zero-rows registry above; deleting an
+// account is T-025, which moves these two into the registry. A rename or a new user table fails tabTables until it is listed here.
+var userTables = []string{"user_identity_tab", "user_tab"}
+
+// tabTables lists the *_tab tables of the test database except userTables, which must all exist.
 func (e *env) tabTables() []string {
 	e.t.Helper()
-	rows, err := e.db.Query(`SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME LIKE '%\_tab' AND TABLE_NAME NOT LIKE 'user%' ORDER BY TABLE_NAME`)
+	rows, err := e.db.Query(`SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME LIKE '%\_tab' ORDER BY TABLE_NAME`)
 	if err != nil {
 		e.t.Fatal(err)
 	}
@@ -89,7 +100,14 @@ func (e *env) tabTables() []string {
 		if err := rows.Scan(&n); err != nil {
 			e.t.Fatal(err)
 		}
-		out = append(out, n)
+		if !slices.Contains(userTables, n) {
+			out = append(out, n)
+		}
+	}
+	for _, n := range userTables {
+		if e.count(`SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '`+n+`'`) != 1 {
+			e.t.Fatalf("user table %s is missing: update userTables", n)
+		}
 	}
 	return out
 }

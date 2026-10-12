@@ -73,9 +73,10 @@ func New(t testing.TB) *sql.DB {
 }
 
 // orphanPairs lists every "child column refers to parent id" relation that has no foreign key (docs/db-conventions.md).
-// The conversion tasks add their pairs here (T-067: users).
+// The conversion tasks add their pairs here.
 var orphanPairs = []struct{ child, column, parent string }{
-	{"yearbook_tab", "owner_id", "users"},
+	{"user_identity_tab", "user_id", "user_tab"},
+	{"yearbook_tab", "owner_id", "user_tab"},
 	{"yearbook_tab", "cover_media_id", "media_tab"},
 	{"profile_tab", "yearbook_id", "yearbook_tab"},
 	{"profile_tab", "photo_media_id", "media_tab"},

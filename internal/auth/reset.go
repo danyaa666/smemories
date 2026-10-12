@@ -86,7 +86,7 @@ func (s *Store) resetPassword(ctx context.Context, userID uint64, phc string, no
 		return err
 	}
 	defer func() { _ = tx.Rollback() }()
-	if _, err := tx.ExecContext(ctx, `UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?`, phc, now, userID); err != nil {
+	if _, err := tx.ExecContext(ctx, `UPDATE user_tab SET password_hash = ?, updated_at = ? WHERE id = ?`, phc, now.UnixMilli(), userID); err != nil {
 		return err
 	}
 	if err := dropSessions(ctx, userID); err != nil {

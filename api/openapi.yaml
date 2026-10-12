@@ -107,7 +107,7 @@ paths:
                   enum: [en, vi, null]
                   default: en
                   description: >-
-                    The student's UI language; it becomes `users.locale` and selects the language of the
+                    The student's UI language; it becomes `user_tab.locale` and selects the language of the
                     verification email. Absent or `null` means `en`; any other value (including another
                     case such as `VI`, or a non-string) is `400 invalid_locale` and nothing is created.
       responses:

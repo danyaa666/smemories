@@ -139,7 +139,7 @@ func (e *env) register(email, name string, verified bool) user {
 		e.t.Fatalf("register: %d %s", rec.Code, rec.Body.String())
 	}
 	if verified {
-		if _, err := e.db.Exec(`UPDATE users SET email_verified_at = ? WHERE email = ?`, e.now(), email); err != nil {
+		if _, err := e.db.Exec(`UPDATE user_tab SET email_verified_at = ? WHERE email = ?`, e.now().UnixMilli(), email); err != nil {
 			e.t.Fatal(err)
 		}
 	}

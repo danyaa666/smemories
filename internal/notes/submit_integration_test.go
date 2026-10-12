@@ -183,7 +183,7 @@ type link struct {
 
 func (e *env) newOpenLink() link {
 	e.t.Helper()
-	n := e.count(`SELECT COUNT(*) FROM users`)
+	n := e.count(`SELECT COUNT(*) FROM user_tab`)
 	owner := e.register(fmt.Sprintf("owner%d@example.com", n), "Owner", true)
 	book := e.book(owner, "Class 12A")
 	id, token := e.newLink(owner, book, `{}`)
@@ -971,6 +971,34 @@ func TestUnknownTokenIsAnsweredWithoutReadingTheBody(t *testing.T) {
 	e.nothingKept()
 	if strings.Contains(e.logs.String(), secret) {
 		t.Fatal("the token reached the logs")
+	}
+}
+
+// T-034 order: a full link (a valid token) is answered 409 right after the lookup, before the body is read or spooled,
+// and a filled honeypot on a full link is also 409 (the honeypot is only looked at after the full check).
+func TestFullLinkIsAnsweredWithoutReadingTheBody(t *testing.T) {
+	e := newEnv(t)
+	l := e.newOpenLink()
+	e.fillCollection(l, 300)
+	_, ct := multipartOf(answers("A", "m"))
+	rc := &readCounter{}
+	r := httptest.NewRequest("POST", submitURL(l.token), io.LimitReader(rc, 20<<20))
+	r.ContentLength = 20 << 20
+	r.Header.Set("Content-Type", ct)
+	r.RemoteAddr = "192.0.2.9:4000"
+	rec := httptest.NewRecorder()
+	e.h.ServeHTTP(rec, r)
+	resp{rec, t}.status(409, "ERROR_COLLECTION_FULL")
+	if n := rc.n.Load(); n != 0 {
+		t.Fatalf("%d bytes of the body were read", n)
+	}
+	if len(e.spooled()) != 0 {
+		t.Fatal("spool not empty")
+	}
+	e.post(l.token, answers("Bot", "x"), text("website", "http://spam.example")).status(409, "ERROR_COLLECTION_FULL")
+	e.noSpool()
+	if e.noteCount() != 300 {
+		t.Fatal("a note was stored on a full link")
 	}
 }
 
