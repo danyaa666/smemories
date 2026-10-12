@@ -10,16 +10,17 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 30 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-077, T-078 |
-| QA_PASS | 1 | T-065 |
+| BACKLOG | 28 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-077 |
+| TODO | 2 | T-066, T-078 |
+| MERGED | 1 | T-065 |
 | DONE | 40 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-074, T-075, T-076 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
 
-**Awaiting your review (MERGED):** nothing
+**Awaiting your review (MERGED):** T-065 ([E10] DB conventions: media table)
 
-**Open questions for you:** Q-027 (Approve merge of T-065 (E10: media table to the new DB conventions)?)
+**Open questions for you:** none
 
-_Board last written 2026-10-12 02:10Z_
+_Board last written 2026-10-12 02:11Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -362,7 +363,7 @@ QA passed in a real browser (Chromium) with the dev code: register -> verify, fo
 First database conversion of epic E10 (D-26). Migration 20261010120000 renames yearbooks/profiles to yearbook_tab/profile_tab, stores created_at/updated_at as BIGINT Unix ms, replaces ENUM columns with VARCHAR validated in Go, and drops the four foreign keys; Down restores the old schema and data. Integrity moves into the yearbook service: one transaction deletes profiles, registered child records and the book, with a documented lock order (a deadlock between delete and edit was found by QA and fixed). Reads use 3 queries, no joins. API/JSON/web unchanged. QA ran the migration on 307 realistic rows (Up/Down/Up clean), race probes (0 5xx over 300+ requests) and Newman. Existing local data converts in place. To approve: team approve T-064. Then T-065 (media table) can start.
 
 ### Q-027 — Approve merge of T-065 (E10: media table to the new DB conventions)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-11 07:47Z
 - **Blocks:** T-065,T-066
 - **Recommendation:** approve
@@ -2602,18 +2603,18 @@ Converts `yearbooks` and `profiles` to `yearbook_tab` and `profile_tab` per docs
 - 2026-10-12 02:10Z · human · accepted by owner
 
 ### T-065 — [E10] DB conventions: media table
-- **Status:** QA_PASS
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
 - **Depends-on:** T-064
 - **Risk:** high
 - **Rework:** 0
-- **Owner-approved:** —
-- **Assignee:** leader
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-065-e10-db-conventions-media-table
 - **PR:** https://github.com/danyaa666/smemories/pull/48
-- **Updated:** 2026-10-11 07:46Z by qa
+- **Updated:** 2026-10-12 02:11Z by leader
 - **Comments-seen:** 3
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/03-db-media.md`
@@ -2641,9 +2642,11 @@ Converts `media` to `media_tab` (ms timestamps, no FK, no ENUM, print columns fr
   3. MINOR (known ponytail in PurgeYearbook): an upload racing a book delete leaves objects without rows. About 470 objects after 120 racing deletes on T-065, 631 on baseline. Needs the M2 sweep.
   4. Observation: media created_at in JSON now has millisecond precision (was microseconds); still valid RFC 3339.
 - 2026-10-11 07:47Z · leader · Leader review (content) OK: media_tab migration with Down, child purger, AssertNoOrphans (QA planted orphans in all 5 pairs: caught), documented lock order, API unchanged. QA's own storm: no lock-order inversion in media paths. Three PRE-EXISTING issues QA reproduced on clean develop are not caused by this PR: read race with book delete (-> T-078), public submit vs book delete deadlock (-> T-066 spec), upload vs delete orphan objects (-> T-025 spec). Merge after CI is green on QA's test-only commit a155b72. Awaiting owner approval.
+- 2026-10-12 02:10Z · human · owner approved merge
+- 2026-10-12 02:11Z · leader · merged d93ab34. Review: media_tab migration (BIGINT ms, VARCHAR, no FK to yearbooks; note_photos keeps its FK until T-066/T-067), media registered as yearbook child purger, AssertNoOrphans, documented lock order; QA storm found no media lock inversion and no orphans. Combined tree checked: no code refers to the old media table name. For owner to check: run make migrate on your dev DB. Older bugs found by QA: T-078, T-066 spec, T-025 spec.
 
 ### T-066 — [E10] DB conventions: note collections and notes tables
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2654,7 +2657,7 @@ Converts `media` to `media_tab` (ms timestamps, no FK, no ENUM, print columns fr
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
+- **Updated:** 2026-10-12 02:11Z by leader
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/04-db-notes.md`
@@ -2952,7 +2955,7 @@ Dev and QA hit the default 10-minute test timeout in internal/media (763-858 s o
 #### Comments
 
 ### T-078 — [E03] Yearbook reads: a book deleted mid-read is 404, not 500
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** bug
 - **Milestone:** M1
@@ -2963,7 +2966,7 @@ Dev and QA hit the default 10-minute test timeout in internal/media (763-858 s o
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-11 07:47Z by leader
+- **Updated:** 2026-10-12 02:11Z by leader
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E03-yearbooks/07-read-race-with-delete.md`
