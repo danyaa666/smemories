@@ -10,8 +10,8 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 25 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-069, T-070, T-071, T-072, T-073 |
-| TODO | 1 | T-079 |
+| BACKLOG | 24 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-069, T-070, T-071, T-072 |
+| TODO | 2 | T-073, T-079 |
 | CHANGES_REQUESTED | 1 | T-068 |
 | DONE | 45 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-074, T-075, T-076, T-077, T-078 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
@@ -20,7 +20,7 @@
 
 **Open questions for you:** none
 
-_Board last written 2026-10-12 09:10Z_
+_Board last written 2026-10-12 13:15Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -2908,7 +2908,7 @@ Turns the remaining skill rules into lint (mnd, forbidigo), fixes what they find
 #### Comments
 
 ### T-073 — [E10] Observability: request metrics middleware and /metrics endpoint
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P3
 - **Type:** infra
 - **Milestone:** M1
@@ -2919,8 +2919,8 @@ Turns the remaining skill rules into lint (mnd, forbidigo), fixes what they find
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-12 13:15Z by leader
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/11-metrics.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2929,6 +2929,7 @@ Turns the remaining skill rules into lint (mnd, forbidigo), fixes what they find
 Adds request and pool metrics as be-golang requires; waits for Q-018 (library choice).
 
 #### Comments
+- 2026-10-12 13:15Z · leader · Dependencies met (T-063 done); library approved (Q-018 prometheus). Dev: after T-068 rework, merge develop often - main.go routes/middleware will overlap with T-068/T-069.
 
 ### T-074 — [E04] Sweep orphaned upload spool files at start-up
 - **Status:** DONE
