@@ -224,6 +224,7 @@ func TestProcessOpaquePNGBecomesJPEG(t *testing.T) {
 }
 
 func TestProcessResizeAndThumb(t *testing.T) {
+	t.Parallel()
 	big := image.NewGray(image.Rect(0, 0, 4000, 1000))
 	out, err := process(encPNG(t, big))
 	if err != nil {
@@ -417,6 +418,7 @@ func TestResizeBandsMatchOneShot(t *testing.T) {
 }
 
 func TestProcessPrintVersion(t *testing.T) {
+	t.Parallel()
 	long := func(d []byte) int { c, _, _ := image.DecodeConfig(bytes.NewReader(d)); return max(c.Width, c.Height) }
 	// Larger than 1800 px: a JPEG of 1800 px on the long edge, smaller than the display.
 	p, err := process(jpegWith(t, quad(2600, 1300, false)))
@@ -448,6 +450,7 @@ func TestProcessPrintVersion(t *testing.T) {
 }
 
 func TestPrintOfDisplay(t *testing.T) {
+	t.Parallel()
 	// The display of an opaque PNG is a PNG; its print stays a PNG although the pixels are opaque.
 	d := encPNG(t, quad(3000, 1500, false))
 	out, err := printOf(d)
@@ -464,6 +467,7 @@ func TestPrintOfDisplay(t *testing.T) {
 
 // T-075: a synthetic PNG that is larger at 1800 px than at 3000 px keeps its display bytes as the print object.
 func TestPrintOfKeepsDisplayWhenPrintIsNotSmaller(t *testing.T) {
+	t.Parallel()
 	img := image.NewNRGBA(image.Rect(0, 0, 3000, 2000))
 	rng := rand.New(rand.NewPCG(1, 2)) // random 3x3 blocks: cheap to compress as drawn, many grey levels once scaled by 0.6
 	for by := 0; by < 2000; by += 3 {
