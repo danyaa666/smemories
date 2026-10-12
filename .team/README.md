@@ -12,15 +12,14 @@
 |---|---:|---|
 | BACKLOG | 30 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-077, T-078 |
 | QA_PASS | 1 | T-065 |
-| MERGED | 5 | T-044, T-053, T-064, T-075, T-076 |
-| DONE | 35 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-054, T-057, T-062, T-063, T-074 |
+| DONE | 40 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-074, T-075, T-076 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
 
-**Awaiting your review (MERGED):** T-044 ([E08] Templates declare note fields (format v2.1): note_fields, note_field slot, NoteFields helper); T-053 ([E02] Rate limiters move to Redis (shared limiter for all endpoints)); T-064 ([E10] DB conventions: yearbook and profile tables (no joins, no foreign keys, ms timestamps)); T-075 ([E05] Media backfill hardening); T-076 ([E02] Code screens polish (target size, cooldown reload, messages, focus))
+**Awaiting your review (MERGED):** nothing
 
 **Open questions for you:** Q-027 (Approve merge of T-065 (E10: media table to the new DB conventions)?)
 
-_Board last written 2026-10-11 07:47Z_
+_Board last written 2026-10-12 02:10Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -1825,7 +1824,7 @@ Closed catalogue of note form fields (name, relationship, message, how we met, .
 - 2026-10-08 09:29Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-037, T-038, T-043, T-045')
 
 ### T-044 — [E08] Templates declare note fields (format v2.1): note_fields, note_field slot, NoteFields helper
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
@@ -1836,7 +1835,7 @@ Closed catalogue of note form fields (name, relationship, message, how we met, .
 - **Assignee:** —
 - **Branch:** task/t-044-e08-templates-declare-note-fields-format
 - **PR:** https://github.com/danyaa666/smemories/pull/47
-- **Updated:** 2026-10-11 06:49Z by leader
+- **Updated:** 2026-10-12 02:10Z by human
 - **Comments-seen:** 9
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E08-designer-templates/07-templates-declare-note-fields.md`
@@ -1874,6 +1873,7 @@ A template lists which note fields its friend pages ask for and where each answe
   - Newman notes collection x2 back to back on the branch API: 72 requests, 137 assertions, 0 failed both runs (incl. revoked/unknown/expired lookups and photo upload).
   Non-blocking: same as before (no committed HTTP-level test with a non-default field set; registry not injectable).
 - 2026-10-11 06:49Z · leader · merged fa893cc. Review: note_fields in the template manifest (1-9 catalogue ids, defaults when absent), renderer html manifests with no pages, templates.NoteFields returns a copy, notes.FieldsFor reads the book's template (NULL/unknown -> default set), pdf.Render refuses html templates, classic/modern output byte-identical. QA ran a custom-field and an html template end to end on a fresh yearbook_tab DB. For owner to check: docs/templates.md. Note: make test-integration needs -timeout 40m for internal/media on a loaded machine.
+- 2026-10-12 02:10Z · human · accepted by owner
 
 ### T-045 — [E02] Register accepts a locale; verification email in the student's language
 - **Status:** DONE
@@ -2199,7 +2199,7 @@ Sessions with native expiry in Redis, per-user index for delete-all, fail-closed
 - 2026-10-10 03:29Z · human · accepted by owner
 
 ### T-053 — [E02] Rate limiters move to Redis (shared limiter for all endpoints)
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2210,7 +2210,7 @@ Sessions with native expiry in Redis, per-user index for delete-all, fail-closed
 - **Assignee:** —
 - **Branch:** task/t-053-e02-rate-limiters-move-to-redis-shared-l
 - **PR:** https://github.com/danyaa666/smemories/pull/41
-- **Updated:** 2026-10-10 04:12Z by leader
+- **Updated:** 2026-10-12 02:10Z by human
 - **Comments-seen:** 10
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/11-rate-limiters-in-redis.md`
@@ -2239,6 +2239,7 @@ Redis sliding-window limiter with Take and Refund replacing the in-memory one ev
 - 2026-10-10 03:31Z · dev · Merged develop b835af9 (conflicts in auth service/handler, media service, 4 integration tests, openapi, redis.md; schema.d.ts regenerated). NewService now takes sessions + limiters; backfill cmd passes a limiter factory it never uses. openapi: limiter_unavailable listed on login, verify-email, reset-password 503s and in the error code examples. make lint build test test-integration green (incl. npm run check:api, 128 vitest). Short regression pass is enough.
 - 2026-10-10 04:03Z · qa · Regression pass at head 7196cc3 (CI green: go, go-integration, security, web). Diff vs origin/develop = 32 files, all T-053 (limiter, callers, tests, docs/redis.md, openapi, schema.d.ts, postman var); no .team/ change; develop b835af9 is an ancestor. make lint OK, make build OK, make test OK (web 128 vitest), make test-integration -race OK (all pkgs incl auth/media/notes/ratelimit/yearbook), npm run check:api 'api schema ok'. Newman against my API on a scratch DB, make-reset-limits-equivalent between runs: yearbooks 92 req/0 failed, media 67 req/0 failed, notes x2 137 assertions/0 failed (after verifying the two test users), auth x2 174 assertions with the same 20 failures all Google OIDC (no SMEM_GOOGLE_* configured; unchanged from first QA). openapi: limiter_unavailable listed on 503 of /v1/auth/login, verify-email, reset-password, in CodeStoreUnavailable response and Error code examples; grep of the code shows the closed limiters (login_pair, login_ip, verify_tries, reset_tries) are used only by login, verify-email and reset-password, so no other endpoint needs it. Fail-closed vs open, live with a throwaway Valkey stopped: login wrong+right = 503 limiter_unavailable Retry-After 5; reset-password = 503 limiter_unavailable; public collect lookup = 404 (open); one 'limiter failed' ERROR log; register passes the open limiter and then fails with session_store_unavailable (T-052 session store shares Redis, expected). verify-email with Redis down returns session_store_unavailable first (session in Redis), its limiter_unavailable path is covered by internal/auth/limiters_integration_test.go (passes). make reset-limits works (needs the compose project of the running stack: the stack here runs as project 'smemories', so I ran COMPOSE_PROJECT_NAME=smemories make reset-limits from the worktree; key deleted). Non-blocking: (a) running dev stack is compose project 'smemories' not 'awesomeproject1' as CLAUDE.md says, so plain make reset-limits finds no redis service on this machine; (b) main checkout is on develop and has no reset-limits target until merge.
 - 2026-10-10 04:12Z · leader · merged 3d79b5d. Review: atomic Lua sliding window on the Redis clock, 4 guessing limiters fail closed (503 limiter_unavailable), 12 fail open with one ERROR per minute, emails hashed in keys, make reset-limits; QA passed twice (second after the develop merge). For owner to check: docs/redis.md limiter table; note COMPOSE_PROJECT_NAME for make reset-limits when your stack runs as project smemories.
+- 2026-10-12 02:10Z · human · accepted by owner
 
 ### T-054 — [E05] Spike: HTML templates and browser print-to-PDF instead of server rendering
 - **Status:** DONE
@@ -2535,7 +2536,7 @@ Adds the tools the rest of E10 uses: the typed error package, the v2 envelope he
 - 2026-10-09 03:05Z · human · accepted by owner
 
 ### T-064 — [E10] DB conventions: yearbook and profile tables (no joins, no foreign keys, ms timestamps)
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2546,7 +2547,7 @@ Adds the tools the rest of E10 uses: the typed error package, the v2 envelope he
 - **Assignee:** —
 - **Branch:** task/t-064-e10-db-conventions-yearbook-and-profile-
 - **PR:** https://github.com/danyaa666/smemories/pull/44
-- **Updated:** 2026-10-11 05:16Z by leader
+- **Updated:** 2026-10-12 02:10Z by human
 - **Comments-seen:** 10
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/02-db-yearbook-profile.md`
@@ -2598,6 +2599,7 @@ Converts `yearbooks` and `profiles` to `yearbook_tab` and `profile_tab` per docs
 - 2026-10-10 04:38Z · leader · Leader review OK at head 2aabc37 (= QA head, CI green, mergeable, no .team changes). Migration yearbooks/profiles -> yearbook_tab/profile_tab (ms timestamps, VARCHAR instead of ENUM, 4 FKs dropped, owner_flag rebuilt), yearbook.Service.Delete in one transaction with documented lock order, ClearMediaRefs, 3-query reads. Race probes 0 5xx. Awaiting owner approval.
 - 2026-10-11 05:16Z · human · owner approved merge
 - 2026-10-11 05:16Z · leader · merged 438d6b7. Review: migration 20261010120000 converts yearbooks/profiles to yearbook_tab/profile_tab (BIGINT ms, VARCHAR instead of ENUM, 4 FKs dropped, Down restores data); yearbook.Service.Delete in one transaction with documented lock order (yearbook_tab then profile_tab then children); 3-query reads; race probes 0 5xx. Combined tree checked: no code refers to the old table names. For owner to check: run make migrate on your dev DB (existing rows convert in place). Next: T-065 (media table).
+- 2026-10-12 02:10Z · human · accepted by owner
 
 ### T-065 — [E10] DB conventions: media table
 - **Status:** QA_PASS
@@ -2862,7 +2864,7 @@ T-034 QA finding: a shutdown or crash in the middle of an upload leaves a smem-u
 - 2026-10-10 03:28Z · human · accepted by owner
 
 ### T-075 — [E05] Media backfill hardening
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2873,7 +2875,7 @@ T-034 QA finding: a shutdown or crash in the middle of an upload leaves a smem-u
 - **Assignee:** —
 - **Branch:** task/t-075-e05-media-backfill-hardening
 - **PR:** https://github.com/danyaa666/smemories/pull/45
-- **Updated:** 2026-10-10 05:33Z by leader
+- **Updated:** 2026-10-12 02:10Z by human
 - **Comments-seen:** 3
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/13-media-backfill-hardening.md`
@@ -2895,9 +2897,10 @@ T-057 QA findings: backfill config loader, stop after consecutive storage failur
   AC2 idempotency: 30 legacy-style photos (10 large JPEG, 10 small JPEG, 10 alpha PNG; print objects moved away, print_key NULL): dry-run 30, run 1 created 30 (batch 7), run 2 created 0, object listing byte-for-byte identical, dry-run afterwards 0.
   Non-blocking observations: (a) a flat synthetic JPEG (postman/fixtures/media/photo-large.jpg 2400x1200) gets print = display bytes (2400 px) via backfill because the q85 1800px encoding is larger than the q92 display, whereas the upload path stores an 1800 px print for it; R6 as specified, but docs/media.md says 'only seen with synthetic PNGs' (also synthetic JPEGs). Real photos unaffected. (b) Backfilled print is derived from the already lossy display, so is a few KiB different from the upload-time print (expected, documented). (c) Each failing S3 read takes ~25 s with SDK retries when the endpoint refuses connections (20 x ~25 s ~ 8 min before the stop), not 2.5 s as the spec assumed; stop still works, consider a shorter SDK retry/timeout in T-022. (d) smemories-migrate in prod still requires SMEM_S3_BUCKET (pre-existing, unchanged). Leftover test objects remain in MinIO bucket smemories-dev (prefixes yearbooks/01M4J2R*, 01M4J2V*, qa75-stash*); scratch DB dropped.
 - 2026-10-10 05:33Z · leader · merged c974d3c. Review: backfill uses config.LoadMigrate (Load not weakened), stops after N consecutive storage failures, dry-run counts only usable photos, delete race closed, 1800 px Postman fixture. QA ran newman twice and the idempotent backfill on 30 photos. For owner to check: docs/media.md backfill variable list. QA leftovers: test objects in the smemories-dev bucket under yearbooks/01M4J2R*, yearbooks/01M4J2V*, qa75-stash* (safe to delete).
+- 2026-10-12 02:10Z · human · accepted by owner
 
 ### T-076 — [E02] Code screens polish (target size, cooldown reload, messages, focus)
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2908,7 +2911,7 @@ T-057 QA findings: backfill config loader, stop after consecutive storage failur
 - **Assignee:** —
 - **Branch:** task/t-076-e02-code-screens-polish-target-size-cool
 - **PR:** https://github.com/danyaa666/smemories/pull/46
-- **Updated:** 2026-10-10 05:41Z by leader
+- **Updated:** 2026-10-12 02:10Z by human
 - **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/12-code-screens-polish.md`
@@ -2923,6 +2926,7 @@ T-049 QA findings: resend button target size, cooldown restarts on reload, short
 - 2026-10-10 05:35Z · dev · All 5 requirements done, web only. One vitest case per requirement (codes.test.tsx), EN+VI code_short, npm test/lint/typecheck/i18n/build green. Test: cd web && npm test. AC2: main already has overflow-wrap:anywhere, not changed; jsdom cannot measure layout, QA please eyeball 375px. Gap: reload after cooldown expiry with router state sent restarts 60s.
 - 2026-10-10 05:39Z · qa · QA_PASS. Real Chrome (Playwright, 375x800) vs dev stack (API SMEM_ENV=dev, SMEM_DEV_FIXED_OTP=123123, Vite from the T-076 worktree, head 882418a). R1 resend target: boundingBox 204x44 (EN) and 161x44 (VI) on verify and reset screens, >=44. R2 cooldown: sessionStorage holds only {resendUntil:verify|reset: <epoch ms>}, localStorage empty; reload keeps 'Send a new code (60s)' disabled; a 3s value survives reload, then unlocks after 3.6s; expired value, 'abc', '', '-1', 'NaN' are ignored (button enabled when no router state); resend click sends exactly one POST and writes a new end time; per-tab. R3: EN 'Enter all 6 digits of the code.' / VI 'Hãy nhập đủ 6 chữ số của mã.' on verify and reset with 0 API requests; wrong code 000000 still shows 'Mã không đúng...'. R4: weak password on reset (EN and VI) -> document.activeElement is the new-password input, also on a repeated weak submit. R5: /verify-email?token=abc123&x=1#h -> /verify-email?x=1#h; /reset-password?token=abc123 -> /reset-password (other params and hash kept, history.state kept). AC2: scrollWidth==innerWidth==375 on verify (125-char email, wraps), verify with error, reset, EN and VI; screenshot checked. Regression T-049: register -> verify with 123123 -> verified; forgot-password -> reset with 123123 -> login with the new password -> /account, EN and VI. make lint build test (run in worktree) exit 0, web 133/133. CI: web and security pass; go and go-integration still pending at the time (web-only diff). Dev gap judged ACCEPTABLE: after expiry a reload of a page reached with router state (history.state.sent survives reload) starts a new 60s; reproduced; fail-safe direction, max 60s, server rate limit still the authority. Non-blocking observations: (1) a tampered sessionStorage value like 99999999999999999999 gives a huge countdown (self-inflicted, own tab only); clamp to now+60s would fix. (2) A stale unexpired stored end time wins over a fresh send from the previous screen, so the new cooldown can be shorter than 60s after the latest send (safe, server enforces). (3) The gap could be closed by clearing history state after first use.
 - 2026-10-10 05:41Z · leader · merged 6764e64. Review: web only; 44 px resend button, cooldown end time kept in sessionStorage, 'Enter all 6 digits' message EN/VI, focus to password after weak_password, leftover ?token= removed; QA checked in real Chrome at 375 px, CI green. For owner to check: the verify and reset screens on your phone. Known minor: a tampered sessionStorage value shows a long countdown in the user's own tab.
+- 2026-10-12 02:10Z · human · accepted by owner
 
 ### T-077 — [E01] Integration tests: set a timeout and cut the media package time
 - **Status:** BACKLOG
