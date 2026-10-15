@@ -605,168 +605,212 @@ paths:
         "404": {$ref: "#/components/responses/YearbookNotFound"}
         "413": {$ref: "#/components/responses/PayloadTooLarge"}
         "415": {$ref: "#/components/responses/UnsupportedMediaType"}
-  /v1/yearbooks/{id}/media:
-    parameters:
-      - {name: id, in: path, required: true, schema: {type: string}, description: Yearbook ULID.}
+  /api/media/create:
     post:
-      operationId: uploadMedia
+      operationId: createMedia
       tags: [media]
       summary: Upload a photo to a yearbook
       description: >-
-        `multipart/form-data` with the image in the part named `file`; other parts are ignored and the client file
-        name is never used. The type is decided by sniffing the content (JPEG, PNG, WebP), never by file name or
-        Content-Type. The image is decoded, rotated upright, stripped of all metadata (EXIF, GPS, ICC, comments),
-        resized to at most 3000 px on the long edge (never enlarged) and stored; a 480 px JPEG thumbnail and a
-        print version (long edge at most 1800 px, JPEG quality 85, PNG when the photo has transparency) are stored
-        too. Opaque images are stored as JPEG, images with transparency as PNG. Only the owner may upload (`404`
-        otherwise). The body cap is `SMEM_MEDIA_MAX_BYTES` (default 10 MiB). Limits: 200 photos per yearbook, 500 MiB
-        per user, 60 uploads per 10 minutes per user.
+        Called by the signed-in owner (the web app's photo library, cover and profile photo pickers). `multipart/form-data` with the
+        text field `yearbook_id` and the image in the part named `file`, in either order; other parts are ignored and the client file
+        name is never used. The type is decided by sniffing the content (JPEG, PNG, WebP), never by file name or Content-Type. The image
+        is decoded, rotated upright, stripped of all metadata (EXIF, GPS, ICC, comments), resized to at most 3000 px on the long edge
+        (never enlarged) and stored; a 480 px JPEG thumbnail and a print version (long edge at most 1800 px, JPEG quality 85, PNG when
+        the photo has transparency) are stored too. Opaque images are stored as JPEG, images with transparency as PNG. Only the owner of
+        the yearbook may upload (`ERROR_NOT_FOUND` otherwise). The request body is capped at `SMEM_MEDIA_MAX_BYTES` (default 10 MiB) for
+        the file plus 64 KiB of framing. The route may take up to 2.5 minutes (2 minutes to receive a slow phone upload, 30 seconds to
+        process it). Limits: 200 photos per yearbook, 500 MiB per user, 60 uploads per 10 minutes per user, and at most four times the
+        number of image-processing slots in progress at once (`ERROR_BUSY`, retry after `Retry-After`). A request with the session cookie
+        must come from an allowed Origin. Not idempotent: retrying after a lost answer may store the photo twice. The answer carries no
+        storage key or URL: fetch the image with `GET /api/media/get-content?id=`.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: The yearbook does not exist or belongs to someone else; the two cannot be told apart.}
+        - {code: ERROR_INVALID_IMAGE, description: "The image is corrupt, over 12000 px on a side, over 50 megapixels for JPEG or 25 megapixels for PNG and WebP, or its estimated decoded size is over 128 MiB."}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: The request is not multipart/form-data, or the file is not a JPEG, PNG or WebP image.}
+        - {code: ERROR_QUOTA_EXCEEDED, description: "The yearbook already holds 200 photos or the user's photos together reach 500 MiB."}
+        - {code: ERROR_TOO_LARGE, description: "The file or the request body is over the cap (`SMEM_MEDIA_MAX_BYTES` plus framing)."}
+        - {code: ERROR_REQUEST_TIMEOUT, description: The request body did not arrive in time; nothing was stored.}
+        - {code: ERROR_RATE_LIMITED, description: "More than 60 uploads in 10 minutes for this user; wait `Retry-After` seconds."}
+        - {code: ERROR_BUSY, description: "Too many uploads are in progress; retry after `Retry-After`."}
+        - {code: ERROR_STORAGE_ERROR, description: The object store failed; nothing was kept, retry later.}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
       security:
         - sessionCookie: []
       requestBody:
         required: true
         content:
           multipart/form-data:
-            schema:
-              type: object
-              required: [file]
-              properties:
-                file: {type: string, format: binary}
+            schema: {$ref: "#/components/schemas/MediaCreateRequest"}
+            examples:
+              photo:
+                summary: A photo for one yearbook
+                value: {yearbook_id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, file: "(binary JPEG, PNG or WebP bytes)"}
       responses:
-        "201":
+        "200":
           description: Stored.
           content:
             application/json:
-              schema: {$ref: "#/components/schemas/MediaEnvelope"}
-        "400":
-          description: >-
-            `invalid_image` (corrupt, over 12000 px on a side, over 50 megapixels for JPEG or 25 megapixels for PNG and
-            WebP, or an estimated decoded size over 128 MiB) or `invalid_body` (not multipart or no `file` part).
-          content:
-            application/json:
-              schema: {$ref: "#/components/schemas/Error"}
-        "401": {$ref: "#/components/responses/Unauthenticated"}
-        "403": {$ref: "#/components/responses/CsrfOriginMismatch"}
-        "404": {$ref: "#/components/responses/YearbookNotFound"}
-        "409":
-          description: A storage limit is reached (`quota_exceeded`).
-          content:
-            application/json:
-              schema: {$ref: "#/components/schemas/Error"}
-        "413":
-          description: The file or the request body is over the cap (`payload_too_large`).
-          content:
-            application/json:
-              schema: {$ref: "#/components/schemas/Error"}
-        "415":
-          description: >-
-            The request is not `multipart/form-data`, or the file is not a JPEG, PNG or WebP image
-            (`unsupported_media_type`).
-          content:
-            application/json:
-              schema: {$ref: "#/components/schemas/Error"}
-        "429": {$ref: "#/components/responses/RateLimited"}
-        "502": {$ref: "#/components/responses/StorageError"}
-        "503":
-          description: Too many uploads in progress (`busy`) or the session store is down (`session_store_unavailable`); retry after the `Retry-After` seconds.
-          headers:
-            Retry-After: {schema: {type: integer}}
-          content:
-            application/json:
-              schema: {$ref: "#/components/schemas/Error"}
+              schema: {$ref: "#/components/schemas/MediaResponse"}
+              examples:
+                stored:
+                  value:
+                    status: OK
+                    data: {id: 01K7QC5D6E7F8G9H0J1K2M3N4P, yearbook_id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, content_type: image/jpeg, bytes: 184220, width: 1800, height: 1200, created_at: 1760000000000}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "408": {$ref: "#/components/responses/ApiRequestTimeout"}
+        "409": {$ref: "#/components/responses/ApiConflict"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "429": {$ref: "#/components/responses/ApiRateLimited"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "502": {$ref: "#/components/responses/ApiBadGateway"}
+        "503": {$ref: "#/components/responses/ApiBusy"}
+  /api/media/get-list:
     get:
       operationId: listMedia
       tags: [media]
       summary: List a yearbook's photos
       description: >-
-        Owner only (a missing book and someone else's both answer `404 not_found`). Newest first, keyset
-        paginated on the photo id, so uploads and deletes between pages never repeat or skip a photo that stays.
-        Pass `next_cursor` back as `cursor`; it is null on the last page. By default only the owner's own uploads
-        are listed (`uploader=owner`). The response never contains storage keys, hashes or URLs: fetch the image
-        with `GET /v1/media/{id}/content`.
+        Called by the signed-in owner (the photo library). Newest first, keyset paginated, so uploads and deletes between pages never
+        repeat or skip a photo that stays. Pass the `next_id` of a page back as the `next_id` query parameter to get the next one; it is the empty string on the last page.
+        `next_id` is an opaque, tamper-evident token that is bound to the yearbook it came from: a changed, truncated, foreign or
+        otherwise unknown token (also the cursor of the old API) is `ERROR_PARAM`, and a token never reveals an internal id. By default
+        only the owner's own uploads are listed (`uploader=owner`); `contributor` lists the photos friends sent through a collection link
+        and `all` both. A missing `yearbook_id`, a `limit` outside 1..100 and an unknown `uploader` are `ERROR_PARAM`. A missing yearbook
+        and one owned by someone else both answer `ERROR_NOT_FOUND`. The response never contains storage keys, hashes or URLs: build the
+        image URL from `id`, for example `/api/media/get-content?id=<id>&variant=thumb`.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: The yearbook does not exist or belongs to someone else; the two cannot be told apart.}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
       security:
         - sessionCookie: []
       parameters:
-        - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100, default: 50}, description: "Out of range or not a number: `400 invalid_limit`."}
-        - {name: cursor, in: query, required: false, schema: {type: string}, description: "Opaque token from a previous page; a malformed one is `400 invalid_cursor`."}
-        - {name: uploader, in: query, required: false, schema: {type: string, enum: [owner, contributor, all], default: owner}, description: "Anything else: `400 invalid_uploader`."}
+        - {name: yearbook_id, in: query, required: true, schema: {type: string}, description: Yearbook ULID.}
+        - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100, default: 50}, description: "Page size, default 50, maximum 100."}
+        - {name: next_id, in: query, required: false, schema: {type: string}, description: "Opaque token from the previous page; omit it for the first page."}
+        - {name: uploader, in: query, required: false, schema: {type: string, enum: [owner, contributor, all], default: owner}, description: "Whose photos to list: `owner` (the owner's own uploads, default), `contributor` (photos sent through a collection link) or `all`."}
       responses:
         "200":
           description: A page of photos.
           content:
             application/json:
-              schema:
-                type: object
-                required: [media, next_cursor]
-                properties:
-                  media:
-                    type: array
-                    items: {$ref: "#/components/schemas/MediaItem"}
-                  next_cursor: {type: [string, "null"]}
-        "400":
-          description: "`invalid_limit`, `invalid_cursor` or `invalid_uploader`."
-          content:
-            application/json:
-              schema: {$ref: "#/components/schemas/Error"}
-        "401": {$ref: "#/components/responses/Unauthenticated"}
-        "503": {$ref: "#/components/responses/SessionStoreUnavailable"}
-        "404": {$ref: "#/components/responses/YearbookNotFound"}
-  /v1/media/{id}/content:
-    parameters:
-      - {name: id, in: path, required: true, schema: {type: string}, description: Media ULID.}
+              schema: {$ref: "#/components/schemas/MediaListResponse"}
+              examples:
+                page:
+                  value:
+                    status: OK
+                    data:
+                      items:
+                        - {id: 01K7QC5D6E7F8G9H0J1K2M3N4P, yearbook_id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, content_type: image/jpeg, bytes: 184220, width: 1800, height: 1200, created_at: 1760000000000}
+                      next_id: ""
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/media/get-content:
     get:
       operationId: getMediaContent
       tags: [media]
       summary: Download a photo
       description: >-
-        Streams the stored image to the yearbook owner only (`404` for anyone else). `Content-Type` comes from the
-        stored record. Honours `Range` and `If-None-Match`. `size=print` is the 1800 px version for the print renderer
-        (same type as `display`); a photo uploaded before it existed, and not yet reached by the backfill
-        (`smemories-media-backfill`), is answered in display size.
+        Called by the browser for every `<img src>` of the signed-in owner (session cookie, same origin). Binary: on success the body is
+        the stored image with **no envelope**; `Content-Type` comes from the stored record (`image/jpeg`, or `image/png` for a photo with
+        transparency; always `image/jpeg` for `variant=thumb`), `X-Content-Type-Options: nosniff` and `Cache-Control: private, max-age=3600`
+        are set, and the `ETag` differs per variant. Honours `HEAD`, `Range` (206) and `If-None-Match` (304). On failure the answer is the
+        usual JSON error envelope with the matching HTTP status and `Cache-Control: no-store`, so an error is never cached in place of the
+        image; an `<img>` tag only needs the status. Only the owner may read (`ERROR_NOT_FOUND` for anyone else, and for an unknown id).
+        `variant=print` is the 1800 px version for the print renderer; a photo uploaded before it existed, and not yet reached by the
+        backfill (`smemories-media-backfill`), is answered in display size. The route may take up to 2 minutes for a slow client.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: The photo does not exist or belongs to someone else; the two cannot be told apart.}
+        - {code: ERROR_STORAGE_ERROR, description: The object store failed or the stored object is gone; retry later.}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
       security:
         - sessionCookie: []
       parameters:
-        - {name: size, in: query, required: false, schema: {type: string, enum: [display, thumb, print], default: display}}
+        - {name: id, in: query, required: true, schema: {type: string}, description: Photo ULID (the `id` of a list item or of the upload answer).}
+        - {name: variant, in: query, required: false, schema: {type: string, enum: [display, thumb, print], default: display}, description: "Which stored version to send: `display` (long edge at most 3000 px, the default), `thumb` (480 px JPEG) or `print` (long edge at most 1800 px, for the print renderer). Anything else is `ERROR_PARAM`."}
       responses:
         "200":
-          description: The image.
+          description: The image bytes. Not an envelope.
           headers:
-            Cache-Control: {schema: {type: string, const: "private, max-age=3600"}}
-            X-Content-Type-Options: {schema: {type: string, const: nosniff}}
+            Cache-Control: {description: "Always `private, max-age=3600` on success.", schema: {type: string, const: "private, max-age=3600"}}
+            X-Content-Type-Options: {description: "Always `nosniff`.", schema: {type: string, const: nosniff}}
+            ETag: {description: "Differs per variant (`-t` thumb, `-p` print).", schema: {type: string}}
           content:
-            image/jpeg: {schema: {type: string, format: binary}}
-            image/png: {schema: {type: string, format: binary}}
-        "206": {description: The requested byte range.}
-        "304": {description: Not modified.}
-        "400":
-          description: Unknown `size` (`invalid_size`).
-          content:
-            application/json:
-              schema: {$ref: "#/components/schemas/Error"}
-        "401": {$ref: "#/components/responses/Unauthenticated"}
-        "503": {$ref: "#/components/responses/SessionStoreUnavailable"}
-        "404": {$ref: "#/components/responses/NotFound"}
+            image/jpeg:
+              schema: {type: string, format: binary}
+              examples:
+                jpeg:
+                  summary: The bytes of a JPEG (display or thumb)
+                  value: "(binary JPEG bytes)"
+            image/png:
+              schema: {type: string, format: binary}
+              examples:
+                png:
+                  summary: The bytes of a PNG (a photo with transparency)
+                  value: "(binary PNG bytes)"
+        "206": {description: The requested byte range (`Range` request header).}
+        "304": {description: Not modified (`If-None-Match` matched).}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
         "416": {description: Range not satisfiable.}
-        "502": {$ref: "#/components/responses/StorageError"}
-  /v1/media/{id}:
-    parameters:
-      - {name: id, in: path, required: true, schema: {type: string}, description: Media ULID.}
-    delete:
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "502": {$ref: "#/components/responses/ApiBadGateway"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/media/delete:
+    post:
       operationId: deleteMedia
       tags: [media]
       summary: Delete a photo
       description: >-
-        Removes the row and both stored objects. Idempotent: an unknown id, an already deleted one and someone
-        else's photo all answer `204` (and the last deletes nothing), so the answer never reveals whether a photo
-        exists. A cover or profile photo that pointed at it is cleared.
+        Called by the signed-in owner. Removes the row and the stored objects (display, thumbnail, print). Idempotent: an unknown id, an
+        already deleted one and someone else's photo all answer success (and the last deletes nothing), so the answer never reveals whether
+        a photo exists. A cover or profile photo that pointed at it is cleared. A missing `id` and unknown fields are `ERROR_PARAM`. A
+        request with the session cookie must come from an allowed Origin.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_STORAGE_ERROR, description: The object store failed; the photo is still there and the call can be repeated.}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
       security:
         - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/MediaDeleteRequest"}
+            examples:
+              delete:
+                value: {id: 01K7QC5D6E7F8G9H0J1K2M3N4P}
       responses:
-        "204": {description: Deleted, or nothing to delete.}
-        "401": {$ref: "#/components/responses/Unauthenticated"}
-        "503": {$ref: "#/components/responses/SessionStoreUnavailable"}
-        "403": {$ref: "#/components/responses/CsrfOriginMismatch"}
-        "502": {$ref: "#/components/responses/StorageError"}
+        "200":
+          description: Deleted, or there was nothing to delete.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/EmptyResponse"}
+              examples:
+                deleted:
+                  value: {status: OK, data: {}}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "502": {$ref: "#/components/responses/ApiBadGateway"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
   /api/note-collection/create:
     post:
       operationId: createNoteCollection
@@ -1337,29 +1381,49 @@ components:
         photo_media_id: {type: [string, "null"], description: A photo of this yearbook (else `400 invalid_media`). Like every field of this replacing PUT, omitted means cleared.}
     Media:
       type: object
-      additionalProperties: false
-      required: [id, width, height, bytes]
+      description: A stored photo. Carries no storage key, hash or URL; the client builds the content URL from `id`.
+      required: [id, yearbook_id, content_type, bytes, width, height, created_at]
       properties:
-        id: {type: string, description: Opaque ULID.}
-        width: {type: integer, description: Pixels, of the stored display version.}
-        height: {type: integer}
-        bytes: {type: integer, description: Size of the stored display version.}
-    MediaItem:
+        id: {type: string, description: "Photo ULID; use it as `id` of get-content and delete."}
+        yearbook_id: {type: string, description: Yearbook ULID the photo belongs to.}
+        content_type: {type: string, description: "MIME type of the display version: `image/jpeg`, or `image/png` for a photo with transparency."}
+        bytes: {type: integer, description: Size in bytes of the stored display version.}
+        width: {type: integer, description: Width in pixels of the stored display version.}
+        height: {type: integer, description: Height in pixels of the stored display version.}
+        created_at: {type: integer, format: int64, description: "Upload time, Unix ms."}
+    MediaResponse:
+      type: object
+      required: [status, data]
+      properties:
+        status: {type: string, const: OK, description: Always `OK` on success.}
+        data: {$ref: "#/components/schemas/Media"}
+    MediaListResponse:
+      type: object
+      required: [status, data]
+      properties:
+        status: {type: string, const: OK, description: Always `OK` on success.}
+        data:
+          type: object
+          description: One page of photos.
+          required: [items, next_id]
+          properties:
+            items:
+              type: array
+              description: The photos of this page, newest first.
+              items: {$ref: "#/components/schemas/Media"}
+            next_id: {type: string, description: "Opaque page token for the next page; the empty string on the last page."}
+    MediaCreateRequest:
+      type: object
+      required: [yearbook_id, file]
+      properties:
+        yearbook_id: {type: string, description: Required. ULID of a yearbook the caller owns, at most 64 characters.}
+        file: {type: string, format: binary, description: "Required. The image: JPEG, PNG or WebP, at most `SMEM_MEDIA_MAX_BYTES` (default 10 MiB)."}
+    MediaDeleteRequest:
       type: object
       additionalProperties: false
-      required: [id, width, height, bytes, uploader_kind, created_at]
+      required: [id]
       properties:
-        id: {type: string, description: Opaque ULID.}
-        width: {type: integer}
-        height: {type: integer}
-        bytes: {type: integer}
-        uploader_kind: {type: string, enum: [owner, contributor]}
-        created_at: {type: string, format: date-time}
-    MediaEnvelope:
-      type: object
-      required: [media]
-      properties:
-        media: {$ref: "#/components/schemas/Media"}
+        id: {type: string, description: Required. ULID of the photo to delete.}
     ApiError:
       type: object
       description: >-

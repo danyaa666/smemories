@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"cmp"
 	"encoding/binary"
-	"errors"
 	"image"
 	"image/color"
 	"image/jpeg"
@@ -14,13 +13,6 @@ import (
 
 	"golang.org/x/image/draw"
 	_ "golang.org/x/image/webp" // registers the WebP decoder
-)
-
-var (
-	// ErrUnsupported: the content is not a JPEG, PNG or WebP image (decided by sniffing, never by name or Content-Type).
-	ErrUnsupported = errors.New("media: unsupported image type")
-	// ErrInvalidImage: the content looks like a supported image but is corrupt or too large to process safely.
-	ErrInvalidImage = errors.New("media: invalid image")
 )
 
 const (

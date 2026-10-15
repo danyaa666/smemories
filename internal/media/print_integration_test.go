@@ -17,7 +17,7 @@ import (
 func bigPhoto(t *testing.T) []byte { return jpegWith(t, quad(2000, 1000, false)) }
 
 func (e *env) width(u user, id, size string) (int, string) {
-	r := e.json(u, "GET", "/v1/media/"+id+"/content?size="+size, "").status(200, "")
+	r := e.json(u, "GET", "/api/media/get-content?id="+id+"&variant="+size, "").status(200, "")
 	c, _, err := image.DecodeConfig(bytes.NewReader(r.Body.Bytes()))
 	if err != nil {
 		e.t.Fatal(err)
@@ -29,7 +29,7 @@ func TestUploadStoresPrintVersion(t *testing.T) {
 	e := newEnv(t)
 	u, other := e.register("a@example.com"), e.register("b@example.com")
 	book := e.newBook(u)
-	id := e.upload(u, book, "a.jpg", "image/jpeg", bigPhoto(t)).status(201, "").mediaID()
+	id := e.upload(u, book, "a.jpg", "image/jpeg", bigPhoto(t)).status(200, "").mediaID()
 
 	var pk string
 	_ = e.db.QueryRow(`SELECT print_key FROM media_tab WHERE public_id = ?`, id).Scan(&pk)
@@ -44,21 +44,21 @@ func TestUploadStoresPrintVersion(t *testing.T) {
 	if pw != 1800 || dw != 2000 || petag == detag {
 		t.Fatalf("print %d px %s, display %d px %s", pw, petag, dw, detag)
 	}
-	got := e.json(u, "GET", "/v1/media/"+id+"/content?size=print", "").status(200, "")
+	got := e.json(u, "GET", "/api/media/get-content?id="+id+"&variant=print", "").status(200, "")
 	if h := got.Header(); h.Get("Content-Type") != "image/jpeg" || h.Get("X-Content-Type-Options") != "nosniff" || h.Get("Cache-Control") != "private, max-age=3600" {
 		t.Fatalf("headers: %v", h)
 	}
 	// Same authorisation as the other sizes.
-	e.json(other, "GET", "/v1/media/"+id+"/content?size=print", "").status(404, "not_found")
-	e.json(user{}, "GET", "/v1/media/"+id+"/content?size=print", "").status(401, "")
-	e.json(u, "GET", "/v1/media/"+id+"/content?size=Print", "").status(400, "invalid_size")
+	e.json(other, "GET", "/api/media/get-content?id="+id+"&variant=print", "").status(404, "ERROR_NOT_FOUND")
+	e.json(user{}, "GET", "/api/media/get-content?id="+id+"&variant=print", "").status(401, "")
+	e.json(u, "GET", "/api/media/get-content?id="+id+"&variant=Print", "").status(400, "ERROR_PARAM")
 
 	// Deleting the photo removes the print object; so does deleting the yearbook.
-	e.json(u, "DELETE", "/v1/media/"+id, "").status(204, "")
+	e.deleteMedia(u, id).status(200, "")
 	if _, err := e.st.Get(context.Background(), pk); err == nil {
 		t.Fatal("print object survived the photo delete")
 	}
-	e.upload(u, book, "b.jpg", "image/jpeg", bigPhoto(t)).status(201, "")
+	e.upload(u, book, "b.jpg", "image/jpeg", bigPhoto(t)).status(200, "")
 	e.json(u, "DELETE", "/v1/yearbooks/"+book, "").status(204, "")
 	if n := e.st.count(yearbookPrefix(book)); n != 0 {
 		t.Fatalf("%d objects left after the yearbook delete", n)
@@ -87,10 +87,10 @@ func TestBackfillPrint(t *testing.T) {
 	e := newEnv(t)
 	u := e.register("a@example.com")
 	book := e.newBook(u)
-	a := e.upload(u, book, "a.jpg", "image/jpeg", bigPhoto(t)).status(201, "").mediaID()
-	b := e.upload(u, book, "b.png", "image/png", encPNG(t, quad(2000, 1000, true))).status(201, "").mediaID()
-	c := e.upload(u, book, "c.jpg", "image/jpeg", photo(t)).status(201, "").mediaID() // 64 px: print is a copy of the display
-	broken := e.upload(u, book, "d.jpg", "image/jpeg", bigPhoto(t)).status(201, "").mediaID()
+	a := e.upload(u, book, "a.jpg", "image/jpeg", bigPhoto(t)).status(200, "").mediaID()
+	b := e.upload(u, book, "b.png", "image/png", encPNG(t, quad(2000, 1000, true))).status(200, "").mediaID()
+	c := e.upload(u, book, "c.jpg", "image/jpeg", photo(t)).status(200, "").mediaID() // 64 px: print is a copy of the display
+	broken := e.upload(u, book, "d.jpg", "image/jpeg", bigPhoto(t)).status(200, "").mediaID()
 
 	// Make them look like photos from before T-057: no print object, no print_key.
 	if _, err := e.db.Exec(`UPDATE media_tab SET print_key = NULL`); err != nil {
@@ -134,7 +134,7 @@ func TestBackfillPrint(t *testing.T) {
 	if !strings.HasSuffix(key, "-print.png") {
 		t.Fatalf("print key of the PNG: %q", key)
 	}
-	r := e.json(u, "GET", "/v1/media/"+b+"/content?size=print", "").status(200, "")
+	r := e.json(u, "GET", "/api/media/get-content?id="+b+"&variant=print", "").status(200, "")
 	if r.Header().Get("Content-Type") != "image/png" {
 		t.Fatalf("content type %s", r.Header().Get("Content-Type"))
 	}
@@ -142,7 +142,7 @@ func TestBackfillPrint(t *testing.T) {
 		t.Fatalf("print of c: %d px", w)
 	}
 	// The backfilled print object goes with the photo.
-	e.json(u, "DELETE", "/v1/media/"+a, "").status(204, "")
+	e.deleteMedia(u, a).status(200, "")
 	if _, err := e.st.Get(context.Background(), yearbookPrefix(book)+a+"-print.jpg"); err == nil {
 		t.Fatal("print object survived the delete")
 	}
@@ -153,7 +153,7 @@ func backfillFixture(t *testing.T, e *env, n int) (book string, ids []string) {
 	u := e.register("a@example.com")
 	book = e.newBook(u)
 	for i := range n {
-		ids = append(ids, e.upload(u, book, "a.jpg", "image/jpeg", bigPhoto(t)).status(201, "").mediaID())
+		ids = append(ids, e.upload(u, book, "a.jpg", "image/jpeg", bigPhoto(t)).status(200, "").mediaID())
 		_ = e.st.Delete(context.Background(), yearbookPrefix(book)+ids[i]+"-print.jpg")
 	}
 	if _, err := e.db.Exec(`UPDATE media_tab SET print_key = NULL`); err != nil {

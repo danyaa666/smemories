@@ -9,13 +9,6 @@ import (
 	"github.com/danyaa666/smemories/internal/apperr"
 )
 
-var (
-	// ErrNotFound covers media or a yearbook that does not exist and one owned by someone else.
-	ErrNotFound = errors.New("media: not found")
-	// ErrQuota: the yearbook or the user is at a storage limit.
-	ErrQuota = errors.New("media: quota exceeded")
-)
-
 // Quotas (AC6).
 const (
 	maxPerYearbook  = 200
@@ -62,19 +55,22 @@ func (s *Store) ownedYearbook(ctx context.Context, ownerID uint64, publicID stri
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, ErrNotFound
 	}
-	return id, err
+	if err != nil {
+		return 0, dbError(err, "select yearbook")
+	}
+	return id, nil
 }
 
 // checkQuota fails with ErrQuota when adding one more photo of size add would pass a limit.
 func checkQuota(ctx context.Context, q rowQuerier, ownerID, yearbookID uint64, add int) error {
 	var n int
 	if err := q.QueryRowContext(ctx, `SELECT COUNT(*) FROM media_tab WHERE yearbook_id = ?`, yearbookID).Scan(&n); err != nil {
-		return err
+		return dbError(err, "count photos")
 	}
 	var used int64
 	if err := q.QueryRowContext(ctx,
 		`SELECT COALESCE(SUM(m.bytes), 0) FROM media_tab m JOIN yearbook_tab y ON y.id = m.yearbook_id WHERE y.owner_id = ?`, ownerID).Scan(&used); err != nil {
-		return err
+		return dbError(err, "sum photo bytes")
 	}
 	if n >= maxPerYearbook || used+int64(add) > maxBytesPerUser {
 		return ErrQuota
@@ -90,19 +86,19 @@ func (s *Store) insert(ctx context.Context, ownerID, yearbookID uint64, kind str
 	}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		return Media{}, err
+		return Media{}, dbError(err, "begin insert photo")
 	}
 	defer func() { _ = tx.Rollback() }()
 	var locked uint64
 	if err := tx.QueryRowContext(ctx, `SELECT id FROM user_tab WHERE id = ? FOR UPDATE`, ownerID).Scan(&locked); err != nil {
-		return Media{}, err
+		return Media{}, dbError(err, "lock user")
 	}
 	err = tx.QueryRowContext(ctx, `SELECT id FROM yearbook_tab WHERE id = ? AND owner_id = ? FOR SHARE`, yearbookID, ownerID).Scan(&locked)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Media{}, ErrNotFound
 	}
 	if err != nil {
-		return Media{}, err
+		return Media{}, dbError(err, "lock yearbook")
 	}
 	if err := checkQuota(ctx, tx, ownerID, yearbookID, m.Bytes); err != nil {
 		return Media{}, err
@@ -112,14 +108,17 @@ func (s *Store) insert(ctx context.Context, ownerID, yearbookID uint64, kind str
 		 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 		m.ID, yearbookID, kind, m.ObjectKey, m.ThumbKey, m.PrintKey, m.ContentType, m.Bytes, m.Width, m.Height, m.SHA256, m.CreatedAt, m.CreatedAt)
 	if err != nil {
-		return Media{}, err
+		return Media{}, dbError(err, "insert photo")
 	}
 	id, err := res.LastInsertId()
 	if err != nil {
-		return Media{}, err
+		return Media{}, dbError(err, "read photo id")
 	}
 	m.RowID = id
-	return m, tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return Media{}, dbError(err, "commit photo")
+	}
+	return m, nil
 }
 
 // yearbookByRow returns the owner and the public id of a yearbook given its internal id.
@@ -128,7 +127,10 @@ func (s *Store) yearbookByRow(ctx context.Context, id uint64) (ownerID uint64, p
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, "", ErrNotFound
 	}
-	return ownerID, publicID, err
+	if err != nil {
+		return 0, "", dbError(err, "select yearbook by row")
+	}
+	return ownerID, publicID, nil
 }
 
 // owned returns the media with that public id if its yearbook belongs to the user.
@@ -142,8 +144,11 @@ func (s *Store) owned(ctx context.Context, ownerID uint64, publicID string) (Med
 	if errors.Is(err, sql.ErrNoRows) {
 		return Media{}, ErrNotFound
 	}
+	if err != nil {
+		return Media{}, dbError(err, "select photo")
+	}
 	m.PrintKey = printKey.String
-	return m, err
+	return m, nil
 }
 
 // keys lists the objects of a photo that exist (the print object is missing until the backfill ran).
@@ -163,24 +168,29 @@ func (m Media) keys() []string {
 func (s *Store) removeRow(ctx context.Context, rowID int64, refs RefClearer) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		return err
+		return dbError(err, "begin delete photo")
 	}
 	defer func() { _ = tx.Rollback() }()
 	if refs != nil {
 		if err := refs.ClearMediaRefs(ctx, tx, rowID); err != nil {
-			return err
+			return err // the clearers wrap their own failures
 		}
 	}
 	if _, err := tx.ExecContext(ctx, `DELETE FROM media_tab WHERE id = ?`, rowID); err != nil {
-		return err
+		return dbError(err, "delete photo")
 	}
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return dbError(err, "commit delete photo")
+	}
+	return nil
 }
 
 // deleteByYearbook removes every photo row of a yearbook inside the caller's transaction (which holds the yearbook lock).
 func deleteByYearbook(ctx context.Context, tx *sql.Tx, yearbookID uint64) error {
-	_, err := tx.ExecContext(ctx, `DELETE FROM media_tab WHERE yearbook_id = ?`, yearbookID)
-	return err
+	if _, err := tx.ExecContext(ctx, `DELETE FROM media_tab WHERE yearbook_id = ?`, yearbookID); err != nil {
+		return dbError(err, "delete yearbook photos")
+	}
+	return nil
 }
 
 // list returns up to limit photos of a yearbook, newest first (id descending), with id < before when before > 0.
@@ -188,7 +198,7 @@ func deleteByYearbook(ctx context.Context, tx *sql.Tx, yearbookID uint64) error 
 // read is an index range scan in id order with no sort. FORCE INDEX because, on a big table, the optimizer is
 // tempted by a reverse primary-key scan for ORDER BY id DESC LIMIT n, which walks every yearbook's rows.
 func (s *Store) list(ctx context.Context, yearbookID uint64, kinds []string, before uint64, limit int) ([]Media, error) {
-	q := `SELECT id, public_id, uploader_kind, bytes, width, height, created_at FROM media_tab FORCE INDEX (idx_yearbook_id) WHERE yearbook_id = ? AND uploader_kind IN (?` +
+	q := `SELECT id, public_id, uploader_kind, content_type, bytes, width, height, created_at FROM media_tab FORCE INDEX (idx_yearbook_id) WHERE yearbook_id = ? AND uploader_kind IN (?` +
 		strings.Repeat(",?", len(kinds)-1) + `)`
 	args := []any{yearbookID}
 	for _, k := range kinds {
@@ -200,18 +210,21 @@ func (s *Store) list(ctx context.Context, yearbookID uint64, kinds []string, bef
 	}
 	rows, err := s.db.QueryContext(ctx, q+` ORDER BY id DESC LIMIT ?`, append(args, limit)...)
 	if err != nil {
-		return nil, err
+		return nil, dbError(err, "list photos")
 	}
 	defer func() { _ = rows.Close() }()
 	var out []Media
 	for rows.Next() {
 		var m Media
-		if err := rows.Scan(&m.seq, &m.ID, &m.UploaderKind, &m.Bytes, &m.Width, &m.Height, &m.CreatedAt); err != nil {
-			return nil, err
+		if err := rows.Scan(&m.seq, &m.ID, &m.UploaderKind, &m.ContentType, &m.Bytes, &m.Width, &m.Height, &m.CreatedAt); err != nil {
+			return nil, dbError(err, "scan photo")
 		}
 		out = append(out, m)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, dbError(err, "list photos")
+	}
+	return out, nil
 }
 
 // withoutPrint returns up to limit photos with id > after that have no print object yet, oldest first.

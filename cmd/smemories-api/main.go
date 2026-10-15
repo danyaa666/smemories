@@ -116,7 +116,7 @@ func main() {
 		Endpoint: cfg.S3Endpoint, Region: cfg.S3Region, Bucket: cfg.S3Bucket,
 		AccessKey: cfg.S3AccessKey, SecretKey: cfg.S3SecretKey, PathStyle: cfg.S3PathStyle,
 	}), cfg.MediaMaxConcurrent, limiters, nil)
-	mediaH := media.NewHandler(mediaSvc, cfg.MediaMaxBytes, authH.RequireUser, cfg.AllowedOrigins, logger)
+	mediaH := media.NewHandler(mediaSvc, cfg.MediaMaxBytes, authH.RequireUser, cfg.AllowedOrigins, httpx.NewCursors(cfg.OTPKey), logger)
 	bookStore := yearbook.NewStore(d)
 	notesStore := notes.NewStore(d)
 	notesSvc := notes.NewService(notesStore, mediaSvc, limiters, logger, nil)

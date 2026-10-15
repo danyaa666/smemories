@@ -65,7 +65,7 @@ describe("yearbook list", () => {
     expect(screen.getByText("THPT Chu Văn An · 12A1 · 2026")).toBeInTheDocument();
     expect(container.querySelector("img")).toHaveAttribute(
       "src",
-      `/api/v1/media/${PHOTO}/content?size=thumb`,
+      `/api/media/get-content?id=${PHOTO}&variant=thumb`,
     );
     await userEvent.click(screen.getByRole("button", { name: "Show more" }));
     expect(await screen.findByRole("link", { name: "Second" })).toBeInTheDocument();
@@ -267,20 +267,24 @@ class FakeXhr {
     act(() => this.onload?.());
   }
 }
-const apiErr = (code: string) => ({ error: { code, message: code, request_id: "r1" } });
+// The v2 error body: legacy snake_case test names map to ERROR_ + upper case, except the merged codes.
+const v2 = (code: string) =>
+  code === "payload_too_large" ? "ERROR_TOO_LARGE" : `ERROR_${code.toUpperCase()}`;
+const apiErr = (code: string) => ({ status: v2(code), error_message: code, request_id: "r1" });
 const png = (name = "a.png") => new File([new Uint8Array([1, 2, 3])], name, { type: "image/png" });
-const created = { media: { id: PHOTO, width: 800, height: 600, bytes: 3 } };
 const item = (id: string) => ({
   id,
+  yearbook_id: ID,
+  content_type: "image/jpeg",
+  bytes: 3,
   width: 800,
   height: 600,
-  bytes: 3,
-  uploader_kind: "owner",
-  created_at: "2026-10-02T00:00:00Z",
+  created_at: 1760000000000,
 });
-const MEDIA = `GET /v1/yearbooks/${ID}/media`;
-const mediaPage = (ids: string[], next: string | null = null) =>
-  Response.json({ media: ids.map(item), next_cursor: next });
+const created = { status: "OK", data: item(PHOTO) };
+const MEDIA = `GET /media/get-list?yearbook_id=${ID}`;
+const mediaPage = (ids: string[], next = "") =>
+  Response.json({ status: "OK", data: { items: ids.map(item), next_id: next } });
 
 async function openEditor(extra: Record<string, Response | ((c: Call) => Response)> = {}) {
   FakeXhr.all = [];
@@ -305,14 +309,16 @@ describe("photos", () => {
     await userEvent.upload(input, png("holiday.png"));
     await waitFor(() => expect(FakeXhr.all).toHaveLength(1));
     const x = FakeXhr.all[0]!;
-    expect(x.url).toBe(`/api/v1/yearbooks/${ID}/media`);
+    expect(x.url).toBe("/api/media/create");
+    expect([...x.form!.keys()]).toEqual(["yearbook_id", "file"]); // the target comes first
+    expect(x.form!.get("yearbook_id")).toBe(ID);
     expect((x.form!.get("file") as File).name).toBe("holiday.png");
     x.progress(0.5);
     expect(screen.getByRole("progressbar", { name: "holiday.png" })).toHaveValue(0.5);
     uploaded = true;
-    x.reply(201, created);
+    x.reply(200, created);
     const img = await screen.findByRole("img", { name: "Photo 1" });
-    expect(img).toHaveAttribute("src", `/api/v1/media/${PHOTO}/content?size=thumb`);
+    expect(img).toHaveAttribute("src", `/api/media/get-content?id=${PHOTO}&variant=thumb`);
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
   });
 
@@ -356,7 +362,7 @@ describe("photos", () => {
     await waitFor(() => expect(FakeXhr.all).toHaveLength(2));
     expect(delays).toEqual([2000]);
     uploaded = true;
-    FakeXhr.all[1]!.reply(201, created);
+    FakeXhr.all[1]!.reply(200, created);
     expect(await screen.findByRole("img", { name: "Photo 1" })).toBeInTheDocument();
   });
 
@@ -399,36 +405,46 @@ describe("photos", () => {
     const { calls } = await openEditor({
       [`GET /v1/yearbooks/${ID}`]: () => book(yb({ cover_media_id: gone ? null : PHOTO })),
       [MEDIA]: () => mediaPage(gone ? [] : [PHOTO]),
-      [`DELETE /v1/media/${PHOTO}`]: () => {
+      "POST /media/delete": () => {
         gone = true;
-        return new Response(null, { status: 204 });
+        return Response.json({ status: "OK", data: {} });
       },
     });
     await userEvent.click(await screen.findByRole("button", { name: "Delete" }));
     await waitFor(() => expect(screen.queryByRole("img")).not.toBeInTheDocument());
     expect(screen.getByText("No photos to show yet.")).toBeInTheDocument();
-    expect(calls.some((c) => c.method === "DELETE" && c.path === `/v1/media/${PHOTO}`)).toBe(true);
+    expect(
+      calls.some(
+        (c) =>
+          c.method === "POST" &&
+          c.path === "/media/delete" &&
+          (c.body as { id: string }).id === PHOTO,
+      ),
+    ).toBe(true);
   });
 
   it("lists the stored photos after a reload and pages with the cursor", async () => {
     const { calls } = await openEditor({
       [MEDIA]: mediaPage([PHOTO], "c2"),
-      [`${MEDIA}?cursor=c2`]: mediaPage([OTHER]),
+      [`${MEDIA}&next_id=c2`]: mediaPage([OTHER]),
     });
     const first = await screen.findByRole("img", { name: "Photo 1" });
-    expect(first).toHaveAttribute("src", `/api/v1/media/${PHOTO}/content?size=thumb`);
+    expect(first).toHaveAttribute("src", `/api/media/get-content?id=${PHOTO}&variant=thumb`);
     await userEvent.click(screen.getByRole("button", { name: "Show more photos" }));
     expect(await screen.findByRole("img", { name: "Photo 2" })).toHaveAttribute(
       "src",
-      `/api/v1/media/${OTHER}/content?size=thumb`,
+      `/api/media/get-content?id=${OTHER}&variant=thumb`,
     );
     expect(screen.queryByRole("button", { name: "Show more photos" })).not.toBeInTheDocument();
-    expect(calls.at(-1)?.path).toBe(`/v1/yearbooks/${ID}/media?cursor=c2`);
+    expect(calls.at(-1)?.path).toBe(`/media/get-list?yearbook_id=${ID}&next_id=c2`);
   });
 
   it("shows a translated error with a retry when the list fails", async () => {
     let fail = true;
-    await openEditor({ [MEDIA]: () => (fail ? err(502, "storage_error") : mediaPage([PHOTO])) });
+    await openEditor({
+      [MEDIA]: () =>
+        fail ? Response.json(apiErr("storage_error"), { status: 502 }) : mediaPage([PHOTO]),
+    });
     expect(await screen.findByText(/Photo storage is not responding/)).toBeInTheDocument();
     expect(screen.queryByText("No photos to show yet.")).not.toBeInTheDocument();
     fail = false;
@@ -441,16 +457,16 @@ describe("photos", () => {
     let gone = false;
     await openEditor({
       [MEDIA]: () => mediaPage(gone ? [OTHER] : [PHOTO, OTHER]),
-      [`DELETE /v1/media/${PHOTO}`]: () => {
+      "POST /media/delete": () => {
         gone = true;
-        return new Response(null, { status: 204 });
+        return Response.json({ status: "OK", data: {} });
       },
     });
     await userEvent.click((await screen.findAllByRole("button", { name: "Delete" }))[0]!);
     await waitFor(() => expect(screen.getAllByRole("img")).toHaveLength(1));
     expect(screen.getByRole("img")).toHaveAttribute(
       "src",
-      `/api/v1/media/${OTHER}/content?size=thumb`,
+      `/api/media/get-content?id=${OTHER}&variant=thumb`,
     );
   });
 });
