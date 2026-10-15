@@ -11,17 +11,17 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 24 | T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-071, T-072, T-080, T-081, T-082 |
-| TODO | 3 | T-013, T-079, T-083 |
-| CHANGES_REQUESTED | 1 | T-070 |
-| MERGED | 1 | T-073 |
+| TODO | 2 | T-013, T-079 |
+| IN_PROGRESS | 1 | T-083 |
+| MERGED | 2 | T-070, T-073 |
 | DONE | 47 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-074, T-075, T-076, T-077, T-078 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
 
-**Awaiting your review (MERGED):** T-073 ([E10] Observability: request metrics middleware and /metrics endpoint)
+**Awaiting your review (MERGED):** T-070 ([E10] API v2: yearbook domain with a service layer); T-073 ([E10] Observability: request metrics middleware and /metrics endpoint)
 
 **Open questions for you:** none
 
-_Board last written 2026-10-15 10:15Z_
+_Board last written 2026-10-15 14:05Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -2874,7 +2874,7 @@ Moves the media endpoints to /api/media/* (multipart create, binary get-content)
 - 2026-10-15 08:27Z · human · accepted by owner
 
 ### T-070 — [E10] API v2: yearbook domain with a service layer
-- **Status:** CHANGES_REQUESTED
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2885,7 +2885,7 @@ Moves the media endpoints to /api/media/* (multipart create, binary get-content)
 - **Assignee:** —
 - **Branch:** task/t-070-e10-api-v2-yearbook-domain-with-a-servic
 - **PR:** https://github.com/danyaa666/smemories/pull/56
-- **Updated:** 2026-10-15 10:15Z by leader
+- **Updated:** 2026-10-15 14:05Z by leader
 - **Comments-seen:** 6
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/08-api-yearbook.md`
@@ -2901,6 +2901,18 @@ Moves the yearbook endpoints to /api/yearbook/*, introduces yearbook.Service (ru
 - 2026-10-15 08:58Z · leader · Reset by leader: dev's usage gate slept after the claim (stale cache), no work was done.
 - 2026-10-15 09:19Z · dev · Yearbook API v2 done (PR #56): /api/yearbook/*, Service holds all rules (handler 143 lines, no store), sealed next_id bound to caller, openapi+Postman (yearbooks/media/notes)+web updated. Test: go test -race -tags integration ./... green; web lint/typecheck/vitest green; newman yearbooks/media/notes 0 failures on a private DB. Test changes listed in the PR. Known: a next_id from another user is now 400 (was silently own list).
 - 2026-10-15 10:15Z · leader · PR #56 conflicts with develop (T-073 merged and touched cmd/smemories-api/main.go; CI is not running on the PR because of it). Blocking: 1) merge origin/develop into the branch, keep both the yearbook v2 wiring and the metrics wiring; 2) re-run make lint build test and go test -race -tags integration ./internal/yearbook ./internal/httpx ./internal/media ./internal/notes, confirm CI green on the exact head; 3) READY_FOR_QA. Nothing else changes. Rework 1 of 2.
+- 2026-10-15 13:39Z · dev · Merged origin/develop into branch (only conflict: cmd/smemories-api/main.go; kept metrics gauges + yearbook v2 wiring, shared cursors var). make lint build test and go test -race -tags integration ./... all green on head 1499acd. No other changes.
+- 2026-10-15 14:04Z · qa · QA_PASS on head 1499acd (PR #56, MERGEABLE, CI go/go-integration/security/web all green on this head).
+  Mechanical (worktree): gofmt clean; go vet + vet -tags integration OK; golangci-lint 0 issues; go build OK; go test -race -count=1 ./... all ok; go test -race -count=1 -tags integration ./... all ok (yearbook, media, notes, auth, db, httpx, metrics, pdf...); web lint/typecheck/lint:i18n/check:api OK, vitest 133/133.
+  Merged main.go (diff vs develop = 5 lines): one shared httpx.NewCursors(cfg.OTPKey) passed to media.NewHandler and yearbook.NewService; metrics gauges (media_processing_slots*, public_uploads_in_progress), mt/RouterConfig.Metrics, MetricsAddr listener, SetRefClearer(bookStore first), notesH wiring all intact. Live run (private DB smem_test_qa70, API on 18070, metrics 19070): 127.0.0.1:19070/metrics serves smem_* series incl. smem_media_processing_slots=2; public :18070/metrics = 404; /v1/yearbooks = 404.
+  Cursor: scope "yearbook/get-list:<ownerID>" used as GCM AAD (httpx.Cursors); media uses its own "media/get-list:" scope, so no cross-endpoint reuse. Live: token+'x', truncated token, token of user A used by user B, and an old base64 cursor all -> 400 ERROR_PARAM; walk limit=7 over 20 books = 7+7+6, next_id "" on last page.
+  Lock order: remove() = lockBook(yearbook_tab FOR UPDATE) -> profile_tab -> child purgers -> book delete; modify and ClearMediaRefs also book row first; race tests (TestDeleteRacesWithEdits, TestMediaDeleteRacesWithCoverEdits, TestDeleteRacesWithReads) pass under -race.
+  No fmt.Errorf/errors.New added in non-test code (remaining hits are pre-existing in internal/redis, internal/config, not in this diff; one errors.New in service_test.go is test-only). handler.go 143 lines, imports no store. No .team/ files in the PR.
+  AC1 openapi: six /api/yearbook/* ops, Vietnamese titles in examples, x-error-codes present, api test + check:api pass. AC2: integration tests updated (only path/envelope/code/time/pagination), service_test.go with fake store covers limit/defaults/ownership/cover-photo. AC3: web uses new paths and next_id, vitest updated and green. AC4: openapi/Postman updated; README has no yearbook API examples to change. AC5: TestReadQueryCountIsConstant passes (integration).
+  Live probes (curl as 2 users): update {} -> 400 ERROR_PARAM; unknown field -> 400; other owner get/update/delete -> 404 ERROR_NOT_FOUND; missing id -> 400; 21st book -> 409 ERROR_LIMIT_REACHED; limit 0/51/abc -> 400; non-allowed Origin on POST -> 403 ERROR_CSRF_ORIGIN_MISMATCH; unauthenticated -> 401 envelope; Vietnamese title round-trips as UTF-8. Delete with storage down: covered by TestServiceDeletePurgesStorageBeforeTheTransaction (fake purger error -> nothing deleted), not exercised live because Docker must stay up.
+  Newman on a private DB with --working-dir postman: yearbooks 98 req/203 assertions 0 failures, run twice back to back (no uniqueness conflict); media 75/144 0 failures; notes (after its documented setup) 74/141 0 failures twice.
+  Non-blocking: (1) running newman media/notes without --working-dir fails on fixture upload (documented in the collection); (2) media/notes integration tests still reference /v1/yearbooks/... only as 404 assertions, expected until T-071/T-072 land. Test DB and my API process cleaned up.
+- 2026-10-15 14:05Z · leader · merged c50ee9a (PR #56). Review: owner-scoped queries, lock order book->profile->children, sealed next_id bound to caller and scope, handler has no store; CI green, QA_PASS on the same head. For owner to check: web Yearbooks screen on /api/yearbook/* (list paging, create, edit, delete).
 
 ### T-071 — [E10] API v2: auth and user domain; remove the /v1 paths and the web shim
 - **Status:** BACKLOG
@@ -3256,7 +3268,7 @@ Account page shows the username and lets the user change it (weekly limit, local
 #### Comments
 
 ### T-083 — [E01] Web: design system foundation (tokens, fonts, base components, yearbook shell)
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -3264,10 +3276,10 @@ Account page shows the username and lets the user change it (weekly limit, local
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-083-e01-web-design-system-foundation-tokens-
 - **PR:** —
-- **Updated:** 2026-10-15 08:38Z by leader
+- **Updated:** 2026-10-15 13:41Z by dev
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/15-web-design-system-foundation.md`
@@ -3302,3 +3314,4 @@ Port the Claude Design tokens, self-host the fonts, add base components (Button,
 - 2026-10-09 — T-062 (CI takes the newest Go patch from go.dev; owner-approved, merged 0c1e2d4) and T-063 (E10 foundation: apperr, v2 helpers, timeout and client-IP middleware, contract lint; merged bb5143f) merged; both await owner acceptance. The required `security` job had been red on every PR because setup-go lagged Go 1.26.9; T-062 fixed it. T-063's QA found no issues; T-062 needed one rework (malformed go.dev answer aborted the step).
 - 2026-10-10 — Owner approved T-052, T-057, T-053, T-049. Merged: T-052 (35298e1, sessions in Redis, migration 0012), T-057 (487555d, print-size photos, migration 0013), T-049 (b835af9, web code screens). T-053 conflicted with develop and went back to dev for a mechanical merge plus the openapi 503 fix. E10 database lane started: T-064 is TODO. Follow-ups created: T-074 (done), T-075 (backfill hardening), T-076 (code screens polish); T-055 cancelled and folded into T-069/T-070.
 - 2026-10-12 — T-068 (API v2 notes, PR #53) merged 1dfffac after rework 1 (conflict with T-067, full-link check restored before the body is spooled); T-080 added (P3) for the browser reset on a full link; T-069 promoted to TODO; T-073 promoted to TODO.
+- 2026-10-15 — T-070 (API v2 yearbook, PR #56) merged c50ee9a after rework 1 (conflict with T-073 resolved by dev); awaiting owner accept. Heartbeat back to recurring (job 676f3351) after the one-shot wake; dev now on T-083. Note: local stack runs as compose project `smemories` (old volumes) after the Docker restart, not `awesomeproject1`.
