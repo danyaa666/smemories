@@ -11,17 +11,17 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 22 | T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-072, T-081, T-082 |
-| TODO | 4 | T-013, T-071, T-079, T-080 |
-| IN_PROGRESS | 1 | T-083 |
-| MERGED | 2 | T-070, T-073 |
-| DONE | 47 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-074, T-075, T-076, T-077, T-078 |
+| TODO | 3 | T-013, T-079, T-080 |
+| IN_PROGRESS | 1 | T-071 |
+| IN_QA | 1 | T-083 |
+| DONE | 49 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-073, T-074, T-075, T-076, T-077, T-078 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
 
-**Awaiting your review (MERGED):** T-070 ([E10] API v2: yearbook domain with a service layer); T-073 ([E10] Observability: request metrics middleware and /metrics endpoint)
+**Awaiting your review (MERGED):** nothing
 
 **Open questions for you:** none
 
-_Board last written 2026-10-15 14:06Z_
+_Board last written 2026-10-15 14:19Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -2874,7 +2874,7 @@ Moves the media endpoints to /api/media/* (multipart create, binary get-content)
 - 2026-10-15 08:27Z · human · accepted by owner
 
 ### T-070 — [E10] API v2: yearbook domain with a service layer
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2885,8 +2885,8 @@ Moves the media endpoints to /api/media/* (multipart create, binary get-content)
 - **Assignee:** —
 - **Branch:** task/t-070-e10-api-v2-yearbook-domain-with-a-servic
 - **PR:** https://github.com/danyaa666/smemories/pull/56
-- **Updated:** 2026-10-15 14:05Z by leader
-- **Comments-seen:** 6
+- **Updated:** 2026-10-15 14:19Z by human
+- **Comments-seen:** 9
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/08-api-yearbook.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2913,9 +2913,10 @@ Moves the yearbook endpoints to /api/yearbook/*, introduces yearbook.Service (ru
   Newman on a private DB with --working-dir postman: yearbooks 98 req/203 assertions 0 failures, run twice back to back (no uniqueness conflict); media 75/144 0 failures; notes (after its documented setup) 74/141 0 failures twice.
   Non-blocking: (1) running newman media/notes without --working-dir fails on fixture upload (documented in the collection); (2) media/notes integration tests still reference /v1/yearbooks/... only as 404 assertions, expected until T-071/T-072 land. Test DB and my API process cleaned up.
 - 2026-10-15 14:05Z · leader · merged c50ee9a (PR #56). Review: owner-scoped queries, lock order book->profile->children, sealed next_id bound to caller and scope, handler has no store; CI green, QA_PASS on the same head. For owner to check: web Yearbooks screen on /api/yearbook/* (list paging, create, edit, delete).
+- 2026-10-15 14:19Z · human · accepted by owner
 
 ### T-071 — [E10] API v2: auth and user domain; remove the /v1 paths and the web shim
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2923,10 +2924,10 @@ Moves the yearbook endpoints to /api/yearbook/*, introduces yearbook.Service (ru
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-071-e10-api-v2-auth-and-user-domain-remove-t
 - **PR:** —
-- **Updated:** 2026-10-15 14:06Z by leader
+- **Updated:** 2026-10-15 14:11Z by dev
 - **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/09-api-auth.md`
@@ -2962,7 +2963,7 @@ Turns the remaining skill rules into lint (mnd, forbidigo), fixes what they find
 #### Comments
 
 ### T-073 — [E10] Observability: request metrics middleware and /metrics endpoint
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P3
 - **Type:** infra
 - **Milestone:** M1
@@ -2973,7 +2974,7 @@ Turns the remaining skill rules into lint (mnd, forbidigo), fixes what they find
 - **Assignee:** —
 - **Branch:** task/t-073-e10-observability-request-metrics-middle
 - **PR:** https://github.com/danyaa666/smemories/pull/55
-- **Updated:** 2026-10-15 09:07Z by leader
+- **Updated:** 2026-10-15 14:19Z by human
 - **Comments-seen:** 6
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/11-metrics.md`
@@ -2996,6 +2997,7 @@ Adds request and pool metrics as be-golang requires; waits for Q-018 (library ch
   Commands: make build lint (ok); go test -race -count=1 ./... (all ok); go test -race -tags integration ./internal/{httpx,metrics,ratelimit,notes,config,auth} twice against my own compose project qa073 (ports 33173/63173/39173, removed afterwards), all ok. No Postman needed (no API endpoint change).
   Non-blocking: (1) the equal-address check is a string compare, so e.g. ':8080' vs '0.0.0.0:8080' is only caught by the bind failing; (2) the metrics port has no auth by design (documented): bind it to a private interface in deploy (T-023/T-024).
 - 2026-10-15 09:07Z · leader · merged eb401e3. Review: private Prometheus registry, httpx.Instrument labels are route pattern + folded method + status class only (hostile paths become route=unmatched), DB/Redis pool, media, upload and rate-limit gauges, listener on SMEM_METRICS_ADDR default off, public /metrics 404, QA verified live. New dependency prometheus/client_golang v1.23.2 (Apache-2.0, approved in Q-018, noted in THIRD_PARTY_NOTICES). For owner to check: nothing to run; metrics are off until SMEM_METRICS_ADDR is set. Deploy note: the metrics port has no auth by design, so T-022/T-023 must bind it to a private interface only.
+- 2026-10-15 14:19Z · human · accepted by owner
 
 ### T-074 — [E04] Sweep orphaned upload spool files at start-up
 - **Status:** DONE
@@ -3270,7 +3272,7 @@ Account page shows the username and lets the user change it (weekly limit, local
 #### Comments
 
 ### T-083 — [E01] Web: design system foundation (tokens, fonts, base components, yearbook shell)
-- **Status:** IN_PROGRESS
+- **Status:** IN_QA
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -3278,11 +3280,11 @@ Account page shows the username and lets the user change it (weekly limit, local
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** qa
 - **Branch:** task/t-083-e01-web-design-system-foundation-tokens-
-- **PR:** —
-- **Updated:** 2026-10-15 13:41Z by dev
-- **Comments-seen:** 0
+- **PR:** https://github.com/danyaa666/smemories/pull/57
+- **Updated:** 2026-10-15 14:11Z by qa
+- **Comments-seen:** 2
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/15-web-design-system-foundation.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -3291,6 +3293,8 @@ Account page shows the username and lets the user change it (weekly limit, local
 Port the Claude Design tokens, self-host the fonts, add base components (Button, TextField, Badge, Toast, Dialog, Banner, PhotoTile...) and the yearbook shell (sidebar / tab bar); restyle existing controls. Blocks T-017 and T-018.
 
 #### Comments
+- 2026-10-15 14:10Z · dev · PR #57 head 3126fd1. Tokens, self-hosted fonts (3 subsets), 9 ui components + tests, YearbookLayout (sidebar>=960/tab bar), existing controls restyled. web typecheck/lint/test(170)/i18n/check:api/build green. Verify: 375/1280 screenshots in scratchpad/shots (see PR), vi copy needs owner review, one assertion in codes.test.tsx moved (.resend -> .btn). Dialog not wired (window.confirm kept).
+- 2026-10-15 14:19Z · leader · Owner accepted the new Vietnamese nav strings as written (2026-10-15): nav.main 'Kỷ yếu', nav.profile 'Trang hồ sơ của tôi', nav.tabBooks 'Kỷ yếu', nav.tabProfile 'Hồ sơ'. No wording rework needed; QA need not list them.
 
 <!-- tasks:end -->
 
