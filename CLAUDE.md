@@ -2,24 +2,50 @@
 
 Board and decisions: [.team/README.md](.team/README.md). Product description: [README.md](README.md).
 
-## Usage gate in the Claude desktop app (owner-approved 2026-10-07)
+## Usage gate in the Claude desktop app (owner-approved 2026-10-07, one-command form 2026-10-15)
 
 The desktop app's session never runs the statusLine, so `~/.claude/team-usage.json` is not filled automatically
 and `usage_gate.py` would sleep forever. **Leader only:** before the usage gate in every `/team-tick`
 (Step 0), and again right before dispatching dev/qa:
 
 1. Call the read-only `get_usage` tool (`mcp__ccd_session_mgmt__get_usage`).
-2. If `plan.status` is `ok` and both the "5-hour limit" and "Weekly" windows are present, run
-   `python3 .team/refresh_usage.py <5h percentUsed> <5h resetsAt> <weekly percentUsed> <weekly resetsAt>`
-   using exactly the numbers that call returned. If a window has no `resetsAt` (a window that has just reset and not
-   started again), pass `-` for it; the helper accepts that only together with 0% used.
-3. Then run the normal gate: `usage_gate.py --wait-fresh`. Obey it literally.
+2. If `plan.status` is `ok` and both the "5-hour limit" and "Weekly" windows are present, run **one** command with exactly the
+   numbers that call returned (a window with no `resetsAt`, i.e. one that has just reset and not started again, gets `-`;
+   accepted only together with 0% used):
+   `python3 .team/gate.py <5h percentUsed> <5h resetsAt> <weekly percentUsed> <weekly resetsAt>`
+   It does what the two old steps did (`refresh_usage.py`, then `usage_gate.py --wait-fresh`), validates first and fails closed,
+   and prints one line: `GO ...` (exit 0) or `SLEEP <reason> | resume HH:MMZ in N min ...` (exit 10). Obey it literally.
+   (The two separate scripts still work.)
 
 Rules:
 - If `get_usage` fails or is not `ok`, do **not** write the cache. The gate then sleeps (fails closed).
 - Never invent, round up or reuse old numbers. Never change `limits` or `usage.on_unknown` in `.team/config.json`.
 - The cache is stale after 5 minutes, so refresh right before dispatching; dev and qa only run `usage_gate.py` and never refresh.
 - Not needed in a terminal session (`bin/team start`): there the statusLine in `.claude/settings.json` fills the cache.
+
+## Token budget (owner request, 2026-10-15)
+
+The heartbeat fires every 30 minutes and the leader's context is large, so every wake-up is expensive even when it does nothing.
+**Leader only:**
+1. **A sleeping tick is exactly 2 tool calls:** `get_usage`, then `python3 .team/gate.py ...`. On `SLEEP` reply with the one line and
+   stop: no board read, no plan, no other tool.
+2. **Sleep until the reset, not in 30-minute steps.** When the SLEEP line says `resume ... in N min` with N > 45, replace the
+   recurring heartbeat by a one-shot: `CronDelete` the recurring job (id in `.team/state/heartbeat.json`), `CronCreate` with
+   `recurring: false`, the `cron "..."` shown in the SLEEP line and prompt `/team-tick`, and record `mode: "one-shot"` and the new id in
+   `heartbeat.json`. On the first tick that gets `GO`: `CronList`; if only the one-shot (or nothing) exists, create the recurring job
+   (`7,37 * * * *`, prompt `/team-tick`) and record it. Never leave the session with neither a recurring nor a pending one-shot job,
+   and tell the owner once that the heartbeat is in one-shot mode.
+3. **An awake tick starts with `python3 .team/orient.py`** (about 25 lines: summary, newest unread comment per task cut to one line,
+   questions, what dev and qa would pick, open PRs with head, mergeable and CI) instead of separate summary, unread, questions, next and
+   `gh` calls. Read a task in full (`board.py get T-xxx`) only when it needs a decision, and cap long output (`| cut -c1-400`, `| tail -n 20`).
+4. **Batch Bash:** acknowledge, regenerate the index, commit and push in one call. Commit with a path limit (`git commit -- .team docs`)
+   because the owner may have unrelated staged files.
+5. **Dispatch only what `orient.py` lists as PICK or REWORK**, after a fresh `get_usage` + `gate.py`. Do not spawn dev for a task whose
+   PR conflicts with develop (send it back with a note), and every dispatch prompt ends with: "Final report to the leader: at most 8 lines
+   (status, PR and head, what to verify, blockers); details go on the board."
+6. **Never read agent output files or transcripts**; the board and the PR are the report. Do not re-read specs you wrote this session.
+7. **Context:** when `get_usage` shows `context.percentUsed` >= 45, tell the owner once per day in one line: "leader context is N%:
+   `/compact` would cut every tick's cost; all state is on the board".
 
 ## Local stack (since 2026-10-07)
 
