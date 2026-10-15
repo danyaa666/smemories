@@ -10,18 +10,17 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 20 | T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-082 |
-| TODO | 5 | T-013, T-072, T-079, T-080, T-081 |
-| IN_PROGRESS | 1 | T-083 |
-| MERGED | 1 | T-071 |
+| BACKLOG | 19 | T-017, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-082 |
+| TODO | 6 | T-013, T-018, T-072, T-079, T-080, T-081 |
+| MERGED | 2 | T-071, T-083 |
 | DONE | 49 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-073, T-074, T-075, T-076, T-077, T-078 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
 
-**Awaiting your review (MERGED):** T-071 ([E10] API v2: auth and user domain; remove the /v1 paths and the web shim)
+**Awaiting your review (MERGED):** T-071 ([E10] API v2: auth and user domain; remove the /v1 paths and the web shim); T-083 ([E01] Web: design system foundation (tokens, fonts, base components, yearbook shell))
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?)
 
-_Board last written 2026-10-15 14:52Z_
+_Board last written 2026-10-15 16:38Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -1100,7 +1099,7 @@ Create/copy/revoke the collection link, set a deadline, see submissions grouped 
 #### Comments
 
 ### T-018 — [E04] Web: public anonymous notes form
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -1111,8 +1110,8 @@ Create/copy/revoke the collection link, set a deadline, see submissions grouped 
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-15 08:38Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-15 16:38Z by leader
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/05-web-public-anonymous-notes-form.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1121,6 +1120,7 @@ Create/copy/revoke the collection link, set a deadline, see submissions grouped 
 Mobile-first public page opened from the shared link: name, relationship, message, photo picker; clear success and error states; EN and VI; works without an account or cookies; no personal data of the owner beyond the book title.
 
 #### Comments
+- 2026-10-15 16:38Z · leader · unblocked: T-083 merged (design foundation) and T-068 done. Spec has the design source (docs/design/notes) and the known-differences list.
 
 ### T-019 — [E05] Web: template picker, PDF preview (pdf.js) and export/download
 - **Status:** CANCELLED
@@ -3311,7 +3311,7 @@ Account page shows the username and lets the user change it (weekly limit, local
 #### Comments
 
 ### T-083 — [E01] Web: design system foundation (tokens, fonts, base components, yearbook shell)
-- **Status:** IN_PROGRESS
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -3319,11 +3319,11 @@ Account page shows the username and lets the user change it (weekly limit, local
 - **Risk:** low
 - **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-083-e01-web-design-system-foundation-tokens-
-- **PR:** https://github.com/danyaa666/smemories/pull/57
-- **Updated:** 2026-10-15 14:33Z by dev
-- **Comments-seen:** 4
+- **PR:** 57
+- **Updated:** 2026-10-15 16:38Z by leader
+- **Comments-seen:** 7
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/15-web-design-system-foundation.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -3354,6 +3354,15 @@ Port the Claude Design tokens, self-host the fonts, add base components (Button,
   
   New vi strings for the owner to review (en -> vi): nav.main "Yearbook" -> "Kỷ yếu"; nav.profile "My profile page" -> "Trang hồ sơ của tôi"; nav.tabBooks "Books" -> "Kỷ yếu"; nav.tabProfile "Profile" -> "Hồ sơ". (Note nav.main and nav.tabBooks share "Kỷ yếu" in vi.)
 - 2026-10-15 14:26Z · leader · Leader guidance for the rework (QA_FAIL, web CI red): YearbookLayout.test.tsx 'on a book, shows the book card...' times out at 1012ms on the CI runner (run 38748994044). Fix the cause, not the clock: await the page content that triggers the card (findBy/waitFor on the loaded state) before asserting the link, and keep the default asyncUtilTimeout unless the whole suite needs it (T-079 is about starved runners; do not paste a magic 5000 in one test). Re-run the web suite 3x locally under load (npm test -- --run with parallel runs). Non-blocking, take only if cheap: inline text links under 44px (brand link, card title link, back link) are exempt as inline text; leave them. Owner approved the 4 nav strings; keep them.
+- 2026-10-15 15:19Z · dev · Head 29e9d8a, all 4 CI checks green. Root cause was NOT a slow runner: PR CI runs on the merge with develop, where T-070 moved the web client to v2 endpoints (/user/get-me, /yearbook/get, /media/get-list). YearbookLayout.test.tsx still mocked /v1/*, so on the merge the book query failed (unexpected request -> network_error) and the card never rendered; locally on the old base it passed. Fixes: (1) merged origin/develop into the branch (one conflict, GoogleButton.tsx: kept buttonClass('secondary') + develop's /api/auth/google-start); (2) YearbookLayout.test.tsx mocks the v2 routes/envelopes/yearbook shape; (3) test now awaits the loaded page (findByRole heading level 1) before getByRole on the card; no timeout change. Web suite 169/169 x3 in parallel locally; lint, lint:i18n, typecheck, build, check:api green. Nav strings unchanged. Note: under 8 concurrent full-suite runs yearbooks.test 'lists the books...' can pass 1s (T-079 territory), not touched.
+- 2026-10-15 16:38Z · qa · Re-verify of head 29e9d8a (rework 1). Prior blocker (red web CI) fixed. Evidence:
+  1. CI: gh pr checks 57 -> go, go-integration, security, web all pass (run 38756770044).
+  2. Merge with current develop: branch already contains origin/develop 72f21b5 (merge-base --is-ancestor true; 'git merge origin/develop' = Already up to date), so no conflicts and the PR head IS the merged state tested.
+  3. In the T-083 worktree at 29e9d8a: web lint (prettier) ok, typecheck ok, lint:i18n ok, check:api ok, build ok (fraunces/be-vietnam woff2 emitted). vitest 12 files / 169 tests pass, run twice, one run in parallel with the other, no flakes (YearbookLayout.test.tsx included).
+  4. Browser smoke (own Vite :5190 from the worktree, own API built from this head on :18972, private DB smem_test_qa083, Redis db 12; headless Chromium): register -> verify (123123) -> create yearbook -> /yearbooks -> open book, at 375 and 1280. scrollWidth == clientWidth everywhere (no horizontal scroll). Body font Be Vietnam Pro, headings Fraunces, both loaded via document.fonts. Zero external requests, zero googleapis/gstatic, 21/23 same-origin woff2 requests. Sidebar at 1280, tab bar (Books/Profile) at 375; screenshots looked correct. No 4xx/5xx and no page errors.
+  5. vi nav strings in src/locales/vi.json unchanged: main 'Kỷ yếu', profile 'Trang hồ sơ của tôi', tabBooks 'Kỷ yếu', tabProfile 'Hồ sơ'.
+  Not re-tested (already verified in my earlier note): AC1-AC5 details, focus ring, reduced motion, 44px targets. Non-blocking observations from my first note still stand (text links under 44px; Dialog not wired). My own processes (API, Vite) are stopped; DB smem_test_qa083 and Redis db 12 are mine and left in place.
+- 2026-10-15 16:38Z · leader · merged 28f5dca (PR #57). Review: tokens.css identical to the design minus @import, self-hosted @fontsource (exact pins, OFL notices), 9 ui components + tests, YearbookLayout; web-only diff, CI green, QA_PASS on the merged state. Rework cause was stale /v1 mocks in a test, fixed. For owner to check: look at Login, Register, Yearbooks and a book at phone and desktop width; owner already approved the 4 nav strings; 'My yearbooks' nav entry was a dev addition.
 
 <!-- tasks:end -->
 
@@ -3381,3 +3390,4 @@ Port the Claude Design tokens, self-host the fonts, add base components (Button,
 - 2026-10-12 — T-068 (API v2 notes, PR #53) merged 1dfffac after rework 1 (conflict with T-067, full-link check restored before the body is spooled); T-080 added (P3) for the browser reset on a full link; T-069 promoted to TODO; T-073 promoted to TODO.
 - 2026-10-15 — T-070 (API v2 yearbook, PR #56) merged c50ee9a after rework 1 (conflict with T-073 resolved by dev); awaiting owner accept. Heartbeat back to recurring (job 676f3351) after the one-shot wake; dev now on T-083. Note: local stack runs as compose project `smemories` (old volumes) after the Docker restart, not `awesomeproject1`.
 - 2026-10-15 — T-070 and T-073 accepted. T-071 (API v2 auth/user, PR #58, owner-approved Q-030) merged 3c4b149; owner action before deploy: register <PUBLIC_BASE_URL>/api/auth/google-callback in the Google console. T-083 got QA_FAIL (flaky layout test on CI), rework running. T-081, T-072, T-080 promoted to TODO. Owner approved the four new nav strings of T-083.
+- 2026-10-15 — T-083 (web design system foundation, PR #57) merged 28f5dca after rework 1 (a test still mocked /v1 routes after T-070; fixed, QA re-passed on the merged state). T-018 promoted to TODO; T-017 waits for T-013.
