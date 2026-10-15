@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;family=Fraunces:opsz,wght@9..144,600;9..144,700&amp;family=Patrick+Hand&amp;display=swap">
+<style>
+body{margin:0;background:#E9E0D0;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:#2B2622;-webkit-font-smoothing:antialiased}
+a{color:#1F6B72}a:hover{color:#17555B}
+</style>
+</helmet>
+<div style="width:1280px;box-sizing:border-box;padding:64px;display:flex;flex-direction:column;gap:56px;background:#F6EFE3">
+
+  <header style="display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:48px;align-items:end">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="font:400 26px/30px 'Patrick Hand',cursive;color:#1F6B72;transform:rotate(-2deg);transform-origin:left">keep the memories,</div>
+      <h1 style="margin:0;font:700 72px/72px Fraunces,Georgia,serif;letter-spacing:-.02em">SMemories<br>design system</h1>
+      <p style="margin:8px 0 0;font:400 17px/26px 'Be Vietnam Pro',sans-serif;color:#5E554B;max-width:560px;text-wrap:pretty">Light theme, mobile first. Colours, paper and tape come from your <strong style="color:#2B2622">memory-book</strong> template, so the website and the printed book feel like one object. Tokens ship as CSS variables in <code style="font:500 14px ui-monospace,Menlo,monospace;background:#EFE4D2;padding:2px 6px;border-radius:4px">tokens.css</code>.</p>
+    </div>
+    <div style="background:#FFFDF8;border-radius:16px;padding:24px;box-shadow:0 1px 2px rgba(43,38,34,.08);display:flex;flex-direction:column;gap:12px;position:relative">
+      <div style="position:absolute;top:-12px;left:32px;width:110px;height:26px;background:rgba(242,193,78,.75);transform:rotate(-4deg)"></div>
+      <div style="font:600 12px/16px 'Be Vietnam Pro',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#6F655A">Decisions to check</div>
+      <div style="display:flex;flex-direction:column;gap:10px;font:400 15px/22px 'Be Vietnam Pro',sans-serif">
+        <div style="display:flex;gap:10px"><span style="flex:none;width:20px;height:20px;border-radius:50%;background:#FBEBC2;color:#7A4E00;font:700 12px/20px 'Be Vietnam Pro';text-align:center">!</span><span><strong>Fonts swapped for Vietnamese.</strong> Caveat, Karla and Jost have no Vietnamese glyphs. The site uses Fraunces + Be Vietnam Pro + Patrick Hand, and all three cover <span lang="vi">tiếng Việt</span>.</span></div>
+        <div style="display:flex;gap:10px"><span style="flex:none;width:20px;height:20px;border-radius:50%;background:#DDEDEA;color:#1F6B72;font:700 12px/20px 'Be Vietnam Pro';text-align:center">✓</span><span>Tomato is for the one main action on a screen. Teal is for links, focus and "approved".</span></div>
+        <div style="display:flex;gap:10px"><span style="flex:none;width:20px;height:20px;border-radius:50%;background:#DDEDEA;color:#1F6B72;font:700 12px/20px 'Be Vietnam Pro';text-align:center">✓</span><span>Tape and rotation are only decoration. Forms and lists stay straight and calm.</span></div>
+      </div>
+    </div>
+  </header>
+
+  <section style="display:flex;flex-direction:column;gap:20px">
+    <div style="display:flex;align-items:baseline;gap:16px"><span style="font:600 12px/16px 'Be Vietnam Pro';letter-spacing:.14em;text-transform:uppercase;color:#6F655A">01</span><h2 style="margin:0;font:700 32px/38px Fraunces,Georgia,serif">Colour</h2></div>
+    <div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:16px">
+      <div style="display:flex;flex-direction:column;gap:8px"><div style="height:88px;border-radius:12px;background:#F6EFE3;border:1px solid #E3D8C6"></div><div style="font:600 14px/20px 'Be Vietnam Pro'">Paper</div><div style="font:400 12px/16px ui-monospace,Menlo,monospace;color:#5E554B">--color-paper<br>#F6EFE3 · page bg</div></div>
+      <div style="display:flex;flex-direction:column;gap:8px"><div style="height:88px;border-radius:12px;background:#EFE4D2"></div><div style="font:600 14px/20px 'Be Vietnam Pro'">Paper deep</div><div style="font:400 12px/16px ui-monospace,Menlo,monospace;color:#5E554B">--color-paper-deep<br>#EFE4D2 · sunken</div></div>
+      <div style="display:flex;flex-direction:column;gap:8px"><div style="height:88px;border-radius:12px;background:#FFFDF8;box-shadow:0 1px 2px rgba(43,38,34,.08)"></div><div style="font:600 14px/20px 'Be Vietnam Pro'">Surface</div><div style="font:400 12px/16px ui-monospace,Menlo,monospace;color:#5E554B">--color-surface<br>#FFFDF8 · cards</div></div>
+      <div style="display:flex;flex-direction:column;gap:8px"><div style="height:88px;border-radius:12px;background:#2B2622;color:#FFFDF8;font:600 13px/88px 'Be Vietnam Pro';text-align:center">13.9 : 1</div><div style="font:600 14px/20px 'Be Vietnam Pro'">Ink</div><div style="font:400 12px/16px ui-monospace,Menlo,monospace;color:#5E554B">--color-ink<br>#2B2622 · text</div></div>
+      <div style="display:flex;flex-direction:column;gap:8px"><div style="height:88px;border-radius:12px;background:#5E554B;color:#FFFDF8;font:600 13px/88px 'Be Vietnam Pro';text-align:center">6.5 : 1</div><div style="font:600 14px/20px 'Be Vietnam Pro'">Ink 2</div><div style="font:400 12px/16px ui-monospace,Menlo,monospace;color:#5E554B">--color-ink-2<br>#5E554B · secondary</div></div>
+      <div style="display:flex;flex-direction:column;gap:8px"><div style="height:88px;border-radius:12px;background:#8C8172;color:#FFFDF8;font:600 13px/88px 'Be Vietnam Pro';text-align:center">3.8 : 1</div><div style="font:600 14px/20px 'Be Vietnam Pro'">Border</div><div style="font:400 12px/16px ui-monospace,Menlo,monospace;color:#5E554B">--color-border<br>#8C8172 · controls</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:16px">
+      <div style="display:flex;flex-direction:column;gap:8px"><div style="height:88px;border-radius:12px;background:#C4472A;color:#fff;font:600 13px/88px 'Be Vietnam Pro';text-align:center">4.9 : 1</div><div style="font:600 14px/20px 'Be Vietnam Pro'">Tomato</div><div style="font:400 12px/16px ui-monospace,Menlo,monospace;color:#5E554B">--color-primary<br>#C4472A · hover #A93B21</div></div>
+      <div style="display:flex;flex-direction:column;gap:8px"><div style="height:88px;border-radius:12px;background:#F9E1D8"></div><div style="font:600 14px/20px 'Be Vietnam Pro'">Tomato soft</div><div style="font:400 12px/16px ui-monospace,Menlo,monospace;color:#5E554B">--color-primary-soft<br>#F9E1D8</div></div>
+      <div style="display:flex;flex-direction:column;gap:8px"><div style="height:88px;border-radius:12px;background:#1F6B72;color:#fff;font:600 13px/88px 'Be Vietnam Pro';text-align:center">6.2 : 1</div><div style="font:600 14px/20px 'Be Vietnam Pro'">Teal</div><div style="font:400 12px/16px ui-monospace,Menlo,monospace;color:#5E554B">--color-teal<br>#1F6B72 · links, focus</div></div>
+      <div style="display:flex;flex-direction:column;gap:8px"><div style="height:88px;border-radius:12px;background:#DDEDEA"></div><div style="font:600 14px/20px 'Be Vietnam Pro'">Teal soft</div><div style="font:400 12px/16px ui-monospace,Menlo,monospace;color:#5E554B">--color-teal-soft<br>#DDEDEA</div></div>
+      <div style="display:flex;flex-direction:column;gap:8px"><div style="height:88px;border-radius:12px;background:#EFE4D2;position:relative;overflow:hidden"><div style="position:absolute;left:14px;top:18px;width:90px;height:24px;background:rgba(242,193,78,.75);transform:rotate(-6deg)"></div><div style="position:absolute;left:44px;top:44px;width:90px;height:24px;background:rgba(191,220,207,.9);transform:rotate(4deg)"></div><div style="position:absolute;left:24px;top:60px;width:80px;height:24px;background:rgba(244,199,184,.9);transform:rotate(-2deg)"></div></div><div style="font:600 14px/20px 'Be Vietnam Pro'">Tape</div><div style="font:400 12px/16px ui-monospace,Menlo,monospace;color:#5E554B">--color-tape-*<br>decorative only</div></div>
+      <div style="display:flex;flex-direction:column;gap:8px"><div style="height:88px;border-radius:12px;background:#B42318;color:#fff;font:600 13px/88px 'Be Vietnam Pro';text-align:center">6.6 : 1</div><div style="font:600 14px/20px 'Be Vietnam Pro'">Error</div><div style="font:400 12px/16px ui-monospace,Menlo,monospace;color:#5E554B">--color-error<br>#B42318 · bg #FCE8E4</div></div>
+    </div>
+  </section>
+
+  <section style="display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:32px">
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <div style="display:flex;align-items:baseline;gap:16px"><span style="font:600 12px/16px 'Be Vietnam Pro';letter-spacing:.14em;text-transform:uppercase;color:#6F655A">02</span><h2 style="margin:0;font:700 32px/38px Fraunces,Georgia,serif">Type</h2></div>
+      <div style="background:#FFFDF8;border-radius:16px;box-shadow:0 1px 2px rgba(43,38,34,.08);padding:8px 28px">
+        <div style="display:grid;grid-template-columns:150px minmax(0,1fr);gap:16px;align-items:baseline;padding:18px 0;border-bottom:1px solid #E3D8C6"><div style="font:400 12px/16px ui-monospace,Menlo,monospace;color:#5E554B">display<br>36/40 → 56/60<br>Fraunces 700</div><div style="font:700 48px/52px Fraunces,Georgia,serif;letter-spacing:-.01em">Linh's yearbook</div></div>
+        <div style="display:grid;grid-template-columns:150px minmax(0,1fr);gap:16px;align-items:baseline;padding:18px 0;border-bottom:1px solid #E3D8C6"><div style="font:400 12px/16px ui-monospace,Menlo,monospace;color:#5E554B">h1<br>28/34 → 40/46<br>Fraunces 700</div><div lang="vi" style="font:700 34px/40px Fraunces,Georgia,serif">Lời nhắn từ bạn bè</div></div>
+        <div style="display:grid;grid-template-columns:150px minmax(0,1fr);gap:16px;align-items:baseline;padding:18px 0;border-bottom:1px solid #E3D8C6"><div style="font:400 12px/16px ui-monospace,Menlo,monospace;color:#5E554B">h2 · h3<br>22/28 → 28/34<br>18/24 · Fraunces 600</div><div style="display:flex;flex-direction:column;gap:6px"><div style="font:600 26px/32px Fraunces,Georgia,serif">Notes from friends</div><div style="font:600 19px/24px Fraunces,Georgia,serif">Waiting for you</div></div></div>
+        <div style="display:grid;grid-template-columns:150px minmax(0,1fr);gap:16px;align-items:baseline;padding:18px 0;border-bottom:1px solid #E3D8C6"><div style="font:400 12px/16px ui-monospace,Menlo,monospace;color:#5E554B">body · body-lg<br>16/24 · 17/26<br>Be Vietnam Pro 400</div><div style="display:flex;flex-direction:column;gap:6px;font:400 16px/24px 'Be Vietnam Pro'"><span>Only Linh can see your note until she approves it.</span><span lang="vi" style="color:#5E554B">Chỉ Linh xem được lời nhắn của bạn cho đến khi bạn ấy duyệt.</span></div></div>
+        <div style="display:grid;grid-template-columns:150px minmax(0,1fr);gap:16px;align-items:baseline;padding:18px 0;border-bottom:1px solid #E3D8C6"><div style="font:400 12px/16px ui-monospace,Menlo,monospace;color:#5E554B">small · caption<br>14/20 · 13/18<br>500 for labels</div><div style="display:flex;gap:24px;align-items:baseline"><span style="font:500 14px/20px 'Be Vietnam Pro'">Your name</span><span style="font:400 13px/18px 'Be Vietnam Pro';color:#5E554B">JPG, PNG or HEIC, up to 10 MB</span></div></div>
+        <div style="display:grid;grid-template-columns:150px minmax(0,1fr);gap:16px;align-items:baseline;padding:18px 0"><div style="font:400 12px/16px ui-monospace,Menlo,monospace;color:#5E554B">hand<br>22/26<br>Patrick Hand 400</div><div style="font:400 26px/30px 'Patrick Hand',cursive;color:#1F6B72">from Khoa, your roommate <span lang="vi">· thương nhiều!</span></div></div>
+      </div>
+      <p style="margin:0;font:400 14px/20px 'Be Vietnam Pro';color:#5E554B;max-width:620px">Hand font is for short accents (signatures, labels on tape), never for anything you have to read to complete a task. Inputs are 16px so phones don't zoom.</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <div style="display:flex;align-items:baseline;gap:16px"><span style="font:600 12px/16px 'Be Vietnam Pro';letter-spacing:.14em;text-transform:uppercase;color:#6F655A">03</span><h2 style="margin:0;font:700 32px/38px Fraunces,Georgia,serif">Space, radius, shadow</h2></div>
+      <div style="background:#FFFDF8;border-radius:16px;box-shadow:0 1px 2px rgba(43,38,34,.08);padding:24px 28px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:grid;grid-template-columns:80px 64px minmax(0,1fr);align-items:center;gap:12px;font:400 12px/16px ui-monospace,Menlo,monospace;color:#5E554B"><span>space-1</span><span>4</span><span style="height:12px;width:4px;background:#C4472A;border-radius:2px"></span></div>
+        <div style="display:grid;grid-template-columns:80px 64px minmax(0,1fr);align-items:center;gap:12px;font:400 12px/16px ui-monospace,Menlo,monospace;color:#5E554B"><span>space-2</span><span>8</span><span style="height:12px;width:8px;background:#C4472A;border-radius:2px"></span></div>
+        <div style="display:grid;grid-template-columns:80px 64px minmax(0,1fr);align-items:center;gap:12px;font:400 12px/16px ui-monospace,Menlo,monospace;color:#5E554B"><span>space-3</span><span>12</span><span style="height:12px;width:12px;background:#C4472A;border-radius:2px"></span></div>
+        <div style="display:grid;grid-template-columns:80px 64px minmax(0,1fr);align-items:center;gap:12px;font:400 12px/16px ui-monospace,Menlo,monospace;color:#5E554B"><span>space-4</span><span>16 gutter</span><span style="height:12px;width:16px;background:#C4472A;border-radius:2px"></span></div>
+        <div style="display:grid;grid-template-columns:80px 64px minmax(0,1fr);align-items:center;gap:12px;font:400 12px/16px ui-monospace,Menlo,monospace;color:#5E554B"><span>space-6</span><span>24</span><span style="height:12px;width:24px;background:#C4472A;border-radius:2px"></span></div>
+        <div style="display:grid;grid-template-columns:80px 64px minmax(0,1fr);align-items:center;gap:12px;font:400 12px/16px ui-monospace,Menlo,monospace;color:#5E554B"><span>space-8</span><span>32 gutter·lg</span><span style="height:12px;width:32px;background:#C4472A;border-radius:2px"></span></div>
+        <div style="display:grid;grid-template-columns:80px 64px minmax(0,1fr);align-items:center;gap:12px;font:400 12px/16px ui-monospace,Menlo,monospace;color:#5E554B"><span>space-12</span><span>48</span><span style="height:12px;width:48px;background:#C4472A;border-radius:2px"></span></div>
+        <div style="display:grid;grid-template-columns:80px 64px minmax(0,1fr);align-items:center;gap:12px;font:400 12px/16px ui-monospace,Menlo,monospace;color:#5E554B"><span>space-16</span><span>64</span><span style="height:12px;width:64px;background:#C4472A;border-radius:2px"></span></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px">
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center"><div style="width:56px;height:56px;background:#EFE4D2;border:1.5px solid #8C8172;border-radius:4px"></div><span style="font:400 11px/14px ui-monospace,Menlo,monospace;color:#5E554B">xs 4</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center"><div style="width:56px;height:56px;background:#EFE4D2;border:1.5px solid #8C8172;border-radius:8px"></div><span style="font:400 11px/14px ui-monospace,Menlo,monospace;color:#5E554B">sm 8</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center"><div style="width:56px;height:56px;background:#EFE4D2;border:1.5px solid #8C8172;border-radius:12px"></div><span style="font:400 11px/14px ui-monospace,Menlo,monospace;color:#5E554B">md 12</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center"><div style="width:56px;height:56px;background:#EFE4D2;border:1.5px solid #8C8172;border-radius:16px"></div><span style="font:400 11px/14px ui-monospace,Menlo,monospace;color:#5E554B">lg 16</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center"><div style="width:56px;height:56px;background:#EFE4D2;border:1.5px solid #8C8172;border-radius:24px"></div><span style="font:400 11px/14px ui-monospace,Menlo,monospace;color:#5E554B">xl 24</span></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;padding:8px 4px 0">
+        <div style="display:flex;flex-direction:column;gap:8px;align-items:center"><div style="width:100%;height:56px;background:#FFFDF8;border-radius:12px;box-shadow:0 1px 2px rgba(43,38,34,.08),0 1px 1px rgba(43,38,34,.04)"></div><span style="font:400 11px/14px ui-monospace,Menlo,monospace;color:#5E554B">1 · card</span></div>
+        <div style="display:flex;flex-direction:column;gap:8px;align-items:center"><div style="width:100%;height:56px;background:#FFFDF8;border-radius:12px;box-shadow:0 4px 12px rgba(43,38,34,.12)"></div><span style="font:400 11px/14px ui-monospace,Menlo,monospace;color:#5E554B">2 · polaroid</span></div>
+        <div style="display:flex;flex-direction:column;gap:8px;align-items:center"><div style="width:100%;height:56px;background:#FFFDF8;border-radius:12px;box-shadow:0 12px 32px rgba(43,38,34,.18)"></div><span style="font:400 11px/14px ui-monospace,Menlo,monospace;color:#5E554B">3 · dialog</span></div>
+        <div style="display:flex;flex-direction:column;gap:8px;align-items:center"><div style="width:100%;height:56px;background:#FFFDF8;border-radius:12px;box-shadow:0 18px 40px rgba(43,38,34,.22);transform:rotate(-1.5deg)"></div><span style="font:400 11px/14px ui-monospace,Menlo,monospace;color:#5E554B">lift · drag</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:20px">
+    <div style="display:flex;align-items:baseline;gap:16px"><span style="font:600 12px/16px 'Be Vietnam Pro';letter-spacing:.14em;text-transform:uppercase;color:#6F655A">04</span><h2 style="margin:0;font:700 32px/38px Fraunces,Georgia,serif">Buttons</h2><span style="font:400 14px/20px 'Be Vietnam Pro';color:#5E554B">44px minimum, 52px for the main action on mobile. Labels say what happens.</span></div>
+    <div style="background:#FFFDF8;border-radius:16px;box-shadow:0 1px 2px rgba(43,38,34,.08);padding:28px;display:grid;grid-template-columns:120px repeat(5,minmax(0,1fr));gap:18px 20px;align-items:center">
+      <span></span>
+      <span style="font:500 12px/16px 'Be Vietnam Pro';color:#6F655A;letter-spacing:.08em;text-transform:uppercase">Default</span>
+      <span style="font:500 12px/16px 'Be Vietnam Pro';color:#6F655A;letter-spacing:.08em;text-transform:uppercase">Hover</span>
+      <span style="font:500 12px/16px 'Be Vietnam Pro';color:#6F655A;letter-spacing:.08em;text-transform:uppercase">Focus</span>
+      <span style="font:500 12px/16px 'Be Vietnam Pro';color:#6F655A;letter-spacing:.08em;text-transform:uppercase">Busy</span>
+      <span style="font:500 12px/16px 'Be Vietnam Pro';color:#6F655A;letter-spacing:.08em;text-transform:uppercase">Disabled</span>
+
+      <span style="font:600 14px/20px 'Be Vietnam Pro'">Primary</span>
+      <button style="height:48px;padding:0 22px;border:0;border-radius:12px;background:#C4472A;color:#fff;font:600 16px/1 'Be Vietnam Pro';cursor:pointer" style-hover="background:#A93B21">Send my note</button>
+      <button style="height:48px;padding:0 22px;border:0;border-radius:12px;background:#A93B21;color:#fff;font:600 16px/1 'Be Vietnam Pro'">Send my note</button>
+      <button style="height:48px;padding:0 22px;border:0;border-radius:12px;background:#C4472A;color:#fff;font:600 16px/1 'Be Vietnam Pro';box-shadow:0 0 0 2px #FFFDF8,0 0 0 5px #1F6B72">Send my note</button>
+      <button style="height:48px;padding:0 22px;border:0;border-radius:12px;background:#C4472A;color:#fff;font:600 16px/1 'Be Vietnam Pro';display:flex;align-items:center;justify-content:center;gap:10px"><span style="width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;box-sizing:border-box"></span>Sending…</button>
+      <button disabled="" style="height:48px;padding:0 22px;border:0;border-radius:12px;background:#E3D8C6;color:#6F655A;font:600 16px/1 'Be Vietnam Pro'">Send my note</button>
+
+      <span style="font:600 14px/20px 'Be Vietnam Pro'">Secondary</span>
+      <button style="height:44px;padding:0 18px;border:1.5px solid #8C8172;border-radius:12px;background:#FFFDF8;color:#2B2622;font:600 15px/1 'Be Vietnam Pro';cursor:pointer" style-hover="background:#EFE4D2">Copy link</button>
+      <button style="height:44px;padding:0 18px;border:1.5px solid #2B2622;border-radius:12px;background:#EFE4D2;color:#2B2622;font:600 15px/1 'Be Vietnam Pro'">Copy link</button>
+      <button style="height:44px;padding:0 18px;border:1.5px solid #8C8172;border-radius:12px;background:#FFFDF8;color:#2B2622;font:600 15px/1 'Be Vietnam Pro';box-shadow:0 0 0 2px #FFFDF8,0 0 0 5px #1F6B72">Copy link</button>
+      <button style="height:44px;padding:0 18px;border:1.5px solid #1F6B72;border-radius:12px;background:#DDEDEA;color:#1F6B72;font:600 15px/1 'Be Vietnam Pro';display:flex;align-items:center;justify-content:center;gap:8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>Copied</button>
+      <button disabled="" style="height:44px;padding:0 18px;border:1.5px solid #E3D8C6;border-radius:12px;background:#F6EFE3;color:#6F655A;font:600 15px/1 'Be Vietnam Pro'">Copy link</button>
+
+      <span style="font:600 14px/20px 'Be Vietnam Pro'">Quiet</span>
+      <button style="height:44px;padding:0 14px;border:0;border-radius:12px;background:transparent;color:#1F6B72;font:600 15px/1 'Be Vietnam Pro';cursor:pointer" style-hover="background:#DDEDEA">Write another note</button>
+      <button style="height:44px;padding:0 14px;border:0;border-radius:12px;background:#DDEDEA;color:#17555B;font:600 15px/1 'Be Vietnam Pro'">Write another note</button>
+      <button style="height:44px;padding:0 14px;border:0;border-radius:12px;background:transparent;color:#1F6B72;font:600 15px/1 'Be Vietnam Pro';box-shadow:0 0 0 2px #FFFDF8,0 0 0 5px #1F6B72">Write another note</button>
+      <span></span>
+      <button disabled="" style="height:44px;padding:0 14px;border:0;border-radius:12px;background:transparent;color:#6F655A;font:600 15px/1 'Be Vietnam Pro'">Write another note</button>
+
+      <span style="font:600 14px/20px 'Be Vietnam Pro'">Danger</span>
+      <button style="height:44px;padding:0 18px;border:0;border-radius:12px;background:#B42318;color:#fff;font:600 15px/1 'Be Vietnam Pro';cursor:pointer" style-hover="background:#911C13">Delete note</button>
+      <button style="height:44px;padding:0 18px;border:0;border-radius:12px;background:#911C13;color:#fff;font:600 15px/1 'Be Vietnam Pro'">Delete note</button>
+      <button style="height:44px;padding:0 18px;border:0;border-radius:12px;background:#B42318;color:#fff;font:600 15px/1 'Be Vietnam Pro';box-shadow:0 0 0 2px #FFFDF8,0 0 0 5px #1F6B72">Delete note</button>
+      <span></span><span></span>
+
+      <span style="font:600 14px/20px 'Be Vietnam Pro'">Icon · 44</span>
+      <div style="display:flex;gap:8px">
+        <button aria-label="Approve" style="width:44px;height:44px;border:1.5px solid #8C8172;border-radius:12px;background:#FFFDF8;color:#1F6B72;display:grid;place-items:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></button>
+        <button aria-label="Hide" style="width:44px;height:44px;border:1.5px solid #8C8172;border-radius:12px;background:#FFFDF8;color:#2B2622;display:grid;place-items:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"></path><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"></path><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"></path><line x1="2" x2="22" y1="2" y2="22"></line></svg></button>
+        <button aria-label="More actions" style="width:44px;height:44px;border:0;border-radius:12px;background:transparent;color:#2B2622;display:grid;place-items:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg></button>
+      </div>
+      <span style="grid-column:span 4;font:400 13px/18px 'Be Vietnam Pro';color:#5E554B">Icon-only buttons always carry an <code style="font:500 12px ui-monospace,Menlo,monospace">aria-label</code> and a tooltip on desktop. Icons: Lucide, 2px stroke, 20px.</span>
+    </div>
+  </section>
+
+  <section style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:32px">
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <div style="display:flex;align-items:baseline;gap:16px"><span style="font:600 12px/16px 'Be Vietnam Pro';letter-spacing:.14em;text-transform:uppercase;color:#6F655A">05</span><h2 style="margin:0;font:700 32px/38px Fraunces,Georgia,serif">Text fields</h2></div>
+      <div style="background:#FFFDF8;border-radius:16px;box-shadow:0 1px 2px rgba(43,38,34,.08);padding:28px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px 20px">
+        <label style="display:flex;flex-direction:column;gap:6px"><span style="font:500 14px/20px 'Be Vietnam Pro'">Your name</span><span style="height:48px;box-sizing:border-box;border:1.5px solid #8C8172;border-radius:12px;background:#FFFDF8;padding:0 14px;display:flex;align-items:center;font:400 16px 'Be Vietnam Pro';color:#6F655A">e.g. Minh Khoa</span><span style="font:400 13px/18px 'Be Vietnam Pro';color:#5E554B">Default · with helper</span></label>
+        <label style="display:flex;flex-direction:column;gap:6px"><span style="font:500 14px/20px 'Be Vietnam Pro'">Your name</span><span style="height:48px;box-sizing:border-box;border:1.5px solid #1F6B72;border-radius:12px;background:#FFFDF8;padding:0 14px;display:flex;align-items:center;font:400 16px 'Be Vietnam Pro';box-shadow:0 0 0 3px rgba(31,107,114,.25)">Trần Minh Kh<span style="width:1.5px;height:20px;background:#2B2622;margin-left:1px"></span></span><span style="font:400 13px/18px 'Be Vietnam Pro';color:#5E554B">Focus · teal border + halo</span></label>
+        <label style="display:flex;flex-direction:column;gap:6px"><span style="font:500 14px/20px 'Be Vietnam Pro'">Email</span><span style="height:48px;box-sizing:border-box;border:2px solid #B42318;border-radius:12px;background:#FFFDF8;padding:0 14px;display:flex;align-items:center;font:400 16px 'Be Vietnam Pro'">linh.nguyen@gmail</span><span style="display:flex;gap:6px;align-items:flex-start;font:500 13px/18px 'Be Vietnam Pro';color:#B42318"><svg style="flex:none;margin-top:1px" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg>Add the full email, like name@gmail.com.</span></label>
+        <label style="display:flex;flex-direction:column;gap:6px"><span style="font:500 14px/20px 'Be Vietnam Pro';color:#6F655A">Username</span><span style="height:48px;box-sizing:border-box;border:1.5px dashed #B8AD9C;border-radius:12px;background:#F6EFE3;padding:0 14px;display:flex;align-items:center;font:400 16px 'Be Vietnam Pro';color:#6F655A">thaolinh.26</span><span style="font:400 13px/18px 'Be Vietnam Pro';color:#5E554B">Disabled · you can change it on 22 Oct</span></label>
+        <label style="grid-column:span 2;display:flex;flex-direction:column;gap:6px"><span style="display:flex;justify-content:space-between;font:500 14px/20px 'Be Vietnam Pro'"><span>Your message</span><span style="font-weight:400;color:#5E554B">212 / 1000</span></span><span style="min-height:112px;box-sizing:border-box;border:1.5px solid #8C8172;border-radius:12px;background:#FFFDF8;padding:12px 14px;font:400 16px/24px 'Be Vietnam Pro'">Four years of 2am bánh mì runs and you still never let me pay. I'm going to miss our balcony talks so much.</span></label>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <div style="display:flex;align-items:baseline;gap:16px"><span style="font:600 12px/16px 'Be Vietnam Pro';letter-spacing:.14em;text-transform:uppercase;color:#6F655A">06</span><h2 style="margin:0;font:700 32px/38px Fraunces,Georgia,serif">Code input &amp; select</h2></div>
+      <div style="background:#FFFDF8;border-radius:16px;box-shadow:0 1px 2px rgba(43,38,34,.08);padding:28px;display:flex;flex-direction:column;gap:24px">
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <span style="font:500 14px/20px 'Be Vietnam Pro'">6-digit code</span>
+          <div style="display:flex;gap:8px">
+            <span style="width:48px;height:56px;box-sizing:border-box;border:1.5px solid #8C8172;border-radius:12px;display:grid;place-items:center;font:600 24px 'Be Vietnam Pro';font-variant-numeric:tabular-nums">4</span>
+            <span style="width:48px;height:56px;box-sizing:border-box;border:1.5px solid #8C8172;border-radius:12px;display:grid;place-items:center;font:600 24px 'Be Vietnam Pro'">8</span>
+            <span style="width:48px;height:56px;box-sizing:border-box;border:1.5px solid #8C8172;border-radius:12px;display:grid;place-items:center;font:600 24px 'Be Vietnam Pro'">1</span>
+            <span style="width:48px;height:56px;box-sizing:border-box;border:1.5px solid #1F6B72;border-radius:12px;display:grid;place-items:center;box-shadow:0 0 0 3px rgba(31,107,114,.25)"><span style="width:1.5px;height:24px;background:#2B2622"></span></span>
+            <span style="width:48px;height:56px;box-sizing:border-box;border:1.5px solid #8C8172;border-radius:12px"></span>
+            <span style="width:48px;height:56px;box-sizing:border-box;border:1.5px solid #8C8172;border-radius:12px"></span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;font:400 14px/20px 'Be Vietnam Pro';color:#5E554B"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>Send a new code in 0:42</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;gap:8px">
+            <span style="width:48px;height:56px;box-sizing:border-box;border:2px solid #B42318;border-radius:12px;display:grid;place-items:center;font:600 24px 'Be Vietnam Pro'">4</span>
+            <span style="width:48px;height:56px;box-sizing:border-box;border:2px solid #B42318;border-radius:12px;display:grid;place-items:center;font:600 24px 'Be Vietnam Pro'">8</span>
+            <span style="width:48px;height:56px;box-sizing:border-box;border:2px solid #B42318;border-radius:12px;display:grid;place-items:center;font:600 24px 'Be Vietnam Pro'">1</span>
+            <span style="width:48px;height:56px;box-sizing:border-box;border:2px solid #B42318;border-radius:12px;display:grid;place-items:center;font:600 24px 'Be Vietnam Pro'">0</span>
+            <span style="width:48px;height:56px;box-sizing:border-box;border:2px solid #B42318;border-radius:12px;display:grid;place-items:center;font:600 24px 'Be Vietnam Pro'">7</span>
+            <span style="width:48px;height:56px;box-sizing:border-box;border:2px solid #B42318;border-radius:12px;display:grid;place-items:center;font:600 24px 'Be Vietnam Pro'">2</span>
+          </div>
+          <span style="display:flex;gap:6px;font:500 13px/18px 'Be Vietnam Pro';color:#B42318"><svg style="flex:none;margin-top:1px" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg>That code isn't right. Check the latest email, or send a new code.</span>
+          <button style="align-self:flex-start;height:44px;padding:0 12px;margin-left:-12px;border:0;border-radius:12px;background:transparent;color:#1F6B72;font:600 15px/1 'Be Vietnam Pro'">Send a new code</button>
+        </div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start">
+          <label style="display:flex;flex-direction:column;gap:6px"><span style="font:500 14px/20px 'Be Vietnam Pro'">Class year</span><span style="height:48px;box-sizing:border-box;border:1.5px solid #8C8172;border-radius:12px;padding:0 12px 0 14px;display:flex;align-items:center;justify-content:space-between;font:400 16px 'Be Vietnam Pro'">Class of 2026<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2B2622" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></span></label>
+          <div style="display:flex;flex-direction:column;gap:6px"><span style="font:500 14px/20px 'Be Vietnam Pro'">Language</span><div style="border:1.5px solid #1F6B72;border-radius:12px;overflow:hidden;box-shadow:0 12px 32px rgba(43,38,34,.18);background:#FFFDF8"><div style="height:44px;padding:0 14px;display:flex;align-items:center;justify-content:space-between;background:#DDEDEA;font:500 16px 'Be Vietnam Pro'">English<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1F6B72" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></div><div lang="vi" style="height:44px;padding:0 14px;display:flex;align-items:center;font:400 16px 'Be Vietnam Pro'">Tiếng Việt</div></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section style="display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:32px">
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <div style="display:flex;align-items:baseline;gap:16px"><span style="font:600 12px/16px 'Be Vietnam Pro';letter-spacing:.14em;text-transform:uppercase;color:#6F655A">07</span><h2 style="margin:0;font:700 32px/38px Fraunces,Georgia,serif">Photo uploader</h2></div>
+      <div style="background:#FFFDF8;border-radius:16px;box-shadow:0 1px 2px rgba(43,38,34,.08);padding:28px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font:500 14px/20px 'Be Vietnam Pro'">Photos <span style="font-weight:400;color:#5E554B">(optional)</span></span><span style="font:400 13px/18px 'Be Vietnam Pro';color:#5E554B">3 of 3 added</span></div>
+        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px">
+          <div style="display:flex;flex-direction:column;gap:6px"><div style="position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;background-color:#E4CDB8;background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.35) 0 8px,transparent 8px 16px);display:flex;align-items:flex-end;padding:6px;box-sizing:border-box"><span style="font:500 10px/12px ui-monospace,Menlo,monospace;color:#5E554B">balcony</span><button aria-label="Remove photo" style="position:absolute;top:2px;right:2px;width:44px;height:44px;border:0;background:transparent;display:grid;place-items:center;padding:0"><span style="width:28px;height:28px;border-radius:50%;background:rgba(43,38,34,.78);display:grid;place-items:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></span></button></div><span style="font:400 12px/16px 'Be Vietnam Pro';color:#5E554B">Done</span></div>
+          <div style="display:flex;flex-direction:column;gap:6px"><div style="position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;background-color:#C9D6D3;background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.35) 0 8px,transparent 8px 16px)"><div style="position:absolute;inset:0;background:rgba(255,253,248,.55)"></div><div style="position:absolute;left:8px;right:8px;bottom:10px;height:6px;border-radius:3px;background:rgba(43,38,34,.18)"><div style="width:62%;height:100%;border-radius:3px;background:#1F6B72"></div></div></div><span style="font:400 12px/16px 'Be Vietnam Pro';color:#5E554B">Uploading 62%</span></div>
+          <div style="display:flex;flex-direction:column;gap:6px"><div style="position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;border:2px solid #B42318;box-sizing:border-box;background:#FCE8E4;display:grid;place-items:center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#B42318" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg></div><span style="font:500 12px/16px 'Be Vietnam Pro';color:#B42318">Didn't upload</span></div>
+          <div style="display:flex;flex-direction:column;gap:6px"><button style="aspect-ratio:1;border-radius:8px;border:1.5px dashed #8C8172;background:#F6EFE3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:#2B2622;font:600 13px/16px 'Be Vietnam Pro';padding:0"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path><circle cx="12" cy="13" r="3"></circle></svg>Add photo</button><span style="font:400 12px/16px 'Be Vietnam Pro';color:#5E554B">Empty</span></div>
+        </div>
+        <div style="display:flex;gap:6px;font:500 13px/18px 'Be Vietnam Pro';color:#B42318;align-items:center;flex-wrap:wrap"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg>IMG_2041.HEIC didn't upload. Check your connection.<button style="height:44px;padding:0 10px;border:0;background:transparent;color:#1F6B72;font:600 14px 'Be Vietnam Pro';display:flex;align-items:center;gap:6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></svg>Try again</button></div>
+        <span style="font:400 13px/18px 'Be Vietnam Pro';color:#5E554B">JPG, PNG or HEIC, up to 10 MB each. The whole tile is the tap target; remove is a 44px hit area around a 28px dot.</span>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <div style="display:flex;align-items:baseline;gap:16px"><span style="font:600 12px/16px 'Be Vietnam Pro';letter-spacing:.14em;text-transform:uppercase;color:#6F655A">08</span><h2 style="margin:0;font:700 32px/38px Fraunces,Georgia,serif">Badges &amp; controls</h2></div>
+      <div style="background:#FFFDF8;border-radius:16px;box-shadow:0 1px 2px rgba(43,38,34,.08);padding:28px;display:flex;flex-direction:column;gap:22px">
+        <div style="display:flex;flex-direction:column;gap:10px"><span style="font:500 12px/16px 'Be Vietnam Pro';color:#6F655A;letter-spacing:.08em;text-transform:uppercase">Note status</span>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <span style="display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:999px;background:#FBEBC2;color:#7A4E00;font:600 13px/1 'Be Vietnam Pro'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>Pending</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:999px;background:#DDEDEA;color:#1F6B72;font:600 13px/1 'Be Vietnam Pro'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>Approved</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:999px;background:#ECE5D9;color:#5E554B;font:600 13px/1 'Be Vietnam Pro'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"></path><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"></path><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"></path><line x1="2" x2="22" y1="2" y2="22"></line></svg>Hidden</span>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px"><span style="font:500 12px/16px 'Be Vietnam Pro';color:#6F655A;letter-spacing:.08em;text-transform:uppercase">Link status</span>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <span style="display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:999px;background:#DDEDEA;color:#1F6B72;font:600 13px/1 'Be Vietnam Pro'"><span style="width:8px;height:8px;border-radius:50%;background:#1F6B72"></span>Active</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:999px;background:#FBEBC2;color:#7A4E00;font:600 13px/1 'Be Vietnam Pro'"><span style="width:8px;height:8px;border-radius:2px;background:#7A4E00"></span>Full</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:999px;background:#ECE5D9;color:#5E554B;font:600 13px/1 'Be Vietnam Pro'"><span style="width:8px;height:8px;border-radius:50%;border:1.5px solid #5E554B;box-sizing:border-box"></span>Expired</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:999px;background:#FCE8E4;color:#B42318;font:600 13px/1 'Be Vietnam Pro'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>Revoked</span>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px"><span style="font:500 12px/16px 'Be Vietnam Pro';color:#6F655A;letter-spacing:.08em;text-transform:uppercase">Filter tabs</span>
+          <div role="tablist" style="display:flex;gap:4px;padding:4px;background:#EFE4D2;border-radius:14px;width:max-content">
+            <span style="height:40px;padding:0 14px;border-radius:10px;display:flex;align-items:center;gap:6px;font:500 14px 'Be Vietnam Pro';color:#2B2622">All <span style="color:#5E554B">24</span></span>
+            <span style="height:40px;padding:0 14px;border-radius:10px;display:flex;align-items:center;gap:6px;font:600 14px 'Be Vietnam Pro';background:#FFFDF8;box-shadow:0 1px 2px rgba(43,38,34,.12)">Pending <span style="min-width:20px;height:20px;padding:0 6px;box-sizing:border-box;border-radius:10px;background:#C4472A;color:#fff;font:700 12px/20px 'Be Vietnam Pro';text-align:center">6</span></span>
+            <span style="height:40px;padding:0 14px;border-radius:10px;display:flex;align-items:center;gap:6px;font:500 14px 'Be Vietnam Pro'">Approved <span style="color:#5E554B">15</span></span>
+            <span style="height:40px;padding:0 14px;border-radius:10px;display:flex;align-items:center;gap:6px;font:500 14px 'Be Vietnam Pro'">Hidden <span style="color:#5E554B">3</span></span>
+          </div>
+        </div>
+        <div style="display:flex;gap:28px;align-items:center;flex-wrap:wrap">
+          <div style="display:flex;flex-direction:column;gap:10px"><span style="font:500 12px/16px 'Be Vietnam Pro';color:#6F655A;letter-spacing:.08em;text-transform:uppercase">Language</span>
+            <div role="radiogroup" aria-label="Language" style="display:flex;padding:3px;border:1.5px solid #8C8172;border-radius:999px;background:#FFFDF8;width:max-content">
+              <span role="radio" aria-checked="true" style="min-width:44px;height:38px;border-radius:999px;background:#2B2622;color:#FFFDF8;display:grid;place-items:center;font:600 14px 'Be Vietnam Pro'">EN</span>
+              <span role="radio" aria-checked="false" style="min-width:44px;height:38px;border-radius:999px;display:grid;place-items:center;font:600 14px 'Be Vietnam Pro'">VI</span>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px"><span style="font:500 12px/16px 'Be Vietnam Pro';color:#6F655A;letter-spacing:.08em;text-transform:uppercase">Checkbox</span>
+            <div style="display:flex;gap:4px">
+              <span style="width:44px;height:44px;display:grid;place-items:center"><span style="width:22px;height:22px;border:1.5px solid #8C8172;border-radius:6px;background:#FFFDF8;box-sizing:border-box"></span></span>
+              <span style="width:44px;height:44px;display:grid;place-items:center"><span style="width:22px;height:22px;border-radius:6px;background:#1F6B72;display:grid;place-items:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span></span>
+              <span style="width:44px;height:44px;display:grid;place-items:center"><span style="width:22px;height:22px;border-radius:6px;background:#1F6B72;display:grid;place-items:center"><span style="width:10px;height:2.6px;border-radius:2px;background:#fff"></span></span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:20px">
+    <div style="display:flex;align-items:baseline;gap:16px"><span style="font:600 12px/16px 'Be Vietnam Pro';letter-spacing:.14em;text-transform:uppercase;color:#6F655A">09</span><h2 style="margin:0;font:700 32px/38px Fraunces,Georgia,serif">Cards</h2></div>
+    <div style="display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:start">
+      <article style="background:#FFFDF8;border-radius:16px;box-shadow:0 1px 2px rgba(43,38,34,.08),0 1px 1px rgba(43,38,34,.04);padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="width:40px;height:40px;border-radius:50%;background:#BFDCCF;display:grid;place-items:center;font:600 16px 'Be Vietnam Pro';color:#17555B">K</span>
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font:600 16px/22px 'Be Vietnam Pro'">Trần Minh Khoa</span><span style="font:400 13px/18px 'Be Vietnam Pro';color:#5E554B">roommate · 2 hours ago</span></div>
+          <span style="display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:999px;background:#FBEBC2;color:#7A4E00;font:600 13px/1 'Be Vietnam Pro'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>Pending</span>
+        </div>
+        <p style="margin:0;font:400 16px/24px 'Be Vietnam Pro';text-wrap:pretty">Four years of 2am bánh mì runs and you still never let me pay. I'm going to miss our balcony talks so much. Go be brilliant in Melbourne.</p>
+        <div style="display:grid;grid-template-columns:repeat(3,96px);gap:8px">
+          <div style="aspect-ratio:1;border-radius:8px;background-color:#E4CDB8;background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.35) 0 8px,transparent 8px 16px)"></div>
+          <div style="aspect-ratio:1;border-radius:8px;background-color:#C9D6D3;background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.35) 0 8px,transparent 8px 16px)"></div>
+        </div>
+        <div style="display:flex;gap:8px;border-top:1px solid #E3D8C6;padding-top:14px">
+          <button style="height:44px;padding:0 18px;border:0;border-radius:12px;background:#1F6B72;color:#fff;font:600 15px/1 'Be Vietnam Pro';display:flex;align-items:center;gap:8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>Approve</button>
+          <button style="height:44px;padding:0 16px;border:1.5px solid #8C8172;border-radius:12px;background:#FFFDF8;color:#2B2622;font:600 15px/1 'Be Vietnam Pro'">Hide</button>
+          <span style="flex:1"></span>
+          <button aria-label="Delete note" style="width:44px;height:44px;border:0;border-radius:12px;background:transparent;color:#5E554B;display:grid;place-items:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg></button>
+        </div>
+      </article>
+      <article style="display:flex;flex-direction:column;gap:12px">
+        <div style="position:relative;background:#FFFDF8;padding:12px 12px 0;box-shadow:0 4px 12px rgba(43,38,34,.12);transform:rotate(-1.5deg)">
+          <div style="position:absolute;top:-10px;left:50%;margin-left:-44px;width:88px;height:24px;background:rgba(242,193,78,.75);transform:rotate(3deg)"></div>
+          <div style="aspect-ratio:4/5;border-radius:2px;background-color:#D9D2C5;background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.35) 0 10px,transparent 10px 20px);display:grid;place-items:center;font:500 11px ui-monospace,Menlo,monospace;color:#5E554B;letter-spacing:.06em">COVER PHOTO</div>
+          <div style="font:400 22px/26px 'Patrick Hand',cursive;text-align:center;padding:8px 0 12px">Class of 2026</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px;padding:4px 2px"><span style="font:600 18px/24px Fraunces,Georgia,serif">Linh's yearbook</span><span style="font:400 13px/18px 'Be Vietnam Pro';color:#5E554B">memory-book · 15 notes approved</span></div>
+        <span style="font:400 12px/16px 'Be Vietnam Pro';color:#6F655A">Yearbook card · the cover is a polaroid, tilt is decoration only</span>
+      </article>
+      <article style="display:flex;flex-direction:column;gap:12px">
+        <div style="background:#FFFDF8;border-radius:16px;box-shadow:0 1px 2px rgba(43,38,34,.08);padding:20px;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center"><span style="font:600 16px/22px 'Be Vietnam Pro'">Class group chat</span><span style="display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:999px;background:#DDEDEA;color:#1F6B72;font:600 13px/1 'Be Vietnam Pro'"><span style="width:8px;height:8px;border-radius:50%;background:#1F6B72"></span>Active</span></div>
+          <span style="font:400 14px/20px 'Be Vietnam Pro';color:#5E554B">12 of 50 notes · closes 30 May</span>
+          <div style="display:flex;align-items:center;gap:8px;height:44px;padding:0 6px 0 12px;border-radius:12px;background:#F6EFE3;font:400 14px ui-monospace,Menlo,monospace;color:#2B2622"><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">smemories.app/n/k7Qp2x</span><button style="height:34px;padding:0 12px;border:0;border-radius:8px;background:#2B2622;color:#FFFDF8;font:600 13px 'Be Vietnam Pro'">Copy link</button></div>
+        </div>
+        <span style="font:400 12px/16px 'Be Vietnam Pro';color:#6F655A">Note-link card</span>
+      </article>
+    </div>
+  </section>
+
+  <section style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:24px">
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <div style="display:flex;align-items:baseline;gap:16px"><span style="font:600 12px/16px 'Be Vietnam Pro';letter-spacing:.14em;text-transform:uppercase;color:#6F655A">10</span><h2 style="margin:0;font:700 32px/38px Fraunces,Georgia,serif">Toasts</h2></div>
+      <div role="status" style="display:flex;align-items:center;gap:12px;padding:6px 6px 6px 16px;min-height:52px;box-sizing:border-box;border-radius:14px;background:#2B2622;color:#FFFDF8;box-shadow:0 12px 32px rgba(43,38,34,.18);font:500 15px/20px 'Be Vietnam Pro'"><svg style="flex:none" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#BFDCCF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg><span style="flex:1">Note approved.</span><button style="height:40px;padding:0 12px;border:0;border-radius:10px;background:transparent;color:#F2C14E;font:600 15px 'Be Vietnam Pro'">Undo</button></div>
+      <div role="status" style="display:flex;align-items:center;gap:12px;padding:6px 6px 6px 16px;min-height:52px;box-sizing:border-box;border-radius:14px;background:#2B2622;color:#FFFDF8;box-shadow:0 12px 32px rgba(43,38,34,.18);font:500 15px/20px 'Be Vietnam Pro'"><svg style="flex:none" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#BFDCCF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"></rect><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path></svg><span style="flex:1">Link copied. Paste it in your class chat.</span></div>
+      <div role="alert" style="display:flex;align-items:center;gap:12px;padding:6px 6px 6px 16px;min-height:52px;box-sizing:border-box;border-radius:14px;background:#2B2622;color:#FFFDF8;box-shadow:0 12px 32px rgba(43,38,34,.18);font:500 15px/20px 'Be Vietnam Pro'"><svg style="flex:none" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F4C7B8" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg><span style="flex:1">Couldn't save that change.</span><button style="height:40px;padding:0 12px;border:0;border-radius:10px;background:transparent;color:#F2C14E;font:600 15px 'Be Vietnam Pro'">Try again</button></div>
+      <span style="font:400 13px/18px 'Be Vietnam Pro';color:#5E554B">Bottom-centre on desktop, above the bottom bar on mobile. 5s, paused on hover/focus; errors stay until dismissed.</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <div style="display:flex;align-items:baseline;gap:16px"><span style="font:600 12px/16px 'Be Vietnam Pro';letter-spacing:.14em;text-transform:uppercase;color:#6F655A">11</span><h2 style="margin:0;font:700 32px/38px Fraunces,Georgia,serif">Empty state</h2></div>
+      <div style="background:#FFFDF8;border-radius:16px;box-shadow:0 1px 2px rgba(43,38,34,.08);padding:36px 28px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px">
+        <div style="position:relative;width:120px;height:132px;margin-bottom:8px">
+          <div style="position:absolute;inset:0;background:#FFFDF8;border:1.5px dashed #8C8172;transform:rotate(-4deg);border-radius:2px"></div>
+          <div style="position:absolute;inset:0;background:#FFFDF8;box-shadow:0 4px 12px rgba(43,38,34,.12);transform:rotate(3deg);padding:8px 8px 0;box-sizing:border-box"><div style="height:84px;background:#EFE4D2"></div></div>
+          <div style="position:absolute;top:-8px;left:30px;width:64px;height:20px;background:rgba(191,220,207,.9);transform:rotate(-6deg)"></div>
+        </div>
+        <h3 style="margin:0;font:600 22px/28px Fraunces,Georgia,serif">No notes yet</h3>
+        <p style="margin:0;font:400 15px/22px 'Be Vietnam Pro';color:#5E554B;max-width:280px;text-wrap:pretty">Share a link and your friends can write in your book. No account needed for them.</p>
+        <button style="margin-top:8px;height:48px;padding:0 20px;border:0;border-radius:12px;background:#C4472A;color:#fff;font:600 16px/1 'Be Vietnam Pro'">Create a note link</button>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <div style="display:flex;align-items:baseline;gap:16px"><span style="font:600 12px/16px 'Be Vietnam Pro';letter-spacing:.14em;text-transform:uppercase;color:#6F655A">12</span><h2 style="margin:0;font:700 32px/38px Fraunces,Georgia,serif">Skeleton</h2></div>
+      <div aria-busy="true" aria-label="Loading notes" style="background:#FFFDF8;border-radius:16px;box-shadow:0 1px 2px rgba(43,38,34,.08);padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:center;gap:12px"><span style="width:40px;height:40px;border-radius:50%;background:#EFE4D2"></span><div style="flex:1;display:flex;flex-direction:column;gap:8px"><span style="width:55%;height:12px;border-radius:6px;background:#EFE4D2"></span><span style="width:35%;height:10px;border-radius:5px;background:#F2EADC"></span></div></div>
+        <span style="width:100%;height:12px;border-radius:6px;background:#EFE4D2"></span>
+        <span style="width:92%;height:12px;border-radius:6px;background:#EFE4D2"></span>
+        <span style="width:60%;height:12px;border-radius:6px;background:#EFE4D2"></span>
+        <div style="display:flex;gap:8px"><span style="width:72px;height:72px;border-radius:8px;background:#EFE4D2"></span><span style="width:72px;height:72px;border-radius:8px;background:#EFE4D2"></span></div>
+      </div>
+      <span style="font:400 13px/18px 'Be Vietnam Pro';color:#5E554B">Same shape as the card it replaces. Slow 1.6s opacity pulse; static when reduced motion is on.</span>
+    </div>
+  </section>
+
+  <section style="display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:32px;align-items:start">
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <div style="display:flex;align-items:baseline;gap:16px"><span style="font:600 12px/16px 'Be Vietnam Pro';letter-spacing:.14em;text-transform:uppercase;color:#6F655A">13</span><h2 style="margin:0;font:700 32px/38px Fraunces,Georgia,serif">Global banners</h2></div>
+      <div role="status" style="display:flex;align-items:center;gap:12px;padding:10px 12px 10px 16px;min-height:52px;box-sizing:border-box;border-radius:12px;background:#FBEBC2;color:#5C3B00;font:500 15px/20px 'Be Vietnam Pro'"><svg style="flex:none" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h.01"></path><path d="M8.5 16.43a5 5 0 0 1 7 0"></path><path d="M2 8.82a15 15 0 0 1 4.17-2.65"></path><path d="M10.66 5c4.01-.36 8.14.9 11.34 3.76"></path><path d="M16.85 11.25a10 10 0 0 1 2.22 1.68"></path><path d="M5 12.86a10 10 0 0 1 5.17-2.69"></path><line x1="2" x2="22" y1="2" y2="22"></line></svg><span style="flex:1"><strong>You're offline.</strong> We'll save your changes when you're back.</span></div>
+      <div role="alert" style="display:flex;align-items:center;gap:12px;padding:6px 6px 6px 16px;min-height:52px;box-sizing:border-box;border-radius:12px;background:#FCE8E4;color:#8A1C12;font:500 15px/20px 'Be Vietnam Pro'"><svg style="flex:none" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg><span style="flex:1"><strong>Something's wrong on our side.</strong> Your work is safe.</span><button style="height:40px;padding:0 14px;border:1.5px solid #B42318;border-radius:10px;background:transparent;color:#8A1C12;font:600 14px 'Be Vietnam Pro'">Try again</button></div>
+      <span style="font:400 13px/18px 'Be Vietnam Pro';color:#5E554B">Full-width strip under the top bar, pushes content down (never covers it). Announced once via a live region.</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <div style="display:flex;align-items:baseline;gap:16px"><span style="font:600 12px/16px 'Be Vietnam Pro';letter-spacing:.14em;text-transform:uppercase;color:#6F655A">14</span><h2 style="margin:0;font:700 32px/38px Fraunces,Georgia,serif">Dialog</h2></div>
+      <div role="dialog" aria-modal="true" aria-labelledby="dlg-t" style="background:#FFFDF8;border-radius:24px;box-shadow:0 12px 32px rgba(43,38,34,.18);padding:24px;display:flex;flex-direction:column;gap:12px">
+        <h3 id="dlg-t" style="margin:0;font:600 22px/28px Fraunces,Georgia,serif">Delete Khoa's note?</h3>
+        <p style="margin:0;font:400 15px/22px 'Be Vietnam Pro';color:#5E554B">This removes the note and its 2 photos for good. If you might want it later, hide it instead.</p>
+        <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:8px">
+          <button style="height:44px;padding:0 16px;border:0;border-radius:12px;background:transparent;color:#1F6B72;font:600 15px 'Be Vietnam Pro'">Hide instead</button>
+          <button style="height:44px;padding:0 16px;border:1.5px solid #8C8172;border-radius:12px;background:#FFFDF8;color:#2B2622;font:600 15px 'Be Vietnam Pro'">Cancel</button>
+          <button style="height:44px;padding:0 18px;border:0;border-radius:12px;background:#B42318;color:#fff;font:600 15px 'Be Vietnam Pro'">Delete note</button>
+        </div>
+      </div>
+      <span style="font:400 13px/18px 'Be Vietnam Pro';color:#5E554B">Focus starts on Cancel. Esc closes. Bottom sheet on mobile.</span>
+    </div>
+  </section>
+
+</div>
+</x-dc>
+</body>
+</html>

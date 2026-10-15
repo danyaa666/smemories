@@ -10,17 +10,17 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 26 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-070, T-071, T-072, T-080, T-081, T-082 |
-| TODO | 2 | T-073, T-079 |
-| READY_FOR_QA | 1 | T-069 |
-| DONE | 46 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-074, T-075, T-076, T-077, T-078 |
+| BACKLOG | 24 | T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-071, T-072, T-080, T-081, T-082 |
+| TODO | 4 | T-013, T-070, T-079, T-083 |
+| CHANGES_REQUESTED | 1 | T-073 |
+| DONE | 47 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-074, T-075, T-076, T-077, T-078 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
 
 **Awaiting your review (MERGED):** nothing
 
 **Open questions for you:** none
 
-_Board last written 2026-10-15 08:15Z_
+_Board last written 2026-10-15 08:45Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -441,6 +441,7 @@ Leader decisions (low-risk, inside the approved stack):
 | L-09 | Auth dependencies and Unicode rule: `golang.org/x/crypto` (argon2id) and `golang.org/x/text` approved. Passwords are normalised to NFKC and display names to NFC before validation and hashing/verification. | The same Vietnamese password can arrive as NFC or NFD from different devices and keyboards; normalising once, before any user exists, prevents lock-outs. NIST SP 800-63B recommends NFKC/NFKD. Changing this after users exist would break their logins. |
 | L-10 | Go toolchain: `go.mod` keeps `go 1.26.0` as the minimum, but CI and production images build with the newest 1.26 patch release. | At exactly go1.26.0 `govulncheck` reports 11 reachable standard-library vulnerabilities; the current patch has none. Raising the `go` directive would force every dev machine to download a newer toolchain for no benefit, while the vulnerable code only matters in what we ship. The Dockerfile (T-022) must follow the same rule. |
 | L-11 | Persistence: plain `database/sql` with parameterised queries and hand-written SQL; `sqlc` (mentioned in L-01) is not adopted. | Auth and yearbooks already use plain SQL cleanly and there is no code generation step to maintain; revisit if the query surface grows. Migrations stay numbered and ordered: always take the next free number (goose rejects out-of-order versions). |
+| L-12 | **Site fonts are self-hosted** (`@fontsource` packages: Fraunces, Be Vietnam Pro, Patrick Hand; latin, latin-ext and vietnamese subsets), never loaded from Google Fonts. The look follows the owner's Claude Design phase 1 (`docs/design/notes/`, adopted 2026-10-15); tokens are ported unchanged. | Avoids sending visitors' IPs to a third party and keeps a strict CSP possible; the three families cover Vietnamese (the originals Caveat, Karla and Jost do not). |
 | L-12 | **Designer templates are imported as pre-rendered decoration plus slots; the runtime stays pure Go.** | Leader decision 2026-10-08 within D-06/D-12. A dev-only Node/Playwright tool renders each canvas page to a background PNG with text and photo placeholders hidden and reads slot and label boxes from the page; the Go renderer draws the background, then localised static text and the user's text and photos (template format v2, T-038). No browser at run time. Costs about 1 MiB per page of embedded assets (budget 8 MiB per template). | Re-draw every design in JSON shapes by hand; render HTML in the server (headless browser); embed PDF pages as backgrounds (new dependency) | Assets pass 64 MiB in total, or a design needs live vector effects |
 
 ## 5. Engineering conventions
@@ -939,7 +940,7 @@ Owner-created private collection links (create, list, revoke) and the public loo
 - 2026-10-08 02:46Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-011, T-012')
 
 ### T-013 — [E04] Notes moderation API (approve, hide, reorder, delete)
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
@@ -950,8 +951,8 @@ Owner-created private collection links (create, list, revoke) and the public loo
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-15 08:27Z by leader
+- **Comments-seen:** 2
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/03-notes-moderation-api-approve-hide-reorder.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -960,6 +961,8 @@ Owner-created private collection links (create, list, revoke) and the public loo
 Owner lists pending/approved/hidden notes per yearbook, approves or hides them, reorders approved notes, deletes a note (and its photos).
 
 #### Comments
+- 2026-10-15 08:27Z · leader · Deps T-034 and T-068 are done: unblocked. API first so the inbox UI (T-017) has a contract; write it in v2 from the start (docs/api-contract.md): /api/note/...
+- 2026-10-15 08:38Z · leader · Spec was a stub when I moved it to TODO; the full spec is now written (endpoints note/get-list, batch-update-status, reorder, batch-delete; counts; lock order). Read the spec file again before starting.
 
 ### T-014 — [E05] Export job: assemble book, render PDF, store, download
 - **Status:** CANCELLED
@@ -1068,14 +1071,14 @@ Dashboard of the user's yearbooks; create/edit form for book information and the
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
-- **Depends-on:** T-013, T-016
+- **Depends-on:** T-013, T-016, T-083
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
+- **Updated:** 2026-10-15 08:38Z by leader
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/04-web-notes-link-management-and-moderation.md`
@@ -1091,14 +1094,14 @@ Create/copy/revoke the collection link, set a deadline, see submissions grouped 
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
-- **Depends-on:** T-003,T-034,T-068
+- **Depends-on:** T-003, T-034, T-068, T-083
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
+- **Updated:** 2026-10-15 08:38Z by leader
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/05-web-public-anonymous-notes-form.md`
@@ -2832,7 +2835,7 @@ Moves the notes endpoints to /api/note-collection/* and /api/public-collect/*, i
 - 2026-10-15 07:18Z · human · accepted by owner
 
 ### T-069 — [E10] API v2: media domain
-- **Status:** READY_FOR_QA
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2843,8 +2846,8 @@ Moves the notes endpoints to /api/note-collection/* and /api/public-collect/*, i
 - **Assignee:** —
 - **Branch:** task/t-069-e10-api-v2-media-domain
 - **PR:** https://github.com/danyaa666/smemories/pull/54
-- **Updated:** 2026-10-12 15:51Z by dev
-- **Comments-seen:** 5
+- **Updated:** 2026-10-15 08:27Z by human
+- **Comments-seen:** 8
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/07-api-media.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2858,9 +2861,19 @@ Moves the media endpoints to /api/media/* (multipart create, binary get-content)
 - 2026-10-12 15:51Z · dev · Media v2 done: 4 routes under /api/media, thin handler, apperr, signed page tokens, per-route deadlines with real-server test. Tests: full integration suite + lint green, vitest 133, newman 75 req/0 failed. See PR #54 for changed existing tests. Gap: none known.
 - 2026-10-12 16:08Z · leader · Leader answers to dev's 3 points: (1) cursor key derived from SMEM_OTP_KEY with a domain label (HMAC-SHA256 of 'smemories/cursor/v1') + AES-GCM with the scope as AAD: accepted; key separation holds, rotation only restarts lists. QA: check a token from another yearbook/endpoint and a bit-flipped token give 400 ERROR_PARAM, and that no internal numeric id appears in next_id. (2) ERROR_STORAGE_ERROR (matches notes + web locale keys): accepted, spec 07 corrected. (3) dropping uploader_kind from get-list items: accepted (nothing in web reads it; the default filter is owner). QA focus: get-content stays binary (Content-Type, Cache-Control, no envelope on success; v2 JSON envelope + no-store on errors), per-route timeout + write deadline fit (slow 8 MiB upload must not be cut at 30 s WriteTimeout), /v1 media routes 404, T-034 note-photo storage untouched, web upload/library/pickers work against the new routes (Newman media x2 + a manual web smoke if possible). Risk:high: after QA_PASS I review and wait for the owner's approve.
 - 2026-10-13 03:12Z · human · owner approved merge
+- 2026-10-15 08:24Z · qa · QA_PASS at ccd9672 (= PR #54 head; CI go/go-integration/security/web all green). Own stack (compose project qa69, ports 13306/16379/19000, API :18080, own spool dir), torn down after; owner stack untouched.
+  AC1 contract/lint: make lint green (gofmt, vet, golangci, eslint, tsc, i18n, check:api); openapi has 4 ops, ERROR_STORAGE_ERROR listed in x-error-codes of create/get-content/delete.
+  AC2 existing tests: go test -race ./internal/... ok; -tags integration media/httpx/notes/yearbook ok (T-034 note-photo suite in notes green). Caps verified live: 10 MiB file ok, 10 MiB+1 -> 413 ERROR_TOO_LARGE, 11 MiB and 40 MB chunked and Content-Length -> 413 mid-stream, bomb PNG 400 ERROR_INVALID_IMAGE, HTML as .jpg 415, JSON body 415, no/foreign Origin 403 ERROR_CSRF_ORIGIN_MISMATCH.
+  AC3 web: vitest 133/133; typecheck+lint ok; code diff reads new paths (create with yearbook_id before file, get-list next_id, delete POST, get-content id+variant); through a Vite proxy copy (temp config in scratchpad, not committed) get-content/get-list/create all pass unchanged /api/media/*. Not done: real browser click-through (no browser driver); XHR progress covered only by vitest.
+  AC4 service.go has no net/http (handler.go and image.go DetectContentType do); storage down (stopped MinIO): get-content, create, delete -> 502 ERROR_STORAGE_ERROR, logged.
+  AC5 Postman media collection: newman run x2 back to back, 75 req, 144 assertions, 0 failed both times; docs/media.md + openapi updated, no stale /v1/media references in web/internal/docs/postman (only the migration table in api-contract.md).
+  Leader focus areas: get-content 200 = raw bytes, Content-Type from DB, X-Content-Type-Options nosniff, Cache-Control private max-age=3600, ETag (-t suffix for thumb), Range 206, HEAD 200 no body, If-None-Match 304, no envelope; errors (401/404/400/405/502) = v2 JSON envelope + Cache-Control no-store, so nothing JSON is cached by <img>; another user's id -> 404; variant=print before backfill -> 200; bad variant 400. Slow 8 MB upload over 45 s (3x the 15 s ReadTimeout, > 30 s WriteTimeout) -> 200; stalled body -> 408 ERROR_REQUEST_TIMEOUT at exactly 120 s. /v1 media routes (get, post, list) -> 404. Cursor: opaque 40-byte AES-GCM token (no numeric id visible), token from another yearbook, bit-flipped, truncated, plain-number (MQ) -> 400 ERROR_PARAM; valid paging works; missing yearbook_id in form or list -> 400; yearbook_id after file part accepted; long yearbook_id 400; B uploading to A's book 404; B deleting A's media 200 no-op (A still reads it).
+  Non-blocking: (a) token scope = endpoint+yearbook only, not uploader filter; harmless since it only holds a position inside the same checked yearbook. (b) A raw non-multipart junk body of 30 MiB (no boundary) gives 400 invalid body rather than 413; real over-cap uploads give 413. (c) delete success returns data {} rather than null/absent; fine for the client. No test files added.
+- 2026-10-15 08:25Z · leader · merged 892b69c. Review: 4 routes /api/media/{create,get-list,get-content,delete}; media.Service (no net/http, no fmt.Errorf/errors.New) + apperr + v2 envelope; get-content stays binary (nosniff, private cache, ETag, Range) with JSON errors; per-route deadlines fit WriteTimeout (8 MB over 45 s = 200, stalled = 408 at 120 s); next_id via httpx.Cursors (opaque, AES-GCM, scope-bound); QA Newman 144 assertions x2; /v1 media 404. For owner to check: web upload/library/pickers use the new routes (QA had no browser driver; covered by vitest + proxy probes), try uploading a photo in the web app. Non-blocking: 30 MiB junk body without a boundary gives 400 not 413.
+- 2026-10-15 08:27Z · human · accepted by owner
 
 ### T-070 — [E10] API v2: yearbook domain with a service layer
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2871,8 +2884,8 @@ Moves the media endpoints to /api/media/* (multipart create, binary get-content)
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-15 08:25Z by leader
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/08-api-yearbook.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2881,6 +2894,7 @@ Moves the media endpoints to /api/media/* (multipart create, binary get-content)
 Moves the yearbook endpoints to /api/yearbook/*, introduces yearbook.Service (rules out of the handler), keyset pagination with next_id, openapi, Postman, web screens.
 
 #### Comments
+- 2026-10-15 08:25Z · leader · T-064 done, T-069 merged: unblocked. Reuse httpx.Cursors for next_id (see T-069); yearbook get-list is keyset-paginated.
 
 ### T-071 — [E10] API v2: auth and user domain; remove the /v1 paths and the web shim
 - **Status:** BACKLOG
@@ -2929,19 +2943,19 @@ Turns the remaining skill rules into lint (mnd, forbidigo), fixes what they find
 #### Comments
 
 ### T-073 — [E10] Observability: request metrics middleware and /metrics endpoint
-- **Status:** TODO
+- **Status:** CHANGES_REQUESTED
 - **Priority:** P3
 - **Type:** infra
 - **Milestone:** M1
 - **Depends-on:** T-063
 - **Risk:** low
-- **Rework:** 0
+- **Rework:** 1
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-12 13:15Z by leader
-- **Comments-seen:** 1
+- **Branch:** task/t-073-e10-observability-request-metrics-middle
+- **PR:** https://github.com/danyaa666/smemories/pull/55
+- **Updated:** 2026-10-15 08:45Z by leader
+- **Comments-seen:** 3
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/11-metrics.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2951,6 +2965,8 @@ Adds request and pool metrics as be-golang requires; waits for Q-018 (library ch
 
 #### Comments
 - 2026-10-12 13:15Z · leader · Dependencies met (T-063 done); library approved (Q-018 prometheus). Dev: after T-068 rework, merge develop often - main.go routes/middleware will overlap with T-068/T-069.
+- 2026-10-15 08:22Z · dev · Prometheus metrics: internal/metrics, httpx.Instrument, SMEM_METRICS_ADDR listener (default off), pool/upload/ratelimit metrics, docs/observability.md. Test: go test -race ./..., scrape smoke on metrics port. No endpoint change, no Postman.
+- 2026-10-15 08:45Z · leader · PR #55 now conflicts with develop (T-069 touched cmd/smemories-api/main.go and docs). Blocking: 1) merge origin/develop into the branch and resolve (keep both the media v2 wiring and the metrics wiring), 2) re-run make lint build test and go test -race -tags integration ./internal/httpx ./internal/media ./internal/ratelimit ./internal/notes, scrape /metrics once, confirm CI green on the exact head, 3) READY_FOR_QA. Nothing else changes. Rework 1 of 2.
 
 ### T-074 — [E04] Sweep orphaned upload spool files at start-up
 - **Status:** DONE
@@ -3220,6 +3236,29 @@ Owner decision D-28: every user gets a unique public username (default user-xxxx
 **Epic:** E02-auth · **PRD:** `.team/epics/E02-auth/PRD.md`
 
 Account page shows the username and lets the user change it (weekly limit, localised errors, accessible).
+
+#### Comments
+
+### T-083 — [E01] Web: design system foundation (tokens, fonts, base components, yearbook shell)
+- **Status:** TODO
+- **Priority:** P1
+- **Type:** feature
+- **Milestone:** M1
+- **Depends-on:** —
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-15 08:38Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/15-web-design-system-foundation.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E01-foundation · **PRD:** `.team/epics/E01-foundation/PRD.md`
+
+Port the Claude Design tokens, self-host the fonts, add base components (Button, TextField, Badge, Toast, Dialog, Banner, PhotoTile...) and the yearbook shell (sidebar / tab bar); restyle existing controls. Blocks T-017 and T-018.
 
 #### Comments
 

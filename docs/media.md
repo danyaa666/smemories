@@ -1,5 +1,24 @@
 # Photo processing: memory budget
 
+## Routes (T-069, v2 contract)
+
+| Route | Notes |
+|---|---|
+| `POST /api/media/create` | `multipart/form-data`: text field `yearbook_id` and the image in the part `file` (either order). Answers `{status:"OK", data:{id, yearbook_id, content_type, bytes, width, height, created_at}}`. |
+| `GET /api/media/get-list?yearbook_id=&limit=&next_id=&uploader=` | `data: {items, next_id}`, newest first, `limit` 1..100 (default 50). `uploader` is `owner` (default), `contributor` or `all`. |
+| `GET /api/media/get-content?id=&variant=display\|thumb\|print` | **Binary** on success (no envelope; `Content-Type` from the database, `nosniff`, `Cache-Control: private, max-age=3600`, `ETag` per variant, `HEAD`/`Range`/`If-None-Match` work); the JSON error envelope with `Cache-Control: no-store` on failure. |
+| `POST /api/media/delete` | JSON `{id}`; idempotent. |
+
+Errors are the v2 envelope (`ERROR_INVALID_IMAGE` 400, `ERROR_UNSUPPORTED_MEDIA_TYPE` 415, `ERROR_QUOTA_EXCEEDED` 409, `ERROR_TOO_LARGE` 413, `ERROR_RATE_LIMITED` 429, `ERROR_BUSY` 503, `ERROR_STORAGE_ERROR` 502, `ERROR_NOT_FOUND` 404, `ERROR_PARAM` 400).
+
+- **Deadlines.** The server's own timeouts (15 s read, 30 s write, `httpx.NewServer`) are too short for a phone upload or a large download, so `create` and `get-content`
+  carry a per-route timeout (`httpx.WithTimeout`: 2.5 min for create = 2 min to receive the body + 30 s to process, 2 min for get-content) and, in the same wrapper (`slowRoute`),
+  move the connection's write deadline to the route timeout plus 10 s (and the read deadline of create to 2 min). A route timeout longer than `WriteTimeout` without that
+  would be cut off by the server; `TestSlowRouteSurvivesServerWriteTimeout` proves it against a real server.
+- **Page tokens.** `next_id` is `httpx.Cursors.Seal(scope, position)`: AES-256-GCM of the position with the scope (`media/get-list:<yearbook id>`) as associated data, base64url. A
+  client cannot read the internal id inside or change it, and a token from another yearbook or another list is `ERROR_PARAM`. The key is derived (HMAC-SHA256 with a fixed label) from
+  `SMEM_OTP_KEY`, so there is no extra secret to configure; changing that key only makes clients start their list again. The same helper serves the other list endpoints.
+
 Every upload is decoded, scaled to at most 3000 px (print 1800 px, thumbnail 480 px) and re-encoded by `process` in
 `internal/media/image.go`. Decoding is the memory risk: a few hundred KB of PNG can claim a 49 megapixel
 canvas. The limits below make the worst case a number we chose.
@@ -50,7 +69,7 @@ Ephemeral storage is cleared on restart anyway. Many-address floods are the job 
 
 Three objects per photo: `<id>.<ext>` (display, 3000 px), `<id>-print.<ext>` (print, long edge 1800 px, JPEG quality 85, PNG with
 transparency stays PNG) and `<id>-thumb.jpg` (480 px). `media.print_key` holds the print key (migration 0013, NULL for photos older than
-the migration). `GET /v1/media/{id}/content?size=print` serves it with the headers and authorisation of the other sizes (ETag ends in `-p`);
+the migration). `GET /api/media/get-content?id=<id>&variant=print` serves it with the headers and authorisation of the other sizes (ETag ends in `-p`);
 while `print_key` is NULL it answers in display size, so the print renderer works before and during the backfill.
 
 - A photo whose long edge is at most 1800 px keeps its display bytes as the print object (no second lossy pass).

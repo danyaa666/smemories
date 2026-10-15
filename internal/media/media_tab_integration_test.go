@@ -59,8 +59,8 @@ func TestParallelUploadDeleteCoverDeleteBook(t *testing.T) {
 		jobs := []func() resp{
 			func() resp { return e.upload(u, book, "a.jpg", "image/jpeg", data) },
 			func() resp { return e.upload(u, book, "b.jpg", "image/jpeg", data) },
-			do("DELETE", "/v1/media/"+ids[0], ""),
-			do("DELETE", "/v1/media/"+ids[1], ""),
+			func() resp { return e.deleteMedia(u, ids[0]) },
+			func() resp { return e.deleteMedia(u, ids[1]) },
 			do("PATCH", "/v1/yearbooks/"+book, fmt.Sprintf(`{"cover_media_id":%q}`, ids[1])),
 			do("PATCH", "/v1/yearbooks/"+book, fmt.Sprintf(`{"cover_media_id":%q}`, ids[2])),
 			do("PUT", "/v1/yearbooks/"+book+"/profile", fmt.Sprintf(`{"full_name":"x","photo_media_id":%q}`, ids[0])),

@@ -125,7 +125,7 @@ func main() {
 	}), cfg.MediaMaxConcurrent, limiters, nil)
 	mt.Gauge("media_processing_slots_in_use", "Images being processed now.", func() float64 { return float64(mediaSvc.SlotsInUse()) })
 	mt.Gauge("media_processing_slots", "Images that can be processed at once (SMEM_MEDIA_MAX_CONCURRENT).", func() float64 { return float64(mediaSvc.Slots()) })
-	mediaH := media.NewHandler(mediaSvc, cfg.MediaMaxBytes, authH.RequireUser, cfg.AllowedOrigins, logger)
+	mediaH := media.NewHandler(mediaSvc, cfg.MediaMaxBytes, authH.RequireUser, cfg.AllowedOrigins, httpx.NewCursors(cfg.OTPKey), logger)
 	bookStore := yearbook.NewStore(d)
 	notesStore := notes.NewStore(d)
 	notesSvc := notes.NewService(notesStore, mediaSvc, limiters, logger, nil)

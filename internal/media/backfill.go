@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/danyaa666/smemories/internal/apperr"
 	"github.com/danyaa666/smemories/internal/storage"
 )
 
@@ -17,12 +18,7 @@ type BackfillStats struct {
 }
 
 // ErrStorageDown stops a backfill run after too many consecutive object-store failures.
-var ErrStorageDown = errors.New("media: backfill stopped, the object store keeps failing")
-
-// storageError marks a failure of the object store itself (not of one photo): it counts towards the consecutive limit.
-type storageError struct{ error }
-
-func (e storageError) Unwrap() error { return e.error }
+var ErrStorageDown = apperr.New(CodeStorage, "backfill stopped, the object store keeps failing")
 
 // Backfill creates the print object of every photo that has none (T-057), oldest first, batch rows at a time.
 // It is idempotent: a photo with a print object is never selected, and a crash between the object and the
@@ -42,11 +38,10 @@ func (s *Service) Backfill(ctx context.Context, batch, maxConsecutive int, dryRu
 		after = rows[len(rows)-1].RowID
 		for _, m := range rows {
 			ok, err := s.backfillOne(ctx, m, dryRun, logger)
-			var se storageError
 			switch {
 			case err != nil && ctx.Err() != nil:
 				return st, ctx.Err()
-			case errors.As(err, &se):
+			case apperr.Is(err, CodeStorage): // the object store itself failed (not one photo): counts towards the consecutive limit
 				st.Failed++
 				storageFails++
 				logger.Warn("media backfill: photo skipped", "media_id", m.ID, "error", err)
@@ -68,14 +63,14 @@ func (s *Service) Backfill(ctx context.Context, batch, maxConsecutive int, dryRu
 }
 
 // backfillOne writes the print object of m; false when the photo was deleted or filled by a parallel run meanwhile.
-// Failures of the object store are returned as storageError. A photo deleted between the write and the row update
+// Failures of the object store are returned as CodeStorage errors. A photo deleted between the write and the row update
 // would leave the new object behind until its yearbook is deleted, so the object is removed again.
 func (s *Service) backfillOne(ctx context.Context, m Media, dryRun bool, logger *slog.Logger) (bool, error) {
 	display, err := s.st.Get(ctx, m.ObjectKey)
 	if errors.Is(err, storage.ErrNotFound) {
 		return false, err
 	} else if err != nil {
-		return false, storageError{err}
+		return false, storageFailed(err)
 	}
 	data, err := printOf(display)
 	if err != nil || dryRun {
@@ -83,7 +78,7 @@ func (s *Service) backfillOne(ctx context.Context, m Media, dryRun bool, logger 
 	}
 	key := printKey(m.ObjectKey)
 	if err := s.st.Put(ctx, key, contentTypeOf(m.ObjectKey), data); err != nil {
-		return false, storageError{err}
+		return false, storageFailed(err)
 	}
 	ok, err := s.store.setPrintKey(ctx, m.RowID, key, s.now().UnixMilli())
 	if err != nil || ok {

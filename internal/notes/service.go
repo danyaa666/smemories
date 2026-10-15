@@ -308,7 +308,6 @@ func (s *Service) takeSubmit(ctx context.Context, ip, collection string) (bool, 
 
 // mediaError gives the errors of the photo pipeline their codes; any other error is returned as it is.
 func mediaError(err error) error {
-	var se media.StorageError
 	switch {
 	case errors.Is(err, media.ErrUnsupported):
 		return apperr.Wrap(CodeUnsupportedMediaType, err, "only JPEG, PNG and WebP images are accepted")
@@ -318,7 +317,7 @@ func mediaError(err error) error {
 		return apperr.Wrap(CodeQuotaExceeded, err, "storage quota reached")
 	case errors.Is(err, media.ErrBusy):
 		return &RetryAfterError{Err: apperr.Wrap(CodeBusy, err, "too many uploads in progress, retry shortly"), After: mediaBusyRetry}
-	case errors.As(err, &se):
+	case apperr.Is(err, media.CodeStorage):
 		return apperr.Wrap(CodeStorage, err, "object storage failed")
 	case errors.Is(err, media.ErrNotFound):
 		return ErrNotFound

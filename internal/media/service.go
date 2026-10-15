@@ -7,7 +7,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"database/sql"
-	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"path"
@@ -15,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/danyaa666/smemories/internal/apperr"
 	"github.com/danyaa666/smemories/internal/ratelimit"
 	"github.com/danyaa666/smemories/internal/storage"
 	"github.com/danyaa666/smemories/internal/ulid"
@@ -25,23 +25,9 @@ const (
 	uploadWindow     = 10 * time.Minute
 )
 
-// ErrBusy: every image-processing slot stayed taken for the whole wait (503 busy, retry shortly).
-var ErrBusy = errors.New("media: busy")
-
 // defaultContributorSlotWait is how long a public submission waits for a processing slot before it gives up
 // instead of queueing without bound.
 const defaultContributorSlotWait = 10 * time.Second
-
-// StorageError wraps a failure of the object store (502 storage_error).
-type StorageError struct{ Err error }
-
-func (e StorageError) Error() string { return "media: storage: " + e.Err.Error() }
-func (e StorageError) Unwrap() error { return e.Err }
-
-// RateLimitedError carries how long until the caller may upload again.
-type RateLimitedError struct{ RetryAfter time.Duration }
-
-func (RateLimitedError) Error() string { return "media: upload rate limit reached" }
 
 // Service orchestrates the store, the object storage and the image pipeline.
 type Service struct {
@@ -105,7 +91,7 @@ func (s *Service) Upload(ctx context.Context, ownerID uint64, yearbookID string,
 		return Media{}, err
 	}
 	if ok, retry, _ := s.limiter.Take(ctx, strconv.FormatUint(ownerID, 10)); !ok {
-		return Media{}, RateLimitedError{retry}
+		return Media{}, tooManyUploads(retry)
 	}
 	return s.save(ctx, ownerID, yb, yearbookID, KindOwner, func() ([]byte, error) { return data, nil }, 0)
 }
@@ -163,15 +149,15 @@ func (s *Service) save(ctx context.Context, ownerID, yb uint64, yearbookID, kind
 		PrintKey: printKey(yearbookPrefix(yearbookID) + id + "." + p.ext), ContentType: p.contentType, Bytes: len(p.display), Width: p.width, Height: p.height, SHA256: hex.EncodeToString(sum[:]), CreatedAt: s.now().UnixMilli()}
 
 	if err := s.st.Put(ctx, m.ObjectKey, m.ContentType, p.display); err != nil {
-		return Media{}, StorageError{err}
+		return Media{}, storageFailed(err)
 	}
 	if err := s.st.Put(ctx, m.ThumbKey, "image/jpeg", p.thumb); err != nil {
 		s.cleanup(m)
-		return Media{}, StorageError{err}
+		return Media{}, storageFailed(err)
 	}
 	if err := s.st.Put(ctx, m.PrintKey, m.ContentType, p.print); err != nil {
 		s.cleanup(m)
-		return Media{}, StorageError{err}
+		return Media{}, storageFailed(err)
 	}
 	saved, err := s.store.insert(ctx, ownerID, yb, kind, m)
 	if err != nil {
@@ -201,53 +187,39 @@ func (s *Service) cleanup(m Media) {
 	_ = s.st.Delete(ctx, m.keys()...) // best effort: an orphan is still removed with its yearbook
 }
 
-// ValidationError is a bad query parameter (400); Code is the API error code.
-type ValidationError struct{ Code string }
-
-func (e ValidationError) Error() string { return "media: " + e.Code }
-
 // List limits and the uploader filter values.
 const (
 	DefaultListLimit = 50
 	MaxListLimit     = 100
 )
 
-// List returns one page of a yearbook's photos, newest first, for its owner. uploader is "owner", "contributor"
-// or "all". The cursor only narrows a query that is already scoped to the owner's yearbook.
-func (s *Service) List(ctx context.Context, ownerID uint64, yearbookID, uploader string, limit int, cursor string) ([]Media, string, error) {
+// List returns one page of a yearbook's photos, newest first, for its owner, and the position to continue from
+// (0 on the last page). uploader is "owner" (also the default for ""), "contributor" or "all". before is the position
+// the previous page returned (0 = first page); it only narrows a query that is already scoped to the owner's yearbook.
+func (s *Service) List(ctx context.Context, ownerID uint64, yearbookID, uploader string, limit int, before uint64) ([]Media, uint64, error) {
 	var kinds []string
 	switch uploader {
-	case "", "owner":
-		kinds = []string{"owner"}
-	case "contributor":
-		kinds = []string{"contributor"}
+	case "", KindOwner:
+		kinds = []string{KindOwner}
+	case KindContributor:
+		kinds = []string{KindContributor}
 	case "all":
-		kinds = []string{"owner", "contributor"}
+		kinds = []string{KindOwner, KindContributor}
 	default:
-		return nil, "", ValidationError{"invalid_uploader"}
-	}
-	var before uint64
-	if cursor != "" {
-		raw, derr := base64.RawURLEncoding.DecodeString(cursor)
-		var perr error
-		before, perr = strconv.ParseUint(string(raw), 10, 63)
-		// the round trip rejects "+5", "007" and other spellings of a number we never issue
-		if derr != nil || perr != nil || before == 0 || strconv.FormatUint(before, 10) != string(raw) {
-			return nil, "", ValidationError{"invalid_cursor"}
-		}
+		return nil, 0, apperr.New(apperr.Param, "uploader must be owner, contributor or all")
 	}
 	yb, err := s.store.ownedYearbook(ctx, ownerID, yearbookID)
 	if err != nil {
-		return nil, "", err
+		return nil, 0, err
 	}
 	items, err := s.store.list(ctx, yb, kinds, before, limit+1) // one extra row says whether another page exists
 	if err != nil {
-		return nil, "", err
+		return nil, 0, err
 	}
-	next := ""
+	var next uint64
 	if len(items) > limit {
 		items = items[:limit]
-		next = base64.RawURLEncoding.EncodeToString([]byte(strconv.FormatUint(items[limit-1].seq, 10)))
+		next = items[limit-1].seq
 	}
 	return items, next, nil
 }
@@ -286,7 +258,7 @@ func (s *Service) Content(ctx context.Context, ownerID uint64, mediaID, size str
 		return Media{}, nil, "", "", ErrNotFound
 	}
 	if err != nil {
-		return Media{}, nil, "", "", StorageError{err}
+		return Media{}, nil, "", "", storageFailed(err)
 	}
 	return m, b, ct, size, nil
 }
@@ -302,7 +274,7 @@ func (s *Service) Delete(ctx context.Context, ownerID uint64, mediaID string) er
 		return err
 	}
 	if err := s.st.Delete(ctx, m.keys()...); err != nil {
-		return StorageError{err} // row stays, so a retry finds it
+		return storageFailed(err) // row stays, so a retry finds it
 	}
 	return s.store.removeRow(ctx, m.RowID, s.refs)
 }
@@ -317,7 +289,7 @@ func (s *Service) DeleteByYearbook(ctx context.Context, tx *sql.Tx, yearbookID u
 // ponytail: an upload racing the delete can leave one orphan object; a periodic sweep of keys without rows fixes that in M2.
 func (s *Service) PurgeYearbook(ctx context.Context, yearbookID string) error {
 	if err := s.st.DeletePrefix(ctx, yearbookPrefix(yearbookID)); err != nil {
-		return StorageError{err}
+		return storageFailed(err)
 	}
 	return nil
 }

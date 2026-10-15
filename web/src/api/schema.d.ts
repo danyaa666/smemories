@@ -316,46 +316,56 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/yearbooks/{id}/media": {
+    "/api/media/create": {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                /** @description Yearbook ULID. */
-                id: string;
-            };
+            path?: never;
             cookie?: never;
         };
-        /**
-         * List a yearbook's photos
-         * @description Owner only (a missing book and someone else's both answer `404 not_found`). Newest first, keyset paginated on the photo id, so uploads and deletes between pages never repeat or skip a photo that stays. Pass `next_cursor` back as `cursor`; it is null on the last page. By default only the owner's own uploads are listed (`uploader=owner`). The response never contains storage keys, hashes or URLs: fetch the image with `GET /v1/media/{id}/content`.
-         */
-        get: operations["listMedia"];
+        get?: never;
         put?: never;
         /**
          * Upload a photo to a yearbook
-         * @description `multipart/form-data` with the image in the part named `file`; other parts are ignored and the client file name is never used. The type is decided by sniffing the content (JPEG, PNG, WebP), never by file name or Content-Type. The image is decoded, rotated upright, stripped of all metadata (EXIF, GPS, ICC, comments), resized to at most 3000 px on the long edge (never enlarged) and stored; a 480 px JPEG thumbnail and a print version (long edge at most 1800 px, JPEG quality 85, PNG when the photo has transparency) are stored too. Opaque images are stored as JPEG, images with transparency as PNG. Only the owner may upload (`404` otherwise). The body cap is `SMEM_MEDIA_MAX_BYTES` (default 10 MiB). Limits: 200 photos per yearbook, 500 MiB per user, 60 uploads per 10 minutes per user.
+         * @description Called by the signed-in owner (the web app's photo library, cover and profile photo pickers). `multipart/form-data` with the text field `yearbook_id` and the image in the part named `file`, in either order; other parts are ignored and the client file name is never used. The type is decided by sniffing the content (JPEG, PNG, WebP), never by file name or Content-Type. The image is decoded, rotated upright, stripped of all metadata (EXIF, GPS, ICC, comments), resized to at most 3000 px on the long edge (never enlarged) and stored; a 480 px JPEG thumbnail and a print version (long edge at most 1800 px, JPEG quality 85, PNG when the photo has transparency) are stored too. Opaque images are stored as JPEG, images with transparency as PNG. Only the owner of the yearbook may upload (`ERROR_NOT_FOUND` otherwise). The request body is capped at `SMEM_MEDIA_MAX_BYTES` (default 10 MiB) for the file plus 64 KiB of framing. The route may take up to 2.5 minutes (2 minutes to receive a slow phone upload, 30 seconds to process it). Limits: 200 photos per yearbook, 500 MiB per user, 60 uploads per 10 minutes per user, and at most four times the number of image-processing slots in progress at once (`ERROR_BUSY`, retry after `Retry-After`). A request with the session cookie must come from an allowed Origin. Not idempotent: retrying after a lost answer may store the photo twice. The answer carries no storage key or URL: fetch the image with `GET /api/media/get-content?id=`.
          */
-        post: operations["uploadMedia"];
+        post: operations["createMedia"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/v1/media/{id}/content": {
+    "/api/media/get-list": {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                /** @description Media ULID. */
-                id: string;
-            };
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List a yearbook's photos
+         * @description Called by the signed-in owner (the photo library). Newest first, keyset paginated, so uploads and deletes between pages never repeat or skip a photo that stays. Pass the `next_id` of a page back as the `next_id` query parameter to get the next one; it is the empty string on the last page. `next_id` is an opaque, tamper-evident token that is bound to the yearbook it came from: a changed, truncated, foreign or otherwise unknown token (also the cursor of the old API) is `ERROR_PARAM`, and a token never reveals an internal id. By default only the owner's own uploads are listed (`uploader=owner`); `contributor` lists the photos friends sent through a collection link and `all` both. A missing `yearbook_id`, a `limit` outside 1..100 and an unknown `uploader` are `ERROR_PARAM`. A missing yearbook and one owned by someone else both answer `ERROR_NOT_FOUND`. The response never contains storage keys, hashes or URLs: build the image URL from `id`, for example `/api/media/get-content?id=<id>&variant=thumb`.
+         */
+        get: operations["listMedia"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/media/get-content": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         /**
          * Download a photo
-         * @description Streams the stored image to the yearbook owner only (`404` for anyone else). `Content-Type` comes from the stored record. Honours `Range` and `If-None-Match`. `size=print` is the 1800 px version for the print renderer (same type as `display`); a photo uploaded before it existed, and not yet reached by the backfill (`smemories-media-backfill`), is answered in display size.
+         * @description Called by the browser for every `<img src>` of the signed-in owner (session cookie, same origin). Binary: on success the body is the stored image with **no envelope**; `Content-Type` comes from the stored record (`image/jpeg`, or `image/png` for a photo with transparency; always `image/jpeg` for `variant=thumb`), `X-Content-Type-Options: nosniff` and `Cache-Control: private, max-age=3600` are set, and the `ETag` differs per variant. Honours `HEAD`, `Range` (206) and `If-None-Match` (304). On failure the answer is the usual JSON error envelope with the matching HTTP status and `Cache-Control: no-store`, so an error is never cached in place of the image; an `<img>` tag only needs the status. Only the owner may read (`ERROR_NOT_FOUND` for anyone else, and for an unknown id). `variant=print` is the 1800 px version for the print renderer; a photo uploaded before it existed, and not yet reached by the backfill (`smemories-media-backfill`), is answered in display size. The route may take up to 2 minutes for a slow client.
          */
         get: operations["getMediaContent"];
         put?: never;
@@ -366,24 +376,21 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/media/{id}": {
+    "/api/media/delete": {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                /** @description Media ULID. */
-                id: string;
-            };
+            path?: never;
             cookie?: never;
         };
         get?: never;
         put?: never;
-        post?: never;
         /**
          * Delete a photo
-         * @description Removes the row and both stored objects. Idempotent: an unknown id, an already deleted one and someone else's photo all answer `204` (and the last deletes nothing), so the answer never reveals whether a photo exists. A cover or profile photo that pointed at it is cleared.
+         * @description Called by the signed-in owner. Removes the row and the stored objects (display, thumbnail, print). Idempotent: an unknown id, an already deleted one and someone else's photo all answer success (and the last deletes nothing), so the answer never reveals whether a photo exists. A cover or profile photo that pointed at it is cleared. A missing `id` and unknown fields are `ERROR_PARAM`. A request with the session cookie must come from an allowed Origin.
          */
-        delete: operations["deleteMedia"];
+        post: operations["deleteMedia"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -600,28 +607,60 @@ export interface components {
             /** @description A photo of this yearbook (else `400 invalid_media`). Like every field of this replacing PUT */
             photo_media_id?: string | null;
         };
+        /** @description A stored photo. Carries no storage key, hash or URL; the client builds the content URL from `id`. */
         Media: {
-            /** @description Opaque ULID. */
+            /** @description Photo ULID; use it as `id` of get-content and delete. */
             id: string;
-            /** @description Pixels */
-            width: number;
-            height: number;
-            /** @description Size of the stored display version. */
+            /** @description Yearbook ULID the photo belongs to. */
+            yearbook_id: string;
+            /** @description MIME type of the display version: `image/jpeg`, or `image/png` for a photo with transparency. */
+            content_type: string;
+            /** @description Size in bytes of the stored display version. */
             bytes: number;
+            /** @description Width in pixels of the stored display version. */
+            width: number;
+            /** @description Height in pixels of the stored display version. */
+            height: number;
+            /**
+             * Format: int64
+             * @description Upload time, Unix ms.
+             */
+            created_at: number;
         };
-        MediaItem: {
-            /** @description Opaque ULID. */
+        MediaResponse: {
+            /**
+             * @description Always `OK` on success.
+             * @constant
+             */
+            status: "OK";
+            data: components["schemas"]["Media"];
+        };
+        MediaListResponse: {
+            /**
+             * @description Always `OK` on success.
+             * @constant
+             */
+            status: "OK";
+            /** @description One page of photos. */
+            data: {
+                /** @description The photos of this page, newest first. */
+                items: components["schemas"]["Media"][];
+                /** @description Opaque page token for the next page; the empty string on the last page. */
+                next_id: string;
+            };
+        };
+        MediaCreateRequest: {
+            /** @description Required. ULID of a yearbook the caller owns */
+            yearbook_id: string;
+            /**
+             * Format: binary
+             * @description Required. The image: JPEG, PNG or WebP, at most `SMEM_MEDIA_MAX_BYTES` (default 10 MiB).
+             */
+            file: string;
+        };
+        MediaDeleteRequest: {
+            /** @description Required. ULID of the photo to delete. */
             id: string;
-            width: number;
-            height: number;
-            bytes: number;
-            /** @enum {string} */
-            uploader_kind: "owner" | "contributor";
-            /** Format: date-time */
-            created_at: string;
-        };
-        MediaEnvelope: {
-            media: components["schemas"]["Media"];
         };
         /** @description The v2 error envelope (docs/api-contract.md section 2). The HTTP status is kept as well; `status` is the contract clients localise on. */
         ApiError: {
@@ -1794,21 +1833,56 @@ export interface operations {
             503: components["responses"]["SessionStoreUnavailable"];
         };
     };
+    createMedia: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["MediaCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Stored. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            408: components["responses"]["ApiRequestTimeout"];
+            409: components["responses"]["ApiConflict"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            429: components["responses"]["ApiRateLimited"];
+            500: components["responses"]["ApiInternal"];
+            502: components["responses"]["ApiBadGateway"];
+            503: components["responses"]["ApiBusy"];
+        };
+    };
     listMedia: {
         parameters: {
-            query?: {
-                /** @description Out of range or not a number: `400 invalid_limit`. */
+            query: {
+                /** @description Yearbook ULID. */
+                yearbook_id: string;
+                /** @description Page size, default 50, maximum 100. */
                 limit?: number;
-                /** @description Opaque token from a previous page; a malformed one is `400 invalid_cursor`. */
-                cursor?: string;
-                /** @description Anything else: `400 invalid_uploader`. */
+                /** @description Opaque token from the previous page; omit it for the first page. */
+                next_id?: string;
+                /** @description Whose photos to list: `owner` (the owner's own uploads, default), `contributor` (photos sent through a collection link) or `all`. */
                 uploader?: "owner" | "contributor" | "all";
             };
             header?: never;
-            path: {
-                /** @description Yearbook ULID. */
-                id: string;
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -1819,126 +1893,39 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        media: components["schemas"]["MediaItem"][];
-                        next_cursor: string | null;
-                    };
+                    "application/json": components["schemas"]["MediaListResponse"];
                 };
             };
-            /** @description `invalid_limit`, `invalid_cursor` or `invalid_uploader`. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            401: components["responses"]["Unauthenticated"];
-            404: components["responses"]["YearbookNotFound"];
-            503: components["responses"]["SessionStoreUnavailable"];
-        };
-    };
-    uploadMedia: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Yearbook ULID. */
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "multipart/form-data": {
-                    /** Format: binary */
-                    file: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Stored. */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MediaEnvelope"];
-                };
-            };
-            /** @description `invalid_image` (corrupt, over 12000 px on a side, over 50 megapixels for JPEG or 25 megapixels for PNG and WebP, or an estimated decoded size over 128 MiB) or `invalid_body` (not multipart or no `file` part). */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["CsrfOriginMismatch"];
-            404: components["responses"]["YearbookNotFound"];
-            /** @description A storage limit is reached (`quota_exceeded`). */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description The file or the request body is over the cap (`payload_too_large`). */
-            413: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description The request is not `multipart/form-data`, or the file is not a JPEG, PNG or WebP image (`unsupported_media_type`). */
-            415: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            429: components["responses"]["RateLimited"];
-            502: components["responses"]["StorageError"];
-            /** @description Too many uploads in progress (`busy`) or the session store is down (`session_store_unavailable`); retry after the `Retry-After` seconds. */
-            503: {
-                headers: {
-                    "Retry-After"?: number;
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            404: components["responses"]["ApiNotFound"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
         };
     };
     getMediaContent: {
         parameters: {
-            query?: {
-                size?: "display" | "thumb" | "print";
+            query: {
+                /** @description Photo ULID (the `id` of a list item or of the upload answer). */
+                id: string;
+                /** @description Which stored version to send: `display` (long edge at most 3000 px, the default), `thumb` (480 px JPEG) or `print` (long edge at most 1800 px, for the print renderer). Anything else is `ERROR_PARAM`. */
+                variant?: "display" | "thumb" | "print";
             };
             header?: never;
-            path: {
-                /** @description Media ULID. */
-                id: string;
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description The image. */
+            /** @description The image bytes. Not an envelope. */
             200: {
                 headers: {
+                    /** @description Always `private, max-age=3600` on success. */
                     "Cache-Control"?: "private, max-age=3600";
+                    /** @description Always `nosniff`. */
                     "X-Content-Type-Options"?: "nosniff";
+                    /** @description Differs per variant (`-t` thumb, `-p` print). */
+                    ETag?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1946,31 +1933,23 @@ export interface operations {
                     "image/png": string;
                 };
             };
-            /** @description The requested byte range. */
+            /** @description The requested byte range (`Range` request header). */
             206: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Not modified. */
+            /** @description Not modified (`If-None-Match` matched). */
             304: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Unknown `size` (`invalid_size`). */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            401: components["responses"]["Unauthenticated"];
-            404: components["responses"]["NotFound"];
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            404: components["responses"]["ApiNotFound"];
             /** @description Range not satisfiable. */
             416: {
                 headers: {
@@ -1978,33 +1957,41 @@ export interface operations {
                 };
                 content?: never;
             };
-            502: components["responses"]["StorageError"];
-            503: components["responses"]["SessionStoreUnavailable"];
+            500: components["responses"]["ApiInternal"];
+            502: components["responses"]["ApiBadGateway"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
         };
     };
     deleteMedia: {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                /** @description Media ULID. */
-                id: string;
-            };
+            path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MediaDeleteRequest"];
+            };
+        };
         responses: {
-            /** @description Deleted */
-            204: {
+            /** @description Deleted, or there was nothing to delete. */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["EmptyResponse"];
+                };
             };
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["CsrfOriginMismatch"];
-            502: components["responses"]["StorageError"];
-            503: components["responses"]["SessionStoreUnavailable"];
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            500: components["responses"]["ApiInternal"];
+            502: components["responses"]["ApiBadGateway"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
         };
     };
     createNoteCollection: {
