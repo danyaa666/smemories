@@ -3,7 +3,6 @@ package auth
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"math/rand/v2"
 	"strings"
@@ -16,8 +15,7 @@ import (
 )
 
 var (
-	errNotFound   = errors.New("auth: not found")
-	ErrEmailTaken = errors.New("auth: email already registered")
+	errNotFound = errors.New("auth: not found")
 )
 
 const (
@@ -36,17 +34,8 @@ type User struct {
 	EmailVerified bool   `json:"email_verified"`
 	DisplayName   string `json:"display_name"`
 	Locale        string `json:"locale"`
-	CreatedAt     int64  `json:"-"` // Unix ms; rendered as RFC 3339 by MarshalJSON until the auth API moves to v2
+	CreatedAt     int64  `json:"created_at"` // Unix ms
 	InternalID    uint64 `json:"-"`
-}
-
-// MarshalJSON keeps the v1 shape: created_at is an RFC 3339 string.
-func (u User) MarshalJSON() ([]byte, error) {
-	type plain User // no methods, so no recursion
-	return json.Marshal(struct {
-		plain
-		CreatedAt time.Time `json:"created_at"`
-	}{plain(u), time.UnixMilli(u.CreatedAt).UTC()})
 }
 
 // Store is the users persistence (sessions live in Redis, see sessions.go). Every query is parameterised.

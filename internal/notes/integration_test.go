@@ -132,10 +132,10 @@ func (e *env) register(email, name string, verified bool) user {
 	e.t.Helper()
 	b, _ := json.Marshal(map[string]string{"email": email, "password": testPW, "display_name": name})
 	rec := httptest.NewRecorder()
-	r := httptest.NewRequest("POST", "/v1/auth/register", bytes.NewReader(b))
+	r := httptest.NewRequest("POST", "/api/auth/register", bytes.NewReader(b))
 	r.Header.Set("Content-Type", "application/json")
 	e.h.ServeHTTP(rec, r)
-	if rec.Code != 201 {
+	if rec.Code != 200 {
 		e.t.Fatalf("register: %d %s", rec.Code, rec.Body.String())
 	}
 	if verified {

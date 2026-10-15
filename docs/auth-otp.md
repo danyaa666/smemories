@@ -10,24 +10,24 @@ sequenceDiagram
     participant A as API
     participant R as Redis
     participant M as Mailer
-    W->>A: POST /v1/auth/register
+    W->>A: POST /api/auth/register
     A->>R: issue: DEL + HSET {h: HMAC, a: 0, x: expiry}, PEXPIRE
     A->>M: email with the 6-digit code (en or vi)
-    W->>A: POST /v1/auth/verify-email {code} (session)
+    W->>A: POST /api/auth/verify-email {code} (session)
     A->>R: one Lua script: live? expired? attempts < 5? HMAC equal (constant time)?
     alt wrong
         R-->>A: attempts + 1 (locked at 5)
-        A-->>W: 400 invalid_code / code_locked
+        A-->>W: 400 ERROR_INVALID_CODE / ERROR_CODE_LOCKED
     else right
         R-->>A: key deleted
-        A-->>W: 204, email_verified_at set
+        A-->>W: 200, email_verified_at set
     end
 ```
 
-Reset: `POST /v1/auth/forgot-password {email}` always answers `202` (5 per hour per IP, 3 per hour per address) and, for an existing
-account, sends a reset code in the background. `POST /v1/auth/reset-password {email, code, password}` checks, in this order: the
-address format, the 20 attempts per hour per IP, the password rules (`weak_password`, the code is untouched, so the answer cannot
-confirm a code), then the code. Unknown address, wrong code and no live code all answer `400 invalid_code`; for an unknown address
+Reset: `POST /api/auth/forgot-password {email}` always answers `200` with an empty `data` (5 per hour per IP, 3 per hour per address) and, for an existing
+account, sends a reset code in the background. `POST /api/auth/reset-password {email, code, password}` checks, in this order: the
+address format, the 20 attempts per hour per IP, the password rules (`ERROR_WEAK_PASSWORD`, the code is untouched, so the answer cannot
+confirm a code), then the code. Unknown address, wrong code and no live code all answer `400 ERROR_INVALID_CODE`; for an unknown address
 the API runs the same Redis script on a key that never exists, so the work is the same. Success: new password stored, all sessions
 of the user deleted, the code consumed.
 

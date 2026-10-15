@@ -20,7 +20,7 @@ func guardReq(method, body, contentType string, hdr map[string]string, cookie bo
 	if body != "" {
 		rd = strings.NewReader(body)
 	}
-	r := httptest.NewRequest(method, "/v1/x", rd)
+	r := httptest.NewRequest(method, "/api/x", rd)
 	if contentType != "" {
 		r.Header.Set("Content-Type", contentType)
 	}
@@ -59,7 +59,7 @@ func TestGuardOrigin(t *testing.T) {
 	} {
 		if rec := guardReq("POST", "", "", c.hdr, c.cookie); rec.Code != c.want {
 			t.Errorf("%s: got %d, want %d", c.name, rec.Code, c.want)
-		} else if c.want == 403 && !strings.Contains(rec.Body.String(), `"csrf_origin_mismatch"`) {
+		} else if c.want == 403 && !strings.Contains(rec.Body.String(), `"ERROR_CSRF_ORIGIN_MISMATCH"`) {
 			t.Errorf("%s: body %q", c.name, rec.Body.String())
 		}
 	}
@@ -94,7 +94,7 @@ func TestGuardJSONOnly(t *testing.T) {
 	} {
 		if rec := guardReq("POST", `{"a":1}`, ct, ok, false); rec.Code != want {
 			t.Errorf("Content-Type %q: got %d, want %d", ct, rec.Code, want)
-		} else if want == 415 && !strings.Contains(rec.Body.String(), `"unsupported_media_type"`) {
+		} else if want == 415 && !strings.Contains(rec.Body.String(), `"ERROR_UNSUPPORTED_MEDIA_TYPE"`) {
 			t.Errorf("Content-Type %q: body %q", ct, rec.Body.String())
 		}
 	}
@@ -146,7 +146,7 @@ func TestGuardMultipart(t *testing.T) {
 		{"no type", "", "http://localhost:5173", 415},
 		{"bad origin", "multipart/form-data; boundary=x", "https://evil.example.com", 403},
 	} {
-		r := httptest.NewRequest("POST", "/v1/x", strings.NewReader("body"))
+		r := httptest.NewRequest("POST", "/api/x", strings.NewReader("body"))
 		r.Header.Set("Content-Type", c.contentType)
 		r.Header.Set("Origin", c.origin)
 		r.AddCookie(&http.Cookie{Name: CookieName, Value: "t"})

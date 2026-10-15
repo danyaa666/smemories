@@ -238,29 +238,29 @@ func deadRedis(t *testing.T) *redis.Client {
 func TestSessionStoreDownFailsClosed(t *testing.T) {
 	e := newEnv(t, opts{})
 	reg := e.register(testMail, testPW, "Alice")
-	want(t, reg, 201, "")
+	want(t, reg, 200, "")
 	cookie := sessionCookie(t, reg).Value
 	want(t, e.me(cookie), 200, "")
 
 	e.sess.rc = deadRedis(t)
 	for i := 0; i < 4; i++ {
-		rec := e.do(req{method: "GET", path: "/v1/me", cookie: cookie})
-		want(t, rec, 503, "session_store_unavailable")
+		rec := e.do(req{method: "GET", path: "/api/user/get-me", cookie: cookie})
+		want(t, rec, 503, "ERROR_SESSION_STORE_UNAVAILABLE")
 		if rec.Header().Get("Retry-After") != "5" {
 			t.Fatalf("Retry-After %q", rec.Header().Get("Retry-After"))
 		}
 	}
-	want(t, e.do(req{method: "GET", path: "/v1/me"}), 401, "unauthenticated") // no cookie: nothing to look up
-	want(t, e.login(testMail, testPW, ""), 503, "session_store_unavailable")
-	want(t, e.login(testMail, "Wrong-fake-password-1", ""), 401, "invalid_credentials") // the account rules ran first
-	want(t, e.do(req{method: "POST", path: "/v1/auth/logout", cookie: cookie, origin: origin}), 503, "session_store_unavailable")
+	want(t, e.do(req{method: "GET", path: "/api/user/get-me"}), 401, "ERROR_UNAUTHORIZED") // no cookie: nothing to look up
+	want(t, e.login(testMail, testPW, ""), 503, "ERROR_SESSION_STORE_UNAVAILABLE")
+	want(t, e.login(testMail, "Wrong-fake-password-1", ""), 401, "ERROR_INVALID_CREDENTIALS") // the account rules ran first
+	want(t, e.do(req{method: "POST", path: "/api/auth/logout", cookie: cookie, origin: origin}), 503, "ERROR_SESSION_STORE_UNAVAILABLE")
 
 	// Register: rules first, then the session; a failure leaves no account behind.
-	want(t, e.register("bob@example.com", testPW, "Bob"), 503, "session_store_unavailable")
+	want(t, e.register("bob@example.com", testPW, "Bob"), 503, "ERROR_SESSION_STORE_UNAVAILABLE")
 	if n := e.count(`SELECT COUNT(*) FROM user_tab WHERE email = 'bob@example.com'`); n != 0 {
 		t.Fatalf("%d accounts left behind by a failed register", n)
 	}
-	want(t, e.register("not-an-email", testPW, "Bob"), 400, "invalid_email")
+	want(t, e.register("not-an-email", testPW, "Bob"), 400, "ERROR_INVALID_EMAIL")
 
 	if n := strings.Count(e.logs.String(), "session store failing"); n != 1 {
 		t.Fatalf("failure logged %d times, want once per interval", n)
@@ -279,7 +279,7 @@ func TestSessionStoreDownFailsClosed(t *testing.T) {
 func TestGooglePreHijackingRollsBackWhenSessionsCannotBeDeleted(t *testing.T) {
 	e, p := newGoogleEnv(t, opts{})
 	reg := e.register("victim@example.com", testPW, "Squatter")
-	want(t, reg, 201, "")
+	want(t, reg, 200, "")
 	squatter := sessionCookie(t, reg).Value
 	f := e.newFlow(p, "", oidctest.Claims{Sub: "victim-sub", Email: "victim@example.com", Name: "Victim"})
 
@@ -294,7 +294,7 @@ func TestGooglePreHijackingRollsBackWhenSessionsCannotBeDeleted(t *testing.T) {
 	e.sess.rc = e.rc
 	want(t, e.me(squatter), 200, "") // still the squatter's, the defence has not run yet
 	wantRedirect(t, e.google(p, "", oidctest.Claims{Sub: "victim-sub", Email: "victim@example.com", Name: "Victim"}), "/")
-	want(t, e.me(squatter), 401, "unauthenticated")
+	want(t, e.me(squatter), 401, "ERROR_UNAUTHORIZED")
 }
 
 // Password reset deletes all sessions of the user, including ones from several browsers (3 sessions, none survives).
@@ -305,11 +305,11 @@ func TestResetPasswordDeletesAllThreeSessions(t *testing.T) {
 		cookies = append(cookies, sessionCookie(t, e.login(testMail, testPW, "")).Value)
 	}
 	other := sessionCookie(t, e.register("bob@example.com", testPW, "Bob")).Value
-	want(t, e.forgot(testMail, ""), 202, "")
+	want(t, e.forgot(testMail, ""), 200, "")
 	code := e.code(testMail)
-	want(t, e.reset(testMail, code, "Brand-new-fake-pw-77"), 204, "")
+	want(t, e.reset(testMail, code, "Brand-new-fake-pw-77"), 200, "")
 	for _, c := range cookies {
-		want(t, e.me(c), 401, "unauthenticated")
+		want(t, e.me(c), 401, "ERROR_UNAUTHORIZED")
 	}
 	want(t, e.me(other), 200, "")
 }

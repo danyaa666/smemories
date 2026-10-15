@@ -13,7 +13,7 @@ import (
 func (s *Service) ForgotPassword(ctx context.Context, ip, email string) error {
 	email = normalizeEmail(email)
 	if !validEmail(email) {
-		return ValidationError{codeInvalidEmail}
+		return errInvalidEmail
 	}
 	// Both limiters fail open: a reset request is not a guess, and the code itself is guarded in Redis.
 	if ok, retry, _ := s.forgotIP.Take(ctx, ip); !ok {
@@ -46,7 +46,7 @@ func (s *Service) ForgotPassword(ctx context.Context, ip, email string) error {
 func (s *Service) ResetPassword(ctx context.Context, ip, email, code, password string) error {
 	email = normalizeEmail(email)
 	if !validEmail(email) {
-		return ValidationError{codeInvalidEmail}
+		return errInvalidEmail
 	}
 	// Fails closed (503 limiter_unavailable): this limit bounds code guessing per IP.
 	ok, retry, err := s.resetIP.Take(ctx, ip)
@@ -58,7 +58,7 @@ func (s *Service) ResetPassword(ctx context.Context, ip, email, code, password s
 	}
 	password = normalizePassword(password)
 	if !validPassword(password, email) {
-		return ValidationError{codeWeakPassword}
+		return errWeakPassword
 	}
 	now := s.now().UTC()
 	u, _, err := s.store.userByEmail(ctx, email)

@@ -102,12 +102,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/auth/register",
+              "raw": "{{baseUrl}}/api/auth/register",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
+                "api",
                 "auth",
                 "register"
               ]
@@ -123,7 +123,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
                   "const m = /smem_session=([^;]+)/.exec(pm.response.headers.get('Set-Cookie') || '');",
                   "pm.test('session cookie issued', () => pm.expect(m).to.not.be.null);",
                   "pm.collectionVariables.set('tokenA', m ? m[1] : '');"
@@ -151,12 +151,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/auth/register",
+              "raw": "{{baseUrl}}/api/auth/register",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
+                "api",
                 "auth",
                 "register"
               ]
@@ -172,7 +172,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
                   "const m = /smem_session=([^;]+)/.exec(pm.response.headers.get('Set-Cookie') || '');",
                   "pm.test('session cookie issued', () => pm.expect(m).to.not.be.null);",
                   "pm.collectionVariables.set('tokenB', m ? m[1] : '');"

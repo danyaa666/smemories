@@ -112,7 +112,7 @@ func main() {
 	if cfg.GoogleClientID != "" {
 		if err := authH.EnableGoogle(auth.GoogleConfig{
 			ClientID: cfg.GoogleClientID, ClientSecret: cfg.GoogleClientSecret, Issuer: cfg.GoogleIssuer,
-			RedirectURL: cfg.PublicBaseURL + "/api/v1/auth/google/callback", CookieKey: cfg.OIDCCookieKey,
+			RedirectURL: cfg.PublicBaseURL + "/api/auth/google-callback", CookieKey: cfg.OIDCCookieKey,
 		}); err != nil {
 			logger.Error("google sign-in setup failed", "error", err)
 			os.Exit(1)

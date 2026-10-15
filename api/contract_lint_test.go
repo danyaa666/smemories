@@ -13,8 +13,7 @@ import (
 )
 
 // The contract lint (docs/api-contract.md section 7): every operation under /api/ in
-// openapi.yaml must be self-documenting, or the build fails. /v1 and the probes are exempt
-// until E10 moves them.
+// openapi.yaml must be self-documenting, or the build fails. Only the /healthz and /readyz probes are exempt.
 
 const apiPrefix = "/api/"
 
@@ -143,6 +142,9 @@ func (l *opLint) errorCodes() {
 }
 
 func (l *opLint) example200() {
+	if obj(obj(l.op["responses"])["302"]) != nil { // a browser redirect (Google sign-in) has no body to give an example of
+		return
+	}
 	resp := obj(obj(l.op["responses"])["200"])
 	if resp == nil {
 		l.bad("missing 200 response")
