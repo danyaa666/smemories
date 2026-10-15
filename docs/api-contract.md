@@ -1,8 +1,7 @@
 # HTTP API contract (v2)
 
 Standard for every client-facing endpoint. Source skill: `.agents/skills/be-api-design`, adapted by decision **D-25** (2026-10-09).
-Applies to every new endpoint now. Existing `/v1/...` endpoints are moved domain by domain (epic E10); until a domain is moved, its
-`/v1` contract in `api/openapi.yaml` (flat error envelope `{"error":{...}}`, REST verbs, ISO timestamps) stays valid.
+Applies to every endpoint. The `/v1/...` endpoints were moved domain by domain (epic E10) and no `/v1` route exists any more; section 8 maps old to new.
 
 ## 1. Paths and methods
 
@@ -78,7 +77,7 @@ The Postman collection and `web/src/api/schema.d.ts` follow the file; the defini
 | `POST /v1/auth/register` | `POST /api/auth/register` | |
 | `POST /v1/auth/login` | `POST /api/auth/login` | |
 | `POST /v1/auth/logout` | `POST /api/auth/logout` | |
-| `POST /v1/auth/verify-email` | `POST /api/auth/verify-email` | T-048 changes this to a code check; same name |
+| `POST /v1/auth/verify-email` | `POST /api/auth/verify-email` | T-048 made this a 6-digit code check; same name. Final auth names (T-071): `register`, `login`, `logout`, `verify-email`, `resend-verification`, `forgot-password`, `reset-password`, `google-start`, `google-callback`; `data` of `register`, `login` and `get-me` is the user object itself `{id, email, email_verified, display_name, locale, created_at}`; `logout`, `verify-email`, `forgot-password`, `reset-password` answer an empty `data`; `resend-verification` answers `{already_verified}` |
 | `POST /v1/auth/verify-email/resend` | `POST /api/auth/resend-verification` | |
 | `POST /v1/auth/forgot-password` | `POST /api/auth/forgot-password` | |
 | `POST /v1/auth/reset-password` | `POST /api/auth/reset-password` | |

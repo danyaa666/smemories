@@ -23,7 +23,7 @@ describe("api client", () => {
   it("maps the error envelope to ApiError", async () => {
     stubFetch(async () =>
       json(
-        { error: { code: "not_ready", message: "db down", request_id: "req-1" } },
+        { status: "ERROR_NOT_READY", error_message: "db down", request_id: "req-1" },
         { status: 503 },
       ),
     );

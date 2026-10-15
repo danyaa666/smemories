@@ -112,7 +112,7 @@ func main() {
 	if cfg.GoogleClientID != "" {
 		if err := authH.EnableGoogle(auth.GoogleConfig{
 			ClientID: cfg.GoogleClientID, ClientSecret: cfg.GoogleClientSecret, Issuer: cfg.GoogleIssuer,
-			RedirectURL: cfg.PublicBaseURL + "/api/v1/auth/google/callback", CookieKey: cfg.OIDCCookieKey,
+			RedirectURL: cfg.PublicBaseURL + "/api/auth/google-callback", CookieKey: cfg.OIDCCookieKey,
 		}); err != nil {
 			logger.Error("google sign-in setup failed", "error", err)
 			os.Exit(1)
@@ -123,14 +123,15 @@ func main() {
 		Endpoint: cfg.S3Endpoint, Region: cfg.S3Region, Bucket: cfg.S3Bucket,
 		AccessKey: cfg.S3AccessKey, SecretKey: cfg.S3SecretKey, PathStyle: cfg.S3PathStyle,
 	}), cfg.MediaMaxConcurrent, limiters, nil)
+	cursors := httpx.NewCursors(cfg.OTPKey)
 	mt.Gauge("media_processing_slots_in_use", "Images being processed now.", func() float64 { return float64(mediaSvc.SlotsInUse()) })
 	mt.Gauge("media_processing_slots", "Images that can be processed at once (SMEM_MEDIA_MAX_CONCURRENT).", func() float64 { return float64(mediaSvc.Slots()) })
-	mediaH := media.NewHandler(mediaSvc, cfg.MediaMaxBytes, authH.RequireUser, cfg.AllowedOrigins, httpx.NewCursors(cfg.OTPKey), logger)
+	mediaH := media.NewHandler(mediaSvc, cfg.MediaMaxBytes, authH.RequireUser, cfg.AllowedOrigins, cursors, logger)
 	bookStore := yearbook.NewStore(d)
 	notesStore := notes.NewStore(d)
 	notesSvc := notes.NewService(notesStore, mediaSvc, limiters, logger, nil)
 	mediaSvc.SetRefClearer(bookStore, notesSvc) // the yearbook store first: it locks the photo's book
-	bookH := yearbook.NewHandler(bookStore, yearbook.NewService(bookStore, mediaSvc, mediaSvc, notesSvc), authH.RequireUser, cfg.AllowedOrigins, logger, nil)
+	bookH := yearbook.NewHandler(yearbook.NewService(bookStore, cursors, mediaSvc, nil, mediaSvc, notesSvc), authH.RequireUser, cfg.AllowedOrigins)
 	notesH := notes.NewHandler(notesSvc, cfg.MediaMaxBytes, authH.RequireUser, cfg.AllowedOrigins, authH.ClientIP, logger)
 	notesH.SetUploadLimits(cfg.PublicUploadConns, cfg.PublicUploadsPerIP, cfg.UploadTmpDir)
 	mt.Gauge("public_uploads_in_progress", "Public note submissions in progress.", func() float64 { return float64(notesH.UploadsInProgress()) })

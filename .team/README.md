@@ -10,18 +10,18 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 24 | T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-071, T-072, T-080, T-081, T-082 |
-| TODO | 3 | T-013, T-079, T-083 |
-| CHANGES_REQUESTED | 1 | T-070 |
-| MERGED | 1 | T-073 |
-| DONE | 47 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-074, T-075, T-076, T-077, T-078 |
+| BACKLOG | 20 | T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-082 |
+| TODO | 5 | T-013, T-072, T-079, T-080, T-081 |
+| IN_PROGRESS | 1 | T-083 |
+| MERGED | 1 | T-071 |
+| DONE | 49 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-073, T-074, T-075, T-076, T-077, T-078 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
 
-**Awaiting your review (MERGED):** T-073 ([E10] Observability: request metrics middleware and /metrics endpoint)
+**Awaiting your review (MERGED):** T-071 ([E10] API v2: auth and user domain; remove the /v1 paths and the web shim)
 
-**Open questions for you:** none
+**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?)
 
-_Board last written 2026-10-15 10:15Z_
+_Board last written 2026-10-15 14:52Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -389,6 +389,13 @@ Third database conversion of E10. Three migrations rename note_collections, note
 - **Answer:** _(pending)_
 
 Small CI-file change (go-integration timeout-minutes 15 -> 40) plus 'make test-integration' now passes -timeout 30m, and the internal/media integration tests run in parallel: 189-198 s -> 44-48 s locally (-76%); on GitHub CI the media package drops from 277-343 s to 150-222 s and the job from 6.5-7.5 to 5.5 min. QA: same 44 tests before and after, only a fixture size changed (2000 px, still above the 1800 px print edge), 7 mutations still fail, parallel runs repeated with -race/-count=5/GOMAXPROCS=2 without flakes. Caveats found by QA: one unrelated ratelimit timing test failed once on CI under the new load and passed on re-run, and the media test binary peaks at 1.9 GB (was 0.7 GB). Both are handled by follow-up T-079 (deterministic timing, cap parallelism). To approve: team approve T-077.
+
+### Q-030 — Approve merge of T-071 (auth/user API v2, PR #58)?
+- **Status:** OPEN
+- **Asked:** 2026-10-15 14:42Z
+- **Blocks:** T-071
+- **Recommendation:** approve
+- **Answer:** approved by owner via team approve T-071
 
 <!-- questions:end -->
 
@@ -952,8 +959,8 @@ Owner-created private collection links (create, list, revoke) and the public loo
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-15 08:27Z by leader
-- **Comments-seen:** 2
+- **Updated:** 2026-10-15 14:32Z by leader
+- **Comments-seen:** 4
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/03-notes-moderation-api-approve-hide-reorder.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -964,6 +971,8 @@ Owner lists pending/approved/hidden notes per yearbook, approves or hides them, 
 #### Comments
 - 2026-10-15 08:27Z · leader · Deps T-034 and T-068 are done: unblocked. API first so the inbox UI (T-017) has a contract; write it in v2 from the start (docs/api-contract.md): /api/note/...
 - 2026-10-15 08:38Z · leader · Spec was a stub when I moved it to TODO; the full spec is now written (endpoints note/get-list, batch-update-status, reorder, batch-delete; counts; lock order). Read the spec file again before starting.
+- 2026-10-15 14:32Z · dev · Dev: claimed by mistake just before the usage gate turned SLEEP (stale cache, 1292 s). No worktree, no code. Leader: reset to TODO or let dev resume on the next wake-up (needs T-071 PR #58 open, it is).
+- 2026-10-15 14:32Z · leader · Reset by leader: dev's usage gate slept after the claim (stale cache); no work started.
 
 ### T-014 — [E05] Export job: assemble book, render PDF, store, download
 - **Status:** CANCELLED
@@ -2874,7 +2883,7 @@ Moves the media endpoints to /api/media/* (multipart create, binary get-content)
 - 2026-10-15 08:27Z · human · accepted by owner
 
 ### T-070 — [E10] API v2: yearbook domain with a service layer
-- **Status:** CHANGES_REQUESTED
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2885,8 +2894,8 @@ Moves the media endpoints to /api/media/* (multipart create, binary get-content)
 - **Assignee:** —
 - **Branch:** task/t-070-e10-api-v2-yearbook-domain-with-a-servic
 - **PR:** https://github.com/danyaa666/smemories/pull/56
-- **Updated:** 2026-10-15 10:15Z by leader
-- **Comments-seen:** 6
+- **Updated:** 2026-10-15 14:19Z by human
+- **Comments-seen:** 9
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/08-api-yearbook.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2901,21 +2910,34 @@ Moves the yearbook endpoints to /api/yearbook/*, introduces yearbook.Service (ru
 - 2026-10-15 08:58Z · leader · Reset by leader: dev's usage gate slept after the claim (stale cache), no work was done.
 - 2026-10-15 09:19Z · dev · Yearbook API v2 done (PR #56): /api/yearbook/*, Service holds all rules (handler 143 lines, no store), sealed next_id bound to caller, openapi+Postman (yearbooks/media/notes)+web updated. Test: go test -race -tags integration ./... green; web lint/typecheck/vitest green; newman yearbooks/media/notes 0 failures on a private DB. Test changes listed in the PR. Known: a next_id from another user is now 400 (was silently own list).
 - 2026-10-15 10:15Z · leader · PR #56 conflicts with develop (T-073 merged and touched cmd/smemories-api/main.go; CI is not running on the PR because of it). Blocking: 1) merge origin/develop into the branch, keep both the yearbook v2 wiring and the metrics wiring; 2) re-run make lint build test and go test -race -tags integration ./internal/yearbook ./internal/httpx ./internal/media ./internal/notes, confirm CI green on the exact head; 3) READY_FOR_QA. Nothing else changes. Rework 1 of 2.
+- 2026-10-15 13:39Z · dev · Merged origin/develop into branch (only conflict: cmd/smemories-api/main.go; kept metrics gauges + yearbook v2 wiring, shared cursors var). make lint build test and go test -race -tags integration ./... all green on head 1499acd. No other changes.
+- 2026-10-15 14:04Z · qa · QA_PASS on head 1499acd (PR #56, MERGEABLE, CI go/go-integration/security/web all green on this head).
+  Mechanical (worktree): gofmt clean; go vet + vet -tags integration OK; golangci-lint 0 issues; go build OK; go test -race -count=1 ./... all ok; go test -race -count=1 -tags integration ./... all ok (yearbook, media, notes, auth, db, httpx, metrics, pdf...); web lint/typecheck/lint:i18n/check:api OK, vitest 133/133.
+  Merged main.go (diff vs develop = 5 lines): one shared httpx.NewCursors(cfg.OTPKey) passed to media.NewHandler and yearbook.NewService; metrics gauges (media_processing_slots*, public_uploads_in_progress), mt/RouterConfig.Metrics, MetricsAddr listener, SetRefClearer(bookStore first), notesH wiring all intact. Live run (private DB smem_test_qa70, API on 18070, metrics 19070): 127.0.0.1:19070/metrics serves smem_* series incl. smem_media_processing_slots=2; public :18070/metrics = 404; /v1/yearbooks = 404.
+  Cursor: scope "yearbook/get-list:<ownerID>" used as GCM AAD (httpx.Cursors); media uses its own "media/get-list:" scope, so no cross-endpoint reuse. Live: token+'x', truncated token, token of user A used by user B, and an old base64 cursor all -> 400 ERROR_PARAM; walk limit=7 over 20 books = 7+7+6, next_id "" on last page.
+  Lock order: remove() = lockBook(yearbook_tab FOR UPDATE) -> profile_tab -> child purgers -> book delete; modify and ClearMediaRefs also book row first; race tests (TestDeleteRacesWithEdits, TestMediaDeleteRacesWithCoverEdits, TestDeleteRacesWithReads) pass under -race.
+  No fmt.Errorf/errors.New added in non-test code (remaining hits are pre-existing in internal/redis, internal/config, not in this diff; one errors.New in service_test.go is test-only). handler.go 143 lines, imports no store. No .team/ files in the PR.
+  AC1 openapi: six /api/yearbook/* ops, Vietnamese titles in examples, x-error-codes present, api test + check:api pass. AC2: integration tests updated (only path/envelope/code/time/pagination), service_test.go with fake store covers limit/defaults/ownership/cover-photo. AC3: web uses new paths and next_id, vitest updated and green. AC4: openapi/Postman updated; README has no yearbook API examples to change. AC5: TestReadQueryCountIsConstant passes (integration).
+  Live probes (curl as 2 users): update {} -> 400 ERROR_PARAM; unknown field -> 400; other owner get/update/delete -> 404 ERROR_NOT_FOUND; missing id -> 400; 21st book -> 409 ERROR_LIMIT_REACHED; limit 0/51/abc -> 400; non-allowed Origin on POST -> 403 ERROR_CSRF_ORIGIN_MISMATCH; unauthenticated -> 401 envelope; Vietnamese title round-trips as UTF-8. Delete with storage down: covered by TestServiceDeletePurgesStorageBeforeTheTransaction (fake purger error -> nothing deleted), not exercised live because Docker must stay up.
+  Newman on a private DB with --working-dir postman: yearbooks 98 req/203 assertions 0 failures, run twice back to back (no uniqueness conflict); media 75/144 0 failures; notes (after its documented setup) 74/141 0 failures twice.
+  Non-blocking: (1) running newman media/notes without --working-dir fails on fixture upload (documented in the collection); (2) media/notes integration tests still reference /v1/yearbooks/... only as 404 assertions, expected until T-071/T-072 land. Test DB and my API process cleaned up.
+- 2026-10-15 14:05Z · leader · merged c50ee9a (PR #56). Review: owner-scoped queries, lock order book->profile->children, sealed next_id bound to caller and scope, handler has no store; CI green, QA_PASS on the same head. For owner to check: web Yearbooks screen on /api/yearbook/* (list paging, create, edit, delete).
+- 2026-10-15 14:19Z · human · accepted by owner
 
 ### T-071 — [E10] API v2: auth and user domain; remove the /v1 paths and the web shim
-- **Status:** BACKLOG
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
 - **Depends-on:** T-067, T-070, T-053
 - **Risk:** high
 - **Rework:** 0
-- **Owner-approved:** —
+- **Owner-approved:** yes
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
-- **Comments-seen:** 0
+- **Branch:** task/t-071-e10-api-v2-auth-and-user-domain-remove-t
+- **PR:** https://github.com/danyaa666/smemories/pull/58
+- **Updated:** 2026-10-15 14:52Z by leader
+- **Comments-seen:** 4
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/09-api-auth.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2924,9 +2946,38 @@ Moves the yearbook endpoints to /api/yearbook/*, introduces yearbook.Service (ru
 Moves auth to /api/auth/* and /api/user/get-me, Google callback path, last domain: deletes the /v1 routes, the proxy rewrite and the web client shim.
 
 #### Comments
+- 2026-10-15 14:06Z · leader · unblocked: T-070 merged; dependencies T-067/T-070/T-053 are in. Risk high: needs owner approve before merge. Owner must register <PUBLIC_BASE_URL>/api/auth/google-callback as a Google redirect URI before deploy.
+- 2026-10-15 14:32Z · dev · PR #58 head f3d640f. Auth+get-me on /api/auth/*, /api/user/get-me, v2 envelope, /v1 routes gone, web shim removed. OWNER: register <PUBLIC_BASE_URL>/api/auth/google-callback in Google console before deploy. Full go test -race -tags integration green, lint 0, web vitest/lint/build green, newman auth/yearbooks/media 0 failures (notes not run, needs verified users). QA probe: resend-verification now always returns data.already_verified (bool); client-cancel is 499 not 500; register/login/get-me data is the flat user object.
+- 2026-10-15 14:42Z · qa · QA_PASS on PR #58. Tested head f3d640f + my test-only commit f189d67 (internal/auth/t071_qa_integration_test.go, 3 tests). Own API process (built from the branch) on :18971 with private MySQL smem_test_qa71 (dropped after), Valkey db 11, dev env, fake Google client id, real issuer.
+  EVIDENCE (AC -> how -> result)
+  AC1 contract lint: go test ./api green; no skip list left except /healthz,/readyz; example200 skips only redirect-only ops (Google). PASS.
+  AC2 auth integration: make test-integration (-race, -tags integration, -count=1, 30m) all 21 pkgs ok (auth 197 s, incl. Google concurrency stress and Redis sessions); go test -race ./... ok; go vet (+integration tag), gofmt, golangci-lint 0 issues; build ok. Test changes are only path/status/envelope/code/created_at as listed in the PR. PASS.
+  AC3 web: npm run lint, typecheck, lint:i18n, check:api, vitest 132/132, build all green. client.ts has no old-envelope branch (isEnvelope/ErrorEnvelope deleted; normaliseCode aliases kept); vite rewrite only matches /healthz|/readyz (viteProxy.test.ts: /api/v1/me stays /api/v1/me); git grep finds no /v1 in web/src, Go, docs, Makefile apart from that test. get-me, register, login all use one auth.User (handler me/register/login -> httpx.OK(w,r,u)); json created_at Unix ms. PASS.
+  AC4 /v1 gone: TestV1AuthRoutesAreGone green; live: GET/POST /v1/auth/login, /v1/me, /v1/auth/verify-email/resend, /api/v1/me, /api/me, /api/auth/verify-email/resend, /api/auth/google/start all 404; GET on POST routes 405; POST /api/user/get-me 405. PASS.
+  AC5 Postman/docs: newman (scratch install) on my API, each run twice back to back with the Redis limiter keys reset between: auth 74 req/174 assertions 0 failed (x2, Google folder runs with fake client id); yearbooks 98/203 0 failed (x2); media 75/144 0 failed (x2, --working-dir postman); notes 74/141 0 failed (x2, accounts A and B verified, C left unverified as the collection expects). README/.env.example/auth-otp/dev-shortcuts/api-contract updated; diff has no .team files; DEV-SHORTCUT lines untouched (diff only changes doc paths). PASS.
+  PROBES (live, my API unless noted)
+  - Cookie: smem_session, Path=/, HttpOnly, SameSite=Lax, Max-Age 30d, no Secure in dev; logout clears with Max-Age=0 same attrs; no cookie-code lines in the diff. Unchanged.
+  - CSRF: with a cookie, Origin evil / null / localhost:5173.evil.com / absent -> 403 ERROR_CSRF_ORIGIN_MISMATCH on all 7 POST routes (curl, 28 combos) and in the new TestQAWrongOriginOnEveryPost (also :5174 and https scheme); session survives; right Origin works. No-cookie requests are not origin-checked (unchanged design; login/register cannot be CSRF-guarded that way).
+  - Rate limit: 10 wrong logins for one email -> 11th and 12th 429 ERROR_RATE_LIMITED Retry-After: 900, and the correct password is also 429 while locked (unchanged behaviour); register 5/h -> 429 Retry-After 3573; forgot-password 429 Retry-After 3590.
+  - Anti-enumeration: login unknown vs known email, same 401 ERROR_INVALID_CREDENTIALS and message; timing median 21.9 ms vs 22.2 ms (8 each, interleaved); forgot-password unknown vs known same 200 {} and 1.3 ms vs 1.3 ms (429 limits identical); reset-password unknown vs known both 400 ERROR_INVALID_CODE.
+  - Logout idempotence: 3 logouts with the same cookie, no cookie, empty body: all 200 {status:OK,data:{}} + clearing cookie; a CSRF-blocked logout leaves the session alive.
+  - Expired session mid-use: deleted the Redis session key, then get-me, verify-email, resend-verification all 401 ERROR_UNAUTHORIZED (RequireUser), logout still 200. Password reset revokes the old session (401).
+  - resend-verification: unverified -> data.already_verified=false; after verify -> true; always 200. register/login/get-me data is the flat user object. verify-email wrong code 400 ERROR_INVALID_CODE; reset weak password 400 ERROR_WEAK_PASSWORD; bad JSON 400 ERROR_PARAM; text/plain 415.
+  - Google: existing oidctest suite covers state/cookie tamper, expired cookie, replay, login-CSRF across browsers, PKCE (provider checks the verifier), return_to sanitising, rejections never set a session. I added a test that code+state of one flow with another flow's signed cookie is refused, and that return_to/redirect/next query params on the callback are ignored (redirect only from the signed cookie). Live: google-start?return_to=//evil.example stores r=/ in the signed cookie; start 302 to accounts.google.com with S256, state, nonce, redirect_uri=<base>/api/auth/google-callback. Without Google configured the routes are 404.
+  - 499 (new): TestQAClientCancelIs499WithoutErrorLogs: cancelled context on get-me (valid session), login and forgot-password -> 499 ERROR_CLIENT_CLOSED, no Set-Cookie, no internals in the body, no level ERROR log line, session intact afterwards. Safe: only the caller can trigger it, nothing sensitive, logged at debug, metrics count it in the 4xx class, and yearbook/media already use the same code. Judged OK.
+  NON-BLOCKING
+  1. ERROR_CLIENT_CLOSED/499 is not in docs/api-contract.md section 3 or openapi (yearbook/media/notes already return it), and codeClientClosed is now defined in three packages (auth, yearbook, media): move one definition into apperr and document it in T-072.
+  2. CI: at my verdict the PR checks web and security were green and go / go-integration still pending on the new head f189d67 (test-only commit, same product code); leader to confirm green before merge.
+  3. Unknown JSON fields are still accepted on auth bodies (PR says unchanged on purpose); 404 for unknown /v1 paths still carries the legacy body until T-072 (spec says so).
+  4. scripts/check-no-dev-shortcuts.sh is not in this branch's tree (T-050 not merged here), so I could not run it; no shortcut lines were changed.
+  5. Owner action stays: register <PUBLIC_BASE_URL>/api/auth/google-callback in the Google console before deploy.
+  QA housekeeping to disclose: while probing I first pointed my own API at Valkey db 5 and then ran a delete of smem:dev:sess:* keys there to simulate an expired session; db 5 turned out to hold older dev sessions (about 130 user session keys, from an earlier local run, not from any test: the integration suite uses db 0 with unique prefixes). Those dev login sessions are gone (users just sign in again); no code, MySQL data or other process was touched. Rest of the probes used db 11 (flushed) and a private DB (dropped).
+- 2026-10-15 14:42Z · leader · Leader review OK on f189d67 (f3d640f + QA test-only commit): handler decodes and maps only, cookie name/flags unchanged, fail-closed stores keep Retry-After, 499 is debug-logged only, get-me = single auth.User (T-081 adds username there), /v1 gone, web shim removed. QA probes clean. Waiting for: (1) CI go + go-integration green on f189d67, (2) owner approval (Risk high). Follow-ups moved into T-072 spec. For owner: register <PUBLIC_BASE_URL>/api/auth/google-callback in the Google console before deploy.
+- 2026-10-15 14:52Z · human · owner approved merge
+- 2026-10-15 14:52Z · leader · merged 3c4b149 (PR #58). Review: handler decodes/maps only, cookie/CSRF/limits unchanged, 499 debug-only, single auth.User for get-me, /v1 gone; QA probes clean, CI green on f189d67, owner approved. For owner to check: sign in/out, register + code 123123, forgot/reset, Google sign-in after registering <PUBLIC_BASE_URL>/api/auth/google-callback in the Google console.
 
 ### T-072 — [E10] Quality sweep: mnd, forbidigo, pointer parameters, pool defaults, remove the transition switch
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2937,8 +2988,8 @@ Moves auth to /api/auth/* and /api/user/get-me, Google callback path, last domai
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-15 14:52Z by leader
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/10-sweep.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2947,9 +2998,10 @@ Moves auth to /api/auth/* and /api/user/get-me, Google callback path, last domai
 Turns the remaining skill rules into lint (mnd, forbidigo), fixes what they find, sets the pool defaults and deletes the path-based envelope switch.
 
 #### Comments
+- 2026-10-15 14:52Z · leader · unblocked: T-071 merged. Includes the ERROR_CLIENT_CLOSED follow-up (see spec bottom). Dev: start it only when no other branch is open that touches many files.
 
 ### T-073 — [E10] Observability: request metrics middleware and /metrics endpoint
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P3
 - **Type:** infra
 - **Milestone:** M1
@@ -2960,7 +3012,7 @@ Turns the remaining skill rules into lint (mnd, forbidigo), fixes what they find
 - **Assignee:** —
 - **Branch:** task/t-073-e10-observability-request-metrics-middle
 - **PR:** https://github.com/danyaa666/smemories/pull/55
-- **Updated:** 2026-10-15 09:07Z by leader
+- **Updated:** 2026-10-15 14:19Z by human
 - **Comments-seen:** 6
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/11-metrics.md`
@@ -2983,6 +3035,7 @@ Adds request and pool metrics as be-golang requires; waits for Q-018 (library ch
   Commands: make build lint (ok); go test -race -count=1 ./... (all ok); go test -race -tags integration ./internal/{httpx,metrics,ratelimit,notes,config,auth} twice against my own compose project qa073 (ports 33173/63173/39173, removed afterwards), all ok. No Postman needed (no API endpoint change).
   Non-blocking: (1) the equal-address check is a string compare, so e.g. ':8080' vs '0.0.0.0:8080' is only caught by the bind failing; (2) the metrics port has no auth by design (documented): bind it to a private interface in deploy (T-023/T-024).
 - 2026-10-15 09:07Z · leader · merged eb401e3. Review: private Prometheus registry, httpx.Instrument labels are route pattern + folded method + status class only (hostile paths become route=unmatched), DB/Redis pool, media, upload and rate-limit gauges, listener on SMEM_METRICS_ADDR default off, public /metrics 404, QA verified live. New dependency prometheus/client_golang v1.23.2 (Apache-2.0, approved in Q-018, noted in THIRD_PARTY_NOTICES). For owner to check: nothing to run; metrics are off until SMEM_METRICS_ADDR is set. Deploy note: the metrics port has no auth by design, so T-022/T-023 must bind it to a private interface only.
+- 2026-10-15 14:19Z · human · accepted by owner
 
 ### T-074 — [E04] Sweep orphaned upload spool files at start-up
 - **Status:** DONE
@@ -3187,7 +3240,7 @@ T-077 QA: a ratelimit retry-after test failed once on the CI runner (689 ms vs a
 #### Comments
 
 ### T-080 — [E04] Public submit: show 'link full' instead of a connection reset
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -3198,8 +3251,8 @@ T-077 QA: a ratelimit retry-after test failed once on the CI runner (689 ms vs a
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-12 13:28Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-15 14:06Z by leader
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/08-full-link-reset.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -3208,9 +3261,10 @@ T-077 QA: a ratelimit retry-after test failed once on the CI runner (689 ms vs a
 T-068 answers a full public link on the raw writer without reading the body; a friend with a valid token may then see a connection reset instead of the "link full" message. Drain the body (bounded, nothing on disk) and show the message in the public form.
 
 #### Comments
+- 2026-10-15 14:06Z · leader · unblocked, small P3
 
 ### T-081 — [E02] Username: unique public handle with default and weekly change (API)
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
@@ -3221,8 +3275,8 @@ T-068 answers a full public link on the raw writer without reading the body; a f
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-15 07:30Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-15 14:52Z by leader
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/13-username-api.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -3231,6 +3285,7 @@ T-068 answers a full public link on the raw writer without reading the body; a f
 Owner decision D-28: every user gets a unique public username (default user-xxxxxxxx, changeable once per 7 days), not a login name. Migration + backfill, default at registration, POST /api/user/update-username, username fields on get-me.
 
 #### Comments
+- 2026-10-15 14:52Z · leader · unblocked: T-071 merged (get-me uses the single auth.User struct; add username there). Risk high: owner approval before merge.
 
 ### T-082 — [E02] Web: show and change the username on the account page
 - **Status:** BACKLOG
@@ -3256,19 +3311,19 @@ Account page shows the username and lets the user change it (weekly limit, local
 #### Comments
 
 ### T-083 — [E01] Web: design system foundation (tokens, fonts, base components, yearbook shell)
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
 - **Depends-on:** —
 - **Risk:** low
-- **Rework:** 0
+- **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-15 08:38Z by leader
-- **Comments-seen:** 0
+- **Assignee:** dev
+- **Branch:** task/t-083-e01-web-design-system-foundation-tokens-
+- **PR:** https://github.com/danyaa666/smemories/pull/57
+- **Updated:** 2026-10-15 14:33Z by dev
+- **Comments-seen:** 4
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/15-web-design-system-foundation.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -3277,6 +3332,28 @@ Account page shows the username and lets the user change it (weekly limit, local
 Port the Claude Design tokens, self-host the fonts, add base components (Button, TextField, Badge, Toast, Dialog, Banner, PhotoTile...) and the yearbook shell (sidebar / tab bar); restyle existing controls. Blocks T-017 and T-018.
 
 #### Comments
+- 2026-10-15 14:10Z · dev · PR #57 head 3126fd1. Tokens, self-hosted fonts (3 subsets), 9 ui components + tests, YearbookLayout (sidebar>=960/tab bar), existing controls restyled. web typecheck/lint/test(170)/i18n/check:api/build green. Verify: 375/1280 screenshots in scratchpad/shots (see PR), vi copy needs owner review, one assertion in codes.test.tsx moved (.resend -> .btn). Dialog not wired (window.confirm kept).
+- 2026-10-15 14:19Z · leader · Owner accepted the new Vietnamese nav strings as written (2026-10-15): nav.main 'Kỷ yếu', nav.profile 'Trang hồ sơ của tôi', nav.tabBooks 'Kỷ yếu', nav.tabProfile 'Hồ sơ'. No wording rework needed; QA need not list them.
+- 2026-10-15 14:25Z · qa · QA_FAIL on head 3126fd1 (1 blocker, rest verified OK).
+  
+  1. [BLOCKER] PR CI job `web` is RED: `npm test` fails in src/components/YearbookLayout.test.tsx > "on a book, shows the book card and the profile item (sidebar) or tab": TestingLibraryElementError "Unable to find role=link and name /Class 12A1.*Le Hong Phong/" after 1012 ms (findByRole default timeout is 1000 ms). Run: gh run 38748994044, job 116470084572 (steps lint, lint:i18n, typecheck pass; test fails; build and check:api skipped). Locally it passes (35 ms; 4 parallel full-suite runs all 170/170), so it is a timing flake on the slow CI runner: the render goes through the lazy YearbookEdit chunk plus two fetches before the book card appears. Expected: green CI on the head. Fix: give that findByRole an explicit timeout (e.g. { timeout: 5000 }) or await the page first (findByRole heading for the book) and then the card; check the other tests in the file that depend on the lazy route. Re-push and CI must be green (go, go-integration, security already pass).
+  
+  Verified OK (my own evidence, Vite on :5190 from the T-083 worktree, proxy to the local API, Chromium headless 375 and 1280):
+  - Scope: git diff origin/develop...HEAD touches only web/**, THIRD_PARTY_NOTICES.md; no Go, no .team/ files.
+  - AC1: diff docs/design/notes/tokens.css web/src/styles/tokens.css shows only the removed @import (+ blank line); tokens.test.ts asserts it. Network log over the full flow (login, register, verify, account, yearbooks, new, edit, photos, delete, sign out, login) at both widths: external hosts = [], 34 to 36 woff2/woff requests all from localhost; build output has only latin, latin-ext and vietnamese files (no other subsets). OFL notices for the 3 packages present in THIRD_PARTY_NOTICES.md (versions pinned 5.3.0). Minor: Fraunces variable package has the wght axis only (the design import asked for opsz 9..144 too); fine, just FYI.
+  - AC2/AC5 mechanical, local: web lint, lint:i18n, typecheck, build, check:api all pass; vitest 12 files / 170 tests pass (also 4 concurrent runs). Dialog trap/restore, Toast action keyboard covered in ui.test.tsx (passing).
+  - AC3 end to end (real API): register (Vietnamese display name) -> verify with dev code 123123 (CodeField auto-submits at 6 digits) -> account -> create book with long Vietnamese title/school -> edit + Save + "Saved." -> upload PNG (polaroid tile with tape and remove button) -> list -> Delete yearbook (window.confirm) -> empty state -> sign out -> login: all work at 375 and 1280 (desktop run used an existing account because /register returned 429 rate_limited after my first runs). No page errors. No horizontal scroll on any of the 12 screens x 2 widths (scrollWidth == clientWidth). Screenshots in the QA scratchpad (shots/).
+  - AC4 in browser: sidebar present and tab bar absent at 960, 1280; tab bar present and sidebar absent at 375, 599, 600, 959 (boundary correct). Tab bar does not cover the last button when scrolled to the bottom at 375 (tab top 743, last button bottom 728).
+  - Focus ring: input and .btn show the 2px paper + 3px teal (--focus-ring) box-shadow on keyboard focus. Buttons, inputs, selects, textareas, resend button all >= 44 px. prefers-reduced-motion: emulated reduce gives 0s transition and animation on buttons, links, inputs.
+  - codes.test.tsx change (.resend -> .btn, now reads ui.css `.btn{min-height:var(--tap-min)}` and tokens.css `--tap-min:44px`): legitimate. The resend button is now the shared Button, and I measured it at >= 44 px in the browser; the assertion still checks the same rule at its new home.
+  
+  Non-blocking observations (minor, not part of the fail):
+  a. Text links under 44 px high (AC6 says touch targets >= 44): brand link in the shell (24 px), the yearbook card title link on /yearbooks (23 px; the card is not itself clickable, so this is the only way to open a book), "Back to my yearbooks" (20 px). Inline-text links are tolerated by WCAG 2.5.8, but the card title link would be better as a full-card or padded target.
+  b. Dialog is not wired (window.confirm kept for delete book and delete photo) as dev stated; acceptable for a foundation task.
+  c. Not tested by me: 200% zoom, offline font loading, screen reader.
+  
+  New vi strings for the owner to review (en -> vi): nav.main "Yearbook" -> "Kỷ yếu"; nav.profile "My profile page" -> "Trang hồ sơ của tôi"; nav.tabBooks "Books" -> "Kỷ yếu"; nav.tabProfile "Profile" -> "Hồ sơ". (Note nav.main and nav.tabBooks share "Kỷ yếu" in vi.)
+- 2026-10-15 14:26Z · leader · Leader guidance for the rework (QA_FAIL, web CI red): YearbookLayout.test.tsx 'on a book, shows the book card...' times out at 1012ms on the CI runner (run 38748994044). Fix the cause, not the clock: await the page content that triggers the card (findBy/waitFor on the loaded state) before asserting the link, and keep the default asyncUtilTimeout unless the whole suite needs it (T-079 is about starved runners; do not paste a magic 5000 in one test). Re-run the web suite 3x locally under load (npm test -- --run with parallel runs). Non-blocking, take only if cheap: inline text links under 44px (brand link, card title link, back link) are exempt as inline text; leave them. Owner approved the 4 nav strings; keep them.
 
 <!-- tasks:end -->
 
@@ -3302,3 +3379,5 @@ Port the Claude Design tokens, self-host the fonts, add base components (Button,
 - 2026-10-09 — T-062 (CI takes the newest Go patch from go.dev; owner-approved, merged 0c1e2d4) and T-063 (E10 foundation: apperr, v2 helpers, timeout and client-IP middleware, contract lint; merged bb5143f) merged; both await owner acceptance. The required `security` job had been red on every PR because setup-go lagged Go 1.26.9; T-062 fixed it. T-063's QA found no issues; T-062 needed one rework (malformed go.dev answer aborted the step).
 - 2026-10-10 — Owner approved T-052, T-057, T-053, T-049. Merged: T-052 (35298e1, sessions in Redis, migration 0012), T-057 (487555d, print-size photos, migration 0013), T-049 (b835af9, web code screens). T-053 conflicted with develop and went back to dev for a mechanical merge plus the openapi 503 fix. E10 database lane started: T-064 is TODO. Follow-ups created: T-074 (done), T-075 (backfill hardening), T-076 (code screens polish); T-055 cancelled and folded into T-069/T-070.
 - 2026-10-12 — T-068 (API v2 notes, PR #53) merged 1dfffac after rework 1 (conflict with T-067, full-link check restored before the body is spooled); T-080 added (P3) for the browser reset on a full link; T-069 promoted to TODO; T-073 promoted to TODO.
+- 2026-10-15 — T-070 (API v2 yearbook, PR #56) merged c50ee9a after rework 1 (conflict with T-073 resolved by dev); awaiting owner accept. Heartbeat back to recurring (job 676f3351) after the one-shot wake; dev now on T-083. Note: local stack runs as compose project `smemories` (old volumes) after the Docker restart, not `awesomeproject1`.
+- 2026-10-15 — T-070 and T-073 accepted. T-071 (API v2 auth/user, PR #58, owner-approved Q-030) merged 3c4b149; owner action before deploy: register <PUBLIC_BASE_URL>/api/auth/google-callback in the Google console. T-083 got QA_FAIL (flaky layout test on CI), rework running. T-081, T-072, T-080 promoted to TODO. Owner approved the four new nav strings of T-083.

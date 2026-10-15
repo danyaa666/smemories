@@ -103,11 +103,11 @@ func (e *env) post(path, body string, cookie string) *httptest.ResponseRecorder 
 }
 
 func (e *env) verify(code, cookie string) *httptest.ResponseRecorder {
-	return e.post("/v1/auth/verify-email", fmt.Sprintf(`{"code":%q}`, code), cookie)
+	return e.post("/api/auth/verify-email", fmt.Sprintf(`{"code":%q}`, code), cookie)
 }
 
 func (e *env) forgot(email, remote string) *httptest.ResponseRecorder {
-	return e.do(req{method: "POST", path: "/v1/auth/forgot-password", body: fmt.Sprintf(`{"email":%q}`, email), remote: remote})
+	return e.do(req{method: "POST", path: "/api/auth/forgot-password", body: fmt.Sprintf(`{"email":%q}`, email), remote: remote})
 }
 
 func (e *env) reset(email, code, pw string) *httptest.ResponseRecorder {
@@ -115,13 +115,13 @@ func (e *env) reset(email, code, pw string) *httptest.ResponseRecorder {
 }
 
 func (e *env) resetFrom(email, code, pw, remote string) *httptest.ResponseRecorder {
-	return e.do(req{method: "POST", path: "/v1/auth/reset-password", origin: origin, remote: remote,
+	return e.do(req{method: "POST", path: "/api/auth/reset-password", origin: origin, remote: remote,
 		body: fmt.Sprintf(`{"email":%q,"code":%q,"password":%q}`, email, code, pw)})
 }
 
 func (e *env) verified(cookie string) bool {
 	e.t.Helper()
-	return strings.Contains(e.do(req{method: "GET", path: "/v1/me", cookie: cookie}).Body.String(), `"email_verified":true`)
+	return strings.Contains(e.do(req{method: "GET", path: "/api/user/get-me", cookie: cookie}).Body.String(), `"email_verified":true`)
 }
 
 const newPW = "Another-fake-pw-for-tests-42"
@@ -140,19 +140,19 @@ func TestRegisterSendsVerificationCodeAndVerifyIsSingleUse(t *testing.T) {
 		t.Fatalf("redis ttl %v", ttl)
 	}
 
-	want(t, e.verify(code, ""), 401, "unauthenticated")
-	want(t, e.do(req{method: "POST", path: "/v1/auth/verify-email", body: `{"code":"123456"}`, cookie: c.Value}), 403, "csrf_origin_mismatch")
+	want(t, e.verify(code, ""), 401, "ERROR_UNAUTHORIZED")
+	want(t, e.do(req{method: "POST", path: "/api/auth/verify-email", body: `{"code":"123456"}`, cookie: c.Value}), 403, "ERROR_CSRF_ORIGIN_MISMATCH")
 	if e.verified(c.Value) {
 		t.Fatal("verified before the code was typed")
 	}
-	want(t, e.verify(code, c.Value), 204, "")
+	want(t, e.verify(code, c.Value), 200, "")
 	if !e.verified(c.Value) {
 		t.Fatal("not verified")
 	}
 	if e.rc.Client().Exists(context.Background(), e.otpKey("verify", testMail)).Val() != 0 {
 		t.Fatal("code not consumed")
 	}
-	want(t, e.verify(code, c.Value), 204, "") // already verified: nothing to do
+	want(t, e.verify(code, c.Value), 200, "") // already verified: nothing to do
 	if strings.Contains(e.logs.String(), code) {
 		t.Fatal("code in logs")
 	}
@@ -164,18 +164,18 @@ func TestVerifyRejectsBadCodes(t *testing.T) {
 	c := sessionCookie(t, e.register(testMail, testPW, "Alice"))
 	code := e.code(testMail)
 	for _, bad := range []string{wrongFor(code), "", "12345", "1234567", "abcdef", " 123456", "12345\u0663"} {
-		want(t, e.verify(bad, c.Value), 400, "invalid_code")
+		want(t, e.verify(bad, c.Value), 400, "ERROR_INVALID_CODE")
 	}
-	want(t, e.post("/v1/auth/verify-email", `{}`, c.Value), 400, "invalid_code")
-	want(t, e.post("/v1/auth/verify-email", `{"code":123456}`, c.Value), 400, "invalid_body")
-	want(t, e.post("/v1/auth/verify-email", `not json`, c.Value), 400, "invalid_body")
+	want(t, e.post("/api/auth/verify-email", `{}`, c.Value), 400, "ERROR_INVALID_CODE")
+	want(t, e.post("/api/auth/verify-email", `{"code":123456}`, c.Value), 400, "ERROR_PARAM")
+	want(t, e.post("/api/auth/verify-email", `not json`, c.Value), 400, "ERROR_PARAM")
 	if e.otpField("verify", testMail, "a") != "1" { // only the one well-formed wrong guess counted
 		t.Fatalf("attempts = %q", e.otpField("verify", testMail, "a"))
 	}
 	if e.verified(c.Value) {
 		t.Fatal("verified by a wrong code")
 	}
-	want(t, e.verify(code, c.Value), 204, "") // still usable
+	want(t, e.verify(code, c.Value), 200, "") // still usable
 }
 
 // AC3: after 5 wrong attempts the code is locked, the right code then fails until a new code is sent.
@@ -185,21 +185,21 @@ func TestVerifyLocksAfterFiveWrongGuesses(t *testing.T) {
 	code := e.code(testMail)
 	bad := wrongFor(code)
 	for i := 0; i < 4; i++ {
-		want(t, e.verify(bad, c.Value), 400, "invalid_code")
+		want(t, e.verify(bad, c.Value), 400, "ERROR_INVALID_CODE")
 	}
-	want(t, e.verify(bad, c.Value), 400, "code_locked")
-	want(t, e.verify(code, c.Value), 400, "code_locked")
-	want(t, e.verify(bad, c.Value), 400, "code_locked")
+	want(t, e.verify(bad, c.Value), 400, "ERROR_CODE_LOCKED")
+	want(t, e.verify(code, c.Value), 400, "ERROR_CODE_LOCKED")
+	want(t, e.verify(bad, c.Value), 400, "ERROR_CODE_LOCKED")
 	if e.verified(c.Value) {
 		t.Fatal("locked code verified")
 	}
-	want(t, e.post("/v1/auth/verify-email/resend", "", c.Value), 202, "")
+	want(t, e.post("/api/auth/resend-verification", "", c.Value), 200, "")
 	fresh := e.code(testMail)
 	if fresh == code {
 		t.Skip("drew the same code twice (1 in a million)")
 	}
-	want(t, e.verify(code, c.Value), 400, "invalid_code") // the old one is dead
-	want(t, e.verify(fresh, c.Value), 204, "")
+	want(t, e.verify(code, c.Value), 400, "ERROR_INVALID_CODE") // the old one is dead
+	want(t, e.verify(fresh, c.Value), 200, "")
 }
 
 // AC1 + QA probe: 20 parallel wrong guesses count exactly 5 attempts; four answer invalid_code, the rest code_locked.
@@ -219,7 +219,7 @@ func TestParallelWrongGuessesNeverExceedFiveAttempts(t *testing.T) {
 	for c := range codes {
 		got[c]++
 	}
-	if got["invalid_code"] != 4 || got["code_locked"] != verifyTriesPerHour-4 {
+	if got["ERROR_INVALID_CODE"] != 4 || got["ERROR_CODE_LOCKED"] != verifyTriesPerHour-4 {
 		t.Fatalf("answers %v", got)
 	}
 	if a := e.otpField("verify", testMail, "a"); a != "5" {
@@ -233,21 +233,21 @@ func TestVerifyCodeExpiry(t *testing.T) {
 	c := sessionCookie(t, e.register(testMail, testPW, "Alice"))
 	code := e.code(testMail)
 	e.clock.advance(30*time.Minute - time.Second)
-	want(t, e.verify(wrongFor(code), c.Value), 400, "invalid_code") // still live
+	want(t, e.verify(wrongFor(code), c.Value), 400, "ERROR_INVALID_CODE") // still live
 	e.clock.advance(2 * time.Second)
-	want(t, e.verify(code, c.Value), 400, "code_expired")
-	want(t, e.verify(wrongFor(code), c.Value), 400, "code_expired")
+	want(t, e.verify(code, c.Value), 400, "ERROR_CODE_EXPIRED")
+	want(t, e.verify(wrongFor(code), c.Value), 400, "ERROR_CODE_EXPIRED")
 	if e.verified(c.Value) {
 		t.Fatal("expired code verified")
 	}
 	// no live code at all (consumed or never issued) is invalid_code
-	want(t, e.post("/v1/auth/verify-email/resend", "", c.Value), 202, "")
-	want(t, e.verify(e.code(testMail), c.Value), 204, "")
+	want(t, e.post("/api/auth/resend-verification", "", c.Value), 200, "")
+	want(t, e.verify(e.code(testMail), c.Value), 200, "")
 	other := sessionCookie(t, e.register("bob@example.com", testPW, "Bob"))
 	if err := e.rc.Client().Del(context.Background(), e.otpKey("verify", "bob@example.com")).Err(); err != nil {
 		t.Fatal(err)
 	}
-	want(t, e.verify("000000", other.Value), 400, "invalid_code")
+	want(t, e.verify("000000", other.Value), 400, "ERROR_INVALID_CODE")
 }
 
 // QA probes: another user's code, a reset code, and a verify code do not cross over.
@@ -259,18 +259,18 @@ func TestCodesAreBoundToUserAndPurpose(t *testing.T) {
 	if aCode == bCode {
 		t.Skip("same code for both users (1 in a million)")
 	}
-	want(t, e.verify(bCode, ca.Value), 400, "invalid_code") // Bob's code, Alice's session
-	want(t, e.forgot(testMail, ""), 202, "")
+	want(t, e.verify(bCode, ca.Value), 400, "ERROR_INVALID_CODE") // Bob's code, Alice's session
+	want(t, e.forgot(testMail, ""), 200, "")
 	resetCode := e.code(testMail)
 	if resetCode == aCode {
 		t.Skip("reset and verify codes are equal (1 in a million)")
 	}
-	want(t, e.verify(resetCode, ca.Value), 400, "invalid_code")   // reset code as verify code
-	want(t, e.reset(testMail, aCode, newPW), 400, "invalid_code") // verify code as reset code
-	want(t, e.reset(testMail, bCode, newPW), 400, "invalid_code")
-	want(t, e.verify(aCode, ca.Value), 204, "")
-	want(t, e.verify(bCode, cb.Value), 204, "")
-	want(t, e.reset(testMail, resetCode, newPW), 204, "")
+	want(t, e.verify(resetCode, ca.Value), 400, "ERROR_INVALID_CODE")   // reset code as verify code
+	want(t, e.reset(testMail, aCode, newPW), 400, "ERROR_INVALID_CODE") // verify code as reset code
+	want(t, e.reset(testMail, bCode, newPW), 400, "ERROR_INVALID_CODE")
+	want(t, e.verify(aCode, ca.Value), 200, "")
+	want(t, e.verify(bCode, cb.Value), 200, "")
+	want(t, e.reset(testMail, resetCode, newPW), 200, "")
 }
 
 // AC3: 20 verify attempts per hour per user, then 429 with Retry-After, whatever the code.
@@ -282,42 +282,42 @@ func TestVerifyAttemptsAreLimitedPerUser(t *testing.T) {
 		e.verify(wrongFor(code), c.Value)
 	}
 	rec := e.verify(code, c.Value)
-	want(t, rec, 429, "rate_limited")
+	want(t, rec, 429, "ERROR_RATE_LIMITED")
 	if rec.Header().Get("Retry-After") == "" {
 		t.Fatal("Retry-After missing")
 	}
 	e.clock.advance(time.Hour + time.Second)
-	want(t, e.post("/v1/auth/verify-email/resend", "", c.Value), 202, "")
-	want(t, e.verify(e.code(testMail), c.Value), 204, "")
+	want(t, e.post("/api/auth/resend-verification", "", c.Value), 200, "")
+	want(t, e.verify(e.code(testMail), c.Value), 200, "")
 }
 
 // AC4: resend is limited to 3 per hour, each one kills the previous code; a verified user gets already_verified.
 func TestResendVerification(t *testing.T) {
 	e := newEnv(t, opts{})
 	c := sessionCookie(t, e.register(testMail, testPW, "Alice"))
-	want(t, e.do(req{method: "POST", path: "/v1/auth/verify-email/resend", origin: origin}), 401, "unauthenticated")
-	want(t, e.do(req{method: "POST", path: "/v1/auth/verify-email/resend", cookie: c.Value}), 403, "csrf_origin_mismatch")
+	want(t, e.do(req{method: "POST", path: "/api/auth/resend-verification", origin: origin}), 401, "ERROR_UNAUTHORIZED")
+	want(t, e.do(req{method: "POST", path: "/api/auth/resend-verification", cookie: c.Value}), 403, "ERROR_CSRF_ORIGIN_MISMATCH")
 	first := e.code(testMail)
 	for i := 0; i < 3; i++ {
-		rec := e.post("/v1/auth/verify-email/resend", "", c.Value)
-		want(t, rec, 202, "")
-		if rec.Body.String() != "{}\n" && rec.Body.String() != "{}" {
+		rec := e.post("/api/auth/resend-verification", "", c.Value)
+		want(t, rec, 200, "")
+		if strings.TrimSpace(rec.Body.String()) != `{"status":"OK","data":{"already_verified":false}}` {
 			t.Fatalf("body %q", rec.Body.String())
 		}
 	}
-	rec := e.post("/v1/auth/verify-email/resend", "", c.Value)
-	want(t, rec, 429, "rate_limited")
+	rec := e.post("/api/auth/resend-verification", "", c.Value)
+	want(t, rec, 429, "ERROR_RATE_LIMITED")
 	if rec.Header().Get("Retry-After") == "" {
 		t.Fatal("Retry-After missing")
 	}
 	if got := e.code(testMail); got != first {
-		want(t, e.verify(first, c.Value), 400, "invalid_code") // only the newest code lives
+		want(t, e.verify(first, c.Value), 400, "ERROR_INVALID_CODE") // only the newest code lives
 	}
 	e.clock.advance(time.Hour + time.Second)
-	want(t, e.post("/v1/auth/verify-email/resend", "", c.Value), 202, "") // window passed
-	want(t, e.verify(e.code(testMail), c.Value), 204, "")
+	want(t, e.post("/api/auth/resend-verification", "", c.Value), 200, "") // window passed
+	want(t, e.verify(e.code(testMail), c.Value), 200, "")
 	before := e.mailCount(testMail)
-	rec = e.post("/v1/auth/verify-email/resend", "", c.Value)
+	rec = e.post("/api/auth/resend-verification", "", c.Value)
 	want(t, rec, 200, "")
 	if !strings.Contains(rec.Body.String(), `"already_verified":true`) || e.mailCount(testMail) != before {
 		t.Fatalf("verified user: %s, mails %d->%d", rec.Body.String(), before, e.mailCount(testMail))
@@ -328,7 +328,7 @@ func TestResendVerification(t *testing.T) {
 func TestRegisterSurvivesMailerFailure(t *testing.T) {
 	e := newEnv(t, opts{})
 	e.mail.fail = true
-	want(t, e.register(testMail, testPW, "Alice"), 201, "")
+	want(t, e.register(testMail, testPW, "Alice"), 200, "")
 	code := e.code(testMail) // the recorder kept the attempted message
 	logs := e.logs.String()
 	if !strings.Contains(logs, "verification email not sent") {
@@ -339,7 +339,7 @@ func TestRegisterSurvivesMailerFailure(t *testing.T) {
 	}
 	e.mail.fail = false
 	c := sessionCookie(t, e.login(testMail, testPW, ""))
-	want(t, e.post("/v1/auth/verify-email/resend", "", c.Value), 202, "") // user can resend
+	want(t, e.post("/api/auth/resend-verification", "", c.Value), 200, "") // user can resend
 	if e.mailCount(testMail) != 2 {
 		t.Fatalf("mails: %d", e.mailCount(testMail))
 	}
@@ -348,11 +348,11 @@ func TestRegisterSurvivesMailerFailure(t *testing.T) {
 // AC5: forgot-password stays silent about unknown addresses and sends a code to known ones.
 func TestForgotPasswordDoesNotRevealAccounts(t *testing.T) {
 	e := newEnv(t, opts{})
-	want(t, e.register(testMail, testPW, "Alice"), 201, "")
+	want(t, e.register(testMail, testPW, "Alice"), 200, "")
 	known := e.forgot(testMail, "")
 	unknown := e.forgot("nobody@example.com", "")
-	want(t, known, 202, "")
-	want(t, unknown, 202, "")
+	want(t, known, 200, "")
+	want(t, unknown, 200, "")
 	if known.Body.String() != unknown.Body.String() {
 		t.Fatalf("bodies differ: %q vs %q", known.Body.String(), unknown.Body.String())
 	}
@@ -366,30 +366,30 @@ func TestForgotPasswordDoesNotRevealAccounts(t *testing.T) {
 		t.Fatalf("reset ttl %v", ttl)
 	}
 	// the address is normalised like at login
-	want(t, e.forgot("  ALICE@Example.com ", "192.0.2.9:1"), 202, "")
+	want(t, e.forgot("  ALICE@Example.com ", "192.0.2.9:1"), 200, "")
 	if e.mailCount(testMail) != 3 {
 		t.Fatal("upper-case address did not match the account")
 	}
-	want(t, e.forgot("not-an-email", ""), 400, "invalid_email")
+	want(t, e.forgot("not-an-email", ""), 400, "ERROR_INVALID_EMAIL")
 }
 
 // AC5: 5 per hour per IP and 3 per hour per address, applied the same to unknown addresses.
 func TestForgotPasswordRateLimits(t *testing.T) {
 	e := newEnv(t, opts{})
 	for i := 0; i < 5; i++ {
-		want(t, e.forgot(fmt.Sprintf("u%d@example.com", i), "192.0.2.1:1"), 202, "")
+		want(t, e.forgot(fmt.Sprintf("u%d@example.com", i), "192.0.2.1:1"), 200, "")
 	}
 	rec := e.forgot("u9@example.com", "192.0.2.1:1")
-	want(t, rec, 429, "rate_limited")
+	want(t, rec, 429, "ERROR_RATE_LIMITED")
 	if rec.Header().Get("Retry-After") == "" {
 		t.Fatal("Retry-After missing")
 	}
 	for i := 0; i < 3; i++ { // per address, from different IPs; the address does not exist
-		want(t, e.forgot("ghost@example.com", fmt.Sprintf("192.0.2.%d:1", 20+i)), 202, "")
+		want(t, e.forgot("ghost@example.com", fmt.Sprintf("192.0.2.%d:1", 20+i)), 200, "")
 	}
-	want(t, e.forgot("ghost@example.com", "192.0.2.99:1"), 429, "rate_limited")
+	want(t, e.forgot("ghost@example.com", "192.0.2.99:1"), 429, "ERROR_RATE_LIMITED")
 	e.clock.advance(time.Hour + time.Second)
-	want(t, e.forgot("ghost@example.com", "192.0.2.1:1"), 202, "")
+	want(t, e.forgot("ghost@example.com", "192.0.2.1:1"), 200, "")
 }
 
 // AC5: the whole reset flow, including session removal, single use and a weak password sparing the code.
@@ -397,30 +397,30 @@ func TestResetPasswordFlow(t *testing.T) {
 	e := newEnv(t, opts{})
 	c1 := sessionCookie(t, e.register(testMail, testPW, "Alice"))
 	c2 := sessionCookie(t, e.login(testMail, testPW, ""))
-	want(t, e.forgot(testMail, ""), 202, "")
+	want(t, e.forgot(testMail, ""), 200, "")
 	code := e.code(testMail)
 
 	// a weak password is refused, with a right or wrong code alike, and does not touch the code
-	want(t, e.reset(testMail, code, "short"), 400, "weak_password")
-	want(t, e.reset(testMail, code, testMail), 400, "weak_password")
-	want(t, e.reset(testMail, wrongFor(code), "short"), 400, "weak_password")
-	want(t, e.reset("nobody@example.com", code, "short"), 400, "weak_password")
+	want(t, e.reset(testMail, code, "short"), 400, "ERROR_WEAK_PASSWORD")
+	want(t, e.reset(testMail, code, testMail), 400, "ERROR_WEAK_PASSWORD")
+	want(t, e.reset(testMail, wrongFor(code), "short"), 400, "ERROR_WEAK_PASSWORD")
+	want(t, e.reset("nobody@example.com", code, "short"), 400, "ERROR_WEAK_PASSWORD")
 	if e.otpField("reset", testMail, "a") != "0" {
 		t.Fatal("a weak password counted as an attempt")
 	}
-	want(t, e.reset("not-an-email", code, newPW), 400, "invalid_email")
-	want(t, e.reset(testMail, wrongFor(code), newPW), 400, "invalid_code")
+	want(t, e.reset("not-an-email", code, newPW), 400, "ERROR_INVALID_EMAIL")
+	want(t, e.reset(testMail, wrongFor(code), newPW), 400, "ERROR_INVALID_CODE")
 
-	want(t, e.reset("  ALICE@example.com ", code, newPW), 204, "")
+	want(t, e.reset("  ALICE@example.com ", code, newPW), 200, "")
 	for _, c := range []string{c1.Value, c2.Value} {
-		want(t, e.do(req{method: "GET", path: "/v1/me", cookie: c}), 401, "unauthenticated")
+		want(t, e.do(req{method: "GET", path: "/api/user/get-me", cookie: c}), 401, "ERROR_UNAUTHORIZED")
 	}
 	if e.sessionCount() != 0 {
 		t.Fatal("sessions left")
 	}
-	want(t, e.login(testMail, testPW, ""), 401, "invalid_credentials")
+	want(t, e.login(testMail, testPW, ""), 401, "ERROR_INVALID_CREDENTIALS")
 	want(t, e.login(testMail, newPW, ""), 200, "")
-	want(t, e.reset(testMail, code, "Third-fake-password-99"), 400, "invalid_code") // reuse
+	want(t, e.reset(testMail, code, "Third-fake-password-99"), 400, "ERROR_INVALID_CODE") // reuse
 	want(t, e.login(testMail, newPW, ""), 200, "")
 	if strings.Contains(e.logs.String(), code) || strings.Contains(e.logs.String(), newPW) {
 		t.Fatal("secret in logs")
@@ -430,23 +430,24 @@ func TestResetPasswordFlow(t *testing.T) {
 // AC5: unknown address, wrong code and no code at all answer alike (same status, code and message).
 func TestResetAnswersAreIndistinguishable(t *testing.T) {
 	e := newEnv(t, opts{})
-	want(t, e.register(testMail, testPW, "Alice"), 201, "")
-	want(t, e.register("bob@example.com", testPW, "Bob"), 201, "") // Bob never asks for a reset code
-	want(t, e.forgot(testMail, ""), 202, "")
+	want(t, e.register(testMail, testPW, "Alice"), 200, "")
+	want(t, e.register("bob@example.com", testPW, "Bob"), 200, "") // Bob never asks for a reset code
+	want(t, e.forgot(testMail, ""), 200, "")
 	code := e.code(testMail)
 	shape := func(rec *httptest.ResponseRecorder) string {
 		var b struct {
-			Error struct{ Code, Message string }
+			Status       string `json:"status"`
+			ErrorMessage string `json:"error_message"`
 		}
 		if err := json.Unmarshal(rec.Body.Bytes(), &b); err != nil {
 			t.Fatal(err)
 		}
-		return fmt.Sprint(rec.Code, b.Error.Code, b.Error.Message)
+		return fmt.Sprint(rec.Code, b.Status, b.ErrorMessage)
 	}
 	a := shape(e.reset("ghost@example.com", "123456", newPW))
 	b := shape(e.reset(testMail, wrongFor(code), newPW))
 	c := shape(e.reset("bob@example.com", "123456", newPW))
-	if a != b || b != c || !strings.Contains(a, "invalid_code") {
+	if a != b || b != c || !strings.Contains(a, "ERROR_INVALID_CODE") {
 		t.Fatalf("answers differ: %q %q %q", a, b, c)
 	}
 }
@@ -454,57 +455,57 @@ func TestResetAnswersAreIndistinguishable(t *testing.T) {
 // AC5: a reset code lives 15 minutes, then code_expired for the account that has one; the password stays.
 func TestResetCodeExpiresAfterFifteenMinutes(t *testing.T) {
 	e := newEnv(t, opts{})
-	want(t, e.register(testMail, testPW, "Alice"), 201, "")
-	want(t, e.forgot(testMail, ""), 202, "")
+	want(t, e.register(testMail, testPW, "Alice"), 200, "")
+	want(t, e.forgot(testMail, ""), 200, "")
 	code := e.code(testMail)
 	e.clock.advance(15*time.Minute - time.Second)
-	want(t, e.reset(testMail, wrongFor(code), newPW), 400, "invalid_code") // a near miss is just wrong
+	want(t, e.reset(testMail, wrongFor(code), newPW), 400, "ERROR_INVALID_CODE") // a near miss is just wrong
 	e.clock.advance(2 * time.Second)
-	want(t, e.reset(testMail, code, newPW), 400, "code_expired")
-	want(t, e.reset("ghost@example.com", code, newPW), 400, "invalid_code")
+	want(t, e.reset(testMail, code, newPW), 400, "ERROR_CODE_EXPIRED")
+	want(t, e.reset("ghost@example.com", code, newPW), 400, "ERROR_INVALID_CODE")
 	want(t, e.login(testMail, testPW, ""), 200, "") // password unchanged
 }
 
 // AC5: 5 wrong guesses lock a reset code; a new forgot-password gives a fresh one.
 func TestResetLocksAfterFiveWrongGuesses(t *testing.T) {
 	e := newEnv(t, opts{})
-	want(t, e.register(testMail, testPW, "Alice"), 201, "")
-	want(t, e.forgot(testMail, "10.0.0.1:1"), 202, "")
+	want(t, e.register(testMail, testPW, "Alice"), 200, "")
+	want(t, e.forgot(testMail, "10.0.0.1:1"), 200, "")
 	code := e.code(testMail)
 	for i := 0; i < 4; i++ {
-		want(t, e.reset(testMail, wrongFor(code), newPW), 400, "invalid_code")
+		want(t, e.reset(testMail, wrongFor(code), newPW), 400, "ERROR_INVALID_CODE")
 	}
-	want(t, e.reset(testMail, wrongFor(code), newPW), 400, "code_locked")
-	want(t, e.reset(testMail, code, newPW), 400, "code_locked")
-	want(t, e.login(testMail, newPW, ""), 401, "invalid_credentials")
-	want(t, e.forgot(testMail, "10.0.0.2:1"), 202, "")
+	want(t, e.reset(testMail, wrongFor(code), newPW), 400, "ERROR_CODE_LOCKED")
+	want(t, e.reset(testMail, code, newPW), 400, "ERROR_CODE_LOCKED")
+	want(t, e.login(testMail, newPW, ""), 401, "ERROR_INVALID_CREDENTIALS")
+	want(t, e.forgot(testMail, "10.0.0.2:1"), 200, "")
 	fresh := e.code(testMail)
 	if fresh == code {
 		t.Skip("same code twice (1 in a million)")
 	}
-	want(t, e.reset(testMail, code, newPW), 400, "invalid_code")
-	want(t, e.reset(testMail, fresh, newPW), 204, "")
+	want(t, e.reset(testMail, code, newPW), 400, "ERROR_INVALID_CODE")
+	want(t, e.reset(testMail, fresh, newPW), 200, "")
 }
 
 // AC5: reset attempts are limited to 20 per hour per IP.
 func TestResetAttemptsAreLimitedPerIP(t *testing.T) {
 	e := newEnv(t, opts{})
 	for i := 0; i < resetTriesPerHour; i++ {
-		want(t, e.resetFrom("ghost@example.com", "123456", newPW, "192.0.2.5:1"), 400, "invalid_code")
+		want(t, e.resetFrom("ghost@example.com", "123456", newPW, "192.0.2.5:1"), 400, "ERROR_INVALID_CODE")
 	}
 	rec := e.resetFrom("ghost@example.com", "123456", newPW, "192.0.2.5:1")
-	want(t, rec, 429, "rate_limited")
+	want(t, rec, 429, "ERROR_RATE_LIMITED")
 	if rec.Header().Get("Retry-After") == "" {
 		t.Fatal("Retry-After missing")
 	}
-	want(t, e.resetFrom("ghost@example.com", "123456", newPW, "192.0.2.6:1"), 400, "invalid_code") // another IP
+	want(t, e.resetFrom("ghost@example.com", "123456", newPW, "192.0.2.6:1"), 400, "ERROR_INVALID_CODE") // another IP
 }
 
 // AC1 + QA probe: one code used by 8 parallel resets has exactly one winner.
 func TestConcurrentResetHasOneWinner(t *testing.T) {
 	e := newEnv(t, opts{})
-	want(t, e.register(testMail, testPW, "Alice"), 201, "")
-	want(t, e.forgot(testMail, ""), 202, "")
+	want(t, e.register(testMail, testPW, "Alice"), 200, "")
+	want(t, e.forgot(testMail, ""), 200, "")
 	code := e.code(testMail)
 	var wg sync.WaitGroup
 	statuses := make(chan int, 8)
@@ -519,7 +520,7 @@ func TestConcurrentResetHasOneWinner(t *testing.T) {
 	close(statuses)
 	ok := 0
 	for c := range statuses {
-		if c == 204 {
+		if c == 200 {
 			ok++
 		} else if c != 400 {
 			t.Fatalf("unexpected status %d", c)
@@ -533,11 +534,11 @@ func TestConcurrentResetHasOneWinner(t *testing.T) {
 // AC6: user_tab.locale picks the language and the mail carries the code, in both languages.
 func TestEmailLocale(t *testing.T) {
 	e := newEnv(t, opts{})
-	want(t, e.register(testMail, testPW, "Hồng"), 201, "")
+	want(t, e.register(testMail, testPW, "Hồng"), 200, "")
 	if _, err := e.db.Exec("UPDATE user_tab SET locale = 'vi'"); err != nil {
 		t.Fatal(err)
 	}
-	want(t, e.forgot(testMail, ""), 202, "")
+	want(t, e.forgot(testMail, ""), 200, "")
 	e.svc.Wait()
 	msgs := e.mail.all()
 	got := msgs[len(msgs)-1]
@@ -563,18 +564,18 @@ func TestRedisDownFailsClosed(t *testing.T) {
 	e.codes.rc = dead // nothing listens on port 1
 	for name, rec := range map[string]*httptest.ResponseRecorder{
 		"verify": e.verify(code, c.Value),
-		"resend": e.post("/v1/auth/verify-email/resend", "", c.Value),
+		"resend": e.post("/api/auth/resend-verification", "", c.Value),
 		"reset":  e.reset(testMail, code, newPW),
 		"decoy":  e.reset("ghost@example.com", code, newPW),
 	} {
-		if rec.Code != 503 || errCode(t, rec) != "code_store_unavailable" || rec.Header().Get("Retry-After") == "" {
+		if rec.Code != 503 || errCode(t, rec) != "ERROR_CODE_STORE_UNAVAILABLE" || rec.Header().Get("Retry-After") == "" {
 			t.Errorf("%s: %d %s", name, rec.Code, rec.Body.String())
 		}
 	}
 	if e.verified(c.Value) {
 		t.Fatal("verified while Redis was down")
 	}
-	want(t, e.forgot(testMail, ""), 202, "") // stays silent; the send failure is logged
+	want(t, e.forgot(testMail, ""), 200, "") // stays silent; the send failure is logged
 	e.svc.Wait()
 	if !errors.Is(e.codes.Check(context.Background(), purposeVerify, 1, code, e.clock.now()), redis.ErrUnavailable) {
 		t.Fatal("Check should report ErrUnavailable")
@@ -587,9 +588,9 @@ func TestDevFixedCode(t *testing.T) {
 	e := newEnv(t, opts{fixedOTP: fixed})
 	c := sessionCookie(t, e.register(testMail, testPW, "Alice"))
 	real := e.code(testMail)
-	want(t, e.verify(wrongFor(real), c.Value), 400, "invalid_code") // a wrong 6-digit code is still rejected
-	want(t, e.verify("123124", c.Value), 400, "invalid_code")
-	want(t, e.verify(fixed, c.Value), 204, "")
+	want(t, e.verify(wrongFor(real), c.Value), 400, "ERROR_INVALID_CODE") // a wrong 6-digit code is still rejected
+	want(t, e.verify("123124", c.Value), 400, "ERROR_INVALID_CODE")
+	want(t, e.verify(fixed, c.Value), 200, "")
 	if !e.verified(c.Value) {
 		t.Fatal("fixed code did not verify")
 	}
@@ -598,12 +599,12 @@ func TestDevFixedCode(t *testing.T) {
 	}
 
 	// reset: no forgot-password needed; an unknown address is still invalid_code; a weak password still counts first
-	want(t, e.reset("ghost@example.com", fixed, newPW), 400, "invalid_code")
-	want(t, e.reset(testMail, fixed, "short"), 400, "weak_password")
-	want(t, e.reset(testMail, "123124", newPW), 400, "invalid_code")
-	want(t, e.reset(testMail, fixed, newPW), 204, "")
+	want(t, e.reset("ghost@example.com", fixed, newPW), 400, "ERROR_INVALID_CODE")
+	want(t, e.reset(testMail, fixed, "short"), 400, "ERROR_WEAK_PASSWORD")
+	want(t, e.reset(testMail, "123124", newPW), 400, "ERROR_INVALID_CODE")
+	want(t, e.reset(testMail, fixed, newPW), 200, "")
 	want(t, e.login(testMail, newPW, ""), 200, "")
-	want(t, e.reset(testMail, fixed, "Yet-another-fake-pw-7"), 204, "") // not single use: it is a dev shortcut
+	want(t, e.reset(testMail, fixed, "Yet-another-fake-pw-7"), 200, "") // not single use: it is a dev shortcut
 }
 
 // AC7 DEV-SHORTCUT(otp): with the variable unset, 123123 is just a wrong code.
@@ -613,8 +614,8 @@ func TestDevFixedCodeOffByDefault(t *testing.T) {
 	if e.code(testMail) == "123123" {
 		t.Skip("drew 123123 (1 in a million)")
 	}
-	want(t, e.verify("123123", c.Value), 400, "invalid_code")
-	want(t, e.reset(testMail, "123123", newPW), 400, "invalid_code")
+	want(t, e.verify("123123", c.Value), 400, "ERROR_INVALID_CODE")
+	want(t, e.reset(testMail, "123123", newPW), 400, "ERROR_INVALID_CODE")
 	if e.verified(c.Value) {
 		t.Fatal("verified")
 	}
@@ -642,23 +643,23 @@ func TestNewCodesRefusesFixedCodeOutsideDevAndTest(t *testing.T) {
 func TestRegisterLocale(t *testing.T) {
 	e := newEnv(t, opts{})
 	reg := func(email, locale string) *httptest.ResponseRecorder {
-		return e.do(req{method: "POST", path: "/v1/auth/register", body: fmt.Sprintf(`{"email":%q,"password":%q,"display_name":"A"%s}`, email, testPW, locale)})
+		return e.do(req{method: "POST", path: "/api/auth/register", body: fmt.Sprintf(`{"email":%q,"password":%q,"display_name":"A"%s}`, email, testPW, locale)})
 	}
 	for i, c := range []struct{ field, stored string }{
 		{``, "en"}, {`,"locale":null`, "en"}, {`,"locale":"en"`, "en"}, {`,"locale":"vi"`, "vi"},
 	} {
 		mail := fmt.Sprintf("ok%d@example.com", i)
 		rec := reg(mail, c.field)
-		want(t, rec, 201, "")
+		want(t, rec, 200, "")
 		if !strings.Contains(rec.Body.String(), `"locale":"`+c.stored+`"`) {
 			t.Errorf("%q: response %s, want locale %s", c.field, rec.Body.String(), c.stored)
 		}
 		if n := e.count("SELECT COUNT(*) FROM user_tab WHERE email = ? AND locale = ?", mail, c.stored); n != 1 {
 			t.Errorf("%q: stored locale is not %s", c.field, c.stored)
 		}
-		me := e.do(req{method: "GET", path: "/v1/me", cookie: sessionCookie(t, rec).Value})
+		me := e.do(req{method: "GET", path: "/api/user/get-me", cookie: sessionCookie(t, rec).Value})
 		if !strings.Contains(me.Body.String(), `"locale":"`+c.stored+`"`) {
-			t.Errorf("%q: /v1/me %s", c.field, me.Body.String())
+			t.Errorf("%q: /api/user/get-me %s", c.field, me.Body.String())
 		}
 	}
 	// The Vietnamese mail has the Vietnamese subject and the verify code.
@@ -685,7 +686,7 @@ func TestRegisterLocale(t *testing.T) {
 		"number": `,"locale":1`, "bool": `,"locale":false`, "object": `,"locale":{}`, "array": `,"locale":["vi"]`,
 	} {
 		rec := reg("bad@example.com", f)
-		if rec.Code != 400 || errCode(t, rec) != "invalid_locale" || rec.Header().Get("Set-Cookie") != "" {
+		if rec.Code != 400 || errCode(t, rec) != "ERROR_INVALID_LOCALE" || rec.Header().Get("Set-Cookie") != "" {
 			t.Errorf("%s: %d %s", name, rec.Code, rec.Body.String())
 		}
 	}

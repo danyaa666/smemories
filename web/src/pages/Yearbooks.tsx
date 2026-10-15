@@ -8,6 +8,7 @@ import { Button, buttonClass } from "../components/ui/Button";
 export const YEARBOOKS_KEY = ["yearbooks"] as const;
 
 function Card({ y, lang }: { y: Yearbook; lang: string }) {
+  const updated = new Date(y.updated_at);
   const meta = [y.school_name, y.class_name, y.graduation_year].filter(Boolean).join(" · ");
   return (
     <li className="card">
@@ -18,8 +19,8 @@ function Card({ y, lang }: { y: Yearbook; lang: string }) {
       {meta && <p>{meta}</p>}
       <p>
         <small>
-          <time dateTime={y.updated_at}>
-            {new Intl.DateTimeFormat(lang, { dateStyle: "medium" }).format(new Date(y.updated_at))}
+          <time dateTime={updated.toISOString()}>
+            {new Intl.DateTimeFormat(lang, { dateStyle: "medium" }).format(updated)}
           </time>
         </small>
       </p>
@@ -33,9 +34,9 @@ export function Yearbooks() {
     queryKey: YEARBOOKS_KEY,
     queryFn: ({ pageParam }) => listYearbooks(pageParam),
     initialPageParam: undefined as string | undefined,
-    getNextPageParam: (last) => last.next_cursor ?? undefined,
+    getNextPageParam: (last) => last.next_id || undefined,
   });
-  const books = q.data?.pages.flatMap((p) => p.yearbooks) ?? [];
+  const books = q.data?.pages.flatMap((p) => p.items) ?? [];
   return (
     <>
       <h1>{t("books.title")}</h1>

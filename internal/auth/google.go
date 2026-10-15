@@ -24,7 +24,7 @@ import (
 )
 
 // Google sign-in: OpenID Connect authorization-code flow with PKCE (D-07). The browser leaves
-// through /v1/auth/google/start and comes back to /v1/auth/google/callback; the only state
+// through /api/auth/google-start and comes back to /api/auth/google-callback; the only state
 // between the two is the signed smem_oidc cookie, which also binds the flow to the browser
 // that started it (login CSRF). Failures redirect to /login?error=<code> with a fixed code;
 // provider errors, codes and tokens are never put in a redirect or a log line.
@@ -50,7 +50,7 @@ type GoogleConfig struct {
 	ClientID     string
 	ClientSecret string
 	Issuer       string // https://accounts.google.com unless testing
-	RedirectURL  string // <public base URL>/api/v1/auth/google/callback
+	RedirectURL  string // <public base URL>/api/auth/google-callback
 	CookieKey    []byte // HMAC key for smem_oidc, at least 32 bytes
 	HTTPClient   *http.Client
 }

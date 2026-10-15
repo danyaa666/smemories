@@ -99,7 +99,7 @@
       "name": "Setup (once per database)",
       "item": [
         {
-          "name": "Register A (201; 409 or 429 when an earlier run already did)",
+          "name": "Register A (200; 409 or 429 when an earlier run already did)",
           "request": {
             "method": "POST",
             "header": [
@@ -113,12 +113,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/auth/register",
+              "raw": "{{baseUrl}}/api/auth/register",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
+                "api",
                 "auth",
                 "register"
               ]
@@ -134,14 +134,14 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('created, or already there (the register limit is 5 per hour per IP)', () => pm.expect(pm.response.code).to.be.oneOf([201, 409, 429]));"
+                  "pm.test('created, or already there (the register limit is 5 per hour per IP)', () => pm.expect(pm.response.code).to.be.oneOf([200, 409, 429]));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Register B (201; 409 or 429 when an earlier run already did)",
+          "name": "Register B (200; 409 or 429 when an earlier run already did)",
           "request": {
             "method": "POST",
             "header": [
@@ -155,12 +155,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/auth/register",
+              "raw": "{{baseUrl}}/api/auth/register",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
+                "api",
                 "auth",
                 "register"
               ]
@@ -176,14 +176,14 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('created, or already there (the register limit is 5 per hour per IP)', () => pm.expect(pm.response.code).to.be.oneOf([201, 409, 429]));"
+                  "pm.test('created, or already there (the register limit is 5 per hour per IP)', () => pm.expect(pm.response.code).to.be.oneOf([200, 409, 429]));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Register C (stays unverified) (201; 409 or 429 when an earlier run already did)",
+          "name": "Register C (stays unverified) (200; 409 or 429 when an earlier run already did)",
           "request": {
             "method": "POST",
             "header": [
@@ -197,12 +197,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/auth/register",
+              "raw": "{{baseUrl}}/api/auth/register",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
+                "api",
                 "auth",
                 "register"
               ]
@@ -218,7 +218,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('created, or already there (the register limit is 5 per hour per IP)', () => pm.expect(pm.response.code).to.be.oneOf([201, 409, 429]));"
+                  "pm.test('created, or already there (the register limit is 5 per hour per IP)', () => pm.expect(pm.response.code).to.be.oneOf([200, 409, 429]));"
                 ]
               }
             }
@@ -262,12 +262,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/auth/login",
+              "raw": "{{baseUrl}}/api/auth/login",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
+                "api",
                 "auth",
                 "login"
               ]
@@ -311,12 +311,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/auth/login",
+              "raw": "{{baseUrl}}/api/auth/login",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
+                "api",
                 "auth",
                 "login"
               ]
@@ -360,13 +360,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks",
+              "raw": "{{baseUrl}}/api/yearbook/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks"
+                "api",
+                "yearbook",
+                "create"
               ]
             },
             "body": {
@@ -380,8 +381,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 201', () => pm.response.to.have.status(201));",
-                  "pm.collectionVariables.set('bookId', pm.response.json().yearbook.id);"
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('bookId', pm.response.json().data.id);"
                 ]
               }
             }
@@ -1460,12 +1461,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/auth/login",
+              "raw": "{{baseUrl}}/api/auth/login",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
+                "api",
                 "auth",
                 "login"
               ]
@@ -3572,9 +3573,9 @@
           ]
         },
         {
-          "name": "Clean up: A deletes the yearbook - 204",
+          "name": "Clean up: A deletes the yearbook - 200",
           "request": {
-            "method": "DELETE",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -3583,18 +3584,26 @@
               {
                 "key": "Origin",
                 "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}",
+              "raw": "{{baseUrl}}/api/yearbook/delete",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}"
+                "api",
+                "yearbook",
+                "delete"
               ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{bookId}}\"}"
             }
           },
           "event": [
@@ -3603,7 +3612,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 204', () => pm.response.to.have.status(204));"
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
                 ]
               }
             }

@@ -6,29 +6,27 @@ export type User = components["schemas"]["User"];
 /** The signed-in user, or null when there is no valid session. */
 export async function getMe(): Promise<User | null> {
   try {
-    return (await request<components["schemas"]["UserEnvelope"]>("/v1/me")).user;
+    return await request<User>("/user/get-me");
   } catch (e) {
     if (e instanceof ApiError && e.status === 401) return null;
     throw e;
   }
 }
 
-const user = async (path: string, body: unknown) =>
-  (await postJson<components["schemas"]["UserEnvelope"]>(path, body)).user;
-
 export const register = (
   email: string,
   password: string,
   display_name: string,
   locale: "en" | "vi",
-) => user("/v1/auth/register", { email, password, display_name, locale });
+) => postJson<User>("/auth/register", { email, password, display_name, locale });
 export const login = (email: string, password: string) =>
-  user("/v1/auth/login", { email, password });
-export const logout = () => postJson<void>("/v1/auth/logout");
-export const verifyEmail = (code: string) => postJson<void>("/v1/auth/verify-email", { code });
+  postJson<User>("/auth/login", { email, password });
+export const logout = () => postJson<void>("/auth/logout");
+export const verifyEmail = (code: string) => postJson<void>("/auth/verify-email", { code });
 export const resendVerification = () =>
-  postJson<{ already_verified?: true }>("/v1/auth/verify-email/resend");
-export const forgotPassword = (email: string) =>
-  postJson<void>("/v1/auth/forgot-password", { email });
+  postJson<components["schemas"]["ResendVerificationResponse"]["data"]>(
+    "/auth/resend-verification",
+  );
+export const forgotPassword = (email: string) => postJson<void>("/auth/forgot-password", { email });
 export const resetPassword = (email: string, code: string, password: string) =>
-  postJson<void>("/v1/auth/reset-password", { email, code, password });
+  postJson<void>("/auth/reset-password", { email, code, password });

@@ -3,9 +3,8 @@ info:
   title: SMemories API
   version: 0.1.0
   description: >-
-    Hand-written contract for the SMemories API. Infrastructure routes live at the
-    root; business routes live under /api/<namespace>/<action> (v2, docs/api-contract.md) or,
-    until epic E10 moves their domain, under /v1 (the web app reaches them as /api/v1/*).
+    Hand-written contract for the SMemories API. Infrastructure routes (/healthz, /readyz) live at the
+    root; every business route lives under /api/<namespace>/<action> (docs/api-contract.md).
 servers:
   - url: http://localhost:8080
     description: Local development
@@ -56,108 +55,87 @@ paths:
                 $ref: "#/components/schemas/Error"
         "405":
           $ref: "#/components/responses/MethodNotAllowed"
-  /v1/auth/register:
+  /api/auth/register:
     post:
       operationId: register
-      security: []
       tags: [auth]
       summary: Create an account and sign in
       description: >-
-        Email is trimmed, lower-cased and normalised to NFC; a duplicate (case-insensitive, and
-        NFC/NFD spellings are the same address) is `409 email_taken`. Password: 10-128 characters
-        and not equal to the email. Display name: 1-100 characters after trimming, no control or
-        format characters (see the field). Rate limit: 5 per hour per IP (counted once the
-        input is valid). A cookie-less request needs no Origin; one that carries a session cookie
-        must satisfy the CSRF origin check.
+        Called by the sign-up form. Creates the account and signs the caller in (the session cookie is set) and sends the 6-digit verification code by email.
+        The email is trimmed, lower-cased and normalised to NFC; a duplicate (case-insensitive, and NFC/NFD spellings are the same address) is `ERROR_EMAIL_TAKEN`.
+        Password: 10-128 characters after NFKC normalisation and not equal to the email. Display name: 1-100 characters after trimming, no control or format characters.
+        Rate limit: 5 per hour per IP, counted once the input is valid. A cookie-less request needs no Origin; one that carries a session cookie must come from an allowed Origin.
+        Not idempotent: a repeated call is `ERROR_EMAIL_TAKEN`. Unknown body fields are ignored.
+      x-auth: public
+      x-error-codes:
+        - {code: ERROR_INVALID_EMAIL, description: "Field `email`: not a single address, over 254 characters, local part over 64 bytes, or containing control or format characters."}
+        - {code: ERROR_WEAK_PASSWORD, description: "Field `password`: fewer than 10 or more than 128 characters after normalisation, or equal to the email."}
+        - {code: ERROR_INVALID_DISPLAY_NAME, description: "Field `display_name`: empty after trimming, over 100 characters, or containing control characters."}
+        - {code: ERROR_INVALID_LOCALE, description: "Field `locale`: present but not `en` or `vi` (case-sensitive), or not a string."}
+        - {code: ERROR_EMAIL_TAKEN, description: An account with this address already exists.}
+        - {code: ERROR_RATE_LIMITED, description: "More than 5 registrations per hour from this IP; wait for `Retry-After` seconds."}
+        - {code: ERROR_BUSY, description: "All password-hashing slots stayed taken for 2 seconds; retry after `Retry-After`."}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; no account is created. Retry after `Retry-After`."}
+      security: []
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              type: object
-              required: [email, password, display_name]
-              properties:
-                email:
-                  type: string
-                  maxLength: 254
-                  description: >-
-                    Trimmed, lower-cased and normalised to Unicode NFC, so NFC and NFD spellings of one
-                    address are the same account (also at login). The local part (before the last `@`)
-                    is at most 64 bytes, and the address contains no control (Cc) or format (Cf)
-                    characters; otherwise `invalid_email`.
-                password:
-                  type: string
-                  format: password
-                  minLength: 10
-                  maxLength: 128
-                  description: >-
-                    Normalised to Unicode NFKC before the length rules (counted in characters after
-                    normalisation) and before hashing, so NFC and NFD forms of the same password are equal.
-                display_name:
-                  type: string
-                  minLength: 1
-                  maxLength: 100
-                  description: >-
-                    Normalised to Unicode NFC, then trimmed; stored and returned in that form. Control
-                    characters (Cc), format characters (Cf: zero-width space, bidi overrides and isolates,
-                    LRM/RLM, BOM) except U+200D (zero-width joiner, used in emoji sequences), and line or
-                    paragraph separators (Zl, Zp) are rejected with `invalid_display_name`.
-                locale:
-                  type: [string, "null"]
-                  enum: [en, vi, null]
-                  default: en
-                  description: >-
-                    The student's UI language; it becomes `user_tab.locale` and selects the language of the
-                    verification email. Absent or `null` means `en`; any other value (including another
-                    case such as `VI`, or a non-string) is `400 invalid_locale` and nothing is created.
+            schema: {$ref: "#/components/schemas/RegisterRequest"}
+            examples:
+              register:
+                value: {email: lan@example.com, password: correct-horse-battery, display_name: "Nguyễn Thị Lan", locale: vi}
       responses:
-        "201":
+        "200":
           description: Account created; the session cookie is set.
           headers:
             Set-Cookie: {$ref: "#/components/headers/SessionCookie"}
           content:
             application/json:
-              schema: {$ref: "#/components/schemas/UserEnvelope"}
-        "400":
-          description: >-
-            `invalid_email`, `weak_password`, `invalid_display_name`, `invalid_locale` or `invalid_body`.
-          content:
-            application/json:
-              schema: {$ref: "#/components/schemas/Error"}
-        "403": {$ref: "#/components/responses/CsrfOriginMismatch"}
-        "409":
-          description: Email already registered (`email_taken`).
-          content:
-            application/json:
-              schema: {$ref: "#/components/schemas/Error"}
-        "413": {$ref: "#/components/responses/PayloadTooLarge"}
-        "415": {$ref: "#/components/responses/UnsupportedMediaType"}
-        "429": {$ref: "#/components/responses/RateLimited"}
-        "503": {$ref: "#/components/responses/BusyOrSessionStore"}
-  /v1/auth/login:
+              schema: {$ref: "#/components/schemas/UserResponse"}
+              examples:
+                created:
+                  value: {status: OK, data: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, email: lan@example.com, email_verified: false, display_name: "Nguyễn Thị Lan", locale: vi, created_at: 1760000000000}}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "409": {$ref: "#/components/responses/ApiConflict"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "429": {$ref: "#/components/responses/ApiRateLimited"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiAuthUnavailable"}
+  /api/auth/login:
     post:
       operationId: login
-      security: []
       tags: [auth]
       summary: Sign in with email and password
       description: >-
-        A wrong password and an unknown email give the identical `401 invalid_credentials`
-        (same body, same work). Every login issues a new session token; a session cookie sent
-        with the request is revoked. Failures are limited to 10 per 15 minutes per IP+email and
-        100 per 15 minutes per IP.
+        Called by the sign-in form. A wrong password, an unknown email and an account without a password (Google only) give the identical `ERROR_INVALID_CREDENTIALS`
+        (same body, same work), so the answer never tells whether an address is registered. Every login issues a new session token; a session cookie sent with the
+        request is revoked. Failures are limited to 10 per 15 minutes per IP and email and 100 per 15 minutes per IP (`ERROR_RATE_LIMITED`). The email is trimmed,
+        lower-cased and NFC-normalised as at registration. Not idempotent (a new session each time). Unknown body fields are ignored.
+      x-auth: public
+      x-error-codes:
+        - {code: ERROR_INVALID_CREDENTIALS, description: Wrong email or password; the two cannot be told apart.}
+        - {code: ERROR_RATE_LIMITED, description: "Too many failed sign-ins for this IP and email, or for this IP; wait for `Retry-After` seconds."}
+        - {code: ERROR_BUSY, description: "All password-hashing slots stayed taken for 2 seconds; retry after `Retry-After`."}
+        - {code: ERROR_LIMITER_UNAVAILABLE, description: "The sign-in lockout counters in Redis did not answer, so the attempt fails closed. Retry after `Retry-After`."}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; no session is created. Retry after `Retry-After`."}
+      security: []
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              type: object
-              required: [email, password]
-              properties:
-                email: {type: string, description: "Trimmed, lower-cased and NFC-normalised as at registration, so either Unicode spelling signs in."}
-                password:
-                  type: string
-                  format: password
-                  description: Normalised to Unicode NFKC before verification, exactly as at registration.
+            schema: {$ref: "#/components/schemas/LoginRequest"}
+            examples:
+              login:
+                value: {email: lan@example.com, password: correct-horse-battery}
       responses:
         "200":
           description: Signed in; the session cookie is set.
@@ -165,272 +143,301 @@ paths:
             Set-Cookie: {$ref: "#/components/headers/SessionCookie"}
           content:
             application/json:
-              schema: {$ref: "#/components/schemas/UserEnvelope"}
-        "400":
-          description: Malformed body (`invalid_body`).
-          content:
-            application/json:
-              schema: {$ref: "#/components/schemas/Error"}
+              schema: {$ref: "#/components/schemas/UserResponse"}
+              examples:
+                signedIn:
+                  value: {status: OK, data: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, email: lan@example.com, email_verified: true, display_name: "Nguyễn Thị Lan", locale: vi, created_at: 1760000000000}}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
         "401":
-          description: Wrong email or password (`invalid_credentials`).
+          description: Wrong email or password (`ERROR_INVALID_CREDENTIALS`).
           content:
             application/json:
-              schema: {$ref: "#/components/schemas/Error"}
-        "403": {$ref: "#/components/responses/CsrfOriginMismatch"}
-        "413": {$ref: "#/components/responses/PayloadTooLarge"}
-        "415": {$ref: "#/components/responses/UnsupportedMediaType"}
-        "429": {$ref: "#/components/responses/RateLimited"}
-        "503":
-          description: >-
-            `busy` (all password-hashing slots stayed taken), `session_store_unavailable` (no session could be created) or
-            `limiter_unavailable` (the sign-in lockout counters in Redis did not answer, so the attempt fails closed); retry after `Retry-After`.
-          headers:
-            Retry-After:
-              schema: {type: integer}
-          content:
-            application/json:
-              schema: {$ref: "#/components/schemas/Error"}
-  /v1/auth/logout:
+              schema: {$ref: "#/components/schemas/ApiError"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "429": {$ref: "#/components/responses/ApiRateLimited"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiAuthUnavailable"}
+  /api/auth/logout:
     post:
       operationId: logout
       tags: [auth]
       summary: Sign out (idempotent)
-      description: Deletes the session and clears the cookie. Always 204, also when nobody is signed in.
+      description: >-
+        Called by the sign-out button. Deletes the session and clears the cookie. Always succeeds, also when nobody is signed in or the session is already gone, so a lost
+        response can simply be repeated. A request with the session cookie must come from an allowed Origin. Takes no body.
+      x-auth: optional
+      x-error-codes:
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer, so the session could not be deleted. Retry after `Retry-After`."}
       security:
         - sessionCookie: []
         - {}
       responses:
-        "204":
+        "200":
           description: Signed out; the cookie is cleared.
           headers:
             Set-Cookie:
               description: smem_session with an empty value and a negative Max-Age.
               schema: {type: string}
-        "403": {$ref: "#/components/responses/CsrfOriginMismatch"}
-        "415": {$ref: "#/components/responses/UnsupportedMediaType"}
-        "503": {$ref: "#/components/responses/SessionStoreUnavailable"}
-  /v1/auth/verify-email:
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/EmptyResponse"}
+              examples:
+                signedOut:
+                  value: {status: OK, data: {}}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/auth/verify-email:
     post:
       operationId: verifyEmail
       tags: [auth]
       summary: Confirm the signed-in user's email address with the 6-digit code from the verification email
       description: >-
-        The code is 6 decimal digits, valid 30 minutes, single use; there is one live code per user (a new one
-        from registration or `verify-email/resend` replaces the old). Only the HMAC of the code is stored, in Redis.
-        A wrong or missing code (or one that is not 6 digits) is `400 invalid_code`, a code past its lifetime
-        `400 code_expired`, and after 5 wrong attempts on one code it is `400 code_locked` until a new code is
-        requested. An already verified user gets `204` without a check. Also limited to 20 attempts per hour per
-        user (`429 rate_limited` with `Retry-After`). When the code store (Redis) is down the answer is
-        `503 code_store_unavailable`. In dev and test `SMEM_DEV_FIXED_OTP` makes one fixed code valid (docs/dev-shortcuts.md).
+        Called by the verification screen. The code is 6 decimal digits, valid 30 minutes, single use; there is one live code per user (a new one from registration or
+        `/api/auth/resend-verification` replaces the old). Only the HMAC of the code is stored, in Redis. A wrong or missing code (or one that is not 6 digits) is
+        `ERROR_INVALID_CODE`, a code past its lifetime `ERROR_CODE_EXPIRED`, and after 5 wrong attempts on one code it is `ERROR_CODE_LOCKED` until a new code is requested.
+        An already verified user gets success without a check. Also limited to 20 attempts per hour per user. Idempotent once verified. In dev and test `SMEM_DEV_FIXED_OTP`
+        makes one fixed code valid (docs/dev-shortcuts.md). A request with the session cookie must come from an allowed Origin.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_INVALID_CODE, description: The code is missing, not 6 digits, or wrong.}
+        - {code: ERROR_CODE_EXPIRED, description: The code is past its 30-minute lifetime; request a new one.}
+        - {code: ERROR_CODE_LOCKED, description: "5 wrong attempts were used on this code; request a new one."}
+        - {code: ERROR_RATE_LIMITED, description: "More than 20 attempts per hour for this user; wait for `Retry-After` seconds."}
+        - {code: ERROR_LIMITER_UNAVAILABLE, description: "The code-guess counter in Redis did not answer, so the attempt fails closed. Retry after `Retry-After`."}
+        - {code: ERROR_CODE_STORE_UNAVAILABLE, description: "Redis, which holds the email codes, did not answer; nothing was accepted. Retry after `Retry-After`."}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
       security:
         - sessionCookie: []
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              type: object
-              required: [code]
-              properties:
-                code: {type: string, pattern: "^[0-9]{6}$", examples: ["042917"]}
+            schema: {$ref: "#/components/schemas/VerifyEmailRequest"}
+            examples:
+              verify:
+                value: {code: "042917"}
       responses:
-        "204":
+        "200":
           description: The address is verified (`email_verified` is now true) and the code is used.
-        "400":
-          description: "`invalid_code`, `code_expired`, `code_locked` or `invalid_body`."
           content:
             application/json:
-              schema: {$ref: "#/components/schemas/Error"}
-        "401": {$ref: "#/components/responses/Unauthenticated"}
-        "403": {$ref: "#/components/responses/CsrfOriginMismatch"}
-        "413": {$ref: "#/components/responses/PayloadTooLarge"}
-        "415": {$ref: "#/components/responses/UnsupportedMediaType"}
-        "429": {$ref: "#/components/responses/RateLimited"}
-        "503":
-          description: >-
-            `code_store_unavailable`, `session_store_unavailable` or `limiter_unavailable` (the code-guess counter in Redis did not
-            answer, so the attempt fails closed); retry after `Retry-After`.
-          headers:
-            Retry-After:
-              schema: {type: integer}
-          content:
-            application/json:
-              schema: {$ref: "#/components/schemas/Error"}
-  /v1/auth/verify-email/resend:
+              schema: {$ref: "#/components/schemas/EmptyResponse"}
+              examples:
+                verified:
+                  value: {status: OK, data: {}}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "429": {$ref: "#/components/responses/ApiRateLimited"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiAuthUnavailable"}
+  /api/auth/resend-verification:
     post:
-      operationId: resendVerificationEmail
+      operationId: resendVerification
       tags: [auth]
       summary: Send a new verification code to the signed-in user
       description: >-
-        At most 3 per hour per user (`429 rate_limited` with `Retry-After`). The new code replaces the
-        previous one, which stops working. Takes no body.
+        Called by the "send a new code" button. At most 3 per hour per user (`ERROR_RATE_LIMITED` with `Retry-After`). The new code replaces the previous one, which stops
+        working. A user whose address is already verified gets `already_verified: true` and nothing is sent. A mailer failure is `ERROR_INTERNAL` and is logged without the code.
+        Takes no body. A request with the session cookie must come from an allowed Origin.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_RATE_LIMITED, description: "More than 3 sends per hour for this user; wait for `Retry-After` seconds."}
+        - {code: ERROR_CODE_STORE_UNAVAILABLE, description: "Redis, which holds the email codes, did not answer; nothing was sent. Retry after `Retry-After`."}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
       security:
         - sessionCookie: []
       responses:
         "200":
-          description: The address was already verified; nothing was sent.
+          description: The email was sent, or the address was already verified and nothing was sent.
           content:
             application/json:
-              schema:
-                type: object
-                required: [already_verified]
-                properties:
-                  already_verified: {type: boolean, const: true}
-        "202":
-          description: The email was sent. A mailer failure is `500 internal_error` (and is logged without the code).
-          content:
-            application/json:
-              schema: {type: object}
-        "401": {$ref: "#/components/responses/Unauthenticated"}
-        "403": {$ref: "#/components/responses/CsrfOriginMismatch"}
-        "415": {$ref: "#/components/responses/UnsupportedMediaType"}
-        "429": {$ref: "#/components/responses/RateLimited"}
-        "503": {$ref: "#/components/responses/CodeOrSessionStoreUnavailable"}
-  /v1/auth/forgot-password:
+              schema: {$ref: "#/components/schemas/ResendVerificationResponse"}
+              examples:
+                sent:
+                  value: {status: OK, data: {already_verified: false}}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "429": {$ref: "#/components/responses/ApiRateLimited"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiAuthUnavailable"}
+  /api/auth/forgot-password:
     post:
       operationId: forgotPassword
-      security: []
       tags: [auth]
       summary: Ask for a password reset code by email
       description: >-
-        Always `202 {}` for a well-formed address, whether or not an account exists; the email (a 6-digit
-        code valid 15 minutes, in the user's `locale`; a new request replaces the previous code) goes out in the background and only when the account
-        exists, so neither the body nor the timing tells them apart. Limits: 5 per hour per IP and 3 per
-        hour per address (counted for unknown addresses too). The address is trimmed, lower-cased and
-        NFC-normalised like at login; one that is not an email at all is `400 invalid_email`.
+        Called by the "forgot password" form. Always succeeds with an empty `data` for a well-formed address, whether or not an account exists: the email (a 6-digit code
+        valid 15 minutes, in the user's `locale`; a new request replaces the previous code) goes out in the background and only when the account exists, so neither the body
+        nor the timing tells them apart (anti-enumeration). Limits: 5 per hour per IP and 3 per hour per address, counted for unknown addresses too. The address is trimmed,
+        lower-cased and NFC-normalised like at login; one that is not an email at all is `ERROR_INVALID_EMAIL`. Idempotent for the caller (a repeat sends a fresh code).
+        A request with the session cookie must come from an allowed Origin.
+      x-auth: public
+      x-error-codes:
+        - {code: ERROR_INVALID_EMAIL, description: "Field `email`: not a single valid address."}
+        - {code: ERROR_RATE_LIMITED, description: "More than 5 requests per hour from this IP or 3 for this address; wait for `Retry-After` seconds."}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+      security: []
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              type: object
-              required: [email]
-              properties:
-                email: {type: string, maxLength: 254}
+            schema: {$ref: "#/components/schemas/ForgotPasswordRequest"}
+            examples:
+              forgot:
+                value: {email: lan@example.com}
       responses:
-        "202":
-          description: Accepted.
+        "200":
+          description: Accepted; a code was sent if the account exists.
           content:
             application/json:
-              schema: {type: object}
-        "400":
-          description: "`invalid_email` or `invalid_body`."
-          content:
-            application/json:
-              schema: {$ref: "#/components/schemas/Error"}
-        "403": {$ref: "#/components/responses/CsrfOriginMismatch"}
-        "413": {$ref: "#/components/responses/PayloadTooLarge"}
-        "415": {$ref: "#/components/responses/UnsupportedMediaType"}
-        "429": {$ref: "#/components/responses/RateLimited"}
-  /v1/auth/reset-password:
+              schema: {$ref: "#/components/schemas/EmptyResponse"}
+              examples:
+                accepted:
+                  value: {status: OK, data: {}}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "429": {$ref: "#/components/responses/ApiRateLimited"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+  /api/auth/reset-password:
     post:
       operationId: resetPassword
-      security: []
       tags: [auth]
       summary: Set a new password with the 6-digit code from the reset email
       description: >-
-        Checked in this order: the address format (`400 invalid_email`), 20 attempts per hour per IP
-        (`429 rate_limited`), the password rules (NFKC, 10-128 characters, not the email; a rejected password
-        is `400 weak_password` and leaves the code untouched, so the answer cannot confirm a code), then the
-        code. An unknown address, a wrong code and no live code all answer `400 invalid_code` with the same
-        body; `400 code_expired` and `400 code_locked` (5 wrong attempts) only for an account that has such a
-        code. The code is valid 15 minutes and single use. On success every session of the user is deleted
-        (sign in again). When the code store (Redis) is down the answer is `503 code_store_unavailable`. In dev
-        and test `SMEM_DEV_FIXED_OTP` makes one fixed code valid for any existing account (docs/dev-shortcuts.md).
+        Called by the reset form. Checked in this order: the address format (`ERROR_INVALID_EMAIL`), 20 attempts per hour per IP (`ERROR_RATE_LIMITED`), the password rules
+        (NFKC, 10-128 characters, not the email; a rejected password is `ERROR_WEAK_PASSWORD` and leaves the code untouched, so the answer cannot confirm a code), then the code.
+        An unknown address, a wrong code and no live code all answer `ERROR_INVALID_CODE` with the same body (anti-enumeration); `ERROR_CODE_EXPIRED` and `ERROR_CODE_LOCKED`
+        (5 wrong attempts) only for an account that has such a code. The code is valid 15 minutes and single use. On success every session of the user is deleted (sign in again).
+        In dev and test `SMEM_DEV_FIXED_OTP` makes one fixed code valid for any existing account (docs/dev-shortcuts.md). Not idempotent: the code is used up.
+       
+      x-auth: public
+      x-error-codes:
+        - {code: ERROR_INVALID_EMAIL, description: "Field `email`: not a single valid address."}
+        - {code: ERROR_WEAK_PASSWORD, description: "Field `password`: fewer than 10 or more than 128 characters after normalisation, or equal to the email."}
+        - {code: ERROR_INVALID_CODE, description: "The code is missing, not 6 digits, wrong, or there is no live code (also for an unknown address)."}
+        - {code: ERROR_CODE_EXPIRED, description: The code is past its 15-minute lifetime; request a new one.}
+        - {code: ERROR_CODE_LOCKED, description: "5 wrong attempts were used on this code; request a new one."}
+        - {code: ERROR_RATE_LIMITED, description: "More than 20 attempts per hour from this IP; wait for `Retry-After` seconds."}
+        - {code: ERROR_BUSY, description: "All password-hashing slots stayed taken; the code is already used, ask for a new one. Retry after `Retry-After`."}
+        - {code: ERROR_LIMITER_UNAVAILABLE, description: "The code-guess counter in Redis did not answer, so the attempt fails closed. Retry after `Retry-After`."}
+        - {code: ERROR_CODE_STORE_UNAVAILABLE, description: "Redis, which holds the email codes, did not answer. Retry after `Retry-After`."}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "The sessions could not be deleted, so the password was not changed either. Retry after `Retry-After`."}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+      security: []
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              type: object
-              required: [email, code, password]
-              properties:
-                email: {type: string, maxLength: 254}
-                code: {type: string, pattern: "^[0-9]{6}$", examples: ["042917"]}
-                password: {type: string, format: password, minLength: 10, maxLength: 128}
+            schema: {$ref: "#/components/schemas/ResetPasswordRequest"}
+            examples:
+              reset:
+                value: {email: lan@example.com, code: "042917", password: a-brand-new-passphrase}
       responses:
-        "204":
+        "200":
           description: Password changed; all sessions are gone.
-        "400":
-          description: "`invalid_email`, `invalid_code`, `code_expired`, `code_locked`, `weak_password` or `invalid_body`."
           content:
             application/json:
-              schema: {$ref: "#/components/schemas/Error"}
-        "403": {$ref: "#/components/responses/CsrfOriginMismatch"}
-        "413": {$ref: "#/components/responses/PayloadTooLarge"}
-        "415": {$ref: "#/components/responses/UnsupportedMediaType"}
-        "429": {$ref: "#/components/responses/RateLimited"}
-        "503":
-          description: "`busy` (all password-hashing slots stayed taken; the code is already used, ask for a new one), `code_store_unavailable`, `limiter_unavailable` (the code-guess counter in Redis did not answer, so the attempt fails closed) or `session_store_unavailable` (the sessions could not be deleted, so the password was not changed either)."
-          content:
-            application/json:
-              schema: {$ref: "#/components/schemas/Error"}
-  /v1/auth/google/start:
+              schema: {$ref: "#/components/schemas/EmptyResponse"}
+              examples:
+                changed:
+                  value: {status: OK, data: {}}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "429": {$ref: "#/components/responses/ApiRateLimited"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiAuthUnavailable"}
+  /api/auth/google-start:
     get:
       operationId: googleStart
-      security: []
       tags: [auth]
       summary: Start Google sign-in (browser navigation, not a fetch call)
       description: >-
-        Only exists when the server has `SMEM_GOOGLE_CLIENT_ID` set; otherwise `404 not_found`. Redirects
-        to Google's authorization endpoint (authorization-code flow with PKCE S256, `state` and `nonce`,
-        scope `openid email profile`) and sets the 10-minute `smem_oidc` cookie (HttpOnly, SameSite=Lax,
-        signed) that binds the flow to this browser. `return_to` must be a same-site relative path (one
-        leading `/`, at most 200 characters, no `//`, `/\`, scheme or control characters); anything else
-        is replaced by `/`. If Google cannot be reached the answer is `302 /login?error=oidc_failed`.
-        30 per 15 minutes per IP.
+        Called by the "Continue with Google" link, which the browser follows; there is no JSON body. Only exists when the server has `SMEM_GOOGLE_CLIENT_ID` set; otherwise it is
+        `ERROR_NOT_FOUND` (404). Redirects (302) to Google's authorization endpoint (authorization-code flow with PKCE S256, `state` and `nonce`, scope `openid email profile`)
+        and sets the 10-minute `smem_oidc` cookie (HttpOnly, SameSite=Lax, signed) that binds the flow to this browser. `return_to` must be a same-site relative path (one leading `/`,
+        at most 200 characters, no `//`, `/\`, scheme or control characters); anything else is replaced by `/`. If Google cannot be reached the answer is `302 /login?error=oidc_failed`.
+        30 per 15 minutes per IP (`ERROR_RATE_LIMITED`).
+      x-auth: public
+      x-error-codes:
+        - {code: ERROR_RATE_LIMITED, description: "More than 30 starts per 15 minutes from this IP; wait for `Retry-After` seconds."}
+      security: []
       parameters:
-        - {name: return_to, in: query, required: false, schema: {type: string, maxLength: 200}}
+        - {name: return_to, in: query, required: false, schema: {type: string, maxLength: 200}, description: "Same-site path to go to after sign-in, for example `/yearbooks`. Default and fallback `/`."}
       responses:
         "302":
           description: To Google (or to `/login?error=oidc_failed`).
           headers:
-            Location: {schema: {type: string}}
+            Location: {schema: {type: string}, description: "Google's authorization URL, or `/login?error=oidc_failed`."}
             Set-Cookie:
               description: "`smem_oidc`, valid 10 minutes."
               schema: {type: string}
-        "404": {$ref: "#/components/responses/NotFound"}
-        "429": {$ref: "#/components/responses/RateLimited"}
-  /v1/auth/google/callback:
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "429": {$ref: "#/components/responses/ApiRateLimited"}
+  /api/auth/google-callback:
     get:
       operationId: googleCallback
-      security: []
       tags: [auth]
       summary: Google redirects the browser here after sign-in
       description: >-
-        Only exists when Google sign-in is enabled (else `404 not_found`). The redirect URI registered at
-        Google is `<public base URL>/api/v1/auth/google/callback`. Success signs the user in (new
-        `smem_session` cookie; a session cookie sent with the request is revoked) and redirects to the
-        `return_to` given at start. Linking: a known Google account signs in; the same verified email on a
-        local account links to it; the same email on a local account that never verified it first loses its
-        password and sessions, is marked verified and linked (pre-hijacking defence); an unknown email
-        creates a password-less account. Every failure is `302 /login?error=<code>` and creates nothing:
-        `oidc_state` (cookie missing, altered or expired, or `state` differs), `oidc_denied` (the provider
-        reported an error), `oidc_failed` (code exchange or ID-token check failed, or no usable email),
-        `email_unverified` (Google did not mark the email verified). Provider details are only logged.
-        30 per 15 minutes per IP.
+        Called by Google through the browser, never by our web code; there is no JSON body. Only exists when Google sign-in is enabled (else `ERROR_NOT_FOUND`, 404). The redirect URI
+        registered in the Google console is `<PUBLIC_BASE_URL>/api/auth/google-callback`. Success signs the user in (new `smem_session` cookie; a session cookie sent with the request is
+        revoked) and redirects (302) to the `return_to` given at start. Linking: a known Google account signs in; the same verified email on a local account links to it; the same email on
+        a local account that never verified it first loses its password and sessions, is marked verified and linked (pre-hijacking defence); an unknown email creates a password-less account.
+        Every failure is `302 /login?error=<code>` and creates nothing: `oidc_state` (cookie missing, altered or expired, or `state` differs), `oidc_denied` (the provider reported an error),
+        `oidc_failed` (code exchange or ID-token check failed, or no usable email), `email_unverified` (Google did not mark the email verified). Provider details are only logged.
+        30 per 15 minutes per IP (`ERROR_RATE_LIMITED`).
+      x-auth: public
+      x-error-codes:
+        - {code: ERROR_RATE_LIMITED, description: "More than 30 callbacks per 15 minutes from this IP; wait for `Retry-After` seconds."}
+      security: []
       parameters:
-        - {name: code, in: query, required: false, schema: {type: string}}
-        - {name: state, in: query, required: false, schema: {type: string}}
-        - {name: error, in: query, required: false, schema: {type: string}}
+        - {name: code, in: query, required: false, schema: {type: string}, description: "Authorization code from Google."}
+        - {name: state, in: query, required: false, schema: {type: string}, description: "The `state` we sent to Google; must equal the one in the `smem_oidc` cookie."}
+        - {name: error, in: query, required: false, schema: {type: string}, description: "Set by Google when the user refused or the request failed; its text is never logged."}
       responses:
         "302":
           description: To `return_to` (signed in) or to `/login?error=<code>`.
           headers:
-            Location: {schema: {type: string}}
+            Location: {schema: {type: string}, description: "The `return_to` path, or `/login?error=<code>`."}
             Set-Cookie:
               description: "`smem_session` on success; `smem_oidc` is always cleared."
               schema: {type: string}
-        "404": {$ref: "#/components/responses/NotFound"}
-        "429": {$ref: "#/components/responses/RateLimited"}
-  /v1/me:
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "429": {$ref: "#/components/responses/ApiRateLimited"}
+  /api/user/get-me:
     get:
       operationId: getMe
       tags: [auth]
       summary: The signed-in user
       description: >-
-        Sliding expiry: once more than half of the 30-day lifetime has elapsed the expiry is
-        extended and the cookie is sent again.
+        Called on every page load as the session bootstrap; `ERROR_UNAUTHORIZED` (401) means signed out. Sliding expiry: once more than half of the 30-day session lifetime has elapsed the
+        expiry is extended and the cookie is sent again. Read-only and idempotent.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed (the caller is not treated as signed out). Retry after `Retry-After`."}
       security:
         - sessionCookie: []
       responses:
@@ -442,169 +449,290 @@ paths:
               schema: {type: string}
           content:
             application/json:
-              schema: {$ref: "#/components/schemas/UserEnvelope"}
-        "401":
-          description: No, unknown or expired session (`unauthenticated`).
-          content:
-            application/json:
-              schema: {$ref: "#/components/schemas/Error"}
-        "503": {$ref: "#/components/responses/SessionStoreUnavailable"}
-  /v1/yearbooks:
+              schema: {$ref: "#/components/schemas/UserResponse"}
+              examples:
+                me:
+                  value: {status: OK, data: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, email: lan@example.com, email_verified: true, display_name: "Nguyễn Thị Lan", locale: vi, created_at: 1760000000000}}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/yearbook/create:
     post:
       operationId: createYearbook
-      tags: [yearbooks]
+      tags: [yearbook]
       summary: Create a yearbook (and its owner profile)
       description: >-
-        Creates the book and one owner profile whose `full_name` is the user's display name.
-        A user owns at most 20 books (`409 limit_reached`). Unknown fields (for example `owner_id`)
-        are rejected with `400 unknown_field`. Text fields are normalised to NFC and trimmed;
-        control characters (Cc), format characters (Cf, except U+200D) and line/paragraph
-        separators are rejected with `invalid_<field>`.
+        Called by the signed-in user from the new-book form. Creates the book and its one owner profile, whose `full_name` is the user's display name.
+        `title` and `language` are required; `page_size` defaults to `A5`; every other field is optional. A user owns at most 20 books (`ERROR_LIMIT_REACHED`).
+        A new book has no photos yet, so `cover_media_id` is not accepted here (`ERROR_INVALID_MEDIA`): set the cover later with `/api/yearbook/update`. Unknown fields
+        (for example `owner_id`) and a body that is not a JSON object are `ERROR_PARAM`. Text fields are normalised to NFC and trimmed; control characters (Cc), format characters (Cf, except U+200D) and line/paragraph separators are rejected. Not idempotent: repeating a lost request creates a second book.
+        A request with the session cookie must come from an allowed Origin.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_INVALID_TITLE, description: "Field `title`: missing on create, empty after trimming, over 120 characters, or containing control characters."}
+        - {code: ERROR_INVALID_SCHOOL_NAME, description: "Field `school_name`: over 120 characters or containing control characters."}
+        - {code: ERROR_INVALID_CLASS_NAME, description: "Field `class_name`: over 120 characters or containing control characters."}
+        - {code: ERROR_INVALID_GRADUATION_YEAR, description: "Field `graduation_year`: not a whole year from 1950 to 2100."}
+        - {code: ERROR_INVALID_MOTTO, description: "Field `motto`: over 200 characters or containing control characters."}
+        - {code: ERROR_INVALID_LANGUAGE, description: "Field `language`: missing on create, or not `en` or `vi`."}
+        - {code: ERROR_INVALID_PAGE_SIZE, description: "Field `page_size`: not `A5`, `A4` or `Letter`."}
+        - {code: ERROR_INVALID_MEDIA, description: "A cover was sent; a new book has no photos yet."}
+        - {code: ERROR_LIMIT_REACHED, description: The user already owns 20 yearbooks.}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
       security:
         - sessionCookie: []
       requestBody:
         required: true
         content:
           application/json:
-            schema: {$ref: "#/components/schemas/YearbookCreate"}
+            schema: {$ref: "#/components/schemas/YearbookCreateRequest"}
+            examples:
+              create:
+                value: {title: "Lớp 12A1 - Trường THPT Chu Văn An", school_name: "THPT Chu Văn An", class_name: 12A1, graduation_year: 2026, motto: "Học, học nữa, học mãi", language: vi}
       responses:
-        "201":
-          description: Created.
+        "200":
+          description: The new book, with its profile.
           content:
             application/json:
-              schema: {$ref: "#/components/schemas/YearbookEnvelope"}
-        "400": {$ref: "#/components/responses/YearbookInvalid"}
-        "401": {$ref: "#/components/responses/Unauthenticated"}
-        "503": {$ref: "#/components/responses/SessionStoreUnavailable"}
-        "403": {$ref: "#/components/responses/CsrfOriginMismatch"}
-        "409":
-          description: The user already owns 20 yearbooks (`limit_reached`).
-          content:
-            application/json:
-              schema: {$ref: "#/components/schemas/Error"}
-        "413": {$ref: "#/components/responses/PayloadTooLarge"}
-        "415": {$ref: "#/components/responses/UnsupportedMediaType"}
+              schema: {$ref: "#/components/schemas/YearbookResponse"}
+              examples:
+                created:
+                  value:
+                    status: OK
+                    data: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, title: "Lớp 12A1 - Trường THPT Chu Văn An", school_name: "THPT Chu Văn An", class_name: 12A1, graduation_year: 2026, motto: "Học, học nữa, học mãi", language: vi, page_size: A5, template_id: null, cover_media_id: null, created_at: 1760000000000, updated_at: 1760000000000, profile: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2F, is_owner: true, full_name: "Nguyễn Thị Hồng", nickname: "", birthday: null, quote: "", hobbies: "", future_plans: "", photo_media_id: null}}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "409": {$ref: "#/components/responses/ApiConflict"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/yearbook/get-list:
     get:
       operationId: listYearbooks
-      tags: [yearbooks]
+      tags: [yearbook]
       summary: List the caller's yearbooks
       description: >-
-        Only the caller's books, newest `updated_at` first (editing the book or its profile updates it).
-        Pass `next_cursor` back as `cursor` for the next page; `next_cursor` is null on the last page.
-        A malformed or tampered cursor is `400 invalid_cursor`.
+        Called by the signed-in user (the book list). Only the caller's own books, newest `updated_at` first (editing the book or its
+        profile moves it to the front), each with its profile. Keyset paginated: pass the `next_id` of a page back as the `next_id` query
+        parameter to get the next one; it is the empty string on the last page. `next_id` is an opaque, tamper-evident token bound to the
+        caller's list: a changed, truncated or foreign token (also a cursor of the old API passed as `next_id`) is `ERROR_PARAM`, and it
+        never reveals an internal id. A `limit` outside 1..50 is `ERROR_PARAM`. Books created, edited or deleted between two pages never make the walk repeat
+        or skip a book that stays.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
       security:
         - sessionCookie: []
       parameters:
-        - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 50, default: 20}, description: "Out of range or not a number: `400 invalid_limit`."}
-        - {name: cursor, in: query, required: false, schema: {type: string}, description: Opaque token from a previous page.}
+        - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 50, default: 20}, description: "Page size, default 20, maximum 50."}
+        - {name: next_id, in: query, required: false, schema: {type: string}, description: "Opaque token from the previous page; omit it for the first page."}
       responses:
         "200":
-          description: A page of books (each with its profile).
+          description: A page of books.
           content:
             application/json:
-              schema:
-                type: object
-                required: [yearbooks, next_cursor]
-                properties:
-                  yearbooks:
-                    type: array
-                    items: {$ref: "#/components/schemas/Yearbook"}
-                  next_cursor: {type: [string, "null"]}
-        "400": {$ref: "#/components/responses/YearbookInvalid"}
-        "401": {$ref: "#/components/responses/Unauthenticated"}
-        "503": {$ref: "#/components/responses/SessionStoreUnavailable"}
-  /v1/yearbooks/{id}:
-    parameters:
-      - {name: id, in: path, required: true, schema: {type: string}, description: Yearbook ULID.}
+              schema: {$ref: "#/components/schemas/YearbookListResponse"}
+              examples:
+                page:
+                  value:
+                    status: OK
+                    data:
+                      items:
+                        - {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, title: "Lớp 12A1 - Trường THPT Chu Văn An", school_name: "THPT Chu Văn An", class_name: 12A1, graduation_year: 2026, motto: "Học, học nữa, học mãi", language: vi, page_size: A5, template_id: null, cover_media_id: null, created_at: 1760000000000, updated_at: 1760000000000, profile: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2F, is_owner: true, full_name: "Nguyễn Thị Hồng", nickname: "", birthday: null, quote: "", hobbies: "", future_plans: "", photo_media_id: null}}
+                      next_id: ""
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/yearbook/get:
     get:
       operationId: getYearbook
-      tags: [yearbooks]
+      tags: [yearbook]
       summary: Read one yearbook with its profile
-      description: A missing book and a book owned by someone else both answer `404 not_found`.
+      description: >-
+        Called by the signed-in user (the edit screens). A missing book and a book owned by someone else both answer `ERROR_NOT_FOUND`. A missing `id` is `ERROR_PARAM`.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: The yearbook does not exist or belongs to someone else; the two cannot be told apart.}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
       security:
         - sessionCookie: []
+      parameters:
+        - {name: id, in: query, required: true, schema: {type: string}, description: Yearbook ULID.}
       responses:
         "200":
           description: The book.
           content:
             application/json:
-              schema: {$ref: "#/components/schemas/YearbookEnvelope"}
-        "401": {$ref: "#/components/responses/Unauthenticated"}
-        "503": {$ref: "#/components/responses/SessionStoreUnavailable"}
-        "404": {$ref: "#/components/responses/YearbookNotFound"}
-    patch:
+              schema: {$ref: "#/components/schemas/YearbookResponse"}
+              examples:
+                book:
+                  value:
+                    status: OK
+                    data: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, title: "Lớp 12A1 - Trường THPT Chu Văn An", school_name: "THPT Chu Văn An", class_name: 12A1, graduation_year: 2026, motto: "Học, học nữa, học mãi", language: vi, page_size: A5, template_id: null, cover_media_id: null, created_at: 1760000000000, updated_at: 1760000000000, profile: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2F, is_owner: true, full_name: "Nguyễn Thị Hồng", nickname: "", birthday: null, quote: "", hobbies: "", future_plans: "", photo_media_id: null}}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/yearbook/update:
+    post:
       operationId: updateYearbook
-      tags: [yearbooks]
+      tags: [yearbook]
       summary: Partially update a yearbook
       description: >-
-        Only the fields present change. An empty string clears an optional text field; `graduation_year: null`
-        clears the year. A JSON null on any other field counts as absent. Unknown fields are `400 unknown_field`.
+        Called by the signed-in owner (the edit screen, the cover picker). Only the fields present change; an absent field stays as it is, an empty string clears an
+        optional text field and `graduation_year: null` or `cover_media_id: null` clear them. A JSON null on any other field counts as absent. A body with only `id` changes nothing
+        but still bumps `updated_at`. `cover_media_id` must be a photo of this very book (`ERROR_INVALID_MEDIA`). Unknown fields and a missing `id` are `ERROR_PARAM`. Text fields are normalised to NFC and trimmed; control characters (Cc), format characters (Cf, except U+200D) and line/paragraph separators are rejected.
+        A request with the session cookie must come from an allowed Origin. Idempotent: repeating it leaves the same book (apart from `updated_at`).
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: The yearbook does not exist or belongs to someone else; the two cannot be told apart.}
+        - {code: ERROR_INVALID_TITLE, description: "Field `title`: missing on create, empty after trimming, over 120 characters, or containing control characters."}
+        - {code: ERROR_INVALID_SCHOOL_NAME, description: "Field `school_name`: over 120 characters or containing control characters."}
+        - {code: ERROR_INVALID_CLASS_NAME, description: "Field `class_name`: over 120 characters or containing control characters."}
+        - {code: ERROR_INVALID_GRADUATION_YEAR, description: "Field `graduation_year`: not a whole year from 1950 to 2100."}
+        - {code: ERROR_INVALID_MOTTO, description: "Field `motto`: over 200 characters or containing control characters."}
+        - {code: ERROR_INVALID_LANGUAGE, description: "Field `language`: missing on create, or not `en` or `vi`."}
+        - {code: ERROR_INVALID_PAGE_SIZE, description: "Field `page_size`: not `A5`, `A4` or `Letter`."}
+        - {code: ERROR_INVALID_MEDIA, description: "`cover_media_id` is not a photo of this yearbook (unknown, deleted, or another book's)."}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
       security:
         - sessionCookie: []
       requestBody:
         required: true
         content:
           application/json:
-            schema: {$ref: "#/components/schemas/YearbookPatch"}
+            schema: {$ref: "#/components/schemas/YearbookUpdateRequest"}
+            examples:
+              rename:
+                value: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, title: "Lớp 12A1 - Kỷ yếu", graduation_year: null}
       responses:
         "200":
           description: The updated book.
           content:
             application/json:
-              schema: {$ref: "#/components/schemas/YearbookEnvelope"}
-        "400": {$ref: "#/components/responses/YearbookInvalid"}
-        "401": {$ref: "#/components/responses/Unauthenticated"}
-        "503": {$ref: "#/components/responses/SessionStoreUnavailable"}
-        "403": {$ref: "#/components/responses/CsrfOriginMismatch"}
-        "404": {$ref: "#/components/responses/YearbookNotFound"}
-        "413": {$ref: "#/components/responses/PayloadTooLarge"}
-        "415": {$ref: "#/components/responses/UnsupportedMediaType"}
-    delete:
-      operationId: deleteYearbook
-      tags: [yearbooks]
-      summary: Delete a yearbook
-      description: >-
-        Hard-deletes the book, its profile and its stored photos. The photos are removed from object storage first;
-        if that fails the request answers `502 storage_error` and nothing is deleted.
-      security:
-        - sessionCookie: []
-      responses:
-        "204": {description: Deleted.}
-        "401": {$ref: "#/components/responses/Unauthenticated"}
-        "503": {$ref: "#/components/responses/SessionStoreUnavailable"}
-        "403": {$ref: "#/components/responses/CsrfOriginMismatch"}
-        "404": {$ref: "#/components/responses/YearbookNotFound"}
-        "502": {$ref: "#/components/responses/StorageError"}
-  /v1/yearbooks/{id}/profile:
-    parameters:
-      - {name: id, in: path, required: true, schema: {type: string}, description: Yearbook ULID.}
-    put:
-      operationId: replaceYearbookProfile
-      tags: [yearbooks]
+              schema: {$ref: "#/components/schemas/YearbookResponse"}
+              examples:
+                updated:
+                  value:
+                    status: OK
+                    data: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, title: "Lớp 12A1 - Trường THPT Chu Văn An", school_name: "THPT Chu Văn An", class_name: 12A1, graduation_year: 2026, motto: "Học, học nữa, học mãi", language: vi, page_size: A5, template_id: null, cover_media_id: null, created_at: 1760000000000, updated_at: 1760000000000, profile: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2F, is_owner: true, full_name: "Nguyễn Thị Hồng", nickname: "", birthday: null, quote: "", hobbies: "", future_plans: "", photo_media_id: null}}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/yearbook/update-profile:
+    post:
+      operationId: updateYearbookProfile
+      tags: [yearbook]
       summary: Replace the owner's profile information
       description: >-
-        Replaces every field: an omitted optional field is cleared. Unknown fields (for example `is_owner`)
-        are `400 unknown_field`. Birthday is personal data and is never logged.
+        Called by the signed-in owner (the profile form, the photo picker). Replaces every profile field: an omitted optional field is cleared, so send the whole profile
+        (the web app builds the body from the current one). `full_name` is required. `photo_media_id` must be a photo of this very book (`ERROR_INVALID_MEDIA`). The
+        birthday is personal data and is never logged. Unknown fields (for example `is_owner`) and a missing `yearbook_id` are `ERROR_PARAM`. Text fields are normalised to NFC and trimmed; control characters (Cc), format characters (Cf, except U+200D) and line/paragraph separators are rejected.
+        A request with the session cookie must come from an allowed Origin. Idempotent.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: The yearbook does not exist or belongs to someone else; the two cannot be told apart.}
+        - {code: ERROR_INVALID_FULL_NAME, description: "Field `full_name`: missing, empty after trimming, over 100 characters, or containing control characters."}
+        - {code: ERROR_INVALID_NICKNAME, description: "Field `nickname`: over 50 characters or containing control characters."}
+        - {code: ERROR_INVALID_BIRTHDAY, description: "Field `birthday`: not a real `YYYY-MM-DD` date, before 1900-01-01, or not before today (UTC)."}
+        - {code: ERROR_INVALID_QUOTE, description: "Field `quote`: over 500 characters or containing control characters."}
+        - {code: ERROR_INVALID_HOBBIES, description: "Field `hobbies`: over 300 characters or containing control characters."}
+        - {code: ERROR_INVALID_FUTURE_PLANS, description: "Field `future_plans`: over 300 characters or containing control characters."}
+        - {code: ERROR_INVALID_MEDIA, description: "`photo_media_id` is not a photo of this yearbook (unknown, deleted, or another book's)."}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
       security:
         - sessionCookie: []
       requestBody:
         required: true
         content:
           application/json:
-            schema: {$ref: "#/components/schemas/ProfileInput"}
+            schema: {$ref: "#/components/schemas/YearbookUpdateProfileRequest"}
+            examples:
+              profile:
+                value: {yearbook_id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, full_name: "Nguyễn Thị Hồng", nickname: Hồng, birthday: "2008-02-29", quote: "Sống là để yêu thương", hobbies: "Đọc sách, vẽ", future_plans: "Học kiến trúc", photo_media_id: null}
       responses:
         "200":
           description: The book with its updated profile.
           content:
             application/json:
-              schema: {$ref: "#/components/schemas/YearbookEnvelope"}
-        "400": {$ref: "#/components/responses/YearbookInvalid"}
-        "401": {$ref: "#/components/responses/Unauthenticated"}
-        "503": {$ref: "#/components/responses/SessionStoreUnavailable"}
-        "403": {$ref: "#/components/responses/CsrfOriginMismatch"}
-        "404": {$ref: "#/components/responses/YearbookNotFound"}
-        "413": {$ref: "#/components/responses/PayloadTooLarge"}
-        "415": {$ref: "#/components/responses/UnsupportedMediaType"}
+              schema: {$ref: "#/components/schemas/YearbookResponse"}
+              examples:
+                updated:
+                  value:
+                    status: OK
+                    data: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, title: "Lớp 12A1 - Trường THPT Chu Văn An", school_name: "THPT Chu Văn An", class_name: 12A1, graduation_year: 2026, motto: "Học, học nữa, học mãi", language: vi, page_size: A5, template_id: null, cover_media_id: null, created_at: 1760000000000, updated_at: 1760000000000, profile: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2F, is_owner: true, full_name: "Nguyễn Thị Hồng", nickname: "", birthday: null, quote: "", hobbies: "", future_plans: "", photo_media_id: null}}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/yearbook/delete:
+    post:
+      operationId: deleteYearbook
+      tags: [yearbook]
+      summary: Delete a yearbook
+      description: >-
+        Called by the signed-in owner (the edit screen). Hard-deletes the book with its profile, photos, note collections and notes. The stored files are removed
+        from object storage first; if that fails the call answers `ERROR_STORAGE_ERROR` and nothing is deleted, so it can simply be repeated. After the
+        files are gone one transaction removes the rows (all or nothing). Not idempotent: a book that is already deleted, a missing one and someone else's all answer
+        `ERROR_NOT_FOUND`. A missing `id` and unknown fields are `ERROR_PARAM`. A request with the session cookie must come from an allowed Origin.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: The yearbook does not exist or belongs to someone else; the two cannot be told apart.}
+        - {code: ERROR_STORAGE_ERROR, description: The object store failed; the book is still there and the call can be repeated.}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/YearbookDeleteRequest"}
+            examples:
+              delete:
+                value: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E}
+      responses:
+        "200":
+          description: Deleted.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/EmptyResponse"}
+              examples:
+                deleted:
+                  value: {status: OK, data: {}}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "502": {$ref: "#/components/responses/ApiBadGateway"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
   /api/media/create:
     post:
       operationId: createMedia
@@ -1089,103 +1217,6 @@ components:
         (plus `Secure` unless SMEM_ENV=dev). Only the token's SHA-256 is stored server-side.
       schema: {type: string}
   responses:
-    Unauthenticated:
-      description: No, unknown or expired session (`unauthenticated`).
-      content:
-        application/json:
-          schema: {$ref: "#/components/schemas/Error"}
-    YearbookNotFound:
-      description: The yearbook does not exist or belongs to someone else (`not_found`); the two cannot be told apart.
-      content:
-        application/json:
-          schema: {$ref: "#/components/schemas/Error"}
-    YearbookInvalid:
-      description: >-
-        `invalid_<field>` (title, school_name, class_name, graduation_year, motto, language, page_size, full_name,
-        nickname, birthday, quote, hobbies, future_plans, limit, cursor, media: a `*_media_id` that is not a photo of this
-        yearbook), `unknown_field` or `invalid_body`.
-      content:
-        application/json:
-          schema: {$ref: "#/components/schemas/Error"}
-    CsrfOriginMismatch:
-      description: >-
-        The request carries the session cookie but its Origin (or Referer) is missing or not
-        allowed (`csrf_origin_mismatch`).
-      content:
-        application/json:
-          schema: {$ref: "#/components/schemas/Error"}
-    PayloadTooLarge:
-      description: Body over the 1 MiB cap (`payload_too_large`).
-      content:
-        application/json:
-          schema: {$ref: "#/components/schemas/Error"}
-    UnsupportedMediaType:
-      description: A body was sent with a Content-Type other than application/json (`unsupported_media_type`).
-      content:
-        application/json:
-          schema: {$ref: "#/components/schemas/Error"}
-    RateLimited:
-      description: Too many attempts (`rate_limited`).
-      headers:
-        Retry-After:
-          description: Seconds until the oldest counted attempt leaves the window.
-          schema: {type: integer, minimum: 1}
-      content:
-        application/json:
-          schema: {$ref: "#/components/schemas/Error"}
-    StorageError:
-      description: The object store failed (`storage_error`); nothing was changed, retry later.
-      content:
-        application/json:
-          schema: {$ref: "#/components/schemas/Error"}
-    CodeStoreUnavailable:
-      description: Redis, which holds the email codes, did not answer (`code_store_unavailable`), or the rate limiter that guards sign-in, verification and reset did (`limiter_unavailable`); nothing was accepted, retry shortly.
-      headers:
-        Retry-After:
-          schema: {type: integer}
-      content:
-        application/json:
-          schema: {$ref: "#/components/schemas/Error"}
-    SessionStoreUnavailable:
-      description: >-
-        Redis, which holds the login sessions, did not answer (`session_store_unavailable`). Sessions have no copy elsewhere, so
-        the request fails closed: the caller is not treated as anonymous and no session is created. Retry after `Retry-After`.
-      headers:
-        Retry-After:
-          schema: {type: integer}
-      content:
-        application/json:
-          schema: {$ref: "#/components/schemas/Error"}
-    BusyOrSessionStore:
-      description: >-
-        All password-hashing slots stayed taken (`busy`), or the session store is down (`session_store_unavailable`; for register
-        no account is created); retry after `Retry-After`.
-      headers:
-        Retry-After:
-          schema: {type: integer}
-      content:
-        application/json:
-          schema: {$ref: "#/components/schemas/Error"}
-    CodeOrSessionStoreUnavailable:
-      description: >-
-        Redis did not answer: `code_store_unavailable` (nothing was accepted) or `session_store_unavailable` (the session could not be
-        read); retry shortly.
-      headers:
-        Retry-After:
-          schema: {type: integer}
-      content:
-        application/json:
-          schema: {$ref: "#/components/schemas/Error"}
-    Busy:
-      description: >-
-        All password-hashing or image-processing slots stayed taken for a few seconds, or (public note submission) the upload
-        slots are full (`busy`); retry after `Retry-After`.
-      headers:
-        Retry-After:
-          schema: {type: integer}
-      content:
-        application/json:
-          schema: {$ref: "#/components/schemas/Error"}
     NotFound:
       description: No route matches this path. Error code `not_found`.
       content:
@@ -1278,6 +1309,17 @@ components:
       content:
         application/json:
           schema: {$ref: "#/components/schemas/ApiError"}
+    ApiAuthUnavailable:
+      description: >-
+        A Redis-backed store or the hashing pool could not serve the request, so it failed closed and nothing was accepted: `ERROR_BUSY`, `ERROR_LIMITER_UNAVAILABLE`,
+        `ERROR_CODE_STORE_UNAVAILABLE` or `ERROR_SESSION_STORE_UNAVAILABLE`. Retry after `Retry-After`.
+      headers:
+        Retry-After:
+          description: Seconds to wait before retrying.
+          schema: {type: integer, minimum: 1}
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/ApiError"}
     ApiSessionStoreUnavailable:
       description: >-
         Redis, which holds the login sessions, did not answer (`ERROR_SESSION_STORE_UNAVAILABLE`). Sessions have no copy elsewhere, so
@@ -1292,93 +1334,185 @@ components:
   schemas:
     User:
       type: object
-      additionalProperties: false
+      description: The signed-in account. Fields are only ever added (the username arrives with T-081).
       required: [id, email, email_verified, display_name, locale, created_at]
       properties:
-        id: {type: string, description: Opaque ULID., examples: ["01J9Z3K6V8Q4M7N2P5R8T0W1XY"]}
-        email: {type: string}
-        email_verified: {type: boolean}
-        display_name: {type: string}
-        locale: {type: string, enum: [en, vi]}
-        created_at: {type: string, format: date-time}
-    UserEnvelope:
+        id: {type: string, description: "The account's public id, a ULID. Always present.", examples: ["01J9Z3K6V8Q4M7N2P5R8T0W1XY"]}
+        email: {type: string, description: "The normalised (trimmed, lower-cased, NFC) address. Always present."}
+        email_verified: {type: boolean, description: "True once the 6-digit code was confirmed (or Google vouched for the address). Always present."}
+        display_name: {type: string, description: "1-100 characters, NFC. Always present."}
+        locale: {type: string, enum: [en, vi], description: "UI language and language of the emails: `en` English, `vi` Vietnamese. Always present."}
+        created_at: {type: integer, format: int64, description: "When the account was created, Unix ms. Always present."}
+    UserResponse:
       type: object
-      required: [user]
+      required: [status, data]
       properties:
-        user: {$ref: "#/components/schemas/User"}
+        status: {type: string, const: OK, description: Always `OK` on success.}
+        data: {$ref: "#/components/schemas/User"}
+    ResendVerificationResponse:
+      type: object
+      required: [status, data]
+      properties:
+        status: {type: string, const: OK, description: Always `OK` on success.}
+        data:
+          type: object
+          description: What the call did.
+          required: [already_verified]
+          properties:
+            already_verified: {type: boolean, description: "True when the address was already verified and nothing was sent; false when a new code was emailed."}
+    RegisterRequest:
+      type: object
+      required: [email, password, display_name]
+      properties:
+        email:
+          type: string
+          maxLength: 254
+          description: >-
+            Required. Trimmed, lower-cased and normalised to Unicode NFC, so NFC and NFD spellings of one address are the same account (also at login). The local part (before the last `@`)
+            is at most 64 bytes, and the address contains no control (Cc) or format (Cf) characters; otherwise `ERROR_INVALID_EMAIL`.
+        password:
+          type: string
+          format: password
+          minLength: 10
+          maxLength: 128
+          description: >-
+            Required. Normalised to Unicode NFKC before the length rules (counted in characters after normalisation) and before hashing, so NFC and NFD forms of the same password are equal.
+            Must differ from the email (case-insensitive); otherwise `ERROR_WEAK_PASSWORD`.
+        display_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: >-
+            Required. Normalised to Unicode NFC, then trimmed; stored and returned in that form. Control characters (Cc), format characters (Cf: zero-width space, bidi overrides and isolates,
+            LRM/RLM, BOM) except U+200D (zero-width joiner, used in emoji sequences), and line or paragraph separators (Zl, Zp) are rejected with `ERROR_INVALID_DISPLAY_NAME`.
+        locale:
+          type: [string, "null"]
+          enum: [en, vi, null]
+          default: en
+          description: >-
+            Optional. The student's UI language; it selects the language of the verification email. Absent or `null` means `en`; any other value (including another case such as `VI`,
+            or a non-string) is `ERROR_INVALID_LOCALE` and nothing is created.
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: {type: string, maxLength: 254, description: "Required. Trimmed, lower-cased and NFC-normalised as at registration, so either Unicode spelling signs in."}
+        password: {type: string, format: password, description: "Required. Normalised to Unicode NFKC before verification, exactly as at registration."}
+    VerifyEmailRequest:
+      type: object
+      required: [code]
+      properties:
+        code: {type: string, pattern: "^[0-9]{6}$", description: "Required. The 6-digit code from the verification email; anything else is `ERROR_INVALID_CODE`.", examples: ["042917"]}
+    ForgotPasswordRequest:
+      type: object
+      required: [email]
+      properties:
+        email: {type: string, maxLength: 254, description: "Required. Trimmed, lower-cased and NFC-normalised like at login."}
+    ResetPasswordRequest:
+      type: object
+      required: [email, code, password]
+      properties:
+        email: {type: string, maxLength: 254, description: "Required. The address the reset code was sent to, normalised like at login."}
+        code: {type: string, pattern: "^[0-9]{6}$", description: "Required. The 6-digit code from the reset email, valid 15 minutes.", examples: ["042917"]}
+        password: {type: string, format: password, minLength: 10, maxLength: 128, description: "Required. The new password; same rules as at registration (NFKC, 10-128 characters, not the email)."}
     Profile:
       type: object
-      additionalProperties: false
+      description: The owner's profile page information of one yearbook.
       required: [id, is_owner, full_name, nickname, birthday, quote, hobbies, future_plans, photo_media_id]
       properties:
-        id: {type: string, description: Opaque ULID.}
-        is_owner: {type: boolean}
-        full_name: {type: string, minLength: 1, maxLength: 100}
-        nickname: {type: string, maxLength: 50, description: Empty when not set.}
-        birthday: {type: [string, "null"], format: date}
-        quote: {type: string, maxLength: 500}
-        hobbies: {type: string, maxLength: 300}
-        future_plans: {type: string, maxLength: 300}
-        photo_media_id: {type: [string, "null"], description: A photo of this yearbook, or null.}
+        id: {type: string, description: "Profile ULID."}
+        is_owner: {type: boolean, description: "Always true: this is the profile of the book's owner."}
+        full_name: {type: string, description: "The name on the profile page, 1 to 100 characters. A new book starts with the user's display name."}
+        nickname: {type: string, description: "Up to 50 characters; the empty string when not set."}
+        birthday: {type: [string, "null"], format: date, description: "`YYYY-MM-DD` calendar date (not an instant, so not Unix ms); null when not set."}
+        quote: {type: string, description: "Up to 500 characters; the empty string when not set."}
+        hobbies: {type: string, description: "Up to 300 characters; the empty string when not set."}
+        future_plans: {type: string, description: "Up to 300 characters; the empty string when not set."}
+        photo_media_id: {type: [string, "null"], description: "Photo ULID (a photo of this yearbook) shown on the profile page, or null."}
     Yearbook:
       type: object
-      additionalProperties: false
+      description: A yearbook with its owner profile. Carries no internal id.
       required: [id, title, school_name, class_name, graduation_year, motto, language, page_size, template_id, cover_media_id, created_at, updated_at, profile]
       properties:
-        id: {type: string, description: Opaque ULID., examples: ["01J9Z3K6V8Q4M7N2P5R8T0W1XY"]}
-        title: {type: string, minLength: 1, maxLength: 120}
-        school_name: {type: string, maxLength: 120, description: Empty when not set.}
-        class_name: {type: string, maxLength: 120, description: Empty when not set.}
-        graduation_year: {type: [integer, "null"], minimum: 1950, maximum: 2100}
-        motto: {type: string, maxLength: 200}
-        language: {type: string, enum: [en, vi]}
-        page_size: {type: string, enum: [A5, A4, Letter]}
-        template_id: {type: [string, "null"], description: Null until a template is chosen.}
-        cover_media_id: {type: [string, "null"], description: A photo of this yearbook, or null.}
-        created_at: {type: string, format: date-time}
-        updated_at: {type: string, format: date-time}
+        id: {type: string, description: "Yearbook ULID; use it as `id` or `yearbook_id` of the other calls."}
+        title: {type: string, description: "1 to 120 characters."}
+        school_name: {type: string, description: "Up to 120 characters; the empty string when not set."}
+        class_name: {type: string, description: "Up to 120 characters; the empty string when not set."}
+        graduation_year: {type: [integer, "null"], description: "Year from 1950 to 2100; null when not set."}
+        motto: {type: string, description: "Up to 200 characters; the empty string when not set."}
+        language: {type: string, enum: [en, vi], description: "Language of the book's pages: `en` English, `vi` Vietnamese."}
+        page_size: {type: string, enum: [A5, A4, Letter], description: "Paper size of the printed book: `A5` (default), `A4` or `Letter`."}
+        template_id: {type: [string, "null"], description: "Template ULID; null until a template is chosen."}
+        cover_media_id: {type: [string, "null"], description: "Photo ULID (a photo of this yearbook) used as the cover, or null."}
+        created_at: {type: integer, format: int64, description: "Creation time, Unix ms."}
+        updated_at: {type: integer, format: int64, description: "Last edit of the book or its profile, Unix ms; the list is ordered by it."}
         profile: {$ref: "#/components/schemas/Profile"}
-    YearbookEnvelope:
+    YearbookResponse:
       type: object
-      required: [yearbook]
+      required: [status, data]
       properties:
-        yearbook: {$ref: "#/components/schemas/Yearbook"}
-    YearbookCreate:
+        status: {type: string, const: OK, description: "Always `OK` on success."}
+        data: {$ref: "#/components/schemas/Yearbook"}
+    YearbookListResponse:
+      type: object
+      required: [status, data]
+      properties:
+        status: {type: string, const: OK, description: "Always `OK` on success."}
+        data:
+          type: object
+          description: One page of yearbooks.
+          required: [items, next_id]
+          properties:
+            items:
+              type: array
+              description: The books of this page, newest `updated_at` first; an empty array when the user has none.
+              items: {$ref: "#/components/schemas/Yearbook"}
+            next_id: {type: string, description: "Opaque page token for the next page; the empty string on the last page."}
+    YearbookCreateRequest:
       type: object
       additionalProperties: false
       required: [title, language]
       properties:
-        title: {type: string, minLength: 1, maxLength: 120}
-        school_name: {type: string, maxLength: 120}
-        class_name: {type: string, maxLength: 120}
-        graduation_year: {type: [integer, "null"], minimum: 1950, maximum: 2100}
-        motto: {type: string, maxLength: 200}
-        language: {type: string, enum: [en, vi]}
-        page_size: {type: string, enum: [A5, A4, Letter], default: A5}
-    YearbookPatch:
+        title: {type: string, minLength: 1, maxLength: 120, description: "Required. 1 to 120 characters after trimming."}
+        school_name: {type: string, maxLength: 120, description: "Optional, up to 120 characters; default empty."}
+        class_name: {type: string, maxLength: 120, description: "Optional, up to 120 characters; default empty."}
+        graduation_year: {type: [integer, "null"], minimum: 1950, maximum: 2100, description: "Optional, 1950 to 2100; default null."}
+        motto: {type: string, maxLength: 200, description: "Optional, up to 200 characters; default empty."}
+        language: {type: string, enum: [en, vi], description: "Required. `en` English or `vi` Vietnamese."}
+        page_size: {type: string, enum: [A5, A4, Letter], default: A5, description: "Optional paper size, default `A5`."}
+    YearbookUpdateRequest:
       type: object
       additionalProperties: false
+      required: [id]
       properties:
-        title: {type: string, minLength: 1, maxLength: 120}
-        school_name: {type: string, maxLength: 120}
-        class_name: {type: string, maxLength: 120}
-        graduation_year: {type: [integer, "null"], minimum: 1950, maximum: 2100}
-        motto: {type: string, maxLength: 200}
-        language: {type: string, enum: [en, vi]}
-        page_size: {type: string, enum: [A5, A4, Letter]}
-        cover_media_id: {type: [string, "null"], description: A photo of this yearbook (else `400 invalid_media`); null clears it.}
-    ProfileInput:
+        id: {type: string, description: "Required. ULID of the yearbook to change."}
+        title: {type: string, minLength: 1, maxLength: 120, description: "Optional. 1 to 120 characters after trimming; absent = unchanged."}
+        school_name: {type: string, maxLength: 120, description: "Optional, up to 120 characters; the empty string clears it; absent = unchanged."}
+        class_name: {type: string, maxLength: 120, description: "Optional, up to 120 characters; the empty string clears it; absent = unchanged."}
+        graduation_year: {type: [integer, "null"], minimum: 1950, maximum: 2100, description: "Optional, 1950 to 2100; null clears it; absent = unchanged."}
+        motto: {type: string, maxLength: 200, description: "Optional, up to 200 characters; the empty string clears it; absent = unchanged."}
+        language: {type: string, enum: [en, vi], description: "Optional. `en` or `vi`; absent = unchanged."}
+        page_size: {type: string, enum: [A5, A4, Letter], description: "Optional paper size; absent = unchanged."}
+        cover_media_id: {type: [string, "null"], description: "Optional. Photo ULID, which must be a photo of this yearbook (else `ERROR_INVALID_MEDIA`); null clears the cover; absent = unchanged."}
+    YearbookUpdateProfileRequest:
       type: object
       additionalProperties: false
-      required: [full_name]
+      required: [yearbook_id, full_name]
       properties:
-        full_name: {type: string, minLength: 1, maxLength: 100}
-        nickname: {type: string, maxLength: 50}
-        birthday: {type: [string, "null"], format: date, description: "YYYY-MM-DD, a real date strictly before today (UTC) and not before 1900-01-01."}
-        quote: {type: string, maxLength: 500}
-        hobbies: {type: string, maxLength: 300}
-        future_plans: {type: string, maxLength: 300}
-        photo_media_id: {type: [string, "null"], description: A photo of this yearbook (else `400 invalid_media`). Like every field of this replacing PUT, omitted means cleared.}
+        yearbook_id: {type: string, description: "Required. ULID of the yearbook whose profile is replaced."}
+        full_name: {type: string, minLength: 1, maxLength: 100, description: "Required. 1 to 100 characters after trimming."}
+        nickname: {type: string, maxLength: 50, description: "Optional, up to 50 characters; omitted = cleared."}
+        birthday: {type: [string, "null"], format: date, description: "Optional `YYYY-MM-DD`, a real date strictly before today (UTC) and not before 1900-01-01; omitted or null = cleared."}
+        quote: {type: string, maxLength: 500, description: "Optional, up to 500 characters; omitted = cleared."}
+        hobbies: {type: string, maxLength: 300, description: "Optional, up to 300 characters; omitted = cleared."}
+        future_plans: {type: string, maxLength: 300, description: "Optional, up to 300 characters; omitted = cleared."}
+        photo_media_id: {type: [string, "null"], description: "Optional. Photo ULID, which must be a photo of this yearbook (else `ERROR_INVALID_MEDIA`); omitted or null = cleared."}
+    YearbookDeleteRequest:
+      type: object
+      additionalProperties: false
+      required: [id]
+      properties:
+        id: {type: string, description: "Required. ULID of the yearbook to delete."}
     Media:
       type: object
       description: A stored photo. Carries no storage key, hash or URL; the client builds the content URL from `id`.
@@ -1580,8 +1714,8 @@ components:
     Error:
       type: object
       description: >-
-        Shared error envelope. `code` is a stable snake_case contract (clients localise
-        it); `message` is English text meant for logs.
+        Error envelope of the infrastructure probes only (/readyz, and the 404/405 of unknown root paths). Business routes use ApiError.
+        `code` is a stable snake_case name; `message` is English text meant for logs.
       required: [error]
       properties:
         error:
@@ -1590,7 +1724,7 @@ components:
           properties:
             code:
               type: string
-              examples: [not_found, method_not_allowed, payload_too_large, internal_error, not_ready, invalid_credentials, unauthenticated, rate_limited, invalid_code, code_expired, code_locked, code_store_unavailable, session_store_unavailable, limiter_unavailable, limit_reached, unknown_field, unsupported_media_type, invalid_image, quota_exceeded, storage_error, invalid_media, missing_answer, invalid_answer, too_many_photos, collection_full, collection_closed, verification_failed, busy, request_timeout]
+              examples: [not_found, method_not_allowed, internal_error, not_ready]
             message:
               type: string
             request_id:

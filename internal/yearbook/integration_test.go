@@ -37,6 +37,7 @@ type env struct {
 	logs  *bytes.Buffer
 	mu    sync.Mutex
 	clock time.Time
+	ah    *auth.Handler
 }
 
 func (e *env) now() time.Time {
@@ -87,8 +88,9 @@ func newEnvWith(t *testing.T, children ...ChildPurger) *env {
 		t.Fatal(err)
 	}
 	ah := auth.NewHandler(svc, auth.HandlerConfig{AllowedOrigins: []string{origin}}, logger)
+	e.ah = ah
 	st := NewStore(d)
-	yh := NewHandler(st, NewService(st, nil, children...), ah.RequireUser, []string{origin}, logger, e.now)
+	yh := NewHandler(NewService(st, httpx.NewCursors([]byte(strings.Repeat("c", 32))), nil, e.now, children...), ah.RequireUser, []string{origin})
 	e.h = httpx.NewRouter(logger, ah.Routes, yh.Routes)
 	return e
 }
@@ -99,10 +101,10 @@ func (e *env) register(email, name string) user {
 	e.t.Helper()
 	b, _ := json.Marshal(map[string]string{"email": email, "password": testPW, "display_name": name})
 	rec := httptest.NewRecorder()
-	r := httptest.NewRequest("POST", "/v1/auth/register", bytes.NewReader(b))
+	r := httptest.NewRequest("POST", "/api/auth/register", bytes.NewReader(b))
 	r.Header.Set("Content-Type", "application/json")
 	e.h.ServeHTTP(rec, r)
-	if rec.Code != 201 {
+	if rec.Code != 200 {
 		e.t.Fatalf("register: %d %s", rec.Code, rec.Body.String())
 	}
 	for _, c := range rec.Result().Cookies() {
@@ -122,6 +124,12 @@ type resp struct {
 // do sends a request as u (zero user = no cookie) with a JSON body.
 func (e *env) do(u user, method, path, body string) resp {
 	e.t.Helper()
+	return e.doOn(e.h, u, method, path, body)
+}
+
+// doOn is do against another handler (the tests that count queries build their own).
+func (e *env) doOn(h http.Handler, u user, method, path, body string) resp {
+	e.t.Helper()
 	var r *http.Request
 	if body == "" {
 		r = httptest.NewRequest(method, path, nil)
@@ -134,7 +142,7 @@ func (e *env) do(u user, method, path, body string) resp {
 		r.Header.Set("Origin", origin)
 	}
 	rec := httptest.NewRecorder()
-	e.h.ServeHTTP(rec, r)
+	h.ServeHTTP(rec, r)
 	return resp{rec, e.t}
 }
 
@@ -144,28 +152,68 @@ func (r resp) status(want int, code string) resp {
 		r.t.Fatalf("status %d, want %d (%s)", r.Code, want, r.Body.String())
 	}
 	if code != "" {
-		var env struct{ Error struct{ Code string } }
-		if err := json.Unmarshal(r.Body.Bytes(), &env); err != nil || env.Error.Code != code {
-			r.t.Fatalf("code %q (err %v), want %q: %s", env.Error.Code, err, code, r.Body.String())
+		var env struct{ Status string }
+		if err := json.Unmarshal(r.Body.Bytes(), &env); err != nil || env.Status != code {
+			r.t.Fatalf("status field %q (err %v), want %q: %s", env.Status, err, code, r.Body.String())
 		}
 	}
 	return r
 }
 
+// book is the yearbook in the "data" of a success answer.
 func (r resp) book() map[string]any {
 	r.t.Helper()
-	var out struct{ Yearbook map[string]any }
-	if err := json.Unmarshal(r.Body.Bytes(), &out); err != nil || out.Yearbook == nil {
+	var out struct {
+		Status string
+		Data   map[string]any
+	}
+	if err := json.Unmarshal(r.Body.Bytes(), &out); err != nil || out.Status != "OK" || out.Data == nil {
 		r.t.Fatalf("no yearbook in %s", r.Body.String())
 	}
-	return out.Yearbook
+	return out.Data
+}
+
+// page is the "data" of a get-list answer.
+func (r resp) page() (items []map[string]any, nextID string) {
+	r.t.Helper()
+	var out struct {
+		Status string
+		Data   struct {
+			Items  []map[string]any `json:"items"`
+			NextID *string          `json:"next_id"`
+		}
+	}
+	if err := json.Unmarshal(r.Body.Bytes(), &out); err != nil || out.Status != "OK" || out.Data.Items == nil || out.Data.NextID == nil {
+		r.t.Fatalf("not a page in %s", r.Body.String())
+	}
+	return out.Data.Items, *out.Data.NextID
+}
+
+// withID puts "key":"id" first into the JSON object body.
+func withID(key, id, body string) string {
+	rest := strings.TrimPrefix(body, "{")
+	if strings.TrimSpace(rest) != "}" {
+		rest = "," + rest
+	}
+	return `{"` + key + `":"` + id + `"` + rest
+}
+
+func (e *env) get(u user, id string) resp { return e.do(u, "GET", "/api/yearbook/get?id="+id, "") }
+func (e *env) update(u user, id, body string) resp {
+	return e.do(u, "POST", "/api/yearbook/update", withID("id", id, body))
+}
+func (e *env) profile(u user, id, body string) resp {
+	return e.do(u, "POST", "/api/yearbook/update-profile", withID("yearbook_id", id, body))
+}
+func (e *env) remove(u user, id string) resp {
+	return e.do(u, "POST", "/api/yearbook/delete", withID("id", id, "{}"))
 }
 
 func (e *env) create(u user, title string) string {
 	e.t.Helper()
 	e.tick()
 	b, _ := json.Marshal(map[string]string{"title": title, "language": "en"})
-	return e.do(u, "POST", "/v1/yearbooks", string(b)).status(201, "").book()["id"].(string)
+	return e.do(u, "POST", "/api/yearbook/create", string(b)).status(200, "").book()["id"].(string)
 }
 
 func (e *env) count(q string, args ...any) int {
@@ -181,8 +229,7 @@ func (e *env) count(q string, args ...any) int {
 func TestCreateAndGet(t *testing.T) {
 	e := newEnv(t)
 	alice := e.register("alice@example.com", "Đặng Thị Hồng 🎓")
-	rec := e.do(alice, "POST", "/v1/yearbooks",
-		"{\"title\":\"  Class of 2026 Việt \",\"school_name\":\"Fake University\",\"graduation_year\":2026,\"language\":\"vi\",\"page_size\":\"A4\"}").status(201, "")
+	rec := e.do(alice, "POST", "/api/yearbook/create", "{\"title\":\"  Class of 2026 Việt \",\"school_name\":\"Fake University\",\"graduation_year\":2026,\"language\":\"vi\",\"page_size\":\"A4\"}").status(200, "")
 	b := rec.book()
 	if b["title"] != "Class of 2026 Việt" || b["page_size"] != "A4" || b["language"] != "vi" || b["graduation_year"] != float64(2026) || b["template_id"] != nil {
 		t.Fatalf("unexpected book %v", b)
@@ -200,12 +247,12 @@ func TestCreateAndGet(t *testing.T) {
 			t.Fatalf("response leaks %s", k)
 		}
 	}
-	got := e.do(alice, "GET", "/v1/yearbooks/"+id, "").status(200, "").book()
+	got := e.get(alice, id).status(200, "").book()
 	if fmt.Sprint(got) != fmt.Sprint(b) {
 		t.Fatalf("GET differs from POST:\n%v\n%v", got, b)
 	}
 	// default page size
-	d := e.do(alice, "POST", "/v1/yearbooks", `{"title":"Plain","language":"en"}`).status(201, "").book()
+	d := e.do(alice, "POST", "/api/yearbook/create", `{"title":"Plain","language":"en"}`).status(200, "").book()
 	if d["page_size"] != "A5" || d["school_name"] != "" {
 		t.Fatalf("defaults: %v", d)
 	}
@@ -215,24 +262,24 @@ func TestCreateAndGet(t *testing.T) {
 func TestPageSizeLetter(t *testing.T) {
 	e := newEnv(t)
 	alice := e.register("alice@example.com", "Alice")
-	b := e.do(alice, "POST", "/v1/yearbooks", `{"title":"L","language":"en","page_size":"Letter"}`).status(201, "").book()
+	b := e.do(alice, "POST", "/api/yearbook/create", `{"title":"L","language":"en","page_size":"Letter"}`).status(200, "").book()
 	if b["page_size"] != "Letter" {
 		t.Fatalf("created %v", b)
 	}
 	id := e.create(alice, "A5 book")
 	for _, size := range []string{"Letter", "A4", "Letter", "A5"} {
-		got := e.do(alice, "PATCH", "/v1/yearbooks/"+id, `{"page_size":"`+size+`"}`).status(200, "").book()
+		got := e.update(alice, id, `{"page_size":"`+size+`"}`).status(200, "").book()
 		if got["page_size"] != size {
 			t.Fatalf("patched to %s: %v", size, got)
 		}
-		if g := e.do(alice, "GET", "/v1/yearbooks/"+id, "").book(); g["page_size"] != size {
+		if g := e.get(alice, id).book(); g["page_size"] != size {
 			t.Fatalf("read back %s: %v", size, g)
 		}
 	}
 	for _, bad := range []string{"letter", "LETTER", "Legal"} {
-		e.do(alice, "PATCH", "/v1/yearbooks/"+id, `{"page_size":"`+bad+`"}`).status(400, "invalid_page_size")
+		e.update(alice, id, `{"page_size":"`+bad+`"}`).status(400, "ERROR_INVALID_PAGE_SIZE")
 	}
-	if g := e.do(alice, "GET", "/v1/yearbooks/"+id, "").book(); g["page_size"] != "A5" {
+	if g := e.get(alice, id).book(); g["page_size"] != "A5" {
 		t.Fatalf("rejected patch applied: %v", g)
 	}
 }
@@ -248,34 +295,34 @@ func TestCreateValidation(t *testing.T) {
 		code   string
 		why    string
 	}{
-		{`{"language":"en"}`, 400, "invalid_title", "missing title"},
-		{`{"title":null,"language":"en"}`, 400, "invalid_title", "null title"},
-		{`{"title":"  ","language":"en"}`, 400, "invalid_title", "blank title"},
-		{`{"title":"` + long(121) + `","language":"en"}`, 400, "invalid_title", "long title"},
-		{`{"title":"` + long(120) + `","language":"en"}`, 201, "", "max title"},
-		{`{"title":"x"}`, 400, "invalid_language", "missing language"},
-		{`{"title":"x","language":"de"}`, 400, "invalid_language", "bad language"},
-		{`{"title":"x","language":"en","page_size":"A3"}`, 400, "invalid_page_size", "bad page size"},
-		{`{"title":"x","language":"en","page_size":"letter"}`, 400, "invalid_page_size", "lower case Letter"},
-		{`{"title":"x","language":"en","page_size":"LETTER"}`, 400, "invalid_page_size", "upper case Letter"},
-		{`{"title":"x","language":"en","page_size":"Legal"}`, 400, "invalid_page_size", "Legal"},
-		{`{"title":"x","language":"en","page_size":"Letter"}`, 201, "", "Letter"},
-		{`{"title":"x","language":"en","graduation_year":1949}`, 400, "invalid_graduation_year", "year low"},
-		{`{"title":"x","language":"en","graduation_year":2101}`, 400, "invalid_graduation_year", "year high"},
-		{`{"title":"x","language":"en","graduation_year":"2020"}`, 400, "invalid_body", "year as string"},
-		{`{"title":"x","language":"en","motto":"` + long(201) + `"}`, 400, "invalid_motto", "long motto"},
-		{`{"title":"x\u200by","language":"en"}`, 400, "invalid_title", "zero-width space"},
-		{`{"title":"x\ny","language":"en"}`, 400, "invalid_title", "newline"},
-		{`{"title":"x","language":"en","owner_id":1}`, 400, "unknown_field", "owner_id"},
-		{`{"title":"x","language":"en","id":"01J9Z3K6V8Q4M7N2P5R8T0W1XY"}`, 400, "unknown_field", "id"},
-		{`{"title":"x","language":"en","public_id":"A"}`, 400, "unknown_field", "public_id"},
-		{`{"title":"x","language":"en","profile":{"is_owner":false}}`, 400, "unknown_field", "nested profile"},
-		{`not json`, 400, "invalid_body", "garbage"},
-		{``, 400, "invalid_body", "empty body"},
+		{`{"language":"en"}`, 400, "ERROR_INVALID_TITLE", "missing title"},
+		{`{"title":null,"language":"en"}`, 400, "ERROR_INVALID_TITLE", "null title"},
+		{`{"title":"  ","language":"en"}`, 400, "ERROR_INVALID_TITLE", "blank title"},
+		{`{"title":"` + long(121) + `","language":"en"}`, 400, "ERROR_INVALID_TITLE", "long title"},
+		{`{"title":"` + long(120) + `","language":"en"}`, 200, "", "max title"},
+		{`{"title":"x"}`, 400, "ERROR_INVALID_LANGUAGE", "missing language"},
+		{`{"title":"x","language":"de"}`, 400, "ERROR_INVALID_LANGUAGE", "bad language"},
+		{`{"title":"x","language":"en","page_size":"A3"}`, 400, "ERROR_INVALID_PAGE_SIZE", "bad page size"},
+		{`{"title":"x","language":"en","page_size":"letter"}`, 400, "ERROR_INVALID_PAGE_SIZE", "lower case Letter"},
+		{`{"title":"x","language":"en","page_size":"LETTER"}`, 400, "ERROR_INVALID_PAGE_SIZE", "upper case Letter"},
+		{`{"title":"x","language":"en","page_size":"Legal"}`, 400, "ERROR_INVALID_PAGE_SIZE", "Legal"},
+		{`{"title":"x","language":"en","page_size":"Letter"}`, 200, "", "Letter"},
+		{`{"title":"x","language":"en","graduation_year":1949}`, 400, "ERROR_INVALID_GRADUATION_YEAR", "year low"},
+		{`{"title":"x","language":"en","graduation_year":2101}`, 400, "ERROR_INVALID_GRADUATION_YEAR", "year high"},
+		{`{"title":"x","language":"en","graduation_year":"2020"}`, 400, "ERROR_PARAM", "year as string"},
+		{`{"title":"x","language":"en","motto":"` + long(201) + `"}`, 400, "ERROR_INVALID_MOTTO", "long motto"},
+		{`{"title":"x\u200by","language":"en"}`, 400, "ERROR_INVALID_TITLE", "zero-width space"},
+		{`{"title":"x\ny","language":"en"}`, 400, "ERROR_INVALID_TITLE", "newline"},
+		{`{"title":"x","language":"en","owner_id":1}`, 400, "ERROR_PARAM", "owner_id"},
+		{`{"title":"x","language":"en","id":"01J9Z3K6V8Q4M7N2P5R8T0W1XY"}`, 400, "ERROR_PARAM", "id"},
+		{`{"title":"x","language":"en","public_id":"A"}`, 400, "ERROR_PARAM", "public_id"},
+		{`{"title":"x","language":"en","profile":{"is_owner":false}}`, 400, "ERROR_PARAM", "nested profile"},
+		{`not json`, 400, "ERROR_PARAM", "garbage"},
+		{``, 400, "ERROR_PARAM", "empty body"},
 	}
 	for _, tc := range tests {
 		t.Log(tc.why) // shown with the failure when the check below stops the test
-		e.do(alice, "POST", "/v1/yearbooks", tc.body).status(tc.status, tc.code)
+		e.do(alice, "POST", "/api/yearbook/create", tc.body).status(tc.status, tc.code)
 	}
 }
 
@@ -291,54 +338,40 @@ func TestListPaging(t *testing.T) {
 	e.create(bob, "Bob's")
 	// Touching A1 moves it to the front.
 	e.tick()
-	e.do(alice, "PATCH", "/v1/yearbooks/"+ids[1], `{"motto":"touched"}`).status(200, "")
+	e.update(alice, ids[1], `{"motto":"touched"}`).status(200, "")
 	want := []string{ids[1], ids[4], ids[3], ids[2], ids[0]}
 
 	var got []string
-	cursor := ""
+	next := ""
 	for page := 0; page < 10; page++ {
-		path := "/v1/yearbooks?limit=2"
-		if cursor != "" {
-			path += "&cursor=" + cursor
+		path := "/api/yearbook/get-list?limit=2"
+		if next != "" {
+			path += "&next_id=" + next
 		}
-		var out struct {
-			Yearbooks  []map[string]any `json:"yearbooks"`
-			NextCursor *string          `json:"next_cursor"`
-		}
-		rec := e.do(alice, "GET", path, "").status(200, "")
-		if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
-			t.Fatal(err)
-		}
-		for _, y := range out.Yearbooks {
+		items, nextID := e.do(alice, "GET", path, "").status(200, "").page()
+		for _, y := range items {
 			got = append(got, y["id"].(string))
 		}
-		if out.NextCursor == nil {
+		if nextID == "" {
 			break
 		}
-		cursor = *out.NextCursor
+		next = nextID
 	}
 	if fmt.Sprint(got) != fmt.Sprint(want) {
 		t.Fatalf("order %v, want %v", got, want)
 	}
-	// Default limit returns everything here; an empty account returns [] not null.
+	// Default limit returns everything here; an empty account returns [] and "" (not null).
 	carol := e.register("carol@example.com", "Carol")
-	rec := e.do(carol, "GET", "/v1/yearbooks", "").status(200, "")
-	if !strings.Contains(rec.Body.String(), `"yearbooks":[]`) || !strings.Contains(rec.Body.String(), `"next_cursor":null`) {
+	rec := e.do(carol, "GET", "/api/yearbook/get-list", "").status(200, "")
+	if !strings.Contains(rec.Body.String(), `"data":{"items":[],"next_id":""}`) {
 		t.Fatalf("empty list: %s", rec.Body.String())
 	}
-	for _, q := range []string{"limit=0", "limit=51", "limit=-1", "limit=abc", "limit=1.5", "cursor=garbage", "cursor=!!", "limit=2&cursor=" + cursor + "x"} {
-		e.do(alice, "GET", "/v1/yearbooks?"+q, "").status(400, "")
+	for _, q := range []string{"limit=0", "limit=51", "limit=-1", "limit=abc", "limit=1.5", "next_id=garbage", "next_id=!!", "limit=2&next_id=" + next + "x", "next_id=" + next[:len(next)-3]} {
+		e.do(alice, "GET", "/api/yearbook/get-list?"+q, "").status(400, "ERROR_PARAM")
 	}
-	e.do(alice, "GET", "/v1/yearbooks?limit=50", "").status(200, "")
-	// A cursor taken from another user's list does not widen the view.
-	var out struct{ Yearbooks []map[string]any }
-	rec = e.do(bob, "GET", "/v1/yearbooks?cursor="+cursor, "").status(200, "")
-	_ = json.Unmarshal(rec.Body.Bytes(), &out)
-	for _, y := range out.Yearbooks {
-		if y["title"] != "Bob's" {
-			t.Fatalf("bob sees %v", y)
-		}
-	}
+	e.do(alice, "GET", "/api/yearbook/get-list?limit=50", "").status(200, "")
+	// A token taken from another user's list is refused: it is bound to the list it came from.
+	e.do(bob, "GET", "/api/yearbook/get-list?next_id="+next, "").status(400, "ERROR_PARAM")
 }
 
 // AC3, AC4, AC7: the ownership matrix. Another user's book and a missing book look the same.
@@ -348,17 +381,17 @@ func TestOwnershipMatrix(t *testing.T) {
 	bob := e.register("bob@example.com", "Bob")
 	id := e.create(alice, "Alice's book")
 	missing := "01J9Z3K6V8Q4M7N2P5R8T0W1XY"
-	calls := []struct{ method, suffix, body string }{
-		{"GET", "", ""},
-		{"PATCH", "", `{"title":"hijack"}`},
-		{"PUT", "/profile", `{"full_name":"hijack"}`},
-		{"DELETE", "", ""},
+	calls := []func(target string) resp{
+		func(target string) resp { return e.get(bob, target) },
+		func(target string) resp { return e.update(bob, target, `{"title":"hijack"}`) },
+		func(target string) resp { return e.profile(bob, target, `{"full_name":"hijack"}`) },
+		func(target string) resp { return e.remove(bob, target) },
 	}
 	var bodies []string
-	for _, c := range calls {
+	for i, call := range calls {
 		for _, target := range []string{id, missing, "not-a-ulid", "1"} {
-			rec := e.do(bob, c.method, "/v1/yearbooks/"+target+c.suffix, c.body).status(404, "not_found")
-			bodies = append(bodies, c.method+rec.Body.String()[:strings.Index(rec.Body.String(), `"request_id"`)])
+			rec := call(target).status(404, "ERROR_NOT_FOUND")
+			bodies = append(bodies, fmt.Sprint(i)+rec.Body.String()[:strings.Index(rec.Body.String(), `"request_id"`)])
 		}
 	}
 	// identical bodies (apart from request_id) per verb for own-missing, foreign and garbage ids
@@ -370,7 +403,7 @@ func TestOwnershipMatrix(t *testing.T) {
 		}
 	}
 	// Alice's book is untouched.
-	b := e.do(alice, "GET", "/v1/yearbooks/"+id, "").status(200, "").book()
+	b := e.get(alice, id).status(200, "").book()
 	if b["title"] != "Alice's book" || b["profile"].(map[string]any)["full_name"] != "Alice" {
 		t.Fatalf("book changed: %v", b)
 	}
@@ -384,44 +417,44 @@ func TestPatchAndProfile(t *testing.T) {
 	e := newEnv(t)
 	alice := e.register("alice@example.com", "Alice")
 	id := e.create(alice, "Book")
-	e.do(alice, "PATCH", "/v1/yearbooks/"+id, `{"graduation_year":2027,"motto":"Carpe diem","class_name":"K65"}`).status(200, "")
-	b := e.do(alice, "PATCH", "/v1/yearbooks/"+id, `{"title":"Renamed","graduation_year":null}`).status(200, "").book()
+	e.update(alice, id, `{"graduation_year":2027,"motto":"Carpe diem","class_name":"K65"}`).status(200, "")
+	b := e.update(alice, id, `{"title":"Renamed","graduation_year":null}`).status(200, "").book()
 	if b["title"] != "Renamed" || b["motto"] != "Carpe diem" || b["class_name"] != "K65" || b["graduation_year"] != nil || b["language"] != "en" {
 		t.Fatalf("patch result %v", b)
 	}
 	// Rejected patch changes nothing.
-	e.do(alice, "PATCH", "/v1/yearbooks/"+id, `{"motto":"new","title":""}`).status(400, "invalid_title")
-	e.do(alice, "PATCH", "/v1/yearbooks/"+id, `{"owner_id":5}`).status(400, "unknown_field")
-	e.do(alice, "PATCH", "/v1/yearbooks/"+id, `{"profile":{"full_name":"x"}}`).status(400, "unknown_field")
-	if g := e.do(alice, "GET", "/v1/yearbooks/"+id, "").book(); g["motto"] != "Carpe diem" {
+	e.update(alice, id, `{"motto":"new","title":""}`).status(400, "ERROR_INVALID_TITLE")
+	e.update(alice, id, `{"owner_id":5}`).status(400, "ERROR_PARAM")
+	e.update(alice, id, `{"profile":{"full_name":"x"}}`).status(400, "ERROR_PARAM")
+	if g := e.get(alice, id).book(); g["motto"] != "Carpe diem" {
 		t.Fatalf("rejected patch applied: %v", g)
 	}
 	// Empty patch is a no-op that still succeeds.
-	e.do(alice, "PATCH", "/v1/yearbooks/"+id, `{}`).status(200, "")
+	e.update(alice, id, `{}`).status(200, "")
 
 	full := `{"full_name":"Nguyễn Văn A","nickname":"Bống","birthday":"2004-02-29","quote":"Stay hungry","hobbies":"Chess","future_plans":"Engineer"}`
-	p := e.do(alice, "PUT", "/v1/yearbooks/"+id+"/profile", full).status(200, "").book()["profile"].(map[string]any)
+	p := e.profile(alice, id, full).status(200, "").book()["profile"].(map[string]any)
 	if p["full_name"] != "Nguyễn Văn A" || p["birthday"] != "2004-02-29" || p["nickname"] != "Bống" || p["hobbies"] != "Chess" || p["is_owner"] != true {
 		t.Fatalf("profile %v", p)
 	}
 	// Replace: omitted optional fields are cleared.
-	p = e.do(alice, "PUT", "/v1/yearbooks/"+id+"/profile", `{"full_name":"Only Name"}`).status(200, "").book()["profile"].(map[string]any)
+	p = e.profile(alice, id, `{"full_name":"Only Name"}`).status(200, "").book()["profile"].(map[string]any)
 	if p["nickname"] != "" || p["birthday"] != nil || p["quote"] != "" || p["full_name"] != "Only Name" {
 		t.Fatalf("not replaced: %v", p)
 	}
 	for body, code := range map[string]string{
-		`{}`: "invalid_full_name",
-		`{"full_name":"a","birthday":"2099-01-01"}`:                      "invalid_birthday",
-		`{"full_name":"a","birthday":"2026-10-07"}`:                      "invalid_birthday",
-		`{"full_name":"a","birthday":"2001-13-01"}`:                      "invalid_birthday",
-		`{"full_name":"a","birthday":""}`:                                "invalid_birthday",
-		`{"full_name":"a","nickname":"` + strings.Repeat("x", 51) + `"}`: "invalid_nickname",
-		`{"full_name":"a","quote":"` + strings.Repeat("x", 501) + `"}`:   "invalid_quote",
-		`{"full_name":"a","is_owner":false}`:                             "unknown_field",
-		`{"full_name":"a","yearbook_id":2}`:                              "unknown_field",
-		`{"full_name":"a","photo_media_id":2}`:                           "invalid_body", // a known field since T-009, but not a string
+		`{}`: "ERROR_INVALID_FULL_NAME",
+		`{"full_name":"a","birthday":"2099-01-01"}`:                      "ERROR_INVALID_BIRTHDAY",
+		`{"full_name":"a","birthday":"2026-10-07"}`:                      "ERROR_INVALID_BIRTHDAY",
+		`{"full_name":"a","birthday":"2001-13-01"}`:                      "ERROR_INVALID_BIRTHDAY",
+		`{"full_name":"a","birthday":""}`:                                "ERROR_INVALID_BIRTHDAY",
+		`{"full_name":"a","nickname":"` + strings.Repeat("x", 51) + `"}`: "ERROR_INVALID_NICKNAME",
+		`{"full_name":"a","quote":"` + strings.Repeat("x", 501) + `"}`:   "ERROR_INVALID_QUOTE",
+		`{"full_name":"a","is_owner":false}`:                             "ERROR_PARAM",
+		`{"full_name":"a","id":"x"}`:                                     "ERROR_PARAM",
+		`{"full_name":"a","photo_media_id":2}`:                           "ERROR_PARAM", // a known field since T-009, but not a string
 	} {
-		e.do(alice, "PUT", "/v1/yearbooks/"+id+"/profile", body).status(400, code)
+		e.profile(alice, id, body).status(400, code)
 	}
 	// Exactly one profile, still the owner's.
 	if e.count(`SELECT COUNT(*) FROM profile_tab WHERE is_owner`) != 1 || e.count(`SELECT COUNT(*) FROM profile_tab`) != 1 {
@@ -430,11 +463,10 @@ func TestPatchAndProfile(t *testing.T) {
 	// A profile edit counts as an edit of the book: it moves to the front.
 	other := e.create(alice, "Newer")
 	e.tick()
-	e.do(alice, "PUT", "/v1/yearbooks/"+id+"/profile", `{"full_name":"Again"}`).status(200, "")
-	var out struct{ Yearbooks []map[string]any }
-	_ = json.Unmarshal(e.do(alice, "GET", "/v1/yearbooks", "").Body.Bytes(), &out)
-	if out.Yearbooks[0]["id"] != id || out.Yearbooks[1]["id"] != other {
-		t.Fatalf("order after profile edit: %v", out.Yearbooks)
+	e.profile(alice, id, `{"full_name":"Again"}`).status(200, "")
+	books, _ := e.do(alice, "GET", "/api/yearbook/get-list", "").page()
+	if books[0]["id"] != id || books[1]["id"] != other {
+		t.Fatalf("order after profile edit: %v", books)
 	}
 	// Birthday is personal data: it is never written to the logs.
 	if strings.Contains(e.logs.String(), "2004-02-29") {
@@ -448,9 +480,9 @@ func TestDeleteAndLimit(t *testing.T) {
 	alice := e.register("alice@example.com", "Alice")
 	bob := e.register("bob@example.com", "Bob")
 	id := e.create(alice, "Doomed")
-	e.do(alice, "DELETE", "/v1/yearbooks/"+id, "").status(204, "")
-	e.do(alice, "GET", "/v1/yearbooks/"+id, "").status(404, "not_found")
-	e.do(alice, "DELETE", "/v1/yearbooks/"+id, "").status(404, "not_found")
+	e.remove(alice, id).status(200, "")
+	e.get(alice, id).status(404, "ERROR_NOT_FOUND")
+	e.remove(alice, id).status(404, "ERROR_NOT_FOUND")
 	if e.count(`SELECT COUNT(*) FROM yearbook_tab`) != 0 || e.count(`SELECT COUNT(*) FROM profile_tab`) != 0 {
 		t.Fatal("rows left after delete")
 	}
@@ -459,17 +491,15 @@ func TestDeleteAndLimit(t *testing.T) {
 	for i := 1; i < 20; i++ {
 		e.create(alice, fmt.Sprintf("B%d", i))
 	}
-	e.do(alice, "POST", "/v1/yearbooks", `{"title":"21st","language":"en"}`).status(409, "limit_reached")
+	e.do(alice, "POST", "/api/yearbook/create", `{"title":"21st","language":"en"}`).status(409, "ERROR_LIMIT_REACHED")
 	e.create(bob, "Bob is unaffected")
-	first := e.do(alice, "GET", "/v1/yearbooks?limit=50", "").Body.String()
-	if n := strings.Count(first, `"language"`); n != 20 {
-		t.Fatalf("alice has %d books", n)
+	books, _ := e.do(alice, "GET", "/api/yearbook/get-list?limit=50", "").page()
+	if len(books) != 20 {
+		t.Fatalf("alice has %d books", len(books))
 	}
 	// Freeing a slot allows a new book.
-	var out struct{ Yearbooks []map[string]any }
-	_ = json.Unmarshal([]byte(first), &out)
-	e.do(alice, "DELETE", "/v1/yearbooks/"+out.Yearbooks[0]["id"].(string), "").status(204, "")
-	e.do(alice, "POST", "/v1/yearbooks", `{"title":"21st","language":"en"}`).status(201, "")
+	e.remove(alice, books[0]["id"].(string)).status(200, "")
+	e.do(alice, "POST", "/api/yearbook/create", `{"title":"21st","language":"en"}`).status(200, "")
 }
 
 // The limit holds under concurrent creates.
@@ -482,7 +512,7 @@ func TestLimitConcurrent(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			codes <- e.do(alice, "POST", "/v1/yearbooks", `{"title":"x","language":"en"}`).Code
+			codes <- e.do(alice, "POST", "/api/yearbook/create", `{"title":"x","language":"en"}`).Code
 		}()
 	}
 	wg.Wait()
@@ -490,7 +520,7 @@ func TestLimitConcurrent(t *testing.T) {
 	created := 0
 	for c := range codes {
 		switch c {
-		case 201:
+		case 200:
 			created++
 		case 409:
 		default:
@@ -508,34 +538,97 @@ func TestAuthRequired(t *testing.T) {
 	alice := e.register("alice@example.com", "Alice")
 	id := e.create(alice, "Book")
 	for _, c := range []struct{ method, path, body string }{
-		{"POST", "/v1/yearbooks", `{"title":"x","language":"en"}`},
-		{"GET", "/v1/yearbooks", ""},
-		{"GET", "/v1/yearbooks/" + id, ""},
-		{"PATCH", "/v1/yearbooks/" + id, `{"title":"x"}`},
-		{"PUT", "/v1/yearbooks/" + id + "/profile", `{"full_name":"x"}`},
-		{"DELETE", "/v1/yearbooks/" + id, ""},
+		{"POST", "/api/yearbook/create", `{"title":"x","language":"en"}`},
+		{"GET", "/api/yearbook/get-list", ""},
+		{"GET", "/api/yearbook/get?id=" + id, ""},
+		{"POST", "/api/yearbook/update", `{"id":"` + id + `","title":"x"}`},
+		{"POST", "/api/yearbook/update-profile", `{"yearbook_id":"` + id + `","full_name":"x"}`},
+		{"POST", "/api/yearbook/delete", `{"id":"` + id + `"}`},
 	} {
-		e.do(user{}, c.method, c.path, c.body).status(401, "unauthenticated")
-		e.do(user{"bogus-token"}, c.method, c.path, c.body).status(401, "unauthenticated")
+		e.do(user{}, c.method, c.path, c.body).status(401, "ERROR_UNAUTHORIZED")
+		e.do(user{"bogus-token"}, c.method, c.path, c.body).status(401, "ERROR_UNAUTHORIZED")
+		if c.method == "POST" { // cross-site write with a valid cookie
+			r := httptest.NewRequest("POST", c.path, strings.NewReader(c.body))
+			r.AddCookie(&http.Cookie{Name: auth.CookieName, Value: alice.cookie})
+			r.Header.Set("Origin", "https://evil.example")
+			r.Header.Set("Content-Type", "application/json")
+			rec := httptest.NewRecorder()
+			e.h.ServeHTTP(rec, r)
+			if rec.Code != 403 {
+				t.Fatalf("cross-origin %s: %d", c.path, rec.Code)
+			}
+		}
 	}
-	// Cross-site write with a valid cookie.
-	r := httptest.NewRequest("DELETE", "/v1/yearbooks/"+id, nil)
-	r.AddCookie(&http.Cookie{Name: auth.CookieName, Value: alice.cookie})
-	r.Header.Set("Origin", "https://evil.example")
-	rec := httptest.NewRecorder()
-	e.h.ServeHTTP(rec, r)
-	if rec.Code != 403 {
-		t.Fatalf("cross-origin delete: %d", rec.Code)
-	}
-	e.do(alice, "GET", "/v1/yearbooks/"+id, "").status(200, "")
+	e.get(alice, id).status(200, "")
 	// Wrong content type on a body.
-	r = httptest.NewRequest("POST", "/v1/yearbooks", strings.NewReader(`{"title":"x","language":"en"}`))
+	r := httptest.NewRequest("POST", "/api/yearbook/create", strings.NewReader(`{"title":"x","language":"en"}`))
 	r.AddCookie(&http.Cookie{Name: auth.CookieName, Value: alice.cookie})
 	r.Header.Set("Origin", origin)
 	r.Header.Set("Content-Type", "text/plain")
-	rec = httptest.NewRecorder()
+	rec := httptest.NewRecorder()
 	e.h.ServeHTTP(rec, r)
 	if rec.Code != 415 {
 		t.Fatalf("text/plain: %d", rec.Code)
 	}
+}
+
+// T-070 AC1, AC3: the v2 shapes. Times are Unix ms numbers, the book is the "data" itself, a list is {items,next_id}, a
+// delete answers an empty object, the Vietnamese title survives the round trip, and the old routes are gone.
+func TestV2Shapes(t *testing.T) {
+	e := newEnv(t)
+	alice := e.register("alice@example.com", "Alice")
+	now := e.now().UnixMilli()
+	rec := e.do(alice, "POST", "/api/yearbook/create", `{"title":"Lớp 12A1 - Trường THPT Chu Văn An","language":"vi"}`).status(200, "")
+	b := rec.book()
+	if b["title"] != "Lớp 12A1 - Trường THPT Chu Văn An" || b["created_at"] != float64(now) || b["updated_at"] != float64(now) || b["graduation_year"] != nil {
+		t.Fatalf("created %v", b)
+	}
+	if strings.Contains(rec.Body.String(), `"yearbook":`) || !strings.HasPrefix(rec.Body.String(), `{"status":"OK","data":{`) {
+		t.Fatalf("not the v2 envelope: %s", rec.Body.String())
+	}
+	id := b["id"].(string)
+
+	e.tick()
+	up := e.update(alice, id, `{"motto":"Học, học nữa, học mãi"}`).status(200, "").book()
+	if up["updated_at"] != float64(e.now().UnixMilli()) || up["created_at"] != float64(now) {
+		t.Fatalf("update times %v", up)
+	}
+	items, next := e.do(alice, "GET", "/api/yearbook/get-list", "").status(200, "").page()
+	if len(items) != 1 || next != "" || items[0]["id"] != id || items[0]["updated_at"] != up["updated_at"] {
+		t.Fatalf("list %v %q", items, next)
+	}
+
+	// The error envelope: status, error_message and request_id, with the HTTP status kept.
+	rec = e.update(alice, "01J9Z3K6V8Q4M7N2P5R8T0W1XY", `{"title":"x"}`).status(404, "ERROR_NOT_FOUND")
+	var errBody map[string]any
+	_ = json.Unmarshal(rec.Body.Bytes(), &errBody)
+	if errBody["error_message"] == "" || errBody["request_id"] == "" || errBody["request_id"] != rec.Header().Get("X-Request-Id") {
+		t.Fatalf("error body %v", errBody)
+	}
+
+	// Missing or malformed input is ERROR_PARAM, whichever endpoint.
+	e.do(alice, "POST", "/api/yearbook/update", `{"title":"no id"}`).status(400, "ERROR_PARAM")
+	e.do(alice, "POST", "/api/yearbook/update", `{}`).status(400, "ERROR_PARAM")
+	e.do(alice, "POST", "/api/yearbook/update", ``).status(400, "ERROR_PARAM")
+	e.do(alice, "POST", "/api/yearbook/update-profile", `{"full_name":"no book"}`).status(400, "ERROR_PARAM")
+	e.do(alice, "POST", "/api/yearbook/delete", `{}`).status(400, "ERROR_PARAM")
+	e.do(alice, "GET", "/api/yearbook/get", "").status(400, "ERROR_PARAM")
+	e.do(alice, "POST", "/api/yearbook/delete", `{"id":"`+id+`","extra":1}`).status(400, "ERROR_PARAM")
+	e.get(alice, id).status(200, "") // none of the rejected calls deleted it
+
+	// A cover cannot be set on a new book: there is no photo of it yet.
+	e.do(alice, "POST", "/api/yearbook/create", `{"title":"x","language":"en","cover_media_id":"01J9Z3K6V8Q4M7N2P5R8T0W1XY"}`).status(400, "ERROR_INVALID_MEDIA")
+
+	rec = e.remove(alice, id).status(200, "")
+	if got := strings.TrimSpace(rec.Body.String()); got != `{"status":"OK","data":{}}` {
+		t.Fatalf("delete answered %s", got)
+	}
+	// The v1 routes are gone, and the new ones take their own method only.
+	for _, c := range [][2]string{{"POST", "/v1/yearbooks"}, {"GET", "/v1/yearbooks"}, {"GET", "/v1/yearbooks/" + id}, {"DELETE", "/v1/yearbooks/" + id}} {
+		if code := e.do(alice, c[0], c[1], "").Code; code != 404 && code != 405 {
+			t.Errorf("%s %s: %d, want 404 or 405", c[0], c[1], code)
+		}
+	}
+	e.do(alice, "GET", "/api/yearbook/delete", "").status(405, "ERROR_METHOD_NOT_ALLOWED")
+	e.do(alice, "POST", "/api/yearbook/get-list", `{}`).status(405, "ERROR_METHOD_NOT_ALLOWED")
 }

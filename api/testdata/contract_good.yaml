@@ -27,6 +27,16 @@ paths:
               schema: {$ref: "#/components/schemas/BookResponse"}
               examples:
                 created: {value: {status: OK, data: {id: 01J, created_at: 1760000000000}}}
+  /api/book/open:
+    get:
+      operationId: openBook
+      summary: Browser redirect.
+      description: Called by a link the browser follows; answers 302 and has no body to give an example of.
+      x-auth: public
+      x-error-codes: []
+      responses:
+        "302":
+          description: To the book page.
   /api/book/get-list:
     get:
       operationId: listBooks

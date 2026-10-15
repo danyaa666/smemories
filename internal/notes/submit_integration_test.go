@@ -634,7 +634,7 @@ func TestYearbookDeleteRemovesNotes(t *testing.T) {
 	e := newEnv(t)
 	l := e.newOpenLink()
 	e.post(l.token, answers("A", "m"), photoPart(jpegOf(t, 1))).status(200, "")
-	e.do(l.owner, "DELETE", "/v1/yearbooks/"+l.book, "").status(204, "")
+	e.deleteBook(l.owner, l.book).status(200, "")
 	for _, q := range []string{`SELECT COUNT(*) FROM note_tab`, `SELECT COUNT(*) FROM note_photo_tab`, `SELECT COUNT(*) FROM media_tab`} {
 		if n := e.count(q); n != 0 {
 			t.Fatalf("%s = %d", q, n)

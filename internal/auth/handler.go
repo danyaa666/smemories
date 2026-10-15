@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/danyaa666/smemories/internal/apperr"
 	"github.com/danyaa666/smemories/internal/httpx"
 	"github.com/danyaa666/smemories/internal/ratelimit"
 	"github.com/danyaa666/smemories/internal/redis"
@@ -20,7 +21,8 @@ type HandlerConfig struct {
 	TrustProxy     bool     // SMEM_TRUST_PROXY: client IP = last X-Forwarded-For hop
 }
 
-// Handler serves /v1/auth/* and /v1/me.
+// Handler serves /api/auth/* and /api/user/get-me (docs/api-contract.md): it decodes, calls the Service and writes the
+// envelope. Rules live in the Service.
 type Handler struct {
 	svc    *Service
 	cfg    HandlerConfig
@@ -34,19 +36,20 @@ func NewHandler(svc *Service, cfg HandlerConfig, logger *slog.Logger) *Handler {
 
 // Routes registers the auth endpoints on mux (pass to httpx.NewRouter).
 func (h *Handler) Routes(mux *http.ServeMux) {
-	guard := func(f http.HandlerFunc) http.Handler { return Guard(h.cfg.AllowedOrigins, f) }
-	mux.Handle("POST /v1/auth/register", guard(h.register))
-	mux.Handle("POST /v1/auth/login", guard(h.login))
-	mux.Handle("POST /v1/auth/logout", guard(h.logout))
-	mux.Handle("POST /v1/auth/verify-email", Guard(h.cfg.AllowedOrigins, h.RequireUser(http.HandlerFunc(h.verifyEmail))))
-	mux.Handle("POST /v1/auth/verify-email/resend", Guard(h.cfg.AllowedOrigins, h.RequireUser(http.HandlerFunc(h.resendVerification))))
-	mux.Handle("POST /v1/auth/forgot-password", guard(h.forgotPassword))
-	mux.Handle("POST /v1/auth/reset-password", guard(h.resetPassword))
+	open := func(f http.HandlerFunc) http.Handler { return Guard(h.cfg.AllowedOrigins, f) }
+	signedIn := func(f http.HandlerFunc) http.Handler { return Guard(h.cfg.AllowedOrigins, h.RequireUser(f)) }
+	mux.Handle("POST /api/auth/register", open(h.register))
+	mux.Handle("POST /api/auth/login", open(h.login))
+	mux.Handle("POST /api/auth/logout", open(h.logout))
+	mux.Handle("POST /api/auth/verify-email", signedIn(h.verifyEmail))
+	mux.Handle("POST /api/auth/resend-verification", signedIn(h.resendVerification))
+	mux.Handle("POST /api/auth/forgot-password", open(h.forgotPassword))
+	mux.Handle("POST /api/auth/reset-password", open(h.resetPassword))
 	if h.google != nil {
-		mux.HandleFunc("GET /v1/auth/google/start", h.googleStart)
-		mux.HandleFunc("GET /v1/auth/google/callback", h.googleCallback)
+		mux.HandleFunc("GET /api/auth/google-start", h.googleStart)
+		mux.HandleFunc("GET /api/auth/google-callback", h.googleCallback)
 	}
-	mux.Handle("GET /v1/me", h.RequireUser(http.HandlerFunc(h.me)))
+	mux.Handle("GET /api/user/get-me", h.RequireUser(http.HandlerFunc(h.me)))
 }
 
 type ctxKey struct{}
@@ -100,7 +103,7 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.setCookie(w, sess)
-	httpx.WriteJSON(w, http.StatusCreated, map[string]User{"user": u})
+	httpx.OK(w, r, u)
 }
 
 func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
@@ -114,7 +117,7 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.setCookie(w, sess)
-	httpx.WriteJSON(w, http.StatusOK, map[string]User{"user": u})
+	httpx.OK(w, r, u)
 }
 
 func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
@@ -123,7 +126,7 @@ func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.cookie(w, "", -1, time.Unix(0, 0))
-	w.WriteHeader(http.StatusNoContent)
+	httpx.OK(w, r, nil)
 }
 
 func (h *Handler) verifyEmail(w http.ResponseWriter, r *http.Request) {
@@ -134,25 +137,18 @@ func (h *Handler) verifyEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	u, _ := UserFrom(r.Context())
-	if err := h.svc.VerifyEmail(r.Context(), u, in.Code); err != nil {
-		h.fail(w, r, err)
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
+	h.respond(w, r, nil, h.svc.VerifyEmail(r.Context(), u, in.Code))
+}
+
+// resendResponse is the data of resend-verification.
+type resendResponse struct {
+	AlreadyVerified bool `json:"already_verified"`
 }
 
 func (h *Handler) resendVerification(w http.ResponseWriter, r *http.Request) {
 	u, _ := UserFrom(r.Context())
 	already, err := h.svc.ResendVerification(r.Context(), u)
-	if err != nil {
-		h.fail(w, r, err)
-		return
-	}
-	if already {
-		httpx.WriteJSON(w, http.StatusOK, map[string]bool{"already_verified": true})
-		return
-	}
-	httpx.WriteJSON(w, http.StatusAccepted, struct{}{})
+	h.respond(w, r, resendResponse{AlreadyVerified: already}, err)
 }
 
 func (h *Handler) forgotPassword(w http.ResponseWriter, r *http.Request) {
@@ -162,11 +158,7 @@ func (h *Handler) forgotPassword(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &in) {
 		return
 	}
-	if err := h.svc.ForgotPassword(r.Context(), h.clientIP(r), in.Email); err != nil {
-		h.fail(w, r, err)
-		return
-	}
-	httpx.WriteJSON(w, http.StatusAccepted, struct{}{})
+	h.respond(w, r, nil, h.svc.ForgotPassword(r.Context(), h.clientIP(r), in.Email))
 }
 
 func (h *Handler) resetPassword(w http.ResponseWriter, r *http.Request) {
@@ -178,69 +170,67 @@ func (h *Handler) resetPassword(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &in) {
 		return
 	}
-	if err := h.svc.ResetPassword(r.Context(), h.clientIP(r), in.Email, in.Code, in.Password); err != nil {
+	h.respond(w, r, nil, h.svc.ResetPassword(r.Context(), h.clientIP(r), in.Email, in.Code, in.Password))
+}
+
+// me answers with the user itself; a field added to User (T-081: username) shows up here with no other change.
+func (h *Handler) me(w http.ResponseWriter, r *http.Request) {
+	u, _ := UserFrom(r.Context())
+	httpx.OK(w, r, u)
+}
+
+// respond answers data, or err when there is one.
+func (h *Handler) respond(w http.ResponseWriter, r *http.Request, data any, err error) {
+	if err != nil {
 		h.fail(w, r, err)
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
-}
-
-func (h *Handler) me(w http.ResponseWriter, r *http.Request) {
-	u, _ := UserFrom(r.Context())
-	httpx.WriteJSON(w, http.StatusOK, map[string]User{"user": u})
+	httpx.OK(w, r, data)
 }
 
 // decode reads exactly one JSON object from the body; on failure it writes the error
-// response itself (413 payload_too_large or 400 invalid_body).
+// response itself (413 ERROR_TOO_LARGE or 400 ERROR_PARAM).
 func decode(w http.ResponseWriter, r *http.Request, v any) bool {
 	return httpx.DecodeJSON(w, r, v, false)
 }
 
-// fail maps a service error to the shared envelope; unexpected errors are logged (never
-// with credentials) and answer 500 internal_error.
+// codeClientClosed is nginx's 499: the client went away, nobody reads the answer.
+var codeClientClosed = apperr.NewCode("ERROR_CLIENT_CLOSED", 499)
+
+// fail maps an error to the v2 envelope. Rate limits and the Redis-backed stores that fail closed get their code and a
+// Retry-After; unexpected errors are logged by httpx.Fail (never with credentials) and answer ERROR_INTERNAL.
 func (h *Handler) fail(w http.ResponseWriter, r *http.Request, err error) {
-	var ve ValidationError
 	var rl RateLimitedError
 	var sse *SessionStoreError
+	rid := httpx.RequestIDFrom(r.Context())
 	switch {
-	case errors.As(err, &ve):
-		httpx.WriteError(w, r, http.StatusBadRequest, ve.Code, "invalid input: "+ve.Code)
-	case errors.Is(err, ErrInvalidCode):
-		httpx.WriteError(w, r, http.StatusBadRequest, "invalid_code", "invalid code")
-	case errors.Is(err, ErrCodeExpired):
-		httpx.WriteError(w, r, http.StatusBadRequest, "code_expired", "code expired, request a new one")
-	case errors.Is(err, ErrCodeLocked):
-		httpx.WriteError(w, r, http.StatusBadRequest, "code_locked", "too many wrong attempts, request a new code")
-	case errors.Is(err, ratelimit.ErrUnavailable): // a fail-closed limiter could not count (already logged, throttled)
-		w.Header().Set("Retry-After", "5")
-		httpx.WriteError(w, r, http.StatusServiceUnavailable, "limiter_unavailable", "rate limiter unavailable, retry shortly")
-	case errors.As(err, &sse): // already logged (once per interval) by the session store
-		w.Header().Set("Retry-After", "5")
-		httpx.WriteError(w, r, http.StatusServiceUnavailable, "session_store_unavailable", "session store unavailable, retry shortly")
-	case errors.Is(err, redis.ErrUnavailable):
-		h.logger.Error("auth: code store unavailable", "request_id", httpx.RequestIDFrom(r.Context()), "error", err)
-		w.Header().Set("Retry-After", "5")
-		httpx.WriteError(w, r, http.StatusServiceUnavailable, "code_store_unavailable", "code store unavailable, retry shortly")
-	case errors.Is(err, ErrEmailTaken):
-		httpx.WriteError(w, r, http.StatusConflict, "email_taken", "email already registered")
-	case errors.Is(err, ErrInvalidCredentials):
-		httpx.WriteError(w, r, http.StatusUnauthorized, "invalid_credentials", "invalid email or password")
-	case errors.Is(err, ErrUnauthenticated):
-		httpx.WriteError(w, r, http.StatusUnauthorized, "unauthenticated", "sign in required")
 	case errors.As(err, &rl):
-		secs := int((rl.RetryAfter + time.Second - 1) / time.Second)
-		w.Header().Set("Retry-After", strconv.Itoa(max(secs, 1)))
-		httpx.WriteError(w, r, http.StatusTooManyRequests, "rate_limited", "too many attempts")
+		w.Header().Set("Retry-After", strconv.Itoa(max(int((rl.RetryAfter+time.Second-1)/time.Second), 1)))
+		err = apperr.New(apperr.RateLimited, "too many attempts")
+	case errors.Is(err, ratelimit.ErrUnavailable): // a fail-closed limiter could not count (already logged, throttled)
+		w.Header().Set("Retry-After", retryStore)
+		err = apperr.New(CodeLimiterUnavailable, "rate limiter unavailable, retry shortly")
+	case errors.As(err, &sse): // already logged (once per interval) by the session store
+		w.Header().Set("Retry-After", retryStore)
+		err = apperr.New(CodeSessionStoreUnavailable, "session store unavailable, retry shortly")
+	case errors.Is(err, redis.ErrUnavailable):
+		h.logger.Error("auth: code store unavailable", "request_id", rid, "error", err)
+		w.Header().Set("Retry-After", retryStore)
+		err = apperr.New(CodeCodeStoreUnavailable, "code store unavailable, retry shortly")
 	case errors.Is(err, ErrBusy):
-		w.Header().Set("Retry-After", "2")
-		httpx.WriteError(w, r, http.StatusServiceUnavailable, "busy", "server busy, retry shortly")
-	default:
-		if !errors.Is(err, context.Canceled) {
-			h.logger.Error("auth: request failed", "request_id", httpx.RequestIDFrom(r.Context()), "error", err)
-		}
-		httpx.WriteError(w, r, http.StatusInternalServerError, "internal_error", "internal server error")
+		w.Header().Set("Retry-After", retryBusy)
+	case errors.Is(err, context.Canceled):
+		h.logger.Debug("auth: client gone", "request_id", rid, "error", err)
+		err = apperr.New(codeClientClosed, "client closed the request")
 	}
+	httpx.Fail(w, r, err)
 }
+
+// Retry-After seconds for the 503 answers.
+const (
+	retryStore = "5"
+	retryBusy  = "2"
+)
 
 func cookieToken(r *http.Request) string {
 	c, err := r.Cookie(CookieName)

@@ -96,12 +96,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/auth/register",
+              "raw": "{{baseUrl}}/api/auth/register",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
+                "api",
                 "auth",
                 "register"
               ]
@@ -117,12 +117,12 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
                   "const sc = pm.response.headers.get('Set-Cookie') || '';",
                   "const m = /smem_session=([^;]+)/.exec(sc);",
                   "pm.test('session cookie issued', () => pm.expect(m).to.not.be.null);",
                   "pm.collectionVariables.set('tokenA', m ? m[1] : '');",
-                  "pm.test('user body', () => pm.expect(pm.response.json().user.display_name).to.eql(pm.collectionVariables.get('nameA')));"
+                  "pm.test('user body', () => pm.expect(pm.response.json().data.display_name).to.eql(pm.collectionVariables.get('nameA')));"
                 ]
               }
             }
@@ -143,12 +143,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/auth/register",
+              "raw": "{{baseUrl}}/api/auth/register",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
+                "api",
                 "auth",
                 "register"
               ]
@@ -164,7 +164,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
                   "const sc = pm.response.headers.get('Set-Cookie') || '';",
                   "const m = /smem_session=([^;]+)/.exec(sc);",
                   "pm.test('session cookie issued', () => pm.expect(m).to.not.be.null);",
@@ -193,13 +193,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks",
+              "raw": "{{baseUrl}}/api/yearbook/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks"
+                "api",
+                "yearbook",
+                "create"
               ]
             },
             "body": {
@@ -213,8 +214,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 201', () => pm.response.to.have.status(201));",
-                  "const b = pm.response.json().yearbook;\npm.test('book shape', () => { pm.expect(b.id).to.match(/^[0-9A-Z]{26}$/); pm.expect(b).to.not.have.any.keys('owner_id', 'internal_id'); pm.expect(b.profile.id).to.match(/^[0-9A-Z]{26}$/); pm.expect(b.profile.is_owner).to.eql(true); });\npm.test('values', () => {\n  pm.expect(b.title).to.eql('Class of 2026 Vi\\u1ec7t');\n  pm.expect(b.school_name).to.eql('Fake University');\n  pm.expect(b.graduation_year).to.eql(2026);\n  pm.expect(b.language).to.eql('vi');\n  pm.expect(b.page_size).to.eql('A5');\n  pm.expect(b.template_id).to.eql(null);\n  pm.expect(b.profile.full_name).to.eql(pm.collectionVariables.get('nameA'));\n  pm.expect(b.profile.birthday).to.eql(null);\n});\npm.collectionVariables.set('bookId', b.id);\npm.collectionVariables.set('profileId', b.profile.id);"
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json().data;\npm.test('book shape', () => { pm.expect(b.id).to.match(/^[0-9A-Z]{26}$/); pm.expect(b).to.not.have.any.keys('owner_id', 'internal_id'); pm.expect(b.profile.id).to.match(/^[0-9A-Z]{26}$/); pm.expect(b.profile.is_owner).to.eql(true); });\npm.test('values', () => {\n  pm.expect(b.title).to.eql('Class of 2026 Vi\\u1ec7t');\n  pm.expect(b.school_name).to.eql('Fake University');\n  pm.expect(b.graduation_year).to.eql(2026);\n  pm.expect(b.language).to.eql('vi');\n  pm.expect(b.page_size).to.eql('A5');\n  pm.expect(b.template_id).to.eql(null);\n  pm.expect(b.profile.full_name).to.eql(pm.collectionVariables.get('nameA'));\n  pm.expect(b.profile.birthday).to.eql(null);\n});\npm.collectionVariables.set('bookId', b.id);\npm.collectionVariables.set('profileId', b.profile.id);"
                 ]
               }
             }
@@ -235,14 +236,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}",
+              "raw": "{{baseUrl}}/api/yearbook/get?id={{bookId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}"
+                "api",
+                "yearbook",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{bookId}}"
+                }
               ]
             }
           },
@@ -253,7 +260,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 200', () => pm.response.to.have.status(200));",
-                  "const b = pm.response.json().yearbook;\npm.test('book shape', () => { pm.expect(b.id).to.match(/^[0-9A-Z]{26}$/); pm.expect(b).to.not.have.any.keys('owner_id', 'internal_id'); pm.expect(b.profile.id).to.match(/^[0-9A-Z]{26}$/); pm.expect(b.profile.is_owner).to.eql(true); });pm.test('same book', () => { pm.expect(b.id).to.eql(pm.collectionVariables.get('bookId')); pm.expect(b.profile.id).to.eql(pm.collectionVariables.get('profileId')); });"
+                  "const b = pm.response.json().data;\npm.test('book shape', () => { pm.expect(b.id).to.match(/^[0-9A-Z]{26}$/); pm.expect(b).to.not.have.any.keys('owner_id', 'internal_id'); pm.expect(b.profile.id).to.match(/^[0-9A-Z]{26}$/); pm.expect(b.profile.is_owner).to.eql(true); });pm.test('same book', () => { pm.expect(b.id).to.eql(pm.collectionVariables.get('bookId')); pm.expect(b.profile.id).to.eql(pm.collectionVariables.get('profileId')); });"
                 ]
               }
             }
@@ -274,13 +281,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks",
+              "raw": "{{baseUrl}}/api/yearbook/get-list",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks"
+                "api",
+                "yearbook",
+                "get-list"
               ]
             }
           },
@@ -292,7 +300,7 @@
                 "exec": [
                   "pm.test('status 200', () => pm.response.to.have.status(200));",
                   "const j = pm.response.json();",
-                  "pm.test('one book, no next page', () => { pm.expect(j.yearbooks).to.have.length(1); pm.expect(j.yearbooks[0].id).to.eql(pm.collectionVariables.get('bookId')); pm.expect(j.next_cursor).to.eql(null); });"
+                  "pm.test('one book, no next page', () => { pm.expect(j.data.items).to.have.length(1); pm.expect(j.data.items[0].id).to.eql(pm.collectionVariables.get('bookId')); pm.expect(j.data.next_id).to.eql(''); });"
                 ]
               }
             }
@@ -301,7 +309,7 @@
         {
           "name": "6. A patches the yearbook (partial; null clears the year)",
           "request": {
-            "method": "PATCH",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -317,19 +325,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}",
+              "raw": "{{baseUrl}}/api/yearbook/update",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}"
+                "api",
+                "yearbook",
+                "update"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"title\":\"Renamed book\",\"motto\":\"Carpe diem\",\"graduation_year\":null,\"page_size\":\"A4\"}"
+              "raw": "{\"id\":\"{{bookId}}\",\"title\":\"Renamed book\",\"motto\":\"Carpe diem\",\"graduation_year\":null,\"page_size\":\"A4\"}"
             }
           },
           "event": [
@@ -339,7 +347,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 200', () => pm.response.to.have.status(200));",
-                  "const b = pm.response.json().yearbook;\npm.test('book shape', () => { pm.expect(b.id).to.match(/^[0-9A-Z]{26}$/); pm.expect(b).to.not.have.any.keys('owner_id', 'internal_id'); pm.expect(b.profile.id).to.match(/^[0-9A-Z]{26}$/); pm.expect(b.profile.is_owner).to.eql(true); });pm.test('patched, rest kept', () => { pm.expect(b.title).to.eql('Renamed book'); pm.expect(b.motto).to.eql('Carpe diem'); pm.expect(b.graduation_year).to.eql(null); pm.expect(b.school_name).to.eql('Fake University'); pm.expect(b.page_size).to.eql('A4'); });"
+                  "const b = pm.response.json().data;\npm.test('book shape', () => { pm.expect(b.id).to.match(/^[0-9A-Z]{26}$/); pm.expect(b).to.not.have.any.keys('owner_id', 'internal_id'); pm.expect(b.profile.id).to.match(/^[0-9A-Z]{26}$/); pm.expect(b.profile.is_owner).to.eql(true); });pm.test('patched, rest kept', () => { pm.expect(b.title).to.eql('Renamed book'); pm.expect(b.motto).to.eql('Carpe diem'); pm.expect(b.graduation_year).to.eql(null); pm.expect(b.school_name).to.eql('Fake University'); pm.expect(b.page_size).to.eql('A4'); });"
                 ]
               }
             }
@@ -348,7 +356,7 @@
         {
           "name": "7. A replaces the profile",
           "request": {
-            "method": "PUT",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -364,20 +372,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/profile",
+              "raw": "{{baseUrl}}/api/yearbook/update-profile",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "profile"
+                "api",
+                "yearbook",
+                "update-profile"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"full_name\":\"Nguy\\u1ec5n V\\u0103n A\",\"nickname\":\"Bong\",\"birthday\":\"2004-02-29\",\"quote\":\"Stay hungry\"}"
+              "raw": "{\"yearbook_id\":\"{{bookId}}\",\"full_name\":\"Nguy\\u1ec5n V\\u0103n A\",\"nickname\":\"Bong\",\"birthday\":\"2004-02-29\",\"quote\":\"Stay hungry\"}"
             }
           },
           "event": [
@@ -387,7 +394,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 200', () => pm.response.to.have.status(200));",
-                  "const b = pm.response.json().yearbook;\npm.test('book shape', () => { pm.expect(b.id).to.match(/^[0-9A-Z]{26}$/); pm.expect(b).to.not.have.any.keys('owner_id', 'internal_id'); pm.expect(b.profile.id).to.match(/^[0-9A-Z]{26}$/); pm.expect(b.profile.is_owner).to.eql(true); });pm.test('profile replaced', () => { const p = b.profile; pm.expect(p.full_name).to.eql('Nguy\\u1ec5n V\\u0103n A'); pm.expect(p.nickname).to.eql('Bong'); pm.expect(p.birthday).to.eql('2004-02-29'); pm.expect(p.quote).to.eql('Stay hungry'); pm.expect(p.hobbies).to.eql(''); pm.expect(p.id).to.eql(pm.collectionVariables.get('profileId')); });"
+                  "const b = pm.response.json().data;\npm.test('book shape', () => { pm.expect(b.id).to.match(/^[0-9A-Z]{26}$/); pm.expect(b).to.not.have.any.keys('owner_id', 'internal_id'); pm.expect(b.profile.id).to.match(/^[0-9A-Z]{26}$/); pm.expect(b.profile.is_owner).to.eql(true); });pm.test('profile replaced', () => { const p = b.profile; pm.expect(p.full_name).to.eql('Nguy\\u1ec5n V\\u0103n A'); pm.expect(p.nickname).to.eql('Bong'); pm.expect(p.birthday).to.eql('2004-02-29'); pm.expect(p.quote).to.eql('Stay hungry'); pm.expect(p.hobbies).to.eql(''); pm.expect(p.id).to.eql(pm.collectionVariables.get('profileId')); });"
                 ]
               }
             }
@@ -408,14 +415,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}",
+              "raw": "{{baseUrl}}/api/yearbook/get?id={{bookId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}"
+                "api",
+                "yearbook",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{bookId}}"
+                }
               ]
             }
           },
@@ -426,7 +439,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 404', () => pm.response.to.have.status(404));",
-                  "pm.test('error code not_found', () => pm.expect(pm.response.json().error.code).to.eql('not_found'));"
+                  "pm.test('error code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
                 ]
               }
             }
@@ -435,7 +448,7 @@
         {
           "name": "9. B cannot patch A's yearbook - 404",
           "request": {
-            "method": "PATCH",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -451,19 +464,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}",
+              "raw": "{{baseUrl}}/api/yearbook/update",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}"
+                "api",
+                "yearbook",
+                "update"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"title\":\"hijack\"}"
+              "raw": "{\"id\":\"{{bookId}}\",\"title\":\"hijack\"}"
             }
           },
           "event": [
@@ -473,7 +486,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 404', () => pm.response.to.have.status(404));",
-                  "pm.test('error code not_found', () => pm.expect(pm.response.json().error.code).to.eql('not_found'));"
+                  "pm.test('error code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
                 ]
               }
             }
@@ -482,7 +495,7 @@
         {
           "name": "10. B cannot replace A's profile - 404",
           "request": {
-            "method": "PUT",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -498,20 +511,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/profile",
+              "raw": "{{baseUrl}}/api/yearbook/update-profile",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "profile"
+                "api",
+                "yearbook",
+                "update-profile"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"full_name\":\"hijack\"}"
+              "raw": "{\"yearbook_id\":\"{{bookId}}\",\"full_name\":\"hijack\"}"
             }
           },
           "event": [
@@ -521,7 +533,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 404', () => pm.response.to.have.status(404));",
-                  "pm.test('error code not_found', () => pm.expect(pm.response.json().error.code).to.eql('not_found'));"
+                  "pm.test('error code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
                 ]
               }
             }
@@ -530,7 +542,7 @@
         {
           "name": "11. B cannot delete A's yearbook - 404",
           "request": {
-            "method": "DELETE",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -539,18 +551,26 @@
               {
                 "key": "Origin",
                 "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}",
+              "raw": "{{baseUrl}}/api/yearbook/delete",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}"
+                "api",
+                "yearbook",
+                "delete"
               ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{bookId}}\"}"
             }
           },
           "event": [
@@ -560,7 +580,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 404', () => pm.response.to.have.status(404));",
-                  "pm.test('error code not_found', () => pm.expect(pm.response.json().error.code).to.eql('not_found'));"
+                  "pm.test('error code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
                 ]
               }
             }
@@ -581,13 +601,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks",
+              "raw": "{{baseUrl}}/api/yearbook/get-list",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks"
+                "api",
+                "yearbook",
+                "get-list"
               ]
             }
           },
@@ -598,7 +619,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('empty', () => pm.expect(pm.response.json().yearbooks).to.eql([]));"
+                  "pm.test('empty', () => { const j = pm.response.json(); pm.expect(j.data.items).to.eql([]); pm.expect(j.data.next_id).to.eql(''); });"
                 ]
               }
             }
@@ -619,14 +640,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}",
+              "raw": "{{baseUrl}}/api/yearbook/get?id={{bookId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}"
+                "api",
+                "yearbook",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{bookId}}"
+                }
               ]
             }
           },
@@ -637,7 +664,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 200', () => pm.response.to.have.status(200));",
-                  "const b = pm.response.json().yearbook;",
+                  "const b = pm.response.json().data;",
                   "pm.test('unchanged', () => { pm.expect(b.title).to.eql('Renamed book'); pm.expect(b.profile.full_name).to.eql('Nguy\\u1ec5n V\\u0103n A'); });"
                 ]
               }
@@ -645,9 +672,9 @@
           ]
         },
         {
-          "name": "14. A deletes the yearbook - 204",
+          "name": "14. A deletes the yearbook - 200",
           "request": {
-            "method": "DELETE",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -656,18 +683,26 @@
               {
                 "key": "Origin",
                 "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}",
+              "raw": "{{baseUrl}}/api/yearbook/delete",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}"
+                "api",
+                "yearbook",
+                "delete"
               ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{bookId}}\"}"
             }
           },
           "event": [
@@ -676,7 +711,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 204', () => pm.response.to.have.status(204));"
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
                 ]
               }
             }
@@ -697,14 +732,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}",
+              "raw": "{{baseUrl}}/api/yearbook/get?id={{bookId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}"
+                "api",
+                "yearbook",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{bookId}}"
+                }
               ]
             }
           },
@@ -715,7 +756,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 404', () => pm.response.to.have.status(404));",
-                  "pm.test('error code not_found', () => pm.expect(pm.response.json().error.code).to.eql('not_found'));"
+                  "pm.test('error code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
                 ]
               }
             }
@@ -724,7 +765,7 @@
         {
           "name": "16. A deletes it again - 404",
           "request": {
-            "method": "DELETE",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -733,18 +774,26 @@
               {
                 "key": "Origin",
                 "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}",
+              "raw": "{{baseUrl}}/api/yearbook/delete",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}"
+                "api",
+                "yearbook",
+                "delete"
               ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{bookId}}\"}"
             }
           },
           "event": [
@@ -754,7 +803,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 404', () => pm.response.to.have.status(404));",
-                  "pm.test('error code not_found', () => pm.expect(pm.response.json().error.code).to.eql('not_found'));"
+                  "pm.test('error code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
                 ]
               }
             }
@@ -779,13 +828,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks",
+              "raw": "{{baseUrl}}/api/yearbook/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks"
+                "api",
+                "yearbook",
+                "create"
               ]
             },
             "body": {
@@ -799,15 +849,15 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 201', () => pm.response.to.have.status(201));",
-                  "pm.collectionVariables.set('bookId', pm.response.json().yearbook.id);"
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('bookId', pm.response.json().data.id);"
                 ]
               }
             }
           ]
         },
         {
-          "name": "18. A pages through two books (limit=1, then the cursor)",
+          "name": "18. A pages through two books (limit=1, then next_id)",
           "request": {
             "method": "POST",
             "header": [
@@ -825,13 +875,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks",
+              "raw": "{{baseUrl}}/api/yearbook/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks"
+                "api",
+                "yearbook",
+                "create"
               ]
             },
             "body": {
@@ -845,15 +896,15 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 201', () => pm.response.to.have.status(201));",
-                  "pm.collectionVariables.set('bookId2', pm.response.json().yearbook.id);"
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('bookId2', pm.response.json().data.id);"
                 ]
               }
             }
           ]
         },
         {
-          "name": "19. List page 1 (limit=1): newest first, with next_cursor",
+          "name": "19. List page 1 (limit=1): newest first, with next_id",
           "request": {
             "method": "GET",
             "header": [
@@ -867,13 +918,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks?limit=1",
+              "raw": "{{baseUrl}}/api/yearbook/get-list?limit=1",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks"
+                "api",
+                "yearbook",
+                "get-list"
               ],
               "query": [
                 {
@@ -891,15 +943,15 @@
                 "exec": [
                   "pm.test('status 200', () => pm.response.to.have.status(200));",
                   "const j = pm.response.json();",
-                  "pm.test('newest first', () => { pm.expect(j.yearbooks).to.have.length(1); pm.expect(j.yearbooks[0].id).to.eql(pm.collectionVariables.get('bookId2')); pm.expect(j.next_cursor).to.be.a('string'); });",
-                  "pm.collectionVariables.set('cursor', j.next_cursor);"
+                  "pm.test('newest first', () => { pm.expect(j.data.items).to.have.length(1); pm.expect(j.data.items[0].id).to.eql(pm.collectionVariables.get('bookId2')); pm.expect(j.data.next_id).to.be.a('string'); });",
+                  "pm.collectionVariables.set('cursor', j.data.next_id);"
                 ]
               }
             }
           ]
         },
         {
-          "name": "20. List page 2 via the cursor: the older book, no next_cursor",
+          "name": "20. List page 2 via next_id: the older book, no next_id",
           "request": {
             "method": "GET",
             "header": [
@@ -913,13 +965,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks?limit=1&cursor={{cursor}}",
+              "raw": "{{baseUrl}}/api/yearbook/get-list?limit=1&next_id={{cursor}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks"
+                "api",
+                "yearbook",
+                "get-list"
               ],
               "query": [
                 {
@@ -927,7 +980,7 @@
                   "value": "1"
                 },
                 {
-                  "key": "cursor",
+                  "key": "next_id",
                   "value": "{{cursor}}"
                 }
               ]
@@ -941,7 +994,7 @@
                 "exec": [
                   "pm.test('status 200', () => pm.response.to.have.status(200));",
                   "const j = pm.response.json();",
-                  "pm.test('older book', () => { pm.expect(j.yearbooks).to.have.length(1); pm.expect(j.yearbooks[0].id).to.eql(pm.collectionVariables.get('bookId')); pm.expect(j.next_cursor).to.eql(null); });"
+                  "pm.test('older book', () => { pm.expect(j.data.items).to.have.length(1); pm.expect(j.data.items[0].id).to.eql(pm.collectionVariables.get('bookId')); pm.expect(j.data.next_id).to.eql(''); });"
                 ]
               }
             }
@@ -966,13 +1019,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks",
+              "raw": "{{baseUrl}}/api/yearbook/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks"
+                "api",
+                "yearbook",
+                "create"
               ]
             },
             "body": {
@@ -986,8 +1040,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 201', () => pm.response.to.have.status(201));",
-                  "const b = pm.response.json().yearbook;",
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json().data;",
                   "pm.test('page_size is Letter', () => pm.expect(b.page_size).to.eql('Letter'));",
                   "pm.collectionVariables.set('bookIdLetter', b.id);"
                 ]
@@ -998,7 +1052,7 @@
         {
           "name": "22. A patches the Letter book to A4",
           "request": {
-            "method": "PATCH",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -1014,19 +1068,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookIdLetter}}",
+              "raw": "{{baseUrl}}/api/yearbook/update",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookIdLetter}}"
+                "api",
+                "yearbook",
+                "update"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"page_size\":\"A4\"}"
+              "raw": "{\"id\":\"{{bookIdLetter}}\",\"page_size\":\"A4\"}"
             }
           },
           "event": [
@@ -1036,7 +1090,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('page_size is A4', () => pm.expect(pm.response.json().yearbook.page_size).to.eql('A4'));"
+                  "pm.test('page_size is A4', () => pm.expect(pm.response.json().data.page_size).to.eql('A4'));"
                 ]
               }
             }
@@ -1045,7 +1099,7 @@
         {
           "name": "23. A patches the Letter book to Letter",
           "request": {
-            "method": "PATCH",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -1061,19 +1115,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookIdLetter}}",
+              "raw": "{{baseUrl}}/api/yearbook/update",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookIdLetter}}"
+                "api",
+                "yearbook",
+                "update"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"page_size\":\"Letter\"}"
+              "raw": "{\"id\":\"{{bookIdLetter}}\",\"page_size\":\"Letter\"}"
             }
           },
           "event": [
@@ -1083,7 +1137,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('page_size is Letter', () => pm.expect(pm.response.json().yearbook.page_size).to.eql('Letter'));"
+                  "pm.test('page_size is Letter', () => pm.expect(pm.response.json().data.page_size).to.eql('Letter'));"
                 ]
               }
             }
@@ -1108,14 +1162,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookIdLetter}}",
+              "raw": "{{baseUrl}}/api/yearbook/get?id={{bookIdLetter}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookIdLetter}}"
+                "api",
+                "yearbook",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{bookIdLetter}}"
+                }
               ]
             }
           },
@@ -1126,7 +1186,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('still Letter', () => pm.expect(pm.response.json().yearbook.page_size).to.eql('Letter'));"
+                  "pm.test('still Letter', () => pm.expect(pm.response.json().data.page_size).to.eql('Letter'));"
                 ]
               }
             }
@@ -1156,13 +1216,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks",
+              "raw": "{{baseUrl}}/api/yearbook/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks"
+                "api",
+                "yearbook",
+                "create"
               ]
             },
             "body": {
@@ -1177,8 +1238,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 401', () => pm.response.to.have.status(401));",
-                  "pm.test('error code unauthenticated', () => pm.expect(pm.response.json().error.code).to.eql('unauthenticated'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_UNAUTHORIZED', () => pm.expect(pm.response.json().status).to.eql('ERROR_UNAUTHORIZED'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
@@ -1199,13 +1260,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks",
+              "raw": "{{baseUrl}}/api/yearbook/get-list",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks"
+                "api",
+                "yearbook",
+                "get-list"
               ]
             }
           },
@@ -1216,8 +1278,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 401', () => pm.response.to.have.status(401));",
-                  "pm.test('error code unauthenticated', () => pm.expect(pm.response.json().error.code).to.eql('unauthenticated'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_UNAUTHORIZED', () => pm.expect(pm.response.json().status).to.eql('ERROR_UNAUTHORIZED'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
@@ -1238,14 +1300,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}",
+              "raw": "{{baseUrl}}/api/yearbook/get?id={{bookId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}"
+                "api",
+                "yearbook",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{bookId}}"
+                }
               ]
             }
           },
@@ -1256,8 +1324,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 401', () => pm.response.to.have.status(401));",
-                  "pm.test('error code unauthenticated', () => pm.expect(pm.response.json().error.code).to.eql('unauthenticated'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_UNAUTHORIZED', () => pm.expect(pm.response.json().status).to.eql('ERROR_UNAUTHORIZED'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
@@ -1266,7 +1334,7 @@
         {
           "name": "Patch without a session - 401",
           "request": {
-            "method": "PATCH",
+            "method": "POST",
             "header": [
               {
                 "key": "Origin",
@@ -1282,19 +1350,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}",
+              "raw": "{{baseUrl}}/api/yearbook/update",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}"
+                "api",
+                "yearbook",
+                "update"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"title\":\"x\"}"
+              "raw": "{\"id\":\"{{bookId}}\",\"title\":\"x\"}"
             }
           },
           "event": [
@@ -1304,8 +1372,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 401', () => pm.response.to.have.status(401));",
-                  "pm.test('error code unauthenticated', () => pm.expect(pm.response.json().error.code).to.eql('unauthenticated'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_UNAUTHORIZED', () => pm.expect(pm.response.json().status).to.eql('ERROR_UNAUTHORIZED'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
@@ -1314,7 +1382,7 @@
         {
           "name": "Put profile without a session - 401",
           "request": {
-            "method": "PUT",
+            "method": "POST",
             "header": [
               {
                 "key": "Origin",
@@ -1330,20 +1398,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/profile",
+              "raw": "{{baseUrl}}/api/yearbook/update-profile",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "profile"
+                "api",
+                "yearbook",
+                "update-profile"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"full_name\":\"x\"}"
+              "raw": "{\"yearbook_id\":\"{{bookId}}\",\"full_name\":\"x\"}"
             }
           },
           "event": [
@@ -1353,8 +1420,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 401', () => pm.response.to.have.status(401));",
-                  "pm.test('error code unauthenticated', () => pm.expect(pm.response.json().error.code).to.eql('unauthenticated'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_UNAUTHORIZED', () => pm.expect(pm.response.json().status).to.eql('ERROR_UNAUTHORIZED'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
@@ -1363,7 +1430,7 @@
         {
           "name": "Delete without a session - 401",
           "request": {
-            "method": "DELETE",
+            "method": "POST",
             "header": [
               {
                 "key": "Origin",
@@ -1372,18 +1439,26 @@
               {
                 "key": "Cookie",
                 "value": "smem_session="
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}",
+              "raw": "{{baseUrl}}/api/yearbook/delete",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}"
+                "api",
+                "yearbook",
+                "delete"
               ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{bookId}}\"}"
             }
           },
           "event": [
@@ -1393,8 +1468,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 401', () => pm.response.to.have.status(401));",
-                  "pm.test('error code unauthenticated', () => pm.expect(pm.response.json().error.code).to.eql('unauthenticated'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_UNAUTHORIZED', () => pm.expect(pm.response.json().status).to.eql('ERROR_UNAUTHORIZED'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
@@ -1415,13 +1490,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks",
+              "raw": "{{baseUrl}}/api/yearbook/get-list",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks"
+                "api",
+                "yearbook",
+                "get-list"
               ]
             }
           },
@@ -1432,8 +1508,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 401', () => pm.response.to.have.status(401));",
-                  "pm.test('error code unauthenticated', () => pm.expect(pm.response.json().error.code).to.eql('unauthenticated'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_UNAUTHORIZED', () => pm.expect(pm.response.json().status).to.eql('ERROR_UNAUTHORIZED'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
@@ -1458,13 +1534,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks",
+              "raw": "{{baseUrl}}/api/yearbook/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks"
+                "api",
+                "yearbook",
+                "create"
               ]
             },
             "body": {
@@ -1479,8 +1556,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_title', () => pm.expect(pm.response.json().error.code).to.eql('invalid_title'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_INVALID_TITLE', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_TITLE'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
@@ -1505,13 +1582,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks",
+              "raw": "{{baseUrl}}/api/yearbook/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks"
+                "api",
+                "yearbook",
+                "create"
               ]
             },
             "body": {
@@ -1526,8 +1604,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_title', () => pm.expect(pm.response.json().error.code).to.eql('invalid_title'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_INVALID_TITLE', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_TITLE'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
@@ -1552,13 +1630,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks",
+              "raw": "{{baseUrl}}/api/yearbook/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks"
+                "api",
+                "yearbook",
+                "create"
               ]
             },
             "body": {
@@ -1573,8 +1652,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_title', () => pm.expect(pm.response.json().error.code).to.eql('invalid_title'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_INVALID_TITLE', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_TITLE'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
@@ -1599,13 +1678,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks",
+              "raw": "{{baseUrl}}/api/yearbook/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks"
+                "api",
+                "yearbook",
+                "create"
               ]
             },
             "body": {
@@ -1620,8 +1700,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_language', () => pm.expect(pm.response.json().error.code).to.eql('invalid_language'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_INVALID_LANGUAGE', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_LANGUAGE'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
@@ -1646,13 +1726,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks",
+              "raw": "{{baseUrl}}/api/yearbook/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks"
+                "api",
+                "yearbook",
+                "create"
               ]
             },
             "body": {
@@ -1667,8 +1748,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_language', () => pm.expect(pm.response.json().error.code).to.eql('invalid_language'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_INVALID_LANGUAGE', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_LANGUAGE'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
@@ -1693,13 +1774,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks",
+              "raw": "{{baseUrl}}/api/yearbook/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks"
+                "api",
+                "yearbook",
+                "create"
               ]
             },
             "body": {
@@ -1714,8 +1796,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_page_size', () => pm.expect(pm.response.json().error.code).to.eql('invalid_page_size'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_INVALID_PAGE_SIZE', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_PAGE_SIZE'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
@@ -1740,13 +1822,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks",
+              "raw": "{{baseUrl}}/api/yearbook/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks"
+                "api",
+                "yearbook",
+                "create"
               ]
             },
             "body": {
@@ -1761,8 +1844,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_page_size', () => pm.expect(pm.response.json().error.code).to.eql('invalid_page_size'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_INVALID_PAGE_SIZE', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_PAGE_SIZE'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
@@ -1787,13 +1870,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks",
+              "raw": "{{baseUrl}}/api/yearbook/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks"
+                "api",
+                "yearbook",
+                "create"
               ]
             },
             "body": {
@@ -1808,8 +1892,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_page_size', () => pm.expect(pm.response.json().error.code).to.eql('invalid_page_size'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_INVALID_PAGE_SIZE', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_PAGE_SIZE'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
@@ -1818,7 +1902,7 @@
         {
           "name": "Patch - page size LETTER (wrong case) - 400",
           "request": {
-            "method": "PATCH",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -1834,19 +1918,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}",
+              "raw": "{{baseUrl}}/api/yearbook/update",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}"
+                "api",
+                "yearbook",
+                "update"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"page_size\":\"LETTER\"}"
+              "raw": "{\"id\":\"{{bookId}}\",\"page_size\":\"LETTER\"}"
             }
           },
           "event": [
@@ -1856,8 +1940,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_page_size', () => pm.expect(pm.response.json().error.code).to.eql('invalid_page_size'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_INVALID_PAGE_SIZE', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_PAGE_SIZE'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
@@ -1882,13 +1966,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks",
+              "raw": "{{baseUrl}}/api/yearbook/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks"
+                "api",
+                "yearbook",
+                "create"
               ]
             },
             "body": {
@@ -1903,8 +1988,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_graduation_year', () => pm.expect(pm.response.json().error.code).to.eql('invalid_graduation_year'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_INVALID_GRADUATION_YEAR', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_GRADUATION_YEAR'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
@@ -1929,13 +2014,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks",
+              "raw": "{{baseUrl}}/api/yearbook/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks"
+                "api",
+                "yearbook",
+                "create"
               ]
             },
             "body": {
@@ -1950,8 +2036,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_graduation_year', () => pm.expect(pm.response.json().error.code).to.eql('invalid_graduation_year'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_INVALID_GRADUATION_YEAR', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_GRADUATION_YEAR'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
@@ -1976,13 +2062,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks",
+              "raw": "{{baseUrl}}/api/yearbook/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks"
+                "api",
+                "yearbook",
+                "create"
               ]
             },
             "body": {
@@ -1997,8 +2084,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_motto', () => pm.expect(pm.response.json().error.code).to.eql('invalid_motto'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_INVALID_MOTTO', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_MOTTO'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
@@ -2023,13 +2110,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks",
+              "raw": "{{baseUrl}}/api/yearbook/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks"
+                "api",
+                "yearbook",
+                "create"
               ]
             },
             "body": {
@@ -2044,8 +2132,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_title', () => pm.expect(pm.response.json().error.code).to.eql('invalid_title'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_INVALID_TITLE', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_TITLE'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
@@ -2070,13 +2158,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks",
+              "raw": "{{baseUrl}}/api/yearbook/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks"
+                "api",
+                "yearbook",
+                "create"
               ]
             },
             "body": {
@@ -2091,15 +2180,15 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_title', () => pm.expect(pm.response.json().error.code).to.eql('invalid_title'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_INVALID_TITLE', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_TITLE'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Create - mass assignment owner_id - 400 unknown_field",
+          "name": "Create - mass assignment owner_id - 400 ERROR_PARAM",
           "request": {
             "method": "POST",
             "header": [
@@ -2117,13 +2206,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks",
+              "raw": "{{baseUrl}}/api/yearbook/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks"
+                "api",
+                "yearbook",
+                "create"
               ]
             },
             "body": {
@@ -2138,15 +2228,15 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code unknown_field', () => pm.expect(pm.response.json().error.code).to.eql('unknown_field'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Create - mass assignment public_id - 400 unknown_field",
+          "name": "Create - mass assignment public_id - 400 ERROR_PARAM",
           "request": {
             "method": "POST",
             "header": [
@@ -2164,13 +2254,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks",
+              "raw": "{{baseUrl}}/api/yearbook/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks"
+                "api",
+                "yearbook",
+                "create"
               ]
             },
             "body": {
@@ -2185,8 +2276,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code unknown_field', () => pm.expect(pm.response.json().error.code).to.eql('unknown_field'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
@@ -2211,13 +2302,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks",
+              "raw": "{{baseUrl}}/api/yearbook/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks"
+                "api",
+                "yearbook",
+                "create"
               ]
             },
             "body": {
@@ -2232,8 +2324,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_body', () => pm.expect(pm.response.json().error.code).to.eql('invalid_body'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
@@ -2258,13 +2350,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks",
+              "raw": "{{baseUrl}}/api/yearbook/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks"
+                "api",
+                "yearbook",
+                "create"
               ]
             },
             "body": {
@@ -2279,15 +2372,15 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 415', () => pm.response.to.have.status(415));",
-                  "pm.test('error code unsupported_media_type', () => pm.expect(pm.response.json().error.code).to.eql('unsupported_media_type'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_UNSUPPORTED_MEDIA_TYPE', () => pm.expect(pm.response.json().status).to.eql('ERROR_UNSUPPORTED_MEDIA_TYPE'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Create - 120 character title and emoji + Vietnamese (boundary) - 201",
+          "name": "Create - 120 character title and emoji + Vietnamese (boundary) - 200",
           "request": {
             "method": "POST",
             "header": [
@@ -2305,13 +2398,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks",
+              "raw": "{{baseUrl}}/api/yearbook/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks"
+                "api",
+                "yearbook",
+                "create"
               ]
             },
             "body": {
@@ -2325,8 +2419,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 201', () => pm.response.to.have.status(201));",
-                  "const b = pm.response.json().yearbook;",
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json().data;",
                   "pm.test('kept', () => { pm.expect([...b.title].length).to.eql(120); pm.expect(b.motto).to.eql('Học, học nữa 🎓'); });"
                 ]
               }
@@ -2336,7 +2430,7 @@
         {
           "name": "Patch - unknown field is_owner - 400",
           "request": {
-            "method": "PATCH",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -2352,19 +2446,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}",
+              "raw": "{{baseUrl}}/api/yearbook/update",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}"
+                "api",
+                "yearbook",
+                "update"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"is_owner\":false}"
+              "raw": "{\"id\":\"{{bookId}}\",\"is_owner\":false}"
             }
           },
           "event": [
@@ -2374,8 +2468,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code unknown_field', () => pm.expect(pm.response.json().error.code).to.eql('unknown_field'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
@@ -2384,7 +2478,7 @@
         {
           "name": "Patch - empty title - 400",
           "request": {
-            "method": "PATCH",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -2400,19 +2494,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}",
+              "raw": "{{baseUrl}}/api/yearbook/update",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}"
+                "api",
+                "yearbook",
+                "update"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"title\":\"\"}"
+              "raw": "{\"id\":\"{{bookId}}\",\"title\":\"\"}"
             }
           },
           "event": [
@@ -2422,8 +2516,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_title', () => pm.expect(pm.response.json().error.code).to.eql('invalid_title'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_INVALID_TITLE', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_TITLE'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
@@ -2432,7 +2526,7 @@
         {
           "name": "Patch - bad language - 400",
           "request": {
-            "method": "PATCH",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -2448,19 +2542,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}",
+              "raw": "{{baseUrl}}/api/yearbook/update",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}"
+                "api",
+                "yearbook",
+                "update"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"language\":\"de\"}"
+              "raw": "{\"id\":\"{{bookId}}\",\"language\":\"de\"}"
             }
           },
           "event": [
@@ -2470,8 +2564,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_language', () => pm.expect(pm.response.json().error.code).to.eql('invalid_language'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_INVALID_LANGUAGE', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_LANGUAGE'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
@@ -2480,7 +2574,7 @@
         {
           "name": "Patch - nonexistent yearbook - 404",
           "request": {
-            "method": "PATCH",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -2496,19 +2590,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/01J9Z3K6V8Q4M7N2P5R8T0W1XY",
+              "raw": "{{baseUrl}}/api/yearbook/update",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "01J9Z3K6V8Q4M7N2P5R8T0W1XY"
+                "api",
+                "yearbook",
+                "update"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"title\":\"x\"}"
+              "raw": "{\"id\":\"01J9Z3K6V8Q4M7N2P5R8T0W1XY\",\"title\":\"x\"}"
             }
           },
           "event": [
@@ -2518,8 +2612,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 404', () => pm.response.to.have.status(404));",
-                  "pm.test('error code not_found', () => pm.expect(pm.response.json().error.code).to.eql('not_found'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
@@ -2540,14 +2634,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/not-a-ulid",
+              "raw": "{{baseUrl}}/api/yearbook/get?id=not-a-ulid",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "not-a-ulid"
+                "api",
+                "yearbook",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "not-a-ulid"
+                }
               ]
             }
           },
@@ -2558,8 +2658,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 404', () => pm.response.to.have.status(404));",
-                  "pm.test('error code not_found', () => pm.expect(pm.response.json().error.code).to.eql('not_found'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
@@ -2568,7 +2668,7 @@
         {
           "name": "Profile - missing full_name - 400",
           "request": {
-            "method": "PUT",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -2584,20 +2684,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/profile",
+              "raw": "{{baseUrl}}/api/yearbook/update-profile",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "profile"
+                "api",
+                "yearbook",
+                "update-profile"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{}"
+              "raw": "{\"yearbook_id\":\"{{bookId}}\"}"
             }
           },
           "event": [
@@ -2607,8 +2706,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_full_name', () => pm.expect(pm.response.json().error.code).to.eql('invalid_full_name'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_INVALID_FULL_NAME', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_FULL_NAME'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
@@ -2617,7 +2716,7 @@
         {
           "name": "Profile - 101 character full_name (boundary) - 400",
           "request": {
-            "method": "PUT",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -2633,20 +2732,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/profile",
+              "raw": "{{baseUrl}}/api/yearbook/update-profile",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "profile"
+                "api",
+                "yearbook",
+                "update-profile"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"full_name\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}"
+              "raw": "{\"yearbook_id\":\"{{bookId}}\",\"full_name\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}"
             }
           },
           "event": [
@@ -2656,8 +2754,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_full_name', () => pm.expect(pm.response.json().error.code).to.eql('invalid_full_name'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_INVALID_FULL_NAME', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_FULL_NAME'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
@@ -2666,7 +2764,7 @@
         {
           "name": "Profile - 51 character nickname (boundary) - 400",
           "request": {
-            "method": "PUT",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -2682,20 +2780,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/profile",
+              "raw": "{{baseUrl}}/api/yearbook/update-profile",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "profile"
+                "api",
+                "yearbook",
+                "update-profile"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"full_name\":\"a\",\"nickname\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}"
+              "raw": "{\"yearbook_id\":\"{{bookId}}\",\"full_name\":\"a\",\"nickname\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}"
             }
           },
           "event": [
@@ -2705,8 +2802,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_nickname', () => pm.expect(pm.response.json().error.code).to.eql('invalid_nickname'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_INVALID_NICKNAME', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_NICKNAME'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
@@ -2715,7 +2812,7 @@
         {
           "name": "Profile - 501 character quote (boundary) - 400",
           "request": {
-            "method": "PUT",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -2731,20 +2828,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/profile",
+              "raw": "{{baseUrl}}/api/yearbook/update-profile",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "profile"
+                "api",
+                "yearbook",
+                "update-profile"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"full_name\":\"a\",\"quote\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}"
+              "raw": "{\"yearbook_id\":\"{{bookId}}\",\"full_name\":\"a\",\"quote\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}"
             }
           },
           "event": [
@@ -2754,8 +2850,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_quote', () => pm.expect(pm.response.json().error.code).to.eql('invalid_quote'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_INVALID_QUOTE', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_QUOTE'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
@@ -2764,7 +2860,7 @@
         {
           "name": "Profile - 301 character hobbies (boundary) - 400",
           "request": {
-            "method": "PUT",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -2780,20 +2876,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/profile",
+              "raw": "{{baseUrl}}/api/yearbook/update-profile",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "profile"
+                "api",
+                "yearbook",
+                "update-profile"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"full_name\":\"a\",\"hobbies\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}"
+              "raw": "{\"yearbook_id\":\"{{bookId}}\",\"full_name\":\"a\",\"hobbies\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}"
             }
           },
           "event": [
@@ -2803,8 +2898,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_hobbies', () => pm.expect(pm.response.json().error.code).to.eql('invalid_hobbies'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_INVALID_HOBBIES', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_HOBBIES'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
@@ -2813,7 +2908,7 @@
         {
           "name": "Profile - 301 character future_plans (boundary) - 400",
           "request": {
-            "method": "PUT",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -2829,20 +2924,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/profile",
+              "raw": "{{baseUrl}}/api/yearbook/update-profile",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "profile"
+                "api",
+                "yearbook",
+                "update-profile"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"full_name\":\"a\",\"future_plans\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}"
+              "raw": "{\"yearbook_id\":\"{{bookId}}\",\"full_name\":\"a\",\"future_plans\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}"
             }
           },
           "event": [
@@ -2852,8 +2946,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_future_plans', () => pm.expect(pm.response.json().error.code).to.eql('invalid_future_plans'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_INVALID_FUTURE_PLANS', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_FUTURE_PLANS'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
@@ -2862,7 +2956,7 @@
         {
           "name": "Profile - birthday in the future - 400",
           "request": {
-            "method": "PUT",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -2878,20 +2972,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/profile",
+              "raw": "{{baseUrl}}/api/yearbook/update-profile",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "profile"
+                "api",
+                "yearbook",
+                "update-profile"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"full_name\":\"a\",\"birthday\":\"2999-01-01\"}"
+              "raw": "{\"yearbook_id\":\"{{bookId}}\",\"full_name\":\"a\",\"birthday\":\"2999-01-01\"}"
             }
           },
           "event": [
@@ -2901,8 +2994,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_birthday', () => pm.expect(pm.response.json().error.code).to.eql('invalid_birthday'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_INVALID_BIRTHDAY', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_BIRTHDAY'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
@@ -2911,7 +3004,7 @@
         {
           "name": "Profile - birthday that is not a date - 400",
           "request": {
-            "method": "PUT",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -2927,20 +3020,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/profile",
+              "raw": "{{baseUrl}}/api/yearbook/update-profile",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "profile"
+                "api",
+                "yearbook",
+                "update-profile"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"full_name\":\"a\",\"birthday\":\"2001-02-30\"}"
+              "raw": "{\"yearbook_id\":\"{{bookId}}\",\"full_name\":\"a\",\"birthday\":\"2001-02-30\"}"
             }
           },
           "event": [
@@ -2950,17 +3042,17 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_birthday', () => pm.expect(pm.response.json().error.code).to.eql('invalid_birthday'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_INVALID_BIRTHDAY', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_BIRTHDAY'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Profile - mass assignment is_owner - 400 unknown_field",
+          "name": "Profile - mass assignment is_owner - 400 ERROR_PARAM",
           "request": {
-            "method": "PUT",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -2976,20 +3068,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/profile",
+              "raw": "{{baseUrl}}/api/yearbook/update-profile",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "profile"
+                "api",
+                "yearbook",
+                "update-profile"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"full_name\":\"a\",\"is_owner\":false}"
+              "raw": "{\"yearbook_id\":\"{{bookId}}\",\"full_name\":\"a\",\"is_owner\":false}"
             }
           },
           "event": [
@@ -2999,8 +3090,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code unknown_field', () => pm.expect(pm.response.json().error.code).to.eql('unknown_field'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
@@ -3021,13 +3112,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks?limit=0",
+              "raw": "{{baseUrl}}/api/yearbook/get-list?limit=0",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks"
+                "api",
+                "yearbook",
+                "get-list"
               ],
               "query": [
                 {
@@ -3044,8 +3136,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_limit', () => pm.expect(pm.response.json().error.code).to.eql('invalid_limit'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
@@ -3066,13 +3158,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks?limit=51",
+              "raw": "{{baseUrl}}/api/yearbook/get-list?limit=51",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks"
+                "api",
+                "yearbook",
+                "get-list"
               ],
               "query": [
                 {
@@ -3089,15 +3182,15 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_limit', () => pm.expect(pm.response.json().error.code).to.eql('invalid_limit'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
           ]
         },
         {
-          "name": "List - tampered cursor - 400",
+          "name": "List - tampered next_id - 400",
           "request": {
             "method": "GET",
             "header": [
@@ -3111,17 +3204,18 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks?cursor=dGFtcGVyZWQ",
+              "raw": "{{baseUrl}}/api/yearbook/get-list?next_id=dGFtcGVyZWQ",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks"
+                "api",
+                "yearbook",
+                "get-list"
               ],
               "query": [
                 {
-                  "key": "cursor",
+                  "key": "next_id",
                   "value": "dGFtcGVyZWQ"
                 }
               ]
@@ -3134,8 +3228,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_cursor', () => pm.expect(pm.response.json().error.code).to.eql('invalid_cursor'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
@@ -3156,13 +3250,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks?limit=50",
+              "raw": "{{baseUrl}}/api/yearbook/get-list?limit=50",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks"
+                "api",
+                "yearbook",
+                "get-list"
               ],
               "query": [
                 {
@@ -3185,9 +3280,9 @@
           ]
         },
         {
-          "name": "CSRF - delete with a session cookie from a foreign Origin - 403",
+          "name": "Update - missing id - 400 ERROR_PARAM",
           "request": {
-            "method": "DELETE",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -3195,18 +3290,162 @@
               },
               {
                 "key": "Origin",
-                "value": "https://evil.example"
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}",
+              "raw": "{{baseUrl}}/api/yearbook/update",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}"
+                "api",
+                "yearbook",
+                "update"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"No id\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update - empty body - 400 ERROR_PARAM",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/yearbook/update",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "yearbook",
+                "update"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update-profile - missing yearbook_id - 400 ERROR_PARAM",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/yearbook/update-profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "yearbook",
+                "update-profile"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"full_name\":\"No book\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get - missing id - 400 ERROR_PARAM",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/yearbook/get",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "yearbook",
+                "get"
               ]
             }
           },
@@ -3216,9 +3455,132 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "The old GET /v1/yearbooks route is gone - 404",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yearbooks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yearbooks"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('the old v1 route is gone - status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete is POST only (GET /api/yearbook/delete) - 405",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/yearbook/delete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "yearbook",
+                "delete"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('delete is POST only - status 405', () => pm.response.to.have.status(405));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CSRF - delete with a session cookie from a foreign Origin - 403",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "https://evil.example"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/yearbook/delete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "yearbook",
+                "delete"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{bookId}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
                   "pm.test('status 403', () => pm.response.to.have.status(403));",
-                  "pm.test('error code csrf_origin_mismatch', () => pm.expect(pm.response.json().error.code).to.eql('csrf_origin_mismatch'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_CSRF_ORIGIN_MISMATCH', () => pm.expect(pm.response.json().status).to.eql('ERROR_CSRF_ORIGIN_MISMATCH'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
@@ -3239,13 +3601,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks",
+              "raw": "{{baseUrl}}/api/yearbook/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks"
+                "api",
+                "yearbook",
+                "create"
               ]
             },
             "body": {
@@ -3260,15 +3623,15 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 403', () => pm.response.to.have.status(403));",
-                  "pm.test('error code csrf_origin_mismatch', () => pm.expect(pm.response.json().error.code).to.eql('csrf_origin_mismatch'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_CSRF_ORIGIN_MISMATCH', () => pm.expect(pm.response.json().status).to.eql('ERROR_CSRF_ORIGIN_MISMATCH'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Create - 21st yearbook of one user - 409 limit_reached",
+          "name": "Create - 21st yearbook of one user - 409 ERROR_LIMIT_REACHED",
           "request": {
             "method": "POST",
             "header": [
@@ -3286,13 +3649,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks",
+              "raw": "{{baseUrl}}/api/yearbook/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks"
+                "api",
+                "yearbook",
+                "create"
               ]
             },
             "body": {
@@ -3311,10 +3675,10 @@
                   "const base = pm.variables.get('baseUrl');",
                   "const origin = pm.collectionVariables.get('origin');",
                   "const one = (i) => new Promise((resolve, reject) => pm.sendRequest({",
-                  "  url: base + '/v1/yearbooks', method: 'POST',",
+                  "  url: base + '/api/yearbook/create', method: 'POST',",
                   "  header: { 'Content-Type': 'application/json', 'Origin': origin, 'Cookie': 'smem_session=' + tok },",
                   "  body: { mode: 'raw', raw: JSON.stringify({ title: 'Filler ' + i, language: 'en' }) }",
-                  "}, (e, r) => (e || r.code !== 201) ? reject(e || new Error('filler ' + i + ' got ' + r.code)) : resolve()));",
+                  "}, (e, r) => (e || r.code !== 200) ? reject(e || new Error('filler ' + i + ' got ' + r.code)) : resolve()));",
                   "(async () => { for (let i = 1; i <= 20; i++) { await one(i); } })();"
                 ]
               }
@@ -3325,15 +3689,15 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 409', () => pm.response.to.have.status(409));",
-                  "pm.test('error code limit_reached', () => pm.expect(pm.response.json().error.code).to.eql('limit_reached'));",
-                  "pm.test('has request_id', () => pm.expect(pm.response.json().error.request_id).to.be.a('string').and.not.empty);"
+                  "pm.test('error code ERROR_LIMIT_REACHED', () => pm.expect(pm.response.json().status).to.eql('ERROR_LIMIT_REACHED'));",
+                  "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Create - user A is not affected by B's limit - 201",
+          "name": "Create - user A is not affected by B's limit - 200",
           "request": {
             "method": "POST",
             "header": [
@@ -3351,13 +3715,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks",
+              "raw": "{{baseUrl}}/api/yearbook/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks"
+                "api",
+                "yearbook",
+                "create"
               ]
             },
             "body": {
@@ -3371,7 +3736,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 201', () => pm.response.to.have.status(201));"
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
                 ]
               }
             }

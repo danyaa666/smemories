@@ -7,7 +7,7 @@ export function GoogleButton({ label, returnTo }: { label: string; returnTo: str
   return (
     <a
       className={buttonClass("secondary")}
-      href={`/api/v1/auth/google/start?return_to=${encodeURIComponent(returnTo)}`}
+      href={`/api/auth/google-start?return_to=${encodeURIComponent(returnTo)}`}
     >
       {label}
     </a>

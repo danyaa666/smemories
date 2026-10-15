@@ -112,7 +112,7 @@ func newEnv(t *testing.T) *env {
 	notesSvc := NewService(notesStore, e.svc, e.lim, logger, e.now)
 	e.ns = notesSvc
 	e.svc.SetRefClearer(bookStore, notesSvc)
-	yh := yearbook.NewHandler(bookStore, yearbook.NewService(bookStore, e.svc, e.svc, notesSvc), ah.RequireUser, []string{origin}, logger, e.now)
+	yh := yearbook.NewHandler(yearbook.NewService(bookStore, httpx.NewCursors([]byte(strings.Repeat("c", 32))), e.svc, e.now, e.svc, notesSvc), ah.RequireUser, []string{origin})
 	e.nh = NewHandler(notesSvc, 10<<20, ah.RequireUser, []string{origin}, ah.ClientIP, logger)
 	e.tmp = t.TempDir()
 	e.nh.SetUploadLimits(defaultUploadConns, defaultUploadsPerIP, e.tmp)
@@ -132,10 +132,10 @@ func (e *env) register(email, name string, verified bool) user {
 	e.t.Helper()
 	b, _ := json.Marshal(map[string]string{"email": email, "password": testPW, "display_name": name})
 	rec := httptest.NewRecorder()
-	r := httptest.NewRequest("POST", "/v1/auth/register", bytes.NewReader(b))
+	r := httptest.NewRequest("POST", "/api/auth/register", bytes.NewReader(b))
 	r.Header.Set("Content-Type", "application/json")
 	e.h.ServeHTTP(rec, r)
-	if rec.Code != 201 {
+	if rec.Code != 200 {
 		e.t.Fatalf("register: %d %s", rec.Code, rec.Body.String())
 	}
 	if verified {
@@ -232,10 +232,29 @@ func (r resp) json() map[string]any {
 
 func (e *env) book(u user, title string) string {
 	e.t.Helper()
-	id := e.do(u, "POST", "/v1/yearbooks", fmt.Sprintf(`{"title":%q,"language":"en"}`, title)).status(201, "").
-		json()["yearbook"].(map[string]any)["id"].(string)
+	id := e.do(u, "POST", "/api/yearbook/create", fmt.Sprintf(`{"title":%q,"language":"en"}`, title)).status(200, "").
+		data()["id"].(string)
 	e.books = append(e.books, id)
 	return id
+}
+
+// The yearbook endpoints, which the tests use for setup and for the cross-domain checks.
+func withID(key, id, body string) string {
+	rest := strings.TrimPrefix(body, "{")
+	if strings.TrimSpace(rest) != "}" {
+		rest = "," + rest
+	}
+	return `{"` + key + `":"` + id + `"` + rest
+}
+
+func (e *env) updateBook(u user, id, body string) resp {
+	return e.do(u, "POST", "/api/yearbook/update", withID("id", id, body))
+}
+func (e *env) updateProfile(u user, id, body string) resp {
+	return e.do(u, "POST", "/api/yearbook/update-profile", withID("yearbook_id", id, body))
+}
+func (e *env) deleteBook(u user, id string) resp {
+	return e.do(u, "POST", "/api/yearbook/delete", withID("id", id, "{}"))
 }
 
 // create calls POST /api/note-collection/create for a book; body is a JSON object of the other fields ("{}" for none).
@@ -630,7 +649,7 @@ func TestYearbookDeleteCascades(t *testing.T) {
 	b1, b2 := e.book(alice, "One"), e.book(alice, "Two")
 	_, t1 := e.newLink(alice, b1, `{}`)
 	_, t2 := e.newLink(alice, b2, `{}`)
-	e.do(alice, "DELETE", "/v1/yearbooks/"+b1, "").status(204, "")
+	e.deleteBook(alice, b1).status(200, "")
 	if n := e.count(`SELECT COUNT(*) FROM note_collection_tab`); n != 1 {
 		t.Fatalf("%d links left, want 1", n)
 	}

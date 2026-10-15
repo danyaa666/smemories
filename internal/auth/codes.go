@@ -35,12 +35,12 @@ const (
 	MinOTPKeyBytes = 32
 )
 
-// The outcomes of a code check; the handler maps them to 400 invalid_code, code_expired and
-// code_locked.
+// The outcomes of a code check; the handler answers them as 400 ERROR_INVALID_CODE, ERROR_CODE_EXPIRED and
+// ERROR_CODE_LOCKED.
 var (
-	ErrInvalidCode = apperr.New(apperr.Param, "invalid code")
-	ErrCodeExpired = apperr.New(apperr.Param, "code expired")
-	ErrCodeLocked  = apperr.New(apperr.Param, "too many wrong attempts on this code")
+	ErrInvalidCode = apperr.New(CodeInvalidCode, "invalid code")
+	ErrCodeExpired = apperr.New(CodeCodeExpired, "code expired, request a new one")
+	ErrCodeLocked  = apperr.New(CodeCodeLocked, "too many wrong attempts, request a new code")
 )
 
 // Results of the check script.

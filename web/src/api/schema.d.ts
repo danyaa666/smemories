@@ -38,7 +38,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/auth/register": {
+    "/api/auth/register": {
         parameters: {
             query?: never;
             header?: never;
@@ -49,7 +49,7 @@ export interface paths {
         put?: never;
         /**
          * Create an account and sign in
-         * @description Email is trimmed, lower-cased and normalised to NFC; a duplicate (case-insensitive, and NFC/NFD spellings are the same address) is `409 email_taken`. Password: 10-128 characters and not equal to the email. Display name: 1-100 characters after trimming, no control or format characters (see the field). Rate limit: 5 per hour per IP (counted once the input is valid). A cookie-less request needs no Origin; one that carries a session cookie must satisfy the CSRF origin check.
+         * @description Called by the sign-up form. Creates the account and signs the caller in (the session cookie is set) and sends the 6-digit verification code by email. The email is trimmed, lower-cased and normalised to NFC; a duplicate (case-insensitive, and NFC/NFD spellings are the same address) is `ERROR_EMAIL_TAKEN`. Password: 10-128 characters after NFKC normalisation and not equal to the email. Display name: 1-100 characters after trimming, no control or format characters. Rate limit: 5 per hour per IP, counted once the input is valid. A cookie-less request needs no Origin; one that carries a session cookie must come from an allowed Origin. Not idempotent: a repeated call is `ERROR_EMAIL_TAKEN`. Unknown body fields are ignored.
          */
         post: operations["register"];
         delete?: never;
@@ -58,7 +58,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/auth/login": {
+    "/api/auth/login": {
         parameters: {
             query?: never;
             header?: never;
@@ -69,7 +69,7 @@ export interface paths {
         put?: never;
         /**
          * Sign in with email and password
-         * @description A wrong password and an unknown email give the identical `401 invalid_credentials` (same body, same work). Every login issues a new session token; a session cookie sent with the request is revoked. Failures are limited to 10 per 15 minutes per IP+email and 100 per 15 minutes per IP.
+         * @description Called by the sign-in form. A wrong password, an unknown email and an account without a password (Google only) give the identical `ERROR_INVALID_CREDENTIALS` (same body, same work), so the answer never tells whether an address is registered. Every login issues a new session token; a session cookie sent with the request is revoked. Failures are limited to 10 per 15 minutes per IP and email and 100 per 15 minutes per IP (`ERROR_RATE_LIMITED`). The email is trimmed, lower-cased and NFC-normalised as at registration. Not idempotent (a new session each time). Unknown body fields are ignored.
          */
         post: operations["login"];
         delete?: never;
@@ -78,7 +78,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/auth/logout": {
+    "/api/auth/logout": {
         parameters: {
             query?: never;
             header?: never;
@@ -89,7 +89,7 @@ export interface paths {
         put?: never;
         /**
          * Sign out (idempotent)
-         * @description Deletes the session and clears the cookie. Always 204, also when nobody is signed in.
+         * @description Called by the sign-out button. Deletes the session and clears the cookie. Always succeeds, also when nobody is signed in or the session is already gone, so a lost response can simply be repeated. A request with the session cookie must come from an allowed Origin. Takes no body.
          */
         post: operations["logout"];
         delete?: never;
@@ -98,7 +98,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/auth/verify-email": {
+    "/api/auth/verify-email": {
         parameters: {
             query?: never;
             header?: never;
@@ -109,7 +109,7 @@ export interface paths {
         put?: never;
         /**
          * Confirm the signed-in user's email address with the 6-digit code from the verification email
-         * @description The code is 6 decimal digits, valid 30 minutes, single use; there is one live code per user (a new one from registration or `verify-email/resend` replaces the old). Only the HMAC of the code is stored, in Redis. A wrong or missing code (or one that is not 6 digits) is `400 invalid_code`, a code past its lifetime `400 code_expired`, and after 5 wrong attempts on one code it is `400 code_locked` until a new code is requested. An already verified user gets `204` without a check. Also limited to 20 attempts per hour per user (`429 rate_limited` with `Retry-After`). When the code store (Redis) is down the answer is `503 code_store_unavailable`. In dev and test `SMEM_DEV_FIXED_OTP` makes one fixed code valid (docs/dev-shortcuts.md).
+         * @description Called by the verification screen. The code is 6 decimal digits, valid 30 minutes, single use; there is one live code per user (a new one from registration or `/api/auth/resend-verification` replaces the old). Only the HMAC of the code is stored, in Redis. A wrong or missing code (or one that is not 6 digits) is `ERROR_INVALID_CODE`, a code past its lifetime `ERROR_CODE_EXPIRED`, and after 5 wrong attempts on one code it is `ERROR_CODE_LOCKED` until a new code is requested. An already verified user gets success without a check. Also limited to 20 attempts per hour per user. Idempotent once verified. In dev and test `SMEM_DEV_FIXED_OTP` makes one fixed code valid (docs/dev-shortcuts.md). A request with the session cookie must come from an allowed Origin.
          */
         post: operations["verifyEmail"];
         delete?: never;
@@ -118,7 +118,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/auth/verify-email/resend": {
+    "/api/auth/resend-verification": {
         parameters: {
             query?: never;
             header?: never;
@@ -129,16 +129,16 @@ export interface paths {
         put?: never;
         /**
          * Send a new verification code to the signed-in user
-         * @description At most 3 per hour per user (`429 rate_limited` with `Retry-After`). The new code replaces the previous one, which stops working. Takes no body.
+         * @description Called by the "send a new code" button. At most 3 per hour per user (`ERROR_RATE_LIMITED` with `Retry-After`). The new code replaces the previous one, which stops working. A user whose address is already verified gets `already_verified: true` and nothing is sent. A mailer failure is `ERROR_INTERNAL` and is logged without the code. Takes no body. A request with the session cookie must come from an allowed Origin.
          */
-        post: operations["resendVerificationEmail"];
+        post: operations["resendVerification"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/v1/auth/forgot-password": {
+    "/api/auth/forgot-password": {
         parameters: {
             query?: never;
             header?: never;
@@ -149,7 +149,7 @@ export interface paths {
         put?: never;
         /**
          * Ask for a password reset code by email
-         * @description Always `202 {}` for a well-formed address, whether or not an account exists; the email (a 6-digit code valid 15 minutes, in the user's `locale`; a new request replaces the previous code) goes out in the background and only when the account exists, so neither the body nor the timing tells them apart. Limits: 5 per hour per IP and 3 per hour per address (counted for unknown addresses too). The address is trimmed, lower-cased and NFC-normalised like at login; one that is not an email at all is `400 invalid_email`.
+         * @description Called by the "forgot password" form. Always succeeds with an empty `data` for a well-formed address, whether or not an account exists: the email (a 6-digit code valid 15 minutes, in the user's `locale`; a new request replaces the previous code) goes out in the background and only when the account exists, so neither the body nor the timing tells them apart (anti-enumeration). Limits: 5 per hour per IP and 3 per hour per address, counted for unknown addresses too. The address is trimmed, lower-cased and NFC-normalised like at login; one that is not an email at all is `ERROR_INVALID_EMAIL`. Idempotent for the caller (a repeat sends a fresh code). A request with the session cookie must come from an allowed Origin.
          */
         post: operations["forgotPassword"];
         delete?: never;
@@ -158,7 +158,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/auth/reset-password": {
+    "/api/auth/reset-password": {
         parameters: {
             query?: never;
             header?: never;
@@ -169,7 +169,7 @@ export interface paths {
         put?: never;
         /**
          * Set a new password with the 6-digit code from the reset email
-         * @description Checked in this order: the address format (`400 invalid_email`), 20 attempts per hour per IP (`429 rate_limited`), the password rules (NFKC, 10-128 characters, not the email; a rejected password is `400 weak_password` and leaves the code untouched, so the answer cannot confirm a code), then the code. An unknown address, a wrong code and no live code all answer `400 invalid_code` with the same body; `400 code_expired` and `400 code_locked` (5 wrong attempts) only for an account that has such a code. The code is valid 15 minutes and single use. On success every session of the user is deleted (sign in again). When the code store (Redis) is down the answer is `503 code_store_unavailable`. In dev and test `SMEM_DEV_FIXED_OTP` makes one fixed code valid for any existing account (docs/dev-shortcuts.md).
+         * @description Called by the reset form. Checked in this order: the address format (`ERROR_INVALID_EMAIL`), 20 attempts per hour per IP (`ERROR_RATE_LIMITED`), the password rules (NFKC, 10-128 characters, not the email; a rejected password is `ERROR_WEAK_PASSWORD` and leaves the code untouched, so the answer cannot confirm a code), then the code. An unknown address, a wrong code and no live code all answer `ERROR_INVALID_CODE` with the same body (anti-enumeration); `ERROR_CODE_EXPIRED` and `ERROR_CODE_LOCKED` (5 wrong attempts) only for an account that has such a code. The code is valid 15 minutes and single use. On success every session of the user is deleted (sign in again). In dev and test `SMEM_DEV_FIXED_OTP` makes one fixed code valid for any existing account (docs/dev-shortcuts.md). Not idempotent: the code is used up.
          */
         post: operations["resetPassword"];
         delete?: never;
@@ -178,7 +178,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/auth/google/start": {
+    "/api/auth/google-start": {
         parameters: {
             query?: never;
             header?: never;
@@ -187,7 +187,7 @@ export interface paths {
         };
         /**
          * Start Google sign-in (browser navigation, not a fetch call)
-         * @description Only exists when the server has `SMEM_GOOGLE_CLIENT_ID` set; otherwise `404 not_found`. Redirects to Google's authorization endpoint (authorization-code flow with PKCE S256, `state` and `nonce`, scope `openid email profile`) and sets the 10-minute `smem_oidc` cookie (HttpOnly, SameSite=Lax, signed) that binds the flow to this browser. `return_to` must be a same-site relative path (one leading `/`, at most 200 characters, no `//`, `/\`, scheme or control characters); anything else is replaced by `/`. If Google cannot be reached the answer is `302 /login?error=oidc_failed`. 30 per 15 minutes per IP.
+         * @description Called by the "Continue with Google" link, which the browser follows; there is no JSON body. Only exists when the server has `SMEM_GOOGLE_CLIENT_ID` set; otherwise it is `ERROR_NOT_FOUND` (404). Redirects (302) to Google's authorization endpoint (authorization-code flow with PKCE S256, `state` and `nonce`, scope `openid email profile`) and sets the 10-minute `smem_oidc` cookie (HttpOnly, SameSite=Lax, signed) that binds the flow to this browser. `return_to` must be a same-site relative path (one leading `/`, at most 200 characters, no `//`, `/\`, scheme or control characters); anything else is replaced by `/`. If Google cannot be reached the answer is `302 /login?error=oidc_failed`. 30 per 15 minutes per IP (`ERROR_RATE_LIMITED`).
          */
         get: operations["googleStart"];
         put?: never;
@@ -198,7 +198,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/auth/google/callback": {
+    "/api/auth/google-callback": {
         parameters: {
             query?: never;
             header?: never;
@@ -207,7 +207,7 @@ export interface paths {
         };
         /**
          * Google redirects the browser here after sign-in
-         * @description Only exists when Google sign-in is enabled (else `404 not_found`). The redirect URI registered at Google is `<public base URL>/api/v1/auth/google/callback`. Success signs the user in (new `smem_session` cookie; a session cookie sent with the request is revoked) and redirects to the `return_to` given at start. Linking: a known Google account signs in; the same verified email on a local account links to it; the same email on a local account that never verified it first loses its password and sessions, is marked verified and linked (pre-hijacking defence); an unknown email creates a password-less account. Every failure is `302 /login?error=<code>` and creates nothing: `oidc_state` (cookie missing, altered or expired, or `state` differs), `oidc_denied` (the provider reported an error), `oidc_failed` (code exchange or ID-token check failed, or no usable email), `email_unverified` (Google did not mark the email verified). Provider details are only logged. 30 per 15 minutes per IP.
+         * @description Called by Google through the browser, never by our web code; there is no JSON body. Only exists when Google sign-in is enabled (else `ERROR_NOT_FOUND`, 404). The redirect URI registered in the Google console is `<PUBLIC_BASE_URL>/api/auth/google-callback`. Success signs the user in (new `smem_session` cookie; a session cookie sent with the request is revoked) and redirects (302) to the `return_to` given at start. Linking: a known Google account signs in; the same verified email on a local account links to it; the same email on a local account that never verified it first loses its password and sessions, is marked verified and linked (pre-hijacking defence); an unknown email creates a password-less account. Every failure is `302 /login?error=<code>` and creates nothing: `oidc_state` (cookie missing, altered or expired, or `state` differs), `oidc_denied` (the provider reported an error), `oidc_failed` (code exchange or ID-token check failed, or no usable email), `email_unverified` (Google did not mark the email verified). Provider details are only logged. 30 per 15 minutes per IP (`ERROR_RATE_LIMITED`).
          */
         get: operations["googleCallback"];
         put?: never;
@@ -218,7 +218,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/me": {
+    "/api/user/get-me": {
         parameters: {
             query?: never;
             header?: never;
@@ -227,7 +227,7 @@ export interface paths {
         };
         /**
          * The signed-in user
-         * @description Sliding expiry: once more than half of the 30-day lifetime has elapsed the expiry is extended and the cookie is sent again.
+         * @description Called on every page load as the session bootstrap; `ERROR_UNAUTHORIZED` (401) means signed out. Sliding expiry: once more than half of the 30-day session lifetime has elapsed the expiry is extended and the cookie is sent again. Read-only and idempotent.
          */
         get: operations["getMe"];
         put?: never;
@@ -238,22 +238,18 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/yearbooks": {
+    "/api/yearbook/create": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /**
-         * List the caller's yearbooks
-         * @description Only the caller's books, newest `updated_at` first (editing the book or its profile updates it). Pass `next_cursor` back as `cursor` for the next page; `next_cursor` is null on the last page. A malformed or tampered cursor is `400 invalid_cursor`.
-         */
-        get: operations["listYearbooks"];
+        get?: never;
         put?: never;
         /**
          * Create a yearbook (and its owner profile)
-         * @description Creates the book and one owner profile whose `full_name` is the user's display name. A user owns at most 20 books (`409 limit_reached`). Unknown fields (for example `owner_id`) are rejected with `400 unknown_field`. Text fields are normalised to NFC and trimmed; control characters (Cc), format characters (Cf, except U+200D) and line/paragraph separators are rejected with `invalid_<field>`.
+         * @description Called by the signed-in user from the new-book form. Creates the book and its one owner profile, whose `full_name` is the user's display name. `title` and `language` are required; `page_size` defaults to `A5`; every other field is optional. A user owns at most 20 books (`ERROR_LIMIT_REACHED`). A new book has no photos yet, so `cover_media_id` is not accepted here (`ERROR_INVALID_MEDIA`): set the cover later with `/api/yearbook/update`. Unknown fields (for example `owner_id`) and a body that is not a JSON object are `ERROR_PARAM`. Text fields are normalised to NFC and trimmed; control characters (Cc), format characters (Cf, except U+200D) and line/paragraph separators are rejected. Not idempotent: repeating a lost request creates a second book. A request with the session cookie must come from an allowed Origin.
          */
         post: operations["createYearbook"];
         delete?: never;
@@ -262,54 +258,100 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/yearbooks/{id}": {
+    "/api/yearbook/get-list": {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                /** @description Yearbook ULID. */
-                id: string;
-            };
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the caller's yearbooks
+         * @description Called by the signed-in user (the book list). Only the caller's own books, newest `updated_at` first (editing the book or its profile moves it to the front), each with its profile. Keyset paginated: pass the `next_id` of a page back as the `next_id` query parameter to get the next one; it is the empty string on the last page. `next_id` is an opaque, tamper-evident token bound to the caller's list: a changed, truncated or foreign token (also a cursor of the old API passed as `next_id`) is `ERROR_PARAM`, and it never reveals an internal id. A `limit` outside 1..50 is `ERROR_PARAM`. Books created, edited or deleted between two pages never make the walk repeat or skip a book that stays.
+         */
+        get: operations["listYearbooks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/yearbook/get": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         /**
          * Read one yearbook with its profile
-         * @description A missing book and a book owned by someone else both answer `404 not_found`.
+         * @description Called by the signed-in user (the edit screens). A missing book and a book owned by someone else both answer `ERROR_NOT_FOUND`. A missing `id` is `ERROR_PARAM`.
          */
         get: operations["getYearbook"];
         put?: never;
         post?: never;
-        /**
-         * Delete a yearbook
-         * @description Hard-deletes the book, its profile and its stored photos. The photos are removed from object storage first; if that fails the request answers `502 storage_error` and nothing is deleted.
-         */
-        delete: operations["deleteYearbook"];
+        delete?: never;
         options?: never;
         head?: never;
-        /**
-         * Partially update a yearbook
-         * @description Only the fields present change. An empty string clears an optional text field; `graduation_year: null` clears the year. A JSON null on any other field counts as absent. Unknown fields are `400 unknown_field`.
-         */
-        patch: operations["updateYearbook"];
+        patch?: never;
         trace?: never;
     };
-    "/v1/yearbooks/{id}/profile": {
+    "/api/yearbook/update": {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                /** @description Yearbook ULID. */
-                id: string;
-            };
+            path?: never;
             cookie?: never;
         };
         get?: never;
+        put?: never;
+        /**
+         * Partially update a yearbook
+         * @description Called by the signed-in owner (the edit screen, the cover picker). Only the fields present change; an absent field stays as it is, an empty string clears an optional text field and `graduation_year: null` or `cover_media_id: null` clear them. A JSON null on any other field counts as absent. A body with only `id` changes nothing but still bumps `updated_at`. `cover_media_id` must be a photo of this very book (`ERROR_INVALID_MEDIA`). Unknown fields and a missing `id` are `ERROR_PARAM`. Text fields are normalised to NFC and trimmed; control characters (Cc), format characters (Cf, except U+200D) and line/paragraph separators are rejected. A request with the session cookie must come from an allowed Origin. Idempotent: repeating it leaves the same book (apart from `updated_at`).
+         */
+        post: operations["updateYearbook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/yearbook/update-profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
         /**
          * Replace the owner's profile information
-         * @description Replaces every field: an omitted optional field is cleared. Unknown fields (for example `is_owner`) are `400 unknown_field`. Birthday is personal data and is never logged.
+         * @description Called by the signed-in owner (the profile form, the photo picker). Replaces every profile field: an omitted optional field is cleared, so send the whole profile (the web app builds the body from the current one). `full_name` is required. `photo_media_id` must be a photo of this very book (`ERROR_INVALID_MEDIA`). The birthday is personal data and is never logged. Unknown fields (for example `is_owner`) and a missing `yearbook_id` are `ERROR_PARAM`. Text fields are normalised to NFC and trimmed; control characters (Cc), format characters (Cf, except U+200D) and line/paragraph separators are rejected. A request with the session cookie must come from an allowed Origin. Idempotent.
          */
-        put: operations["replaceYearbookProfile"];
-        post?: never;
+        post: operations["updateYearbookProfile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/yearbook/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Delete a yearbook
+         * @description Called by the signed-in owner (the edit screen). Hard-deletes the book with its profile, photos, note collections and notes. The stored files are removed from object storage first; if that fails the call answers `ERROR_STORAGE_ERROR` and nothing is deleted, so it can simply be repeated. After the files are gone one transaction removes the rows (all or nothing). Not idempotent: a book that is already deleted, a missing one and someone else's all answer `ERROR_NOT_FOUND`. A missing `id` and unknown fields are `ERROR_PARAM`. A request with the session cookie must come from an allowed Origin.
+         */
+        post: operations["deleteYearbook"];
         delete?: never;
         options?: never;
         head?: never;
@@ -504,108 +546,260 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description The signed-in account. Fields are only ever added (the username arrives with T-081). */
         User: {
             /**
-             * @description Opaque ULID.
+             * @description The account's public id, a ULID. Always present.
              * @example 01J9Z3K6V8Q4M7N2P5R8T0W1XY
              */
             id: string;
+            /** @description The normalised (trimmed, lower-cased, NFC) address. Always present. */
             email: string;
+            /** @description True once the 6-digit code was confirmed (or Google vouched for the address). Always present. */
             email_verified: boolean;
+            /** @description 1-100 characters, NFC. Always present. */
             display_name: string;
-            /** @enum {string} */
+            /**
+             * @description UI language and language of the emails: `en` English, `vi` Vietnamese. Always present.
+             * @enum {string}
+             */
             locale: "en" | "vi";
-            /** Format: date-time */
-            created_at: string;
+            /**
+             * Format: int64
+             * @description When the account was created, Unix ms. Always present.
+             */
+            created_at: number;
         };
-        UserEnvelope: {
-            user: components["schemas"]["User"];
+        UserResponse: {
+            /**
+             * @description Always `OK` on success.
+             * @constant
+             */
+            status: "OK";
+            data: components["schemas"]["User"];
         };
+        ResendVerificationResponse: {
+            /**
+             * @description Always `OK` on success.
+             * @constant
+             */
+            status: "OK";
+            /** @description What the call did. */
+            data: {
+                /** @description True when the address was already verified and nothing was sent; false when a new code was emailed. */
+                already_verified: boolean;
+            };
+        };
+        RegisterRequest: {
+            /** @description Required. Trimmed, lower-cased and normalised to Unicode NFC, so NFC and NFD spellings of one address are the same account (also at login). The local part (before the last `@`) is at most 64 bytes, and the address contains no control (Cc) or format (Cf) characters; otherwise `ERROR_INVALID_EMAIL`. */
+            email: string;
+            /**
+             * Format: password
+             * @description Required. Normalised to Unicode NFKC before the length rules (counted in characters after normalisation) and before hashing, so NFC and NFD forms of the same password are equal. Must differ from the email (case-insensitive); otherwise `ERROR_WEAK_PASSWORD`.
+             */
+            password: string;
+            /** @description Required. Normalised to Unicode NFC, then trimmed; stored and returned in that form. Control characters (Cc), format characters (Cf: zero-width space, bidi overrides and isolates, LRM/RLM, BOM) except U+200D (zero-width joiner, used in emoji sequences), and line or paragraph separators (Zl, Zp) are rejected with `ERROR_INVALID_DISPLAY_NAME`. */
+            display_name: string;
+            /**
+             * @description Optional. The student's UI language; it selects the language of the verification email. Absent or `null` means `en`; any other value (including another case such as `VI`, or a non-string) is `ERROR_INVALID_LOCALE` and nothing is created.
+             * @default en
+             * @enum {string|null}
+             */
+            locale: "en" | "vi" | null;
+        };
+        LoginRequest: {
+            /** @description Required. Trimmed, lower-cased and NFC-normalised as at registration, so either Unicode spelling signs in. */
+            email: string;
+            /**
+             * Format: password
+             * @description Required. Normalised to Unicode NFKC before verification, exactly as at registration.
+             */
+            password: string;
+        };
+        VerifyEmailRequest: {
+            /**
+             * @description Required. The 6-digit code from the verification email; anything else is `ERROR_INVALID_CODE`.
+             * @example 042917
+             */
+            code: string;
+        };
+        ForgotPasswordRequest: {
+            /** @description Required. Trimmed, lower-cased and NFC-normalised like at login. */
+            email: string;
+        };
+        ResetPasswordRequest: {
+            /** @description Required. The address the reset code was sent to, normalised like at login. */
+            email: string;
+            /**
+             * @description Required. The 6-digit code from the reset email, valid 15 minutes.
+             * @example 042917
+             */
+            code: string;
+            /**
+             * Format: password
+             * @description Required. The new password; same rules as at registration (NFKC, 10-128 characters, not the email).
+             */
+            password: string;
+        };
+        /** @description The owner's profile page information of one yearbook. */
         Profile: {
-            /** @description Opaque ULID. */
+            /** @description Profile ULID. */
             id: string;
+            /** @description Always true: this is the profile of the book's owner. */
             is_owner: boolean;
+            /** @description The name on the profile page, 1 to 100 characters. A new book starts with the user's display name. */
             full_name: string;
-            /** @description Empty when not set. */
+            /** @description Up to 50 characters; the empty string when not set. */
             nickname: string;
-            /** Format: date */
+            /**
+             * Format: date
+             * @description `YYYY-MM-DD` calendar date (not an instant, so not Unix ms); null when not set.
+             */
             birthday: string | null;
+            /** @description Up to 500 characters; the empty string when not set. */
             quote: string;
+            /** @description Up to 300 characters; the empty string when not set. */
             hobbies: string;
+            /** @description Up to 300 characters; the empty string when not set. */
             future_plans: string;
-            /** @description A photo of this yearbook */
+            /** @description Photo ULID (a photo of this yearbook) shown on the profile page, or null. */
             photo_media_id: string | null;
         };
+        /** @description A yearbook with its owner profile. Carries no internal id. */
         Yearbook: {
-            /**
-             * @description Opaque ULID.
-             * @example 01J9Z3K6V8Q4M7N2P5R8T0W1XY
-             */
+            /** @description Yearbook ULID; use it as `id` or `yearbook_id` of the other calls. */
             id: string;
+            /** @description 1 to 120 characters. */
             title: string;
-            /** @description Empty when not set. */
+            /** @description Up to 120 characters; the empty string when not set. */
             school_name: string;
-            /** @description Empty when not set. */
+            /** @description Up to 120 characters; the empty string when not set. */
             class_name: string;
+            /** @description Year from 1950 to 2100; null when not set. */
             graduation_year: number | null;
+            /** @description Up to 200 characters; the empty string when not set. */
             motto: string;
-            /** @enum {string} */
+            /**
+             * @description Language of the book's pages: `en` English, `vi` Vietnamese.
+             * @enum {string}
+             */
             language: "en" | "vi";
-            /** @enum {string} */
+            /**
+             * @description Paper size of the printed book: `A5` (default), `A4` or `Letter`.
+             * @enum {string}
+             */
             page_size: "A5" | "A4" | "Letter";
-            /** @description Null until a template is chosen. */
+            /** @description Template ULID; null until a template is chosen. */
             template_id: string | null;
-            /** @description A photo of this yearbook */
+            /** @description Photo ULID (a photo of this yearbook) used as the cover, or null. */
             cover_media_id: string | null;
-            /** Format: date-time */
-            created_at: string;
-            /** Format: date-time */
-            updated_at: string;
+            /**
+             * Format: int64
+             * @description Creation time, Unix ms.
+             */
+            created_at: number;
+            /**
+             * Format: int64
+             * @description Last edit of the book or its profile, Unix ms; the list is ordered by it.
+             */
+            updated_at: number;
             profile: components["schemas"]["Profile"];
         };
-        YearbookEnvelope: {
-            yearbook: components["schemas"]["Yearbook"];
+        YearbookResponse: {
+            /**
+             * @description Always `OK` on success.
+             * @constant
+             */
+            status: "OK";
+            data: components["schemas"]["Yearbook"];
         };
-        YearbookCreate: {
+        YearbookListResponse: {
+            /**
+             * @description Always `OK` on success.
+             * @constant
+             */
+            status: "OK";
+            /** @description One page of yearbooks. */
+            data: {
+                /** @description The books of this page, newest `updated_at` first; an empty array when the user has none. */
+                items: components["schemas"]["Yearbook"][];
+                /** @description Opaque page token for the next page; the empty string on the last page. */
+                next_id: string;
+            };
+        };
+        YearbookCreateRequest: {
+            /** @description Required. 1 to 120 characters after trimming. */
             title: string;
+            /** @description Optional, up to 120 characters; default empty. */
             school_name?: string;
+            /** @description Optional, up to 120 characters; default empty. */
             class_name?: string;
+            /** @description Optional, 1950 to 2100; default null. */
             graduation_year?: number | null;
+            /** @description Optional, up to 200 characters; default empty. */
             motto?: string;
-            /** @enum {string} */
+            /**
+             * @description Required. `en` English or `vi` Vietnamese.
+             * @enum {string}
+             */
             language: "en" | "vi";
             /**
+             * @description Optional paper size, default `A5`.
              * @default A5
              * @enum {string}
              */
             page_size: "A5" | "A4" | "Letter";
         };
-        YearbookPatch: {
+        YearbookUpdateRequest: {
+            /** @description Required. ULID of the yearbook to change. */
+            id: string;
+            /** @description Optional. 1 to 120 characters after trimming; absent = unchanged. */
             title?: string;
+            /** @description Optional, up to 120 characters; the empty string clears it; absent = unchanged. */
             school_name?: string;
+            /** @description Optional, up to 120 characters; the empty string clears it; absent = unchanged. */
             class_name?: string;
+            /** @description Optional, 1950 to 2100; null clears it; absent = unchanged. */
             graduation_year?: number | null;
+            /** @description Optional, up to 200 characters; the empty string clears it; absent = unchanged. */
             motto?: string;
-            /** @enum {string} */
+            /**
+             * @description Optional. `en` or `vi`; absent = unchanged.
+             * @enum {string}
+             */
             language?: "en" | "vi";
-            /** @enum {string} */
+            /**
+             * @description Optional paper size; absent = unchanged.
+             * @enum {string}
+             */
             page_size?: "A5" | "A4" | "Letter";
-            /** @description A photo of this yearbook (else `400 invalid_media`); null clears it. */
+            /** @description Optional. Photo ULID, which must be a photo of this yearbook (else `ERROR_INVALID_MEDIA`); null clears the cover; absent = unchanged. */
             cover_media_id?: string | null;
         };
-        ProfileInput: {
+        YearbookUpdateProfileRequest: {
+            /** @description Required. ULID of the yearbook whose profile is replaced. */
+            yearbook_id: string;
+            /** @description Required. 1 to 100 characters after trimming. */
             full_name: string;
+            /** @description Optional, up to 50 characters; omitted = cleared. */
             nickname?: string;
             /**
              * Format: date
-             * @description YYYY-MM-DD, a real date strictly before today (UTC) and not before 1900-01-01.
+             * @description Optional `YYYY-MM-DD`, a real date strictly before today (UTC) and not before 1900-01-01; omitted or null = cleared.
              */
             birthday?: string | null;
+            /** @description Optional, up to 500 characters; omitted = cleared. */
             quote?: string;
+            /** @description Optional, up to 300 characters; omitted = cleared. */
             hobbies?: string;
+            /** @description Optional, up to 300 characters; omitted = cleared. */
             future_plans?: string;
-            /** @description A photo of this yearbook (else `400 invalid_media`). Like every field of this replacing PUT */
+            /** @description Optional. Photo ULID, which must be a photo of this yearbook (else `ERROR_INVALID_MEDIA`); omitted or null = cleared. */
             photo_media_id?: string | null;
+        };
+        YearbookDeleteRequest: {
+            /** @description Required. ULID of the yearbook to delete. */
+            id: string;
         };
         /** @description A stored photo. Carries no storage key, hash or URL; the client builds the content URL from `id`. */
         Media: {
@@ -845,39 +1039,14 @@ export interface components {
                 id: string;
             };
         };
-        /** @description Shared error envelope. `code` is a stable snake_case contract (clients localise it); `message` is English text meant for logs. */
+        /** @description Error envelope of the infrastructure probes only (/readyz, and the 404/405 of unknown root paths). Business routes use ApiError. `code` is a stable snake_case name; `message` is English text meant for logs. */
         Error: {
             error: {
                 /**
                  * @example not_found
                  * @example method_not_allowed
-                 * @example payload_too_large
                  * @example internal_error
                  * @example not_ready
-                 * @example invalid_credentials
-                 * @example unauthenticated
-                 * @example rate_limited
-                 * @example invalid_code
-                 * @example code_expired
-                 * @example code_locked
-                 * @example code_store_unavailable
-                 * @example session_store_unavailable
-                 * @example limiter_unavailable
-                 * @example limit_reached
-                 * @example unknown_field
-                 * @example unsupported_media_type
-                 * @example invalid_image
-                 * @example quota_exceeded
-                 * @example storage_error
-                 * @example invalid_media
-                 * @example missing_answer
-                 * @example invalid_answer
-                 * @example too_many_photos
-                 * @example collection_full
-                 * @example collection_closed
-                 * @example verification_failed
-                 * @example busy
-                 * @example request_timeout
                  */
                 code: string;
                 message: string;
@@ -887,130 +1056,6 @@ export interface components {
         };
     };
     responses: {
-        /** @description No, unknown or expired session (`unauthenticated`). */
-        Unauthenticated: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["Error"];
-            };
-        };
-        /** @description The yearbook does not exist or belongs to someone else (`not_found`); the two cannot be told apart. */
-        YearbookNotFound: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["Error"];
-            };
-        };
-        /** @description `invalid_<field>` (title, school_name, class_name, graduation_year, motto, language, page_size, full_name, nickname, birthday, quote, hobbies, future_plans, limit, cursor, media: a `*_media_id` that is not a photo of this yearbook), `unknown_field` or `invalid_body`. */
-        YearbookInvalid: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["Error"];
-            };
-        };
-        /** @description The request carries the session cookie but its Origin (or Referer) is missing or not allowed (`csrf_origin_mismatch`). */
-        CsrfOriginMismatch: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["Error"];
-            };
-        };
-        /** @description Body over the 1 MiB cap (`payload_too_large`). */
-        PayloadTooLarge: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["Error"];
-            };
-        };
-        /** @description A body was sent with a Content-Type other than application/json (`unsupported_media_type`). */
-        UnsupportedMediaType: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["Error"];
-            };
-        };
-        /** @description Too many attempts (`rate_limited`). */
-        RateLimited: {
-            headers: {
-                /** @description Seconds until the oldest counted attempt leaves the window. */
-                "Retry-After"?: number;
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["Error"];
-            };
-        };
-        /** @description The object store failed (`storage_error`); nothing was changed, retry later. */
-        StorageError: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["Error"];
-            };
-        };
-        /** @description Redis, which holds the email codes, did not answer (`code_store_unavailable`), or the rate limiter that guards sign-in, verification and reset did (`limiter_unavailable`); nothing was accepted, retry shortly. */
-        CodeStoreUnavailable: {
-            headers: {
-                "Retry-After"?: number;
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["Error"];
-            };
-        };
-        /** @description Redis, which holds the login sessions, did not answer (`session_store_unavailable`). Sessions have no copy elsewhere, so the request fails closed: the caller is not treated as anonymous and no session is created. Retry after `Retry-After`. */
-        SessionStoreUnavailable: {
-            headers: {
-                "Retry-After"?: number;
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["Error"];
-            };
-        };
-        /** @description All password-hashing slots stayed taken (`busy`), or the session store is down (`session_store_unavailable`; for register no account is created); retry after `Retry-After`. */
-        BusyOrSessionStore: {
-            headers: {
-                "Retry-After"?: number;
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["Error"];
-            };
-        };
-        /** @description Redis did not answer: `code_store_unavailable` (nothing was accepted) or `session_store_unavailable` (the session could not be read); retry shortly. */
-        CodeOrSessionStoreUnavailable: {
-            headers: {
-                "Retry-After"?: number;
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["Error"];
-            };
-        };
-        /** @description All password-hashing or image-processing slots stayed taken for a few seconds, or (public note submission) the upload slots are full (`busy`); retry after `Retry-After`. */
-        Busy: {
-            headers: {
-                "Retry-After"?: number;
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["Error"];
-            };
-        };
         /** @description No route matches this path. Error code `not_found`. */
         NotFound: {
             headers: {
@@ -1152,6 +1197,17 @@ export interface components {
                 "application/json": components["schemas"]["ApiError"];
             };
         };
+        /** @description A Redis-backed store or the hashing pool could not serve the request, so it failed closed and nothing was accepted: `ERROR_BUSY`, `ERROR_LIMITER_UNAVAILABLE`, `ERROR_CODE_STORE_UNAVAILABLE` or `ERROR_SESSION_STORE_UNAVAILABLE`. Retry after `Retry-After`. */
+        ApiAuthUnavailable: {
+            headers: {
+                /** @description Seconds to wait before retrying. */
+                "Retry-After"?: number;
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ApiError"];
+            };
+        };
         /** @description Redis, which holds the login sessions, did not answer (`ERROR_SESSION_STORE_UNAVAILABLE`). Sessions have no copy elsewhere, so the request fails closed. Retry after `Retry-After`. */
         ApiSessionStoreUnavailable: {
             headers: {
@@ -1241,59 +1297,28 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": {
-                    /** @description Trimmed, lower-cased and normalised to Unicode NFC, so NFC and NFD spellings of one address are the same account (also at login). The local part (before the last `@`) is at most 64 bytes, and the address contains no control (Cc) or format (Cf) characters; otherwise `invalid_email`. */
-                    email: string;
-                    /**
-                     * Format: password
-                     * @description Normalised to Unicode NFKC before the length rules (counted in characters after normalisation) and before hashing, so NFC and NFD forms of the same password are equal.
-                     */
-                    password: string;
-                    /** @description Normalised to Unicode NFC, then trimmed; stored and returned in that form. Control characters (Cc), format characters (Cf: zero-width space, bidi overrides and isolates, LRM/RLM, BOM) except U+200D (zero-width joiner, used in emoji sequences), and line or paragraph separators (Zl, Zp) are rejected with `invalid_display_name`. */
-                    display_name: string;
-                    /**
-                     * @description The student's UI language; it becomes `user_tab.locale` and selects the language of the verification email. Absent or `null` means `en`; any other value (including another case such as `VI`, or a non-string) is `400 invalid_locale` and nothing is created.
-                     * @default en
-                     * @enum {string|null}
-                     */
-                    locale?: "en" | "vi" | null;
-                };
+                "application/json": components["schemas"]["RegisterRequest"];
             };
         };
         responses: {
             /** @description Account created; the session cookie is set. */
-            201: {
+            200: {
                 headers: {
                     "Set-Cookie": components["headers"]["SessionCookie"];
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserEnvelope"];
+                    "application/json": components["schemas"]["UserResponse"];
                 };
             };
-            /** @description `invalid_email`, `weak_password`, `invalid_display_name`, `invalid_locale` or `invalid_body`. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            403: components["responses"]["CsrfOriginMismatch"];
-            /** @description Email already registered (`email_taken`). */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            413: components["responses"]["PayloadTooLarge"];
-            415: components["responses"]["UnsupportedMediaType"];
-            429: components["responses"]["RateLimited"];
-            503: components["responses"]["BusyOrSessionStore"];
+            400: components["responses"]["ApiBadRequest"];
+            403: components["responses"]["ApiForbidden"];
+            409: components["responses"]["ApiConflict"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            429: components["responses"]["ApiRateLimited"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiAuthUnavailable"];
         };
     };
     login: {
@@ -1305,15 +1330,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": {
-                    /** @description Trimmed, lower-cased and NFC-normalised as at registration, so either Unicode spelling signs in. */
-                    email: string;
-                    /**
-                     * Format: password
-                     * @description Normalised to Unicode NFKC before verification, exactly as at registration.
-                     */
-                    password: string;
-                };
+                "application/json": components["schemas"]["LoginRequest"];
             };
         };
         responses: {
@@ -1324,41 +1341,25 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserEnvelope"];
+                    "application/json": components["schemas"]["UserResponse"];
                 };
             };
-            /** @description Malformed body (`invalid_body`). */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description Wrong email or password (`invalid_credentials`). */
+            400: components["responses"]["ApiBadRequest"];
+            /** @description Wrong email or password (`ERROR_INVALID_CREDENTIALS`). */
             401: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["ApiError"];
                 };
             };
-            403: components["responses"]["CsrfOriginMismatch"];
-            413: components["responses"]["PayloadTooLarge"];
-            415: components["responses"]["UnsupportedMediaType"];
-            429: components["responses"]["RateLimited"];
-            /** @description `busy` (all password-hashing slots stayed taken), `session_store_unavailable` (no session could be created) or `limiter_unavailable` (the sign-in lockout counters in Redis did not answer, so the attempt fails closed); retry after `Retry-After`. */
-            503: {
-                headers: {
-                    "Retry-After"?: number;
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
+            403: components["responses"]["ApiForbidden"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            429: components["responses"]["ApiRateLimited"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiAuthUnavailable"];
         };
     };
     logout: {
@@ -1371,17 +1372,20 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Signed out; the cookie is cleared. */
-            204: {
+            200: {
                 headers: {
                     /** @description smem_session with an empty value and a negative Max-Age. */
                     "Set-Cookie"?: string;
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["EmptyResponse"];
+                };
             };
-            403: components["responses"]["CsrfOriginMismatch"];
-            415: components["responses"]["UnsupportedMediaType"];
-            503: components["responses"]["SessionStoreUnavailable"];
+            403: components["responses"]["ApiForbidden"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
         };
     };
     verifyEmail: {
@@ -1393,47 +1397,30 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": {
-                    /** @example 042917 */
-                    code: string;
-                };
+                "application/json": components["schemas"]["VerifyEmailRequest"];
             };
         };
         responses: {
             /** @description The address is verified (`email_verified` is now true) and the code is used. */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description `invalid_code`, `code_expired`, `code_locked` or `invalid_body`. */
-            400: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["EmptyResponse"];
                 };
             };
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["CsrfOriginMismatch"];
-            413: components["responses"]["PayloadTooLarge"];
-            415: components["responses"]["UnsupportedMediaType"];
-            429: components["responses"]["RateLimited"];
-            /** @description `code_store_unavailable`, `session_store_unavailable` or `limiter_unavailable` (the code-guess counter in Redis did not answer, so the attempt fails closed); retry after `Retry-After`. */
-            503: {
-                headers: {
-                    "Retry-After"?: number;
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            429: components["responses"]["ApiRateLimited"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiAuthUnavailable"];
         };
     };
-    resendVerificationEmail: {
+    resendVerification: {
         parameters: {
             query?: never;
             header?: never;
@@ -1442,32 +1429,21 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The address was already verified; nothing was sent. */
+            /** @description The email was sent, or the address was already verified and nothing was sent. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** @constant */
-                        already_verified: true;
-                    };
+                    "application/json": components["schemas"]["ResendVerificationResponse"];
                 };
             };
-            /** @description The email was sent. A mailer failure is `500 internal_error` (and is logged without the code). */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": Record<string, never>;
-                };
-            };
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["CsrfOriginMismatch"];
-            415: components["responses"]["UnsupportedMediaType"];
-            429: components["responses"]["RateLimited"];
-            503: components["responses"]["CodeOrSessionStoreUnavailable"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            429: components["responses"]["ApiRateLimited"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiAuthUnavailable"];
         };
     };
     forgotPassword: {
@@ -1479,34 +1455,25 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": {
-                    email: string;
-                };
+                "application/json": components["schemas"]["ForgotPasswordRequest"];
             };
         };
         responses: {
-            /** @description Accepted. */
-            202: {
+            /** @description Accepted; a code was sent if the account exists. */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["EmptyResponse"];
                 };
             };
-            /** @description `invalid_email` or `invalid_body`. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            403: components["responses"]["CsrfOriginMismatch"];
-            413: components["responses"]["PayloadTooLarge"];
-            415: components["responses"]["UnsupportedMediaType"];
-            429: components["responses"]["RateLimited"];
+            400: components["responses"]["ApiBadRequest"];
+            403: components["responses"]["ApiForbidden"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            429: components["responses"]["ApiRateLimited"];
+            500: components["responses"]["ApiInternal"];
         };
     };
     resetPassword: {
@@ -1518,50 +1485,32 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": {
-                    email: string;
-                    /** @example 042917 */
-                    code: string;
-                    /** Format: password */
-                    password: string;
-                };
+                "application/json": components["schemas"]["ResetPasswordRequest"];
             };
         };
         responses: {
             /** @description Password changed; all sessions are gone. */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description `invalid_email`, `invalid_code`, `code_expired`, `code_locked`, `weak_password` or `invalid_body`. */
-            400: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["EmptyResponse"];
                 };
             };
-            403: components["responses"]["CsrfOriginMismatch"];
-            413: components["responses"]["PayloadTooLarge"];
-            415: components["responses"]["UnsupportedMediaType"];
-            429: components["responses"]["RateLimited"];
-            /** @description `busy` (all password-hashing slots stayed taken; the code is already used, ask for a new one), `code_store_unavailable`, `limiter_unavailable` (the code-guess counter in Redis did not answer, so the attempt fails closed) or `session_store_unavailable` (the sessions could not be deleted, so the password was not changed either). */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
+            400: components["responses"]["ApiBadRequest"];
+            403: components["responses"]["ApiForbidden"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            429: components["responses"]["ApiRateLimited"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiAuthUnavailable"];
         };
     };
     googleStart: {
         parameters: {
             query?: {
+                /** @description Same-site path to go to after sign-in, for example `/yearbooks`. Default and fallback `/`. */
                 return_to?: string;
             };
             header?: never;
@@ -1573,6 +1522,7 @@ export interface operations {
             /** @description To Google (or to `/login?error=oidc_failed`). */
             302: {
                 headers: {
+                    /** @description Google's authorization URL, or `/login?error=oidc_failed`. */
                     Location?: string;
                     /** @description `smem_oidc`, valid 10 minutes. */
                     "Set-Cookie"?: string;
@@ -1580,15 +1530,18 @@ export interface operations {
                 };
                 content?: never;
             };
-            404: components["responses"]["NotFound"];
-            429: components["responses"]["RateLimited"];
+            404: components["responses"]["ApiNotFound"];
+            429: components["responses"]["ApiRateLimited"];
         };
     };
     googleCallback: {
         parameters: {
             query?: {
+                /** @description Authorization code from Google. */
                 code?: string;
+                /** @description The `state` we sent to Google; must equal the one in the `smem_oidc` cookie. */
                 state?: string;
+                /** @description Set by Google when the user refused or the request failed; its text is never logged. */
                 error?: string;
             };
             header?: never;
@@ -1600,6 +1553,7 @@ export interface operations {
             /** @description To `return_to` (signed in) or to `/login?error=<code>`. */
             302: {
                 headers: {
+                    /** @description The `return_to` path, or `/login?error=<code>`. */
                     Location?: string;
                     /** @description `smem_session` on success; `smem_oidc` is always cleared. */
                     "Set-Cookie"?: string;
@@ -1607,8 +1561,8 @@ export interface operations {
                 };
                 content?: never;
             };
-            404: components["responses"]["NotFound"];
-            429: components["responses"]["RateLimited"];
+            404: components["responses"]["ApiNotFound"];
+            429: components["responses"]["ApiRateLimited"];
         };
     };
     getMe: {
@@ -1628,50 +1582,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserEnvelope"];
+                    "application/json": components["schemas"]["UserResponse"];
                 };
             };
-            /** @description No, unknown or expired session (`unauthenticated`). */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            503: components["responses"]["SessionStoreUnavailable"];
-        };
-    };
-    listYearbooks: {
-        parameters: {
-            query?: {
-                /** @description Out of range or not a number: `400 invalid_limit`. */
-                limit?: number;
-                /** @description Opaque token from a previous page. */
-                cursor?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A page of books (each with its profile). */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        yearbooks: components["schemas"]["Yearbook"][];
-                        next_cursor: string | null;
-                    };
-                };
-            };
-            400: components["responses"]["YearbookInvalid"];
-            401: components["responses"]["Unauthenticated"];
-            503: components["responses"]["SessionStoreUnavailable"];
+            401: components["responses"]["ApiUnauthorized"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
         };
     };
     createYearbook: {
@@ -1683,44 +1599,66 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["YearbookCreate"];
+                "application/json": components["schemas"]["YearbookCreateRequest"];
             };
         };
         responses: {
-            /** @description Created. */
-            201: {
+            /** @description The new book, with its profile. */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["YearbookEnvelope"];
+                    "application/json": components["schemas"]["YearbookResponse"];
                 };
             };
-            400: components["responses"]["YearbookInvalid"];
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["CsrfOriginMismatch"];
-            /** @description The user already owns 20 yearbooks (`limit_reached`). */
-            409: {
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            409: components["responses"]["ApiConflict"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    listYearbooks: {
+        parameters: {
+            query?: {
+                /** @description Page size, default 20, maximum 50. */
+                limit?: number;
+                /** @description Opaque token from the previous page; omit it for the first page. */
+                next_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of books. */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["YearbookListResponse"];
                 };
             };
-            413: components["responses"]["PayloadTooLarge"];
-            415: components["responses"]["UnsupportedMediaType"];
-            503: components["responses"]["SessionStoreUnavailable"];
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
         };
     };
     getYearbook: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
                 /** @description Yearbook ULID. */
                 id: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -1731,53 +1669,26 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["YearbookEnvelope"];
+                    "application/json": components["schemas"]["YearbookResponse"];
                 };
             };
-            401: components["responses"]["Unauthenticated"];
-            404: components["responses"]["YearbookNotFound"];
-            503: components["responses"]["SessionStoreUnavailable"];
-        };
-    };
-    deleteYearbook: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Yearbook ULID. */
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Deleted. */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["CsrfOriginMismatch"];
-            404: components["responses"]["YearbookNotFound"];
-            502: components["responses"]["StorageError"];
-            503: components["responses"]["SessionStoreUnavailable"];
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            404: components["responses"]["ApiNotFound"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
         };
     };
     updateYearbook: {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                /** @description Yearbook ULID. */
-                id: string;
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["YearbookPatch"];
+                "application/json": components["schemas"]["YearbookUpdateRequest"];
             };
         };
         responses: {
@@ -1787,31 +1698,29 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["YearbookEnvelope"];
+                    "application/json": components["schemas"]["YearbookResponse"];
                 };
             };
-            400: components["responses"]["YearbookInvalid"];
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["CsrfOriginMismatch"];
-            404: components["responses"]["YearbookNotFound"];
-            413: components["responses"]["PayloadTooLarge"];
-            415: components["responses"]["UnsupportedMediaType"];
-            503: components["responses"]["SessionStoreUnavailable"];
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
         };
     };
-    replaceYearbookProfile: {
+    updateYearbookProfile: {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                /** @description Yearbook ULID. */
-                id: string;
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ProfileInput"];
+                "application/json": components["schemas"]["YearbookUpdateProfileRequest"];
             };
         };
         responses: {
@@ -1821,16 +1730,50 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["YearbookEnvelope"];
+                    "application/json": components["schemas"]["YearbookResponse"];
                 };
             };
-            400: components["responses"]["YearbookInvalid"];
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["CsrfOriginMismatch"];
-            404: components["responses"]["YearbookNotFound"];
-            413: components["responses"]["PayloadTooLarge"];
-            415: components["responses"]["UnsupportedMediaType"];
-            503: components["responses"]["SessionStoreUnavailable"];
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    deleteYearbook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["YearbookDeleteRequest"];
+            };
+        };
+        responses: {
+            /** @description Deleted. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmptyResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            500: components["responses"]["ApiInternal"];
+            502: components["responses"]["ApiBadGateway"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
         };
     };
     createMedia: {
