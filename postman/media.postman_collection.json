@@ -200,13 +200,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks",
+              "raw": "{{baseUrl}}/api/yearbook/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks"
+                "api",
+                "yearbook",
+                "create"
               ]
             },
             "body": {
@@ -220,8 +221,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 201', () => pm.response.to.have.status(201));",
-                  "pm.collectionVariables.set('bookId', pm.response.json().yearbook.id);"
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('bookId', pm.response.json().data.id);"
                 ]
               }
             }
@@ -664,7 +665,7 @@
         {
           "name": "8. A sets the cover and the profile photo",
           "request": {
-            "method": "PATCH",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -680,19 +681,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}",
+              "raw": "{{baseUrl}}/api/yearbook/update",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}"
+                "api",
+                "yearbook",
+                "update"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"cover_media_id\":\"{{mediaId}}\"}"
+              "raw": "{\"id\":\"{{bookId}}\",\"cover_media_id\":\"{{mediaId}}\"}"
             }
           },
           "event": [
@@ -702,7 +703,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('cover set', () => pm.expect(pm.response.json().yearbook.cover_media_id).to.eql(pm.collectionVariables.get('mediaId')));"
+                  "pm.test('cover set', () => pm.expect(pm.response.json().data.cover_media_id).to.eql(pm.collectionVariables.get('mediaId')));"
                 ]
               }
             }
@@ -711,7 +712,7 @@
         {
           "name": "9. A sets the profile photo",
           "request": {
-            "method": "PUT",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -727,20 +728,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/profile",
+              "raw": "{{baseUrl}}/api/yearbook/update-profile",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "profile"
+                "api",
+                "yearbook",
+                "update-profile"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"full_name\":\"Newman A\",\"photo_media_id\":\"{{mediaId}}\"}"
+              "raw": "{\"yearbook_id\":\"{{bookId}}\",\"full_name\":\"Newman A\",\"photo_media_id\":\"{{mediaId}}\"}"
             }
           },
           "event": [
@@ -750,7 +750,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('photo set', () => pm.expect(pm.response.json().yearbook.profile.photo_media_id).to.eql(pm.collectionVariables.get('mediaId')));"
+                  "pm.test('photo set', () => pm.expect(pm.response.json().data.profile.photo_media_id).to.eql(pm.collectionVariables.get('mediaId')));"
                 ]
               }
             }
@@ -1043,14 +1043,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}",
+              "raw": "{{baseUrl}}/api/yearbook/get?id={{bookId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}"
+                "api",
+                "yearbook",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{bookId}}"
+                }
               ]
             }
           },
@@ -1061,7 +1067,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('cleared', () => { const b = pm.response.json().yearbook; pm.expect(b.cover_media_id).to.eql(null); pm.expect(b.profile.photo_media_id).to.eql(null); });"
+                  "pm.test('cleared', () => { const b = pm.response.json().data; pm.expect(b.cover_media_id).to.eql(null); pm.expect(b.profile.photo_media_id).to.eql(null); });"
                 ]
               }
             }
@@ -1552,7 +1558,7 @@
         {
           "name": "27. A deletes the yearbook (its photos go with it)",
           "request": {
-            "method": "DELETE",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -1561,18 +1567,26 @@
               {
                 "key": "Origin",
                 "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}",
+              "raw": "{{baseUrl}}/api/yearbook/delete",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}"
+                "api",
+                "yearbook",
+                "delete"
               ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{bookId}}\"}"
             }
           },
           "event": [
@@ -1581,7 +1595,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 204', () => pm.response.to.have.status(204));"
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
                 ]
               }
             }
@@ -1652,13 +1666,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks",
+              "raw": "{{baseUrl}}/api/yearbook/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks"
+                "api",
+                "yearbook",
+                "create"
               ]
             },
             "body": {
@@ -1672,8 +1687,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 201', () => pm.response.to.have.status(201));",
-                  "pm.collectionVariables.set('bookId', pm.response.json().yearbook.id);"
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('bookId', pm.response.json().data.id);"
                 ]
               }
             }
@@ -1698,13 +1713,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks",
+              "raw": "{{baseUrl}}/api/yearbook/create",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks"
+                "api",
+                "yearbook",
+                "create"
               ]
             },
             "body": {
@@ -1718,8 +1734,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 201', () => pm.response.to.have.status(201));",
-                  "pm.collectionVariables.set('bookIdB', pm.response.json().yearbook.id);"
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('bookIdB', pm.response.json().data.id);"
                 ]
               }
             }
@@ -2578,7 +2594,7 @@
         {
           "name": "E18. A cannot use B's photo as a cover - 400",
           "request": {
-            "method": "PATCH",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -2594,19 +2610,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}",
+              "raw": "{{baseUrl}}/api/yearbook/update",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}"
+                "api",
+                "yearbook",
+                "update"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"cover_media_id\":\"{{mediaIdB}}\"}"
+              "raw": "{\"id\":\"{{bookId}}\",\"cover_media_id\":\"{{mediaIdB}}\"}"
             }
           },
           "event": [
@@ -2616,7 +2632,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_media', () => pm.expect(pm.response.json().error.code).to.eql('invalid_media'));"
+                  "pm.test('error code ERROR_INVALID_MEDIA', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_MEDIA'));"
                 ]
               }
             }
@@ -2625,7 +2641,7 @@
         {
           "name": "E19. A cannot use B's photo as a profile photo - 400",
           "request": {
-            "method": "PUT",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -2641,20 +2657,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}/profile",
+              "raw": "{{baseUrl}}/api/yearbook/update-profile",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}",
-                "profile"
+                "api",
+                "yearbook",
+                "update-profile"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"full_name\":\"Newman A\",\"photo_media_id\":\"{{mediaIdB}}\"}"
+              "raw": "{\"yearbook_id\":\"{{bookId}}\",\"full_name\":\"Newman A\",\"photo_media_id\":\"{{mediaIdB}}\"}"
             }
           },
           "event": [
@@ -2664,7 +2679,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_media', () => pm.expect(pm.response.json().error.code).to.eql('invalid_media'));"
+                  "pm.test('error code ERROR_INVALID_MEDIA', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_MEDIA'));"
                 ]
               }
             }
@@ -2673,7 +2688,7 @@
         {
           "name": "E20. Unknown media id as cover - 400",
           "request": {
-            "method": "PATCH",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -2689,19 +2704,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}",
+              "raw": "{{baseUrl}}/api/yearbook/update",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}"
+                "api",
+                "yearbook",
+                "update"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"cover_media_id\":\"01ARZ3NDEKTSV4RRFFQ69G5FAV\"}"
+              "raw": "{\"id\":\"{{bookId}}\",\"cover_media_id\":\"01ARZ3NDEKTSV4RRFFQ69G5FAV\"}"
             }
           },
           "event": [
@@ -2711,7 +2726,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "pm.test('error code invalid_media', () => pm.expect(pm.response.json().error.code).to.eql('invalid_media'));"
+                  "pm.test('error code ERROR_INVALID_MEDIA', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_MEDIA'));"
                 ]
               }
             }
@@ -3532,7 +3547,7 @@
         {
           "name": "E37. Clean up: A deletes the yearbook",
           "request": {
-            "method": "DELETE",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -3541,18 +3556,26 @@
               {
                 "key": "Origin",
                 "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookId}}",
+              "raw": "{{baseUrl}}/api/yearbook/delete",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookId}}"
+                "api",
+                "yearbook",
+                "delete"
               ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{bookId}}\"}"
             }
           },
           "event": [
@@ -3561,7 +3584,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 204', () => pm.response.to.have.status(204));"
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
                 ]
               }
             }
@@ -3570,7 +3593,7 @@
         {
           "name": "E38. Clean up: B deletes the yearbook",
           "request": {
-            "method": "DELETE",
+            "method": "POST",
             "header": [
               {
                 "key": "Cookie",
@@ -3579,18 +3602,26 @@
               {
                 "key": "Origin",
                 "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/yearbooks/{{bookIdB}}",
+              "raw": "{{baseUrl}}/api/yearbook/delete",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "v1",
-                "yearbooks",
-                "{{bookIdB}}"
+                "api",
+                "yearbook",
+                "delete"
               ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{bookIdB}}\"}"
             }
           },
           "event": [
@@ -3599,7 +3630,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 204', () => pm.response.to.have.status(204));"
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
                 ]
               }
             }

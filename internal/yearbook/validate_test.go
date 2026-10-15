@@ -2,23 +2,23 @@ package yearbook
 
 import (
 	"encoding/json"
-	"errors"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/danyaa666/smemories/internal/apperr"
 )
 
 func code(err error) string {
-	var ve ValidationError
-	if errors.As(err, &ve) {
-		return ve.Code
+	if err == nil {
+		return ""
 	}
-	return ""
+	return apperr.CodeOf(err).Name
 }
 
-func parseBook(t *testing.T, js string) bookInput {
+func parseBook(t *testing.T, js string) BookInput {
 	t.Helper()
-	var in bookInput
+	var in BookInput
 	if err := json.Unmarshal([]byte(js), &in); err != nil {
 		t.Fatal(err)
 	}
@@ -38,17 +38,17 @@ func TestBookBoundaries(t *testing.T) {
 		{"motto", "motto", maxMotto, 0},
 	}
 	for _, tc := range tests {
-		mk := func(v string) bookInput {
+		mk := func(v string) BookInput {
 			b, _ := json.Marshal(map[string]string{tc.field: v})
 			return parseBook(t, string(b))
 		}
 		if err := mk(rep(tc.max)).applyTo(&Yearbook{}); err != nil {
 			t.Errorf("%s at max: %v", tc.field, err)
 		}
-		if got := code(mk(rep(tc.max + 1)).applyTo(&Yearbook{})); got != "invalid_"+tc.field {
+		if got := code(mk(rep(tc.max + 1)).applyTo(&Yearbook{})); got != "ERROR_INVALID_"+strings.ToUpper(tc.field) {
 			t.Errorf("%s over max: %q", tc.field, got)
 		}
-		if got := code(mk("a\x07b").applyTo(&Yearbook{})); got != "invalid_"+tc.field {
+		if got := code(mk("a\x07b").applyTo(&Yearbook{})); got != "ERROR_INVALID_"+strings.ToUpper(tc.field) {
 			t.Errorf("%s control char: %q", tc.field, got)
 		}
 		if err := mk("").applyTo(&Yearbook{}); (tc.min == 1) == (err == nil) {
@@ -59,14 +59,14 @@ func TestBookBoundaries(t *testing.T) {
 
 func TestBookEnumsAndYear(t *testing.T) {
 	bad := []struct{ js, want string }{
-		{`{"language":"fr"}`, "invalid_language"},
-		{`{"language":""}`, "invalid_language"},
-		{`{"page_size":"A3"}`, "invalid_page_size"},
-		{`{"page_size":"letter"}`, "invalid_page_size"},
-		{`{"page_size":"LETTER"}`, "invalid_page_size"},
-		{`{"page_size":"Legal"}`, "invalid_page_size"},
-		{`{"graduation_year":1949}`, "invalid_graduation_year"},
-		{`{"graduation_year":2101}`, "invalid_graduation_year"},
+		{`{"language":"fr"}`, "ERROR_INVALID_LANGUAGE"},
+		{`{"language":""}`, "ERROR_INVALID_LANGUAGE"},
+		{`{"page_size":"A3"}`, "ERROR_INVALID_PAGE_SIZE"},
+		{`{"page_size":"letter"}`, "ERROR_INVALID_PAGE_SIZE"},
+		{`{"page_size":"LETTER"}`, "ERROR_INVALID_PAGE_SIZE"},
+		{`{"page_size":"Legal"}`, "ERROR_INVALID_PAGE_SIZE"},
+		{`{"graduation_year":1949}`, "ERROR_INVALID_GRADUATION_YEAR"},
+		{`{"graduation_year":2101}`, "ERROR_INVALID_GRADUATION_YEAR"},
 	}
 	for _, tc := range bad {
 		if got := code(parseBook(t, tc.js).applyTo(&Yearbook{})); got != tc.want {
@@ -105,45 +105,32 @@ func TestProfileValidation(t *testing.T) {
 	str := func(s string) *string { return &s }
 	tests := []struct {
 		name string
-		in   profileInput
+		in   ProfileInput
 		want string
 	}{
-		{"ok minimal", profileInput{FullName: "Lan"}, ""},
-		{"ok yesterday", profileInput{FullName: "Lan", Birthday: str("2026-10-06")}, ""},
-		{"ok leap day", profileInput{FullName: "Lan", Birthday: str("2000-02-29")}, ""},
-		{"empty name", profileInput{FullName: "  "}, "invalid_full_name"},
-		{"long name", profileInput{FullName: strings.Repeat("a", 101)}, "invalid_full_name"},
-		{"long nickname", profileInput{FullName: "a", Nickname: strings.Repeat("a", 51)}, "invalid_nickname"},
-		{"long quote", profileInput{FullName: "a", Quote: strings.Repeat("a", 501)}, "invalid_quote"},
-		{"max quote", profileInput{FullName: "a", Quote: strings.Repeat("ế", 500)}, ""},
-		{"long hobbies", profileInput{FullName: "a", Hobbies: strings.Repeat("a", 301)}, "invalid_hobbies"},
-		{"long plans", profileInput{FullName: "a", FuturePlans: strings.Repeat("a", 301)}, "invalid_future_plans"},
-		{"newline in quote", profileInput{FullName: "a", Quote: "a\nb"}, "invalid_quote"},
-		{"today", profileInput{FullName: "a", Birthday: str("2026-10-07")}, "invalid_birthday"},
-		{"future", profileInput{FullName: "a", Birthday: str("2030-01-01")}, "invalid_birthday"},
-		{"not a date", profileInput{FullName: "a", Birthday: str("2001-02-30")}, "invalid_birthday"},
-		{"wrong format", profileInput{FullName: "a", Birthday: str("03/02/2001")}, "invalid_birthday"},
-		{"unpadded", profileInput{FullName: "a", Birthday: str("2001-2-3")}, "invalid_birthday"},
-		{"empty string", profileInput{FullName: "a", Birthday: str("")}, "invalid_birthday"},
-		{"too old", profileInput{FullName: "a", Birthday: str("1899-12-31")}, "invalid_birthday"},
+		{"ok minimal", ProfileInput{FullName: "Lan"}, ""},
+		{"ok yesterday", ProfileInput{FullName: "Lan", Birthday: str("2026-10-06")}, ""},
+		{"ok leap day", ProfileInput{FullName: "Lan", Birthday: str("2000-02-29")}, ""},
+		{"empty name", ProfileInput{FullName: "  "}, "ERROR_INVALID_FULL_NAME"},
+		{"long name", ProfileInput{FullName: strings.Repeat("a", 101)}, "ERROR_INVALID_FULL_NAME"},
+		{"long nickname", ProfileInput{FullName: "a", Nickname: strings.Repeat("a", 51)}, "ERROR_INVALID_NICKNAME"},
+		{"long quote", ProfileInput{FullName: "a", Quote: strings.Repeat("a", 501)}, "ERROR_INVALID_QUOTE"},
+		{"max quote", ProfileInput{FullName: "a", Quote: strings.Repeat("ế", 500)}, ""},
+		{"long hobbies", ProfileInput{FullName: "a", Hobbies: strings.Repeat("a", 301)}, "ERROR_INVALID_HOBBIES"},
+		{"long plans", ProfileInput{FullName: "a", FuturePlans: strings.Repeat("a", 301)}, "ERROR_INVALID_FUTURE_PLANS"},
+		{"newline in quote", ProfileInput{FullName: "a", Quote: "a\nb"}, "ERROR_INVALID_QUOTE"},
+		{"today", ProfileInput{FullName: "a", Birthday: str("2026-10-07")}, "ERROR_INVALID_BIRTHDAY"},
+		{"future", ProfileInput{FullName: "a", Birthday: str("2030-01-01")}, "ERROR_INVALID_BIRTHDAY"},
+		{"not a date", ProfileInput{FullName: "a", Birthday: str("2001-02-30")}, "ERROR_INVALID_BIRTHDAY"},
+		{"wrong format", ProfileInput{FullName: "a", Birthday: str("03/02/2001")}, "ERROR_INVALID_BIRTHDAY"},
+		{"unpadded", ProfileInput{FullName: "a", Birthday: str("2001-2-3")}, "ERROR_INVALID_BIRTHDAY"},
+		{"empty string", ProfileInput{FullName: "a", Birthday: str("")}, "ERROR_INVALID_BIRTHDAY"},
+		{"too old", ProfileInput{FullName: "a", Birthday: str("1899-12-31")}, "ERROR_INVALID_BIRTHDAY"},
 	}
 	for _, tc := range tests {
 		var p Profile
 		if got := code(tc.in.applyTo(&p, now)); got != tc.want {
 			t.Errorf("%s: %q, want %q", tc.name, got, tc.want)
-		}
-	}
-}
-
-func TestCursorRoundTripAndTamper(t *testing.T) {
-	c := cursor{time.Date(2026, 10, 7, 12, 0, 0, 123000000, time.UTC).UnixMilli(), "01J9Z3K6V8Q4M7N2P5R8T0W1XY"}
-	got, ok := parseCursor(formatCursor(c))
-	if !ok || got.updatedAt != c.updatedAt || got.publicID != c.publicID {
-		t.Fatalf("round trip: %+v %v", got, ok)
-	}
-	for _, bad := range []string{"", "!!!", "YWJj", formatCursor(c) + "x", "MTIzLnNob3J0", "OTk5OTk5OTk5OTk5OTk5OTk5LjAxSjlaM0s2VjhRNE03TjJQNVI4VDBXMVhZ"} {
-		if _, ok := parseCursor(bad); ok {
-			t.Errorf("accepted %q", bad)
 		}
 	}
 }

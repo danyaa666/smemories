@@ -449,162 +449,283 @@ paths:
             application/json:
               schema: {$ref: "#/components/schemas/Error"}
         "503": {$ref: "#/components/responses/SessionStoreUnavailable"}
-  /v1/yearbooks:
+  /api/yearbook/create:
     post:
       operationId: createYearbook
-      tags: [yearbooks]
+      tags: [yearbook]
       summary: Create a yearbook (and its owner profile)
       description: >-
-        Creates the book and one owner profile whose `full_name` is the user's display name.
-        A user owns at most 20 books (`409 limit_reached`). Unknown fields (for example `owner_id`)
-        are rejected with `400 unknown_field`. Text fields are normalised to NFC and trimmed;
-        control characters (Cc), format characters (Cf, except U+200D) and line/paragraph
-        separators are rejected with `invalid_<field>`.
+        Called by the signed-in user from the new-book form. Creates the book and its one owner profile, whose `full_name` is the user's display name.
+        `title` and `language` are required; `page_size` defaults to `A5`; every other field is optional. A user owns at most 20 books (`ERROR_LIMIT_REACHED`).
+        A new book has no photos yet, so `cover_media_id` is not accepted here (`ERROR_INVALID_MEDIA`): set the cover later with `/api/yearbook/update`. Unknown fields
+        (for example `owner_id`) and a body that is not a JSON object are `ERROR_PARAM`. Text fields are normalised to NFC and trimmed; control characters (Cc), format characters (Cf, except U+200D) and line/paragraph separators are rejected. Not idempotent: repeating a lost request creates a second book.
+        A request with the session cookie must come from an allowed Origin.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_INVALID_TITLE, description: "Field `title`: missing on create, empty after trimming, over 120 characters, or containing control characters."}
+        - {code: ERROR_INVALID_SCHOOL_NAME, description: "Field `school_name`: over 120 characters or containing control characters."}
+        - {code: ERROR_INVALID_CLASS_NAME, description: "Field `class_name`: over 120 characters or containing control characters."}
+        - {code: ERROR_INVALID_GRADUATION_YEAR, description: "Field `graduation_year`: not a whole year from 1950 to 2100."}
+        - {code: ERROR_INVALID_MOTTO, description: "Field `motto`: over 200 characters or containing control characters."}
+        - {code: ERROR_INVALID_LANGUAGE, description: "Field `language`: missing on create, or not `en` or `vi`."}
+        - {code: ERROR_INVALID_PAGE_SIZE, description: "Field `page_size`: not `A5`, `A4` or `Letter`."}
+        - {code: ERROR_INVALID_MEDIA, description: "A cover was sent; a new book has no photos yet."}
+        - {code: ERROR_LIMIT_REACHED, description: The user already owns 20 yearbooks.}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
       security:
         - sessionCookie: []
       requestBody:
         required: true
         content:
           application/json:
-            schema: {$ref: "#/components/schemas/YearbookCreate"}
+            schema: {$ref: "#/components/schemas/YearbookCreateRequest"}
+            examples:
+              create:
+                value: {title: "Lớp 12A1 - Trường THPT Chu Văn An", school_name: "THPT Chu Văn An", class_name: 12A1, graduation_year: 2026, motto: "Học, học nữa, học mãi", language: vi}
       responses:
-        "201":
-          description: Created.
+        "200":
+          description: The new book, with its profile.
           content:
             application/json:
-              schema: {$ref: "#/components/schemas/YearbookEnvelope"}
-        "400": {$ref: "#/components/responses/YearbookInvalid"}
-        "401": {$ref: "#/components/responses/Unauthenticated"}
-        "503": {$ref: "#/components/responses/SessionStoreUnavailable"}
-        "403": {$ref: "#/components/responses/CsrfOriginMismatch"}
-        "409":
-          description: The user already owns 20 yearbooks (`limit_reached`).
-          content:
-            application/json:
-              schema: {$ref: "#/components/schemas/Error"}
-        "413": {$ref: "#/components/responses/PayloadTooLarge"}
-        "415": {$ref: "#/components/responses/UnsupportedMediaType"}
+              schema: {$ref: "#/components/schemas/YearbookResponse"}
+              examples:
+                created:
+                  value:
+                    status: OK
+                    data: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, title: "Lớp 12A1 - Trường THPT Chu Văn An", school_name: "THPT Chu Văn An", class_name: 12A1, graduation_year: 2026, motto: "Học, học nữa, học mãi", language: vi, page_size: A5, template_id: null, cover_media_id: null, created_at: 1760000000000, updated_at: 1760000000000, profile: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2F, is_owner: true, full_name: "Nguyễn Thị Hồng", nickname: "", birthday: null, quote: "", hobbies: "", future_plans: "", photo_media_id: null}}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "409": {$ref: "#/components/responses/ApiConflict"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/yearbook/get-list:
     get:
       operationId: listYearbooks
-      tags: [yearbooks]
+      tags: [yearbook]
       summary: List the caller's yearbooks
       description: >-
-        Only the caller's books, newest `updated_at` first (editing the book or its profile updates it).
-        Pass `next_cursor` back as `cursor` for the next page; `next_cursor` is null on the last page.
-        A malformed or tampered cursor is `400 invalid_cursor`.
+        Called by the signed-in user (the book list). Only the caller's own books, newest `updated_at` first (editing the book or its
+        profile moves it to the front), each with its profile. Keyset paginated: pass the `next_id` of a page back as the `next_id` query
+        parameter to get the next one; it is the empty string on the last page. `next_id` is an opaque, tamper-evident token bound to the
+        caller's list: a changed, truncated or foreign token (also a cursor of the old API passed as `next_id`) is `ERROR_PARAM`, and it
+        never reveals an internal id. A `limit` outside 1..50 is `ERROR_PARAM`. Books created, edited or deleted between two pages never make the walk repeat
+        or skip a book that stays.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
       security:
         - sessionCookie: []
       parameters:
-        - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 50, default: 20}, description: "Out of range or not a number: `400 invalid_limit`."}
-        - {name: cursor, in: query, required: false, schema: {type: string}, description: Opaque token from a previous page.}
+        - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 50, default: 20}, description: "Page size, default 20, maximum 50."}
+        - {name: next_id, in: query, required: false, schema: {type: string}, description: "Opaque token from the previous page; omit it for the first page."}
       responses:
         "200":
-          description: A page of books (each with its profile).
+          description: A page of books.
           content:
             application/json:
-              schema:
-                type: object
-                required: [yearbooks, next_cursor]
-                properties:
-                  yearbooks:
-                    type: array
-                    items: {$ref: "#/components/schemas/Yearbook"}
-                  next_cursor: {type: [string, "null"]}
-        "400": {$ref: "#/components/responses/YearbookInvalid"}
-        "401": {$ref: "#/components/responses/Unauthenticated"}
-        "503": {$ref: "#/components/responses/SessionStoreUnavailable"}
-  /v1/yearbooks/{id}:
-    parameters:
-      - {name: id, in: path, required: true, schema: {type: string}, description: Yearbook ULID.}
+              schema: {$ref: "#/components/schemas/YearbookListResponse"}
+              examples:
+                page:
+                  value:
+                    status: OK
+                    data:
+                      items:
+                        - {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, title: "Lớp 12A1 - Trường THPT Chu Văn An", school_name: "THPT Chu Văn An", class_name: 12A1, graduation_year: 2026, motto: "Học, học nữa, học mãi", language: vi, page_size: A5, template_id: null, cover_media_id: null, created_at: 1760000000000, updated_at: 1760000000000, profile: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2F, is_owner: true, full_name: "Nguyễn Thị Hồng", nickname: "", birthday: null, quote: "", hobbies: "", future_plans: "", photo_media_id: null}}
+                      next_id: ""
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/yearbook/get:
     get:
       operationId: getYearbook
-      tags: [yearbooks]
+      tags: [yearbook]
       summary: Read one yearbook with its profile
-      description: A missing book and a book owned by someone else both answer `404 not_found`.
+      description: >-
+        Called by the signed-in user (the edit screens). A missing book and a book owned by someone else both answer `ERROR_NOT_FOUND`. A missing `id` is `ERROR_PARAM`.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: The yearbook does not exist or belongs to someone else; the two cannot be told apart.}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
       security:
         - sessionCookie: []
+      parameters:
+        - {name: id, in: query, required: true, schema: {type: string}, description: Yearbook ULID.}
       responses:
         "200":
           description: The book.
           content:
             application/json:
-              schema: {$ref: "#/components/schemas/YearbookEnvelope"}
-        "401": {$ref: "#/components/responses/Unauthenticated"}
-        "503": {$ref: "#/components/responses/SessionStoreUnavailable"}
-        "404": {$ref: "#/components/responses/YearbookNotFound"}
-    patch:
+              schema: {$ref: "#/components/schemas/YearbookResponse"}
+              examples:
+                book:
+                  value:
+                    status: OK
+                    data: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, title: "Lớp 12A1 - Trường THPT Chu Văn An", school_name: "THPT Chu Văn An", class_name: 12A1, graduation_year: 2026, motto: "Học, học nữa, học mãi", language: vi, page_size: A5, template_id: null, cover_media_id: null, created_at: 1760000000000, updated_at: 1760000000000, profile: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2F, is_owner: true, full_name: "Nguyễn Thị Hồng", nickname: "", birthday: null, quote: "", hobbies: "", future_plans: "", photo_media_id: null}}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/yearbook/update:
+    post:
       operationId: updateYearbook
-      tags: [yearbooks]
+      tags: [yearbook]
       summary: Partially update a yearbook
       description: >-
-        Only the fields present change. An empty string clears an optional text field; `graduation_year: null`
-        clears the year. A JSON null on any other field counts as absent. Unknown fields are `400 unknown_field`.
+        Called by the signed-in owner (the edit screen, the cover picker). Only the fields present change; an absent field stays as it is, an empty string clears an
+        optional text field and `graduation_year: null` or `cover_media_id: null` clear them. A JSON null on any other field counts as absent. A body with only `id` changes nothing
+        but still bumps `updated_at`. `cover_media_id` must be a photo of this very book (`ERROR_INVALID_MEDIA`). Unknown fields and a missing `id` are `ERROR_PARAM`. Text fields are normalised to NFC and trimmed; control characters (Cc), format characters (Cf, except U+200D) and line/paragraph separators are rejected.
+        A request with the session cookie must come from an allowed Origin. Idempotent: repeating it leaves the same book (apart from `updated_at`).
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: The yearbook does not exist or belongs to someone else; the two cannot be told apart.}
+        - {code: ERROR_INVALID_TITLE, description: "Field `title`: missing on create, empty after trimming, over 120 characters, or containing control characters."}
+        - {code: ERROR_INVALID_SCHOOL_NAME, description: "Field `school_name`: over 120 characters or containing control characters."}
+        - {code: ERROR_INVALID_CLASS_NAME, description: "Field `class_name`: over 120 characters or containing control characters."}
+        - {code: ERROR_INVALID_GRADUATION_YEAR, description: "Field `graduation_year`: not a whole year from 1950 to 2100."}
+        - {code: ERROR_INVALID_MOTTO, description: "Field `motto`: over 200 characters or containing control characters."}
+        - {code: ERROR_INVALID_LANGUAGE, description: "Field `language`: missing on create, or not `en` or `vi`."}
+        - {code: ERROR_INVALID_PAGE_SIZE, description: "Field `page_size`: not `A5`, `A4` or `Letter`."}
+        - {code: ERROR_INVALID_MEDIA, description: "`cover_media_id` is not a photo of this yearbook (unknown, deleted, or another book's)."}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
       security:
         - sessionCookie: []
       requestBody:
         required: true
         content:
           application/json:
-            schema: {$ref: "#/components/schemas/YearbookPatch"}
+            schema: {$ref: "#/components/schemas/YearbookUpdateRequest"}
+            examples:
+              rename:
+                value: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, title: "Lớp 12A1 - Kỷ yếu", graduation_year: null}
       responses:
         "200":
           description: The updated book.
           content:
             application/json:
-              schema: {$ref: "#/components/schemas/YearbookEnvelope"}
-        "400": {$ref: "#/components/responses/YearbookInvalid"}
-        "401": {$ref: "#/components/responses/Unauthenticated"}
-        "503": {$ref: "#/components/responses/SessionStoreUnavailable"}
-        "403": {$ref: "#/components/responses/CsrfOriginMismatch"}
-        "404": {$ref: "#/components/responses/YearbookNotFound"}
-        "413": {$ref: "#/components/responses/PayloadTooLarge"}
-        "415": {$ref: "#/components/responses/UnsupportedMediaType"}
-    delete:
-      operationId: deleteYearbook
-      tags: [yearbooks]
-      summary: Delete a yearbook
-      description: >-
-        Hard-deletes the book, its profile and its stored photos. The photos are removed from object storage first;
-        if that fails the request answers `502 storage_error` and nothing is deleted.
-      security:
-        - sessionCookie: []
-      responses:
-        "204": {description: Deleted.}
-        "401": {$ref: "#/components/responses/Unauthenticated"}
-        "503": {$ref: "#/components/responses/SessionStoreUnavailable"}
-        "403": {$ref: "#/components/responses/CsrfOriginMismatch"}
-        "404": {$ref: "#/components/responses/YearbookNotFound"}
-        "502": {$ref: "#/components/responses/StorageError"}
-  /v1/yearbooks/{id}/profile:
-    parameters:
-      - {name: id, in: path, required: true, schema: {type: string}, description: Yearbook ULID.}
-    put:
-      operationId: replaceYearbookProfile
-      tags: [yearbooks]
+              schema: {$ref: "#/components/schemas/YearbookResponse"}
+              examples:
+                updated:
+                  value:
+                    status: OK
+                    data: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, title: "Lớp 12A1 - Trường THPT Chu Văn An", school_name: "THPT Chu Văn An", class_name: 12A1, graduation_year: 2026, motto: "Học, học nữa, học mãi", language: vi, page_size: A5, template_id: null, cover_media_id: null, created_at: 1760000000000, updated_at: 1760000000000, profile: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2F, is_owner: true, full_name: "Nguyễn Thị Hồng", nickname: "", birthday: null, quote: "", hobbies: "", future_plans: "", photo_media_id: null}}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/yearbook/update-profile:
+    post:
+      operationId: updateYearbookProfile
+      tags: [yearbook]
       summary: Replace the owner's profile information
       description: >-
-        Replaces every field: an omitted optional field is cleared. Unknown fields (for example `is_owner`)
-        are `400 unknown_field`. Birthday is personal data and is never logged.
+        Called by the signed-in owner (the profile form, the photo picker). Replaces every profile field: an omitted optional field is cleared, so send the whole profile
+        (the web app builds the body from the current one). `full_name` is required. `photo_media_id` must be a photo of this very book (`ERROR_INVALID_MEDIA`). The
+        birthday is personal data and is never logged. Unknown fields (for example `is_owner`) and a missing `yearbook_id` are `ERROR_PARAM`. Text fields are normalised to NFC and trimmed; control characters (Cc), format characters (Cf, except U+200D) and line/paragraph separators are rejected.
+        A request with the session cookie must come from an allowed Origin. Idempotent.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: The yearbook does not exist or belongs to someone else; the two cannot be told apart.}
+        - {code: ERROR_INVALID_FULL_NAME, description: "Field `full_name`: missing, empty after trimming, over 100 characters, or containing control characters."}
+        - {code: ERROR_INVALID_NICKNAME, description: "Field `nickname`: over 50 characters or containing control characters."}
+        - {code: ERROR_INVALID_BIRTHDAY, description: "Field `birthday`: not a real `YYYY-MM-DD` date, before 1900-01-01, or not before today (UTC)."}
+        - {code: ERROR_INVALID_QUOTE, description: "Field `quote`: over 500 characters or containing control characters."}
+        - {code: ERROR_INVALID_HOBBIES, description: "Field `hobbies`: over 300 characters or containing control characters."}
+        - {code: ERROR_INVALID_FUTURE_PLANS, description: "Field `future_plans`: over 300 characters or containing control characters."}
+        - {code: ERROR_INVALID_MEDIA, description: "`photo_media_id` is not a photo of this yearbook (unknown, deleted, or another book's)."}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
       security:
         - sessionCookie: []
       requestBody:
         required: true
         content:
           application/json:
-            schema: {$ref: "#/components/schemas/ProfileInput"}
+            schema: {$ref: "#/components/schemas/YearbookUpdateProfileRequest"}
+            examples:
+              profile:
+                value: {yearbook_id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, full_name: "Nguyễn Thị Hồng", nickname: Hồng, birthday: "2008-02-29", quote: "Sống là để yêu thương", hobbies: "Đọc sách, vẽ", future_plans: "Học kiến trúc", photo_media_id: null}
       responses:
         "200":
           description: The book with its updated profile.
           content:
             application/json:
-              schema: {$ref: "#/components/schemas/YearbookEnvelope"}
-        "400": {$ref: "#/components/responses/YearbookInvalid"}
-        "401": {$ref: "#/components/responses/Unauthenticated"}
-        "503": {$ref: "#/components/responses/SessionStoreUnavailable"}
-        "403": {$ref: "#/components/responses/CsrfOriginMismatch"}
-        "404": {$ref: "#/components/responses/YearbookNotFound"}
-        "413": {$ref: "#/components/responses/PayloadTooLarge"}
-        "415": {$ref: "#/components/responses/UnsupportedMediaType"}
+              schema: {$ref: "#/components/schemas/YearbookResponse"}
+              examples:
+                updated:
+                  value:
+                    status: OK
+                    data: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, title: "Lớp 12A1 - Trường THPT Chu Văn An", school_name: "THPT Chu Văn An", class_name: 12A1, graduation_year: 2026, motto: "Học, học nữa, học mãi", language: vi, page_size: A5, template_id: null, cover_media_id: null, created_at: 1760000000000, updated_at: 1760000000000, profile: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2F, is_owner: true, full_name: "Nguyễn Thị Hồng", nickname: "", birthday: null, quote: "", hobbies: "", future_plans: "", photo_media_id: null}}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/yearbook/delete:
+    post:
+      operationId: deleteYearbook
+      tags: [yearbook]
+      summary: Delete a yearbook
+      description: >-
+        Called by the signed-in owner (the edit screen). Hard-deletes the book with its profile, photos, note collections and notes. The stored files are removed
+        from object storage first; if that fails the call answers `ERROR_STORAGE_ERROR` and nothing is deleted, so it can simply be repeated. After the
+        files are gone one transaction removes the rows (all or nothing). Not idempotent: a book that is already deleted, a missing one and someone else's all answer
+        `ERROR_NOT_FOUND`. A missing `id` and unknown fields are `ERROR_PARAM`. A request with the session cookie must come from an allowed Origin.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: The yearbook does not exist or belongs to someone else; the two cannot be told apart.}
+        - {code: ERROR_STORAGE_ERROR, description: The object store failed; the book is still there and the call can be repeated.}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/YearbookDeleteRequest"}
+            examples:
+              delete:
+                value: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E}
+      responses:
+        "200":
+          description: Deleted.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/EmptyResponse"}
+              examples:
+                deleted:
+                  value: {status: OK, data: {}}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "502": {$ref: "#/components/responses/ApiBadGateway"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
   /api/media/create:
     post:
       operationId: createMedia
@@ -1094,19 +1215,6 @@ components:
       content:
         application/json:
           schema: {$ref: "#/components/schemas/Error"}
-    YearbookNotFound:
-      description: The yearbook does not exist or belongs to someone else (`not_found`); the two cannot be told apart.
-      content:
-        application/json:
-          schema: {$ref: "#/components/schemas/Error"}
-    YearbookInvalid:
-      description: >-
-        `invalid_<field>` (title, school_name, class_name, graduation_year, motto, language, page_size, full_name,
-        nickname, birthday, quote, hobbies, future_plans, limit, cursor, media: a `*_media_id` that is not a photo of this
-        yearbook), `unknown_field` or `invalid_body`.
-      content:
-        application/json:
-          schema: {$ref: "#/components/schemas/Error"}
     CsrfOriginMismatch:
       description: >-
         The request carries the session cookie but its Origin (or Referer) is missing or not
@@ -1130,11 +1238,6 @@ components:
         Retry-After:
           description: Seconds until the oldest counted attempt leaves the window.
           schema: {type: integer, minimum: 1}
-      content:
-        application/json:
-          schema: {$ref: "#/components/schemas/Error"}
-    StorageError:
-      description: The object store failed (`storage_error`); nothing was changed, retry later.
       content:
         application/json:
           schema: {$ref: "#/components/schemas/Error"}
@@ -1308,77 +1411,102 @@ components:
         user: {$ref: "#/components/schemas/User"}
     Profile:
       type: object
-      additionalProperties: false
+      description: The owner's profile page information of one yearbook.
       required: [id, is_owner, full_name, nickname, birthday, quote, hobbies, future_plans, photo_media_id]
       properties:
-        id: {type: string, description: Opaque ULID.}
-        is_owner: {type: boolean}
-        full_name: {type: string, minLength: 1, maxLength: 100}
-        nickname: {type: string, maxLength: 50, description: Empty when not set.}
-        birthday: {type: [string, "null"], format: date}
-        quote: {type: string, maxLength: 500}
-        hobbies: {type: string, maxLength: 300}
-        future_plans: {type: string, maxLength: 300}
-        photo_media_id: {type: [string, "null"], description: A photo of this yearbook, or null.}
+        id: {type: string, description: "Profile ULID."}
+        is_owner: {type: boolean, description: "Always true: this is the profile of the book's owner."}
+        full_name: {type: string, description: "The name on the profile page, 1 to 100 characters. A new book starts with the user's display name."}
+        nickname: {type: string, description: "Up to 50 characters; the empty string when not set."}
+        birthday: {type: [string, "null"], format: date, description: "`YYYY-MM-DD` calendar date (not an instant, so not Unix ms); null when not set."}
+        quote: {type: string, description: "Up to 500 characters; the empty string when not set."}
+        hobbies: {type: string, description: "Up to 300 characters; the empty string when not set."}
+        future_plans: {type: string, description: "Up to 300 characters; the empty string when not set."}
+        photo_media_id: {type: [string, "null"], description: "Photo ULID (a photo of this yearbook) shown on the profile page, or null."}
     Yearbook:
       type: object
-      additionalProperties: false
+      description: A yearbook with its owner profile. Carries no internal id.
       required: [id, title, school_name, class_name, graduation_year, motto, language, page_size, template_id, cover_media_id, created_at, updated_at, profile]
       properties:
-        id: {type: string, description: Opaque ULID., examples: ["01J9Z3K6V8Q4M7N2P5R8T0W1XY"]}
-        title: {type: string, minLength: 1, maxLength: 120}
-        school_name: {type: string, maxLength: 120, description: Empty when not set.}
-        class_name: {type: string, maxLength: 120, description: Empty when not set.}
-        graduation_year: {type: [integer, "null"], minimum: 1950, maximum: 2100}
-        motto: {type: string, maxLength: 200}
-        language: {type: string, enum: [en, vi]}
-        page_size: {type: string, enum: [A5, A4, Letter]}
-        template_id: {type: [string, "null"], description: Null until a template is chosen.}
-        cover_media_id: {type: [string, "null"], description: A photo of this yearbook, or null.}
-        created_at: {type: string, format: date-time}
-        updated_at: {type: string, format: date-time}
+        id: {type: string, description: "Yearbook ULID; use it as `id` or `yearbook_id` of the other calls."}
+        title: {type: string, description: "1 to 120 characters."}
+        school_name: {type: string, description: "Up to 120 characters; the empty string when not set."}
+        class_name: {type: string, description: "Up to 120 characters; the empty string when not set."}
+        graduation_year: {type: [integer, "null"], description: "Year from 1950 to 2100; null when not set."}
+        motto: {type: string, description: "Up to 200 characters; the empty string when not set."}
+        language: {type: string, enum: [en, vi], description: "Language of the book's pages: `en` English, `vi` Vietnamese."}
+        page_size: {type: string, enum: [A5, A4, Letter], description: "Paper size of the printed book: `A5` (default), `A4` or `Letter`."}
+        template_id: {type: [string, "null"], description: "Template ULID; null until a template is chosen."}
+        cover_media_id: {type: [string, "null"], description: "Photo ULID (a photo of this yearbook) used as the cover, or null."}
+        created_at: {type: integer, format: int64, description: "Creation time, Unix ms."}
+        updated_at: {type: integer, format: int64, description: "Last edit of the book or its profile, Unix ms; the list is ordered by it."}
         profile: {$ref: "#/components/schemas/Profile"}
-    YearbookEnvelope:
+    YearbookResponse:
       type: object
-      required: [yearbook]
+      required: [status, data]
       properties:
-        yearbook: {$ref: "#/components/schemas/Yearbook"}
-    YearbookCreate:
+        status: {type: string, const: OK, description: "Always `OK` on success."}
+        data: {$ref: "#/components/schemas/Yearbook"}
+    YearbookListResponse:
+      type: object
+      required: [status, data]
+      properties:
+        status: {type: string, const: OK, description: "Always `OK` on success."}
+        data:
+          type: object
+          description: One page of yearbooks.
+          required: [items, next_id]
+          properties:
+            items:
+              type: array
+              description: The books of this page, newest `updated_at` first; an empty array when the user has none.
+              items: {$ref: "#/components/schemas/Yearbook"}
+            next_id: {type: string, description: "Opaque page token for the next page; the empty string on the last page."}
+    YearbookCreateRequest:
       type: object
       additionalProperties: false
       required: [title, language]
       properties:
-        title: {type: string, minLength: 1, maxLength: 120}
-        school_name: {type: string, maxLength: 120}
-        class_name: {type: string, maxLength: 120}
-        graduation_year: {type: [integer, "null"], minimum: 1950, maximum: 2100}
-        motto: {type: string, maxLength: 200}
-        language: {type: string, enum: [en, vi]}
-        page_size: {type: string, enum: [A5, A4, Letter], default: A5}
-    YearbookPatch:
+        title: {type: string, minLength: 1, maxLength: 120, description: "Required. 1 to 120 characters after trimming."}
+        school_name: {type: string, maxLength: 120, description: "Optional, up to 120 characters; default empty."}
+        class_name: {type: string, maxLength: 120, description: "Optional, up to 120 characters; default empty."}
+        graduation_year: {type: [integer, "null"], minimum: 1950, maximum: 2100, description: "Optional, 1950 to 2100; default null."}
+        motto: {type: string, maxLength: 200, description: "Optional, up to 200 characters; default empty."}
+        language: {type: string, enum: [en, vi], description: "Required. `en` English or `vi` Vietnamese."}
+        page_size: {type: string, enum: [A5, A4, Letter], default: A5, description: "Optional paper size, default `A5`."}
+    YearbookUpdateRequest:
       type: object
       additionalProperties: false
+      required: [id]
       properties:
-        title: {type: string, minLength: 1, maxLength: 120}
-        school_name: {type: string, maxLength: 120}
-        class_name: {type: string, maxLength: 120}
-        graduation_year: {type: [integer, "null"], minimum: 1950, maximum: 2100}
-        motto: {type: string, maxLength: 200}
-        language: {type: string, enum: [en, vi]}
-        page_size: {type: string, enum: [A5, A4, Letter]}
-        cover_media_id: {type: [string, "null"], description: A photo of this yearbook (else `400 invalid_media`); null clears it.}
-    ProfileInput:
+        id: {type: string, description: "Required. ULID of the yearbook to change."}
+        title: {type: string, minLength: 1, maxLength: 120, description: "Optional. 1 to 120 characters after trimming; absent = unchanged."}
+        school_name: {type: string, maxLength: 120, description: "Optional, up to 120 characters; the empty string clears it; absent = unchanged."}
+        class_name: {type: string, maxLength: 120, description: "Optional, up to 120 characters; the empty string clears it; absent = unchanged."}
+        graduation_year: {type: [integer, "null"], minimum: 1950, maximum: 2100, description: "Optional, 1950 to 2100; null clears it; absent = unchanged."}
+        motto: {type: string, maxLength: 200, description: "Optional, up to 200 characters; the empty string clears it; absent = unchanged."}
+        language: {type: string, enum: [en, vi], description: "Optional. `en` or `vi`; absent = unchanged."}
+        page_size: {type: string, enum: [A5, A4, Letter], description: "Optional paper size; absent = unchanged."}
+        cover_media_id: {type: [string, "null"], description: "Optional. Photo ULID, which must be a photo of this yearbook (else `ERROR_INVALID_MEDIA`); null clears the cover; absent = unchanged."}
+    YearbookUpdateProfileRequest:
       type: object
       additionalProperties: false
-      required: [full_name]
+      required: [yearbook_id, full_name]
       properties:
-        full_name: {type: string, minLength: 1, maxLength: 100}
-        nickname: {type: string, maxLength: 50}
-        birthday: {type: [string, "null"], format: date, description: "YYYY-MM-DD, a real date strictly before today (UTC) and not before 1900-01-01."}
-        quote: {type: string, maxLength: 500}
-        hobbies: {type: string, maxLength: 300}
-        future_plans: {type: string, maxLength: 300}
-        photo_media_id: {type: [string, "null"], description: A photo of this yearbook (else `400 invalid_media`). Like every field of this replacing PUT, omitted means cleared.}
+        yearbook_id: {type: string, description: "Required. ULID of the yearbook whose profile is replaced."}
+        full_name: {type: string, minLength: 1, maxLength: 100, description: "Required. 1 to 100 characters after trimming."}
+        nickname: {type: string, maxLength: 50, description: "Optional, up to 50 characters; omitted = cleared."}
+        birthday: {type: [string, "null"], format: date, description: "Optional `YYYY-MM-DD`, a real date strictly before today (UTC) and not before 1900-01-01; omitted or null = cleared."}
+        quote: {type: string, maxLength: 500, description: "Optional, up to 500 characters; omitted = cleared."}
+        hobbies: {type: string, maxLength: 300, description: "Optional, up to 300 characters; omitted = cleared."}
+        future_plans: {type: string, maxLength: 300, description: "Optional, up to 300 characters; omitted = cleared."}
+        photo_media_id: {type: [string, "null"], description: "Optional. Photo ULID, which must be a photo of this yearbook (else `ERROR_INVALID_MEDIA`); omitted or null = cleared."}
+    YearbookDeleteRequest:
+      type: object
+      additionalProperties: false
+      required: [id]
+      properties:
+        id: {type: string, description: "Required. ULID of the yearbook to delete."}
     Media:
       type: object
       description: A stored photo. Carries no storage key, hash or URL; the client builds the content URL from `id`.

@@ -3,8 +3,10 @@ package yearbook
 import (
 	"encoding/json"
 	"slices"
+	"strings"
 	"time"
 
+	"github.com/danyaa666/smemories/internal/apperr"
 	"github.com/danyaa666/smemories/internal/textx"
 )
 
@@ -32,10 +34,10 @@ var (
 	pageSizes = []string{"A5", "A4", "Letter"}
 )
 
-// ValidationError carries the stable API error code (invalid_<field>) for a rejected input.
-type ValidationError struct{ Code string }
-
-func (e ValidationError) Error() string { return "yearbook: " + e.Code }
+// invalid is the 400 for a rejected field: the business code ERROR_INVALID_<FIELD>, which the web shows under that field.
+func invalid(field string) error {
+	return apperr.New(apperr.NewCode("ERROR_INVALID_"+strings.ToUpper(field), apperr.Param.HTTP), field+" is not valid")
+}
 
 // optional distinguishes an absent JSON field (Set false) from an explicit null (Set true,
 // Val nil), so PATCH can clear graduation_year.
@@ -54,10 +56,10 @@ func (o *optional[T]) UnmarshalJSON(b []byte) error {
 	return json.Unmarshal(b, o.Val)
 }
 
-// bookInput is the body of POST /v1/yearbooks and PATCH /v1/yearbooks/{id}: every field is
+// BookInput holds the fields of yearbook/create and yearbook/update: every field is
 // optional here; create then insists on title and language. A JSON null counts as absent
 // except for graduation_year, where it clears the value.
-type bookInput struct {
+type BookInput struct {
 	Title          *string          `json:"title"`
 	SchoolName     *string          `json:"school_name"`
 	ClassName      *string          `json:"class_name"`
@@ -69,13 +71,13 @@ type bookInput struct {
 }
 
 // text cleans *in (when present) with the shared rules and stores it in dst.
-func text(in *string, dst *string, min, max int, code string) error {
+func text(in *string, dst *string, min, max int, field string) error {
 	if in == nil {
 		return nil
 	}
 	s, ok := textx.Clean(*in, min, max)
 	if !ok {
-		return ValidationError{code}
+		return invalid(field)
 	}
 	*dst = s
 	return nil
@@ -83,19 +85,19 @@ func text(in *string, dst *string, min, max int, code string) error {
 
 // applyTo validates every field present in in and writes it to y; y is only meaningful when
 // the returned error is nil.
-func (in bookInput) applyTo(y *Yearbook) error {
+func (in BookInput) applyTo(y *Yearbook) error {
 	for _, f := range []struct {
 		in       *string
 		dst      *string
 		min, max int
-		code     string
+		field    string
 	}{
-		{in.Title, &y.Title, 1, maxTitle, "invalid_title"},
-		{in.SchoolName, &y.SchoolName, 0, maxSchool, "invalid_school_name"},
-		{in.ClassName, &y.ClassName, 0, maxClass, "invalid_class_name"},
-		{in.Motto, &y.Motto, 0, maxMotto, "invalid_motto"},
+		{in.Title, &y.Title, 1, maxTitle, "title"},
+		{in.SchoolName, &y.SchoolName, 0, maxSchool, "school_name"},
+		{in.ClassName, &y.ClassName, 0, maxClass, "class_name"},
+		{in.Motto, &y.Motto, 0, maxMotto, "motto"},
 	} {
-		if err := text(f.in, f.dst, f.min, f.max, f.code); err != nil {
+		if err := text(f.in, f.dst, f.min, f.max, f.field); err != nil {
 			return err
 		}
 	}
@@ -103,14 +105,14 @@ func (in bookInput) applyTo(y *Yearbook) error {
 		if v := in.GraduationYear.Val; v == nil {
 			y.GraduationYear = nil
 		} else if *v < minGradYear || *v > maxGradYear {
-			return ValidationError{"invalid_graduation_year"}
+			return invalid("graduation_year")
 		} else {
 			y.GraduationYear = v
 		}
 	}
 	if in.Language != nil {
 		if !slices.Contains(languages, *in.Language) {
-			return ValidationError{"invalid_language"}
+			return invalid("language")
 		}
 		y.Language = *in.Language
 	}
@@ -119,16 +121,16 @@ func (in bookInput) applyTo(y *Yearbook) error {
 	}
 	if in.PageSize != nil {
 		if !slices.Contains(pageSizes, *in.PageSize) {
-			return ValidationError{"invalid_page_size"}
+			return invalid("page_size")
 		}
 		y.PageSize = *in.PageSize
 	}
 	return nil
 }
 
-// profileInput is the body of PUT /v1/yearbooks/{id}/profile; it replaces every field, so an
+// ProfileInput holds the fields of yearbook/update-profile; it replaces every field, so an
 // absent optional field is cleared.
-type profileInput struct {
+type ProfileInput struct {
 	FullName     string  `json:"full_name"`
 	Nickname     string  `json:"nickname"`
 	Birthday     *string `json:"birthday"`
@@ -139,28 +141,28 @@ type profileInput struct {
 }
 
 // applyTo validates the input and writes it to p. now decides what "past" means for the birthday.
-func (in profileInput) applyTo(p *Profile, now time.Time) error {
+func (in ProfileInput) applyTo(p *Profile, now time.Time) error {
 	var out Profile
 	for _, f := range []struct {
 		in       string
 		dst      *string
 		min, max int
-		code     string
+		field    string
 	}{
-		{in.FullName, &out.FullName, 1, maxFullName, "invalid_full_name"},
-		{in.Nickname, &out.Nickname, 0, maxNickname, "invalid_nickname"},
-		{in.Quote, &out.Quote, 0, maxQuote, "invalid_quote"},
-		{in.Hobbies, &out.Hobbies, 0, maxHobbies, "invalid_hobbies"},
-		{in.FuturePlans, &out.FuturePlans, 0, maxFuture, "invalid_future_plans"},
+		{in.FullName, &out.FullName, 1, maxFullName, "full_name"},
+		{in.Nickname, &out.Nickname, 0, maxNickname, "nickname"},
+		{in.Quote, &out.Quote, 0, maxQuote, "quote"},
+		{in.Hobbies, &out.Hobbies, 0, maxHobbies, "hobbies"},
+		{in.FuturePlans, &out.FuturePlans, 0, maxFuture, "future_plans"},
 	} {
-		if err := text(&f.in, f.dst, f.min, f.max, f.code); err != nil {
+		if err := text(&f.in, f.dst, f.min, f.max, f.field); err != nil {
 			return err
 		}
 	}
 	if in.Birthday != nil {
 		d, err := time.Parse(dateLayout, *in.Birthday)
 		if err != nil || d.Format(dateLayout) != *in.Birthday || d.Year() < minBirthYear || !d.Before(now.UTC().Truncate(24*time.Hour)) {
-			return ValidationError{"invalid_birthday"}
+			return invalid("birthday")
 		}
 		s := d.Format(dateLayout)
 		out.Birthday = &s

@@ -27,11 +27,11 @@ func TestDeleteRacesWithEdits(t *testing.T) {
 			codes <- e.do(alice, method, path, body).Code
 		}
 		wg.Add(5)
-		go run("DELETE", "/v1/yearbooks/"+id, "")
-		go run("PATCH", "/v1/yearbooks/"+id, `{"motto":"a"}`)
-		go run("PATCH", "/v1/yearbooks/"+id, `{"motto":"b"}`)
-		go run("PUT", "/v1/yearbooks/"+id+"/profile", `{"full_name":"x"}`)
-		go run("PUT", "/v1/yearbooks/"+id+"/profile", `{"full_name":"y"}`)
+		go run("POST", "/api/yearbook/delete", withID("id", id, "{}"))
+		go run("POST", "/api/yearbook/update", withID("id", id, `{"motto":"a"}`))
+		go run("POST", "/api/yearbook/update", withID("id", id, `{"motto":"b"}`))
+		go run("POST", "/api/yearbook/update-profile", withID("yearbook_id", id, `{"full_name":"x"}`))
+		go run("POST", "/api/yearbook/update-profile", withID("yearbook_id", id, `{"full_name":"y"}`))
 		wg.Wait()
 		close(codes)
 		for c := range codes {
@@ -78,8 +78,8 @@ func TestMediaDeleteRacesWithCoverEdits(t *testing.T) {
 			codes <- e.do(alice, method, path, body).Code
 		}
 		for i := 0; i < 4; i++ {
-			go run("PATCH", "/v1/yearbooks/"+id, fmt.Sprintf(`{"cover_media_id":%q}`, pub))
-			go run("PUT", "/v1/yearbooks/"+id+"/profile", fmt.Sprintf(`{"full_name":"x","photo_media_id":%q}`, pub))
+			go run("POST", "/api/yearbook/update", withID("id", id, fmt.Sprintf(`{"cover_media_id":%q}`, pub)))
+			go run("POST", "/api/yearbook/update-profile", withID("yearbook_id", id, fmt.Sprintf(`{"full_name":"x","photo_media_id":%q}`, pub)))
 		}
 		wg.Wait()
 		close(codes)
@@ -91,7 +91,7 @@ func TestMediaDeleteRacesWithCoverEdits(t *testing.T) {
 		if n := e.count(`SELECT COUNT(*) FROM yearbook_tab WHERE cover_media_id = ?`, row) + e.count(`SELECT COUNT(*) FROM profile_tab WHERE photo_media_id = ?`, row); n != 0 {
 			t.Fatalf("round %d: %d dangling references to the deleted photo", round, n)
 		}
-		e.do(alice, "DELETE", "/v1/yearbooks/"+id, "").status(204, "") // keeps the user under the 20-book limit
+		e.remove(alice, id).status(200, "") // keeps the user under the 20-book limit
 	}
 }
 
@@ -110,13 +110,13 @@ func TestDeleteRacesWithReads(t *testing.T) {
 			}
 		}
 		wg.Add(7)
-		go run("DELETE", "/v1/yearbooks/"+id, "")
+		go run("POST", "/api/yearbook/delete", withID("id", id, "{}"))
 		for i := 0; i < 2; i++ {
-			go run("GET", "/v1/yearbooks/"+id, "")
-			go run("GET", "/v1/yearbooks", "")
+			go run("GET", "/api/yearbook/get?id="+id, "")
+			go run("GET", "/api/yearbook/get-list", "")
 		}
-		go run("PATCH", "/v1/yearbooks/"+id, `{"motto":"a"}`)
-		go run("PUT", "/v1/yearbooks/"+id+"/profile", `{"full_name":"x"}`)
+		go run("POST", "/api/yearbook/update", withID("id", id, `{"motto":"a"}`))
+		go run("POST", "/api/yearbook/update-profile", withID("yearbook_id", id, `{"full_name":"x"}`))
 		wg.Wait()
 	}
 	if n := bad.Load(); n != 0 {

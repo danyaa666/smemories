@@ -35,8 +35,8 @@ func TestDeleteBookLeavesNoRows(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	e.do(alice, "PATCH", "/v1/yearbooks/"+book, fmt.Sprintf(`{"cover_media_id":%q}`, cover.ID)).status(200, "")
-	e.do(alice, "PUT", "/v1/yearbooks/"+book+"/profile", fmt.Sprintf(`{"full_name":"Alice","photo_media_id":%q}`, cover.ID)).status(200, "")
+	e.updateBook(alice, book, fmt.Sprintf(`{"cover_media_id":%q}`, cover.ID)).status(200, "")
+	e.updateProfile(alice, book, fmt.Sprintf(`{"full_name":"Alice","photo_media_id":%q}`, cover.ID)).status(200, "")
 
 	_, token1 := e.newLink(alice, book, `{"label":"first"}`)
 	id2, token2 := e.newLink(alice, book, fmt.Sprintf(`{"deadline_at":%d}`, e.now().Add(48*time.Hour).UnixMilli()))
@@ -70,7 +70,7 @@ func TestDeleteBookLeavesNoRows(t *testing.T) {
 	if usersBefore == 0 {
 		t.Fatal("the test needs an account")
 	}
-	e.do(alice, "DELETE", "/v1/yearbooks/"+book, "").status(204, "")
+	e.deleteBook(alice, book).status(200, "")
 	if n := e.count(`SELECT COUNT(*) FROM user_tab`); n != usersBefore {
 		t.Errorf("user_tab holds %d rows after the book was deleted, want the account kept (%d)", n, usersBefore)
 	}
@@ -118,7 +118,7 @@ func TestDeleteBookAndPhotoScopes(t *testing.T) {
 	a, b := e.newOpenLink(), e.newOpenLink()
 	e.post(a.token, answers("A", "m"), photoPart(jpegOf(t, 1))).status(200, "")
 	e.post(b.token, answers("B", "m"), photoPart(jpegOf(t, 2))).status(200, "")
-	e.do(a.owner, "DELETE", "/v1/yearbooks/"+a.book, "").status(204, "")
+	e.deleteBook(a.owner, a.book).status(200, "")
 	for _, tb := range []string{"note_collection_tab", "note_tab", "note_photo_tab"} {
 		if n := e.count(`SELECT COUNT(*) FROM ` + tb); n != 1 {
 			t.Errorf("%s holds %d rows after book A was deleted, want book B's 1", tb, n)
@@ -164,7 +164,7 @@ func TestDeleteRacesWithSubmitsAndCollections(t *testing.T) {
 			})
 			go do(func() int { return e.postFrom(context.Background(), ip, token2, answers("B", "m")).Code })
 		}
-		go do(func() int { return e.do(alice, "DELETE", "/v1/yearbooks/"+book, "").Code })
+		go do(func() int { return e.deleteBook(alice, book).Code })
 		go do(func() int { return e.create(alice, book, `{}`).Code })
 		go do(func() int { return e.create(alice, book, `{}`).Code })
 		go do(func() int { return e.revoke(alice, id1).Code })

@@ -23,8 +23,8 @@ const yb = (
   page_size: "A4",
   template_id: null,
   cover_media_id: null,
-  created_at: "2026-10-01T00:00:00Z",
-  updated_at: "2026-10-02T00:00:00Z",
+  created_at: 1760000000000,
+  updated_at: 1760086400000,
   profile: {
     id: "01J9Z3K6V8Q4M7N2P5R8T0BBBB",
     is_owner: true,
@@ -40,22 +40,19 @@ const yb = (
   ...over,
 });
 const me = () => Response.json({ user: user() });
-const book = (y: Yearbook) => Response.json({ yearbook: y });
+const ok = (data: unknown) => Response.json({ status: "OK", data });
+const book = (y: Yearbook) => ok(y);
+const page = (items: Yearbook[], next = "") => ok({ items, next_id: next });
+const fail = (status: number, code: string) => Response.json(apiErr(code), { status });
 const where = () => screen.getByTestId("where").textContent;
 const last = <T,>(a: T[]) => a[a.length - 1]!;
 
 describe("yearbook list", () => {
-  it("lists the books with a cover thumbnail, and pages with the cursor", async () => {
+  it("lists the books with a cover thumbnail, and pages with next_id", async () => {
     const calls = mockApi({
       "GET /v1/me": me,
-      "GET /v1/yearbooks": Response.json({
-        yearbooks: [yb({ cover_media_id: PHOTO })],
-        next_cursor: "c2",
-      }),
-      "GET /v1/yearbooks?cursor=c2": Response.json({
-        yearbooks: [yb({ id: OTHER, title: "Second" })],
-        next_cursor: null,
-      }),
+      "GET /yearbook/get-list": page([yb({ cover_media_id: PHOTO })], "c2"),
+      "GET /yearbook/get-list?next_id=c2": page([yb({ id: OTHER, title: "Second" })]),
     });
     const { container } = renderApp("/yearbooks");
     expect(await screen.findByRole("link", { name: "Lớp 12A1" })).toHaveAttribute(
@@ -70,13 +67,13 @@ describe("yearbook list", () => {
     await userEvent.click(screen.getByRole("button", { name: "Show more" }));
     expect(await screen.findByRole("link", { name: "Second" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Show more" })).not.toBeInTheDocument();
-    expect(calls.at(-1)?.path).toBe("/v1/yearbooks?cursor=c2");
+    expect(calls.at(-1)?.path).toBe("/yearbook/get-list?next_id=c2");
   });
 
   it("invites the user to create a first book", async () => {
     mockApi({
       "GET /v1/me": me,
-      "GET /v1/yearbooks": Response.json({ yearbooks: [], next_cursor: null }),
+      "GET /yearbook/get-list": page([]),
     });
     renderApp("/yearbooks");
     expect(await screen.findByText(/no yearbooks yet/)).toBeInTheDocument();
@@ -97,9 +94,9 @@ describe("create", () => {
   it("offers A5, A4 and Letter, posts the form and opens the new book", async () => {
     const calls = mockApi({
       "GET /v1/me": me,
-      "POST /v1/yearbooks": () => book(yb({ page_size: "Letter" })),
-      [`GET /v1/yearbooks/${ID}`]: book(yb({ page_size: "Letter" })),
-      "GET /v1/yearbooks": Response.json({ yearbooks: [], next_cursor: null }),
+      "POST /yearbook/create": () => book(yb({ page_size: "Letter" })),
+      [`GET /yearbook/get?id=${ID}`]: book(yb({ page_size: "Letter" })),
+      "GET /yearbook/get-list": page([]),
     });
     renderApp("/yearbooks/new");
     await userEvent.type(await screen.findByLabelText("Title"), "Our year 🎓");
@@ -114,7 +111,7 @@ describe("create", () => {
     await userEvent.click(screen.getByRole("button", { name: "Create yearbook" }));
     expect(await screen.findByRole("heading", { name: "Lớp 12A1" })).toBeInTheDocument();
     expect(where()).toBe(`/yearbooks/${ID}`);
-    expect(calls.find((c) => c.method === "POST")?.body).toEqual({
+    expect(calls.find((c) => c.path === "/yearbook/create")?.body).toEqual({
       title: "Our year 🎓",
       school_name: "",
       class_name: "",
@@ -136,8 +133,8 @@ describe("create", () => {
     let n = 0;
     mockApi({
       "GET /v1/me": me,
-      "POST /v1/yearbooks": () =>
-        n++ === 0 ? err(400, "invalid_title") : err(409, "limit_reached"),
+      "POST /yearbook/create": () =>
+        n++ === 0 ? fail(400, "invalid_title") : fail(409, "limit_reached"),
     });
     renderApp("/yearbooks/new");
     await userEvent.click(await screen.findByRole("button", { name: "Create yearbook" }));
@@ -151,13 +148,13 @@ describe("create", () => {
 });
 
 describe("edit", () => {
-  it("saving the profile keeps the profile photo (PUT replaces everything)", async () => {
+  it("saving the profile keeps the profile photo (update-profile replaces everything)", async () => {
     const calls = mockApi({
       "GET /v1/me": me,
-      [`GET /v1/yearbooks/${ID}`]: book(yb({}, { photo_media_id: PHOTO })),
-      [`PUT /v1/yearbooks/${ID}/profile`]: (c) =>
+      [`GET /yearbook/get?id=${ID}`]: book(yb({}, { photo_media_id: PHOTO })),
+      ["POST /yearbook/update-profile"]: (c) =>
         book(yb({}, { ...(c.body as object), photo_media_id: PHOTO })),
-      "GET /v1/yearbooks": Response.json({ yearbooks: [], next_cursor: null }),
+      "GET /yearbook/get-list": page([]),
       [MEDIA]: mediaPage([PHOTO]),
     });
     renderApp(`/yearbooks/${ID}`);
@@ -166,7 +163,8 @@ describe("edit", () => {
     await userEvent.type(name, "Nguyễn Thị Lan");
     await userEvent.click(screen.getByRole("button", { name: "Save profile" }));
     expect(await screen.findByText("Saved.")).toBeInTheDocument();
-    expect(last(calls.filter((c) => c.method === "PUT")).body).toEqual({
+    expect(last(calls.filter((c) => c.path === "/yearbook/update-profile")).body).toEqual({
+      yearbook_id: ID,
       full_name: "Nguyễn Thị Lan",
       nickname: "Lan",
       birthday: "2008-03-04",
@@ -180,20 +178,23 @@ describe("edit", () => {
     ).toBeInTheDocument();
   });
 
-  it("saving the book details sends no cover (PATCH keeps it) and clears the year with null", async () => {
+  it("saving the book details sends no cover (an absent cover is kept) and clears the year with null", async () => {
     const calls = mockApi({
       "GET /v1/me": me,
-      [`GET /v1/yearbooks/${ID}`]: book(yb({ cover_media_id: PHOTO })),
-      [`PATCH /v1/yearbooks/${ID}`]: (c) =>
-        book(yb({ ...(c.body as object), cover_media_id: PHOTO })),
-      "GET /v1/yearbooks": Response.json({ yearbooks: [], next_cursor: null }),
+      [`GET /yearbook/get?id=${ID}`]: book(yb({ cover_media_id: PHOTO })),
+      ["POST /yearbook/update"]: (c) => book(yb({ ...(c.body as object), cover_media_id: PHOTO })),
+      "GET /yearbook/get-list": page([]),
       [MEDIA]: mediaPage([PHOTO]),
     });
     renderApp(`/yearbooks/${ID}`);
     await userEvent.clear(await screen.findByLabelText("Graduation year"));
     await userEvent.click(screen.getByRole("button", { name: "Save details" }));
     expect(await screen.findByText("Saved.")).toBeInTheDocument();
-    const body = last(calls.filter((c) => c.method === "PATCH")).body as Record<string, unknown>;
+    const body = last(calls.filter((c) => c.path === "/yearbook/update")).body as Record<
+      string,
+      unknown
+    >;
+    expect(body.id).toBe(ID);
     expect(body.graduation_year).toBeNull();
     expect(body.page_size).toBe("A4");
     expect(body).not.toHaveProperty("cover_media_id");
@@ -201,7 +202,7 @@ describe("edit", () => {
   });
 
   it("says so when the book does not exist", async () => {
-    mockApi({ "GET /v1/me": me, [`GET /v1/yearbooks/${ID}`]: err(404, "not_found") });
+    mockApi({ "GET /v1/me": me, [`GET /yearbook/get?id=${ID}`]: fail(404, "not_found") });
     renderApp(`/yearbooks/${ID}`);
     expect(await screen.findByRole("alert")).toHaveTextContent("does not exist");
   });
@@ -210,23 +211,23 @@ describe("edit", () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
     const calls = mockApi({
       "GET /v1/me": me,
-      [`GET /v1/yearbooks/${ID}`]: book(yb()),
-      [`DELETE /v1/yearbooks/${ID}`]: new Response(null, { status: 204 }),
-      "GET /v1/yearbooks": Response.json({ yearbooks: [], next_cursor: null }),
+      [`GET /yearbook/get?id=${ID}`]: book(yb()),
+      "POST /yearbook/delete": ok({}),
+      "GET /yearbook/get-list": page([]),
     });
     renderApp(`/yearbooks/${ID}`);
     await userEvent.click(await screen.findByRole("button", { name: "Delete yearbook" }));
     expect(await screen.findByRole("heading", { name: "My yearbooks" })).toBeInTheDocument();
     expect(where()).toBe("/yearbooks");
-    expect(calls.some((c) => c.method === "DELETE")).toBe(true);
+    expect(calls.find((c) => c.path === "/yearbook/delete")?.body).toEqual({ id: ID });
   });
 
   it("does not delete when the user cancels", async () => {
     vi.spyOn(window, "confirm").mockReturnValue(false);
-    const calls = mockApi({ "GET /v1/me": me, [`GET /v1/yearbooks/${ID}`]: book(yb()) });
+    const calls = mockApi({ "GET /v1/me": me, [`GET /yearbook/get?id=${ID}`]: book(yb()) });
     renderApp(`/yearbooks/${ID}`);
     await userEvent.click(await screen.findByRole("button", { name: "Delete yearbook" }));
-    expect(calls.some((c) => c.method === "DELETE")).toBe(false);
+    expect(calls.some((c) => c.path === "/yearbook/delete")).toBe(false);
   });
 });
 
@@ -291,8 +292,8 @@ async function openEditor(extra: Record<string, Response | ((c: Call) => Respons
   vi.stubGlobal("XMLHttpRequest", FakeXhr);
   const calls = mockApi({
     "GET /v1/me": me,
-    [`GET /v1/yearbooks/${ID}`]: book(yb()),
-    "GET /v1/yearbooks": Response.json({ yearbooks: [], next_cursor: null }),
+    [`GET /yearbook/get?id=${ID}`]: book(yb()),
+    "GET /yearbook/get-list": page([]),
     [MEDIA]: mediaPage([]),
     ...extra,
   });
@@ -378,10 +379,12 @@ describe("photos", () => {
   it("sets and clears the cover and the profile photo", async () => {
     const withCover = yb({ cover_media_id: PHOTO }, { photo_media_id: PHOTO });
     const { calls } = await openEditor({
-      [`GET /v1/yearbooks/${ID}`]: book(yb({ cover_media_id: PHOTO }, { photo_media_id: PHOTO })),
+      [`GET /yearbook/get?id=${ID}`]: book(
+        yb({ cover_media_id: PHOTO }, { photo_media_id: PHOTO }),
+      ),
       [MEDIA]: mediaPage([PHOTO]),
-      [`PATCH /v1/yearbooks/${ID}`]: (c) => book({ ...withCover, ...(c.body as object) }),
-      [`PUT /v1/yearbooks/${ID}/profile`]: book(yb()),
+      ["POST /yearbook/update"]: (c) => book({ ...withCover, ...(c.body as object) }),
+      ["POST /yearbook/update-profile"]: book(yb()),
     });
     const cover = await screen.findByRole("button", { name: "Cover photo", pressed: true });
     await userEvent.click(cover);
@@ -390,10 +393,16 @@ describe("photos", () => {
         screen.getByRole("button", { name: "Cover photo", pressed: false }),
       ).toBeInTheDocument(),
     );
-    expect(calls.find((c) => c.method === "PATCH")?.body).toEqual({ cover_media_id: null });
+    expect(calls.find((c) => c.path === "/yearbook/update")?.body).toEqual({
+      id: ID,
+      cover_media_id: null,
+    });
     await userEvent.click(screen.getByRole("button", { name: "Profile photo", pressed: true }));
-    await waitFor(() => expect(calls.some((c) => c.method === "PUT")).toBe(true));
-    expect(calls.find((c) => c.method === "PUT")?.body).toMatchObject({
+    await waitFor(() =>
+      expect(calls.some((c) => c.path === "/yearbook/update-profile")).toBe(true),
+    );
+    expect(calls.find((c) => c.path === "/yearbook/update-profile")?.body).toMatchObject({
+      yearbook_id: ID,
       full_name: "Lan Nguyễn",
       photo_media_id: null,
     });
@@ -403,7 +412,7 @@ describe("photos", () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
     let gone = false;
     const { calls } = await openEditor({
-      [`GET /v1/yearbooks/${ID}`]: () => book(yb({ cover_media_id: gone ? null : PHOTO })),
+      [`GET /yearbook/get?id=${ID}`]: () => book(yb({ cover_media_id: gone ? null : PHOTO })),
       [MEDIA]: () => mediaPage(gone ? [] : [PHOTO]),
       "POST /media/delete": () => {
         gone = true;

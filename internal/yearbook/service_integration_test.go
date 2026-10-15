@@ -8,6 +8,7 @@ import (
 	"database/sql/driver"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 	"sync/atomic"
@@ -17,6 +18,7 @@ import (
 
 	"github.com/danyaa666/smemories/internal/db"
 	"github.com/danyaa666/smemories/internal/db/dbtest"
+	"github.com/danyaa666/smemories/internal/httpx"
 )
 
 // fakeChild is a registered ChildPurger: it records what it saw and can fail.
@@ -74,24 +76,24 @@ func TestDeleteCallsChildrenAndRollsBack(t *testing.T) {
 	e.insertMedia(row, "01J9Z3K6V8Q4M7N2P5R8T0W1XY")
 
 	// Bob cannot delete it: no child is called and nothing changes.
-	e.do(bob, "DELETE", "/v1/yearbooks/"+doomed, "").status(404, "not_found")
+	e.remove(bob, doomed).status(404, "ERROR_NOT_FOUND")
 	if len(child.called) != 0 || e.count(`SELECT COUNT(*) FROM yearbook_tab`) != 2 {
 		t.Fatalf("foreign delete: children %v", child.called)
 	}
 
 	// A failing child rolls the profile delete, the child's own delete and the book back.
 	child.fail = errors.New("child exploded")
-	e.do(alice, "DELETE", "/v1/yearbooks/"+doomed, "").status(500, "internal_error")
+	e.remove(alice, doomed).status(500, "ERROR_INTERNAL")
 	if e.count(`SELECT COUNT(*) FROM yearbook_tab WHERE public_id = ?`, doomed) != 1 || e.count(`SELECT COUNT(*) FROM profile_tab WHERE yearbook_id = ?`, row) != 1 ||
 		e.count(`SELECT COUNT(*) FROM media_tab`) != 1 {
 		t.Fatal("a failed child purger left the delete half done")
 	}
-	e.do(alice, "GET", "/v1/yearbooks/"+doomed, "").status(200, "")
+	e.get(alice, doomed).status(200, "")
 
 	// Without the failure: the child ran once more, saw no profile (deleted before it), and book, profile and its rows are gone.
 	child.fail = nil
 	child.called = nil
-	e.do(alice, "DELETE", "/v1/yearbooks/"+doomed, "").status(204, "")
+	e.remove(alice, doomed).status(200, "")
 	if len(child.called) != 1 || child.called[0] != row || child.profiles != 0 {
 		t.Fatalf("child called %v, saw %d profiles", child.called, child.profiles)
 	}
@@ -103,7 +105,7 @@ func TestDeleteCallsChildrenAndRollsBack(t *testing.T) {
 	if n := e.count(`SELECT COUNT(*) FROM media_tab`); n != 0 {
 		t.Fatalf("child's delete did not commit: %d media rows", n)
 	}
-	e.do(bob, "GET", "/v1/yearbooks/"+bobs, "").status(200, "")
+	e.get(bob, bobs).status(200, "")
 	if e.count(`SELECT COUNT(*) FROM profile_tab`) != 1 {
 		t.Fatal("another book's profile was deleted")
 	}
@@ -124,14 +126,14 @@ func TestMediaReferences(t *testing.T) {
 	e.insertMedia(e.bookRow(bobs), others) // someone else's book
 
 	for _, bad := range []string{otherBook, others, "01J9Z3K6V8Q4M7N2P5R8T0DDDD", "x"} {
-		e.do(alice, "PATCH", "/v1/yearbooks/"+one, fmt.Sprintf(`{"cover_media_id":%q}`, bad)).status(400, "invalid_media")
-		e.do(alice, "PUT", "/v1/yearbooks/"+one+"/profile", fmt.Sprintf(`{"full_name":"A","photo_media_id":%q}`, bad)).status(400, "invalid_media")
+		e.update(alice, one, fmt.Sprintf(`{"cover_media_id":%q}`, bad)).status(400, "ERROR_INVALID_MEDIA")
+		e.profile(alice, one, fmt.Sprintf(`{"full_name":"A","photo_media_id":%q}`, bad)).status(400, "ERROR_INVALID_MEDIA")
 	}
-	b := e.do(alice, "PATCH", "/v1/yearbooks/"+one, fmt.Sprintf(`{"cover_media_id":%q}`, mine)).status(200, "").book()
+	b := e.update(alice, one, fmt.Sprintf(`{"cover_media_id":%q}`, mine)).status(200, "").book()
 	if b["cover_media_id"] != mine {
 		t.Fatalf("cover not set: %v", b)
 	}
-	b = e.do(alice, "PUT", "/v1/yearbooks/"+one+"/profile", fmt.Sprintf(`{"full_name":"A","photo_media_id":%q}`, mine)).status(200, "").book()
+	b = e.profile(alice, one, fmt.Sprintf(`{"full_name":"A","photo_media_id":%q}`, mine)).status(200, "").book()
 	if b["cover_media_id"] != mine || b["profile"].(map[string]any)["photo_media_id"] != mine {
 		t.Fatalf("photo not set (or cover lost): %v", b)
 	}
@@ -147,7 +149,7 @@ func TestMediaReferences(t *testing.T) {
 	if err := tx.Commit(); err != nil {
 		t.Fatal(err)
 	}
-	b = e.do(alice, "GET", "/v1/yearbooks/"+one, "").status(200, "").book()
+	b = e.get(alice, one).status(200, "").book()
 	if b["cover_media_id"] != nil || b["profile"].(map[string]any)["photo_media_id"] != nil {
 		t.Fatalf("references survive ClearMediaRefs: %v", b)
 	}
@@ -244,7 +246,7 @@ func hookedDB(t *testing.T, d *sql.DB, n *atomic.Int64, hook func(query string))
 // (book rows, profiles, media public ids).
 func TestReadQueryCountIsConstant(t *testing.T) {
 	e := newEnv(t)
-	e.register("alice@example.com", "Alice")
+	alice := e.register("alice@example.com", "Alice")
 	var owner uint64
 	if err := e.db.QueryRow(`SELECT id FROM user_tab WHERE email = 'alice@example.com'`).Scan(&owner); err != nil {
 		t.Fatal(err)
@@ -290,6 +292,22 @@ func TestReadQueryCountIsConstant(t *testing.T) {
 	}
 	if got := n.Load(); got != 3 {
 		t.Fatalf("get issued %d queries, want 3", got)
+	}
+
+	// T-070 AC5: the same through the HTTP layer: a get-list of 1 or of 50 books and a get cost the same three queries.
+	counted := httpx.NewRouter(slog.New(slog.DiscardHandler), NewHandler(NewService(NewStore(countingDB(t, e.db, &n)), httpx.NewCursors([]byte(strings.Repeat("c", 32))), nil, e.now),
+		e.ah.RequireUser, []string{origin}).Routes, e.ah.Routes)
+	for _, limit := range []int{1, 50} {
+		n.Store(0)
+		items, _ := e.doOn(counted, alice, "GET", fmt.Sprintf("/api/yearbook/get-list?limit=%d", limit), "").status(200, "").page()
+		if len(items) != limit || n.Load() != 3 {
+			t.Fatalf("HTTP get-list of %d books: %d items, %d queries, want 3", limit, len(items), n.Load())
+		}
+	}
+	n.Store(0)
+	e.doOn(counted, alice, "GET", "/api/yearbook/get?id=01J9Z3K6V8Q4M7N2P5R8T00007", "").status(200, "")
+	if n.Load() != 3 {
+		t.Fatalf("HTTP get issued %d queries, want 3", n.Load())
 	}
 
 	// The list query can read idx_owner_updated in order: no sort. (The optimizer ignores any index on a 50-row table,
