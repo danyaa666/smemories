@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { listYearbooks, mediaUrl, type Yearbook } from "../api/yearbooks";
 import { errorText } from "../auth/errors";
+import { Button, buttonClass } from "../components/ui/Button";
 
 export const YEARBOOKS_KEY = ["yearbooks"] as const;
 
@@ -39,7 +40,7 @@ export function Yearbooks() {
     <>
       <h1>{t("books.title")}</h1>
       <p>
-        <Link to="/yearbooks/new" className="button">
+        <Link to="/yearbooks/new" className={buttonClass("primary")}>
           {t("books.new")}
         </Link>
       </p>
@@ -49,9 +50,9 @@ export function Yearbooks() {
           <p role="alert" className="error">
             {errorText(t, q.error)}
           </p>
-          <button type="button" onClick={() => void q.refetch()}>
+          <Button type="button" onClick={() => void q.refetch()}>
             {t("auth.retry")}
-          </button>
+          </Button>
         </>
       )}
       {q.isSuccess && books.length === 0 && <p>{t("books.empty")}</p>}
@@ -63,13 +64,9 @@ export function Yearbooks() {
         </ul>
       )}
       {q.hasNextPage && (
-        <button
-          type="button"
-          disabled={q.isFetchingNextPage}
-          onClick={() => void q.fetchNextPage()}
-        >
+        <Button busy={q.isFetchingNextPage} onClick={() => void q.fetchNextPage()}>
           {t("books.more")}
-        </button>
+        </Button>
       )}
       {q.isFetchNextPageError && (
         <p role="alert" className="error">

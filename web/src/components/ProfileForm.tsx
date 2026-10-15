@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { replaceProfile, type Yearbook } from "../api/yearbooks";
 import { fieldError, formError } from "../auth/errors";
 import { TextField } from "./TextField";
+import { Button } from "./ui/Button";
 
 /** The owner's profile page. PUT replaces everything, so the photo is sent back on every save. */
 export function ProfileForm({
@@ -93,9 +94,9 @@ export function ProfileForm({
           {formError(t, m.error)}
         </p>
       )}
-      <button type="submit" disabled={m.isPending}>
+      <Button type="submit" variant="primary" busy={m.isPending}>
         {m.isPending ? t("auth.working") : t("profile.save")}
-      </button>
+      </Button>
       {m.isSuccess && <p role="status">{t("book.saved")}</p>}
     </form>
   );

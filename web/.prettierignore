@@ -2,3 +2,6 @@ dist
 coverage
 package-lock.json
 src/api/schema.d.ts
+
+# design contract: kept byte-identical to docs/design/notes/tokens.css (see styles/tokens.test.ts)
+src/styles/tokens.css

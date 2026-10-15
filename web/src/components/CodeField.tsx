@@ -1,4 +1,5 @@
-import { useEffect, useId, useRef, type ClipboardEvent, type ChangeEvent } from "react";
+import { useEffect, useRef, type ClipboardEvent, type ChangeEvent } from "react";
+import { TextField } from "./ui/TextField";
 
 export const CODE_LENGTH = 6;
 
@@ -27,7 +28,6 @@ export function CodeField({
   disabled,
   focusOnMount,
 }: Props) {
-  const id = useId();
   const ref = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (focusOnMount) ref.current?.focus();
@@ -40,34 +40,25 @@ export function CodeField({
     onChange(v);
     if (v.length === CODE_LENGTH && v !== value) onComplete?.(v);
   };
-  const describedBy = [hint && `${id}-hint`, error && `${id}-error`].filter(Boolean).join(" ");
   return (
-    <div className="field">
-      <label htmlFor={id}>{label}</label>
-      <input
-        ref={ref}
-        id={id}
-        type="text"
-        inputMode="numeric"
-        autoComplete="one-time-code"
-        maxLength={CODE_LENGTH}
-        spellCheck={false}
-        disabled={disabled}
-        value={value}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={describedBy || undefined}
-        onChange={(e: ChangeEvent<HTMLInputElement>) => set(e.target.value)}
-        onPaste={(e: ClipboardEvent<HTMLInputElement>) => {
-          e.preventDefault(); // maxLength would cut "123 456" to "123 45" before we can clean it
-          set(e.clipboardData.getData("text"));
-        }}
-      />
-      {hint && <small id={`${id}-hint`}>{hint}</small>}
-      {error && (
-        <p id={`${id}-error`} role="alert" className="error">
-          {error}
-        </p>
-      )}
-    </div>
+    <TextField
+      ref={ref}
+      label={label}
+      help={hint}
+      error={error}
+      type="text"
+      inputMode="numeric"
+      autoComplete="one-time-code"
+      maxLength={CODE_LENGTH}
+      spellCheck={false}
+      disabled={disabled}
+      value={value}
+      className="code-input"
+      onChange={(e: ChangeEvent<HTMLInputElement>) => set(e.target.value)}
+      onPaste={(e: ClipboardEvent<HTMLInputElement>) => {
+        e.preventDefault(); // maxLength would cut "123 456" to "123 45" before we can clean it
+        set(e.clipboardData.getData("text"));
+      }}
+    />
   );
 }

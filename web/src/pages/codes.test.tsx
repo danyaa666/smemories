@@ -192,9 +192,12 @@ describe("resend the verification code", () => {
     mockApi({ "GET /v1/me": unverified });
     renderApp("/verify-email");
     // jsdom has no layout, so check the rule the button carries
-    expect(await screen.findByRole("button", { name: "Send a new code" })).toHaveClass("resend");
-    const css = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
-    expect(css).toMatch(/\.resend\s*{[^}]*min-height:\s*2\.75rem/);
+    expect(await screen.findByRole("button", { name: "Send a new code" })).toHaveClass("btn");
+    const css = readFileSync(resolve(__dirname, "../styles/ui.css"), "utf8");
+    expect(css).toMatch(/\.btn\s*{[^}]*min-height:\s*var\(--tap-min\)/); // --tap-min is 44px
+    expect(readFileSync(resolve(__dirname, "../styles/tokens.css"), "utf8")).toMatch(
+      /--tap-min:\s*44px/,
+    );
   });
 
   it("starts the cooldown when the student just registered", async () => {

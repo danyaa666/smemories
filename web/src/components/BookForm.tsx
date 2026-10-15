@@ -4,6 +4,7 @@ import type { YearbookCreate } from "../api/yearbooks";
 import { fieldError, formError } from "../auth/errors";
 import { SelectField } from "./SelectField";
 import { TextField } from "./TextField";
+import { Button } from "./ui/Button";
 
 export const PAGE_SIZES = ["A5", "A4", "Letter"] as const;
 
@@ -101,9 +102,9 @@ export function BookForm({ initial, submitLabel, pending, error, onSubmit }: Pro
           {formError(t, error)}
         </p>
       )}
-      <button type="submit" disabled={pending}>
+      <Button type="submit" variant="primary" busy={pending}>
         {pending ? t("auth.working") : submitLabel}
-      </button>
+      </Button>
     </form>
   );
 }

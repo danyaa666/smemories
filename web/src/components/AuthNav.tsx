@@ -1,23 +1,15 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Link, useNavigate } from "react-router-dom";
-import { logout } from "../api/auth";
+import { Link } from "react-router-dom";
 import { errorText } from "../auth/errors";
-import { ME_KEY, useMe } from "../auth/useMe";
+import { useMe } from "../auth/useMe";
+import { Button } from "./ui/Button";
+import { useSignOut } from "./useSignOut";
 
+/** The header of the public pages: sign in and register, or the account links when signed in. */
 export function AuthNav() {
   const { t } = useTranslation();
-  const qc = useQueryClient();
-  const navigate = useNavigate();
   const { data: user } = useMe();
-  const out = useMutation({
-    mutationFn: logout,
-    onSuccess: () => {
-      qc.clear(); // nothing cached for the old user survives
-      qc.setQueryData(ME_KEY, null);
-      void navigate("/login");
-    },
-  });
+  const out = useSignOut();
   if (user === undefined) return null; // loading or unreachable: show nothing rather than guess
   return (
     <nav aria-label={t("nav.label")} className="auth-nav">
@@ -25,9 +17,9 @@ export function AuthNav() {
         <>
           <Link to="/yearbooks">{t("nav.yearbooks")}</Link>
           <Link to="/account">{user.display_name}</Link>
-          <button type="button" disabled={out.isPending} onClick={() => out.mutate()}>
+          <Button variant="ghost" disabled={out.isPending} onClick={() => out.mutate()}>
             {t("nav.signOut")}
-          </button>
+          </Button>
           {out.isError && <span role="alert">{errorText(t, out.error)}</span>}
         </>
       ) : (

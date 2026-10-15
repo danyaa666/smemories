@@ -5,6 +5,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { forgotPassword } from "../api/auth";
 import { TextField } from "../components/TextField";
 import { fieldError, formError } from "../auth/errors";
+import { Button } from "../components/ui/Button";
 
 export function ForgotPassword() {
   const { t } = useTranslation();
@@ -38,9 +39,9 @@ export function ForgotPassword() {
             {error}
           </p>
         )}
-        <button type="submit" disabled={m.isPending}>
+        <Button type="submit" variant="primary" busy={m.isPending}>
           {m.isPending ? t("auth.working") : t("forgot.submit")}
-        </button>
+        </Button>
       </form>
       <p>
         <Link to="/login">{t("forgot.back")}</Link>

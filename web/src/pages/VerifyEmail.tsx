@@ -8,6 +8,7 @@ import { errorText, fieldError, formError } from "../auth/errors";
 import { ME_KEY, useMe } from "../auth/useMe";
 import { CODE_LENGTH, CodeField } from "../components/CodeField";
 import { ResendCode } from "../components/ResendCode";
+import { Button } from "../components/ui/Button";
 
 export function VerifyEmail() {
   const { t } = useTranslation();
@@ -75,9 +76,9 @@ export function VerifyEmail() {
             {error}
           </p>
         )}
-        <button type="submit" disabled={verify.isPending}>
+        <Button type="submit" variant="primary" busy={verify.isPending}>
           {verify.isPending ? t("auth.working") : t("verify.submit")}
-        </button>
+        </Button>
       </form>
       <p>
         <ResendCode

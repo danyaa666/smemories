@@ -5,7 +5,10 @@ import { BrowserRouter } from "react-router-dom";
 import { App } from "./App";
 import "./i18n";
 import { makeQueryClient } from "./queryClient";
+import "./styles/tokens.css";
+import "./styles/fonts.css";
 import "./styles.css";
+import "./styles/ui.css";
 
 const queryClient = makeQueryClient(3);
 

@@ -15,6 +15,8 @@ import {
   type Yearbook,
 } from "../api/yearbooks";
 import { errorText } from "../auth/errors";
+import { Button, buttonClass } from "./ui/Button";
+import { PhotoTile } from "./ui/PhotoTile";
 
 export const BUSY_RETRIES = 3; // 503 busy: wait Retry-After (2 s if absent) and try again, this many times
 
@@ -123,7 +125,7 @@ export function Photos({
     <section aria-labelledby="photos-h">
       <h2 id="photos-h">{t("photos.title")}</h2>
       <p>
-        <label className="button">
+        <label className={`${buttonClass("primary")} file-button`}>
           {t("photos.add")}
           <input
             type="file"
@@ -152,12 +154,12 @@ export function Photos({
                 <progress value={u.progress} max={1} aria-label={u.name} />
               )}
               {u.error !== undefined && (
-                <button
+                <Button
                   type="button"
                   onClick={() => setUploads((x) => x.filter((y) => y.key !== u.key))}
                 >
                   {t("photos.dismiss")}
-                </button>
+                </Button>
               )}
             </li>
           ))}
@@ -171,9 +173,7 @@ export function Photos({
       {list.isError && (
         <p role="alert" className="error">
           {errorText(t, list.error)}{" "}
-          <button type="button" onClick={() => void list.refetch()}>
-            {t("auth.retry")}
-          </button>
+          <Button onClick={() => void list.refetch()}>{t("auth.retry")}</Button>
         </p>
       )}
       {list.isPending && <p role="status">{t("auth.loading")}</p>}
@@ -182,41 +182,44 @@ export function Photos({
         <ul className="photo-grid">
           {ids.map((id, n) => (
             <li key={id}>
-              <img src={mediaUrl(id)} alt={t("photos.alt", { n: n + 1 })} loading="lazy" />
-              <div className="photo-actions">
-                <button
-                  type="button"
-                  aria-pressed={cover === id}
-                  disabled={act.isPending}
-                  onClick={() => toggleCover(id)}
-                >
-                  {t("photos.cover")}
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={profilePhoto === id}
-                  disabled={act.isPending}
-                  onClick={() => toggleProfile(id)}
-                >
-                  {t("photos.profile")}
-                </button>
-                <button type="button" disabled={act.isPending} onClick={() => remove(id)}>
-                  {t("photos.delete")}
-                </button>
-              </div>
+              <PhotoTile
+                src={mediaUrl(id)}
+                alt={t("photos.alt", { n: n + 1 })}
+                tape
+                disabled={act.isPending}
+                removeLabel={t("photos.delete")}
+                onRemove={() => remove(id)}
+              >
+                <div className="photo-actions">
+                  <Button
+                    aria-pressed={cover === id}
+                    disabled={act.isPending}
+                    onClick={() => toggleCover(id)}
+                  >
+                    {t("photos.cover")}
+                  </Button>
+                  <Button
+                    aria-pressed={profilePhoto === id}
+                    disabled={act.isPending}
+                    onClick={() => toggleProfile(id)}
+                  >
+                    {t("photos.profile")}
+                  </Button>
+                </div>
+              </PhotoTile>
             </li>
           ))}
         </ul>
       )}
       {list.hasNextPage && (
         <p>
-          <button
+          <Button
             type="button"
             disabled={list.isFetchingNextPage}
             onClick={() => void list.fetchNextPage()}
           >
             {t("photos.more")}
-          </button>
+          </Button>
         </p>
       )}
     </section>

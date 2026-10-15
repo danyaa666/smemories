@@ -9,6 +9,7 @@ import { errorText, fieldError, formError } from "../auth/errors";
 import { CODE_LENGTH, CodeField } from "../components/CodeField";
 import { ResendCode } from "../components/ResendCode";
 import { TextField } from "../components/TextField";
+import { Button } from "../components/ui/Button";
 
 export function ResetPassword() {
   const { t } = useTranslation();
@@ -80,9 +81,9 @@ export function ResetPassword() {
             {error}
           </p>
         )}
-        <button type="submit" disabled={m.isPending}>
+        <Button type="submit" variant="primary" busy={m.isPending}>
           {m.isPending ? t("auth.working") : t("reset.submit")}
-        </button>
+        </Button>
       </form>
       <p>
         <ResendCode

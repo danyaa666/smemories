@@ -29,7 +29,11 @@
     "register": "Tạo tài khoản",
     "account": "Tài khoản của tôi",
     "signOut": "Đăng xuất",
-    "yearbooks": "Kỷ yếu của tôi"
+    "yearbooks": "Kỷ yếu của tôi",
+    "main": "Kỷ yếu",
+    "profile": "Trang hồ sơ của tôi",
+    "tabBooks": "Kỷ yếu",
+    "tabProfile": "Hồ sơ"
   },
   "fields": {
     "email": "Email",
