@@ -13,7 +13,7 @@
 | BACKLOG | 22 | T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-072, T-081, T-082 |
 | TODO | 3 | T-013, T-079, T-080 |
 | IN_PROGRESS | 1 | T-071 |
-| IN_QA | 1 | T-083 |
+| QA_FAIL | 1 | T-083 |
 | DONE | 49 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-073, T-074, T-075, T-076, T-077, T-078 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
 
@@ -21,7 +21,7 @@
 
 **Open questions for you:** none
 
-_Board last written 2026-10-15 14:19Z_
+_Board last written 2026-10-15 14:26Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -3272,19 +3272,19 @@ Account page shows the username and lets the user change it (weekly limit, local
 #### Comments
 
 ### T-083 — [E01] Web: design system foundation (tokens, fonts, base components, yearbook shell)
-- **Status:** IN_QA
+- **Status:** QA_FAIL
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
 - **Depends-on:** —
 - **Risk:** low
-- **Rework:** 0
+- **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** —
 - **Branch:** task/t-083-e01-web-design-system-foundation-tokens-
 - **PR:** https://github.com/danyaa666/smemories/pull/57
-- **Updated:** 2026-10-15 14:11Z by qa
-- **Comments-seen:** 2
+- **Updated:** 2026-10-15 14:25Z by qa
+- **Comments-seen:** 4
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/15-web-design-system-foundation.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -3295,6 +3295,26 @@ Port the Claude Design tokens, self-host the fonts, add base components (Button,
 #### Comments
 - 2026-10-15 14:10Z · dev · PR #57 head 3126fd1. Tokens, self-hosted fonts (3 subsets), 9 ui components + tests, YearbookLayout (sidebar>=960/tab bar), existing controls restyled. web typecheck/lint/test(170)/i18n/check:api/build green. Verify: 375/1280 screenshots in scratchpad/shots (see PR), vi copy needs owner review, one assertion in codes.test.tsx moved (.resend -> .btn). Dialog not wired (window.confirm kept).
 - 2026-10-15 14:19Z · leader · Owner accepted the new Vietnamese nav strings as written (2026-10-15): nav.main 'Kỷ yếu', nav.profile 'Trang hồ sơ của tôi', nav.tabBooks 'Kỷ yếu', nav.tabProfile 'Hồ sơ'. No wording rework needed; QA need not list them.
+- 2026-10-15 14:25Z · qa · QA_FAIL on head 3126fd1 (1 blocker, rest verified OK).
+  
+  1. [BLOCKER] PR CI job `web` is RED: `npm test` fails in src/components/YearbookLayout.test.tsx > "on a book, shows the book card and the profile item (sidebar) or tab": TestingLibraryElementError "Unable to find role=link and name /Class 12A1.*Le Hong Phong/" after 1012 ms (findByRole default timeout is 1000 ms). Run: gh run 38748994044, job 116470084572 (steps lint, lint:i18n, typecheck pass; test fails; build and check:api skipped). Locally it passes (35 ms; 4 parallel full-suite runs all 170/170), so it is a timing flake on the slow CI runner: the render goes through the lazy YearbookEdit chunk plus two fetches before the book card appears. Expected: green CI on the head. Fix: give that findByRole an explicit timeout (e.g. { timeout: 5000 }) or await the page first (findByRole heading for the book) and then the card; check the other tests in the file that depend on the lazy route. Re-push and CI must be green (go, go-integration, security already pass).
+  
+  Verified OK (my own evidence, Vite on :5190 from the T-083 worktree, proxy to the local API, Chromium headless 375 and 1280):
+  - Scope: git diff origin/develop...HEAD touches only web/**, THIRD_PARTY_NOTICES.md; no Go, no .team/ files.
+  - AC1: diff docs/design/notes/tokens.css web/src/styles/tokens.css shows only the removed @import (+ blank line); tokens.test.ts asserts it. Network log over the full flow (login, register, verify, account, yearbooks, new, edit, photos, delete, sign out, login) at both widths: external hosts = [], 34 to 36 woff2/woff requests all from localhost; build output has only latin, latin-ext and vietnamese files (no other subsets). OFL notices for the 3 packages present in THIRD_PARTY_NOTICES.md (versions pinned 5.3.0). Minor: Fraunces variable package has the wght axis only (the design import asked for opsz 9..144 too); fine, just FYI.
+  - AC2/AC5 mechanical, local: web lint, lint:i18n, typecheck, build, check:api all pass; vitest 12 files / 170 tests pass (also 4 concurrent runs). Dialog trap/restore, Toast action keyboard covered in ui.test.tsx (passing).
+  - AC3 end to end (real API): register (Vietnamese display name) -> verify with dev code 123123 (CodeField auto-submits at 6 digits) -> account -> create book with long Vietnamese title/school -> edit + Save + "Saved." -> upload PNG (polaroid tile with tape and remove button) -> list -> Delete yearbook (window.confirm) -> empty state -> sign out -> login: all work at 375 and 1280 (desktop run used an existing account because /register returned 429 rate_limited after my first runs). No page errors. No horizontal scroll on any of the 12 screens x 2 widths (scrollWidth == clientWidth). Screenshots in the QA scratchpad (shots/).
+  - AC4 in browser: sidebar present and tab bar absent at 960, 1280; tab bar present and sidebar absent at 375, 599, 600, 959 (boundary correct). Tab bar does not cover the last button when scrolled to the bottom at 375 (tab top 743, last button bottom 728).
+  - Focus ring: input and .btn show the 2px paper + 3px teal (--focus-ring) box-shadow on keyboard focus. Buttons, inputs, selects, textareas, resend button all >= 44 px. prefers-reduced-motion: emulated reduce gives 0s transition and animation on buttons, links, inputs.
+  - codes.test.tsx change (.resend -> .btn, now reads ui.css `.btn{min-height:var(--tap-min)}` and tokens.css `--tap-min:44px`): legitimate. The resend button is now the shared Button, and I measured it at >= 44 px in the browser; the assertion still checks the same rule at its new home.
+  
+  Non-blocking observations (minor, not part of the fail):
+  a. Text links under 44 px high (AC6 says touch targets >= 44): brand link in the shell (24 px), the yearbook card title link on /yearbooks (23 px; the card is not itself clickable, so this is the only way to open a book), "Back to my yearbooks" (20 px). Inline-text links are tolerated by WCAG 2.5.8, but the card title link would be better as a full-card or padded target.
+  b. Dialog is not wired (window.confirm kept for delete book and delete photo) as dev stated; acceptable for a foundation task.
+  c. Not tested by me: 200% zoom, offline font loading, screen reader.
+  
+  New vi strings for the owner to review (en -> vi): nav.main "Yearbook" -> "Kỷ yếu"; nav.profile "My profile page" -> "Trang hồ sơ của tôi"; nav.tabBooks "Books" -> "Kỷ yếu"; nav.tabProfile "Profile" -> "Hồ sơ". (Note nav.main and nav.tabBooks share "Kỷ yếu" in vi.)
+- 2026-10-15 14:26Z · leader · Leader guidance for the rework (QA_FAIL, web CI red): YearbookLayout.test.tsx 'on a book, shows the book card...' times out at 1012ms on the CI runner (run 38748994044). Fix the cause, not the clock: await the page content that triggers the card (findBy/waitFor on the loaded state) before asserting the link, and keep the default asyncUtilTimeout unless the whole suite needs it (T-079 is about starved runners; do not paste a magic 5000 in one test). Re-run the web suite 3x locally under load (npm test -- --run with parallel runs). Non-blocking, take only if cheap: inline text links under 44px (brand link, card title link, back link) are exempt as inline text; leave them. Owner approved the 4 nav strings; keep them.
 
 <!-- tasks:end -->
 
