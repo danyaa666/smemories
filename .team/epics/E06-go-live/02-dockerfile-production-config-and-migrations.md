@@ -19,3 +19,9 @@ Production configuration also needs `SMEM_REDIS_URL` (a `rediss://` URL with the
 #### Leader note from T-075 (2026-10-10)
 The one-off task for `smemories-media-backfill` needs only the database and object-store settings (it uses `config.LoadMigrate`); the exact variable list is in `docs/media.md` (section on the backfill). Run it with `--dry-run` first after the first deploy, then without; it is idempotent. The migrate task definition takes the same variables.
 Also from T-075 QA: a failing S3 read takes about 25 s when the endpoint refuses connections (the AWS client default), so set explicit dial/response timeouts on the S3 client in production config (storage.S3Config) before relying on retry or stop-after-N logic.
+
+#### Leader note (2026-10-15, from T-073)
+The API can serve Prometheus metrics on a second listener (`SMEM_METRICS_ADDR`, default off, see `docs/observability.md`). It has **no authentication by design**: in production bind it to a private interface or the task's loopback and scrape it from inside the VPC only; never expose it through the load balancer or CloudFront. The alarm queries are listed in `docs/observability.md`.
+
+#### Leader note (2026-10-15, from T-073)
+The API can serve Prometheus metrics on a second listener (`SMEM_METRICS_ADDR`, default off, see `docs/observability.md`). It has **no authentication by design**: in production bind it to a private interface or the task's loopback and scrape it from inside the VPC only; never expose it through the load balancer or CloudFront. The alarm queries are listed in `docs/observability.md`.
