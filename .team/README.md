@@ -10,7 +10,7 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 24 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-070, T-071, T-072, T-080 |
+| BACKLOG | 26 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-070, T-071, T-072, T-080, T-081, T-082 |
 | TODO | 2 | T-073, T-079 |
 | READY_FOR_QA | 1 | T-069 |
 | DONE | 46 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-074, T-075, T-076, T-077, T-078 |
@@ -20,7 +20,7 @@
 
 **Open questions for you:** none
 
-_Board last written 2026-10-15 07:18Z_
+_Board last written 2026-10-15 07:30Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -424,6 +424,7 @@ Owner decisions (2026-10-06, `/team-init` interview). "Rejected" lists the optio
 | D-25 | **Client API follows the `be-api-design` skill: `/api/<namespace>/<action>`, GET/POST only, envelope `{status,data}` / `{status,error_message,request_id}`, `ERROR_*` codes, Unix-ms timestamps, `limit`/`next_id` pagination, every operation documented in `api/openapi.yaml` (enforced by a test).** | Owner answer in chat 2026-10-09 ("follow skills in /.agents ... refactor them"; chose full adoption). Cheapest now: nothing is in production. HTTP status codes are kept alongside the envelope (browsers and the edge need them); ULID `public_id` strings stay as ids; a birthday stays a `YYYY-MM-DD` date; `/healthz` and `/readyz` stay outside. Domains move one at a time behind a path-based envelope switch (`/api/...` = v2, `/v1/...` = old), so develop and the web app stay working. Standard: `docs/api-contract.md` (includes the old-to-new route map). Supersedes L-07 and the error-envelope line in section 5. Epic E10: T-063, T-068..T-071. Owner action: register the new Google redirect URI before T-071 is deployed. | Keep REST `/v1` and adopt only the documentation rules | Never (a later change would be a breaking change on a live API) |
 | D-26 | **Database follows the `be-rldb` skill: `_tab` tables, `BIGINT UNSIGNED AUTO_INCREMENT` ids, `created_at`/`updated_at` as BIGINT Unix ms on every table, no foreign keys, no ENUM, indexed reference columns, goose Up/Down; new migrations are timestamp-named.** | Owner answer 2026-10-09 ("align fully before launch"). Integrity moves into Go: the parent's service deletes children in one transaction through small purger interfaces, proven by a zero-rows test per domain. Joins are replaced by one `IN` query per relation. **Interpretation to confirm:** the skill describes soft deletes (`deleted_at BIGINT`) for features that use them; no feature does, and user-requested deletion stays a hard delete for privacy, so no table gets `deleted_at` now. A birthday stays `DATE`. Existing migration files `0001`..`0009` are not renamed. Standard: `docs/db-conventions.md`. Supersedes the timestamp part of L-05. Tasks T-064..T-067 (high risk, owner approves each). | Keep the schema and record the deviations; soft-delete every table | A feature needs undelete or an audit trail (then a decision record for that table) |
 | D-27 | **`.agents/skills/be-*` are the team's backend standard; three layers (handler -> service -> store) inside each domain package; typed errors in `internal/apperr`; deviations only as listed in `docs/go-conventions.md`.** | Owner answer 2026-10-09 ("3 layers inside each domain package"). Not adopted because the stack differs: GORM (L-11 stands), gin (L-01 stands), proto/gRPC, the private `go-common` library (replaced by `internal/apperr` and `internal/httpx`), `idgen` (ULID), ClickHouse, Elasticsearch, Kafka. D-23 keeps sessions fail-closed although be-architect prefers a DB fallback for caches. Lint (`mnd`, `forbidigo`) makes the rules mechanical in T-072; metrics (T-073) wait for Q-018. Audit: `.team/epics/E10-skills-alignment/AUDIT.md`. Dev and QA read the skills from the main checkout (`.agents/skills/`). | Move to `internal/controller|modules|adapter` (large import churn, conflicts with queued tasks) | The domain packages grow past about 500 lines per layer file, or a second binary needs the services |
+| D-28 | **Usernames: a unique, public handle (not a login name). Default `user-` + the last 8 characters of the `public_id`, assigned at registration and backfilled for existing users; stored lower case, 3-30 characters `a-z 0-9 . _ -`, reserved words blocked; the user can change it once every 7 days (the first change from the default is immediate); failed attempts rate-limited; a deleted user's name is freed.** Owner chose "public handle only" and "default `user-xxxx`, change once per 7 days" on 2026-10-15 (login by username and unlimited renames were declined). Tasks T-081 (API) and T-082 (web), after the E10 auth task T-071. | A handle is needed to identify people in class books and notes without exposing internal ids; keeping login on email avoids rewriting auth, and the weekly limit prevents impersonation by rapid renames. |
 
 Leader decisions (low-risk, inside the approved stack):
 
@@ -3173,6 +3174,52 @@ T-077 QA: a ratelimit retry-after test failed once on the CI runner (689 ms vs a
 **Epic:** E04-friends-notes · **PRD:** `.team/epics/E04-friends-notes/PRD.md`
 
 T-068 answers a full public link on the raw writer without reading the body; a friend with a valid token may then see a connection reset instead of the "link full" message. Drain the body (bounded, nothing on disk) and show the message in the public form.
+
+#### Comments
+
+### T-081 — [E02] Username: unique public handle with default and weekly change (API)
+- **Status:** BACKLOG
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M1
+- **Depends-on:** T-071
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-15 07:30Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/13-username-api.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E02-auth · **PRD:** `.team/epics/E02-auth/PRD.md`
+
+Owner decision D-28: every user gets a unique public username (default user-xxxxxxxx, changeable once per 7 days), not a login name. Migration + backfill, default at registration, POST /api/user/update-username, username fields on get-me.
+
+#### Comments
+
+### T-082 — [E02] Web: show and change the username on the account page
+- **Status:** BACKLOG
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M1
+- **Depends-on:** T-081
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-15 07:30Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/14-web-username.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E02-auth · **PRD:** `.team/epics/E02-auth/PRD.md`
+
+Account page shows the username and lets the user change it (weekly limit, localised errors, accessible).
 
 #### Comments
 
