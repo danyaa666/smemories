@@ -12,16 +12,16 @@
 |---|---:|---|
 | BACKLOG | 22 | T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-072, T-081, T-082 |
 | TODO | 3 | T-013, T-079, T-080 |
-| IN_PROGRESS | 1 | T-071 |
-| QA_FAIL | 1 | T-083 |
+| IN_PROGRESS | 1 | T-083 |
+| QA_PASS | 1 | T-071 |
 | DONE | 49 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-073, T-074, T-075, T-076, T-077, T-078 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
 
 **Awaiting your review (MERGED):** nothing
 
-**Open questions for you:** none
+**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?)
 
-_Board last written 2026-10-15 14:26Z_
+_Board last written 2026-10-15 14:42Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -389,6 +389,13 @@ Third database conversion of E10. Three migrations rename note_collections, note
 - **Answer:** _(pending)_
 
 Small CI-file change (go-integration timeout-minutes 15 -> 40) plus 'make test-integration' now passes -timeout 30m, and the internal/media integration tests run in parallel: 189-198 s -> 44-48 s locally (-76%); on GitHub CI the media package drops from 277-343 s to 150-222 s and the job from 6.5-7.5 to 5.5 min. QA: same 44 tests before and after, only a fixture size changed (2000 px, still above the 1800 px print edge), 7 mutations still fail, parallel runs repeated with -race/-count=5/GOMAXPROCS=2 without flakes. Caveats found by QA: one unrelated ratelimit timing test failed once on CI under the new load and passed on re-run, and the media test binary peaks at 1.9 GB (was 0.7 GB). Both are handled by follow-up T-079 (deterministic timing, cap parallelism). To approve: team approve T-077.
+
+### Q-030 — Approve merge of T-071 (auth/user API v2, PR #58)?
+- **Status:** OPEN
+- **Asked:** 2026-10-15 14:42Z
+- **Blocks:** T-071
+- **Recommendation:** approve
+- **Answer:** _(pending)_
 
 <!-- questions:end -->
 
@@ -952,8 +959,8 @@ Owner-created private collection links (create, list, revoke) and the public loo
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-15 08:27Z by leader
-- **Comments-seen:** 2
+- **Updated:** 2026-10-15 14:32Z by leader
+- **Comments-seen:** 4
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/03-notes-moderation-api-approve-hide-reorder.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -964,6 +971,8 @@ Owner lists pending/approved/hidden notes per yearbook, approves or hides them, 
 #### Comments
 - 2026-10-15 08:27Z · leader · Deps T-034 and T-068 are done: unblocked. API first so the inbox UI (T-017) has a contract; write it in v2 from the start (docs/api-contract.md): /api/note/...
 - 2026-10-15 08:38Z · leader · Spec was a stub when I moved it to TODO; the full spec is now written (endpoints note/get-list, batch-update-status, reorder, batch-delete; counts; lock order). Read the spec file again before starting.
+- 2026-10-15 14:32Z · dev · Dev: claimed by mistake just before the usage gate turned SLEEP (stale cache, 1292 s). No worktree, no code. Leader: reset to TODO or let dev resume on the next wake-up (needs T-071 PR #58 open, it is).
+- 2026-10-15 14:32Z · leader · Reset by leader: dev's usage gate slept after the claim (stale cache); no work started.
 
 ### T-014 — [E05] Export job: assemble book, render PDF, store, download
 - **Status:** CANCELLED
@@ -2916,7 +2925,7 @@ Moves the yearbook endpoints to /api/yearbook/*, introduces yearbook.Service (ru
 - 2026-10-15 14:19Z · human · accepted by owner
 
 ### T-071 — [E10] API v2: auth and user domain; remove the /v1 paths and the web shim
-- **Status:** IN_PROGRESS
+- **Status:** QA_PASS
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2924,11 +2933,11 @@ Moves the yearbook endpoints to /api/yearbook/*, introduces yearbook.Service (ru
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** leader
 - **Branch:** task/t-071-e10-api-v2-auth-and-user-domain-remove-t
-- **PR:** —
-- **Updated:** 2026-10-15 14:11Z by dev
-- **Comments-seen:** 1
+- **PR:** https://github.com/danyaa666/smemories/pull/58
+- **Updated:** 2026-10-15 14:42Z by qa
+- **Comments-seen:** 4
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/09-api-auth.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2938,6 +2947,32 @@ Moves auth to /api/auth/* and /api/user/get-me, Google callback path, last domai
 
 #### Comments
 - 2026-10-15 14:06Z · leader · unblocked: T-070 merged; dependencies T-067/T-070/T-053 are in. Risk high: needs owner approve before merge. Owner must register <PUBLIC_BASE_URL>/api/auth/google-callback as a Google redirect URI before deploy.
+- 2026-10-15 14:32Z · dev · PR #58 head f3d640f. Auth+get-me on /api/auth/*, /api/user/get-me, v2 envelope, /v1 routes gone, web shim removed. OWNER: register <PUBLIC_BASE_URL>/api/auth/google-callback in Google console before deploy. Full go test -race -tags integration green, lint 0, web vitest/lint/build green, newman auth/yearbooks/media 0 failures (notes not run, needs verified users). QA probe: resend-verification now always returns data.already_verified (bool); client-cancel is 499 not 500; register/login/get-me data is the flat user object.
+- 2026-10-15 14:42Z · qa · QA_PASS on PR #58. Tested head f3d640f + my test-only commit f189d67 (internal/auth/t071_qa_integration_test.go, 3 tests). Own API process (built from the branch) on :18971 with private MySQL smem_test_qa71 (dropped after), Valkey db 11, dev env, fake Google client id, real issuer.
+  EVIDENCE (AC -> how -> result)
+  AC1 contract lint: go test ./api green; no skip list left except /healthz,/readyz; example200 skips only redirect-only ops (Google). PASS.
+  AC2 auth integration: make test-integration (-race, -tags integration, -count=1, 30m) all 21 pkgs ok (auth 197 s, incl. Google concurrency stress and Redis sessions); go test -race ./... ok; go vet (+integration tag), gofmt, golangci-lint 0 issues; build ok. Test changes are only path/status/envelope/code/created_at as listed in the PR. PASS.
+  AC3 web: npm run lint, typecheck, lint:i18n, check:api, vitest 132/132, build all green. client.ts has no old-envelope branch (isEnvelope/ErrorEnvelope deleted; normaliseCode aliases kept); vite rewrite only matches /healthz|/readyz (viteProxy.test.ts: /api/v1/me stays /api/v1/me); git grep finds no /v1 in web/src, Go, docs, Makefile apart from that test. get-me, register, login all use one auth.User (handler me/register/login -> httpx.OK(w,r,u)); json created_at Unix ms. PASS.
+  AC4 /v1 gone: TestV1AuthRoutesAreGone green; live: GET/POST /v1/auth/login, /v1/me, /v1/auth/verify-email/resend, /api/v1/me, /api/me, /api/auth/verify-email/resend, /api/auth/google/start all 404; GET on POST routes 405; POST /api/user/get-me 405. PASS.
+  AC5 Postman/docs: newman (scratch install) on my API, each run twice back to back with the Redis limiter keys reset between: auth 74 req/174 assertions 0 failed (x2, Google folder runs with fake client id); yearbooks 98/203 0 failed (x2); media 75/144 0 failed (x2, --working-dir postman); notes 74/141 0 failed (x2, accounts A and B verified, C left unverified as the collection expects). README/.env.example/auth-otp/dev-shortcuts/api-contract updated; diff has no .team files; DEV-SHORTCUT lines untouched (diff only changes doc paths). PASS.
+  PROBES (live, my API unless noted)
+  - Cookie: smem_session, Path=/, HttpOnly, SameSite=Lax, Max-Age 30d, no Secure in dev; logout clears with Max-Age=0 same attrs; no cookie-code lines in the diff. Unchanged.
+  - CSRF: with a cookie, Origin evil / null / localhost:5173.evil.com / absent -> 403 ERROR_CSRF_ORIGIN_MISMATCH on all 7 POST routes (curl, 28 combos) and in the new TestQAWrongOriginOnEveryPost (also :5174 and https scheme); session survives; right Origin works. No-cookie requests are not origin-checked (unchanged design; login/register cannot be CSRF-guarded that way).
+  - Rate limit: 10 wrong logins for one email -> 11th and 12th 429 ERROR_RATE_LIMITED Retry-After: 900, and the correct password is also 429 while locked (unchanged behaviour); register 5/h -> 429 Retry-After 3573; forgot-password 429 Retry-After 3590.
+  - Anti-enumeration: login unknown vs known email, same 401 ERROR_INVALID_CREDENTIALS and message; timing median 21.9 ms vs 22.2 ms (8 each, interleaved); forgot-password unknown vs known same 200 {} and 1.3 ms vs 1.3 ms (429 limits identical); reset-password unknown vs known both 400 ERROR_INVALID_CODE.
+  - Logout idempotence: 3 logouts with the same cookie, no cookie, empty body: all 200 {status:OK,data:{}} + clearing cookie; a CSRF-blocked logout leaves the session alive.
+  - Expired session mid-use: deleted the Redis session key, then get-me, verify-email, resend-verification all 401 ERROR_UNAUTHORIZED (RequireUser), logout still 200. Password reset revokes the old session (401).
+  - resend-verification: unverified -> data.already_verified=false; after verify -> true; always 200. register/login/get-me data is the flat user object. verify-email wrong code 400 ERROR_INVALID_CODE; reset weak password 400 ERROR_WEAK_PASSWORD; bad JSON 400 ERROR_PARAM; text/plain 415.
+  - Google: existing oidctest suite covers state/cookie tamper, expired cookie, replay, login-CSRF across browsers, PKCE (provider checks the verifier), return_to sanitising, rejections never set a session. I added a test that code+state of one flow with another flow's signed cookie is refused, and that return_to/redirect/next query params on the callback are ignored (redirect only from the signed cookie). Live: google-start?return_to=//evil.example stores r=/ in the signed cookie; start 302 to accounts.google.com with S256, state, nonce, redirect_uri=<base>/api/auth/google-callback. Without Google configured the routes are 404.
+  - 499 (new): TestQAClientCancelIs499WithoutErrorLogs: cancelled context on get-me (valid session), login and forgot-password -> 499 ERROR_CLIENT_CLOSED, no Set-Cookie, no internals in the body, no level ERROR log line, session intact afterwards. Safe: only the caller can trigger it, nothing sensitive, logged at debug, metrics count it in the 4xx class, and yearbook/media already use the same code. Judged OK.
+  NON-BLOCKING
+  1. ERROR_CLIENT_CLOSED/499 is not in docs/api-contract.md section 3 or openapi (yearbook/media/notes already return it), and codeClientClosed is now defined in three packages (auth, yearbook, media): move one definition into apperr and document it in T-072.
+  2. CI: at my verdict the PR checks web and security were green and go / go-integration still pending on the new head f189d67 (test-only commit, same product code); leader to confirm green before merge.
+  3. Unknown JSON fields are still accepted on auth bodies (PR says unchanged on purpose); 404 for unknown /v1 paths still carries the legacy body until T-072 (spec says so).
+  4. scripts/check-no-dev-shortcuts.sh is not in this branch's tree (T-050 not merged here), so I could not run it; no shortcut lines were changed.
+  5. Owner action stays: register <PUBLIC_BASE_URL>/api/auth/google-callback in the Google console before deploy.
+  QA housekeeping to disclose: while probing I first pointed my own API at Valkey db 5 and then ran a delete of smem:dev:sess:* keys there to simulate an expired session; db 5 turned out to hold older dev sessions (about 130 user session keys, from an earlier local run, not from any test: the integration suite uses db 0 with unique prefixes). Those dev login sessions are gone (users just sign in again); no code, MySQL data or other process was touched. Rest of the probes used db 11 (flushed) and a private DB (dropped).
+- 2026-10-15 14:42Z · leader · Leader review OK on f189d67 (f3d640f + QA test-only commit): handler decodes and maps only, cookie name/flags unchanged, fail-closed stores keep Retry-After, 499 is debug-logged only, get-me = single auth.User (T-081 adds username there), /v1 gone, web shim removed. QA probes clean. Waiting for: (1) CI go + go-integration green on f189d67, (2) owner approval (Risk high). Follow-ups moved into T-072 spec. For owner: register <PUBLIC_BASE_URL>/api/auth/google-callback in the Google console before deploy.
 
 ### T-072 — [E10] Quality sweep: mnd, forbidigo, pointer parameters, pool defaults, remove the transition switch
 - **Status:** BACKLOG
@@ -3272,7 +3307,7 @@ Account page shows the username and lets the user change it (weekly limit, local
 #### Comments
 
 ### T-083 — [E01] Web: design system foundation (tokens, fonts, base components, yearbook shell)
-- **Status:** QA_FAIL
+- **Status:** IN_PROGRESS
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -3280,10 +3315,10 @@ Account page shows the username and lets the user change it (weekly limit, local
 - **Risk:** low
 - **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** dev
 - **Branch:** task/t-083-e01-web-design-system-foundation-tokens-
 - **PR:** https://github.com/danyaa666/smemories/pull/57
-- **Updated:** 2026-10-15 14:25Z by qa
+- **Updated:** 2026-10-15 14:33Z by dev
 - **Comments-seen:** 4
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/15-web-design-system-foundation.md`

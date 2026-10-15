@@ -24,3 +24,6 @@ Make the remaining skill rules mechanical so they cannot regress, and delete the
 
 #### Test plan
 - QA should probe: pool numbers in the start-up log, a config with `SMEM_DB_MAX_IDLE` set explicitly, error bodies for 404/405/413 and panics (all v2 now), unchanged JSON of one endpoint per domain against the openapi examples.
+
+#### Added from T-071 review (2026-10-15)
+- Move `ERROR_CLIENT_CLOSED` (HTTP 499) into `apperr`: it is now defined as `codeClientClosed` in three packages. Document it in `docs/api-contract.md` section 3 and let `httpx.Fail` map `context.Canceled` once, so handlers stop doing it. Auth bodies still accept unknown JSON fields (kept on purpose in T-071); decide here whether to switch `DecodeJSON` to strict for auth.
