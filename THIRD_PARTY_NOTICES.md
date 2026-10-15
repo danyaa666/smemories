@@ -24,6 +24,7 @@ Excluded by decision D-06: `unipdf` (AGPL or commercial licence).
 |---|---|---|
 | `github.com/redis/go-redis/v9` v9.23.0 | BSD-2-Clause | Redis-protocol client (`internal/redis`) |
 | `github.com/cespare/xxhash/v2`, `go.uber.org/atomic` (indirect) | MIT | go-redis dependencies |
+| `github.com/prometheus/client_golang` v1.23.2 | Apache-2.0 | Prometheus metrics (`internal/metrics`); indirect: `client_model`, `common`, `procfs` (Apache-2.0), `beorn7/perks`, `munnerz/goautoneg` (MIT / BSD-3-Clause), `google.golang.org/protobuf` (BSD-3-Clause), `go.yaml.in/yaml/v2` (Apache-2.0) |
 | Valkey 8 (`valkey/valkey` image, local stack and CI only, not shipped) | BSD-3-Clause | Redis-protocol server |
 
 ## Contract lint (T-063)

@@ -62,6 +62,8 @@ type Factory struct {
 	log *slog.Logger
 	now func() time.Time // nil: the Redis clock; set only by tests that move time
 
+	onReject func(name string) // nil: rejections are not counted; set once before the limiters are used
+
 	faults  atomic.Int64 // failures since the last log line
 	lastLog atomic.Int64 // unix nanos of the last log line
 }
@@ -79,6 +81,10 @@ func NewFactory(rc *redis.Client, log *slog.Logger, now func() time.Time) *Facto
 func NewMemoryFactory(now func() time.Time) *Factory {
 	return &Factory{log: slog.New(slog.DiscardHandler), now: now}
 }
+
+// OnReject registers fn to be called with the limiter name each time a limiter refuses a hit (not when it fails).
+// Call it once, right after NewFactory, before any limiter is used.
+func (f *Factory) OnReject(fn func(name string)) { f.onReject = fn }
 
 // Open returns a limiter that fails open: when Redis is unavailable the request is allowed and an ERROR is
 // logged (at most one per minute, with the number of failures since the last one).
@@ -130,6 +136,9 @@ func (e unavailable) Unwrap() []error { return []error{ErrUnavailable, e.cause} 
 func (g *guard) Take(ctx context.Context, key string) (bool, time.Duration, error) {
 	ok, retry, err := g.in.Take(ctx, key)
 	if err == nil {
+		if !ok && g.f.onReject != nil {
+			g.f.onReject(g.name)
+		}
 		return ok, retry, nil
 	}
 	if errors.Is(err, context.Canceled) { // the client left; nothing failed, and the caller sees its own cancellation next

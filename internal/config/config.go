@@ -14,9 +14,10 @@ import (
 
 // Config is the validated process configuration.
 type Config struct {
-	HTTPAddr string     // SMEM_HTTP_ADDR, host:port to listen on
-	Env      string     // SMEM_ENV: dev, test or prod
-	LogLevel slog.Level // SMEM_LOG_LEVEL: debug, info, warn or error
+	HTTPAddr    string     // SMEM_HTTP_ADDR, host:port to listen on
+	Env         string     // SMEM_ENV: dev, test or prod
+	LogLevel    slog.Level // SMEM_LOG_LEVEL: debug, info, warn or error
+	MetricsAddr string     // SMEM_METRICS_ADDR: host:port of the internal /metrics listener, empty = off (never the public address)
 
 	DBDSN             string        // SMEM_DB_DSN: user:pass@tcp(host:port)/dbname; required unless Env is "test" (db.Open still rejects an empty one). Never log it.
 	DBMaxOpen         int           // SMEM_DB_MAX_OPEN, default 20
@@ -99,6 +100,16 @@ func load(getenv func(string) string, forAPI bool) (Config, error) {
 		return Config{}, fmt.Errorf("SMEM_HTTP_ADDR=%q: want host:port, e.g. :8080", cfg.HTTPAddr)
 	} else if _, err := strconv.ParseUint(port, 10, 16); err != nil {
 		return Config{}, fmt.Errorf("SMEM_HTTP_ADDR=%q: port must be a number 0-65535", cfg.HTTPAddr)
+	}
+
+	if cfg.MetricsAddr = getenv("SMEM_METRICS_ADDR"); cfg.MetricsAddr != "" {
+		if _, port, err := net.SplitHostPort(cfg.MetricsAddr); err != nil {
+			return Config{}, fmt.Errorf("SMEM_METRICS_ADDR=%q: want host:port, e.g. 127.0.0.1:9090", cfg.MetricsAddr)
+		} else if n, err := strconv.ParseUint(port, 10, 16); err != nil || n == 0 {
+			return Config{}, fmt.Errorf("SMEM_METRICS_ADDR=%q: port must be a number 1-65535", cfg.MetricsAddr)
+		} else if cfg.MetricsAddr == cfg.HTTPAddr {
+			return Config{}, fmt.Errorf("SMEM_METRICS_ADDR=%q: must differ from SMEM_HTTP_ADDR, metrics are never served on the public listener", cfg.MetricsAddr)
+		}
 	}
 
 	switch cfg.Env {

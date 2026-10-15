@@ -11,16 +11,17 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 24 | T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-071, T-072, T-080, T-081, T-082 |
-| TODO | 4 | T-013, T-070, T-079, T-083 |
-| READY_FOR_QA | 1 | T-073 |
+| TODO | 3 | T-013, T-079, T-083 |
+| CHANGES_REQUESTED | 1 | T-070 |
+| MERGED | 1 | T-073 |
 | DONE | 47 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-074, T-075, T-076, T-077, T-078 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
 
-**Awaiting your review (MERGED):** nothing
+**Awaiting your review (MERGED):** T-073 ([E10] Observability: request metrics middleware and /metrics endpoint)
 
 **Open questions for you:** none
 
-_Board last written 2026-10-15 08:59Z_
+_Board last written 2026-10-15 10:15Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -2873,19 +2874,19 @@ Moves the media endpoints to /api/media/* (multipart create, binary get-content)
 - 2026-10-15 08:27Z · human · accepted by owner
 
 ### T-070 — [E10] API v2: yearbook domain with a service layer
-- **Status:** TODO
+- **Status:** CHANGES_REQUESTED
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
 - **Depends-on:** T-064, T-069
 - **Risk:** low
-- **Rework:** 0
+- **Rework:** 1
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-15 08:58Z by leader
-- **Comments-seen:** 4
+- **Branch:** task/t-070-e10-api-v2-yearbook-domain-with-a-servic
+- **PR:** https://github.com/danyaa666/smemories/pull/56
+- **Updated:** 2026-10-15 10:15Z by leader
+- **Comments-seen:** 6
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/08-api-yearbook.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2898,6 +2899,8 @@ Moves the yearbook endpoints to /api/yearbook/*, introduces yearbook.Service (ru
 - 2026-10-15 08:57Z · dev · No work done. I claimed it, but the usage gate re-check (SLEEP: cache 748s old) failed in the same step. Also Docker Desktop on this machine is down, so MySQL integration tests cannot run now. Leader: please reset to TODO, or leave it and I take it next wake-up.
 - 2026-10-15 08:57Z · dev · No work started: usage gate SLEEP after claim; Docker Desktop down (no MySQL). Reset to TODO.
 - 2026-10-15 08:58Z · leader · Reset by leader: dev's usage gate slept after the claim (stale cache), no work was done.
+- 2026-10-15 09:19Z · dev · Yearbook API v2 done (PR #56): /api/yearbook/*, Service holds all rules (handler 143 lines, no store), sealed next_id bound to caller, openapi+Postman (yearbooks/media/notes)+web updated. Test: go test -race -tags integration ./... green; web lint/typecheck/vitest green; newman yearbooks/media/notes 0 failures on a private DB. Test changes listed in the PR. Known: a next_id from another user is now 400 (was silently own list).
+- 2026-10-15 10:15Z · leader · PR #56 conflicts with develop (T-073 merged and touched cmd/smemories-api/main.go; CI is not running on the PR because of it). Blocking: 1) merge origin/develop into the branch, keep both the yearbook v2 wiring and the metrics wiring; 2) re-run make lint build test and go test -race -tags integration ./internal/yearbook ./internal/httpx ./internal/media ./internal/notes, confirm CI green on the exact head; 3) READY_FOR_QA. Nothing else changes. Rework 1 of 2.
 
 ### T-071 — [E10] API v2: auth and user domain; remove the /v1 paths and the web shim
 - **Status:** BACKLOG
@@ -2946,7 +2949,7 @@ Turns the remaining skill rules into lint (mnd, forbidigo), fixes what they find
 #### Comments
 
 ### T-073 — [E10] Observability: request metrics middleware and /metrics endpoint
-- **Status:** READY_FOR_QA
+- **Status:** MERGED
 - **Priority:** P3
 - **Type:** infra
 - **Milestone:** M1
@@ -2957,8 +2960,8 @@ Turns the remaining skill rules into lint (mnd, forbidigo), fixes what they find
 - **Assignee:** —
 - **Branch:** task/t-073-e10-observability-request-metrics-middle
 - **PR:** https://github.com/danyaa666/smemories/pull/55
-- **Updated:** 2026-10-15 08:57Z by dev
-- **Comments-seen:** 4
+- **Updated:** 2026-10-15 09:07Z by leader
+- **Comments-seen:** 6
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/11-metrics.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2971,6 +2974,15 @@ Adds request and pool metrics as be-golang requires; waits for Q-018 (library ch
 - 2026-10-15 08:22Z · dev · Prometheus metrics: internal/metrics, httpx.Instrument, SMEM_METRICS_ADDR listener (default off), pool/upload/ratelimit metrics, docs/observability.md. Test: go test -race ./..., scrape smoke on metrics port. No endpoint change, no Postman.
 - 2026-10-15 08:45Z · leader · PR #55 now conflicts with develop (T-069 touched cmd/smemories-api/main.go and docs). Blocking: 1) merge origin/develop into the branch and resolve (keep both the media v2 wiring and the metrics wiring), 2) re-run make lint build test and go test -race -tags integration ./internal/httpx ./internal/media ./internal/ratelimit ./internal/notes, scrape /metrics once, confirm CI green on the exact head, 3) READY_FOR_QA. Nothing else changes. Rework 1 of 2.
 - 2026-10-15 08:57Z · dev · Merged origin/develop (conflict in cmd/smemories-api/main.go resolved: kept media slot gauges + T-069's httpx.NewCursors arg). make lint build test green; go test -race -tags integration ./internal/httpx ./internal/media ./internal/ratelimit ./internal/notes green; /metrics scraped on separate port (200, smem_http_*, media/upload gauges; public port /metrics = 404). CI green on head 688aa68 (go, go-integration, security, web). Nothing else changed.
+- 2026-10-15 09:06Z · qa · Head 688aa68, CI green (go, go-integration, security, web).
+  AC1 (middleware, route pattern, method, status class, in-flight): real API run, scrape showed smem_http_request_duration_seconds_count{code_class,method,route="GET /healthz"|"POST /v1/auth/login"|"GET /v1/me"}, in_flight returns to 0. PASS. Unit test TestMetricsRouteLabelsArePatterns covers 5xx via panic.
+  AC2 (pools, uploads, ratelimit): scrape had go_sql_*{db_name=smemories}, smem_redis_pool_*, smem_media_processing_slots(_in_use), smem_public_uploads_in_progress/_max; 15 bad logins gave 10x401 then 5x429 and smem_ratelimit_rejected_total{limiter="login_pair"} 5. PASS.
+  AC3 (separate listener, default off, no unbounded labels): SMEM_METRICS_ADDR unset -> no listener, public /metrics 404. Set -> 127.0.0.1:19173 /metrics 200; /healthz there 404, POST 405; public /metrics 404. Hostile requests (/api/does/not/exist/secrettoken123, method FOOBAR, ?email=a@b.com&token=zzz, login with x@y.com) -> route=unmatched / method=OTHER, 0 leaks of those strings in the scrape. Same addr as HTTP, or non-host:port -> startup config error; port in use -> 'metrics listen failed' and exit; metrics listener closes on SIGTERM. PASS.
+  AC4 (load-free scrape test): httpx/metrics_test.go + metrics_test.go + config + ratelimit tests present and pass. PASS.
+  docs/observability.md lists names, labels and T-024 queries; .env.example and THIRD_PARTY_NOTICES updated. PASS.
+  Commands: make build lint (ok); go test -race -count=1 ./... (all ok); go test -race -tags integration ./internal/{httpx,metrics,ratelimit,notes,config,auth} twice against my own compose project qa073 (ports 33173/63173/39173, removed afterwards), all ok. No Postman needed (no API endpoint change).
+  Non-blocking: (1) the equal-address check is a string compare, so e.g. ':8080' vs '0.0.0.0:8080' is only caught by the bind failing; (2) the metrics port has no auth by design (documented): bind it to a private interface in deploy (T-023/T-024).
+- 2026-10-15 09:07Z · leader · merged eb401e3. Review: private Prometheus registry, httpx.Instrument labels are route pattern + folded method + status class only (hostile paths become route=unmatched), DB/Redis pool, media, upload and rate-limit gauges, listener on SMEM_METRICS_ADDR default off, public /metrics 404, QA verified live. New dependency prometheus/client_golang v1.23.2 (Apache-2.0, approved in Q-018, noted in THIRD_PARTY_NOTICES). For owner to check: nothing to run; metrics are off until SMEM_METRICS_ADDR is set. Deploy note: the metrics port has no auth by design, so T-022/T-023 must bind it to a private interface only.
 
 ### T-074 — [E04] Sweep orphaned upload spool files at start-up
 - **Status:** DONE

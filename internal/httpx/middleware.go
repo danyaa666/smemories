@@ -13,6 +13,8 @@ import (
 	"runtime/debug"
 	"strings"
 	"time"
+
+	"github.com/danyaa666/smemories/internal/metrics"
 )
 
 // DefaultMaxBody is the request-body cap applied to every route unless overridden.
@@ -103,6 +105,30 @@ func AccessLog(logger *slog.Logger, next http.Handler) http.Handler {
 				slog.Int("status", sw.status),
 				slog.Int64("duration_ms", time.Since(start).Milliseconds()),
 			)
+		}()
+		next.ServeHTTP(sw, r)
+	})
+}
+
+// Instrument records every request in m: duration by method, matched route pattern and status class, and the
+// in-flight gauge. The route is the mux pattern the router stored for AccessLog (never the raw path), so the
+// label set is bounded by the routes in the code. It must sit inside AccessLog and outside Recover.
+func Instrument(m *metrics.Metrics, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		sw := &statusWriter{ResponseWriter: w}
+		m.InFlight(1)
+		defer func() {
+			m.InFlight(-1)
+			route := ""
+			if h, ok := r.Context().Value(routeKey).(*routeHolder); ok {
+				route = h.pattern
+			}
+			status := sw.status
+			if status == 0 {
+				status = http.StatusOK
+			}
+			m.ObserveRequest(r.Method, route, status, time.Since(start))
 		}()
 		next.ServeHTTP(sw, r)
 	})

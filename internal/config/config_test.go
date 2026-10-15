@@ -383,3 +383,19 @@ func TestLoadDevFixedOTP(t *testing.T) {
 		}
 	}
 }
+
+func TestLoadMetricsAddr(t *testing.T) {
+	cfg, err := Load(env(map[string]string{"SMEM_DB_DSN": dsn}))
+	if err != nil || cfg.MetricsAddr != "" {
+		t.Fatalf("default must be off: %q, %v", cfg.MetricsAddr, err)
+	}
+	cfg, err = Load(env(map[string]string{"SMEM_DB_DSN": dsn, "SMEM_METRICS_ADDR": "127.0.0.1:9090"}))
+	if err != nil || cfg.MetricsAddr != "127.0.0.1:9090" {
+		t.Fatalf("valid address: %q, %v", cfg.MetricsAddr, err)
+	}
+	for _, bad := range []string{"9090", "127.0.0.1:x", "127.0.0.1:0", ":8080"} {
+		if _, err := Load(env(map[string]string{"SMEM_DB_DSN": dsn, "SMEM_METRICS_ADDR": bad})); err == nil || !strings.Contains(err.Error(), "SMEM_METRICS_ADDR") {
+			t.Errorf("SMEM_METRICS_ADDR=%q: want an error naming the variable, got %v", bad, err)
+		}
+	}
+}
