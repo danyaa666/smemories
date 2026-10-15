@@ -132,12 +132,3 @@ export const postJson = <T>(path: string, body?: unknown) =>
       ? {}
       : { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
   });
-
-/** Any method with an optional JSON body (PATCH, PUT, DELETE). */
-export const sendJson = <T>(method: string, path: string, body?: unknown) =>
-  request<T>(path, {
-    method,
-    ...(body === undefined
-      ? {}
-      : { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
-  });

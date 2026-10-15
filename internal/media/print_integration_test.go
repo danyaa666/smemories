@@ -59,7 +59,7 @@ func TestUploadStoresPrintVersion(t *testing.T) {
 		t.Fatal("print object survived the photo delete")
 	}
 	e.upload(u, book, "b.jpg", "image/jpeg", bigPhoto(t)).status(200, "")
-	e.json(u, "DELETE", "/v1/yearbooks/"+book, "").status(204, "")
+	e.deleteBook(u, book).status(200, "")
 	if n := e.st.count(yearbookPrefix(book)); n != 0 {
 		t.Fatalf("%d objects left after the yearbook delete", n)
 	}

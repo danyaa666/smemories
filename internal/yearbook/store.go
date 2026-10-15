@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"strconv"
 	"strings"
 
 	"github.com/danyaa666/smemories/internal/apperr"
@@ -11,12 +12,19 @@ import (
 
 var (
 	// ErrNotFound covers a book that does not exist and one owned by someone else: callers cannot tell them apart.
-	ErrNotFound     = errors.New("yearbook: not found")
-	ErrLimitReached = errors.New("yearbook: book limit reached")
+	ErrNotFound = apperr.New(apperr.NotFound, "yearbook not found")
+	// ErrLimitReached: the user already owns maxBooksOwned books (409 ERROR_LIMIT_REACHED).
+	ErrLimitReached = apperr.New(CodeLimitReached, "at most "+strconv.Itoa(maxBooksOwned)+" yearbooks per user")
 )
 
-// Yearbook is the book as the API shows it. The ids of rows are never serialised (L-05); times are Unix milliseconds
-// here and rendered as RFC 3339 by MarshalJSON, so the JSON is the one the clients know.
+// Business codes of the yearbook endpoints beyond the field codes of invalid (docs/api-contract.md section 3).
+var (
+	CodeLimitReached = apperr.NewCode("ERROR_LIMIT_REACHED", 409)
+	// CodeStorage is the object store failing while the files of a book were removed: 502, with its own name for the client.
+	CodeStorage = apperr.NewCode("ERROR_STORAGE_ERROR", 502)
+)
+
+// Yearbook is the book as the API shows it. The ids of rows are never serialised (L-05); times are Unix milliseconds.
 type Yearbook struct {
 	ID             string  `json:"id"`
 	Title          string  `json:"title"`
@@ -28,8 +36,8 @@ type Yearbook struct {
 	PageSize       string  `json:"page_size"`
 	TemplateID     *string `json:"template_id"`
 	CoverMediaID   *string `json:"cover_media_id"` // a media id of this yearbook (T-009)
-	CreatedAt      int64   `json:"-"`              // Unix ms
-	UpdatedAt      int64   `json:"-"`              // Unix ms
+	CreatedAt      int64   `json:"created_at"`     // Unix ms
+	UpdatedAt      int64   `json:"updated_at"`     // Unix ms
 	Profile        Profile `json:"profile"`
 	internalID     uint64
 	coverRow       uint64 // media.id of the cover, 0 = none (AUTO_INCREMENT starts at 1)
@@ -356,7 +364,7 @@ func mediaRow(ctx context.Context, tx *sql.Tx, bookID uint64, publicID *string) 
 	var id int64
 	err := tx.QueryRowContext(ctx, `SELECT id FROM media_tab WHERE yearbook_id = ? AND public_id = ? FOR SHARE`, bookID, *publicID).Scan(&id)
 	if errors.Is(err, sql.ErrNoRows) {
-		return sql.NullInt64{}, ValidationError{"invalid_media"}
+		return sql.NullInt64{}, invalid("media")
 	}
 	return sql.NullInt64{Int64: id, Valid: err == nil}, err
 }
@@ -399,7 +407,34 @@ func (s *Store) ClearMediaRefs(ctx context.Context, tx *sql.Tx, mediaID int64) e
 	return err
 }
 
-func (s *Store) begin(ctx context.Context) (*sql.Tx, error) { return s.db.BeginTx(ctx, nil) }
+// remove deletes the book y with everything that belongs to it in one transaction: the profiles, then every child purger,
+// then the book; any failure rolls all of it back.
+//
+// Lock order (docs/db-conventions.md, Writes): yearbook_tab row first, then profile_tab, then the other children (media,
+// notes). Store.modify and Store.ClearMediaRefs take the same order; taking the book row last deadlocked (MySQL 1213)
+// with concurrent edits. Keep it when adding a child.
+func (s *Store) remove(ctx context.Context, ownerID uint64, y *Yearbook, children []ChildPurger) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+	if err := lockBook(ctx, tx, ownerID, y.ID); err != nil {
+		return err
+	}
+	if err := deleteProfiles(ctx, tx, y.internalID); err != nil {
+		return err
+	}
+	for _, c := range children {
+		if err := c.DeleteByYearbook(ctx, tx, y.internalID); err != nil {
+			return err
+		}
+	}
+	if err := deleteBook(ctx, tx, ownerID, y.internalID); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
 
 func deleteProfiles(ctx context.Context, tx *sql.Tx, bookID uint64) error {
 	_, err := tx.ExecContext(ctx, `DELETE FROM profile_tab WHERE yearbook_id = ?`, bookID)

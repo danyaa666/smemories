@@ -154,14 +154,14 @@ func TestQAStormBookDelete(t *testing.T) {
 		go func() { // the book delete, at a random point
 			defer wg.Done()
 			time.Sleep(time.Duration(rand.Intn(120)) * time.Millisecond)
-			c := e.do(alice, "DELETE", "/v1/yearbooks/"+book, "").Code
+			c := e.deleteBook(alice, book).Code
 			rec(c)
 			deleted.Store(true)
 		}()
 		go func() { // a second, repeated delete
 			defer wg.Done()
 			time.Sleep(time.Duration(60+rand.Intn(120)) * time.Millisecond)
-			rec(e.do(alice, "DELETE", "/v1/yearbooks/"+book, "").Code)
+			rec(e.deleteBook(alice, book).Code)
 		}()
 		wg.Wait()
 		for _, tb := range []string{"note_collection_tab", "note_tab", "note_photo_tab", "media_tab", "yearbook_tab", "profile_tab"} {

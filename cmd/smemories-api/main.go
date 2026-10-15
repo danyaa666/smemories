@@ -116,12 +116,13 @@ func main() {
 		Endpoint: cfg.S3Endpoint, Region: cfg.S3Region, Bucket: cfg.S3Bucket,
 		AccessKey: cfg.S3AccessKey, SecretKey: cfg.S3SecretKey, PathStyle: cfg.S3PathStyle,
 	}), cfg.MediaMaxConcurrent, limiters, nil)
-	mediaH := media.NewHandler(mediaSvc, cfg.MediaMaxBytes, authH.RequireUser, cfg.AllowedOrigins, httpx.NewCursors(cfg.OTPKey), logger)
+	cursors := httpx.NewCursors(cfg.OTPKey)
+	mediaH := media.NewHandler(mediaSvc, cfg.MediaMaxBytes, authH.RequireUser, cfg.AllowedOrigins, cursors, logger)
 	bookStore := yearbook.NewStore(d)
 	notesStore := notes.NewStore(d)
 	notesSvc := notes.NewService(notesStore, mediaSvc, limiters, logger, nil)
 	mediaSvc.SetRefClearer(bookStore, notesSvc) // the yearbook store first: it locks the photo's book
-	bookH := yearbook.NewHandler(bookStore, yearbook.NewService(bookStore, mediaSvc, mediaSvc, notesSvc), authH.RequireUser, cfg.AllowedOrigins, logger, nil)
+	bookH := yearbook.NewHandler(yearbook.NewService(bookStore, cursors, mediaSvc, nil, mediaSvc, notesSvc), authH.RequireUser, cfg.AllowedOrigins)
 	notesH := notes.NewHandler(notesSvc, cfg.MediaMaxBytes, authH.RequireUser, cfg.AllowedOrigins, authH.ClientIP, logger)
 	notesH.SetUploadLimits(cfg.PublicUploadConns, cfg.PublicUploadsPerIP, cfg.UploadTmpDir)
 	notesH.SweepSpool() // files a crash or kill left behind; before the listener accepts traffic

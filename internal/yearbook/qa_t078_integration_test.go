@@ -12,7 +12,7 @@ import (
 )
 
 // QA T-078: walk the list page by page over HTTP while deleting books between the pages (and, in the second variant,
-// while the walk requests run). A surviving book is never skipped or repeated, and next_cursor is never null while a
+// while the walk requests run). A surviving book is never skipped or repeated, and next_id is never empty while a
 // surviving book is still unseen.
 func TestQAPaginationWalkAcrossDeletions(t *testing.T) {
 	for _, concurrent := range []bool{false, true} {
@@ -31,7 +31,7 @@ func TestQAPaginationWalkAcrossDeletions(t *testing.T) {
 				}
 				var amu sync.Mutex
 				kill := func(id string) {
-					if c := e.do(alice, "DELETE", "/v1/yearbooks/"+id, "").Code; c != 204 {
+					if c := e.remove(alice, id).Code; c != 200 {
 						t.Errorf("delete %s: %d", id, c)
 						return
 					}
@@ -46,9 +46,9 @@ func TestQAPaginationWalkAcrossDeletions(t *testing.T) {
 					if pages > 50 {
 						t.Fatal("walk does not end")
 					}
-					path := fmt.Sprintf("/v1/yearbooks?limit=%d", limit)
+					path := fmt.Sprintf("/api/yearbook/get-list?limit=%d", limit)
 					if cursor != "" {
-						path += "&cursor=" + cursor
+						path += "&next_id=" + cursor
 					}
 					// Doomed books: any survivor (seen or not); some deleted while this very request runs.
 					var wg sync.WaitGroup
@@ -72,16 +72,18 @@ func TestQAPaginationWalkAcrossDeletions(t *testing.T) {
 						t.Fatalf("list: %d %s", r.Code, r.Body.String())
 					}
 					var body struct {
-						Yearbooks  []struct{ ID string } `json:"yearbooks"`
-						NextCursor *string               `json:"next_cursor"`
+						Data struct {
+							Items  []struct{ ID string } `json:"items"`
+							NextID string                `json:"next_id"`
+						} `json:"data"`
 					}
 					if err := json.Unmarshal(r.Body.Bytes(), &body); err != nil {
 						t.Fatal(err)
 					}
-					if len(body.Yearbooks) > limit {
-						t.Fatalf("page of %d > limit %d", len(body.Yearbooks), limit)
+					if len(body.Data.Items) > limit {
+						t.Fatalf("page of %d > limit %d", len(body.Data.Items), limit)
 					}
-					for _, b := range body.Yearbooks {
+					for _, b := range body.Data.Items {
 						if seen[b.ID] {
 							t.Fatalf("round %d: %s repeated", round, b.ID)
 						}
@@ -92,19 +94,19 @@ func TestQAPaginationWalkAcrossDeletions(t *testing.T) {
 							kill(id)
 						}
 					}
-					if body.NextCursor == nil {
+					if body.Data.NextID == "" {
 						// The walk says it is over: every book alive at the end (nothing is created during the walk) must have been seen,
 						// except books alive now that were already alive and unseen => that would be a skip.
 						amu.Lock()
 						for id := range alive {
 							if !seen[id] {
-								t.Fatalf("round %d (limit %d): next_cursor null but surviving %s was never returned", round, limit, id)
+								t.Fatalf("round %d (limit %d): next_id empty but surviving %s was never returned", round, limit, id)
 							}
 						}
 						amu.Unlock()
 						break
 					}
-					cursor = *body.NextCursor
+					cursor = body.Data.NextID
 				}
 				// clean up for the next round
 				amu.Lock()
@@ -133,15 +135,15 @@ func TestQAMissingProfileLockedEditStaysLoud(t *testing.T) {
 	if _, err := e.db.Exec(`DELETE FROM profile_tab WHERE yearbook_id = ?`, e.bookRow(broken)); err != nil {
 		t.Fatal(err)
 	}
-	e.do(alice, "GET", "/v1/yearbooks/"+broken, "").status(404, "not_found")
-	r := e.do(alice, "GET", "/v1/yearbooks", "")
+	e.get(alice, broken).status(404, "ERROR_NOT_FOUND")
+	r := e.do(alice, "GET", "/api/yearbook/get-list", "")
 	if r.Code != 200 || strings.Contains(r.Body.String(), broken) || !strings.Contains(r.Body.String(), keep) {
 		t.Fatalf("list: %d %s", r.Code, r.Body.String())
 	}
 	if strings.Contains(e.logs.String(), `"level":"ERROR"`) {
 		t.Fatalf("reads logged an ERROR:\n%s", e.logs.String())
 	}
-	e.do(alice, "PATCH", "/v1/yearbooks/"+broken, `{"motto":"x"}`).status(500, "internal_error")
+	e.update(alice, broken, `{"motto":"x"}`).status(500, "ERROR_INTERNAL")
 	if !strings.Contains(e.logs.String(), "yearbook without its owner profile") {
 		t.Fatalf("locked edit did not log the data error:\n%s", e.logs.String())
 	}

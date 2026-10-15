@@ -1,239 +1,143 @@
-// Package yearbook is the user's yearbooks and the owner's profile page information (T-008).
+// Package yearbook is the user's yearbooks and the owner's profile page information (T-008, v2 in T-070).
 // Every endpoint needs a session and only ever sees the caller's own books.
 package yearbook
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"errors"
-	"fmt"
-	"log/slog"
 	"net/http"
-	"strconv"
-	"strings"
-	"time"
 
+	"github.com/danyaa666/smemories/internal/apperr"
 	"github.com/danyaa666/smemories/internal/auth"
 	"github.com/danyaa666/smemories/internal/httpx"
-	"github.com/danyaa666/smemories/internal/ulid"
 )
 
-const (
-	defaultLimit = 20
-	maxLimit     = 50
+// codeClientClosed is nginx's 499: the client went away, nobody reads the answer.
+var codeClientClosed = apperr.NewCode("ERROR_CLIENT_CLOSED", 499)
 
-	// A cursor time outside years 1..9999 is a tampered token, not a position in anyone's list.
-	minCursorMs = -62135596800000 // 0001-01-01T00:00:00Z
-	maxCursorMs = 253402300799999 // 9999-12-31T23:59:59.999Z
-)
-
-// Handler serves /v1/yearbooks.
+// Handler serves /api/yearbook/*: it decodes, checks the shape, calls the Service and writes the answer.
 type Handler struct {
-	store          *Store
 	svc            *Service
 	requireUser    func(http.Handler) http.Handler // auth.Handler.RequireUser
 	allowedOrigins []string                        // for auth.Guard
-	logger         *slog.Logger
-	now            func() time.Time
 }
 
-// NewHandler builds the handler; now may be nil (time.Now). T-070 folds the store calls into the service.
-func NewHandler(store *Store, svc *Service, requireUser func(http.Handler) http.Handler, allowedOrigins []string, logger *slog.Logger, now func() time.Time) *Handler {
-	if now == nil {
-		now = time.Now
-	}
-	return &Handler{store: store, svc: svc, requireUser: requireUser, allowedOrigins: allowedOrigins, logger: logger, now: now}
+func NewHandler(svc *Service, requireUser func(http.Handler) http.Handler, allowedOrigins []string) *Handler {
+	return &Handler{svc: svc, requireUser: requireUser, allowedOrigins: allowedOrigins}
 }
 
 // Routes registers the endpoints on mux (pass to httpx.NewRouter).
 func (h *Handler) Routes(mux *http.ServeMux) {
 	read := func(f http.HandlerFunc) http.Handler { return h.requireUser(f) }
 	write := func(f http.HandlerFunc) http.Handler { return auth.Guard(h.allowedOrigins, h.requireUser(f)) }
-	mux.Handle("POST /v1/yearbooks", write(h.create))
-	mux.Handle("GET /v1/yearbooks", read(h.list))
-	mux.Handle("GET /v1/yearbooks/{id}", read(h.get))
-	mux.Handle("PATCH /v1/yearbooks/{id}", write(h.patch))
-	mux.Handle("PUT /v1/yearbooks/{id}/profile", write(h.putProfile))
-	mux.Handle("DELETE /v1/yearbooks/{id}", write(h.delete))
+	mux.Handle("POST /api/yearbook/create", write(h.create))
+	mux.Handle("GET /api/yearbook/get-list", read(h.list))
+	mux.Handle("GET /api/yearbook/get", read(h.get))
+	mux.Handle("POST /api/yearbook/update", write(h.update))
+	mux.Handle("POST /api/yearbook/update-profile", write(h.updateProfile))
+	mux.Handle("POST /api/yearbook/delete", write(h.delete))
 }
 
-// owner is the signed-in user's internal id; RequireUser has always stored the user by now.
-func owner(r *http.Request) uint64 {
+// The request bodies: the id (or yearbook_id) next to the fields the service validates.
+type (
+	updateInput struct {
+		ID string `json:"id"`
+		BookInput
+	}
+	profileUpdateInput struct {
+		YearbookID string `json:"yearbook_id"`
+		ProfileInput
+	}
+	deleteInput struct {
+		ID string `json:"id"`
+	}
+)
+
+// caller is the signed-in user; RequireUser has always stored it by now.
+func caller(r *http.Request) auth.User {
 	u, _ := auth.UserFrom(r.Context())
-	return u.InternalID
+	return u
 }
 
-type bookEnvelope struct {
-	Yearbook Yearbook `json:"yearbook"`
-}
-
-// MarshalJSON renders the stored milliseconds as RFC 3339 UTC, as the API always has.
-func (y Yearbook) MarshalJSON() ([]byte, error) {
-	type plain Yearbook // no methods, so no recursion
-	return json.Marshal(struct {
-		plain
-		CreatedAt time.Time `json:"created_at"`
-		UpdatedAt time.Time `json:"updated_at"`
-	}{plain(y), time.UnixMilli(y.CreatedAt).UTC(), time.UnixMilli(y.UpdatedAt).UTC()})
+// required is ERROR_PARAM for a missing id.
+func required(w http.ResponseWriter, r *http.Request, id, name string) bool {
+	if id == "" {
+		fail(w, r, apperr.New(apperr.Param, name+" is required"))
+	}
+	return id != ""
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
-	var in bookInput
+	var in BookInput
 	if !httpx.DecodeJSON(w, r, &in, true) {
 		return
 	}
-	now := h.now().UTC()
-	u, _ := auth.UserFrom(r.Context())
-	y := Yearbook{ID: ulid.New(now), PageSize: "A5", CreatedAt: now.UnixMilli(), UpdatedAt: now.UnixMilli(),
-		Profile: Profile{ID: ulid.New(now), IsOwner: true, FullName: u.DisplayName}}
-	if err := in.applyTo(&y); err != nil {
-		h.fail(w, r, err)
-		return
-	}
-	if in.Title == nil {
-		h.fail(w, r, ValidationError{"invalid_title"})
-		return
-	}
-	if in.Language == nil {
-		h.fail(w, r, ValidationError{"invalid_language"})
-		return
-	}
-	if y.CoverMediaID != nil { // a new book has no media yet
-		h.fail(w, r, ValidationError{"invalid_media"})
-		return
-	}
-	if err := h.store.create(r.Context(), owner(r), y); err != nil {
-		h.fail(w, r, err)
-		return
-	}
-	httpx.WriteJSON(w, http.StatusCreated, bookEnvelope{y})
+	u := caller(r)
+	y, err := h.svc.Create(r.Context(), u.InternalID, u.DisplayName, &in)
+	respond(w, r, y, err)
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
-	limit := defaultLimit
-	if s := r.URL.Query().Get("limit"); s != "" {
-		n, err := strconv.Atoi(s)
-		if err != nil || n < 1 || n > maxLimit {
-			h.fail(w, r, ValidationError{"invalid_limit"})
-			return
-		}
-		limit = n
-	}
-	var cur *cursor
-	if s := r.URL.Query().Get("cursor"); s != "" {
-		c, ok := parseCursor(s)
-		if !ok {
-			h.fail(w, r, ValidationError{"invalid_cursor"})
-			return
-		}
-		cur = &c
-	}
-	books, nextCur, err := h.store.list(r.Context(), owner(r), cur, limit)
+	limit, err := httpx.ParseLimit(r, DefaultListLimit, MaxListLimit)
 	if err != nil {
-		h.fail(w, r, err)
+		fail(w, r, err)
 		return
 	}
-	var next *string
-	if nextCur != nil {
-		c := formatCursor(*nextCur)
-		next = &c
-	}
-	if books == nil {
-		books = []Yearbook{}
-	}
-	httpx.WriteJSON(w, http.StatusOK, struct {
-		Yearbooks  []Yearbook `json:"yearbooks"`
-		NextCursor *string    `json:"next_cursor"`
-	}{books, next})
+	books, next, err := h.svc.List(r.Context(), caller(r).InternalID, limit, r.URL.Query().Get("next_id"))
+	respond(w, r, httpx.Page[Yearbook]{Items: books, NextID: next}, err)
 }
 
 func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
-	y, err := h.store.get(r.Context(), owner(r), r.PathValue("id"))
-	if err != nil {
-		h.fail(w, r, err)
-		return
+	id := r.URL.Query().Get("id")
+	if required(w, r, id, "id") {
+		y, err := h.svc.Get(r.Context(), caller(r).InternalID, id)
+		respond(w, r, y, err)
 	}
-	httpx.WriteJSON(w, http.StatusOK, bookEnvelope{y})
 }
 
-func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
-	var in bookInput
-	if !httpx.DecodeJSON(w, r, &in, true) {
-		return
+func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
+	var in updateInput
+	if httpx.DecodeJSON(w, r, &in, true) && required(w, r, in.ID, "id") {
+		y, err := h.svc.Update(r.Context(), caller(r).InternalID, in.ID, &in.BookInput)
+		respond(w, r, y, err)
 	}
-	y, err := h.store.modify(r.Context(), owner(r), r.PathValue("id"), h.now().UnixMilli(), in.applyTo)
-	if err != nil {
-		h.fail(w, r, err)
-		return
-	}
-	httpx.WriteJSON(w, http.StatusOK, bookEnvelope{y})
 }
 
-func (h *Handler) putProfile(w http.ResponseWriter, r *http.Request) {
-	var in profileInput
-	if !httpx.DecodeJSON(w, r, &in, true) {
-		return
+func (h *Handler) updateProfile(w http.ResponseWriter, r *http.Request) {
+	var in profileUpdateInput
+	if httpx.DecodeJSON(w, r, &in, true) && required(w, r, in.YearbookID, "yearbook_id") {
+		y, err := h.svc.UpdateProfile(r.Context(), caller(r).InternalID, in.YearbookID, &in.ProfileInput)
+		respond(w, r, y, err)
 	}
-	now := h.now()
-	y, err := h.store.modify(r.Context(), owner(r), r.PathValue("id"), now.UnixMilli(), func(y *Yearbook) error {
-		return in.applyTo(&y.Profile, now)
-	})
-	if err != nil {
-		h.fail(w, r, err)
-		return
-	}
-	httpx.WriteJSON(w, http.StatusOK, bookEnvelope{y})
 }
 
-// delete removes the book's stored files first: if the store fails, nothing is deleted and the
-// caller can retry (502 storage_error).
+// delete removes the book's stored files first: if the object store fails, nothing is deleted and the caller can retry.
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
-	if err := h.svc.Delete(r.Context(), owner(r), r.PathValue("id")); err != nil {
-		h.fail(w, r, err)
+	var in deleteInput
+	if httpx.DecodeJSON(w, r, &in, true) && required(w, r, in.ID, "id") {
+		respond(w, r, nil, h.svc.Delete(r.Context(), caller(r).InternalID, in.ID))
+	}
+}
+
+// respond answers data, or err when there is one.
+func respond(w http.ResponseWriter, r *http.Request, data any, err error) {
+	if err != nil {
+		fail(w, r, err)
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	httpx.OK(w, r, data)
 }
 
-// fail maps a store or validation error to the shared envelope; anything else is logged
-// (never with field values) and answers 500.
-func (h *Handler) fail(w http.ResponseWriter, r *http.Request, err error) {
-	var ve ValidationError
-	var se StorageError
+// fail answers err. A request whose client went away gets 499 and a debug line, a storage failure is logged (Fail logs
+// only the codes that are our fault), the rest is httpx.Fail.
+func fail(w http.ResponseWriter, r *http.Request, err error) {
+	log := httpx.LoggerFrom(r.Context())
 	switch {
-	case errors.As(err, &ve):
-		httpx.WriteError(w, r, http.StatusBadRequest, ve.Code, "invalid input: "+ve.Code)
-	case errors.Is(err, ErrNotFound):
-		httpx.WriteError(w, r, http.StatusNotFound, "not_found", "yearbook not found")
-	case errors.As(err, &se):
-		h.logger.Error("yearbook: storage purge failed", "request_id", httpx.RequestIDFrom(r.Context()), "error", err)
-		httpx.WriteError(w, r, http.StatusBadGateway, "storage_error", "object storage failed")
-	case errors.Is(err, ErrLimitReached):
-		httpx.WriteError(w, r, http.StatusConflict, "limit_reached", fmt.Sprintf("at most %d yearbooks per user", maxBooksOwned))
-	default:
-		if !errors.Is(err, context.Canceled) {
-			h.logger.Error("yearbook: request failed", "request_id", httpx.RequestIDFrom(r.Context()), "error", err)
-		}
-		httpx.WriteError(w, r, http.StatusInternalServerError, "internal_error", "internal server error")
+	case errors.Is(err, context.Canceled):
+		log.Debug("yearbook: client gone", "request_id", httpx.RequestIDFrom(r.Context()), "error", err)
+		err = apperr.New(codeClientClosed, "client closed the request")
+	case apperr.Is(err, CodeStorage):
+		log.Error("yearbook: storage failed", "request_id", httpx.RequestIDFrom(r.Context()), "error", err)
 	}
-}
-
-// formatCursor / parseCursor: an opaque token "<unix milliseconds>.<book id>". Tampering can
-// only move the page position inside the caller's own books, since every query is owner-scoped.
-func formatCursor(c cursor) string {
-	return base64.RawURLEncoding.EncodeToString([]byte(strconv.FormatInt(c.updatedAt, 10) + "." + c.publicID))
-}
-
-func parseCursor(s string) (cursor, bool) {
-	raw, err := base64.RawURLEncoding.DecodeString(s)
-	if err != nil {
-		return cursor{}, false
-	}
-	ms, id, ok := strings.Cut(string(raw), ".")
-	n, perr := strconv.ParseInt(ms, 10, 64)
-	if !ok || perr != nil || len(id) != 26 || n < minCursorMs || n > maxCursorMs {
-		return cursor{}, false
-	}
-	return cursor{n, id}, true
+	httpx.Fail(w, r, err)
 }

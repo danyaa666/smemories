@@ -1,33 +1,33 @@
 import type { components } from "./schema";
-import { ApiError, apiErrorFrom, postJson, request, sendJson, unwrapSuccess } from "./client";
+import { ApiError, apiErrorFrom, postJson, request, unwrapSuccess } from "./client";
 
 type S = components["schemas"];
 export type Yearbook = S["Yearbook"];
 export type Profile = S["Profile"];
 export type Media = S["Media"];
-export type YearbookCreate = S["YearbookCreate"];
-export type YearbookPatch = S["YearbookPatch"];
-export type ProfileInput = S["ProfileInput"];
+export type YearbookCreate = S["YearbookCreateRequest"];
+/** The fields of an update; `id` is added by `updateYearbook`. */
+export type YearbookPatch = Omit<S["YearbookUpdateRequest"], "id">;
+export type ProfileInput = Omit<S["YearbookUpdateProfileRequest"], "yearbook_id">;
 
-const book = (id: string) => `/v1/yearbooks/${encodeURIComponent(id)}`;
-
-export const listYearbooks = (cursor?: string) =>
-  request<{ yearbooks: Yearbook[]; next_cursor: string | null }>(
-    `/v1/yearbooks${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`,
+/** One page of the owner's books, newest first; `nextId` is the previous page's `next_id` (omitted for the first page). */
+export const listYearbooks = (nextId?: string) =>
+  request<S["YearbookListResponse"]["data"]>(
+    `/yearbook/get-list${nextId ? `?next_id=${encodeURIComponent(nextId)}` : ""}`,
   );
 
-export const getYearbook = async (id: string) =>
-  (await request<S["YearbookEnvelope"]>(book(id))).yearbook;
+export const getYearbook = (id: string) =>
+  request<Yearbook>(`/yearbook/get?id=${encodeURIComponent(id)}`);
 
-export const createYearbook = async (body: YearbookCreate) =>
-  (await postJson<S["YearbookEnvelope"]>("/v1/yearbooks", body)).yearbook;
+export const createYearbook = (body: YearbookCreate) =>
+  postJson<Yearbook>("/yearbook/create", body);
 
-export const updateYearbook = async (id: string, body: YearbookPatch) =>
-  (await sendJson<S["YearbookEnvelope"]>("PATCH", book(id), body)).yearbook;
+export const updateYearbook = (id: string, body: YearbookPatch) =>
+  postJson<Yearbook>("/yearbook/update", { id, ...body });
 
-/** PUT replaces the whole profile: whatever is not in `body` (the photo included) is cleared. */
-export const replaceProfile = async (id: string, body: ProfileInput) =>
-  (await sendJson<S["YearbookEnvelope"]>("PUT", `${book(id)}/profile`, body)).yearbook;
+/** Replaces the whole profile: whatever is not in `body` (the photo included) is cleared. */
+export const replaceProfile = (id: string, body: ProfileInput) =>
+  postJson<Yearbook>("/yearbook/update-profile", { yearbook_id: id, ...body });
 
 /** The current profile as a PUT body, so a save that changes one field keeps the rest, the photo included. */
 export const profileInput = (p: Profile): ProfileInput => ({
@@ -40,7 +40,8 @@ export const profileInput = (p: Profile): ProfileInput => ({
   photo_media_id: p.photo_media_id,
 });
 
-export const deleteYearbook = (id: string) => sendJson<void>("DELETE", book(id));
+export const deleteYearbook = (id: string) => postJson<void>("/yearbook/delete", { id });
+
 /** One page of the owner's own photos, newest first; `nextId` is the previous page's `next_id` (omitted for the first page). */
 export const listMedia = (id: string, nextId?: string) =>
   request<S["MediaListResponse"]["data"]>(

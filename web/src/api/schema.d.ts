@@ -238,22 +238,18 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/yearbooks": {
+    "/api/yearbook/create": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /**
-         * List the caller's yearbooks
-         * @description Only the caller's books, newest `updated_at` first (editing the book or its profile updates it). Pass `next_cursor` back as `cursor` for the next page; `next_cursor` is null on the last page. A malformed or tampered cursor is `400 invalid_cursor`.
-         */
-        get: operations["listYearbooks"];
+        get?: never;
         put?: never;
         /**
          * Create a yearbook (and its owner profile)
-         * @description Creates the book and one owner profile whose `full_name` is the user's display name. A user owns at most 20 books (`409 limit_reached`). Unknown fields (for example `owner_id`) are rejected with `400 unknown_field`. Text fields are normalised to NFC and trimmed; control characters (Cc), format characters (Cf, except U+200D) and line/paragraph separators are rejected with `invalid_<field>`.
+         * @description Called by the signed-in user from the new-book form. Creates the book and its one owner profile, whose `full_name` is the user's display name. `title` and `language` are required; `page_size` defaults to `A5`; every other field is optional. A user owns at most 20 books (`ERROR_LIMIT_REACHED`). A new book has no photos yet, so `cover_media_id` is not accepted here (`ERROR_INVALID_MEDIA`): set the cover later with `/api/yearbook/update`. Unknown fields (for example `owner_id`) and a body that is not a JSON object are `ERROR_PARAM`. Text fields are normalised to NFC and trimmed; control characters (Cc), format characters (Cf, except U+200D) and line/paragraph separators are rejected. Not idempotent: repeating a lost request creates a second book. A request with the session cookie must come from an allowed Origin.
          */
         post: operations["createYearbook"];
         delete?: never;
@@ -262,54 +258,100 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/yearbooks/{id}": {
+    "/api/yearbook/get-list": {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                /** @description Yearbook ULID. */
-                id: string;
-            };
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the caller's yearbooks
+         * @description Called by the signed-in user (the book list). Only the caller's own books, newest `updated_at` first (editing the book or its profile moves it to the front), each with its profile. Keyset paginated: pass the `next_id` of a page back as the `next_id` query parameter to get the next one; it is the empty string on the last page. `next_id` is an opaque, tamper-evident token bound to the caller's list: a changed, truncated or foreign token (also a cursor of the old API passed as `next_id`) is `ERROR_PARAM`, and it never reveals an internal id. A `limit` outside 1..50 is `ERROR_PARAM`. Books created, edited or deleted between two pages never make the walk repeat or skip a book that stays.
+         */
+        get: operations["listYearbooks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/yearbook/get": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         /**
          * Read one yearbook with its profile
-         * @description A missing book and a book owned by someone else both answer `404 not_found`.
+         * @description Called by the signed-in user (the edit screens). A missing book and a book owned by someone else both answer `ERROR_NOT_FOUND`. A missing `id` is `ERROR_PARAM`.
          */
         get: operations["getYearbook"];
         put?: never;
         post?: never;
-        /**
-         * Delete a yearbook
-         * @description Hard-deletes the book, its profile and its stored photos. The photos are removed from object storage first; if that fails the request answers `502 storage_error` and nothing is deleted.
-         */
-        delete: operations["deleteYearbook"];
+        delete?: never;
         options?: never;
         head?: never;
-        /**
-         * Partially update a yearbook
-         * @description Only the fields present change. An empty string clears an optional text field; `graduation_year: null` clears the year. A JSON null on any other field counts as absent. Unknown fields are `400 unknown_field`.
-         */
-        patch: operations["updateYearbook"];
+        patch?: never;
         trace?: never;
     };
-    "/v1/yearbooks/{id}/profile": {
+    "/api/yearbook/update": {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                /** @description Yearbook ULID. */
-                id: string;
-            };
+            path?: never;
             cookie?: never;
         };
         get?: never;
+        put?: never;
+        /**
+         * Partially update a yearbook
+         * @description Called by the signed-in owner (the edit screen, the cover picker). Only the fields present change; an absent field stays as it is, an empty string clears an optional text field and `graduation_year: null` or `cover_media_id: null` clear them. A JSON null on any other field counts as absent. A body with only `id` changes nothing but still bumps `updated_at`. `cover_media_id` must be a photo of this very book (`ERROR_INVALID_MEDIA`). Unknown fields and a missing `id` are `ERROR_PARAM`. Text fields are normalised to NFC and trimmed; control characters (Cc), format characters (Cf, except U+200D) and line/paragraph separators are rejected. A request with the session cookie must come from an allowed Origin. Idempotent: repeating it leaves the same book (apart from `updated_at`).
+         */
+        post: operations["updateYearbook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/yearbook/update-profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
         /**
          * Replace the owner's profile information
-         * @description Replaces every field: an omitted optional field is cleared. Unknown fields (for example `is_owner`) are `400 unknown_field`. Birthday is personal data and is never logged.
+         * @description Called by the signed-in owner (the profile form, the photo picker). Replaces every profile field: an omitted optional field is cleared, so send the whole profile (the web app builds the body from the current one). `full_name` is required. `photo_media_id` must be a photo of this very book (`ERROR_INVALID_MEDIA`). The birthday is personal data and is never logged. Unknown fields (for example `is_owner`) and a missing `yearbook_id` are `ERROR_PARAM`. Text fields are normalised to NFC and trimmed; control characters (Cc), format characters (Cf, except U+200D) and line/paragraph separators are rejected. A request with the session cookie must come from an allowed Origin. Idempotent.
          */
-        put: operations["replaceYearbookProfile"];
-        post?: never;
+        post: operations["updateYearbookProfile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/yearbook/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Delete a yearbook
+         * @description Called by the signed-in owner (the edit screen). Hard-deletes the book with its profile, photos, note collections and notes. The stored files are removed from object storage first; if that fails the call answers `ERROR_STORAGE_ERROR` and nothing is deleted, so it can simply be repeated. After the files are gone one transaction removes the rows (all or nothing). Not idempotent: a book that is already deleted, a missing one and someone else's all answer `ERROR_NOT_FOUND`. A missing `id` and unknown fields are `ERROR_PARAM`. A request with the session cookie must come from an allowed Origin.
+         */
+        post: operations["deleteYearbook"];
         delete?: never;
         options?: never;
         head?: never;
@@ -521,91 +563,165 @@ export interface components {
         UserEnvelope: {
             user: components["schemas"]["User"];
         };
+        /** @description The owner's profile page information of one yearbook. */
         Profile: {
-            /** @description Opaque ULID. */
+            /** @description Profile ULID. */
             id: string;
+            /** @description Always true: this is the profile of the book's owner. */
             is_owner: boolean;
+            /** @description The name on the profile page, 1 to 100 characters. A new book starts with the user's display name. */
             full_name: string;
-            /** @description Empty when not set. */
+            /** @description Up to 50 characters; the empty string when not set. */
             nickname: string;
-            /** Format: date */
+            /**
+             * Format: date
+             * @description `YYYY-MM-DD` calendar date (not an instant, so not Unix ms); null when not set.
+             */
             birthday: string | null;
+            /** @description Up to 500 characters; the empty string when not set. */
             quote: string;
+            /** @description Up to 300 characters; the empty string when not set. */
             hobbies: string;
+            /** @description Up to 300 characters; the empty string when not set. */
             future_plans: string;
-            /** @description A photo of this yearbook */
+            /** @description Photo ULID (a photo of this yearbook) shown on the profile page, or null. */
             photo_media_id: string | null;
         };
+        /** @description A yearbook with its owner profile. Carries no internal id. */
         Yearbook: {
-            /**
-             * @description Opaque ULID.
-             * @example 01J9Z3K6V8Q4M7N2P5R8T0W1XY
-             */
+            /** @description Yearbook ULID; use it as `id` or `yearbook_id` of the other calls. */
             id: string;
+            /** @description 1 to 120 characters. */
             title: string;
-            /** @description Empty when not set. */
+            /** @description Up to 120 characters; the empty string when not set. */
             school_name: string;
-            /** @description Empty when not set. */
+            /** @description Up to 120 characters; the empty string when not set. */
             class_name: string;
+            /** @description Year from 1950 to 2100; null when not set. */
             graduation_year: number | null;
+            /** @description Up to 200 characters; the empty string when not set. */
             motto: string;
-            /** @enum {string} */
+            /**
+             * @description Language of the book's pages: `en` English, `vi` Vietnamese.
+             * @enum {string}
+             */
             language: "en" | "vi";
-            /** @enum {string} */
+            /**
+             * @description Paper size of the printed book: `A5` (default), `A4` or `Letter`.
+             * @enum {string}
+             */
             page_size: "A5" | "A4" | "Letter";
-            /** @description Null until a template is chosen. */
+            /** @description Template ULID; null until a template is chosen. */
             template_id: string | null;
-            /** @description A photo of this yearbook */
+            /** @description Photo ULID (a photo of this yearbook) used as the cover, or null. */
             cover_media_id: string | null;
-            /** Format: date-time */
-            created_at: string;
-            /** Format: date-time */
-            updated_at: string;
+            /**
+             * Format: int64
+             * @description Creation time, Unix ms.
+             */
+            created_at: number;
+            /**
+             * Format: int64
+             * @description Last edit of the book or its profile, Unix ms; the list is ordered by it.
+             */
+            updated_at: number;
             profile: components["schemas"]["Profile"];
         };
-        YearbookEnvelope: {
-            yearbook: components["schemas"]["Yearbook"];
+        YearbookResponse: {
+            /**
+             * @description Always `OK` on success.
+             * @constant
+             */
+            status: "OK";
+            data: components["schemas"]["Yearbook"];
         };
-        YearbookCreate: {
+        YearbookListResponse: {
+            /**
+             * @description Always `OK` on success.
+             * @constant
+             */
+            status: "OK";
+            /** @description One page of yearbooks. */
+            data: {
+                /** @description The books of this page, newest `updated_at` first; an empty array when the user has none. */
+                items: components["schemas"]["Yearbook"][];
+                /** @description Opaque page token for the next page; the empty string on the last page. */
+                next_id: string;
+            };
+        };
+        YearbookCreateRequest: {
+            /** @description Required. 1 to 120 characters after trimming. */
             title: string;
+            /** @description Optional, up to 120 characters; default empty. */
             school_name?: string;
+            /** @description Optional, up to 120 characters; default empty. */
             class_name?: string;
+            /** @description Optional, 1950 to 2100; default null. */
             graduation_year?: number | null;
+            /** @description Optional, up to 200 characters; default empty. */
             motto?: string;
-            /** @enum {string} */
+            /**
+             * @description Required. `en` English or `vi` Vietnamese.
+             * @enum {string}
+             */
             language: "en" | "vi";
             /**
+             * @description Optional paper size, default `A5`.
              * @default A5
              * @enum {string}
              */
             page_size: "A5" | "A4" | "Letter";
         };
-        YearbookPatch: {
+        YearbookUpdateRequest: {
+            /** @description Required. ULID of the yearbook to change. */
+            id: string;
+            /** @description Optional. 1 to 120 characters after trimming; absent = unchanged. */
             title?: string;
+            /** @description Optional, up to 120 characters; the empty string clears it; absent = unchanged. */
             school_name?: string;
+            /** @description Optional, up to 120 characters; the empty string clears it; absent = unchanged. */
             class_name?: string;
+            /** @description Optional, 1950 to 2100; null clears it; absent = unchanged. */
             graduation_year?: number | null;
+            /** @description Optional, up to 200 characters; the empty string clears it; absent = unchanged. */
             motto?: string;
-            /** @enum {string} */
+            /**
+             * @description Optional. `en` or `vi`; absent = unchanged.
+             * @enum {string}
+             */
             language?: "en" | "vi";
-            /** @enum {string} */
+            /**
+             * @description Optional paper size; absent = unchanged.
+             * @enum {string}
+             */
             page_size?: "A5" | "A4" | "Letter";
-            /** @description A photo of this yearbook (else `400 invalid_media`); null clears it. */
+            /** @description Optional. Photo ULID, which must be a photo of this yearbook (else `ERROR_INVALID_MEDIA`); null clears the cover; absent = unchanged. */
             cover_media_id?: string | null;
         };
-        ProfileInput: {
+        YearbookUpdateProfileRequest: {
+            /** @description Required. ULID of the yearbook whose profile is replaced. */
+            yearbook_id: string;
+            /** @description Required. 1 to 100 characters after trimming. */
             full_name: string;
+            /** @description Optional, up to 50 characters; omitted = cleared. */
             nickname?: string;
             /**
              * Format: date
-             * @description YYYY-MM-DD, a real date strictly before today (UTC) and not before 1900-01-01.
+             * @description Optional `YYYY-MM-DD`, a real date strictly before today (UTC) and not before 1900-01-01; omitted or null = cleared.
              */
             birthday?: string | null;
+            /** @description Optional, up to 500 characters; omitted = cleared. */
             quote?: string;
+            /** @description Optional, up to 300 characters; omitted = cleared. */
             hobbies?: string;
+            /** @description Optional, up to 300 characters; omitted = cleared. */
             future_plans?: string;
-            /** @description A photo of this yearbook (else `400 invalid_media`). Like every field of this replacing PUT */
+            /** @description Optional. Photo ULID, which must be a photo of this yearbook (else `ERROR_INVALID_MEDIA`); omitted or null = cleared. */
             photo_media_id?: string | null;
+        };
+        YearbookDeleteRequest: {
+            /** @description Required. ULID of the yearbook to delete. */
+            id: string;
         };
         /** @description A stored photo. Carries no storage key, hash or URL; the client builds the content URL from `id`. */
         Media: {
@@ -896,24 +1012,6 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
-        /** @description The yearbook does not exist or belongs to someone else (`not_found`); the two cannot be told apart. */
-        YearbookNotFound: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["Error"];
-            };
-        };
-        /** @description `invalid_<field>` (title, school_name, class_name, graduation_year, motto, language, page_size, full_name, nickname, birthday, quote, hobbies, future_plans, limit, cursor, media: a `*_media_id` that is not a photo of this yearbook), `unknown_field` or `invalid_body`. */
-        YearbookInvalid: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["Error"];
-            };
-        };
         /** @description The request carries the session cookie but its Origin (or Referer) is missing or not allowed (`csrf_origin_mismatch`). */
         CsrfOriginMismatch: {
             headers: {
@@ -946,15 +1044,6 @@ export interface components {
             headers: {
                 /** @description Seconds until the oldest counted attempt leaves the window. */
                 "Retry-After"?: number;
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["Error"];
-            };
-        };
-        /** @description The object store failed (`storage_error`); nothing was changed, retry later. */
-        StorageError: {
-            headers: {
                 [name: string]: unknown;
             };
             content: {
@@ -1643,37 +1732,6 @@ export interface operations {
             503: components["responses"]["SessionStoreUnavailable"];
         };
     };
-    listYearbooks: {
-        parameters: {
-            query?: {
-                /** @description Out of range or not a number: `400 invalid_limit`. */
-                limit?: number;
-                /** @description Opaque token from a previous page. */
-                cursor?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A page of books (each with its profile). */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        yearbooks: components["schemas"]["Yearbook"][];
-                        next_cursor: string | null;
-                    };
-                };
-            };
-            400: components["responses"]["YearbookInvalid"];
-            401: components["responses"]["Unauthenticated"];
-            503: components["responses"]["SessionStoreUnavailable"];
-        };
-    };
     createYearbook: {
         parameters: {
             query?: never;
@@ -1683,44 +1741,66 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["YearbookCreate"];
+                "application/json": components["schemas"]["YearbookCreateRequest"];
             };
         };
         responses: {
-            /** @description Created. */
-            201: {
+            /** @description The new book, with its profile. */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["YearbookEnvelope"];
+                    "application/json": components["schemas"]["YearbookResponse"];
                 };
             };
-            400: components["responses"]["YearbookInvalid"];
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["CsrfOriginMismatch"];
-            /** @description The user already owns 20 yearbooks (`limit_reached`). */
-            409: {
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            409: components["responses"]["ApiConflict"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    listYearbooks: {
+        parameters: {
+            query?: {
+                /** @description Page size, default 20, maximum 50. */
+                limit?: number;
+                /** @description Opaque token from the previous page; omit it for the first page. */
+                next_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of books. */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["YearbookListResponse"];
                 };
             };
-            413: components["responses"]["PayloadTooLarge"];
-            415: components["responses"]["UnsupportedMediaType"];
-            503: components["responses"]["SessionStoreUnavailable"];
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
         };
     };
     getYearbook: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
                 /** @description Yearbook ULID. */
                 id: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -1731,53 +1811,26 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["YearbookEnvelope"];
+                    "application/json": components["schemas"]["YearbookResponse"];
                 };
             };
-            401: components["responses"]["Unauthenticated"];
-            404: components["responses"]["YearbookNotFound"];
-            503: components["responses"]["SessionStoreUnavailable"];
-        };
-    };
-    deleteYearbook: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Yearbook ULID. */
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Deleted. */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["CsrfOriginMismatch"];
-            404: components["responses"]["YearbookNotFound"];
-            502: components["responses"]["StorageError"];
-            503: components["responses"]["SessionStoreUnavailable"];
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            404: components["responses"]["ApiNotFound"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
         };
     };
     updateYearbook: {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                /** @description Yearbook ULID. */
-                id: string;
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["YearbookPatch"];
+                "application/json": components["schemas"]["YearbookUpdateRequest"];
             };
         };
         responses: {
@@ -1787,31 +1840,29 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["YearbookEnvelope"];
+                    "application/json": components["schemas"]["YearbookResponse"];
                 };
             };
-            400: components["responses"]["YearbookInvalid"];
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["CsrfOriginMismatch"];
-            404: components["responses"]["YearbookNotFound"];
-            413: components["responses"]["PayloadTooLarge"];
-            415: components["responses"]["UnsupportedMediaType"];
-            503: components["responses"]["SessionStoreUnavailable"];
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
         };
     };
-    replaceYearbookProfile: {
+    updateYearbookProfile: {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                /** @description Yearbook ULID. */
-                id: string;
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ProfileInput"];
+                "application/json": components["schemas"]["YearbookUpdateProfileRequest"];
             };
         };
         responses: {
@@ -1821,16 +1872,50 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["YearbookEnvelope"];
+                    "application/json": components["schemas"]["YearbookResponse"];
                 };
             };
-            400: components["responses"]["YearbookInvalid"];
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["CsrfOriginMismatch"];
-            404: components["responses"]["YearbookNotFound"];
-            413: components["responses"]["PayloadTooLarge"];
-            415: components["responses"]["UnsupportedMediaType"];
-            503: components["responses"]["SessionStoreUnavailable"];
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    deleteYearbook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["YearbookDeleteRequest"];
+            };
+        };
+        responses: {
+            /** @description Deleted. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmptyResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            500: components["responses"]["ApiInternal"];
+            502: components["responses"]["ApiBadGateway"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
         };
     };
     createMedia: {

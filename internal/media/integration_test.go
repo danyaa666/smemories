@@ -178,7 +178,7 @@ func newEnv(t *testing.T) *env {
 	mh := NewHandler(e.svc, 10<<20, ah.RequireUser, []string{origin}, e.cursors, logger)
 	bookStore := yearbook.NewStore(d)
 	e.svc.SetRefClearer(bookStore)
-	yh := yearbook.NewHandler(bookStore, yearbook.NewService(bookStore, e.svc, e.svc), ah.RequireUser, []string{origin}, logger, nil)
+	yh := yearbook.NewHandler(yearbook.NewService(bookStore, e.cursors, e.svc, nil, e.svc), ah.RequireUser, []string{origin})
 	e.h = httpx.NewRouter(logger, ah.Routes, yh.Routes, mh.Routes)
 	t.Cleanup(func() { // objects of every book this test created
 		for _, id := range e.books {
@@ -265,7 +265,7 @@ func (r resp) status(want int, code string) resp {
 		r.t.Fatalf("status %d, want %d (%s)", r.Code, want, r.Body)
 	}
 	if code != "" {
-		// The yearbook routes are still v1 ({"error":{"code"}}), the media routes v2 ({"status":"ERROR_..."}).
+		// v2 bodies carry {"status":"ERROR_..."}, the routes still under /v1 {"error":{"code"}}.
 		var env struct {
 			Status string
 			Error  struct{ Code string }
@@ -283,11 +283,9 @@ func (r resp) status(want int, code string) resp {
 
 func (e *env) newBook(u user) string {
 	e.t.Helper()
-	r := e.json(u, "POST", "/v1/yearbooks", `{"title":"Class of 2026","language":"en"}`).status(201, "")
-	var out struct{ Yearbook struct{ ID string } }
-	_ = json.Unmarshal(r.Body.Bytes(), &out)
-	e.books = append(e.books, out.Yearbook.ID)
-	return out.Yearbook.ID
+	id := e.json(u, "POST", "/api/yearbook/create", `{"title":"Class of 2026","language":"en"}`).status(200, "").book()["id"].(string)
+	e.books = append(e.books, id)
+	return id
 }
 
 // deleteMedia calls POST /api/media/delete.
@@ -320,10 +318,33 @@ func (r resp) media() mediaBody {
 
 func (r resp) mediaID() string { return r.media().ID }
 
+// book is the yearbook in the data of a yearbook answer.
 func (r resp) book() map[string]any {
-	var out struct{ Yearbook map[string]any }
+	var out struct{ Data map[string]any }
 	_ = json.Unmarshal(r.Body.Bytes(), &out)
-	return out.Yearbook
+	return out.Data
+}
+
+// The yearbook endpoints, which the tests use for setup and for the cross-domain checks.
+func withID(key, id, body string) string {
+	rest := strings.TrimPrefix(body, "{")
+	if strings.TrimSpace(rest) != "}" {
+		rest = "," + rest
+	}
+	return `{"` + key + `":"` + id + `"` + rest
+}
+
+func (e *env) getBook(u user, id string) resp {
+	return e.json(u, "GET", "/api/yearbook/get?id="+id, "")
+}
+func (e *env) updateBook(u user, id, body string) resp {
+	return e.json(u, "POST", "/api/yearbook/update", withID("id", id, body))
+}
+func (e *env) updateProfile(u user, id, body string) resp {
+	return e.json(u, "POST", "/api/yearbook/update-profile", withID("yearbook_id", id, body))
+}
+func (e *env) deleteBook(u user, id string) resp {
+	return e.json(u, "POST", "/api/yearbook/delete", withID("id", id, "{}"))
 }
 
 func photo(t *testing.T) []byte {
@@ -641,15 +662,15 @@ func TestDeleteMediaClearsCoverAndPhoto(t *testing.T) {
 	book := e.newBook(u)
 	a := e.upload(u, book, "a.jpg", "image/jpeg", photo(t)).status(200, "").mediaID()
 	b := e.upload(u, book, "b.jpg", "image/jpeg", photo(t)).status(200, "").mediaID()
-	e.json(u, "PATCH", "/v1/yearbooks/"+book, fmt.Sprintf(`{"cover_media_id":%q}`, a)).status(200, "")
-	e.json(u, "PUT", "/v1/yearbooks/"+book+"/profile", fmt.Sprintf(`{"full_name":"A","photo_media_id":%q}`, a)).status(200, "")
+	e.updateBook(u, book, fmt.Sprintf(`{"cover_media_id":%q}`, a)).status(200, "")
+	e.updateProfile(u, book, fmt.Sprintf(`{"full_name":"A","photo_media_id":%q}`, a)).status(200, "")
 	e.deleteMedia(u, b).status(200, "") // another photo: the references stay
-	got := e.json(u, "GET", "/v1/yearbooks/"+book, "").status(200, "").book()
+	got := e.getBook(u, book).status(200, "").book()
 	if got["cover_media_id"] != a || got["profile"].(map[string]any)["photo_media_id"] != a {
 		t.Fatalf("references lost by deleting another photo: %v", got)
 	}
 	e.deleteMedia(u, a).status(200, "")
-	got = e.json(u, "GET", "/v1/yearbooks/"+book, "").status(200, "").book()
+	got = e.getBook(u, book).status(200, "").book()
 	if got["cover_media_id"] != nil || got["profile"].(map[string]any)["photo_media_id"] != nil {
 		t.Fatalf("dangling references after the photo was deleted: %v", got)
 	}
@@ -664,18 +685,18 @@ func TestDeleteYearbookRemovesObjects(t *testing.T) {
 	book := e.newBook(u)
 	a := e.upload(u, book, "a.jpg", "image/jpeg", photo(t)).status(200, "").mediaID()
 	b := e.upload(u, book, "b.jpg", "image/jpeg", photo(t)).status(200, "").mediaID()
-	e.json(u, "PATCH", "/v1/yearbooks/"+book, fmt.Sprintf(`{"cover_media_id":%q}`, a)).status(200, "") // book -> media -> book reference cycle
+	e.updateBook(u, book, fmt.Sprintf(`{"cover_media_id":%q}`, a)).status(200, "") // book -> media -> book reference cycle
 
 	// A failing store blocks the delete and keeps everything.
 	e.st.set(false, true)
-	e.json(u, "DELETE", "/v1/yearbooks/"+book, "").status(502, "storage_error")
+	e.deleteBook(u, book).status(502, "ERROR_STORAGE_ERROR")
 	e.st.set(false, false)
-	e.json(u, "GET", "/v1/yearbooks/"+book, "").status(200, "")
+	e.getBook(u, book).status(200, "")
 	e.json(u, "GET", "/api/media/get-content?id="+b, "").status(200, "")
 
 	// Orphans that have no row (a crashed upload) go too.
 	_ = e.st.Storage.Put(context.Background(), yearbookPrefix(book)+"ORPHAN.jpg", "image/jpeg", []byte("x"))
-	e.json(u, "DELETE", "/v1/yearbooks/"+book, "").status(204, "")
+	e.deleteBook(u, book).status(200, "")
 	if n := e.count(`SELECT COUNT(*) FROM media_tab`); n != 0 {
 		t.Fatalf("%d media rows left", n)
 	}
@@ -684,7 +705,7 @@ func TestDeleteYearbookRemovesObjects(t *testing.T) {
 			t.Fatalf("%s survived: %v", k, err)
 		}
 	}
-	e.json(u, "DELETE", "/v1/yearbooks/"+book, "").status(404, "not_found")
+	e.deleteBook(u, book).status(404, "ERROR_NOT_FOUND")
 	if n := e.st.count(yearbookPrefix(book)); n != 0 {
 		t.Fatalf("%d objects left in the bucket", n)
 	}
@@ -703,38 +724,38 @@ func TestProfilePhotoAndCover(t *testing.T) {
 	}
 	quote := func(s string) string { return `"` + s + `"` }
 
-	b := e.json(u, "PUT", "/v1/yearbooks/"+book+"/profile", profile(quote(mine))).status(200, "").book()
+	b := e.updateProfile(u, book, profile(quote(mine))).status(200, "").book()
 	if b["profile"].(map[string]any)["photo_media_id"] != mine {
 		t.Fatalf("photo not set: %v", b["profile"])
 	}
-	b = e.json(u, "PATCH", "/v1/yearbooks/"+book, fmt.Sprintf(`{"cover_media_id":%q}`, mine)).status(200, "").book()
+	b = e.updateBook(u, book, fmt.Sprintf(`{"cover_media_id":%q}`, mine)).status(200, "").book()
 	if b["cover_media_id"] != mine {
 		t.Fatalf("cover not set: %v", b)
 	}
 	// Media of another book of the same user, another user's media, and unknown ids are all invalid_media.
 	for _, bad := range []string{inBook2, theirs, "01ARZ3NDEKTSV4RRFFQ69G5FAV"} {
-		e.json(u, "PUT", "/v1/yearbooks/"+book+"/profile", profile(quote(bad))).status(400, "invalid_media")
-		e.json(u, "PATCH", "/v1/yearbooks/"+book, fmt.Sprintf(`{"cover_media_id":%q}`, bad)).status(400, "invalid_media")
+		e.updateProfile(u, book, profile(quote(bad))).status(400, "ERROR_INVALID_MEDIA")
+		e.updateBook(u, book, fmt.Sprintf(`{"cover_media_id":%q}`, bad)).status(400, "ERROR_INVALID_MEDIA")
 	}
 	// A title edit leaves the cover alone; null clears it; a missing photo_media_id in the (replacing) PUT clears the photo.
-	b = e.json(u, "PATCH", "/v1/yearbooks/"+book, `{"title":"New"}`).status(200, "").book()
+	b = e.updateBook(u, book, `{"title":"New"}`).status(200, "").book()
 	if b["cover_media_id"] != mine {
 		t.Fatalf("cover lost by an unrelated edit: %v", b)
 	}
-	b = e.json(u, "PATCH", "/v1/yearbooks/"+book, `{"cover_media_id":null}`).status(200, "").book()
+	b = e.updateBook(u, book, `{"cover_media_id":null}`).status(200, "").book()
 	if b["cover_media_id"] != nil {
 		t.Fatalf("cover not cleared: %v", b)
 	}
-	e.json(u, "PUT", "/v1/yearbooks/"+book+"/profile", profile(quote(mine))).status(200, "")
-	e.json(u, "PATCH", "/v1/yearbooks/"+book, fmt.Sprintf(`{"cover_media_id":%q}`, mine)).status(200, "")
+	e.updateProfile(u, book, profile(quote(mine))).status(200, "")
+	e.updateBook(u, book, fmt.Sprintf(`{"cover_media_id":%q}`, mine)).status(200, "")
 	// Deleting the media clears both references.
 	e.deleteMedia(u, mine).status(200, "")
-	b = e.json(u, "GET", "/v1/yearbooks/"+book, "").status(200, "").book()
+	b = e.getBook(u, book).status(200, "").book()
 	if b["cover_media_id"] != nil || b["profile"].(map[string]any)["photo_media_id"] != nil {
 		t.Fatalf("references survived the media delete: %v", b)
 	}
 	// A new book cannot start with a cover.
-	e.json(u, "POST", "/v1/yearbooks", fmt.Sprintf(`{"title":"T","language":"en","cover_media_id":%q}`, mine)).status(400, "invalid_media")
+	e.json(u, "POST", "/api/yearbook/create", fmt.Sprintf(`{"title":"T","language":"en","cover_media_id":%q}`, mine)).status(400, "ERROR_INVALID_MEDIA")
 }
 
 // T-034: contributor uploads wait a bounded time for a processing slot, count toward the quotas and can be discarded.
