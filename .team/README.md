@@ -20,7 +20,7 @@
 
 **Open questions for you:** none
 
-_Board last written 2026-10-15 07:30Z_
+_Board last written 2026-10-15 08:15Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -2768,7 +2768,7 @@ Converts `users` and `user_identities` (the sessions and email_tokens tables are
 - **Branch:** task/t-068-e10-api-v2-notes-domain-collections-publ
 - **PR:** https://github.com/danyaa666/smemories/pull/53
 - **Updated:** 2026-10-15 07:18Z by human
-- **Comments-seen:** 10
+- **Comments-seen:** 11
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/06-api-notes.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2844,7 +2844,7 @@ Moves the notes endpoints to /api/note-collection/* and /api/public-collect/*, i
 - **Branch:** task/t-069-e10-api-v2-media-domain
 - **PR:** https://github.com/danyaa666/smemories/pull/54
 - **Updated:** 2026-10-12 15:51Z by dev
-- **Comments-seen:** 1
+- **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/07-api-media.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
