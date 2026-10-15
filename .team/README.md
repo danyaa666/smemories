@@ -10,8 +10,8 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 24 | T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-071, T-072, T-080, T-081, T-082 |
-| TODO | 2 | T-013, T-079 |
+| BACKLOG | 22 | T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-072, T-081, T-082 |
+| TODO | 4 | T-013, T-071, T-079, T-080 |
 | IN_PROGRESS | 1 | T-083 |
 | MERGED | 2 | T-070, T-073 |
 | DONE | 47 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-074, T-075, T-076, T-077, T-078 |
@@ -21,7 +21,7 @@
 
 **Open questions for you:** none
 
-_Board last written 2026-10-15 14:05Z_
+_Board last written 2026-10-15 14:06Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -2915,7 +2915,7 @@ Moves the yearbook endpoints to /api/yearbook/*, introduces yearbook.Service (ru
 - 2026-10-15 14:05Z · leader · merged c50ee9a (PR #56). Review: owner-scoped queries, lock order book->profile->children, sealed next_id bound to caller and scope, handler has no store; CI green, QA_PASS on the same head. For owner to check: web Yearbooks screen on /api/yearbook/* (list paging, create, edit, delete).
 
 ### T-071 — [E10] API v2: auth and user domain; remove the /v1 paths and the web shim
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2926,8 +2926,8 @@ Moves the yearbook endpoints to /api/yearbook/*, introduces yearbook.Service (ru
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-15 14:06Z by leader
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/09-api-auth.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2936,6 +2936,7 @@ Moves the yearbook endpoints to /api/yearbook/*, introduces yearbook.Service (ru
 Moves auth to /api/auth/* and /api/user/get-me, Google callback path, last domain: deletes the /v1 routes, the proxy rewrite and the web client shim.
 
 #### Comments
+- 2026-10-15 14:06Z · leader · unblocked: T-070 merged; dependencies T-067/T-070/T-053 are in. Risk high: needs owner approve before merge. Owner must register <PUBLIC_BASE_URL>/api/auth/google-callback as a Google redirect URI before deploy.
 
 ### T-072 — [E10] Quality sweep: mnd, forbidigo, pointer parameters, pool defaults, remove the transition switch
 - **Status:** BACKLOG
@@ -3199,7 +3200,7 @@ T-077 QA: a ratelimit retry-after test failed once on the CI runner (689 ms vs a
 #### Comments
 
 ### T-080 — [E04] Public submit: show 'link full' instead of a connection reset
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -3210,8 +3211,8 @@ T-077 QA: a ratelimit retry-after test failed once on the CI runner (689 ms vs a
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-12 13:28Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-15 14:06Z by leader
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/08-full-link-reset.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -3220,6 +3221,7 @@ T-077 QA: a ratelimit retry-after test failed once on the CI runner (689 ms vs a
 T-068 answers a full public link on the raw writer without reading the body; a friend with a valid token may then see a connection reset instead of the "link full" message. Drain the body (bounded, nothing on disk) and show the message in the public form.
 
 #### Comments
+- 2026-10-15 14:06Z · leader · unblocked, small P3
 
 ### T-081 — [E02] Username: unique public handle with default and weekly change (API)
 - **Status:** BACKLOG
