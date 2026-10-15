@@ -16,8 +16,11 @@ const book = {
   motto: "",
   language: "en",
   page_size: "A5",
+  template_id: null,
   cover_media_id: null,
   profile: {
+    id: "01J9Z3K6V8Q4M7N2P5R8T0BBBB",
+    is_owner: true,
     full_name: "",
     nickname: "",
     birthday: null,
@@ -26,8 +29,8 @@ const book = {
     future_plans: "",
     photo_media_id: null,
   },
-  created_at: "2026-10-01T00:00:00Z",
-  updated_at: "2026-10-01T00:00:00Z",
+  created_at: 1760000000000,
+  updated_at: 1760086400000,
 };
 
 /** matchMedia that answers the (min-width: 960px) query for a window of this width. */
@@ -45,8 +48,8 @@ describe("YearbookLayout", () => {
   it("shows the sidebar, not the tab bar, at 1280 px", async () => {
     viewport(1280);
     mockApi({
-      "GET /v1/me": Response.json({ user: user() }),
-      "GET /v1/yearbooks": Response.json({ yearbooks: [], next_cursor: null }),
+      "GET /user/get-me": Response.json({ status: "OK", data: user() }),
+      "GET /yearbook/get-list": Response.json({ status: "OK", data: { items: [], next_id: "" } }),
     });
     renderApp("/yearbooks");
     const nav = await screen.findByRole("navigation", { name: "Yearbook" });
@@ -69,8 +72,8 @@ describe("YearbookLayout", () => {
   it("shows the tab bar, not the sidebar, at 375 px", async () => {
     viewport(375);
     mockApi({
-      "GET /v1/me": Response.json({ user: user() }),
-      "GET /v1/yearbooks": Response.json({ yearbooks: [], next_cursor: null }),
+      "GET /user/get-me": Response.json({ status: "OK", data: user() }),
+      "GET /yearbook/get-list": Response.json({ status: "OK", data: { items: [], next_id: "" } }),
     });
     renderApp("/yearbooks");
     const nav = await screen.findByRole("navigation", { name: "Yearbook" });
@@ -85,8 +88,8 @@ describe("YearbookLayout", () => {
   it("on a book, shows the book card and the profile item (sidebar) or tab", async () => {
     viewport(1280);
     mockApi({
-      "GET /v1/me": Response.json({ user: user() }),
-      [`GET /v1/yearbooks/${ID}`]: Response.json({ yearbook: book }),
+      "GET /user/get-me": Response.json({ status: "OK", data: user() }),
+      [`GET /yearbook/get?id=${ID}`]: Response.json({ status: "OK", data: book }),
       [`GET /media/get-list?yearbook_id=${ID}`]: Response.json({
         status: "OK",
         data: { items: [], next_id: "" },
@@ -107,8 +110,8 @@ describe("YearbookLayout", () => {
   it("hides items whose route does not exist: none of the later ones is listed", async () => {
     viewport(1280);
     mockApi({
-      "GET /v1/me": Response.json({ user: user() }),
-      "GET /v1/yearbooks": Response.json({ yearbooks: [], next_cursor: null }),
+      "GET /user/get-me": Response.json({ status: "OK", data: user() }),
+      "GET /yearbook/get-list": Response.json({ status: "OK", data: { items: [], next_id: "" } }),
     });
     renderApp("/yearbooks");
     const nav = await screen.findByRole("navigation", { name: "Yearbook" });
@@ -122,15 +125,15 @@ describe("YearbookLayout", () => {
   it("shows the username when the user has one, else the email local part", async () => {
     viewport(1280);
     mockApi({
-      "GET /v1/me": Response.json({ user: user({ username: "lan.nguyen" }) }),
-      "GET /v1/yearbooks": Response.json({ yearbooks: [], next_cursor: null }),
+      "GET /user/get-me": Response.json({ status: "OK", data: user({ username: "lan.nguyen" }) }),
+      "GET /yearbook/get-list": Response.json({ status: "OK", data: { items: [], next_id: "" } }),
     });
     const { unmount } = renderApp("/yearbooks");
     expect(await screen.findByRole("link", { name: "lan.nguyen" })).toBeInTheDocument();
     unmount();
     mockApi({
-      "GET /v1/me": Response.json({ user: user() }),
-      "GET /v1/yearbooks": Response.json({ yearbooks: [], next_cursor: null }),
+      "GET /user/get-me": Response.json({ status: "OK", data: user() }),
+      "GET /yearbook/get-list": Response.json({ status: "OK", data: { items: [], next_id: "" } }),
     });
     renderApp("/yearbooks");
     expect(await screen.findByRole("link", { name: "lan" })).toBeInTheDocument();
@@ -147,7 +150,7 @@ describe("YearbookLayout", () => {
         badge: 3,
       },
     ];
-    mockApi({ "GET /v1/me": Response.json({ user: user() }) });
+    mockApi({ "GET /user/get-me": Response.json({ status: "OK", data: user() }) });
     render(
       <QueryClientProvider client={makeQueryClient()}>
         <MemoryRouter initialEntries={["/yearbooks"]}>
