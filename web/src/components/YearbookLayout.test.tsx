@@ -87,10 +87,12 @@ describe("YearbookLayout", () => {
     mockApi({
       "GET /v1/me": Response.json({ user: user() }),
       [`GET /v1/yearbooks/${ID}`]: Response.json({ yearbook: book }),
-      [`GET /v1/yearbooks/${ID}/media`]: Response.json({ items: [], next_id: "" }),
+      [`GET /media/get-list?yearbook_id=${ID}`]: Response.json({ status: "OK", data: { items: [], next_id: "" } }),
     });
     renderApp(`/yearbooks/${ID}`);
-    const card = await screen.findByRole("link", { name: /Class 12A1.*Le Hong Phong/ });
+    // wait for the loaded page first (cheap heading query), then the shell card is already there
+    await screen.findByRole("heading", { level: 1, name: "Class 12A1" });
+    const card = screen.getByRole("link", { name: /Class 12A1.*Le Hong Phong/ });
     expect(card).toHaveAttribute("href", `/yearbooks/${ID}`);
     const nav = screen.getByRole("navigation", { name: "Yearbook" });
     expect(within(nav).getByRole("link", { name: "My profile page" })).toHaveAttribute(
