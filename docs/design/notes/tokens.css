@@ -1,0 +1,108 @@
+/* SMemories — design tokens (light theme)
+   Derived from the "memory-book" template (paper, ink, tomato, teal, tape).
+   All text pairs meet WCAG 2.1 AA (4.5:1) unless marked "decorative". */
+
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Patrick+Hand&display=swap');
+
+:root {
+  /* ── Paper & ink ─────────────────────────────── */
+  --color-paper:        #F6EFE3;  /* app background */
+  --color-paper-deep:   #EFE4D2;  /* sunken areas, book page ground */
+  --color-surface:      #FFFDF8;  /* cards, inputs, polaroid frames */
+  --color-ink:          #2B2622;  /* body text — 13.9:1 on paper */
+  --color-ink-2:        #5E554B;  /* secondary text — 6.5:1 on paper */
+  --color-ink-3:        #6F655A;  /* placeholders, captions — 5.0:1 on paper */
+  --color-line:         #E3D8C6;  /* decorative dividers (non-essential) */
+  --color-border:       #8C8172;  /* input & control borders — 3.8:1 on surface */
+
+  /* ── Brand ───────────────────────────────────── */
+  --color-primary:        #C4472A;  /* tomato — white text 4.9:1 */
+  --color-primary-hover:  #A93B21;
+  --color-primary-press:  #8E2F18;
+  --color-primary-soft:   #F9E1D8;
+  --color-on-primary:     #FFFFFF;
+  --color-teal:           #1F6B72;  /* links, focus, success — 6.2:1 on surface */
+  --color-teal-hover:     #17555B;
+  --color-teal-soft:      #DDEDEA;
+
+  /* ── Decorative (never carry text below 18px) ── */
+  --color-tape-yellow:  rgba(242,193,78,.75);
+  --color-tape-mint:    rgba(191,220,207,.9);
+  --color-tape-blush:   rgba(244,199,184,.9);
+  --color-note-blush:   #F4C7B8;
+  --color-note-mint:    #BFDCCF;
+
+  /* ── Status ──────────────────────────────────── */
+  --color-pending-fg:   #7A4E00;  --color-pending-bg:  #FBEBC2;  /* 6.1:1 */
+  --color-approved-fg:  #1F6B72;  --color-approved-bg: #DDEDEA;  /* 5.1:1 */
+  --color-hidden-fg:    #5E554B;  --color-hidden-bg:   #ECE5D9;  /* 5.9:1 */
+  --color-error:        #B42318;  --color-error-bg:    #FCE8E4;  /* 5.7:1 on paper */
+  --color-warning-fg:   #5C3B00;  --color-warning-bg:  #FBEBC2;
+  --color-toast-bg:     #2B2622;  --color-toast-fg:    #FFFDF8;  --color-toast-action: #F2C14E;
+
+  /* ── Focus ───────────────────────────────────── */
+  --focus-ring: 0 0 0 2px var(--color-surface), 0 0 0 5px var(--color-teal);
+
+  /* ── Type ────────────────────────────────────── */
+  /* All three families include Vietnamese glyphs. */
+  --font-display: 'Fraunces', Georgia, serif;          /* headings */
+  --font-body:    'Be Vietnam Pro', system-ui, sans-serif;
+  --font-hand:    'Patrick Hand', 'Segoe Print', cursive; /* short accents only */
+  --font-mono:    ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* size / line-height — mobile first; desktop overrides below */
+  --text-display: 36px;  --lh-display: 40px;
+  --text-h1:      28px;  --lh-h1:      34px;
+  --text-h2:      22px;  --lh-h2:      28px;
+  --text-h3:      18px;  --lh-h3:      24px;
+  --text-body-lg: 17px;  --lh-body-lg: 26px;
+  --text-body:    16px;  --lh-body:    24px;  /* inputs never below 16px (stops iOS zoom) */
+  --text-small:   14px;  --lh-small:   20px;
+  --text-caption: 13px;  --lh-caption: 18px;  /* minimum UI size */
+  --text-hand:    22px;  --lh-hand:    26px;
+  --weight-regular: 400; --weight-medium: 500; --weight-semibold: 600; --weight-bold: 700;
+
+  /* ── Spacing (4px base) ──────────────────────── */
+  --space-1: 4px;  --space-2: 8px;  --space-3: 12px; --space-4: 16px;
+  --space-5: 20px; --space-6: 24px; --space-8: 32px; --space-10: 40px;
+  --space-12: 48px; --space-16: 64px;
+  --gutter: 16px;           /* 375px side gutter */
+  --content-max: 1120px;
+  --form-max: 560px;
+  --tap-min: 44px;
+
+  /* ── Radii ───────────────────────────────────── */
+  --radius-xs: 4px;    /* photo inside a polaroid frame */
+  --radius-sm: 8px;    /* badges, thumbnails */
+  --radius-md: 12px;   /* buttons, inputs */
+  --radius-lg: 16px;   /* cards */
+  --radius-xl: 24px;   /* sheets, dialogs */
+  --radius-pill: 999px;
+
+  /* ── Shadows (warm ink, never grey) ──────────── */
+  --shadow-1: 0 1px 2px rgba(43,38,34,.08), 0 1px 1px rgba(43,38,34,.04);   /* resting card */
+  --shadow-2: 0 4px 12px rgba(43,38,34,.12);                                  /* polaroid, raised */
+  --shadow-3: 0 12px 32px rgba(43,38,34,.18);                                 /* dialog, toast */
+  --shadow-lift: 0 18px 40px rgba(43,38,34,.22);                              /* while dragging */
+
+  /* ── Motion ──────────────────────────────────── */
+  --ease-out: cubic-bezier(.2,.8,.2,1);
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-slow: 320ms;
+}
+
+@media (min-width: 960px) {
+  :root {
+    --text-display: 56px; --lh-display: 60px;
+    --text-h1: 40px;      --lh-h1: 46px;
+    --text-h2: 28px;      --lh-h2: 34px;
+    --text-h3: 20px;      --lh-h3: 26px;
+    --gutter: 32px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --dur-fast: 0ms; --dur-base: 0ms; --dur-slow: 0ms; }
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

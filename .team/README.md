@@ -11,7 +11,7 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 24 | T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-071, T-072, T-080, T-081, T-082 |
-| TODO | 3 | T-013, T-070, T-079 |
+| TODO | 4 | T-013, T-070, T-079, T-083 |
 | READY_FOR_QA | 1 | T-073 |
 | DONE | 47 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-074, T-075, T-076, T-077, T-078 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
@@ -20,7 +20,7 @@
 
 **Open questions for you:** none
 
-_Board last written 2026-10-15 08:27Z_
+_Board last written 2026-10-15 08:38Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -441,6 +441,7 @@ Leader decisions (low-risk, inside the approved stack):
 | L-09 | Auth dependencies and Unicode rule: `golang.org/x/crypto` (argon2id) and `golang.org/x/text` approved. Passwords are normalised to NFKC and display names to NFC before validation and hashing/verification. | The same Vietnamese password can arrive as NFC or NFD from different devices and keyboards; normalising once, before any user exists, prevents lock-outs. NIST SP 800-63B recommends NFKC/NFKD. Changing this after users exist would break their logins. |
 | L-10 | Go toolchain: `go.mod` keeps `go 1.26.0` as the minimum, but CI and production images build with the newest 1.26 patch release. | At exactly go1.26.0 `govulncheck` reports 11 reachable standard-library vulnerabilities; the current patch has none. Raising the `go` directive would force every dev machine to download a newer toolchain for no benefit, while the vulnerable code only matters in what we ship. The Dockerfile (T-022) must follow the same rule. |
 | L-11 | Persistence: plain `database/sql` with parameterised queries and hand-written SQL; `sqlc` (mentioned in L-01) is not adopted. | Auth and yearbooks already use plain SQL cleanly and there is no code generation step to maintain; revisit if the query surface grows. Migrations stay numbered and ordered: always take the next free number (goose rejects out-of-order versions). |
+| L-12 | **Site fonts are self-hosted** (`@fontsource` packages: Fraunces, Be Vietnam Pro, Patrick Hand; latin, latin-ext and vietnamese subsets), never loaded from Google Fonts. The look follows the owner's Claude Design phase 1 (`docs/design/notes/`, adopted 2026-10-15); tokens are ported unchanged. | Avoids sending visitors' IPs to a third party and keeps a strict CSP possible; the three families cover Vietnamese (the originals Caveat, Karla and Jost do not). |
 | L-12 | **Designer templates are imported as pre-rendered decoration plus slots; the runtime stays pure Go.** | Leader decision 2026-10-08 within D-06/D-12. A dev-only Node/Playwright tool renders each canvas page to a background PNG with text and photo placeholders hidden and reads slot and label boxes from the page; the Go renderer draws the background, then localised static text and the user's text and photos (template format v2, T-038). No browser at run time. Costs about 1 MiB per page of embedded assets (budget 8 MiB per template). | Re-draw every design in JSON shapes by hand; render HTML in the server (headless browser); embed PDF pages as backgrounds (new dependency) | Assets pass 64 MiB in total, or a design needs live vector effects |
 
 ## 5. Engineering conventions
@@ -951,7 +952,7 @@ Owner-created private collection links (create, list, revoke) and the public loo
 - **Branch:** —
 - **PR:** —
 - **Updated:** 2026-10-15 08:27Z by leader
-- **Comments-seen:** 1
+- **Comments-seen:** 2
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/03-notes-moderation-api-approve-hide-reorder.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -961,6 +962,7 @@ Owner lists pending/approved/hidden notes per yearbook, approves or hides them, 
 
 #### Comments
 - 2026-10-15 08:27Z · leader · Deps T-034 and T-068 are done: unblocked. API first so the inbox UI (T-017) has a contract; write it in v2 from the start (docs/api-contract.md): /api/note/...
+- 2026-10-15 08:38Z · leader · Spec was a stub when I moved it to TODO; the full spec is now written (endpoints note/get-list, batch-update-status, reorder, batch-delete; counts; lock order). Read the spec file again before starting.
 
 ### T-014 — [E05] Export job: assemble book, render PDF, store, download
 - **Status:** CANCELLED
@@ -1069,14 +1071,14 @@ Dashboard of the user's yearbooks; create/edit form for book information and the
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
-- **Depends-on:** T-013, T-016
+- **Depends-on:** T-013, T-016, T-083
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
+- **Updated:** 2026-10-15 08:38Z by leader
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/04-web-notes-link-management-and-moderation.md`
@@ -1092,14 +1094,14 @@ Create/copy/revoke the collection link, set a deadline, see submissions grouped 
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
-- **Depends-on:** T-003,T-034,T-068
+- **Depends-on:** T-003, T-034, T-068, T-083
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
+- **Updated:** 2026-10-15 08:38Z by leader
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/05-web-public-anonymous-notes-form.md`
@@ -3233,6 +3235,29 @@ Owner decision D-28: every user gets a unique public username (default user-xxxx
 **Epic:** E02-auth · **PRD:** `.team/epics/E02-auth/PRD.md`
 
 Account page shows the username and lets the user change it (weekly limit, localised errors, accessible).
+
+#### Comments
+
+### T-083 — [E01] Web: design system foundation (tokens, fonts, base components, yearbook shell)
+- **Status:** TODO
+- **Priority:** P1
+- **Type:** feature
+- **Milestone:** M1
+- **Depends-on:** —
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-15 08:38Z by leader
+- **Comments-seen:** 0
+
+**Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/15-web-design-system-foundation.md`
+(read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
+**Epic:** E01-foundation · **PRD:** `.team/epics/E01-foundation/PRD.md`
+
+Port the Claude Design tokens, self-host the fonts, add base components (Button, TextField, Badge, Toast, Dialog, Banner, PhotoTile...) and the yearbook shell (sidebar / tab bar); restyle existing controls. Blocks T-017 and T-018.
 
 #### Comments
 
