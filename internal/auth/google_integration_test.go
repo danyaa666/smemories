@@ -23,7 +23,7 @@ func newGoogleEnv(t *testing.T, o opts) (*env, *oidctest.Provider) {
 }
 
 func (e *env) gStart(returnTo, remote string) *httptest.ResponseRecorder {
-	path := "/v1/auth/google/start"
+	path := "/api/auth/google-start"
 	if returnTo != "" {
 		path += "?return_to=" + url.QueryEscape(returnTo)
 	}
@@ -31,7 +31,7 @@ func (e *env) gStart(returnTo, remote string) *httptest.ResponseRecorder {
 }
 
 func (e *env) gCallback(q url.Values, oidc, session, remote string) *httptest.ResponseRecorder {
-	return e.do(req{method: "GET", path: "/v1/auth/google/callback?" + q.Encode(), oidc: oidc, cookie: session, remote: remote})
+	return e.do(req{method: "GET", path: "/api/auth/google-callback?" + q.Encode(), oidc: oidc, cookie: session, remote: remote})
 }
 
 func cookieNamed(rec *httptest.ResponseRecorder, name string) *http.Cookie {
@@ -90,7 +90,7 @@ func wantRedirect(t *testing.T, rec *httptest.ResponseRecorder, loc string) {
 }
 
 func (e *env) me(session string) *httptest.ResponseRecorder {
-	return e.do(req{method: "GET", path: "/v1/me", cookie: session})
+	return e.do(req{method: "GET", path: "/api/user/get-me", cookie: session})
 }
 
 func (e *env) nothingCreated() {
@@ -121,7 +121,7 @@ func TestGoogleStartRedirect(t *testing.T) {
 		u, _ := url.Parse(loc)
 		q := u.Query()
 		if q.Get("response_type") != "code" || q.Get("scope") != "openid email profile" || q.Get("client_id") != oidctest.ClientID ||
-			q.Get("redirect_uri") != testBase+"/api/v1/auth/google/callback" || q.Get("code_challenge_method") != "S256" {
+			q.Get("redirect_uri") != testBase+"/api/auth/google-callback" || q.Get("code_challenge_method") != "S256" {
 			t.Errorf("query: %v", q)
 		}
 		for _, k := range []string{"state", "nonce", "code_challenge"} {
@@ -149,8 +149,8 @@ func TestGoogleStartRedirect(t *testing.T) {
 // AC9
 func TestGoogleDisabledAnswers404(t *testing.T) {
 	e := newEnv(t, opts{})
-	for _, path := range []string{"/v1/auth/google/start", "/v1/auth/google/callback?code=x&state=y"} {
-		want(t, e.do(req{method: "GET", path: path}), 404, "not_found")
+	for _, path := range []string{"/api/auth/google-start", "/api/auth/google-callback?code=x&state=y"} {
+		want(t, e.do(req{method: "GET", path: path}), 404, "ERROR_NOT_FOUND")
 	}
 }
 
@@ -170,7 +170,7 @@ func TestGoogleCreatesSocialOnlyAccount(t *testing.T) {
 	want(t, me, 200, "")
 	for _, s := range []string{`"email":"linh.nguyen@example.com"`, `"email_verified":true`, `"display_name":"Nguyễn Thị Linh"`, `"locale":"vi"`} {
 		if !strings.Contains(me.Body.String(), s) {
-			t.Errorf("/v1/me lacks %s: %s", s, me.Body.String())
+			t.Errorf("/api/user/get-me lacks %s: %s", s, me.Body.String())
 		}
 	}
 	if n := e.count(`SELECT COUNT(*) FROM user_tab WHERE password_hash IS NULL AND email_verified_at IS NOT NULL`); n != 1 {
@@ -180,7 +180,7 @@ func TestGoogleCreatesSocialOnlyAccount(t *testing.T) {
 		t.Errorf("identity row missing")
 	}
 	// A social-only account cannot sign in with a password and looks like an unknown account.
-	want(t, e.login("linh.nguyen@example.com", testPW, ""), 401, "invalid_credentials")
+	want(t, e.login("linh.nguyen@example.com", testPW, ""), 401, "ERROR_INVALID_CREDENTIALS")
 }
 
 // AC6: display name and locale fallbacks.
@@ -220,7 +220,7 @@ func TestGoogleKnownIdentitySignsInAndRevokesOldSession(t *testing.T) {
 	if fresh == old {
 		t.Fatal("session token reused")
 	}
-	want(t, e.me(old), 401, "unauthenticated")
+	want(t, e.me(old), 401, "ERROR_UNAUTHORIZED")
 	want(t, e.me(fresh), 200, "")
 	if n := e.count(`SELECT COUNT(*) FROM user_tab`); n != 1 {
 		t.Errorf("%d users, want 1", n)
@@ -233,7 +233,7 @@ func TestGoogleKnownIdentitySignsInAndRevokesOldSession(t *testing.T) {
 // AC4
 func TestGoogleLinksVerifiedLocalAccount(t *testing.T) {
 	e, p := newGoogleEnv(t, opts{})
-	want(t, e.register("alice@example.com", testPW, "Alice Local"), 201, "")
+	want(t, e.register("alice@example.com", testPW, "Alice Local"), 200, "")
 	if _, err := e.db.Exec(`UPDATE user_tab SET email_verified_at = 1`); err != nil {
 		t.Fatal(err)
 	}
@@ -259,7 +259,7 @@ func TestGoogleLinksVerifiedLocalAccount(t *testing.T) {
 func TestGoogleDefeatsPreHijacking(t *testing.T) {
 	e, p := newGoogleEnv(t, opts{})
 	reg := e.register("victim@example.com", testPW, "Attacker Chosen Name")
-	want(t, reg, 201, "")
+	want(t, reg, 200, "")
 	attacker := sessionCookie(t, reg).Value
 	want(t, e.me(attacker), 200, "")
 	other := e.login("victim@example.com", testPW, "")
@@ -270,9 +270,9 @@ func TestGoogleDefeatsPreHijacking(t *testing.T) {
 	wantRedirect(t, rec, "/")
 	want(t, e.me(sessionCookie(t, rec).Value), 200, "")
 
-	want(t, e.login("victim@example.com", testPW, ""), 401, "invalid_credentials")
-	want(t, e.me(attacker), 401, "unauthenticated")
-	want(t, e.me(attacker2), 401, "unauthenticated")
+	want(t, e.login("victim@example.com", testPW, ""), 401, "ERROR_INVALID_CREDENTIALS")
+	want(t, e.me(attacker), 401, "ERROR_UNAUTHORIZED")
+	want(t, e.me(attacker2), 401, "ERROR_UNAUTHORIZED")
 	if n := e.count(`SELECT COUNT(*) FROM user_tab WHERE password_hash IS NULL AND email_verified_at IS NOT NULL`); n != 1 {
 		t.Errorf("account must be social-only and verified")
 	}
@@ -409,7 +409,7 @@ func TestGoogleExistingSessionIgnoredUntilSuccess(t *testing.T) {
 	want(t, e.me(bob), 200, "")
 	ok := e.newFlow(p, "", oidctest.Claims{Sub: "s", Email: "a@example.com"})
 	wantRedirect(t, ok.callback(bob), "/")
-	want(t, e.me(bob), 401, "unauthenticated")
+	want(t, e.me(bob), 401, "ERROR_UNAUTHORIZED")
 }
 
 // AC7, end to end: only same-site relative paths survive.
@@ -442,7 +442,7 @@ func TestGoogleRateLimits(t *testing.T) {
 		}
 	}
 	rec := e.gStart("", "198.51.100.7:1")
-	want(t, rec, 429, "rate_limited")
+	want(t, rec, 429, "ERROR_RATE_LIMITED")
 	if rec.Header().Get("Retry-After") == "" {
 		t.Error("no Retry-After")
 	}
@@ -459,7 +459,7 @@ func TestGoogleRateLimits(t *testing.T) {
 			t.Fatalf("callback %d: %d", i, rec.Code)
 		}
 	}
-	want(t, e.gCallback(url.Values{"code": {f.code}, "state": {f.state}}, f.oidc, "", "198.51.100.9:1"), 429, "rate_limited")
+	want(t, e.gCallback(url.Values{"code": {f.code}, "state": {f.state}}, f.oidc, "", "198.51.100.9:1"), 429, "ERROR_RATE_LIMITED")
 	e.nothingCreated()
 	e.clock.advance(googleRateWindow + time.Second)
 	f = e.newFlow(p, "", oidctest.Claims{Sub: "s", Email: "a@example.com"})
@@ -498,7 +498,7 @@ func TestGoogleConcurrentCallbacksLinkOnce(t *testing.T) { concurrentLink(t) }
 
 func concurrentLink(t *testing.T) {
 	e, p := newGoogleEnv(t, opts{})
-	want(t, e.register("race@example.com", testPW, "Local"), 201, "")
+	want(t, e.register("race@example.com", testPW, "Local"), 200, "")
 	const n = 4
 	flows := make([]*flow, n)
 	for i := range flows {
@@ -519,7 +519,7 @@ func concurrentLink(t *testing.T) {
 	if u, id := e.count(`SELECT COUNT(*) FROM user_tab`), e.count(`SELECT COUNT(*) FROM user_identity_tab`); u != 1 || id != 1 {
 		t.Errorf("%d users, %d identities, want 1 and 1", u, id)
 	}
-	want(t, e.login("race@example.com", testPW, ""), 401, "invalid_credentials")
+	want(t, e.login("race@example.com", testPW, ""), 401, "ERROR_INVALID_CREDENTIALS")
 }
 
 // T-047: the two races above, 30 times each on a fresh database, must never fail (CI flake).

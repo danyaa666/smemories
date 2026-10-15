@@ -22,9 +22,9 @@ const respond = (res: () => Promise<Response>) =>
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string) =>
-      url === "/api/v1/me"
+      url === "/api/user/get-me"
         ? Response.json(
-            { error: { code: "unauthenticated", message: "", request_id: "" } },
+            { status: "ERROR_UNAUTHORIZED", error_message: "", request_id: "" },
             { status: 401 },
           )
         : res(),

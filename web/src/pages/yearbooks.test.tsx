@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { Yearbook } from "../api/yearbooks";
 import i18n from "../i18n";
-import { err, mockApi, renderApp, user, type Call } from "../test/api";
+import { err, mockApi, ok, renderApp, user, type Call } from "../test/api";
 
 const ID = "01J9Z3K6V8Q4M7N2P5R8T0AAAA";
 const PHOTO = "01J9Z3K6V8Q4M7N2P5R8T0PPPP";
@@ -39,8 +39,7 @@ const yb = (
   },
   ...over,
 });
-const me = () => Response.json({ user: user() });
-const ok = (data: unknown) => Response.json({ status: "OK", data });
+const me = () => ok(user());
 const book = (y: Yearbook) => ok(y);
 const page = (items: Yearbook[], next = "") => ok({ items, next_id: next });
 const fail = (status: number, code: string) => Response.json(apiErr(code), { status });
@@ -50,7 +49,7 @@ const last = <T,>(a: T[]) => a[a.length - 1]!;
 describe("yearbook list", () => {
   it("lists the books with a cover thumbnail, and pages with next_id", async () => {
     const calls = mockApi({
-      "GET /v1/me": me,
+      "GET /user/get-me": me,
       "GET /yearbook/get-list": page([yb({ cover_media_id: PHOTO })], "c2"),
       "GET /yearbook/get-list?next_id=c2": page([yb({ id: OTHER, title: "Second" })]),
     });
@@ -72,7 +71,7 @@ describe("yearbook list", () => {
 
   it("invites the user to create a first book", async () => {
     mockApi({
-      "GET /v1/me": me,
+      "GET /user/get-me": me,
       "GET /yearbook/get-list": page([]),
     });
     renderApp("/yearbooks");
@@ -84,7 +83,7 @@ describe("yearbook list", () => {
   });
 
   it("sends a signed-out visitor to sign in", async () => {
-    mockApi({ "GET /v1/me": err(401, "unauthenticated") });
+    mockApi({ "GET /user/get-me": err(401, "unauthenticated") });
     renderApp("/yearbooks");
     expect(await screen.findByRole("heading", { name: "Sign in" })).toBeInTheDocument();
   });
@@ -93,7 +92,7 @@ describe("yearbook list", () => {
 describe("create", () => {
   it("offers A5, A4 and Letter, posts the form and opens the new book", async () => {
     const calls = mockApi({
-      "GET /v1/me": me,
+      "GET /user/get-me": me,
       "POST /yearbook/create": () => book(yb({ page_size: "Letter" })),
       [`GET /yearbook/get?id=${ID}`]: book(yb({ page_size: "Letter" })),
       "GET /yearbook/get-list": page([]),
@@ -124,7 +123,7 @@ describe("create", () => {
 
   it("defaults the book language to the interface language", async () => {
     await i18n.changeLanguage("vi");
-    mockApi({ "GET /v1/me": me });
+    mockApi({ "GET /user/get-me": me });
     renderApp("/yearbooks/new");
     expect(await screen.findByLabelText("Ngôn ngữ của kỷ yếu")).toHaveValue("vi");
   });
@@ -132,7 +131,7 @@ describe("create", () => {
   it("shows a field error next to the field and a limit error above the button", async () => {
     let n = 0;
     mockApi({
-      "GET /v1/me": me,
+      "GET /user/get-me": me,
       "POST /yearbook/create": () =>
         n++ === 0 ? fail(400, "invalid_title") : fail(409, "limit_reached"),
     });
@@ -150,7 +149,7 @@ describe("create", () => {
 describe("edit", () => {
   it("saving the profile keeps the profile photo (update-profile replaces everything)", async () => {
     const calls = mockApi({
-      "GET /v1/me": me,
+      "GET /user/get-me": me,
       [`GET /yearbook/get?id=${ID}`]: book(yb({}, { photo_media_id: PHOTO })),
       ["POST /yearbook/update-profile"]: (c) =>
         book(yb({}, { ...(c.body as object), photo_media_id: PHOTO })),
@@ -180,7 +179,7 @@ describe("edit", () => {
 
   it("saving the book details sends no cover (an absent cover is kept) and clears the year with null", async () => {
     const calls = mockApi({
-      "GET /v1/me": me,
+      "GET /user/get-me": me,
       [`GET /yearbook/get?id=${ID}`]: book(yb({ cover_media_id: PHOTO })),
       ["POST /yearbook/update"]: (c) => book(yb({ ...(c.body as object), cover_media_id: PHOTO })),
       "GET /yearbook/get-list": page([]),
@@ -202,7 +201,7 @@ describe("edit", () => {
   });
 
   it("says so when the book does not exist", async () => {
-    mockApi({ "GET /v1/me": me, [`GET /yearbook/get?id=${ID}`]: fail(404, "not_found") });
+    mockApi({ "GET /user/get-me": me, [`GET /yearbook/get?id=${ID}`]: fail(404, "not_found") });
     renderApp(`/yearbooks/${ID}`);
     expect(await screen.findByRole("alert")).toHaveTextContent("does not exist");
   });
@@ -210,7 +209,7 @@ describe("edit", () => {
   it("deletes the book after confirmation and returns to the list", async () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
     const calls = mockApi({
-      "GET /v1/me": me,
+      "GET /user/get-me": me,
       [`GET /yearbook/get?id=${ID}`]: book(yb()),
       "POST /yearbook/delete": ok({}),
       "GET /yearbook/get-list": page([]),
@@ -224,7 +223,7 @@ describe("edit", () => {
 
   it("does not delete when the user cancels", async () => {
     vi.spyOn(window, "confirm").mockReturnValue(false);
-    const calls = mockApi({ "GET /v1/me": me, [`GET /yearbook/get?id=${ID}`]: book(yb()) });
+    const calls = mockApi({ "GET /user/get-me": me, [`GET /yearbook/get?id=${ID}`]: book(yb()) });
     renderApp(`/yearbooks/${ID}`);
     await userEvent.click(await screen.findByRole("button", { name: "Delete yearbook" }));
     expect(calls.some((c) => c.path === "/yearbook/delete")).toBe(false);
@@ -291,7 +290,7 @@ async function openEditor(extra: Record<string, Response | ((c: Call) => Respons
   FakeXhr.all = [];
   vi.stubGlobal("XMLHttpRequest", FakeXhr);
   const calls = mockApi({
-    "GET /v1/me": me,
+    "GET /user/get-me": me,
     [`GET /yearbook/get?id=${ID}`]: book(yb()),
     "GET /yearbook/get-list": page([]),
     [MEDIA]: mediaPage([]),

@@ -3,10 +3,7 @@
 export function GoogleButton({ label, returnTo }: { label: string; returnTo: string }) {
   if (import.meta.env.VITE_GOOGLE_SIGNIN !== "true") return null;
   return (
-    <a
-      className="button"
-      href={`/api/v1/auth/google/start?return_to=${encodeURIComponent(returnTo)}`}
-    >
+    <a className="button" href={`/api/auth/google-start?return_to=${encodeURIComponent(returnTo)}`}>
       {label}
     </a>
   );

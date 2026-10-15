@@ -112,7 +112,7 @@ func newEnv(t *testing.T, o opts) *env {
 	if o.google != nil {
 		if err := ah.EnableGoogle(GoogleConfig{
 			ClientID: oidctest.ClientID, ClientSecret: oidctest.ClientSecret, Issuer: o.google.URL,
-			RedirectURL: testBase + "/api/v1/auth/google/callback", CookieKey: []byte(strings.Repeat("k", 32)),
+			RedirectURL: testBase + "/api/auth/google-callback", CookieKey: []byte(strings.Repeat("k", 32)),
 		}); err != nil {
 			t.Fatal(err)
 		}
@@ -181,11 +181,11 @@ func body(email, pw, name string) string {
 }
 
 func (e *env) register(email, pw, name string) *httptest.ResponseRecorder {
-	return e.do(req{method: "POST", path: "/v1/auth/register", body: body(email, pw, name)})
+	return e.do(req{method: "POST", path: "/api/auth/register", body: body(email, pw, name)})
 }
 
 func (e *env) login(email, pw, remote string) *httptest.ResponseRecorder {
-	return e.do(req{method: "POST", path: "/v1/auth/login", body: body(email, pw, ""), remote: remote})
+	return e.do(req{method: "POST", path: "/api/auth/login", body: body(email, pw, ""), remote: remote})
 }
 
 func sessionCookie(t *testing.T, rec *httptest.ResponseRecorder) *http.Cookie {
@@ -201,11 +201,14 @@ func sessionCookie(t *testing.T, rec *httptest.ResponseRecorder) *http.Cookie {
 
 func errCode(t *testing.T, rec *httptest.ResponseRecorder) string {
 	t.Helper()
-	var env struct{ Error httpx.ErrorBody }
-	if err := json.Unmarshal(rec.Body.Bytes(), &env); err != nil || env.Error.Code == "" || env.Error.RequestID == "" {
+	var env struct {
+		Status    string `json:"status"`
+		RequestID string `json:"request_id"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &env); err != nil || !strings.HasPrefix(env.Status, "ERROR_") || env.RequestID == "" {
 		t.Fatalf("not an error envelope (status %d): %q", rec.Code, rec.Body.String())
 	}
-	return env.Error.Code
+	return env.Status
 }
 
 func want(t *testing.T, rec *httptest.ResponseRecorder, status int, code string) {
@@ -241,13 +244,16 @@ func (e *env) sessionCount() int {
 func TestRegisterMeLogoutFlow(t *testing.T) {
 	e := newEnv(t, opts{})
 	rec := e.register("  Alice@Example.COM ", testPW, "  Đặng Thị Hồng 🎓 ")
-	want(t, rec, 201, "")
+	want(t, rec, 200, "")
 
-	var out map[string]map[string]any
-	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
-		t.Fatal(err)
+	var out struct {
+		Status string
+		Data   map[string]any
 	}
-	u := out["user"]
+	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil || out.Status != "OK" {
+		t.Fatalf("%v: %s", err, rec.Body.String())
+	}
+	u := out.Data
 	keys := map[string]bool{}
 	for k := range u {
 		keys[k] = true
@@ -268,21 +274,21 @@ func TestRegisterMeLogoutFlow(t *testing.T) {
 	}
 
 	c := sessionCookie(t, rec)
-	me := e.do(req{method: "GET", path: "/v1/me", cookie: c.Value})
+	me := e.do(req{method: "GET", path: "/api/user/get-me", cookie: c.Value})
 	want(t, me, 200, "")
 	if me.Body.String() != rec.Body.String() {
-		t.Fatalf("/v1/me = %s, register = %s", me.Body.String(), rec.Body.String())
+		t.Fatalf("/api/user/get-me = %s, register = %s", me.Body.String(), rec.Body.String())
 	}
 
-	out204 := e.do(req{method: "POST", path: "/v1/auth/logout", cookie: c.Value, origin: origin})
-	want(t, out204, 204, "")
+	out204 := e.do(req{method: "POST", path: "/api/auth/logout", cookie: c.Value, origin: origin})
+	want(t, out204, 200, "")
 	cleared := sessionCookie(t, out204)
 	if cleared.Value != "" || cleared.MaxAge >= 0 {
 		t.Fatalf("logout must clear the cookie, got %+v", cleared)
 	}
-	want(t, e.do(req{method: "GET", path: "/v1/me", cookie: c.Value}), 401, "unauthenticated")            // replay of the old cookie
-	want(t, e.do(req{method: "POST", path: "/v1/auth/logout", cookie: c.Value, origin: origin}), 204, "") // idempotent
-	want(t, e.do(req{method: "POST", path: "/v1/auth/logout"}), 204, "")                                  // not even signed in
+	want(t, e.do(req{method: "GET", path: "/api/user/get-me", cookie: c.Value}), 401, "ERROR_UNAUTHORIZED") // replay of the old cookie
+	want(t, e.do(req{method: "POST", path: "/api/auth/logout", cookie: c.Value, origin: origin}), 200, "")  // idempotent
+	want(t, e.do(req{method: "POST", path: "/api/auth/logout"}), 200, "")                                   // not even signed in
 	if n := e.sessionCount(); n != 0 {
 		t.Fatalf("%d sessions left", n)
 	}
@@ -307,7 +313,7 @@ func TestSessionTokenAndCookieFlags(t *testing.T) {
 		if n, err := e.rc.Client().Exists(ctx, e.rc.Key("sess", c.Value)).Result(); err != nil || n != 0 {
 			t.Fatalf("raw token must not be stored: %d, %v", n, err)
 		}
-		raw := e.do(req{method: "GET", path: "/v1/me", cookie: c.Value})
+		raw := e.do(req{method: "GET", path: "/api/user/get-me", cookie: c.Value})
 		if raw.Code != 200 {
 			t.Fatal(raw.Body.String())
 		}
@@ -325,19 +331,19 @@ func TestRegisterValidation(t *testing.T) {
 	for _, c := range []struct {
 		name, email, pw, display, code string
 	}{
-		{"no email", "", testPW, "A", "invalid_email"},
-		{"not an address", "alice", testPW, "A", "invalid_email"},
-		{"no dot in domain", "alice@localhost", testPW, "A", "invalid_email"},
-		{"too long", long, testPW, "A", "invalid_email"},
-		{"sql injection", "x'; DROP TABLE users;--@example.com", testPW, "A", "invalid_email"},
-		{"short password", testMail, "123456789", "A", "weak_password"},
-		{"password is the email", testMail, testMail, "A", "weak_password"},
-		{"password is the email, other case", testMail, "ALICE@example.com", "A", "weak_password"},
-		{"129 characters", testMail, strings.Repeat("p", 129), "A", "weak_password"},
-		{"300 KB password is refused", testMail, strings.Repeat("p", 300<<10), "A", "weak_password"},
-		{"blank display name", testMail, testPW, "   ", "invalid_display_name"},
-		{"101 character display name", testMail, testPW, strings.Repeat("n", 101), "invalid_display_name"},
-		{"control character in name", testMail, testPW, "Al\nice", "invalid_display_name"},
+		{"no email", "", testPW, "A", "ERROR_INVALID_EMAIL"},
+		{"not an address", "alice", testPW, "A", "ERROR_INVALID_EMAIL"},
+		{"no dot in domain", "alice@localhost", testPW, "A", "ERROR_INVALID_EMAIL"},
+		{"too long", long, testPW, "A", "ERROR_INVALID_EMAIL"},
+		{"sql injection", "x'; DROP TABLE users;--@example.com", testPW, "A", "ERROR_INVALID_EMAIL"},
+		{"short password", testMail, "123456789", "A", "ERROR_WEAK_PASSWORD"},
+		{"password is the email", testMail, testMail, "A", "ERROR_WEAK_PASSWORD"},
+		{"password is the email, other case", testMail, "ALICE@example.com", "A", "ERROR_WEAK_PASSWORD"},
+		{"129 characters", testMail, strings.Repeat("p", 129), "A", "ERROR_WEAK_PASSWORD"},
+		{"300 KB password is refused", testMail, strings.Repeat("p", 300<<10), "A", "ERROR_WEAK_PASSWORD"},
+		{"blank display name", testMail, testPW, "   ", "ERROR_INVALID_DISPLAY_NAME"},
+		{"101 character display name", testMail, testPW, strings.Repeat("n", 101), "ERROR_INVALID_DISPLAY_NAME"},
+		{"control character in name", testMail, testPW, "Al\nice", "ERROR_INVALID_DISPLAY_NAME"},
 	} {
 		rec := e.register(c.email, c.pw, c.display)
 		if rec.Code != 400 || errCode(t, rec) != c.code {
@@ -351,8 +357,8 @@ func TestRegisterValidation(t *testing.T) {
 		t.Fatalf("rejected registrations created %d users", n)
 	}
 	// Boundaries that are valid: 10 and 128 characters, 100-character name.
-	want(t, e.register("a@example.com", strings.Repeat("p", 10), "A"), 201, "")
-	want(t, e.register("b@example.com", strings.Repeat("🎓", 128), strings.Repeat("đ", 100)), 201, "")
+	want(t, e.register("a@example.com", strings.Repeat("p", 10), "A"), 200, "")
+	want(t, e.register("b@example.com", strings.Repeat("🎓", 128), strings.Repeat("đ", 100)), 200, "")
 }
 
 func TestRegisterBadBodies(t *testing.T) {
@@ -364,26 +370,26 @@ func TestRegisterBadBodies(t *testing.T) {
 		"trailing data":  `{"email":"a@example.com"} {"x":1}`,
 		"truncated json": `{"email":"a@exam`,
 	} {
-		rec := e.do(req{method: "POST", path: "/v1/auth/register", body: b})
-		if rec.Code != 400 || errCode(t, rec) != "invalid_body" {
+		rec := e.do(req{method: "POST", path: "/api/auth/register", body: b})
+		if rec.Code != 400 || errCode(t, rec) != "ERROR_PARAM" {
 			t.Errorf("%s: %d %s", name, rec.Code, rec.Body.String())
 		}
 	}
-	rec := e.do(req{method: "POST", path: "/v1/auth/register", body: `{"email":"` + strings.Repeat("a", 2<<20) + `"}`})
-	want(t, rec, 413, "payload_too_large")
+	rec := e.do(req{method: "POST", path: "/api/auth/register", body: `{"email":"` + strings.Repeat("a", 2<<20) + `"}`})
+	want(t, rec, 413, "ERROR_TOO_LARGE")
 }
 
 func TestDuplicateEmailIsCaseInsensitive(t *testing.T) {
 	e := newEnv(t, opts{})
-	want(t, e.register("Dup@Example.com", testPW, "One"), 201, "")
+	want(t, e.register("Dup@Example.com", testPW, "One"), 200, "")
 	for _, em := range []string{"dup@example.com", "DUP@EXAMPLE.COM", " dup@Example.com "} {
-		want(t, e.register(em, testPW, "Two"), 409, "email_taken")
+		want(t, e.register(em, testPW, "Two"), 409, "ERROR_EMAIL_TAKEN")
 	}
 	if n := e.count("SELECT COUNT(*) FROM user_tab"); n != 1 {
 		t.Fatalf("%d users", n)
 	}
 	// Accents are not folded: they are different addresses.
-	want(t, e.register("dưp@example.com", testPW, "Accent"), 201, "")
+	want(t, e.register("dưp@example.com", testPW, "Accent"), 200, "")
 }
 
 func TestConcurrentDuplicateRegistrations(t *testing.T) {
@@ -399,7 +405,7 @@ func TestConcurrentDuplicateRegistrations(t *testing.T) {
 	created, taken := 0, 0
 	for c := range codes {
 		switch c {
-		case 201:
+		case 200:
 			created++
 		case 409:
 			taken++
@@ -418,7 +424,7 @@ func TestConcurrentDuplicateRegistrations(t *testing.T) {
 // AC2: stored as an argon2id PHC string with the configured parameters.
 func TestPasswordStoredAsArgon2id(t *testing.T) {
 	e := newEnv(t, opts{hashMemKiB: 1024})
-	want(t, e.register(testMail, testPW, "A"), 201, "")
+	want(t, e.register(testMail, testPW, "A"), 200, "")
 	var phc string
 	if err := e.db.QueryRow("SELECT password_hash FROM user_tab").Scan(&phc); err != nil {
 		t.Fatal(err)
@@ -439,18 +445,18 @@ func TestLogin(t *testing.T) {
 	if second.Value == first.Value {
 		t.Fatal("login must issue a new token (no fixation)")
 	}
-	want(t, e.do(req{method: "GET", path: "/v1/me", cookie: second.Value}), 200, "")
-	want(t, e.do(req{method: "GET", path: "/v1/me", cookie: first.Value}), 200, "") // other devices keep their session
+	want(t, e.do(req{method: "GET", path: "/api/user/get-me", cookie: second.Value}), 200, "")
+	want(t, e.do(req{method: "GET", path: "/api/user/get-me", cookie: first.Value}), 200, "") // other devices keep their session
 
 	// Logging in while sending an old cookie revokes that cookie's session.
-	third := e.do(req{method: "POST", path: "/v1/auth/login", body: body(testMail, testPW, ""), cookie: first.Value, origin: origin})
+	third := e.do(req{method: "POST", path: "/api/auth/login", body: body(testMail, testPW, ""), cookie: first.Value, origin: origin})
 	want(t, third, 200, "")
-	want(t, e.do(req{method: "GET", path: "/v1/me", cookie: first.Value}), 401, "unauthenticated")
+	want(t, e.do(req{method: "GET", path: "/api/user/get-me", cookie: first.Value}), 401, "ERROR_UNAUTHORIZED")
 
 	wrong := e.login(testMail, testPW+"x", "")
 	unknown := e.login("nobody@example.com", testPW+"x", "")
 	for _, rec := range []*httptest.ResponseRecorder{wrong, unknown} {
-		want(t, rec, 401, "invalid_credentials")
+		want(t, rec, 401, "ERROR_INVALID_CREDENTIALS")
 		if rec.Header().Get("Set-Cookie") != "" {
 			t.Fatal("no cookie on failure")
 		}
@@ -461,7 +467,7 @@ func TestLogin(t *testing.T) {
 	}
 	// Garbage and injection attempts are plain credential failures.
 	for _, em := range []string{"' OR '1'='1", "alice@example.com' --", strings.Repeat("x", 5000), ""} {
-		want(t, e.login(em, testPW, ""), 401, "invalid_credentials")
+		want(t, e.login(em, testPW, ""), 401, "ERROR_INVALID_CREDENTIALS")
 	}
 }
 
@@ -473,10 +479,10 @@ func TestUnicodeNormalisation(t *testing.T) {
 	}
 	e := newEnv(t, opts{})
 	// Registered with NFC, logs in with NFD.
-	want(t, e.register("nfc@example.com", nfc, "A"), 201, "")
+	want(t, e.register("nfc@example.com", nfc, "A"), 200, "")
 	want(t, e.login("nfc@example.com", nfd, ""), 200, "")
 	// Registered with NFD (NFD is longer in runes), logs in with NFC.
-	want(t, e.register("nfd@example.com", nfd, "B"), 201, "")
+	want(t, e.register("nfd@example.com", nfd, "B"), 200, "")
 	want(t, e.login("nfd@example.com", nfc, ""), 200, "")
 	// Stored hash is over the NFKC form: it verifies the NFC bytes directly.
 	var phc string
@@ -487,21 +493,21 @@ func TestUnicodeNormalisation(t *testing.T) {
 		t.Fatalf("hash not over the NFKC form: %v %v", ok, err)
 	}
 	// NFKC folds compatibility characters: full-width digits log in as ASCII.
-	want(t, e.register("fw@example.com", "pass\uff11\uff12\uff13\uff14\uff15\uff16word", "C"), 201, "")
+	want(t, e.register("fw@example.com", "pass\uff11\uff12\uff13\uff14\uff15\uff16word", "C"), 200, "")
 	want(t, e.login("fw@example.com", "pass123456word", ""), 200, "")
-	want(t, e.login("fw@example.com", "pass123456wor", ""), 401, "invalid_credentials")
+	want(t, e.login("fw@example.com", "pass123456wor", ""), 401, "ERROR_INVALID_CREDENTIALS")
 	// The 10-character minimum counts after normalisation: 15 decomposed runes are 5 characters.
-	want(t, e.register("short@example.com", strings.Repeat("e\u0323\u0302", 5), "D"), 400, "weak_password")
+	want(t, e.register("short@example.com", strings.Repeat("e\u0323\u0302", 5), "D"), 400, "ERROR_WEAK_PASSWORD")
 	// Display name stored (and returned) as NFC.
 	rec := e.register("name@example.com", testPW, "Vie\u0323\u0302t")
-	want(t, rec, 201, "")
+	want(t, rec, 200, "")
 	var out struct {
-		User struct {
+		Data struct {
 			DisplayName string `json:"display_name"`
 		}
 	}
-	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil || out.User.DisplayName != "Vi\u1ec7t" {
-		t.Fatalf("response display_name %q (%v)", out.User.DisplayName, err)
+	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil || out.Data.DisplayName != "Vi\u1ec7t" {
+		t.Fatalf("response display_name %q (%v)", out.Data.DisplayName, err)
 	}
 	var name string
 	if err := e.db.QueryRow("SELECT display_name FROM user_tab WHERE email=?", "name@example.com").Scan(&name); err != nil || name != "Vi\u1ec7t" {
@@ -516,8 +522,8 @@ func TestEmailNFCvsNFD(t *testing.T) {
 		t.Fatal("fixtures must differ in bytes")
 	}
 	e := newEnv(t, opts{})
-	want(t, e.register(nfc, testPW, "A"), 201, "")
-	want(t, e.register(nfd, testPW, "B"), 409, "email_taken")
+	want(t, e.register(nfc, testPW, "A"), 200, "")
+	want(t, e.register(nfd, testPW, "B"), 409, "ERROR_EMAIL_TAKEN")
 	if n := e.count("SELECT COUNT(*) FROM user_tab"); n != 1 {
 		t.Fatalf("%d users", n)
 	}
@@ -534,25 +540,25 @@ func TestEmailNFCvsNFD(t *testing.T) {
 func TestEmailAndDisplayNameHardening(t *testing.T) {
 	e := newEnv(t, opts{})
 	for _, em := range []string{strings.Repeat("a", 65) + "@example.com", "a\u200bb@example.com", "a\u202eb@example.com"} {
-		want(t, e.register(em, testPW, "A"), 400, "invalid_email")
+		want(t, e.register(em, testPW, "A"), 400, "ERROR_INVALID_EMAIL")
 	}
-	want(t, e.register(strings.Repeat("a", 64)+"@example.com", testPW, "A"), 201, "")
+	want(t, e.register(strings.Repeat("a", 64)+"@example.com", testPW, "A"), 200, "")
 	for _, name := range []string{"a\u200bb", "\u200b", "a\u202eb", "a\u2066b\u2069", "a\u200eb", "a\ufeffb", "a\u2028b", "a\u2029b"} {
-		want(t, e.register("n@example.com", testPW, name), 400, "invalid_display_name")
+		want(t, e.register("n@example.com", testPW, name), 400, "ERROR_INVALID_DISPLAY_NAME")
 	}
-	want(t, e.register("n@example.com", testPW, "Vi\u1ec7t \U0001F468\u200d\U0001F393"), 201, "")
+	want(t, e.register("n@example.com", testPW, "Vi\u1ec7t \U0001F468\u200d\U0001F393"), 200, "")
 }
 
 // AC3 timing: the unknown-email path takes a hashing slot just like a real verify.
 func TestUnknownEmailLoginDoesTheSameHashingWork(t *testing.T) {
 	e := newEnv(t, opts{maxHashes: 1, hashWait: 30 * time.Millisecond})
-	want(t, e.register(testMail, testPW, "A"), 201, "")
+	want(t, e.register(testMail, testPW, "A"), 200, "")
 	e.hasher.slots <- struct{}{} // occupy the only slot
-	want(t, e.login(testMail, testPW, ""), 503, "busy")
-	want(t, e.login("nobody@example.com", testPW, ""), 503, "busy")
-	want(t, e.register("b@example.com", testPW, "B"), 503, "busy")
+	want(t, e.login(testMail, testPW, ""), 503, "ERROR_BUSY")
+	want(t, e.login("nobody@example.com", testPW, ""), 503, "ERROR_BUSY")
+	want(t, e.register("b@example.com", testPW, "B"), 503, "ERROR_BUSY")
 	<-e.hasher.slots
-	want(t, e.login("nobody@example.com", testPW, ""), 401, "invalid_credentials")
+	want(t, e.login("nobody@example.com", testPW, ""), 401, "ERROR_INVALID_CREDENTIALS")
 }
 
 // AC8: oversized passwords never reach the hasher (the only slot is held, yet we get 400/401, not 503).
@@ -560,16 +566,16 @@ func TestOversizePasswordsAreRejectedBeforeHashing(t *testing.T) {
 	e := newEnv(t, opts{maxHashes: 1, hashWait: 30 * time.Millisecond})
 	e.hasher.slots <- struct{}{}
 	huge := strings.Repeat("p", 500<<10)
-	want(t, e.register(testMail, huge, "A"), 400, "weak_password")
-	want(t, e.login(testMail, huge, ""), 401, "invalid_credentials")
-	want(t, e.login(testMail, strings.Repeat("p", 129), ""), 401, "invalid_credentials")
-	want(t, e.login(testMail, "", ""), 401, "invalid_credentials")
+	want(t, e.register(testMail, huge, "A"), 400, "ERROR_WEAK_PASSWORD")
+	want(t, e.login(testMail, huge, ""), 401, "ERROR_INVALID_CREDENTIALS")
+	want(t, e.login(testMail, strings.Repeat("p", 129), ""), 401, "ERROR_INVALID_CREDENTIALS")
+	want(t, e.login(testMail, "", ""), 401, "ERROR_INVALID_CREDENTIALS")
 }
 
 // AC2: a flood of logins gets answers (200/401/503), never a hang and never more than the cap in flight.
 func TestParallelLoginsRespectTheHashCap(t *testing.T) {
 	e := newEnv(t, opts{maxHashes: 2, hashWait: 40 * time.Millisecond, hashMemKiB: 65536})
-	want(t, e.register(testMail, testPW, "A"), 201, "")
+	want(t, e.register(testMail, testPW, "A"), 200, "")
 
 	var wg sync.WaitGroup
 	var mu sync.Mutex
@@ -648,14 +654,14 @@ func TestSessionExpiryAndSliding(t *testing.T) {
 	}
 
 	e.clock.advance(10 * 24 * time.Hour) // a third of the TTL: no refresh
-	rec := e.do(req{method: "GET", path: "/v1/me", cookie: c})
+	rec := e.do(req{method: "GET", path: "/api/user/get-me", cookie: c})
 	want(t, rec, 200, "")
 	if rec.Header().Get("Set-Cookie") != "" || !expiry().Equal(t0.Add(SessionTTL)) {
 		t.Fatal("must not slide before half the TTL has passed")
 	}
 
 	e.clock.advance(6 * 24 * time.Hour) // 16 days: more than half has elapsed
-	rec = e.do(req{method: "GET", path: "/v1/me", cookie: c})
+	rec = e.do(req{method: "GET", path: "/api/user/get-me", cookie: c})
 	want(t, rec, 200, "")
 	re := sessionCookie(t, rec)
 	if re.Value != c || re.MaxAge != 30*24*3600 {
@@ -666,7 +672,7 @@ func TestSessionExpiryAndSliding(t *testing.T) {
 	}
 
 	e.clock.advance(SessionTTL + time.Second) // past the new expiry
-	want(t, e.do(req{method: "GET", path: "/v1/me", cookie: c}), 401, "unauthenticated")
+	want(t, e.do(req{method: "GET", path: "/api/user/get-me", cookie: c}), 401, "ERROR_UNAUTHORIZED")
 
 	// Expired rows are swept by the user's next login.
 	if n := e.sessionCount(); n != 1 {
@@ -681,8 +687,8 @@ func TestSessionExpiryAndSliding(t *testing.T) {
 func TestMeWithoutValidSession(t *testing.T) {
 	e := newEnv(t, opts{})
 	for name, cookie := range map[string]string{"none": "", "garbage": "not-a-token", "unknown but well-formed": strings.Repeat("A", 43), "sql": "' OR 1=1 --"} {
-		rec := e.do(req{method: "GET", path: "/v1/me", cookie: cookie})
-		if rec.Code != 401 || errCode(t, rec) != "unauthenticated" {
+		rec := e.do(req{method: "GET", path: "/api/user/get-me", cookie: cookie})
+		if rec.Code != 401 || errCode(t, rec) != "ERROR_UNAUTHORIZED" {
 			t.Errorf("%s: %d %s", name, rec.Code, rec.Body.String())
 		}
 	}
@@ -691,24 +697,24 @@ func TestMeWithoutValidSession(t *testing.T) {
 // AC6: rate limits.
 func TestLoginRateLimitPerEmailAndIP(t *testing.T) {
 	e := newEnv(t, opts{limits: Limits{RegisterPerHour: 100, LoginFailsPerPair: 3, LoginFailsPerIP: 5}})
-	want(t, e.register(testMail, testPW, "A"), 201, "")
-	want(t, e.register("bob@example.com", testPW, "B"), 201, "")
+	want(t, e.register(testMail, testPW, "A"), 200, "")
+	want(t, e.register("bob@example.com", testPW, "B"), 200, "")
 
 	for i := 0; i < 3; i++ {
-		want(t, e.login(testMail, "wrong-password-"+fmt.Sprint(i), ""), 401, "invalid_credentials")
+		want(t, e.login(testMail, "wrong-password-"+fmt.Sprint(i), ""), 401, "ERROR_INVALID_CREDENTIALS")
 	}
 	blocked := e.login(testMail, "wrong-password-again", "")
-	want(t, blocked, 429, "rate_limited")
+	want(t, blocked, 429, "ERROR_RATE_LIMITED")
 	if ra := blocked.Header().Get("Retry-After"); ra == "" || ra == "0" {
 		t.Fatalf("Retry-After = %q", ra)
 	}
-	want(t, e.login(testMail, testPW, ""), 429, "rate_limited") // even the right password is refused while blocked
-	want(t, e.login(testMail, testPW, "192.0.2.77:1"), 200, "") // another IP is not affected
+	want(t, e.login(testMail, testPW, ""), 429, "ERROR_RATE_LIMITED") // even the right password is refused while blocked
+	want(t, e.login(testMail, testPW, "192.0.2.77:1"), 200, "")       // another IP is not affected
 
 	// Per-IP bucket: 3 failures on alice already count as 3 of 5 for 192.0.2.1.
-	want(t, e.login("bob@example.com", "wrong-1-xxxxxx", ""), 401, "invalid_credentials")
-	want(t, e.login("bob@example.com", "wrong-2-xxxxxx", ""), 401, "invalid_credentials")
-	want(t, e.login("bob@example.com", testPW, ""), 429, "rate_limited")
+	want(t, e.login("bob@example.com", "wrong-1-xxxxxx", ""), 401, "ERROR_INVALID_CREDENTIALS")
+	want(t, e.login("bob@example.com", "wrong-2-xxxxxx", ""), 401, "ERROR_INVALID_CREDENTIALS")
+	want(t, e.login("bob@example.com", testPW, ""), 429, "ERROR_RATE_LIMITED")
 
 	e.clock.advance(15*time.Minute + time.Second)
 	want(t, e.login(testMail, testPW, ""), 200, "")
@@ -716,7 +722,7 @@ func TestLoginRateLimitPerEmailAndIP(t *testing.T) {
 
 func TestSuccessfulLoginsDoNotUseUpTheFailureBudget(t *testing.T) {
 	e := newEnv(t, opts{limits: Limits{RegisterPerHour: 100, LoginFailsPerPair: 2, LoginFailsPerIP: 2}})
-	want(t, e.register(testMail, testPW, "A"), 201, "")
+	want(t, e.register(testMail, testPW, "A"), 200, "")
 	for i := 0; i < 10; i++ {
 		want(t, e.login(testMail, testPW, ""), 200, "")
 	}
@@ -724,7 +730,7 @@ func TestSuccessfulLoginsDoNotUseUpTheFailureBudget(t *testing.T) {
 
 func TestParallelGuessesCannotOutrunTheLimit(t *testing.T) {
 	e := newEnv(t, opts{limits: Limits{RegisterPerHour: 100, LoginFailsPerPair: 5, LoginFailsPerIP: 100}})
-	want(t, e.register(testMail, testPW, "A"), 201, "")
+	want(t, e.register(testMail, testPW, "A"), 200, "")
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	codes := map[int]int{}
@@ -747,19 +753,19 @@ func TestParallelGuessesCannotOutrunTheLimit(t *testing.T) {
 func TestRegisterRateLimit(t *testing.T) {
 	e := newEnv(t, opts{limits: Limits{RegisterPerHour: 3, LoginFailsPerPair: 10, LoginFailsPerIP: 100}})
 	for i := 0; i < 3; i++ {
-		want(t, e.register(fmt.Sprintf("u%d@example.com", i), testPW, "U"), 201, "")
+		want(t, e.register(fmt.Sprintf("u%d@example.com", i), testPW, "U"), 200, "")
 	}
 	rec := e.register("u9@example.com", testPW, "U")
-	want(t, rec, 429, "rate_limited")
+	want(t, rec, 429, "ERROR_RATE_LIMITED")
 	if rec.Header().Get("Retry-After") == "" {
 		t.Fatal("Retry-After missing")
 	}
-	want(t, e.do(req{method: "POST", path: "/v1/auth/register", body: body("v@example.com", testPW, "V"), remote: "192.0.2.50:9"}), 201, "")
+	want(t, e.do(req{method: "POST", path: "/api/auth/register", body: body("v@example.com", testPW, "V"), remote: "192.0.2.50:9"}), 200, "")
 	e.clock.advance(time.Hour + time.Second)
-	want(t, e.register("u10@example.com", testPW, "U"), 201, "")
+	want(t, e.register("u10@example.com", testPW, "U"), 200, "")
 	// Invalid input is refused before it can use up the budget.
 	for i := 0; i < 5; i++ {
-		want(t, e.register("bad", testPW, "U"), 400, "invalid_email")
+		want(t, e.register("bad", testPW, "U"), 400, "ERROR_INVALID_EMAIL")
 	}
 }
 
@@ -767,9 +773,9 @@ func TestClientIPAndTrustProxy(t *testing.T) {
 	lim := Limits{RegisterPerHour: 100, LoginFailsPerPair: 2, LoginFailsPerIP: 100}
 	for _, trust := range []bool{false, true} {
 		e := newEnv(t, opts{limits: lim, trustProxy: trust})
-		want(t, e.register(testMail, testPW, "A"), 201, "")
+		want(t, e.register(testMail, testPW, "A"), 200, "")
 		send := func(xff string) int {
-			return e.do(req{method: "POST", path: "/v1/auth/login", body: body(testMail, "wrong-password-x", ""), headers: map[string]string{"X-Forwarded-For": xff}}).Code
+			return e.do(req{method: "POST", path: "/api/auth/login", body: body(testMail, "wrong-password-x", ""), headers: map[string]string{"X-Forwarded-For": xff}}).Code
 		}
 		send("1.1.1.1")
 		send("2.2.2.2") // a spoofed first hop must not give a fresh bucket
@@ -788,22 +794,22 @@ func TestCSRFAndContentTypeOnRoutes(t *testing.T) {
 	c := sessionCookie(t, e.register(testMail, testPW, "A")).Value
 
 	for name, r := range map[string]req{
-		"logout without origin":   {method: "POST", path: "/v1/auth/logout", cookie: c},
-		"logout wrong origin":     {method: "POST", path: "/v1/auth/logout", cookie: c, origin: "https://evil.example.com"},
-		"logout null origin":      {method: "POST", path: "/v1/auth/logout", cookie: c, origin: "null"},
-		"login with cookie, evil": {method: "POST", path: "/v1/auth/login", cookie: c, origin: "https://evil.example.com", body: body(testMail, testPW, "")},
+		"logout without origin":   {method: "POST", path: "/api/auth/logout", cookie: c},
+		"logout wrong origin":     {method: "POST", path: "/api/auth/logout", cookie: c, origin: "https://evil.example.com"},
+		"logout null origin":      {method: "POST", path: "/api/auth/logout", cookie: c, origin: "null"},
+		"login with cookie, evil": {method: "POST", path: "/api/auth/login", cookie: c, origin: "https://evil.example.com", body: body(testMail, testPW, "")},
 	} {
-		want(t, e.do(r), 403, "csrf_origin_mismatch")
+		want(t, e.do(r), 403, "ERROR_CSRF_ORIGIN_MISMATCH")
 		_ = name
 	}
-	want(t, e.do(req{method: "GET", path: "/v1/me", cookie: c}), 200, "") // the session survived all of those
+	want(t, e.do(req{method: "GET", path: "/api/user/get-me", cookie: c}), 200, "") // the session survived all of those
 
-	want(t, e.do(req{method: "POST", path: "/v1/auth/login", body: "email=a&password=b", contentType: "application/x-www-form-urlencoded"}), 415, "unsupported_media_type")
-	want(t, e.do(req{method: "POST", path: "/v1/auth/register", body: body("z@example.com", testPW, "Z"), contentType: "text/plain"}), 415, "unsupported_media_type")
-	want(t, e.do(req{method: "POST", path: "/v1/auth/register", body: body("z@example.com", testPW, "Z"), contentType: "application/json; charset=utf-8"}), 201, "")
+	want(t, e.do(req{method: "POST", path: "/api/auth/login", body: "email=a&password=b", contentType: "application/x-www-form-urlencoded"}), 415, "ERROR_UNSUPPORTED_MEDIA_TYPE")
+	want(t, e.do(req{method: "POST", path: "/api/auth/register", body: body("z@example.com", testPW, "Z"), contentType: "text/plain"}), 415, "ERROR_UNSUPPORTED_MEDIA_TYPE")
+	want(t, e.do(req{method: "POST", path: "/api/auth/register", body: body("z@example.com", testPW, "Z"), contentType: "application/json; charset=utf-8"}), 200, "")
 
-	rec := e.do(req{method: "POST", path: "/v1/auth/logout", cookie: c, headers: map[string]string{"Referer": origin + "/settings"}})
-	want(t, rec, 204, "")
+	rec := e.do(req{method: "POST", path: "/api/auth/logout", cookie: c, headers: map[string]string{"Referer": origin + "/settings"}})
+	want(t, rec, 200, "")
 }
 
 // AC8: nothing secret in logs, nothing secret in bodies.
@@ -814,8 +820,8 @@ func TestSecretsNeverLogged(t *testing.T) {
 	c := sessionCookie(t, rec)
 	e.login(testMail, pw, "")
 	e.login(testMail, pw+"bad", "")
-	e.do(req{method: "GET", path: "/v1/me", cookie: c.Value})
-	e.do(req{method: "POST", path: "/v1/auth/logout", cookie: c.Value, origin: origin})
+	e.do(req{method: "GET", path: "/api/user/get-me", cookie: c.Value})
+	e.do(req{method: "POST", path: "/api/auth/logout", cookie: c.Value, origin: origin})
 	var phc string
 	_ = e.db.QueryRow("SELECT password_hash FROM user_tab").Scan(&phc)
 
@@ -826,6 +832,22 @@ func TestSecretsNeverLogged(t *testing.T) {
 	for _, secret := range []string{pw, c.Value, phc, "Set-Cookie"} {
 		if strings.Contains(logs, secret) {
 			t.Fatalf("log contains %q:\n%s", secret, logs)
+		}
+	}
+}
+
+// T-071 AC4: the v1 auth routes are gone (status only: the legacy body is removed with the switch in T-072).
+func TestV1AuthRoutesAreGone(t *testing.T) {
+	e := newEnv(t, opts{google: oidctest.New(t)})
+	sess := sessionCookie(t, e.register(testMail, testPW, "Alice"))
+	for _, c := range []req{
+		{method: "GET", path: "/v1/auth/login"}, {method: "POST", path: "/v1/auth/login", body: body(testMail, testPW, "")},
+		{method: "POST", path: "/v1/auth/register", body: body("v1@example.com", testPW, "V")},
+		{method: "POST", path: "/v1/auth/verify-email/resend"}, {method: "GET", path: "/v1/auth/google/start"},
+		{method: "GET", path: "/v1/auth/google/callback"}, {method: "GET", path: "/v1/me", cookie: sess.Value},
+	} {
+		if rec := e.do(c); rec.Code != 404 {
+			t.Errorf("%s %s: %d, want 404", c.method, c.path, rec.Code)
 		}
 	}
 }

@@ -13,9 +13,6 @@ import (
 	"golang.org/x/crypto/argon2"
 )
 
-// ErrBusy means every hashing slot stayed taken for the whole wait; the API answers 503 busy.
-var ErrBusy = errors.New("auth: too many password hashes in flight")
-
 const (
 	saltLen = 16
 	keyLen  = 32

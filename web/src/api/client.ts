@@ -1,7 +1,7 @@
-import type { components, operations } from "./schema";
+import type { operations } from "./schema";
 
-// All API calls go to /api/* on our own origin. Legacy paths are /api/v1/... (the edge strips
-// /api); v2 paths are /api/<namespace>/<action> and reach the server unchanged (docs/api-contract.md).
+// All API calls go to /api/* on our own origin; paths are /api/<namespace>/<action> and reach the server unchanged
+// (docs/api-contract.md). Only the /healthz and /readyz probes lose the /api prefix at the edge.
 const BASE = "/api";
 
 export class ApiError extends Error {
@@ -26,8 +26,6 @@ export class ApiError extends Error {
   }
 }
 
-type ErrorEnvelope = components["schemas"]["Error"];
-
 /** v2 error body: {status: "ERROR_...", error_message, request_id}. */
 interface V2Error {
   status: string;
@@ -35,16 +33,16 @@ interface V2Error {
   request_id?: string;
 }
 
-// v2 codes whose legacy spelling is not just the lower-cased name; the locale files and every
-// screen still key on the legacy spelling.
-const LEGACY_CODES: Record<string, string> = {
+// v2 codes whose locale-key spelling is not just the lower-cased name; the locale files and every
+// screen key on the lower-case spelling.
+const CODE_ALIASES: Record<string, string> = {
   ERROR_INTERNAL: "internal_error",
   ERROR_UNAUTHORIZED: "unauthenticated",
   ERROR_PARAM: "invalid_body",
   ERROR_TOO_LARGE: "payload_too_large",
 };
 
-const legacyCode = (v2: string) => LEGACY_CODES[v2] ?? v2.replace(/^ERROR_/, "").toLowerCase();
+const normaliseCode = (v2: string) => CODE_ALIASES[v2] ?? v2.replace(/^ERROR_/, "").toLowerCase();
 
 function isV2Error(body: unknown): body is V2Error {
   return (
@@ -70,12 +68,6 @@ export function unwrapSuccess(body: unknown): unknown {
   return body;
 }
 
-function isEnvelope(body: unknown): body is ErrorEnvelope {
-  if (typeof body !== "object" || body === null || !("error" in body)) return false;
-  const e = body.error;
-  return typeof e === "object" && e !== null && "code" in e && typeof e.code === "string";
-}
-
 /** The ApiError for a failed response (shared by fetch and the XHR upload). */
 export function apiErrorFrom(
   status: number,
@@ -88,15 +80,11 @@ export function apiErrorFrom(
   if (isV2Error(body)) {
     return new ApiError(
       status,
-      legacyCode(body.status),
+      normaliseCode(body.status),
       body.error_message ?? `HTTP ${status}`,
       body.request_id || headerId,
       retryAfter,
     );
-  }
-  if (isEnvelope(body)) {
-    const { code, message, request_id } = body.error;
-    return new ApiError(status, code, message, request_id || headerId, retryAfter);
   }
   return new ApiError(status, "unknown_error", `HTTP ${status}`, headerId, retryAfter);
 }

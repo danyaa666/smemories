@@ -19,14 +19,6 @@ const (
 	maxDisplayNameLen = 100
 )
 
-// Validation error codes returned in the error envelope.
-const (
-	codeInvalidEmail       = "invalid_email"
-	codeWeakPassword       = "weak_password"
-	codeInvalidDisplayName = "invalid_display_name"
-	codeInvalidLocale      = "invalid_locale"
-)
-
 // normalizeEmail trims, lower-cases and NFC-normalises an address (so the NFC and NFD spellings of
 // the same address are one account); the result is what is stored and looked up. Never change it
 // once users exist.

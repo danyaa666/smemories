@@ -9,8 +9,27 @@ import { makeQueryClient } from "../queryClient";
 export type Call = { method: string; path: string; body: unknown; search: string };
 type Handler = Response | ((call: Call) => Response);
 
+// v2 spelling of the codes whose locale key is not just the lower-cased name (see normaliseCode in api/client.ts).
+const V2_NAMES: Record<string, string> = {
+  unauthenticated: "ERROR_UNAUTHORIZED",
+  internal_error: "ERROR_INTERNAL",
+  invalid_body: "ERROR_PARAM",
+  payload_too_large: "ERROR_TOO_LARGE",
+};
+
+/** A v2 error response; `code` is the lower-case locale key (`rate_limited`), spelled ERROR_RATE_LIMITED on the wire. */
 export const err = (status: number, code: string, headers?: Record<string, string>) =>
-  Response.json({ error: { code, message: code, request_id: "r1" } }, { status, headers });
+  Response.json(
+    {
+      status: V2_NAMES[code] ?? `ERROR_${code.toUpperCase()}`,
+      error_message: code,
+      request_id: "r1",
+    },
+    { status, headers },
+  );
+
+/** A v2 success response: HTTP 200 {status: "OK", data}. */
+export const ok = (data: object = {}) => Response.json({ status: "OK", data });
 
 export const user = (over: object = {}) => ({
   id: "01J9Z3K6V8Q4M7N2P5R8T0W1XY",
@@ -18,7 +37,7 @@ export const user = (over: object = {}) => ({
   email_verified: true,
   display_name: "Lan Nguyễn",
   locale: "en",
-  created_at: "2026-10-01T00:00:00Z",
+  created_at: 1759276800000,
   ...over,
 });
 

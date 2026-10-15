@@ -17,9 +17,9 @@ import (
 // T-053 AC4: Redis keys hold hashes, numeric or public ids and IPs, never an email address.
 func TestLimiterKeysHoldNoEmail(t *testing.T) {
 	e := newEnv(t, opts{})
-	want(t, e.register("Alice.Secret@Example.com", testPW, "Alice"), 201, "")
-	want(t, e.login("alice.secret@example.com", "wrong-password-1", ""), 401, "invalid_credentials")
-	want(t, e.forgot("Alice.Secret@Example.com", ""), 202, "")
+	want(t, e.register("Alice.Secret@Example.com", testPW, "Alice"), 200, "")
+	want(t, e.login("alice.secret@example.com", "wrong-password-1", ""), 401, "ERROR_INVALID_CREDENTIALS")
+	want(t, e.forgot("Alice.Secret@Example.com", ""), 200, "")
 	e.svc.Wait()
 
 	rl, err := e.rc.Client().Keys(context.Background(), e.rc.Key("rl", "*")).Result()
@@ -73,7 +73,7 @@ func TestLimitersWhenRedisIsDown(t *testing.T) {
 		}
 	}
 	rec := e.login(testMail, testPW, "")
-	want(t, rec, 503, "limiter_unavailable")
+	want(t, rec, 503, "ERROR_LIMITER_UNAVAILABLE")
 	if rec.Header().Get("Retry-After") == "" {
 		t.Error("Retry-After missing")
 	}
@@ -81,8 +81,8 @@ func TestLimitersWhenRedisIsDown(t *testing.T) {
 		t.Fatal("verified while the guess limiter was down")
 	}
 
-	want(t, e.register("bob@example.com", testPW, "Bob"), 201, "") // open
-	want(t, e.forgot(testMail, ""), 202, "")                       // open
+	want(t, e.register("bob@example.com", testPW, "Bob"), 200, "") // open
+	want(t, e.forgot(testMail, ""), 200, "")                       // open
 	e.svc.Wait()
-	want(t, e.post("/v1/auth/verify-email/resend", "", c.Value), 202, "") // open
+	want(t, e.post("/api/auth/resend-verification", "", c.Value), 200, "") // open
 }

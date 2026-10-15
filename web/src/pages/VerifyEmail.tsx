@@ -18,7 +18,7 @@ export function VerifyEmail() {
   const [short, setShort] = useState(false); // fewer than 6 digits: say so without spending an attempt
   useEffect(dropTokenParam, []);
   const refreshMe = async () => {
-    // The page may open before GET /v1/me has answered; a refetch would join that stale request.
+    // The page may open before GET /api/user/get-me has answered; a refetch would join that stale request.
     await qc.cancelQueries({ queryKey: ME_KEY });
     await qc.invalidateQueries({ queryKey: ME_KEY });
   };

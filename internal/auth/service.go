@@ -33,21 +33,6 @@ const (
 	resetTriesPerHour  = 20 // per IP
 )
 
-var (
-	ErrInvalidCredentials = errors.New("auth: invalid credentials")
-	ErrUnauthenticated    = errors.New("auth: unauthenticated")
-)
-
-// ValidationError carries the stable API error code for a rejected input.
-type ValidationError struct{ Code string }
-
-func (e ValidationError) Error() string { return "auth: " + e.Code }
-
-// RateLimitedError says how long the caller must wait.
-type RateLimitedError struct{ RetryAfter time.Duration }
-
-func (e RateLimitedError) Error() string { return "auth: rate limited" }
-
 // Session is a freshly issued or refreshed session; Token is the cookie value.
 type Session struct {
 	Token   string
@@ -137,19 +122,19 @@ func hashToken(token string) []byte {
 // Register validates the input (locale is "en" or "vi"), creates the account and signs it in.
 func (s *Service) Register(ctx context.Context, ip, userAgent, email, password, displayName, locale string) (User, Session, error) {
 	if locale != "en" && locale != "vi" {
-		return User{}, Session{}, ValidationError{codeInvalidLocale}
+		return User{}, Session{}, errInvalidLocale
 	}
 	email = normalizeEmail(email)
 	if !validEmail(email) {
-		return User{}, Session{}, ValidationError{codeInvalidEmail}
+		return User{}, Session{}, errInvalidEmail
 	}
 	password = normalizePassword(password)
 	if !validPassword(password, email) {
-		return User{}, Session{}, ValidationError{codeWeakPassword}
+		return User{}, Session{}, errWeakPassword
 	}
 	name, ok := cleanDisplayName(displayName)
 	if !ok {
-		return User{}, Session{}, ValidationError{codeInvalidDisplayName}
+		return User{}, Session{}, errInvalidDisplayName
 	}
 	// Only inputs that would cost a hash count against the per-IP limit. Fails open: a registration is not a guess.
 	if ok, retry, _ := s.register.Take(ctx, ip); !ok {
