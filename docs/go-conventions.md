@@ -47,7 +47,7 @@ The skill uses the private `go-common/errors`. We have our own equivalent with t
 
 ## Observability and reliability
 
-- HTTP chain (outermost first): request id, access log, security headers, panic recovery, request timeout, body cap, client IP, metrics (T-073), mux.
+- HTTP chain (outermost first): request id, access log, metrics (T-073), security headers, panic recovery, request timeout, body cap, client IP, mux. Metrics sit outside the recovery so a panic counts as a 500. Metric names and alarm use: [observability.md](observability.md).
 - Graceful shutdown and `/healthz` + `/readyz` stay (they exist). Pool statistics are exported with the metrics.
 
 ## Tests

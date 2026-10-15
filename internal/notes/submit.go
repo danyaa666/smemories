@@ -234,6 +234,13 @@ func (h *Handler) acquire(ip string) bool {
 	return true
 }
 
+// UploadsInProgress is how many public submissions hold a slot now (for metrics).
+func (h *Handler) UploadsInProgress() int {
+	h.upMu.Lock()
+	defer h.upMu.Unlock()
+	return h.upTotal
+}
+
 // release gives back what acquire took.
 func (h *Handler) release(ip string) {
 	h.upMu.Lock()

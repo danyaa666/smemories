@@ -93,6 +93,9 @@ func (s *Service) SetContributorWait(d time.Duration) { s.contributorWait = d }
 // Slots is how many images can be processed at once.
 func (s *Service) Slots() int { return cap(s.sem) }
 
+// SlotsInUse is how many images are being processed now (for metrics).
+func (s *Service) SlotsInUse() int { return len(s.sem) }
+
 func yearbookPrefix(yearbookID string) string { return "yearbooks/" + yearbookID + "/" }
 
 // Upload validates and stores one photo for a yearbook the user owns.
