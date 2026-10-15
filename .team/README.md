@@ -11,8 +11,9 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 26 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-070, T-071, T-072, T-080, T-081, T-082 |
-| TODO | 2 | T-073, T-079 |
-| READY_FOR_QA | 1 | T-069 |
+| TODO | 1 | T-079 |
+| IN_PROGRESS | 1 | T-073 |
+| IN_QA | 1 | T-069 |
 | DONE | 46 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-074, T-075, T-076, T-077, T-078 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
 
@@ -2832,7 +2833,7 @@ Moves the notes endpoints to /api/note-collection/* and /api/public-collect/*, i
 - 2026-10-15 07:18Z · human · accepted by owner
 
 ### T-069 — [E10] API v2: media domain
-- **Status:** READY_FOR_QA
+- **Status:** IN_QA
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2840,10 +2841,10 @@ Moves the notes endpoints to /api/note-collection/* and /api/public-collect/*, i
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** yes
-- **Assignee:** —
+- **Assignee:** qa
 - **Branch:** task/t-069-e10-api-v2-media-domain
 - **PR:** https://github.com/danyaa666/smemories/pull/54
-- **Updated:** 2026-10-12 15:51Z by dev
+- **Updated:** 2026-10-15 08:15Z by qa
 - **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/07-api-media.md`
@@ -2929,7 +2930,7 @@ Turns the remaining skill rules into lint (mnd, forbidigo), fixes what they find
 #### Comments
 
 ### T-073 — [E10] Observability: request metrics middleware and /metrics endpoint
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P3
 - **Type:** infra
 - **Milestone:** M1
@@ -2937,10 +2938,10 @@ Turns the remaining skill rules into lint (mnd, forbidigo), fixes what they find
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** dev
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-12 13:15Z by leader
+- **Updated:** 2026-10-15 08:15Z by dev
 - **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/11-metrics.md`
