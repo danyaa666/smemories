@@ -10,18 +10,18 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 22 | T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-072, T-081, T-082 |
-| TODO | 3 | T-013, T-079, T-080 |
+| BACKLOG | 20 | T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-082 |
+| TODO | 5 | T-013, T-072, T-079, T-080, T-081 |
 | IN_PROGRESS | 1 | T-083 |
-| QA_PASS | 1 | T-071 |
+| MERGED | 1 | T-071 |
 | DONE | 49 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-073, T-074, T-075, T-076, T-077, T-078 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
 
-**Awaiting your review (MERGED):** nothing
+**Awaiting your review (MERGED):** T-071 ([E10] API v2: auth and user domain; remove the /v1 paths and the web shim)
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?)
 
-_Board last written 2026-10-15 14:42Z_
+_Board last written 2026-10-15 14:52Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -395,7 +395,7 @@ Small CI-file change (go-integration timeout-minutes 15 -> 40) plus 'make test-i
 - **Asked:** 2026-10-15 14:42Z
 - **Blocks:** T-071
 - **Recommendation:** approve
-- **Answer:** _(pending)_
+- **Answer:** approved by owner via team approve T-071
 
 <!-- questions:end -->
 
@@ -2925,18 +2925,18 @@ Moves the yearbook endpoints to /api/yearbook/*, introduces yearbook.Service (ru
 - 2026-10-15 14:19Z · human · accepted by owner
 
 ### T-071 — [E10] API v2: auth and user domain; remove the /v1 paths and the web shim
-- **Status:** QA_PASS
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
 - **Depends-on:** T-067, T-070, T-053
 - **Risk:** high
 - **Rework:** 0
-- **Owner-approved:** —
-- **Assignee:** leader
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-071-e10-api-v2-auth-and-user-domain-remove-t
 - **PR:** https://github.com/danyaa666/smemories/pull/58
-- **Updated:** 2026-10-15 14:42Z by qa
+- **Updated:** 2026-10-15 14:52Z by leader
 - **Comments-seen:** 4
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/09-api-auth.md`
@@ -2973,9 +2973,11 @@ Moves auth to /api/auth/* and /api/user/get-me, Google callback path, last domai
   5. Owner action stays: register <PUBLIC_BASE_URL>/api/auth/google-callback in the Google console before deploy.
   QA housekeeping to disclose: while probing I first pointed my own API at Valkey db 5 and then ran a delete of smem:dev:sess:* keys there to simulate an expired session; db 5 turned out to hold older dev sessions (about 130 user session keys, from an earlier local run, not from any test: the integration suite uses db 0 with unique prefixes). Those dev login sessions are gone (users just sign in again); no code, MySQL data or other process was touched. Rest of the probes used db 11 (flushed) and a private DB (dropped).
 - 2026-10-15 14:42Z · leader · Leader review OK on f189d67 (f3d640f + QA test-only commit): handler decodes and maps only, cookie name/flags unchanged, fail-closed stores keep Retry-After, 499 is debug-logged only, get-me = single auth.User (T-081 adds username there), /v1 gone, web shim removed. QA probes clean. Waiting for: (1) CI go + go-integration green on f189d67, (2) owner approval (Risk high). Follow-ups moved into T-072 spec. For owner: register <PUBLIC_BASE_URL>/api/auth/google-callback in the Google console before deploy.
+- 2026-10-15 14:52Z · human · owner approved merge
+- 2026-10-15 14:52Z · leader · merged 3c4b149 (PR #58). Review: handler decodes/maps only, cookie/CSRF/limits unchanged, 499 debug-only, single auth.User for get-me, /v1 gone; QA probes clean, CI green on f189d67, owner approved. For owner to check: sign in/out, register + code 123123, forgot/reset, Google sign-in after registering <PUBLIC_BASE_URL>/api/auth/google-callback in the Google console.
 
 ### T-072 — [E10] Quality sweep: mnd, forbidigo, pointer parameters, pool defaults, remove the transition switch
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2986,8 +2988,8 @@ Moves auth to /api/auth/* and /api/user/get-me, Google callback path, last domai
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-15 14:52Z by leader
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/10-sweep.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2996,6 +2998,7 @@ Moves auth to /api/auth/* and /api/user/get-me, Google callback path, last domai
 Turns the remaining skill rules into lint (mnd, forbidigo), fixes what they find, sets the pool defaults and deletes the path-based envelope switch.
 
 #### Comments
+- 2026-10-15 14:52Z · leader · unblocked: T-071 merged. Includes the ERROR_CLIENT_CLOSED follow-up (see spec bottom). Dev: start it only when no other branch is open that touches many files.
 
 ### T-073 — [E10] Observability: request metrics middleware and /metrics endpoint
 - **Status:** DONE
@@ -3261,7 +3264,7 @@ T-068 answers a full public link on the raw writer without reading the body; a f
 - 2026-10-15 14:06Z · leader · unblocked, small P3
 
 ### T-081 — [E02] Username: unique public handle with default and weekly change (API)
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
@@ -3272,8 +3275,8 @@ T-068 answers a full public link on the raw writer without reading the body; a f
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-15 07:30Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-15 14:52Z by leader
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/13-username-api.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -3282,6 +3285,7 @@ T-068 answers a full public link on the raw writer without reading the body; a f
 Owner decision D-28: every user gets a unique public username (default user-xxxxxxxx, changeable once per 7 days), not a login name. Migration + backfill, default at registration, POST /api/user/update-username, username fields on get-me.
 
 #### Comments
+- 2026-10-15 14:52Z · leader · unblocked: T-071 merged (get-me uses the single auth.User struct; add username there). Risk high: owner approval before merge.
 
 ### T-082 — [E02] Web: show and change the username on the account page
 - **Status:** BACKLOG
@@ -3376,3 +3380,4 @@ Port the Claude Design tokens, self-host the fonts, add base components (Button,
 - 2026-10-10 — Owner approved T-052, T-057, T-053, T-049. Merged: T-052 (35298e1, sessions in Redis, migration 0012), T-057 (487555d, print-size photos, migration 0013), T-049 (b835af9, web code screens). T-053 conflicted with develop and went back to dev for a mechanical merge plus the openapi 503 fix. E10 database lane started: T-064 is TODO. Follow-ups created: T-074 (done), T-075 (backfill hardening), T-076 (code screens polish); T-055 cancelled and folded into T-069/T-070.
 - 2026-10-12 — T-068 (API v2 notes, PR #53) merged 1dfffac after rework 1 (conflict with T-067, full-link check restored before the body is spooled); T-080 added (P3) for the browser reset on a full link; T-069 promoted to TODO; T-073 promoted to TODO.
 - 2026-10-15 — T-070 (API v2 yearbook, PR #56) merged c50ee9a after rework 1 (conflict with T-073 resolved by dev); awaiting owner accept. Heartbeat back to recurring (job 676f3351) after the one-shot wake; dev now on T-083. Note: local stack runs as compose project `smemories` (old volumes) after the Docker restart, not `awesomeproject1`.
+- 2026-10-15 — T-070 and T-073 accepted. T-071 (API v2 auth/user, PR #58, owner-approved Q-030) merged 3c4b149; owner action before deploy: register <PUBLIC_BASE_URL>/api/auth/google-callback in the Google console. T-083 got QA_FAIL (flaky layout test on CI), rework running. T-081, T-072, T-080 promoted to TODO. Owner approved the four new nav strings of T-083.
