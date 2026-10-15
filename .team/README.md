@@ -13,15 +13,14 @@
 | BACKLOG | 25 | T-013, T-017, T-018, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-071, T-072, T-080, T-081, T-082 |
 | TODO | 2 | T-070, T-079 |
 | READY_FOR_QA | 1 | T-073 |
-| MERGED | 1 | T-069 |
-| DONE | 46 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-074, T-075, T-076, T-077, T-078 |
+| DONE | 47 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-074, T-075, T-076, T-077, T-078 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
 
-**Awaiting your review (MERGED):** T-069 ([E10] API v2: media domain)
+**Awaiting your review (MERGED):** nothing
 
 **Open questions for you:** none
 
-_Board last written 2026-10-15 08:25Z_
+_Board last written 2026-10-15 08:27Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -2833,7 +2832,7 @@ Moves the notes endpoints to /api/note-collection/* and /api/public-collect/*, i
 - 2026-10-15 07:18Z · human · accepted by owner
 
 ### T-069 — [E10] API v2: media domain
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2844,7 +2843,7 @@ Moves the notes endpoints to /api/note-collection/* and /api/public-collect/*, i
 - **Assignee:** —
 - **Branch:** task/t-069-e10-api-v2-media-domain
 - **PR:** https://github.com/danyaa666/smemories/pull/54
-- **Updated:** 2026-10-15 08:25Z by leader
+- **Updated:** 2026-10-15 08:27Z by human
 - **Comments-seen:** 7
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/07-api-media.md`
@@ -2868,6 +2867,7 @@ Moves the media endpoints to /api/media/* (multipart create, binary get-content)
   Leader focus areas: get-content 200 = raw bytes, Content-Type from DB, X-Content-Type-Options nosniff, Cache-Control private max-age=3600, ETag (-t suffix for thumb), Range 206, HEAD 200 no body, If-None-Match 304, no envelope; errors (401/404/400/405/502) = v2 JSON envelope + Cache-Control no-store, so nothing JSON is cached by <img>; another user's id -> 404; variant=print before backfill -> 200; bad variant 400. Slow 8 MB upload over 45 s (3x the 15 s ReadTimeout, > 30 s WriteTimeout) -> 200; stalled body -> 408 ERROR_REQUEST_TIMEOUT at exactly 120 s. /v1 media routes (get, post, list) -> 404. Cursor: opaque 40-byte AES-GCM token (no numeric id visible), token from another yearbook, bit-flipped, truncated, plain-number (MQ) -> 400 ERROR_PARAM; valid paging works; missing yearbook_id in form or list -> 400; yearbook_id after file part accepted; long yearbook_id 400; B uploading to A's book 404; B deleting A's media 200 no-op (A still reads it).
   Non-blocking: (a) token scope = endpoint+yearbook only, not uploader filter; harmless since it only holds a position inside the same checked yearbook. (b) A raw non-multipart junk body of 30 MiB (no boundary) gives 400 invalid body rather than 413; real over-cap uploads give 413. (c) delete success returns data {} rather than null/absent; fine for the client. No test files added.
 - 2026-10-15 08:25Z · leader · merged 892b69c. Review: 4 routes /api/media/{create,get-list,get-content,delete}; media.Service (no net/http, no fmt.Errorf/errors.New) + apperr + v2 envelope; get-content stays binary (nosniff, private cache, ETag, Range) with JSON errors; per-route deadlines fit WriteTimeout (8 MB over 45 s = 200, stalled = 408 at 120 s); next_id via httpx.Cursors (opaque, AES-GCM, scope-bound); QA Newman 144 assertions x2; /v1 media 404. For owner to check: web upload/library/pickers use the new routes (QA had no browser driver; covered by vitest + proxy probes), try uploading a photo in the web app. Non-blocking: 30 MiB junk body without a boundary gives 400 not 413.
+- 2026-10-15 08:27Z · human · accepted by owner
 
 ### T-070 — [E10] API v2: yearbook domain with a service layer
 - **Status:** TODO
