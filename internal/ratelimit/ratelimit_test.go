@@ -89,3 +89,18 @@ func TestTakeIsAtomicUnderConcurrency(t *testing.T) {
 		t.Fatalf("allowed %d, want exactly 10", allowed)
 	}
 }
+
+func TestOnRejectCountsOnlyRefusals(t *testing.T) {
+	f := NewMemoryFactory(nil)
+	var got []string
+	f.OnReject(func(name string) { got = append(got, name) })
+	l := f.Open("probe", 1, time.Minute)
+	for range 3 {
+		if _, _, err := l.Take(context.Background(), "k"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if len(got) != 2 || got[0] != "probe" {
+		t.Fatalf("rejections = %v, want two for probe (the first hit is allowed)", got)
+	}
+}

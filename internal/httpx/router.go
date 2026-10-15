@@ -5,14 +5,17 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/danyaa666/smemories/internal/metrics"
 )
 
 // NewRouter returns the root handler: the middleware chain around a ServeMux that
 // serves /healthz plus whatever the domain packages register in routes. Unknown paths
 // and wrong methods answer with the shared error envelope.
 //
-// Chain (outermost first): request id, access log, security headers, panic recovery,
-// request timeout, body cap, client IP, mux.
+// Chain (outermost first): request id, access log, metrics (when configured), security headers,
+// panic recovery, request timeout, body cap, client IP, mux. Metrics sit outside the recovery so a
+// recovered panic counts as a 500, and inside the access log so they share its route holder.
 func NewRouter(logger *slog.Logger, routes ...func(*http.ServeMux)) http.Handler {
 	return NewRouterWith(logger, RouterConfig{}, routes...)
 }
@@ -20,7 +23,8 @@ func NewRouter(logger *slog.Logger, routes ...func(*http.ServeMux)) http.Handler
 // RouterConfig tunes the chain; the zero value means DefaultRequestTimeout and no trusted proxy.
 type RouterConfig struct {
 	RequestTimeout time.Duration
-	TrustProxy     bool // WithClientIP reads the last X-Forwarded-For hop
+	TrustProxy     bool             // WithClientIP reads the last X-Forwarded-For hop
+	Metrics        *metrics.Metrics // nil: requests are not counted
 }
 
 // NewRouterWith is NewRouter with an explicit RouterConfig.
@@ -38,6 +42,9 @@ func NewRouterWith(logger *slog.Logger, cfg RouterConfig, routes ...func(*http.S
 	h = Timeout(cmp.Or(cfg.RequestTimeout, DefaultRequestTimeout))(h)
 	h = Recover(logger, h)
 	h = SecurityHeaders(h)
+	if cfg.Metrics != nil {
+		h = Instrument(cfg.Metrics, h)
+	}
 	h = AccessLog(logger, h)
 	return RequestID(withLogger(logger, h))
 }

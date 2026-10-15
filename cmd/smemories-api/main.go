@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"runtime/debug"
@@ -18,6 +19,7 @@ import (
 	"github.com/danyaa666/smemories/internal/httpx"
 	"github.com/danyaa666/smemories/internal/mailer"
 	"github.com/danyaa666/smemories/internal/media"
+	"github.com/danyaa666/smemories/internal/metrics"
 	"github.com/danyaa666/smemories/internal/notes"
 	"github.com/danyaa666/smemories/internal/ratelimit"
 	"github.com/danyaa666/smemories/internal/redis"
@@ -69,6 +71,10 @@ func main() {
 	}
 	logger.Info("redis connected", "addr", rc.Addr())
 
+	mt := metrics.New()
+	mt.DB(d, "smemories")
+	mt.Redis(rc.Client())
+
 	ln, err := net.Listen("tcp", cfg.HTTPAddr)
 	if err != nil {
 		logger.Error("listen failed", "addr", cfg.HTTPAddr, "error", err)
@@ -77,7 +83,8 @@ func main() {
 	logger.Info("listening", "addr", ln.Addr().String(), "env", cfg.Env)
 
 	hasher := auth.NewHasher(auth.HashParams{MemoryKiB: cfg.ArgonMemoryKiB, Time: cfg.ArgonTime, Parallelism: cfg.ArgonParallelism}, cfg.MaxHashes, auth.HashWait)
-	limiters := ratelimit.NewFactory(rc, logger, nil)                          // the Redis clock, so every API task agrees
+	limiters := ratelimit.NewFactory(rc, logger, nil) // the Redis clock, so every API task agrees
+	limiters.OnReject(mt.RateLimited)
 	codes, err := auth.NewCodes(ctx, rc, cfg.Env, cfg.OTPKey, cfg.DevFixedOTP) // DEV-SHORTCUT(otp): the last argument
 	if err != nil {
 		logger.Error("email code setup failed", "error", err)
@@ -116,6 +123,8 @@ func main() {
 		Endpoint: cfg.S3Endpoint, Region: cfg.S3Region, Bucket: cfg.S3Bucket,
 		AccessKey: cfg.S3AccessKey, SecretKey: cfg.S3SecretKey, PathStyle: cfg.S3PathStyle,
 	}), cfg.MediaMaxConcurrent, limiters, nil)
+	mt.Gauge("media_processing_slots_in_use", "Images being processed now.", func() float64 { return float64(mediaSvc.SlotsInUse()) })
+	mt.Gauge("media_processing_slots", "Images that can be processed at once (SMEM_MEDIA_MAX_CONCURRENT).", func() float64 { return float64(mediaSvc.Slots()) })
 	mediaH := media.NewHandler(mediaSvc, cfg.MediaMaxBytes, authH.RequireUser, cfg.AllowedOrigins, httpx.NewCursors(cfg.OTPKey), logger)
 	bookStore := yearbook.NewStore(d)
 	notesStore := notes.NewStore(d)
@@ -124,9 +133,26 @@ func main() {
 	bookH := yearbook.NewHandler(bookStore, yearbook.NewService(bookStore, mediaSvc, mediaSvc, notesSvc), authH.RequireUser, cfg.AllowedOrigins, logger, nil)
 	notesH := notes.NewHandler(notesSvc, cfg.MediaMaxBytes, authH.RequireUser, cfg.AllowedOrigins, authH.ClientIP, logger)
 	notesH.SetUploadLimits(cfg.PublicUploadConns, cfg.PublicUploadsPerIP, cfg.UploadTmpDir)
+	mt.Gauge("public_uploads_in_progress", "Public note submissions in progress.", func() float64 { return float64(notesH.UploadsInProgress()) })
+	mt.Gauge("public_uploads_max", "Public note submissions allowed at once (SMEM_PUBLIC_UPLOAD_MAX_CONNS).", func() float64 { return float64(cfg.PublicUploadConns) })
 	notesH.SweepSpool() // files a crash or kill left behind; before the listener accepts traffic
 
-	srv := httpx.NewServer(cfg.HTTPAddr, httpx.NewRouterWith(logger, httpx.RouterConfig{RequestTimeout: cfg.RequestTimeout, TrustProxy: cfg.TrustProxy}, httpx.Ready(d, logger, httpx.Dep{Name: "redis", Ping: rc.Ready}), authH.Routes, bookH.Routes, mediaH.Routes, notesH.Routes))
+	srv := httpx.NewServer(cfg.HTTPAddr, httpx.NewRouterWith(logger, httpx.RouterConfig{RequestTimeout: cfg.RequestTimeout, TrustProxy: cfg.TrustProxy, Metrics: mt}, httpx.Ready(d, logger, httpx.Dep{Name: "redis", Ping: rc.Ready}), authH.Routes, bookH.Routes, mediaH.Routes, notesH.Routes))
+	if cfg.MetricsAddr != "" { // internal listener only; the public mux never serves /metrics
+		mln, err := net.Listen("tcp", cfg.MetricsAddr)
+		if err != nil {
+			logger.Error("metrics listen failed", "addr", cfg.MetricsAddr, "error", err)
+			os.Exit(1)
+		}
+		logger.Info("metrics listening", "addr", mln.Addr().String())
+		mux := http.NewServeMux()
+		mux.Handle("GET /metrics", mt.Handler())
+		go func() {
+			if err := httpx.Serve(ctx, httpx.NewServer(cfg.MetricsAddr, mux), mln, httpx.DrainTimeout); err != nil {
+				logger.Error("metrics server stopped", "error", err)
+			}
+		}()
+	}
 	if err := httpx.Serve(ctx, srv, ln, httpx.DrainTimeout); err != nil {
 		logger.Error("server stopped", "error", err)
 		os.Exit(1)
