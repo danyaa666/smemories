@@ -107,7 +107,8 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
     const headers = new Headers(init?.headers); // also accepts Headers instances and tuples
     if (!headers.has("Accept")) headers.set("Accept", "application/json");
     res = await fetch(BASE + path, { ...init, headers });
-  } catch {
+  } catch (e) {
+    console.log("DBGNET", path, String(e), (e as Error).stack);
     throw new ApiError(0, "network_error", "Could not reach the API");
   }
 
