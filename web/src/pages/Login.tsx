@@ -7,6 +7,7 @@ import { GoogleButton } from "../components/GoogleButton";
 import { TextField } from "../components/TextField";
 import { errorText, safePath } from "../auth/errors";
 import { ME_KEY, useMe } from "../auth/useMe";
+import { Button } from "../components/ui/Button";
 
 const OIDC_ERRORS = ["oidc_state", "oidc_denied", "oidc_failed", "email_unverified"];
 
@@ -58,9 +59,9 @@ export function Login() {
             {error}
           </p>
         )}
-        <button type="submit" disabled={m.isPending}>
+        <Button type="submit" variant="primary" busy={m.isPending}>
           {m.isPending ? t("auth.working") : t("login.submit")}
-        </button>
+        </Button>
       </form>
       <GoogleButton label={t("login.google")} returnTo={from} />
       <p>

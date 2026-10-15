@@ -29,7 +29,11 @@
     "register": "Create account",
     "account": "My account",
     "signOut": "Sign out",
-    "yearbooks": "My yearbooks"
+    "yearbooks": "My yearbooks",
+    "main": "Yearbook",
+    "profile": "My profile page",
+    "tabBooks": "Books",
+    "tabProfile": "Profile"
   },
   "fields": {
     "email": "Email",

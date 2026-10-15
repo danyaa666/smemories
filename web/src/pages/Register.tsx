@@ -7,6 +7,7 @@ import { GoogleButton } from "../components/GoogleButton";
 import { TextField } from "../components/TextField";
 import { fieldError, formError } from "../auth/errors";
 import { ME_KEY, useMe } from "../auth/useMe";
+import { Button } from "../components/ui/Button";
 
 export function Register() {
   const { t, i18n } = useTranslation();
@@ -66,9 +67,9 @@ export function Register() {
             {error}
           </p>
         )}
-        <button type="submit" disabled={m.isPending}>
+        <Button type="submit" variant="primary" busy={m.isPending}>
           {m.isPending ? t("auth.working") : t("register.submit")}
-        </button>
+        </Button>
       </form>
       <GoogleButton label={t("register.google")} returnTo="/account" />
       <p>

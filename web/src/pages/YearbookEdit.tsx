@@ -8,6 +8,7 @@ import { BookForm } from "../components/BookForm";
 import { Photos } from "../components/Photos";
 import { ProfileForm } from "../components/ProfileForm";
 import { YEARBOOKS_KEY } from "./Yearbooks";
+import { Button } from "../components/ui/Button";
 
 export function YearbookEdit() {
   const { t } = useTranslation();
@@ -42,9 +43,9 @@ export function YearbookEdit() {
           {gone ? t("books.notFound") : errorText(t, q.error)}
         </p>
         {!gone && (
-          <button type="button" onClick={() => void q.refetch()}>
+          <Button type="button" onClick={() => void q.refetch()}>
             {t("auth.retry")}
-          </button>
+          </Button>
         )}
         <p>
           <Link to="/yearbooks">{t("books.back")}</Link>
@@ -83,15 +84,15 @@ export function YearbookEdit() {
             {errorText(t, del.error)}
           </p>
         )}
-        <button
-          type="button"
-          disabled={del.isPending}
+        <Button
+          variant="danger"
+          busy={del.isPending}
           onClick={() =>
             window.confirm(t("book.confirmDelete", { title: y.title })) && del.mutate()
           }
         >
           {t("book.delete")}
-        </button>
+        </Button>
       </section>
     </>
   );

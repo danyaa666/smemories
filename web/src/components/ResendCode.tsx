@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Button } from "./ui/Button";
 
 export const RESEND_COOLDOWN_S = 60;
 
@@ -48,9 +49,8 @@ export function ResendCode({
   }, [until]);
   const left = Math.max(0, Math.ceil((until - now) / 1000));
   return (
-    <button
-      type="button"
-      className="resend"
+    <Button
+      variant="secondary"
       disabled={pending || left > 0}
       onClick={() => {
         void onSend().then(
@@ -59,6 +59,6 @@ export function ResendCode({
       }}
     >
       {left > 0 ? t("code.resendIn", { seconds: left }) : t("code.resend")}
-    </button>
+    </Button>
   );
 }

@@ -1,9 +1,10 @@
 import { useTranslation } from "react-i18next";
 import { lazy, Suspense } from "react";
-import { Route, Routes, useLocation } from "react-router-dom";
+import { Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { RequireAuth } from "./auth/RequireAuth";
 import { AuthNav } from "./components/AuthNav";
 import { LanguageSwitcher } from "./components/LanguageSwitcher";
+import { YearbookLayout } from "./components/YearbookLayout";
 import { Account } from "./pages/Account";
 import { ForgotPassword } from "./pages/ForgotPassword";
 import { Login } from "./pages/Login";
@@ -20,7 +21,6 @@ import { Yearbooks } from "./pages/Yearbooks";
 const PrintSpike = import.meta.env.DEV ? lazy(() => import("./spike/print/PrintSpike")) : null;
 
 export function App() {
-  const { t } = useTranslation();
   const { pathname } = useLocation();
   if (PrintSpike && pathname === "/spike/print") {
     return (
@@ -30,28 +30,42 @@ export function App() {
     );
   }
   return (
+    <Routes>
+      <Route element={<PublicLayout />}>
+        <Route path="/" element={<Home />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route element={<RequireAuth />}>
+          <Route path="/verify-email" element={<VerifyEmail />} />
+        </Route>
+        <Route path="*" element={<NotFound />} />
+      </Route>
+      <Route element={<RequireAuth />}>
+        <Route element={<YearbookLayout />}>
+          <Route path="/account" element={<Account />} />
+          <Route path="/yearbooks" element={<Yearbooks />} />
+          <Route path="/yearbooks/new" element={<YearbookNew />} />
+          <Route path="/yearbooks/:id" element={<YearbookEdit />} />
+        </Route>
+      </Route>
+    </Routes>
+  );
+}
+
+/** Header and page for everything outside the signed-in shell. */
+function PublicLayout() {
+  const { t } = useTranslation();
+  return (
     <>
       <header className="app-header">
         <strong>{t("app.name")}</strong>
         <AuthNav />
         <LanguageSwitcher />
       </header>
-      <main>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-          <Route element={<RequireAuth />}>
-            <Route path="/verify-email" element={<VerifyEmail />} />
-            <Route path="/account" element={<Account />} />
-            <Route path="/yearbooks" element={<Yearbooks />} />
-            <Route path="/yearbooks/new" element={<YearbookNew />} />
-            <Route path="/yearbooks/:id" element={<YearbookEdit />} />
-          </Route>
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+      <main className="plain-main">
+        <Outlet />
       </main>
     </>
   );

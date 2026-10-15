@@ -1,4 +1,5 @@
-import { useId, type ChangeEvent, type Ref } from "react";
+import type { Ref } from "react";
+import { TextArea, TextField as BaseTextField } from "./ui/TextField";
 
 type Props = {
   label: string;
@@ -12,7 +13,7 @@ type Props = {
   inputRef?: Ref<HTMLInputElement>; // lets a screen move focus here after a server error
 };
 
-/** A labelled input; the error and hint are linked with aria-describedby. */
+/** A labelled input taking and giving plain strings; the error and hint are linked with aria-describedby. */
 export function TextField({
   label,
   type = "text",
@@ -24,29 +25,25 @@ export function TextField({
   hint,
   inputRef,
 }: Props) {
-  const id = useId();
-  const describedBy = [hint && `${id}-hint`, error && `${id}-error`].filter(Boolean).join(" ");
-  const shared = {
-    value,
-    autoComplete,
-    "aria-invalid": error ? true : undefined,
-    "aria-describedby": describedBy || undefined,
-    onChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => onChange(e.target.value),
-  };
-  return (
-    <div className="field">
-      <label htmlFor={id}>{label}</label>
-      {multiline ? (
-        <textarea id={id} rows={3} {...shared} />
-      ) : (
-        <input id={id} ref={inputRef} type={type} {...shared} />
-      )}
-      {hint && <small id={`${id}-hint`}>{hint}</small>}
-      {error && (
-        <p id={`${id}-error`} role="alert" className="error">
-          {error}
-        </p>
-      )}
-    </div>
+  return multiline ? (
+    <TextArea
+      label={label}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      autoComplete={autoComplete}
+      error={error}
+      help={hint}
+    />
+  ) : (
+    <BaseTextField
+      ref={inputRef}
+      label={label}
+      type={type}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      autoComplete={autoComplete}
+      error={error}
+      help={hint}
+    />
   );
 }

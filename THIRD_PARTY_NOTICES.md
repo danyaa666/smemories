@@ -32,3 +32,13 @@ Excluded by decision D-06: `unipdf` (AGPL or commercial licence).
 | Item | Licence | Role |
 |---|---|---|
 | `gopkg.in/yaml.v3` v3.0.1 | MIT and Apache-2.0 | Test-only: parses `api/openapi.yaml` in `api/contract_lint_test.go`; not linked into the API binary |
+
+## Web fonts, self-hosted (T-083, decision L-12; SIL Open Font License 1.1)
+
+Served from our own origin as woff2 through the `@fontsource` npm packages (latin, latin-ext and vietnamese subsets only). The licence text ships in each package's `LICENSE` file under `web/node_modules/`.
+
+| Package | Font and copyright |
+|---|---|
+| `@fontsource-variable/fraunces` 5.3.0 | Fraunces, Copyright 2020 The Fraunces Project Authors (https://github.com/undercasetype/Fraunces) |
+| `@fontsource/be-vietnam-pro` 5.3.0 | Be Vietnam Pro, Copyright 2021 The Be Vietnam Pro Project Authors (https://github.com/bettergui/BeVietnamPro) |
+| `@fontsource/patrick-hand` 5.3.0 | Patrick Hand, Copyright 2010-2012 Patrick Wagesreiter (mail@patrickwagesreiter.at) |
