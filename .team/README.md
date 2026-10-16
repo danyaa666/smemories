@@ -11,17 +11,17 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 15 | T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-059, T-060, T-061 |
-| TODO | 3 | T-058, T-072, T-079 |
-| IN_PROGRESS | 1 | T-082 |
-| MERGED | 1 | T-056 |
+| TODO | 2 | T-072, T-079 |
+| IN_PROGRESS | 1 | T-058 |
+| MERGED | 2 | T-056, T-082 |
 | DONE | 56 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-073, T-074, T-075, T-076, T-077, T-078, T-080, T-081, T-083 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-056 ([E05] Book data endpoint for rendering (owner-only, approved notes))
+**Awaiting your review (MERGED):** T-056 ([E05] Book data endpoint for rendering (owner-only, approved notes)); T-082 ([E02] Web: show and change the username on the account page)
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?)
 
-_Board last written 2026-10-16 09:00Z_
+_Board last written 2026-10-16 09:19Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -2578,7 +2578,7 @@ Third stored size for printing: lighter PDFs and faster print (spike: 63 MB and 
 - 2026-10-10 03:29Z · human · accepted by owner
 
 ### T-058 — [E05] Web: HTML book renderer core and print preview (browser print-to-PDF)
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -2586,10 +2586,10 @@ Third stored size for printing: lighter PDFs and faster print (spike: 63 MB and 
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-058-e05-web-html-book-renderer-core-and-prin
 - **PR:** —
-- **Updated:** 2026-10-16 09:00Z by leader
+- **Updated:** 2026-10-16 09:10Z by dev
 - **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/09-html-book-renderer-core.md`
@@ -3492,7 +3492,7 @@ Owner decision D-28: every user gets a unique public username (default user-xxxx
 - 2026-10-16 03:59Z · human · accepted by owner
 
 ### T-082 — [E02] Web: show and change the username on the account page
-- **Status:** IN_PROGRESS
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
@@ -3500,11 +3500,11 @@ Owner decision D-28: every user gets a unique public username (default user-xxxx
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-082-e02-web-show-and-change-the-username-on-
-- **PR:** —
-- **Updated:** 2026-10-16 08:51Z by dev
-- **Comments-seen:** 1
+- **PR:** 65
+- **Updated:** 2026-10-16 09:19Z by leader
+- **Comments-seen:** 4
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/14-web-username.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -3514,6 +3514,16 @@ Account page shows the username and lets the user change it (weekly limit, local
 
 #### Comments
 - 2026-10-16 03:53Z · leader · unblocked: T-081 merged (API: username, username_next_change_at in get-me; POST /api/user/update-username). Spec 14-web-username.md. Use the T-083 design foundation.
+- 2026-10-16 09:09Z · dev · PR #65 head 983043c, CI green. Username block on /account (UsernameForm). Test: vitest src/pages/username.test.tsx; in browser: save, taken (user B), reserved 'admin', cooldown lock after save, vi locale at 320/375/1280 (done by me, no overflow). Vietnamese strings are in the PR description. Gap: cooldown 'now' read at mount.
+- 2026-10-16 09:18Z · qa · PR #65 head 983043c. CI green (go, go-integration, security, web). Mechanical in worktree web/: lint, typecheck, lint:i18n, check:api, vitest (16 files, 247 tests), build all pass; no .team files in the PR; Go untouched.
+  Real Chrome (channel chrome, playwright-core) on own Vite :15173 + own API :18082 (SMEM_ENV=dev, private DB smem_test_qa082 migrated to latest, redis db 15), EN and VI at 320/375/1280.
+  AC1/behaviour: default user-xxxxxxxx shown on /account (6 combos); save of 'CCC...' typed upper-case -> lower-cased live, one request, view + chip update, form locked with next date exactly +7d (EN 'Oct 23, 2026, 4:15 PM', VI '16:16 23 thg 10, 2026'), focus on status text, lock + name + chip survive reload; taken (user B vs A) 409, reserved 'Admin', other user's user-xxxxxxxx, all error text under field with aria-describedby (help + error), aria-invalid, role=alert, focus back on field, in EN+VI at 3 widths; invalid ('ab','a!b','a..b','-abc','abc-',31 and 61 chars, non-ASCII) = client hint, 0 requests; ' MixedCase.Name ' trimmed+lower-cased on the wire; double submit (Enter,Enter,click on a 1.2 s delayed endpoint) = 1 request; no retry on 409 (waited 2.5 s), 429 too-soon, network abort, 500; 429 CHANGE_TOO_SOON via stale second tab locks form and shows the date (EN+VI, role=alert, focus on it); ERROR_RATE_LIMITED message under field; 401 mid-save (cookies cleared) redirects to /login after exactly one request.
+  Layout: freshly registered accounts show username in chip/sidebar (never email local part) at all widths. 320px: no horizontal overflow in any state (30-char name wraps), no mid-word wraps in block texts, field 44px, submit 52px on mobile and 44px on desktop, submit button reachable and not covered by tab bar when scrolled to bottom. Keyboard: tab order sane, 2px focus outline on every stop, type + Enter saves. a11y tree: region 'Username', heading, textbox 'New username' (label + help via aria-describedby), button 'Save username', status text role=status (alert for too-soon), autocomplete=off.
+  Cooldown 'now' read at mount: judged not an issue (7-day cooldown; reload or the server's 429 corrects it; the 429 path also locks cleanly).
+  Non-blocking: (1) lock text is not aria-describedby-linked to the disabled field (reachable as a status paragraph above the form, fine). (2) client lower-casing folds the Kelvin sign U+212A to ASCII 'k' (the server calls it invalid), so it submits a harmless ASCII name. (3) a full-page screenshot with the fixed tab bar overlaps text only as a capture artifact.
+  New Vietnamese strings for the owner (10 keys, also in the PR description): account.username 'Tên người dùng'; account.usernameNew 'Tên người dùng mới'; account.usernameHelp 'Từ 3 đến 30 ký tự: chữ thường, chữ số, dấu chấm, dấu gạch dưới hoặc dấu gạch ngang. Tên này công khai và không dùng để đăng nhập.'; account.usernameSave 'Lưu tên người dùng'; account.usernameSaved 'Đã lưu tên người dùng.'; account.usernameCooldown 'Bạn có thể đổi lại tên người dùng vào {{date}}.'; errors.invalid_username 'Dùng từ 3 đến 30 ký tự: chữ cái, chữ số, dấu chấm, dấu gạch dưới hoặc dấu gạch ngang, bắt đầu và kết thúc bằng chữ cái hoặc chữ số.'; errors.username_reserved 'Tên người dùng này không dùng được. Hãy chọn tên khác.'; errors.username_taken 'Tên người dùng này đã có người dùng. Hãy chọn tên khác.'; errors.username_change_too_soon 'Bạn vừa đổi tên người dùng. Bạn có thể đổi lại vào {{date}}.'
+  Cleanup done: my API/Vite stopped, DB smem_test_qa082 and dev's smem_test_t082 dropped, redis db 15 and db 11 flushed.
+- 2026-10-16 09:19Z · leader · merged de0eb3c (PR #65). Review: web-only, no retry on 4xx, focus back on the field on errors, double submit sent once, lock survives reload, typed user.username in the layout; QA_PASS on the same head at 320/375/1280 EN+VI, CI green. Minor open item: the lock text is not linked to the disabled field by aria-describedby. For owner to check: /account (username block), the 10 Vietnamese strings (account.username*, errors.invalid_username / username_reserved / username_taken / username_change_too_soon); run make migrate first.
 
 ### T-083 — [E01] Web: design system foundation (tokens, fonts, base components, yearbook shell)
 - **Status:** DONE
@@ -3622,3 +3632,4 @@ Spec: .team/epics/E04-friends-notes/09-inbox-320px-polish.md (read it from the r
 - 2026-10-16 — T-081 (username API, PR #62, owner-approved) merged 5cfe240; T-082 (web username) promoted to TODO. T-013/T-018 accepted. T-017 in rework 2 (320px card head). T-080 (full-link drain, PR #63) waits for QA. Owner: after pulling, run make migrate and restart the API (old binaries cannot create users once user_tab.username exists).
 - 2026-10-16 — T-017 (moderation inbox, PR #61) merged 445a11c after 2 reworks (badge wrap, focus, 320px head); T-080 (full-link drain, PR #63) merged d8e9d7c. T-081 accepted. T-056 (book data endpoint, high risk, route GET /api/book-data/get) promoted to TODO; the printing path T-058..T-061 follows it.
 - 2026-10-16 — T-056 (book data endpoint, PR #64, owner-approved) merged b20bf33: GET /api/book-data/get with explicit truncated/approved_total (no silent cut at 300 notes; renderer must warn). T-017/T-080 accepted. T-058 (HTML renderer core) promoted to TODO; T-072 free to start. Dev now on T-082.
+- 2026-10-16 — T-082 (web username on the account page, PR #65) merged de0eb3c. Dev on T-058 (HTML renderer); T-072 next.
