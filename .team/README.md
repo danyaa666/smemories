@@ -12,7 +12,7 @@
 |---|---:|---|
 | BACKLOG | 12 | T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-061 |
 | TODO | 4 | T-032, T-059, T-060, T-079 |
-| IN_PROGRESS | 1 | T-072 |
+| READY_FOR_QA | 1 | T-072 |
 | MERGED | 1 | T-058 |
 | DONE | 58 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-073, T-074, T-075, T-076, T-077, T-078, T-080, T-081, T-082, T-083 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
@@ -21,7 +21,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?)
 
-_Board last written 2026-10-16 09:50Z_
+_Board last written 2026-10-16 10:12Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -3192,7 +3192,7 @@ Moves auth to /api/auth/* and /api/user/get-me, Google callback path, last domai
 - 2026-10-16 01:37Z · human · accepted by owner
 
 ### T-072 — [E10] Quality sweep: mnd, forbidigo, pointer parameters, pool defaults, remove the transition switch
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -3200,11 +3200,11 @@ Moves auth to /api/auth/* and /api/user/get-me, Google callback path, last domai
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-072-e10-quality-sweep-mnd-forbidigo-pointer-
-- **PR:** —
-- **Updated:** 2026-10-16 09:39Z by dev
-- **Comments-seen:** 1
+- **PR:** https://github.com/danyaa666/smemories/pull/67
+- **Updated:** 2026-10-16 10:12Z by dev
+- **Comments-seen:** 2
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/10-sweep.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -3214,6 +3214,7 @@ Turns the remaining skill rules into lint (mnd, forbidigo), fixes what they find
 
 #### Comments
 - 2026-10-15 14:52Z · leader · unblocked: T-071 merged. Includes the ERROR_CLIENT_CLOSED follow-up (see spec bottom). Dev: start it only when no other branch is open that touches many files.
+- 2026-10-16 10:12Z · dev · PR #67 head e23d459, CI green (go, go-integration, security, web). make lint build test, go test -race -tags integration ./..., Newman (private DB/Redis db 8/bucket): yearbooks, media, notes, notes-moderation, platform (minus manual DB-down), auth (minus Google folder) all pass. Decisions: auth bodies strict (unknown field ERROR_PARAM); mnd allowlist = apperr.NewCode args, number 2, *test helpers, media/image.go; pointers for User/Session/GoogleIdentity/Yearbook/Media, slices and settings structs stay values (documented). QA probe: start-up log 'database pool', readyz 503 body now v2, 404/405/413/panic bodies, SMEM_DB_MAX_IDLE explicit vs default. Leftover /v1 grep hits: tests asserting old paths 404, viteProxy test, cursor key label.
 
 ### T-073 — [E10] Observability: request metrics middleware and /metrics endpoint
 - **Status:** DONE
