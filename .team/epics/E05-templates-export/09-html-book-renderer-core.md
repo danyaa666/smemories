@@ -33,3 +33,6 @@ Owner-only data stays behind the session; no user text is rendered as HTML; phot
 
 #### Added by the leader (2026-10-16, from T-056)
 The book-data response has `truncated` (true when the book has more approved notes than the 300-note cap returned) and `approved_total`. When `truncated` is true the preview and the print screen MUST show a visible warning ("X of Y notes are included") and must not silently print the shorter book; add a test for it.
+
+#### Added by the leader (2026-10-16, from the T-056 QA)
+Do not assume the book-data response is under 1 MiB: measured 693 KB (ASCII, 300 notes x 3 photos), 1.02 MiB (dense Vietnamese), 2.48 MiB (emoji), 3.7 MiB (text full of `<` and `&`, escaped by Go). Parse it as a normal fetch with no size assumption, show a loading state for slow networks, and test with a 300-note fixture. Compression is an E06 deployment matter (load balancer / CDN gzip), not part of this task.

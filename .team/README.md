@@ -10,17 +10,18 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 16 | T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-058, T-059, T-060, T-061 |
-| TODO | 3 | T-072, T-079, T-082 |
-| CHANGES_REQUESTED | 1 | T-056 |
+| BACKLOG | 15 | T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-059, T-060, T-061 |
+| TODO | 3 | T-058, T-072, T-079 |
+| IN_PROGRESS | 1 | T-082 |
+| MERGED | 1 | T-056 |
 | DONE | 56 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-073, T-074, T-075, T-076, T-077, T-078, T-080, T-081, T-083 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** nothing
+**Awaiting your review (MERGED):** T-056 ([E05] Book data endpoint for rendering (owner-only, approved notes))
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?)
 
-_Board last written 2026-10-16 08:34Z_
+_Board last written 2026-10-16 09:00Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -2495,7 +2496,7 @@ Replace the numeric-id paging cursor with a signed opaque cursor and a shared he
 - 2026-10-09 13:15Z · leader · Absorbed by E10: T-069 (media API v2) and T-070 (yearbook API v2) return an opaque next_id from one shared helper; doing it twice on /v1 would be thrown away.
 
 ### T-056 — [E05] Book data endpoint for rendering (owner-only, approved notes)
-- **Status:** CHANGES_REQUESTED
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -2506,8 +2507,8 @@ Replace the numeric-id paging cursor with a signed opaque cursor and a shared he
 - **Assignee:** —
 - **Branch:** task/t-056-e05-book-data-endpoint-for-rendering-own
 - **PR:** https://github.com/danyaa666/smemories/pull/64
-- **Updated:** 2026-10-16 08:34Z by leader
-- **Comments-seen:** 5
+- **Updated:** 2026-10-16 08:59Z by leader
+- **Comments-seen:** 8
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/07-book-data-endpoint.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2521,6 +2522,24 @@ One owner-only request returns the yearbook, profile and approved notes with ans
 - 2026-10-16 08:34Z · dev · PR #64 head a75ecee, CI green (go, go-integration, security, web). GET /api/book-data/get in new internal/bookdata; notes.ApprovedNotes (2 queries). Verify: leader decisions in PR body (cut at 300 notes since the cap is per link; 1 MiB holds for built-in 3-field templates, not for 9 fields or 2+ bytes/char text). Postman: added to notes-moderation collection, newman x2 green (80 req, 164 assertions). Risk high: owner approval before merge.
 - 2026-10-16 08:34Z · leader · Leader decisions on your two questions: (1) Silent truncation would print a book that quietly lacks notes, so do NOT cut silently. Keep the 300 cap as the hard maximum (the response bound), but add a boolean 'truncated' to data (always present): true when more approved notes exist than were returned; note_count stays the number returned; also return approved_total (the real approved count). Document it in openapi/schema/docs and add tests (299/300/301 approved notes: truncated false/false/true, approved_total right; the 301st is the last in order). T-058/T-061 will show a visible warning when truncated is true; I am adding that to their specs. (2) The 1 MiB bound for the built-in 3-field templates is accepted; state in docs/openapi that the response is gzip-compressed when the client accepts it IF the router already does it, otherwise just document the measured size (693 KB ASCII, 300 notes x 3 photos); do not add compression in this task. Everything else in your report is accepted (4 queries, Postman requests in the moderation collection, dbtest.Spy). Then CI green on the new head and READY_FOR_QA.
 - 2026-10-16 08:34Z · leader · small spec change from leader decision (truncated flag), see comment
+- 2026-10-16 08:51Z · dev · Rework head dbb5d3e, CI green (go, go-integration, security, web). data.truncated (always present) + approved_total added, note_count = returned; one COUNT(*) only when the 300 cap is reached (5 queries then, 4 otherwise). TestTruncatedFlag 299/300/301 (false/false/true, totals right, 301st left out); openapi, schema.d.ts, docs/moderation.md, Postman updated; newman x2 on private DB 80 req/164 assertions green. No gzip in the router, so docs state ~690 KB uncompressed.
+- 2026-10-16 08:59Z · qa · QA_PASS on head dbb5d3e (PR #64). CI green (go, go-integration, security, web). Own API :18056 + private DB smem_test_qa56 + Redis db 11 (never 5); all stopped/dropped.
+  EVIDENCE (AC -> how -> result)
+  AC1 route/shape/owner-only: GET /api/book-data/get?yearbook_id= -> envelope; keys exactly yearbook,profile,notes,note_count,approved_total,truncated; notes items id/answers/photo_ids. B->A book 404 ERROR_NOT_FOUND; B->missing ULID 404; bodies byte-identical except request_id (same headers). lower-case id, 'abc', empty, absent, trailing space -> 400 ERROR_PARAM. No cookie / garbage cookie -> 401. Unverified owner (own book, other's book, malformed id) -> 403 ERROR_EMAIL_NOT_VERIFIED (same as note/get-list). Duplicate param uses first value (200, own data). POST/PUT/DELETE -> 405.
+  Approved only/order: pending-only book -> notes [] (not null), 0/0/false. Approve N3,N1,N2,N4 -> order == note/get-list?status=approved; after reorder N2,N4,N3,N1 identical; after hiding N4 (post-approval) it disappears, still equal to list; pending N5,N6 never appear.
+  AC2 bound/cap: 299/300/301/302 approved (+3 pending +3 hidden each, built in DB): notes 299/300/300/300, note_count same, approved_total 299/300/301/302, truncated false/false/true/true; dropped notes are exactly the ones after the 300th in get-list order (list paged to the end, prefix-equal). Query count (Com_stmt_execute delta, 3 runs each, auth excluded): endpoint = notes+photos+yearbook+profile = 4, 5 at the 300 cap; +1 constant when cover/profile photo is set (docs/moderation.md says so). Missing book: no photo query. Not N+1 (299, 300, 301 differ only by the cap COUNT).
+  Size, 300 notes x 3 photos: default 3-field max ASCII 693,380 B (0.66 MiB, matches ~690 KB); same without photos 667,588 B; dense Vietnamese diacritics (all 3-byte chars) 1,068,979 B (1.02 MiB, over 1 MiB); 4-byte emoji 2,601,380 B (2.48 MiB); 9-field ASCII template 1,482,680 B (1.41 MiB); 300 x '<'/'&' heavy text 3,873,379 B (3.69 MiB, because Go escapes < > & as \u003c in the JSON). Latency 11-27 ms locally. All pre-accepted by the leader decision (>1 MiB only for multibyte or 9-field text), see non-blocking.
+  AC3 leaks: grep of raw body for object_key thumb_key print_key sha256 hash @ email birthday 2008 owner_id yearbook_id collection token label created_at updated_at sort_order and numeric id -> none. Cover and profile photo ids and every note photo id resolve: GET /api/media/get-content?id=&variant=print -> 200 image/jpeg. Answers with <script>, <img onerror>, &, quotes, emoji come back as JSON strings (\u003c escapes), Content-Type application/json, X-Content-Type-Options nosniff, Cache-Control no-store.
+  Concurrency: 8 readers + 2 writers (random reorders and approve/hide) for 25 s: 30,171 reads all 200, 0 duplicates, 0 foreign ids, 0 photo mismatches, 0 ERROR lines in the API log; reorder-only run 16,003 reads with 120 reorders: every read had the full 40 ids and exactly 121 distinct orders seen = the committed orders (no torn order). Final book-data == note/get-list.
+  GET changes nothing: CHECKSUM TABLE of note/yearbook/profile/media/note_photo/collection identical before/after 5 GETs, also with a foreign Origin header (no CORS header returned).
+  AC4 docs/contract: openapi BookDataResponse has truncated/approved_total (required); web check:api clean (git status clean after regenerating schema.d.ts); docs/moderation.md matches measured behaviour. Postman: newman notes-moderation run twice on a fresh private DB (smem_test_qa56n, Redis db 10): 80 requests, 164 assertions, 0 failed, both runs (book-data steps 18a + 8 edge requests assert order, exclusion, shape, no internal fields).
+  GATE: go build, go vet (+integration tag), gofmt clean; golangci-lint 0 issues; go test -race ./... all ok; go test -race -tags integration ./internal/bookdata ./internal/notes ./internal/db/... ./api ./cmd/... all ok (bookdata 12.8s, notes 100s); web lint, typecheck, lint:i18n, check:api, build ok, npm test 235/235.
+  NON-BLOCKING OBSERVATIONS
+  1) Responses over 1 MiB are reachable by real data (dense Vietnamese 1.02 MiB, 9-field templates 1.4 MiB, '<' '&' heavy text 3.7 MiB due to Go HTML-escaping json.RawMessage in the envelope). Renderer (T-058/T-061) must not assume <1 MiB; a later hardening could disable HTML escaping or add gzip.
+  2) Query count is 5 (6 at cap) for books with a cover or profile photo; docs already say 2+1; spec text '4 or 5' only holds without photos.
+  3) make reset-limits was NOT run: it flushes rl keys in the shared dev Redis db 0; I cleared my own private Redis db instead (no rate-limit state needed beyond that).
+  4) Unverified check runs before id validation (malformed id + unverified = 403), same as note/get-list.
+- 2026-10-16 08:59Z · leader · merged b20bf33 (PR #64). Review: owner-only via the locked ownership check, approved-only in T-013 order, 4 queries (5 at the cap), explicit truncated + approved_total instead of a silent cut, no internal ids/keys/emails in the JSON; CI green, QA_PASS on the same head (concurrency: 30k reads, no torn order). Owner approved the task before the build; the only change after that was the truncated flag (leader decision). For owner to check: GET /api/book-data/get?yearbook_id=<id> as the signed-in owner. Note for T-058/T-061: response can exceed 1 MiB (1.02 MiB dense Vietnamese, 2.48 MiB emoji, 3.7 MiB for text full of < and &, because Go escapes them), and there is no gzip in the router yet.
 
 ### T-057 — [E05] Media print-size variant (1800 px) with backfill
 - **Status:** DONE
@@ -2559,7 +2578,7 @@ Third stored size for printing: lighter PDFs and faster print (spike: 63 MB and 
 - 2026-10-10 03:29Z · human · accepted by owner
 
 ### T-058 — [E05] Web: HTML book renderer core and print preview (browser print-to-PDF)
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -2570,8 +2589,8 @@ Third stored size for printing: lighter PDFs and faster print (spike: 63 MB and 
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-16 09:00Z by leader
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/09-html-book-renderer-core.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2580,6 +2599,7 @@ Third stored size for printing: lighter PDFs and faster print (spike: 63 MB and 
 Fixed-size HTML pages, pagination, text fit, print CSS, readiness gate and a headless print check (D-24).
 
 #### Comments
+- 2026-10-16 09:00Z · leader · unblocked: T-056 merged (GET /api/book-data/get?yearbook_id=; truncated + approved_total, see spec addendum), T-054 and T-057 done. The addendum at the bottom of the spec is part of the requirements.
 
 ### T-059 — [E05] HTML template memory-book (design temp1)
 - **Status:** BACKLOG
@@ -3472,7 +3492,7 @@ Owner decision D-28: every user gets a unique public username (default user-xxxx
 - 2026-10-16 03:59Z · human · accepted by owner
 
 ### T-082 — [E02] Web: show and change the username on the account page
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
@@ -3480,10 +3500,10 @@ Owner decision D-28: every user gets a unique public username (default user-xxxx
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-082-e02-web-show-and-change-the-username-on-
 - **PR:** —
-- **Updated:** 2026-10-16 03:53Z by leader
+- **Updated:** 2026-10-16 08:51Z by dev
 - **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/14-web-username.md`
@@ -3601,3 +3621,4 @@ Spec: .team/epics/E04-friends-notes/09-inbox-320px-polish.md (read it from the r
 - 2026-10-16 — T-018 (public anonymous notes form, PR #59) merged 2aae76e after 2 reworks (route /c/:token, no-referrer + hashed draft key, no retry on 4xx). Owner to review the note.* Vietnamese strings. T-017 (moderation inbox) is next for dev.
 - 2026-10-16 — T-081 (username API, PR #62, owner-approved) merged 5cfe240; T-082 (web username) promoted to TODO. T-013/T-018 accepted. T-017 in rework 2 (320px card head). T-080 (full-link drain, PR #63) waits for QA. Owner: after pulling, run make migrate and restart the API (old binaries cannot create users once user_tab.username exists).
 - 2026-10-16 — T-017 (moderation inbox, PR #61) merged 445a11c after 2 reworks (badge wrap, focus, 320px head); T-080 (full-link drain, PR #63) merged d8e9d7c. T-081 accepted. T-056 (book data endpoint, high risk, route GET /api/book-data/get) promoted to TODO; the printing path T-058..T-061 follows it.
+- 2026-10-16 — T-056 (book data endpoint, PR #64, owner-approved) merged b20bf33: GET /api/book-data/get with explicit truncated/approved_total (no silent cut at 300 notes; renderer must warn). T-017/T-080 accepted. T-058 (HTML renderer core) promoted to TODO; T-072 free to start. Dev now on T-082.
