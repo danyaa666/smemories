@@ -10,19 +10,18 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 13 | T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-061, T-085 |
-| TODO | 2 | T-032, T-060 |
-| READY_FOR_QA | 1 | T-079 |
-| QA_FAIL | 1 | T-059 |
-| MERGED | 1 | T-072 |
+| BACKLOG | 11 | T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050 |
+| TODO | 3 | T-032, T-061, T-085 |
+| IN_PROGRESS | 1 | T-060 |
+| MERGED | 3 | T-059, T-072, T-079 |
 | DONE | 59 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-073, T-074, T-075, T-076, T-077, T-078, T-080, T-081, T-082, T-083 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-072 ([E10] Quality sweep: mnd, forbidigo, pointer parameters, pool defaults, remove the transition switch)
+**Awaiting your review (MERGED):** T-059 ([E05] HTML template memory-book (design temp1)); T-072 ([E10] Quality sweep: mnd, forbidigo, pointer parameters, pool defaults, remove the transition switch); T-079 ([E01] Make the timing-sensitive integration tests tolerant of a starved CI runner)
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?)
 
-_Board last written 2026-10-16 14:21Z_
+_Board last written 2026-10-16 18:24Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -2633,7 +2632,7 @@ Fixed-size HTML pages, pagination, text fit, print CSS, readiness gate and a hea
 - 2026-10-16 11:13Z · human · accepted by owner
 
 ### T-059 — [E05] HTML template memory-book (design temp1)
-- **Status:** QA_FAIL
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
@@ -2644,8 +2643,8 @@ Fixed-size HTML pages, pagination, text fit, print CSS, readiness gate and a hea
 - **Assignee:** —
 - **Branch:** task/t-059-e05-html-template-memory-book-design-tem
 - **PR:** https://github.com/danyaa666/smemories/pull/68
-- **Updated:** 2026-10-16 14:02Z by qa
-- **Comments-seen:** 4
+- **Updated:** 2026-10-16 18:24Z by leader
+- **Comments-seen:** 7
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/10-html-template-memory-book.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2750,9 +2749,19 @@ Pastel Memory Book canvas as an HTML template, EN and VI, four page kinds.
   # skipped 0
   # todo 0
   # duration_ms 9847.317833 with a cut-off note (the 400-line message and a 2000-char single paragraph) asserting no text outside its card box in the PDF (e.g. pdftotext -bbox or the text positions vs the card rectangles) so this cannot regress; add the same case to the T-058 basic template if it is not already covered. Everything else is accepted as built (manifest, fonts, decisions 1-5). Non-blocking, leave them: inbox extra-answer order and the thank-you card quoting how_we_met (pre-existing). CI green on the new head, READY_FOR_QA.
+- 2026-10-16 18:16Z · dev · Rework 1: QA major (cut-off note ran out of its card in the PRINTED PDF) fixed at the cause. In print the size of the flex-sized text boxes .mb-lines and .mb-motto-text came from layout, and Chromium's print fragmentation let overflowing lines run out of them (overflow:hidden, contain:paint, overflow:clip, clip-path did not stop it; contain:size does: the box size is independent of its text, so the text is clipped at the box). memory.css: contain:size on both. Covered by 6 new make-print-check tests (memory-book and basic x A5/A4/Letter): fixture cutOff = 400-line message ('Dong\n' x 400) and 2000-char single paragraph; pdftotext -bbox asserts every word of both notes has its centre inside its text box in the PDF; verified the 3 memory-book tests FAIL without the fix (Dong at y 0.937 vs box bottom 0.928) and pass with it; basic already clipped and is now covered too. make print-check 19/19, web lint/test/build green, merged develop, CI green (go, go-integration, security, web) on head 68d7372. Verify: print-check cutoff tests; open the printed note 1 on A5 with the 400-line message.
+- 2026-10-16 18:23Z · qa · Re-verify of rework 1, PR #68 head 68d7372 (CI go/go-integration/security/web all green). Earlier failure (cut-off note ran out of the Message card in the printed PDF) is FIXED.
+  Setup: own API build of the branch + own Vite (15159) + private DB smem_test_t059b at the branch schema (migrations applied), Redis db 13, template_id set by SQL, page_size switched by SQL per size; fixture = earlier 21-note fixture (note 5 = 2000-char emoji paragraph) plus 8 new notes: 'Cắt Dài' (400 x 'Dòng\n' message, 1 photo), 'Cắt Đoạn' (2000-char single paragraph), short 'Ok!', emoji, Vietnamese diacritics, 3 photos, long-but-fitting, no photo. Printed with Chromium Page.printToPDF (print media, preferCSSPageSize).
+  1. Cut-off clipping (AC: no text outside its card) -> A5/A4/Letter each 32 pages, exact sizes 420x594.96 / 594.96x841.92 / 612x792 pt, all fonts embedded. pdftotext -bbox: 'Dòng' words only on the Cắt Dài page, last word yMax A5 554.5 (earlier failing run 592 of 595), A4 786.3, Letter 724.9, each above the footer text (A5 566, A4 802, Letter 750). Page images viewed: the last visible line is cut at the card's bottom edge, nothing over the footer, at all 3 sizes. The 2000-char paragraph note (Cắt Đoạn) also stays inside the card at all 3 sizes.
+  2. Print screen lists the cut notes: 'Cắt Dài, 5 pt, vẫn bị cắt bớt' (A5; 7.5 pt at A4/Letter) with a working 'Mở trong hộp thư' link (clicked: lands on /notes?note=<id>, that card focused and visible).
+  3. contain:size did not distort normal notes: A5 run vs my earlier passing PDF (out/real.pdf, same fixture, 24 pages/21 photos): pages 1-23 (cover, profile/motto, 21 notes incl. the 2000-char and the medium note) have word boxes identical to within 0.5 pt, same text, and 50-dpi page images with 0 differing pixels; back page identical (0 diff). The 8 added notes (short, medium, emoji, diacritics, 3 photos, no photo, long-but-fitting) viewed as contact sheets at A5 and Letter: boxes, ruled lines, photos, polaroid placeholder all normal.
+  4. Fidelity: node tools/print-check/fidelity.mjs regenerated the 4 pictures: 0 differing pixels vs committed docs/templates/memory-book-fidelity-*.jpg; largest edge delta 1.1 mm (<= 1.5 tolerance).
+  5. make print-check: 19/19 pass (incl. the 6 new cut-off tests). web: lint, typecheck, lint:i18n, check:api ok; vitest 18 files / 290 tests pass; build ok.
+  Non-blocking (unchanged): inbox extra-answer order and thank-you card quoting how_we_met (pre-existing). Branch is behind develop only by T-079 test changes (no conflict expected). Cleaned up: my API/Vite stopped, private DB dropped, Redis db 13 flushed; :5173 untouched.
+- 2026-10-16 18:24Z · leader · merged 402d685 (PR #68). Review: web template + manifest + print-check; the cut-off defect (text running out of the card in print) fixed at the cause with contain:size and 6 new print-check tests that fail without the fix; QA re-verified the printed PDFs at A5/A4/Letter (identical positions for normal notes, fidelity pictures within 1.5 mm); CI green, QA_PASS on the same head. For owner to check: set a book's template by SQL (no API sets template_id until T-061), open /yearbooks/<id>/book, print to PDF; sample PDFs in docs/templates/memory-book-*.pdf; the Vietnamese strings in the PR description (print screen shrunk-note list etc). Open (pre-existing, not from this PR): inbox lists extra answers in MySQL JSON key order; the thank-you card quotes how_we_met instead of the message.
 
 ### T-060 — [E05] HTML template navy-classic (design temp2)
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
@@ -2760,10 +2769,10 @@ Pastel Memory Book canvas as an HTML template, EN and VI, four page kinds.
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-060-e05-html-template-navy-classic-design-te
 - **PR:** —
-- **Updated:** 2026-10-16 09:50Z by leader
+- **Updated:** 2026-10-16 18:17Z by dev
 - **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/11-html-template-navy-classic.md`
@@ -2776,7 +2785,7 @@ Navy and gold canvas as the second HTML template.
 - 2026-10-16 09:50Z · leader · unblocked: T-058 merged. Read the addendum at the bottom of the spec.
 
 ### T-061 — [E05] Web: template picker and print screen with device guidance
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -2787,8 +2796,8 @@ Navy and gold canvas as the second HTML template.
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-16 18:24Z by leader
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/12-template-picker-and-print-screen.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2797,6 +2806,7 @@ Navy and gold canvas as the second HTML template.
 Pick a template for the page size, print with per-browser guidance, anonymous worked-or-not feedback counter.
 
 #### Comments
+- 2026-10-16 18:24Z · leader · unblocked: T-058 and T-059 merged. AC1 and AC3 were rewritten to the v2 routes (GET /api/template/get-list, template_id via POST /api/yearbook/update, public print-feedback counter). Risk high: owner approval before merge. T-060 (navy-classic) is in progress; the picker works with one template and lists the second when it lands.
 
 ### T-062 — [E01] CI: get the newest Go patch straight from go.dev (no manifest lag)
 - **Status:** DONE
@@ -3544,7 +3554,7 @@ T-065 QA found: a book delete racing a read gives 500 'yearbook without its owne
 - 2026-10-12 04:00Z · human · accepted by owner
 
 ### T-079 — [E01] Make the timing-sensitive integration tests tolerant of a starved CI runner
-- **Status:** READY_FOR_QA
+- **Status:** MERGED
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -3555,8 +3565,8 @@ T-065 QA found: a book delete racing a read gives 500 'yearbook without its owne
 - **Assignee:** —
 - **Branch:** task/t-079-e01-make-the-timing-sensitive-integratio
 - **PR:** 69
-- **Updated:** 2026-10-16 14:20Z by dev
-- **Comments-seen:** 1
+- **Updated:** 2026-10-16 18:13Z by leader
+- **Comments-seen:** 3
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/14-timing-sensitive-integration-tests.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -3566,6 +3576,14 @@ T-077 QA: a ratelimit retry-after test failed once on the CI runner (689 ms vs a
 
 #### Comments
 - 2026-10-16 14:20Z · dev · PR #69. ratelimit retry-after now on fake clock (exact 850ms); media busy test uses channel not 2s wall clock; redis ping best-of-20; session TTL test polls; media TestMain caps -parallel at 4 (peak 1.53->1.24 GB, wall 54->57s on 11 cores, no change on 4-core CI). Load runs: ratelimit/redis/auth Session -count=20 and media -count=5 pass with 12 busy loops. Scan findings left are listed in the PR. make test-integration green locally; CI pending.
+- 2026-10-16 18:13Z · qa · PR #69 head 6f4d8da. CI green (go, go-integration, security, web). Evidence:
+  1 Diff is 5 *_test.go files only (auth, media x2 incl new main_test.go, ratelimit, redis); no product code, no .team files.
+  2 Mutation (scratch worktree, each reverted): retry-after +100ms -> FAIL 'retry=950ms want exactly 850ms'; retry=window -> FAIL (1s); window never slides (-5ms) -> FAIL 'oldest hit left the window'; no PEXPIRE on session -> FAIL after 15s poll 'expired session still found'; media slot wait never ends -> FAIL at the 1 min guard; ErrBusy replaced by nil -> FAIL 'err <nil>, want ErrBusy'; ping +30ms -> FAIL 'best of 20 took 31ms, want <20ms'. All rewritten tests still catch the bug they guard. New 1ms-before-expiry assertion in the ratelimit test makes it stronger than before.
+  3 Stability: 8 busy loops (stopped by PID), SMEM_TEST_REDIS_URL=.../9, -race -tags integration -count=20 each of ratelimit RetryAfter, redis Ping, auth SessionLookup, media BusyAndDiscard: all ok.
+  4 make lint build test exit 0; go test -race -count=1 -tags integration ./... exit 0 (all packages ok, media 71s, total 3m06 on 11 cores).
+  5 main_test.go: probe test in scratch copy: no flag -> test.parallel=4; -parallel 2 -> 2; -parallel 11 -> 11 (caller wins). TestMain is per package so only internal/media is affected.
+  Non-blocking: (a) on a machine with GOMAXPROCS<4 the cap of 4 is above the default (probe with GOMAXPROCS=2 gave 4); harmless, only a ceiling by intent but it is not a pure 'cap'. (b) peak-memory claim (1.53->1.24 GB) not re-measured by QA. (c) 62 smem_test_* MySQL databases exist in the dev server, not from my runs' cleanup failures as far as I can tell (all my runs passed/cleaned); not touched.
+- 2026-10-16 18:13Z · leader · merged 3429df4 (PR #69). Review: tests only (5 _test.go files), fake clock instead of wall clock where possible, channel waits with hang guards; QA mutated the product code 7 ways and every rewritten test failed, stable at -race -count=20 under load; CI green on the same head. Open: remaining timing-sensitive tests are listed in the PR description (notes submit, untagged db/httpx/password) - not worth a task until one flakes in CI. For owner to check: nothing visible.
 
 ### T-080 — [E04] Public submit: show 'link full' instead of a connection reset
 - **Status:** DONE
@@ -3746,7 +3764,7 @@ Spec: .team/epics/E04-friends-notes/09-inbox-320px-polish.md (read it from the r
 - 2026-10-16 03:40Z · leader · created by mistake: the board does not let the leader override QA_FAIL, so the 320px fix goes through T-017 rework 2 instead
 
 ### T-085 — [E10] Lint exclusions anchored and a guard for auth.UserFrom
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -3757,12 +3775,13 @@ Spec: .team/epics/E04-friends-notes/09-inbox-320px-polish.md (read it from the r
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-16 13:19Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-16 18:19Z by leader
+- **Comments-seen:** 1
 
 Spec: .team/epics/E10-skills-alignment/12-lint-anchors-userfrom-guard.md (read it from the repo root). Two non-blocking findings of the T-072 QA.
 
 #### Comments
+- 2026-10-16 18:19Z · leader · promoted to keep the dev queue at 4; spec 12-lint-anchors-userfrom-guard.md
 
 <!-- tasks:end -->
 
@@ -3799,3 +3818,5 @@ Spec: .team/epics/E10-skills-alignment/12-lint-anchors-userfrom-guard.md (read i
 - 2026-10-16 — T-082 (web username on the account page, PR #65) merged de0eb3c. Dev on T-058 (HTML renderer); T-072 next.
 - 2026-10-16 — T-058 (HTML book renderer core, PR #66) merged b219943. T-059 and T-060 (templates) promoted to TODO; T-061 (print screen, high risk) follows T-059. T-056/T-082 accepted. T-072 (quality sweep) in progress.
 - 2026-10-16 — T-072 (quality sweep, PR #67) merged 715b960: transition switch removed, forbidigo/mnd on, strict auth bodies. T-058 accepted. T-085 (P3) added for two QA nits (lint regex anchors, UserFrom guard). Dev on T-059.
+- 2026-10-17 — T-079 (flaky-test tolerance, PR #69) merged 3429df4. T-072 merged earlier, awaiting owner accept. T-059 in rework 1 (print clipping of cut-off notes). Heartbeat recurring (ce6d77f6).
+- 2026-10-17 — T-059 (memory-book template, PR #68) merged 402d685 after rework 1 (cut-off notes ran out of the card in print; fixed with contain:size + print-check cases). T-079 merged. T-061 (picker + print screen, high risk) promoted to TODO. Awaiting owner accept: T-072, T-079, T-059.
