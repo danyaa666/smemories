@@ -23,3 +23,6 @@ const TEMPLATES: Record<string, Template> = { [basic.id]: basic, [memoryBook.id]
 /** The template of that id, else the built-in one (a book whose template was never chosen, or one this build does not know). */
 export const getTemplate = (id: string | null): Template =>
   (id !== null && Object.hasOwn(TEMPLATES, id) ? TEMPLATES[id] : undefined) ?? basic;
+
+/** Whether this build can draw the template: the picker offers only those (a template the server lists but the web lacks would draw as the plain layout). */
+export const knowsTemplate = (id: string): boolean => Object.hasOwn(TEMPLATES, id);

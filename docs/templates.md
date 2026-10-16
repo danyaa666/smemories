@@ -86,6 +86,30 @@ The built-in html template is `memory-book` (T-059, the pastel Memory Book of de
 `best_memory` and `wish`; the page also prints `nickname`, `relationship` and `advice` when a note has them (older
 notes, or a later manifest that asks for them).
 
+## The picker and the print screen (T-061)
+
+- `GET /api/template/get-list?page_size=` (session, `internal/templateapi`) lists `templates.List()` (all) or
+  `templates.ForPageSize(size)` with `id`, `name` (`en`, `vi`), `page_sizes`, `renderer` and `preview`, the path
+  `/template-previews/<id>.jpg` on the web app's own origin. The previews are files in `web/public/template-previews/`;
+  **an html template needs one** (a Go test fails without it). Render the first page of its sample PDF, for example
+  `pdftoppm -jpeg -jpegopt quality=82 -f 1 -l 1 -scale-to-x 360 -scale-to-y -1 -singlefile docs/templates/<sample>.pdf web/public/template-previews/<id>`.
+- The owner's choice is saved by `POST /api/yearbook/update` (or `create`) with `template_id`; `null` clears it (the
+  built-in plain layout). The yearbook service refuses (`ERROR_INVALID_TEMPLATE`, 400) an id the registry does not know, one that
+  does not declare the book's page size (the size after the same request), and a page-size change on a book whose
+  chosen template does not support the new size. A template id the registry no longer knows does not block a size change.
+- The picker (`web/src/book/TemplatePicker.tsx`) offers the plain layout plus every listed template whose `renderer`
+  is `html` **and** which `web/src/book/templates/index.ts` can draw, so a new html template appears in the picker when its
+  manifest and its web component are both in. A Go-renderer template (`classic`, `modern`) is not offered: the print
+  screen cannot draw it.
+- The print guide (`web/src/book/guide.ts`, `PrintGuide.tsx`) picks the steps from the user agent: Chrome and Edge on a
+  computer, Safari on a Mac, Firefox, Chrome on Android (Samsung Internet and others that say `Chrome/`), Safari on an iPhone or
+  iPad (every iOS browser is WebKit; an iPad in desktop mode is told apart by its touch screen), and generic steps otherwise.
+  The page cannot see the print dialog, so it cannot warn about a wrong paper size or missing backgrounds: the guide says so.
+- `POST /api/print-feedback/create` (public, CSRF origin check, 30 per IP per hour) counts "Does the PDF look right?" in
+  `print_feedback_tab`, one row per (`browser_family`, `verdict`) with `hits`; no user, book, IP or user agent is stored.
+  `browser_family` is the guide id: `chromium_desktop`, `safari_desktop`, `firefox`, `chrome_android`, `safari_ios`, `other`.
+  Read it with `SELECT browser_family, verdict, hits FROM print_feedback_tab ORDER BY browser_family, verdict`.
+
 ## Elements
 
 Every element has `type`, `x`, `y`, `w`, `h` (the box, which must lie inside the page, or inside the item for
