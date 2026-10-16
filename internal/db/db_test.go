@@ -90,7 +90,7 @@ func TestOpenRejectsEmptyDSN(t *testing.T) {
 
 func TestWaitReadyFailsFastOnPermanentErrors(t *testing.T) {
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	for _, num := range []uint16{1045, 1049} {
+	for _, num := range []uint16{1044, 1045, 1049} {
 		calls := 0
 		ping := func(context.Context) error {
 			calls++
