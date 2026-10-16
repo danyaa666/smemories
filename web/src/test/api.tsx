@@ -67,14 +67,17 @@ function Where() {
   return <div data-testid="where">{l.pathname + l.search}</div>;
 }
 
-export function renderApp(path: string, opts: { strict?: boolean; browser?: boolean } = {}) {
+export function renderApp(
+  path: string,
+  opts: { strict?: boolean; browser?: boolean; retry?: number } = {},
+) {
   // browser: a real window.history, so a test can see what the address bar holds when fetch runs
   if (opts.browser) {
     window.history.replaceState(null, "", path);
   }
   const Router = opts.browser ? BrowserRouter : MemoryRouter;
   const tree: ReactNode = (
-    <QueryClientProvider client={makeQueryClient()}>
+    <QueryClientProvider client={makeQueryClient(opts.retry)}>
       <Router {...(opts.browser ? {} : { initialEntries: [path] })}>
         <App />
         <Where />

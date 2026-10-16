@@ -231,7 +231,7 @@
     },
     "closed": {
       "title": "This link has closed",
-      "body": "{{name}} stopped collecting notes. If you still want to write, ask them for a new link."
+      "body": "Notes are no longer being collected here. If you still want to write, ask {{name}} for a new link."
     },
     "full": {
       "title": "This link is full",

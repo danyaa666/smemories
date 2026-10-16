@@ -156,6 +156,7 @@ describe("public note form", () => {
     expect(
       await screen.findByRole("heading", { name: "Sent! Thank you, Khoa." }),
     ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Sent! Thank you, Khoa." })).toHaveFocus();
     const x = FakeXHR.sent[0]!;
     expect(x.url).toBe("/api/public-collect/submit-note?token=abc");
     expect([...x.form!.keys()]).toEqual(["answers", "photos", "photos"]);
@@ -394,6 +395,28 @@ describe("public note form", () => {
       expect(screen.queryByRole("button", { name: "Send my note" })).not.toBeInTheDocument();
     });
 
+    it.each([
+      [404, "not_found", "This link doesn't work anymore"],
+      [410, "collection_closed", "This link has closed"],
+    ])(
+      "%i is not retried: the production client (3 retries) sends exactly one lookup",
+      async (status, code, title) => {
+        const calls = mockApi({ [GET]: () => err(status, code) });
+        renderApp("/c/abc", { retry: 3 });
+        expect(await screen.findByRole("heading", { name: title })).toBeInTheDocument();
+        expect(calls).toHaveLength(1);
+      },
+    );
+
+    it("a 5xx on the lookup is retried once, then offers Try again", async () => {
+      const calls = mockApi({ [GET]: () => err(500, "internal_error") });
+      renderApp("/c/abc", { retry: 3 });
+      expect(
+        await screen.findByRole("button", { name: "Try again" }, { timeout: 4000 }),
+      ).toBeInTheDocument();
+      expect(calls).toHaveLength(2);
+    });
+
     it("409 full on the lookup is the full screen", async () => {
       mockApi({ [GET]: () => err(409, "collection_full") });
       renderApp("/c/abc");
@@ -403,10 +426,11 @@ describe("public note form", () => {
 
     it("any other lookup failure offers Try again", async () => {
       let n = 0;
-      mockApi({ [GET]: () => (n++ ? ok(formData) : err(500, "internal_error")) });
+      mockApi({ [GET]: () => (n++ >= 2 ? ok(formData) : err(500, "internal_error")) });
       renderApp("/c/abc");
       const u = user();
-      await u.click(await screen.findByRole("button", { name: "Try again" }));
+      // one automatic retry (1 s backoff) before the button appears
+      await u.click(await screen.findByRole("button", { name: "Try again" }, { timeout: 4000 }));
       expect(await screen.findByLabelText("Your name")).toBeInTheDocument();
     });
 

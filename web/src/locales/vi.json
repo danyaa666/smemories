@@ -231,7 +231,7 @@
     },
     "closed": {
       "title": "Liên kết này đã đóng",
-      "body": "{{name}} đã ngừng nhận lời nhắn. Nếu vẫn muốn viết, hãy xin bạn ấy một liên kết mới."
+      "body": "Liên kết này không còn nhận lời nhắn. Nếu vẫn muốn viết, hãy xin {{name}} một liên kết mới."
     },
     "full": {
       "title": "Liên kết này đã đầy",

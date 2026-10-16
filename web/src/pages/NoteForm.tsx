@@ -87,7 +87,13 @@ function saveDraft(token: string, answers: Record<string, string> | null): boole
 export function NoteForm() {
   const { token = "" } = useParams();
   const { t } = useTranslation();
-  const form = useQuery({ queryKey: ["public-collect", token], queryFn: () => getNoteForm(token) });
+  const form = useQuery({
+    queryKey: ["public-collect", token],
+    queryFn: () => getNoteForm(token),
+    // a 4xx (revoked, expired, full, rate limited) is the answer, not a glitch: retrying only delays the dead-end
+    // screen and spends the tight per-IP miss budget; a network error or 5xx gets one more try
+    retry: (n, e) => !(e instanceof ApiError && e.status >= 400 && e.status < 500) && n < 1,
+  });
   const [dead, setDead] = useState<Dead>();
   useEffect(() => {
     // a link is a secret: keep it out of search indexes and never send it in a Referer header
@@ -170,12 +176,16 @@ function NoteFormBody({
   const [saved, setSaved] = useState(true);
   const [trap, setTrap] = useState(""); // honeypot: people never see it, bots fill it
   const formRef = useRef<HTMLFormElement>(null);
+  const sentRef = useRef<HTMLHeadingElement>(null);
 
   const previews = useMemo(() => photos.map((f) => URL.createObjectURL(f)), [photos]);
   useEffect(() => () => previews.forEach((u) => URL.revokeObjectURL(u)), [previews]);
   useEffect(() => {
     if (focusTick) formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
   }, [focusTick]);
+  useEffect(() => {
+    if (sent) sentRef.current?.focus(); // the form unmounted: keep keyboard and screen-reader users in place
+  }, [sent]);
   useEffect(() => {
     if (!sending) return;
     const id = setTimeout(() => setSlow(true), SLOW_AFTER_MS);
@@ -264,7 +274,7 @@ function NoteFormBody({
             {sign && <footer>— {sign}</footer>}
           </blockquote>
         )}
-        <h1 id="note-sent-h">
+        <h1 id="note-sent-h" ref={sentRef} tabIndex={-1}>
           {sign ? t("note.sent.titleName", { name: sign }) : t("note.sent.title")}
         </h1>
         <p>{t("note.sent.body", { name })}</p>
