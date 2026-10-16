@@ -7,6 +7,7 @@ import { BOOK_ID, photoId } from "./fixture.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const ROOT = path.resolve(HERE, "../..");
+const PHOTOS = process.env.PRINT_CHECK_PHOTOS ?? path.join(HERE, "fixtures"); // the sample PDFs use lighter photos (make-samples.mjs)
 export const PORT = Number(process.env.PRINT_CHECK_PORT ?? 5199);
 export const BASE = `http://localhost:${PORT}`;
 
@@ -46,7 +47,7 @@ export async function serveBook(page, book) {
       seen.media++;
       const f = files.get(u.searchParams.get("id") ?? "");
       if (u.searchParams.get("variant") !== "print" || !f) return route.fulfill({ status: 404, contentType: "application/json", body: '{"status":"ERROR_NOT_FOUND"}' });
-      return route.fulfill({ status: 200, contentType: "image/jpeg", headers: { "Cache-Control": "private, max-age=3600" }, body: readFileSync(path.join(HERE, "fixtures", f)) });
+      return route.fulfill({ status: 200, contentType: "image/jpeg", headers: { "Cache-Control": "private, max-age=3600" }, body: readFileSync(path.join(PHOTOS, f)) });
     }
     return route.fulfill({ status: 404, contentType: "application/json", body: '{"status":"ERROR_NOT_FOUND"}' });
   });

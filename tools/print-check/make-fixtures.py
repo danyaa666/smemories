@@ -2,6 +2,8 @@
 """Synthetic photos for T-054, T-058 (no real people, no real data).
 
   make-fixtures.py small OUT_DIR   30 JPEGs, 1600x1200 or 1200x1600, smooth (committed under tools/print-check/fixtures)
+  make-fixtures.py sample OUT_DIR  30 JPEGs, 1000x750 or 750x1000, smooth, quality 60 (for the sample PDFs in docs/templates/, which stay under 2 MB;
+                                   not committed, make-samples.mjs points PRINT_CHECK_PHOTOS at them)
   make-fixtures.py large OUT_DIR   30 JPEGs, 3000x2250 or 2250x3000 with sensor-like noise (about 1 MB each, not committed;
                                    3000 px is the longest side the media pipeline stores, docs/media.md)
 Needs Pillow only.
@@ -11,8 +13,8 @@ from PIL import Image, ImageChops, ImageDraw, ImageFont
 
 mode, out = sys.argv[1], sys.argv[2]
 os.makedirs(out, exist_ok=True)
-long_side = 1600 if mode == "small" else 3000
-quality = 72 if mode == "small" else 88
+long_side = {"small": 1600, "sample": 1000}.get(mode, 3000)
+quality = {"small": 72, "sample": 60}.get(mode, 88)
 
 def scene(i):
     rnd = random.Random(i)

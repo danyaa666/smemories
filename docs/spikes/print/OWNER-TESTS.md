@@ -10,11 +10,14 @@ on the computer `make up && make migrate`, `go run ./cmd/smemories-api` and `cd 
 `http://localhost:5173/yearbooks/<id>/book` ("Preview and print" in the menu).
 From a phone on the same Wi-Fi use `http://<computer-ip>:5173/...` (the API must be reachable through the same Vite proxy).
 
+The designed template `memory-book` (T-059) has no picker yet (T-061): until then a book uses it when its `template_id` is `memory-book` (the sample PDFs in `docs/templates/memory-book-*.pdf` show what to expect).
+In Firefox look at the dotted paper and the ruled lines of the pastel boxes: the dots are one picture (not a tiled gradient) so they should no longer be black; the ruled lines are still a repeating gradient, which is untested there.
+
 Press "Print or save as PDF" (it is enabled once the fonts and photos are loaded) and record, for each browser:
 
 - paper size offered, margins, headers and footers on by default
 - background graphics option: does the page print its colours when it is off?
-- page count (expected: 3 plus one per 4 approved notes) and any blank last page
+- page count (expected: 3 plus one per 4 approved notes with the plain built-in layout, 3 plus one per note with `memory-book`) and any blank last page
 - photo sharpness (zoom the PDF to 400 %) and file size
 - seconds from the click to the preview, and whether the tab survives
 - whether the Vietnamese text can be selected and pasted

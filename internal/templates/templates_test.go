@@ -325,6 +325,26 @@ func TestHTMLManifest(t *testing.T) {
 	}
 }
 
+// The built-in html template of the web app (T-059): its manifest is what the public note form and the checks of a submission use.
+func TestMemoryBookManifest(t *testing.T) {
+	tt, ok := Get("memory-book")
+	if !ok || !tt.IsHTML() || len(tt.Pages) != 0 {
+		t.Fatalf("memory-book = %+v, %v", tt, ok)
+	}
+	for _, size := range []string{"A5", "A4", "Letter"} {
+		if !tt.Supports(size) {
+			t.Errorf("memory-book does not support %s", size)
+		}
+	}
+	if tt.Name["en"] != "Memory Book" || tt.Name["vi"] != "Lưu bút" {
+		t.Errorf("names = %v", tt.Name)
+	}
+	want := []notefields.FieldRef{{ID: "name", Required: true}, {ID: "how_we_met"}, {ID: "first_impression"}, {ID: "best_memory"}, {ID: "wish"}, {ID: "message", Required: true}}
+	if got, ok := NoteFields("memory-book"); !ok || !slices.Equal(got, want) {
+		t.Errorf("note fields = %v, %v", got, ok)
+	}
+}
+
 func TestHTMLManifestErrors(t *testing.T) {
 	tests := []struct{ name, json, want string }{
 		{"pages", `{"id":"p","renderer":"html","name":{"en":"P","vi":"P"},"page_sizes":["A5"],"pages":[{"kind":"cover","elements":[]}]}`, "an html template has no pages"},
