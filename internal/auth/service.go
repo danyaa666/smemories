@@ -31,6 +31,7 @@ const (
 	forgotPerIPHour    = 5
 	forgotPerEmailHour = 3
 	resetTriesPerHour  = 20 // per IP
+	usernameTriesPerHr = 20 // failed username changes per user
 )
 
 // Session is a freshly issued or refreshed session; Token is the cookie value.
@@ -59,14 +60,15 @@ type Service struct {
 	loginPair ratelimit.Limiter
 	loginIP   ratelimit.Limiter
 
-	mail        Mail
-	bg          sync.WaitGroup // emails being sent in the background
-	codes       *Codes
-	resend      ratelimit.Limiter
-	verifyTries ratelimit.Limiter // per user
-	forgotIP    ratelimit.Limiter
-	forgotEmail ratelimit.Limiter
-	resetIP     ratelimit.Limiter
+	mail          Mail
+	bg            sync.WaitGroup // emails being sent in the background
+	codes         *Codes
+	resend        ratelimit.Limiter
+	verifyTries   ratelimit.Limiter // per user
+	forgotIP      ratelimit.Limiter
+	forgotEmail   ratelimit.Limiter
+	resetIP       ratelimit.Limiter
+	usernameFails ratelimit.Limiter // per user
 }
 
 // NewService builds a Service. It hashes one throw-away password at startup for the
@@ -95,6 +97,8 @@ func NewService(store *Store, sessions *Sessions, hasher *Hasher, limits Limits,
 		forgotIP:    limiters.Open("forgot_ip", forgotPerIPHour, time.Hour),
 		forgotEmail: limiters.Open("forgot_email", forgotPerEmailHour, time.Hour),
 		resetIP:     limiters.Closed("reset_tries", resetTriesPerHour, time.Hour),
+		// Closed: the limit stops probing which names exist (T-081).
+		usernameFails: limiters.Closed("username_tries", usernameTriesPerHr, time.Hour),
 	}, nil
 }
 
@@ -161,7 +165,7 @@ func (s *Service) Register(ctx context.Context, ip, userAgent, email, password, 
 	if err := s.sendCode(ctx, u, purposeVerify); err != nil {
 		s.mail.Logger.Error("auth: verification email not sent", "user_id", u.ID, "error", err)
 	}
-	return u, sess, nil
+	return s.expose(u), sess, nil
 }
 
 func (s *Service) newSession(now time.Time, userAgent string) (Session, session, error) {
@@ -243,7 +247,7 @@ func (s *Service) issue(ctx context.Context, u User, userAgent, oldToken string)
 	if oldToken != "" {
 		_ = s.sessions.Delete(ctx, hashToken(oldToken)) // best effort
 	}
-	return u, sess, nil
+	return s.expose(u), sess, nil
 }
 
 // Authenticate resolves a session cookie value to its user. When more than half the TTL
@@ -284,7 +288,7 @@ func (s *Service) Authenticate(ctx context.Context, token string) (u User, refre
 		}
 		refreshed = &Session{Token: token, Expires: now.Add(SessionTTL)}
 	}
-	return u, refreshed, nil
+	return s.expose(u), refreshed, nil
 }
 
 // Logout deletes the session; an unknown or empty token is not an error.

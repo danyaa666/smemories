@@ -68,22 +68,22 @@ func TestQAUserTabBulkRoundTrip(t *testing.T) {
 	// Values: every ms column equals the old DATETIME(6) in ms (truncated); the replacement dump of the new schema must match.
 	equalLines(t, "users up", dump(t, ctx, d, newU), wantU)
 	equalLines(t, "identities up", dump(t, ctx, d, newI), wantI)
-	colsNew := dump(t, ctx, d, `SELECT REPLACE(REPLACE(TABLE_NAME,'user_identity_tab','user_identities'),'user_tab','users'), COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE, IFNULL(COLUMN_DEFAULT,'NULL'), IFNULL(COLLATION_NAME,''), IFNULL(CHARACTER_SET_NAME,''), COLUMN_COMMENT, EXTRA FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN ('user_tab','user_identity_tab') AND COLUMN_NAME NOT IN ('email_verified_at','created_at','updated_at','locale','provider') ORDER BY 1, COLUMN_NAME`)
+	colsNew := dump(t, ctx, d, `SELECT REPLACE(REPLACE(TABLE_NAME,'user_identity_tab','user_identities'),'user_tab','users'), COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE, IFNULL(COLUMN_DEFAULT,'NULL'), IFNULL(COLLATION_NAME,''), IFNULL(CHARACTER_SET_NAME,''), COLUMN_COMMENT, EXTRA FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN ('user_tab','user_identity_tab') AND COLUMN_NAME NOT IN ('email_verified_at','created_at','updated_at','locale','provider','username','username_changed_at') ORDER BY 1, COLUMN_NAME`)
 	equalLines(t, "untouched column metadata (incl. email collation and comment)", colsNew, colsOld)
 	t.Log("new columns:\n" + strings.Join(dump(t, ctx, d, `SELECT TABLE_NAME, COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE, IFNULL(COLUMN_DEFAULT,'NULL') FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN ('user_tab','user_identity_tab') ORDER BY TABLE_NAME, ORDINAL_POSITION`), "\n"))
 	t.Log("indexes:\n" + strings.Join(dump(t, ctx, d, `SELECT TABLE_NAME, INDEX_NAME, NON_UNIQUE, SEQ_IN_INDEX, COLUMN_NAME FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN ('user_tab','user_identity_tab') ORDER BY TABLE_NAME, INDEX_NAME, SEQ_IN_INDEX`), "\n"))
 
 	// Uniqueness: every distinct email string is unique, and a case/accent twin of an existing email is a different account.
 	for i, tw := range []string{"EEN@exämple.com", "eEN@EXÄMPLE.com", "een@example.com"} {
-		if _, err := d.ExecContext(ctx, `INSERT INTO user_tab (public_id, email, display_name, created_at, updated_at) VALUES (?,?, 'x', 1, 1)`, fmt.Sprintf("TW%d", i), tw); err != nil {
+		if _, err := d.ExecContext(ctx, `INSERT INTO user_tab (public_id, email, display_name, username, created_at, updated_at) VALUES (?,?, 'x', ?, 1, 1)`, fmt.Sprintf("TW%d", i), tw, fmt.Sprintf("user-tw%d", i)); err != nil {
 			t.Errorf("twin %q refused: %v", tw, err)
 		}
 	}
 	// Exact duplicate refused.
-	if _, err := d.ExecContext(ctx, `INSERT INTO user_tab (public_id, email, display_name, created_at, updated_at) VALUES ('DUP', 'een@exämple.com', 'x', 1, 1)`); err == nil {
+	if _, err := d.ExecContext(ctx, `INSERT INTO user_tab (public_id, email, display_name, username, created_at, updated_at) VALUES ('DUP', 'een@exämple.com', 'x', 'user-dup', 1, 1)`); err == nil {
 		t.Error("exact duplicate email accepted")
 	}
-	if _, err := d.ExecContext(ctx, `INSERT INTO user_tab (public_id, email, display_name, created_at, updated_at) VALUES ('U001', 'zzz@x.com', 'x', 1, 1)`); err == nil {
+	if _, err := d.ExecContext(ctx, `INSERT INTO user_tab (public_id, email, display_name, username, created_at, updated_at) VALUES ('U001', 'zzz@x.com', 'x', 'user-u001x', 1, 1)`); err == nil {
 		t.Error("duplicate public_id accepted")
 	}
 	exec(`DELETE FROM user_tab WHERE display_name = 'x'`)

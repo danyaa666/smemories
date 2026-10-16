@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "SMemories - auth",
-    "description": "Email + password auth core (T-006): register, login, logout, /api/user/get-me, plus (T-007, T-048) verification code resend/verify, forgot/reset password. Run against an API started with SMEM_ENV=dev (the session cookie is not Secure there, so Newman's cookie jar sends it over http). Step 1 registers with locale vi (T-045: the stored locale is returned; the default en and the vi verification email are covered by the Go integration tests). Register is limited to 5 per hour per IP and each run makes 2 counted attempts (the register and the duplicate), so a third run within the hour gets 429: run `make reset-limits` (the limiters live in Redis) or set SMEM_RATE_REGISTER_PER_HOUR higher. Forgot-password is limited to 5 per hour per IP and each run makes 2 counted calls, so a third run within the hour gets 429 (run `make reset-limits` to reset). Email one-time codes (T-048): the full flow uses the dev-only fixed code 123123 (`SMEM_DEV_FIXED_OTP`, default in `.env.example`; the API must run with it and SMEM_ENV=dev, otherwise the verify and reset steps fail). Wrong, malformed, locked (5 wrong attempts) and weak-password cases run here too. Code expiry (15 and 30 minutes), the real random codes, parallel guesses and the 503 when Redis is down are covered by the Go integration tests. Limits per run: 3 of 3 resends, about 10 of 20 verify attempts, 4 of 20 reset attempts per IP; two back-to-back runs fit. Google sign-in (T-011): the last folder needs the API started with the SMEM_GOOGLE_* variables (README, 'Google sign-in setup'); requests there do not follow redirects.",
+    "description": "Email + password auth core (T-006): register, login, logout, /api/user/get-me, plus (T-007, T-048) verification code resend/verify, forgot/reset password. Run against an API started with SMEM_ENV=dev (the session cookie is not Secure there, so Newman's cookie jar sends it over http). Step 1 registers with locale vi (T-045: the stored locale is returned; the default en and the vi verification email are covered by the Go integration tests). Register is limited to 5 per hour per IP and each run makes 3 counted attempts (the register, the duplicate and, for the username steps, a second account), so a second run within the hour gets 429: run `make reset-limits` (the limiters live in Redis) or set SMEM_RATE_REGISTER_PER_HOUR higher. Forgot-password is limited to 5 per hour per IP and each run makes 2 counted calls, so a third run within the hour gets 429 (run `make reset-limits` to reset). Email one-time codes (T-048): the full flow uses the dev-only fixed code 123123 (`SMEM_DEV_FIXED_OTP`, default in `.env.example`; the API must run with it and SMEM_ENV=dev, otherwise the verify and reset steps fail). Wrong, malformed, locked (5 wrong attempts) and weak-password cases run here too. Code expiry (15 and 30 minutes), the real random codes, parallel guesses and the 503 when Redis is down are covered by the Go integration tests. Limits per run: 3 of 3 resends, about 10 of 20 verify attempts, 4 of 20 reset attempts per IP; two back-to-back runs fit. Google sign-in (T-011): the last folder needs the API started with the SMEM_GOOGLE_* variables (README, 'Google sign-in setup'); requests there do not follow redirects. Username (T-081, steps 37-55 of the full flow): default name, no-op, invalid/reserved/taken, the 7-day cooldown with Retry-After; the 20 failed attempts per hour limit and the 7-day clock edges run in the Go integration tests (they need a test clock).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -15,6 +15,30 @@
     },
     {
       "key": "oidcState",
+      "value": ""
+    },
+    {
+      "key": "uDefault",
+      "value": ""
+    },
+    {
+      "key": "uName",
+      "value": ""
+    },
+    {
+      "key": "uNameMixed",
+      "value": ""
+    },
+    {
+      "key": "uNameFree",
+      "value": ""
+    },
+    {
+      "key": "uNext",
+      "value": ""
+    },
+    {
+      "key": "email2",
       "value": ""
     }
   ],
@@ -38,6 +62,12 @@
               "pm.collectionVariables.set('displayName', 'Newman Tester Đặng 🎓');",
               "pm.collectionVariables.set('newPassword', 'Fake-Newman-new-pw-' + n); // set by the reset step",
               "pm.collectionVariables.set('fixedOtp', '123123'); // DEV-SHORTCUT(otp): SMEM_DEV_FIXED_OTP in .env.example; the API must run with it (SMEM_ENV=dev)",
+              "// T-081: names for the username steps (unique per run); uNameMixed is the same name in upper case (the API lower-cases it).",
+              "const t = Date.now().toString(36) + Math.floor(Math.random() * 1296).toString(36);",
+              "pm.collectionVariables.set('uName', 'nm.' + t);",
+              "pm.collectionVariables.set('uNameMixed', 'NM.' + t.toUpperCase());",
+              "pm.collectionVariables.set('uNameFree', 'nm.' + t + 'x');",
+              "pm.collectionVariables.set('email2', 'newman2-' + n + '@example.com');",
               "}"
             ]
           }
@@ -77,7 +107,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"user object is exactly the 6 documented fields\", () => { const u = pm.response.json().data; pm.expect(Object.keys(u).sort()).to.eql([\"created_at\",\"display_name\",\"email\",\"email_verified\",\"id\",\"locale\"]); pm.expect(u.id).to.match(/^[0-9A-HJKMNP-TV-Z]{26}$/); pm.expect(u.email_verified).to.eql(false); pm.expect(u.locale).to.eql(\"vi\"); pm.expect(u.created_at).to.be.a(\"number\"); });",
+                  "pm.test(\"user object is exactly the 8 documented fields\", () => { const u = pm.response.json().data; pm.expect(Object.keys(u).sort()).to.eql([\"created_at\",\"display_name\",\"email\",\"email_verified\",\"id\",\"locale\",\"username\",\"username_next_change_at\"]); pm.expect(u.id).to.match(/^[0-9A-HJKMNP-TV-Z]{26}$/); pm.expect(u.email_verified).to.eql(false); pm.expect(u.locale).to.eql(\"vi\"); pm.expect(u.created_at).to.be.a(\"number\"); });",
                   "pm.test(\"no password or hash in the body\", () => pm.expect(pm.response.text().toLowerCase()).to.not.match(/password|argon|hash/));",
                   "pm.test(\"session cookie flags\", () => { const c = pm.response.headers.get(\"Set-Cookie\") || \"\"; pm.expect(c).to.include(\"smem_session=\"); pm.expect(c).to.include(\"HttpOnly\"); pm.expect(c).to.include(\"SameSite=Lax\"); pm.expect(c).to.include(\"Path=/\"); pm.expect(c).to.include(\"Max-Age=2592000\"); });",
                   "pm.test(\"email and display name\", () => { const u = pm.response.json().data; pm.expect(u.email).to.eql(pm.collectionVariables.get(\"email\")); pm.expect(u.display_name).to.eql(pm.collectionVariables.get(\"displayName\")); });",
@@ -111,7 +141,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"user object is exactly the 6 documented fields\", () => { const u = pm.response.json().data; pm.expect(Object.keys(u).sort()).to.eql([\"created_at\",\"display_name\",\"email\",\"email_verified\",\"id\",\"locale\"]); pm.expect(u.id).to.match(/^[0-9A-HJKMNP-TV-Z]{26}$/); pm.expect(u.email_verified).to.eql(false); pm.expect(u.locale).to.eql(\"vi\"); pm.expect(u.created_at).to.be.a(\"number\"); });",
+                  "pm.test(\"user object is exactly the 8 documented fields\", () => { const u = pm.response.json().data; pm.expect(Object.keys(u).sort()).to.eql([\"created_at\",\"display_name\",\"email\",\"email_verified\",\"id\",\"locale\",\"username\",\"username_next_change_at\"]); pm.expect(u.id).to.match(/^[0-9A-HJKMNP-TV-Z]{26}$/); pm.expect(u.email_verified).to.eql(false); pm.expect(u.locale).to.eql(\"vi\"); pm.expect(u.created_at).to.be.a(\"number\"); });",
                   "pm.test(\"same user\", () => pm.expect(pm.response.json().data.id).to.eql(pm.collectionVariables.get(\"userId\")));"
                 ]
               }
@@ -217,7 +247,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"user object is exactly the 6 documented fields\", () => { const u = pm.response.json().data; pm.expect(Object.keys(u).sort()).to.eql([\"created_at\",\"display_name\",\"email\",\"email_verified\",\"id\",\"locale\"]); pm.expect(u.id).to.match(/^[0-9A-HJKMNP-TV-Z]{26}$/); pm.expect(u.email_verified).to.eql(false); pm.expect(u.locale).to.eql(\"vi\"); pm.expect(u.created_at).to.be.a(\"number\"); });",
+                  "pm.test(\"user object is exactly the 8 documented fields\", () => { const u = pm.response.json().data; pm.expect(Object.keys(u).sort()).to.eql([\"created_at\",\"display_name\",\"email\",\"email_verified\",\"id\",\"locale\",\"username\",\"username_next_change_at\"]); pm.expect(u.id).to.match(/^[0-9A-HJKMNP-TV-Z]{26}$/); pm.expect(u.email_verified).to.eql(false); pm.expect(u.locale).to.eql(\"vi\"); pm.expect(u.created_at).to.be.a(\"number\"); });",
                   "pm.test(\"no password or hash in the body\", () => pm.expect(pm.response.text().toLowerCase()).to.not.match(/password|argon|hash/));",
                   "pm.test(\"session cookie flags\", () => { const c = pm.response.headers.get(\"Set-Cookie\") || \"\"; pm.expect(c).to.include(\"smem_session=\"); pm.expect(c).to.include(\"HttpOnly\"); pm.expect(c).to.include(\"SameSite=Lax\"); pm.expect(c).to.include(\"Path=/\"); pm.expect(c).to.include(\"Max-Age=2592000\"); });",
                   "pm.test(\"same user id\", () => pm.expect(pm.response.json().data.id).to.eql(pm.collectionVariables.get(\"userId\")));",
@@ -251,7 +281,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"user object is exactly the 6 documented fields\", () => { const u = pm.response.json().data; pm.expect(Object.keys(u).sort()).to.eql([\"created_at\",\"display_name\",\"email\",\"email_verified\",\"id\",\"locale\"]); pm.expect(u.id).to.match(/^[0-9A-HJKMNP-TV-Z]{26}$/); pm.expect(u.email_verified).to.eql(false); pm.expect(u.locale).to.eql(\"vi\"); pm.expect(u.created_at).to.be.a(\"number\"); });"
+                  "pm.test(\"user object is exactly the 8 documented fields\", () => { const u = pm.response.json().data; pm.expect(Object.keys(u).sort()).to.eql([\"created_at\",\"display_name\",\"email\",\"email_verified\",\"id\",\"locale\",\"username\",\"username_next_change_at\"]); pm.expect(u.id).to.match(/^[0-9A-HJKMNP-TV-Z]{26}$/); pm.expect(u.email_verified).to.eql(false); pm.expect(u.locale).to.eql(\"vi\"); pm.expect(u.created_at).to.be.a(\"number\"); });"
                 ]
               }
             }
@@ -1453,6 +1483,775 @@
                 "auth",
                 "resend-verification"
               ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"error code ERROR_UNAUTHORIZED\", () => pm.expect(pm.response.json().status).to.eql(\"ERROR_UNAUTHORIZED\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "37. Login with the new password (session for the username steps)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"{{email}}\", \"password\": \"{{newPassword}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "38. Username is the default user-xxxxxxxx and no change is pending",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/user/get-me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "get-me"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"default username from the id, next change null\", () => { const u = pm.response.json().data; pm.expect(u.username).to.match(/^user-[0-9a-z]{8}$/); pm.expect(u.username).to.eql(\"user-\" + pm.collectionVariables.get(\"userId\").slice(-8).toLowerCase()); pm.expect(u.username_next_change_at).to.eql(null); pm.collectionVariables.set(\"uDefault\", u.username); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "39. Set the current name (upper case, spaces) - 200 no-op, no cooldown",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/user/update-username",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "update-username"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\": \"  {{uDefault}}  \"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"same name, still no cooldown\", () => { const u = pm.response.json().data; pm.expect(u.username).to.eql(pm.collectionVariables.get(\"uDefault\")); pm.expect(u.username_next_change_at).to.eql(null); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "40. Username too short - 400 ERROR_INVALID_USERNAME",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/user/update-username",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "update-username"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\": \"ab\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"error code ERROR_INVALID_USERNAME\", () => pm.expect(pm.response.json().status).to.eql(\"ERROR_INVALID_USERNAME\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "41. Username with a double special - 400 ERROR_INVALID_USERNAME",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/user/update-username",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "update-username"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\": \"a..b\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"error code ERROR_INVALID_USERNAME\", () => pm.expect(pm.response.json().status).to.eql(\"ERROR_INVALID_USERNAME\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "42. Username that is not a string - 400 ERROR_PARAM",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/user/update-username",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "update-username"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\": 5}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"error code ERROR_PARAM\", () => pm.expect(pm.response.json().status).to.eql(\"ERROR_PARAM\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "43. Reserved name Admin - 400 ERROR_USERNAME_RESERVED",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/user/update-username",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "update-username"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\": \"Admin\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"error code ERROR_USERNAME_RESERVED\", () => pm.expect(pm.response.json().status).to.eql(\"ERROR_USERNAME_RESERVED\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "44. Someone else's default name - 400 ERROR_USERNAME_RESERVED",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/user/update-username",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "update-username"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\": \"user-zzzzzzzz\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"error code ERROR_USERNAME_RESERVED\", () => pm.expect(pm.response.json().status).to.eql(\"ERROR_USERNAME_RESERVED\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "45. Change without Origin (cookie sent) - 403 ERROR_CSRF_ORIGIN_MISMATCH",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/user/update-username",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "update-username"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\": \"{{uName}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"error code ERROR_CSRF_ORIGIN_MISMATCH\", () => pm.expect(pm.response.json().status).to.eql(\"ERROR_CSRF_ORIGIN_MISMATCH\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "46. First change (upper case input) - 200, lower case, cooldown starts",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/user/update-username",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "update-username"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\": \"{{uNameMixed}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"lower-cased name, next change in about 7 days\", () => { const u = pm.response.json().data; pm.expect(u.username).to.eql(pm.collectionVariables.get(\"uName\")); const d = u.username_next_change_at - Date.now(); pm.expect(d).to.be.within(7 * 864e5 - 36e5, 7 * 864e5 + 36e5); pm.collectionVariables.set(\"uNext\", u.username_next_change_at); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "47. Who am I - new name and the same next change",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/user/get-me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "get-me"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"new name\", () => { const u = pm.response.json().data; pm.expect(u.username).to.eql(pm.collectionVariables.get(\"uName\")); pm.expect(u.username_next_change_at).to.eql(Number(pm.collectionVariables.get(\"uNext\"))); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "48. Second change right away - 429 ERROR_USERNAME_CHANGE_TOO_SOON with Retry-After",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/user/update-username",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "update-username"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\": \"{{uNameFree}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 429\", () => pm.response.to.have.status(429));",
+                  "pm.test(\"error code ERROR_USERNAME_CHANGE_TOO_SOON\", () => pm.expect(pm.response.json().status).to.eql(\"ERROR_USERNAME_CHANGE_TOO_SOON\"));",
+                  "pm.test(\"Retry-After is about 7 days\", () => { const s = Number(pm.response.headers.get(\"Retry-After\")); pm.expect(s).to.be.within(7 * 86400 - 3600, 7 * 86400); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "49. Set the current name again during the cooldown - 200 no-op, cooldown unchanged",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/user/update-username",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "update-username"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\": \"{{uName}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"unchanged cooldown\", () => pm.expect(pm.response.json().data.username_next_change_at).to.eql(Number(pm.collectionVariables.get(\"uNext\"))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "50. Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "logout"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "51. Register a second account",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"{{email2}}\", \"password\": \"{{password}}\", \"display_name\": \"Newman Two\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"default username\", () => pm.expect(pm.response.json().data.username).to.match(/^user-[0-9a-z]{8}$/));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "52. Take the first account's name (other case) - 409 ERROR_USERNAME_TAKEN",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/user/update-username",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "update-username"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\": \"{{uNameMixed}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"error code ERROR_USERNAME_TAKEN\", () => pm.expect(pm.response.json().status).to.eql(\"ERROR_USERNAME_TAKEN\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "53. Take a free name - 200 (a failed attempt did not start the cooldown)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/user/update-username",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "update-username"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\": \"{{uNameFree}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"changed\", () => pm.expect(pm.response.json().data.username).to.eql(pm.collectionVariables.get(\"uNameFree\")));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "54. Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "logout"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "55. Change the username without a session - 401",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/user/update-username",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "update-username"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\": \"{{uName}}\"}"
             }
           },
           "event": [

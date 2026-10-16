@@ -50,6 +50,7 @@ func (h *Handler) Routes(mux *http.ServeMux) {
 		mux.HandleFunc("GET /api/auth/google-callback", h.googleCallback)
 	}
 	mux.Handle("GET /api/user/get-me", h.RequireUser(http.HandlerFunc(h.me)))
+	mux.Handle("POST /api/user/update-username", signedIn(h.updateUsername))
 }
 
 type ctxKey struct{}
@@ -173,10 +174,22 @@ func (h *Handler) resetPassword(w http.ResponseWriter, r *http.Request) {
 	h.respond(w, r, nil, h.svc.ResetPassword(r.Context(), h.clientIP(r), in.Email, in.Code, in.Password))
 }
 
-// me answers with the user itself; a field added to User (T-081: username) shows up here with no other change.
+// me answers with the user itself; a field added to User (like the username of T-081) shows up here with no other change.
 func (h *Handler) me(w http.ResponseWriter, r *http.Request) {
 	u, _ := UserFrom(r.Context())
 	httpx.OK(w, r, u)
+}
+
+func (h *Handler) updateUsername(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Username string `json:"username"`
+	}
+	if !decode(w, r, &in) {
+		return
+	}
+	u, _ := UserFrom(r.Context())
+	nu, err := h.svc.UpdateUsername(r.Context(), u, in.Username)
+	h.respond(w, r, nu, err)
 }
 
 // respond answers data, or err when there is one.
@@ -202,11 +215,15 @@ var codeClientClosed = apperr.NewCode("ERROR_CLIENT_CLOSED", 499)
 func (h *Handler) fail(w http.ResponseWriter, r *http.Request, err error) {
 	var rl RateLimitedError
 	var sse *SessionStoreError
+	var cd UsernameCooldownError
 	rid := httpx.RequestIDFrom(r.Context())
 	switch {
 	case errors.As(err, &rl):
 		w.Header().Set("Retry-After", strconv.Itoa(max(int((rl.RetryAfter+time.Second-1)/time.Second), 1)))
 		err = apperr.New(apperr.RateLimited, "too many attempts")
+	case errors.As(err, &cd):
+		w.Header().Set("Retry-After", strconv.Itoa(max(int((cd.RetryAfter+time.Second-1)/time.Second), 1)))
+		err = apperr.New(CodeUsernameChangeTooSoon, "username can be changed again at "+cd.Next.Format(time.RFC3339))
 	case errors.Is(err, ratelimit.ErrUnavailable): // a fail-closed limiter could not count (already logged, throttled)
 		w.Header().Set("Retry-After", retryStore)
 		err = apperr.New(CodeLimiterUnavailable, "rate limiter unavailable, retry shortly")

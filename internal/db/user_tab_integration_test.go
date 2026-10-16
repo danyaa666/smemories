@@ -82,8 +82,8 @@ func TestMigrateUserTabConventions(t *testing.T) {
 		}
 	}
 	// The email column stays binary: case and accent make different accounts, and the exact address is unique.
-	exec(`INSERT INTO user_tab (public_id, email, display_name, created_at, updated_at) VALUES ('U5', 'A@example.com', 'A', 1, 1)`)
-	if _, err := d.ExecContext(ctx, `INSERT INTO user_tab (public_id, email, display_name, created_at, updated_at) VALUES ('U6', 'ánh@example.com', 'A', 1, 1)`); err == nil {
+	exec(`INSERT INTO user_tab (public_id, email, display_name, username, created_at, updated_at) VALUES ('U5', 'A@example.com', 'A', 'user-u5', 1, 1)`)
+	if _, err := d.ExecContext(ctx, `INSERT INTO user_tab (public_id, email, display_name, username, created_at, updated_at) VALUES ('U6', 'ánh@example.com', 'A', 'user-u6', 1, 1)`); err == nil {
 		t.Fatal("a duplicate email was accepted")
 	}
 	exec(`DELETE FROM user_tab WHERE public_id = 'U5'`)
