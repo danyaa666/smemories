@@ -3029,7 +3029,7 @@ Moves the yearbook endpoints to /api/yearbook/*, introduces yearbook.Service (ru
 - **Branch:** task/t-071-e10-api-v2-auth-and-user-domain-remove-t
 - **PR:** https://github.com/danyaa666/smemories/pull/58
 - **Updated:** 2026-10-16 01:37Z by human
-- **Comments-seen:** 6
+- **Comments-seen:** 7
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/09-api-auth.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -3416,7 +3416,7 @@ Account page shows the username and lets the user change it (weekly limit, local
 - **Branch:** task/t-083-e01-web-design-system-foundation-tokens-
 - **PR:** 57
 - **Updated:** 2026-10-16 01:37Z by human
-- **Comments-seen:** 7
+- **Comments-seen:** 8
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/15-web-design-system-foundation.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
