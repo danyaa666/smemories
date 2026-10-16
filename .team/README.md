@@ -12,7 +12,7 @@
 |---|---:|---|
 | BACKLOG | 11 | T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050 |
 | TODO | 2 | T-032, T-085 |
-| IN_PROGRESS | 1 | T-061 |
+| READY_FOR_QA | 1 | T-061 |
 | QA_FAIL | 1 | T-060 |
 | MERGED | 3 | T-059, T-072, T-079 |
 | DONE | 59 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-073, T-074, T-075, T-076, T-077, T-078, T-080, T-081, T-082, T-083 |
@@ -22,7 +22,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?)
 
-_Board last written 2026-10-16 19:11Z_
+_Board last written 2026-10-16 19:16Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -2813,7 +2813,7 @@ Navy and gold canvas as the second HTML template.
 - 2026-10-16 19:11Z · leader · Leader guidance for the rework (QA_FAIL, one major; everything else passed): the real PDF LOSES owner text that the screen shows. On the profile page the favourite-quote text and the signature (owner name + sign line) are missing at A5, A4 and Letter when the profile fields are long but valid: hobbies 300, future_plans 300, quote 500 characters, no photo => neither the quote marker nor the name in the PDF; 100/100/200 prints fine; 300/300/100 loses the name at Letter only. Silent loss of the owner's own text is worse than clipping. Fix at the cause in print (compare with how T-059 memory-book lays out the profile and with the contain:size lesson; the profile boxes must be height-bounded AND the shrink-to-fit must run for every profile field, or the layout must give the quote and the signature a reserved area that long fields cannot push out), at A5/A4/Letter. Then extend make print-check with PROFILE cases at the validated maximum lengths (hobbies 300, future_plans 300, quote 500, motto/name at their maximum, with and without the portrait): assert via pdftotext -bbox that the quote, the name and the sign line are present and inside the page and their boxes. IMPORTANT: run the same profile cases against the T-059 memory-book template and the T-058 basic template; if either loses text too, fix it in this PR (same cause, small) and say so. Also decide cheaply: the public form still offers 'Add photo' although navy-classic never prints friends' photos; leave it as is, we will drive it from the template manifest later (do not change the form here). Strings bookPages.navy.* accepted. CI green on the new head, READY_FOR_QA.
 
 ### T-061 — [E05] Web: template picker and print screen with device guidance
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -2821,11 +2821,11 @@ Navy and gold canvas as the second HTML template.
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-061-e05-web-template-picker-and-print-screen
-- **PR:** —
-- **Updated:** 2026-10-16 18:48Z by dev
-- **Comments-seen:** 1
+- **PR:** https://github.com/danyaa666/smemories/pull/71
+- **Updated:** 2026-10-16 19:16Z by dev
+- **Comments-seen:** 2
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/12-template-picker-and-print-screen.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2835,6 +2835,7 @@ Pick a template for the page size, print with per-browser guidance, anonymous wo
 
 #### Comments
 - 2026-10-16 18:24Z · leader · unblocked: T-058 and T-059 merged. AC1 and AC3 were rewritten to the v2 routes (GET /api/template/get-list, template_id via POST /api/yearbook/update, public print-feedback counter). Risk high: owner approval before merge. T-060 (navy-classic) is in progress; the picker works with one template and lists the second when it lands.
+- 2026-10-16 19:16Z · dev · PR #71, head c7a8fd1, CI green (go, go-integration, security, web). Whole task in one PR: GET /api/template/get-list, template_id on yearbook create/update (ERROR_INVALID_TEMPLATE), POST /api/print-feedback/create (table print_feedback_tab, goose migration 20261017100000), picker + per-UA guide + feedback on /yearbooks/:id/book, openapi/schema.d.ts, postman/templates.postman_collection.json (newman green), docs. Real Chromium at 320/375/1280 checked; make print-check 19/19 (run with PRINT_CHECK_PORT=5683 because :5199 is taken). Not tested on real Safari/Android/iOS devices (OWNER-TESTS). Vietnamese strings are listed in the PR. Two existing integration tests adjusted (db username migration, notes delete registry).
 
 ### T-062 — [E01] CI: get the newest Go patch straight from go.dev (no manifest lag)
 - **Status:** DONE
