@@ -279,6 +279,44 @@ func (s *Service) Delete(ctx context.Context, ownerID uint64, mediaID string) er
 	return s.store.removeRow(ctx, m.RowID, s.refs)
 }
 
+// DeleteObjects removes the stored objects of the photos with these row ids and leaves the rows. A moderation delete runs it
+// before the rows go, so an object store failure (ERROR_STORAGE_ERROR) changes nothing in the database and the caller retries;
+// objects that are already gone are not an error.
+func (s *Service) DeleteObjects(ctx context.Context, rowIDs []int64) error {
+	ms, err := s.store.byRows(ctx, rowIDs)
+	if err != nil {
+		return err
+	}
+	var keys []string
+	for _, m := range ms {
+		keys = append(keys, m.keys()...)
+	}
+	if len(keys) == 0 {
+		return nil
+	}
+	if err := s.st.Delete(ctx, keys...); err != nil {
+		return storageFailed(err)
+	}
+	return nil
+}
+
+// DeleteRows deletes photo rows in the caller's transaction, which already holds the yearbook row lock: the covers, profile
+// photos and note links that point at each photo are cleared first (the RefClearer path of Delete), then the rows go.
+// ponytail: one clearer round trip per photo (at most 300 per moderation delete); batch it if photo deletes get hot.
+func (s *Service) DeleteRows(ctx context.Context, tx *sql.Tx, rowIDs []int64) error {
+	for _, id := range rowIDs {
+		if s.refs != nil {
+			if err := s.refs.ClearMediaRefs(ctx, tx, id); err != nil {
+				return err
+			}
+		}
+		if _, err := tx.ExecContext(ctx, `DELETE FROM media_tab WHERE id = ?`, id); err != nil {
+			return dbError(err, "delete photo")
+		}
+	}
+	return nil
+}
+
 // DeleteByYearbook deletes the photo rows of a yearbook in the yearbook service's delete transaction (yearbook.ChildPurger).
 // The objects were removed before, by PurgeYearbook.
 func (s *Service) DeleteByYearbook(ctx context.Context, tx *sql.Tx, yearbookID uint64) error {

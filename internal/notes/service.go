@@ -72,17 +72,24 @@ type Service struct {
 	now                        func() time.Time
 	misses, all                ratelimit.Limiter // public routes, per client IP
 	subIPHr, subIPDay, subColl ratelimit.Limiter // submissions per IP per hour and day, per collection per hour
+
+	mod        modStore          // moderation (moderation.go)
+	purge      notePhotos        // photos of deleted notes
+	tokens     Tokens            // next_id tokens of the note list
+	moderation ratelimit.Limiter // moderation writes per user
 }
 
-// NewService builds the service; now may be nil (time.Now). mediaSvc stores the photos of submissions.
-func NewService(st *Store, mediaSvc *media.Service, limiters *ratelimit.Factory, logger *slog.Logger, now func() time.Time) *Service {
+// NewService builds the service; now may be nil (time.Now). mediaSvc stores the photos of submissions; tokens seals the
+// next_id of the owner's note list.
+func NewService(st *Store, mediaSvc *media.Service, tokens Tokens, limiters *ratelimit.Factory, logger *slog.Logger, now func() time.Time) *Service {
 	if now == nil {
 		now = time.Now
 	}
 	return &Service{store: st, media: mediaSvc, logger: logger, now: now,
 		misses: limiters.Open("public_misses", missesPerWindow, publicWindow), all: limiters.Open("public_all", allPerWindow, publicWindow),
 		subIPHr: limiters.Open("submit_ip_hour", submitPerIPHour, time.Hour), subIPDay: limiters.Open("submit_ip_day", submitPerIPDay, 24*time.Hour),
-		subColl: limiters.Open("submit_collection_hour", submitPerCollectionHour, time.Hour)}
+		subColl: limiters.Open("submit_collection_hour", submitPerCollectionHour, time.Hour),
+		mod:     st, purge: mediaSvc, tokens: tokens, moderation: limiters.Open("note_moderation", moderationPerMinute, time.Minute)}
 }
 
 // CreateInput is a request for a new link. DeadlineAt is Unix ms.

@@ -62,6 +62,10 @@ func (h *Handler) Routes(mux *http.ServeMux) {
 	mux.Handle("POST /api/note-collection/create", write(h.create))
 	mux.Handle("GET /api/note-collection/get-list", h.requireUser(http.HandlerFunc(h.list)))
 	mux.Handle("POST /api/note-collection/revoke", write(h.revoke))
+	mux.Handle("GET /api/note/get-list", h.requireUser(http.HandlerFunc(h.listNotes)))
+	mux.Handle("POST /api/note/batch-update-status", write(h.updateStatus))
+	mux.Handle("POST /api/note/reorder", write(h.reorder))
+	mux.Handle("POST /api/note/batch-delete", write(h.deleteNotes))
 	// Public routes: no session, no cookie, no CORS; the token is the credential. The access log records the route, never the query.
 	mux.HandleFunc("GET /api/public-collect/get", h.lookup)
 	mux.Handle("POST /api/public-collect/submit-note", httpx.WithTimeout(submitRouteTimeout, httpx.WithBodyLimit(maxBody, http.HandlerFunc(h.submit))))

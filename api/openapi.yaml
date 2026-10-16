@@ -1074,6 +1074,208 @@ paths:
         "413": {$ref: "#/components/responses/ApiTooLarge"}
         "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
         "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/note/get-list:
+    get:
+      operationId: listNotes
+      tags: [notes]
+      summary: List a yearbook's notes for moderation
+      description: >-
+        Called by the signed-in owner's inbox. Returns one page of the notes of a yearbook and, in `counts`, the number of notes
+        of the whole book per status (for the tabs and the header), whatever the filter. `status` is optional: `pending` (not
+        looked at yet), `approved` (in the book) or `hidden`; omitted means all. `status=approved` is in book order (`position`
+        1, 2, 3 ...); every other value is newest first. `limit` defaults to 50, at most 100 (`ERROR_PARAM` above). `next_id` is
+        the opaque cursor of the previous page, bound to this yearbook and this `status`; a malformed, tampered or foreign one is
+        `ERROR_PARAM`. Items carry the answers as stored (the display name is `answers.name`, the client falls back to
+        "Anonymous"), photo ids only (content through `media/get-content`), the label of the link the note arrived through, and
+        no token. Needs a verified email (`ERROR_EMAIL_NOT_VERIFIED`). A missing yearbook and one owned by someone else both
+        answer `ERROR_NOT_FOUND`. Safe to repeat.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: The yearbook does not exist or belongs to someone else; the two cannot be told apart.}
+        - {code: ERROR_EMAIL_NOT_VERIFIED, description: The owner's email address is not verified yet.}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
+      security:
+        - sessionCookie: []
+      parameters:
+        - {name: yearbook_id, in: query, required: true, schema: {type: string}, description: Yearbook ULID.}
+        - {name: status, in: query, required: false, schema: {type: string, enum: [pending, approved, hidden]}, description: "Only notes in this status; omitted means all. `approved` is in book order, the others newest first."}
+        - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100, default: 50}, description: Page size.}
+        - {name: next_id, in: query, required: false, schema: {type: string}, description: "Opaque cursor from the previous page's `next_id`; omit for the first page."}
+      responses:
+        "200":
+          description: One page of notes and the counts of the whole yearbook.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/NoteListResponse"}
+              examples:
+                approved:
+                  value:
+                    status: OK
+                    data:
+                      items:
+                        - {id: 01K7QB1B2C3D4E5F6G7H8J9K0M, status: approved, answers: {name: Minh Khoa, relationship: Classmate, message: Thanks for everything}, photos: [{id: 01K7QC1B2C3D4E5F6G7H8J9K0M}], link_label: Cafe friends, created_at: 1760000100000, position: 1}
+                      next_id: ""
+                      counts: {all: 5, pending: 1, approved: 3, hidden: 1}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/note/batch-update-status:
+    post:
+      operationId: updateNoteStatus
+      tags: [notes]
+      summary: Approve, hide or reset the status of up to 100 notes
+      description: >-
+        Called by the owner's inbox. Sets `status` (`pending`, `approved` or `hidden`; anything else is `ERROR_PARAM`) on 1 to 100
+        notes of one yearbook (`ids` must not repeat; more than 100 is `ERROR_TOO_MANY_IDS`). All or nothing, in one transaction:
+        if any id is not a note of that yearbook, or of someone else's, the whole batch is `ERROR_NOT_FOUND` and nothing changes.
+        Approving appends the notes to the end of the approved order in the order of `ids`; a note that is already approved keeps
+        its place. Hiding or setting a note to `pending` removes its position and closes the gap, so positions of approved notes
+        are always 1..n. One note is a batch of one. Setting the status a note already has changes nothing and succeeds, so a
+        lost answer can be retried. Returns the new `counts`. Needs a verified email. At most 120 moderation writes per user per
+        minute (`ERROR_RATE_LIMITED`, with `Retry-After`). A request with the session cookie must come from an allowed Origin.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: The yearbook, or at least one of the ids, does not exist or belongs to someone else; nothing was changed.}
+        - {code: ERROR_TOO_MANY_IDS, description: More than 100 ids.}
+        - {code: ERROR_EMAIL_NOT_VERIFIED, description: The owner's email address is not verified yet.}
+        - {code: ERROR_RATE_LIMITED, description: "More than 120 moderation writes in a minute. Retry after `Retry-After`."}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/NoteUpdateStatusRequest"}
+            examples:
+              approve:
+                value: {yearbook_id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, ids: [01K7QB1B2C3D4E5F6G7H8J9K0M, 01K7QB2B2C3D4E5F6G7H8J9K0M], status: approved}
+      responses:
+        "200":
+          description: Updated.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/NoteCountsResponse"}
+              examples:
+                updated:
+                  value: {status: OK, data: {counts: {all: 5, pending: 0, approved: 4, hidden: 1}}}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "429": {$ref: "#/components/responses/ApiRateLimited"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/note/reorder:
+    post:
+      operationId: reorderNotes
+      tags: [notes]
+      summary: Put the approved notes in a new order
+      description: >-
+        Called by the owner's inbox after a drag. `ids` must be exactly the notes that are approved right now, in the wanted order
+        (at most 300; a repeated id is `ERROR_PARAM`, more than 300 is `ERROR_TOO_MANY_IDS`). If the approved set differs, for
+        example a note was approved or hidden meanwhile, or an id is not an approved note of the yearbook, the answer is
+        `ERROR_ORDER_STALE` (409), nothing changes and the client reloads the list. Positions stay 1..n. Repeating a successful
+        reorder succeeds. An empty `ids` is valid when no note is approved. Needs a verified email. At most 120 moderation writes
+        per user per minute. A request with the session cookie must come from an allowed Origin.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: The yearbook does not exist or belongs to someone else.}
+        - {code: ERROR_ORDER_STALE, description: "`ids` is not exactly the set of approved notes; nothing was changed. Reload the list."}
+        - {code: ERROR_TOO_MANY_IDS, description: More than 300 ids.}
+        - {code: ERROR_EMAIL_NOT_VERIFIED, description: The owner's email address is not verified yet.}
+        - {code: ERROR_RATE_LIMITED, description: "More than 120 moderation writes in a minute. Retry after `Retry-After`."}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/NoteReorderRequest"}
+            examples:
+              reorder:
+                value: {yearbook_id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, ids: [01K7QB2B2C3D4E5F6G7H8J9K0M, 01K7QB1B2C3D4E5F6G7H8J9K0M]}
+      responses:
+        "200":
+          description: Reordered.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/EmptyResponse"}
+              examples:
+                reordered: {value: {status: OK, data: {}}}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "409": {$ref: "#/components/responses/ApiConflict"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "429": {$ref: "#/components/responses/ApiRateLimited"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/note/batch-delete:
+    post:
+      operationId: deleteNotes
+      tags: [notes]
+      summary: Delete up to 100 notes with their photos
+      description: >-
+        Called by the owner's inbox (the web delays the call so the owner can undo, see T-017). Deletes 1 to 100 notes of one
+        yearbook (`ids` must not repeat; more than 100 is `ERROR_TOO_MANY_IDS`) and their photos: the stored objects first, then
+        the note, note-photo and photo rows in one transaction. Hard delete, there is no undo on the server. All or nothing: any id
+        that is not a note of that yearbook, or of someone else's, is `ERROR_NOT_FOUND` for the whole batch. If the object store
+        fails the answer is `ERROR_STORAGE_ERROR` (502) and the notes are still there: retry the same call. Notes that were already
+        deleted are `ERROR_NOT_FOUND`, so after a lost answer the client reloads. The positions of the remaining approved notes
+        close up. A photo that is also the yearbook's cover or profile photo is cleared there. Returns the new `counts`. Needs a
+        verified email. At most 120 moderation writes per user per minute. A request with the session cookie must come from an
+        allowed Origin.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: The yearbook, or at least one of the ids, does not exist or belongs to someone else; nothing was deleted.}
+        - {code: ERROR_TOO_MANY_IDS, description: More than 100 ids.}
+        - {code: ERROR_EMAIL_NOT_VERIFIED, description: The owner's email address is not verified yet.}
+        - {code: ERROR_RATE_LIMITED, description: "More than 120 moderation writes in a minute. Retry after `Retry-After`."}
+        - {code: ERROR_STORAGE_ERROR, description: The object store failed; nothing was changed, retry later.}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/NoteDeleteRequest"}
+            examples:
+              delete:
+                value: {yearbook_id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, ids: [01K7QB1B2C3D4E5F6G7H8J9K0M]}
+      responses:
+        "200":
+          description: Deleted.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/NoteCountsResponse"}
+              examples:
+                deleted:
+                  value: {status: OK, data: {counts: {all: 4, pending: 0, approved: 3, hidden: 1}}}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "429": {$ref: "#/components/responses/ApiRateLimited"}
+        "502": {$ref: "#/components/responses/ApiBadGateway"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
   /api/public-collect/get:
     get:
       operationId: getPublicCollect
@@ -1637,6 +1839,100 @@ components:
       required: [id]
       properties:
         id: {type: string, description: Required. ULID of a collection of one of the caller's yearbooks.}
+    NoteCounts:
+      type: object
+      description: The notes of a whole yearbook by status.
+      required: [all, pending, approved, hidden]
+      properties:
+        all: {type: integer, minimum: 0, description: Notes in any status (the sum of the three below).}
+        pending: {type: integer, minimum: 0, description: Notes the owner has not looked at yet.}
+        approved: {type: integer, minimum: 0, description: Notes that are in the book.}
+        hidden: {type: integer, minimum: 0, description: Notes the owner hid.}
+    NoteCountsResponse:
+      type: object
+      required: [status, data]
+      properties:
+        status: {type: string, const: OK, description: Always `OK` on success.}
+        data:
+          type: object
+          description: The counts after the change.
+          required: [counts]
+          properties:
+            counts: {$ref: "#/components/schemas/NoteCounts"}
+    NoteItem:
+      type: object
+      description: One note as the owner sees it.
+      required: [id, status, answers, photos, link_label, created_at, position]
+      properties:
+        id: {type: string, description: "The note's public id, a ULID."}
+        status: {type: string, enum: [pending, approved, hidden], description: "`pending` not looked at yet, `approved` in the book, `hidden` kept out of it."}
+        answers:
+          type: object
+          description: The friend's answers as stored, field id to text (`name`, `relationship`, `message`, ...; docs/note-fields.md). The display name is `answers.name`; the client shows "Anonymous" when it is missing.
+          additionalProperties: {type: string}
+        photos:
+          type: array
+          description: The note's photos in order (at most 3). Content is read with `GET /api/media/get-content?id=`.
+          items:
+            type: object
+            required: [id]
+            properties:
+              id: {type: string, description: "The photo's public id, a ULID."}
+        link_label: {type: string, description: Label of the collection link the note came through; empty when the link had none.}
+        created_at: {type: integer, format: int64, description: "When the friend sent the note, Unix ms."}
+        position: {type: [integer, "null"], minimum: 1, description: "1-based place among the approved notes; null unless `status` is `approved`."}
+    NoteListResponse:
+      type: object
+      required: [status, data]
+      properties:
+        status: {type: string, const: OK, description: Always `OK` on success.}
+        data:
+          type: object
+          description: One page of notes and the counts of the whole yearbook.
+          required: [items, next_id, counts]
+          properties:
+            items:
+              type: array
+              description: "The notes: book order for `status=approved`, newest first otherwise."
+              items: {$ref: "#/components/schemas/NoteItem"}
+            next_id: {type: string, description: "Opaque cursor for the next page; the empty string on the last page."}
+            counts: {$ref: "#/components/schemas/NoteCounts"}
+    NoteUpdateStatusRequest:
+      type: object
+      additionalProperties: false
+      required: [yearbook_id, ids, status]
+      properties:
+        yearbook_id: {type: string, description: Required. ULID of a yearbook the caller owns.}
+        ids:
+          type: array
+          description: "Required. 1 to 100 note ULIDs of that yearbook, no repeats. When approving, the order sets the order at the end of the book."
+          minItems: 1
+          maxItems: 100
+          items: {type: string}
+        status: {type: string, enum: [pending, approved, hidden], description: "Required. The status to set: `pending`, `approved` or `hidden`."}
+    NoteReorderRequest:
+      type: object
+      additionalProperties: false
+      required: [yearbook_id, ids]
+      properties:
+        yearbook_id: {type: string, description: Required. ULID of a yearbook the caller owns.}
+        ids:
+          type: array
+          description: "Required. Exactly the ULIDs of the notes that are approved now, in the wanted order, no repeats. At most 300; may be empty only when no note is approved."
+          maxItems: 300
+          items: {type: string}
+    NoteDeleteRequest:
+      type: object
+      additionalProperties: false
+      required: [yearbook_id, ids]
+      properties:
+        yearbook_id: {type: string, description: Required. ULID of a yearbook the caller owns.}
+        ids:
+          type: array
+          description: "Required. 1 to 100 note ULIDs of that yearbook, no repeats."
+          minItems: 1
+          maxItems: 100
+          items: {type: string}
     PublicCollectGetResponse:
       type: object
       required: [status, data]

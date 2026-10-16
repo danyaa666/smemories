@@ -46,6 +46,8 @@ type flakyStore struct {
 	puts    int
 	failAt  int            // fail the nth put (1-based); 0 = never
 	afterFn func(puts int) // called after every successful put
+
+	failDelete bool // fail every Delete (an object store outage)
 }
 
 func (f *flakyStore) Put(ctx context.Context, key, ct string, data []byte) error {
@@ -71,6 +73,12 @@ func (f *flakyStore) Put(ctx context.Context, key, ct string, data []byte) error
 }
 
 func (f *flakyStore) Delete(ctx context.Context, keys ...string) error {
+	f.mu.Lock()
+	down := f.failDelete
+	f.mu.Unlock()
+	if down {
+		return errors.New("injected delete failure")
+	}
 	if err := f.Storage.Delete(ctx, keys...); err != nil {
 		return err
 	}
