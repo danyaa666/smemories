@@ -10,19 +10,18 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 12 | T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-061 |
-| TODO | 2 | T-032, T-085 |
+| BACKLOG | 11 | T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050 |
+| TODO | 3 | T-032, T-061, T-085 |
 | IN_PROGRESS | 1 | T-060 |
-| IN_QA | 1 | T-059 |
-| MERGED | 2 | T-072, T-079 |
+| MERGED | 3 | T-059, T-072, T-079 |
 | DONE | 59 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-073, T-074, T-075, T-076, T-077, T-078, T-080, T-081, T-082, T-083 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-072 ([E10] Quality sweep: mnd, forbidigo, pointer parameters, pool defaults, remove the transition switch); T-079 ([E01] Make the timing-sensitive integration tests tolerant of a starved CI runner)
+**Awaiting your review (MERGED):** T-059 ([E05] HTML template memory-book (design temp1)); T-072 ([E10] Quality sweep: mnd, forbidigo, pointer parameters, pool defaults, remove the transition switch); T-079 ([E01] Make the timing-sensitive integration tests tolerant of a starved CI runner)
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?)
 
-_Board last written 2026-10-16 18:19Z_
+_Board last written 2026-10-16 18:24Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -2633,7 +2632,7 @@ Fixed-size HTML pages, pagination, text fit, print CSS, readiness gate and a hea
 - 2026-10-16 11:13Z · human · accepted by owner
 
 ### T-059 — [E05] HTML template memory-book (design temp1)
-- **Status:** IN_QA
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
@@ -2641,11 +2640,11 @@ Fixed-size HTML pages, pagination, text fit, print CSS, readiness gate and a hea
 - **Risk:** low
 - **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** —
 - **Branch:** task/t-059-e05-html-template-memory-book-design-tem
 - **PR:** https://github.com/danyaa666/smemories/pull/68
-- **Updated:** 2026-10-16 18:17Z by qa
-- **Comments-seen:** 5
+- **Updated:** 2026-10-16 18:24Z by leader
+- **Comments-seen:** 7
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/10-html-template-memory-book.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2751,6 +2750,15 @@ Pastel Memory Book canvas as an HTML template, EN and VI, four page kinds.
   # todo 0
   # duration_ms 9847.317833 with a cut-off note (the 400-line message and a 2000-char single paragraph) asserting no text outside its card box in the PDF (e.g. pdftotext -bbox or the text positions vs the card rectangles) so this cannot regress; add the same case to the T-058 basic template if it is not already covered. Everything else is accepted as built (manifest, fonts, decisions 1-5). Non-blocking, leave them: inbox extra-answer order and the thank-you card quoting how_we_met (pre-existing). CI green on the new head, READY_FOR_QA.
 - 2026-10-16 18:16Z · dev · Rework 1: QA major (cut-off note ran out of its card in the PRINTED PDF) fixed at the cause. In print the size of the flex-sized text boxes .mb-lines and .mb-motto-text came from layout, and Chromium's print fragmentation let overflowing lines run out of them (overflow:hidden, contain:paint, overflow:clip, clip-path did not stop it; contain:size does: the box size is independent of its text, so the text is clipped at the box). memory.css: contain:size on both. Covered by 6 new make-print-check tests (memory-book and basic x A5/A4/Letter): fixture cutOff = 400-line message ('Dong\n' x 400) and 2000-char single paragraph; pdftotext -bbox asserts every word of both notes has its centre inside its text box in the PDF; verified the 3 memory-book tests FAIL without the fix (Dong at y 0.937 vs box bottom 0.928) and pass with it; basic already clipped and is now covered too. make print-check 19/19, web lint/test/build green, merged develop, CI green (go, go-integration, security, web) on head 68d7372. Verify: print-check cutoff tests; open the printed note 1 on A5 with the 400-line message.
+- 2026-10-16 18:23Z · qa · Re-verify of rework 1, PR #68 head 68d7372 (CI go/go-integration/security/web all green). Earlier failure (cut-off note ran out of the Message card in the printed PDF) is FIXED.
+  Setup: own API build of the branch + own Vite (15159) + private DB smem_test_t059b at the branch schema (migrations applied), Redis db 13, template_id set by SQL, page_size switched by SQL per size; fixture = earlier 21-note fixture (note 5 = 2000-char emoji paragraph) plus 8 new notes: 'Cắt Dài' (400 x 'Dòng\n' message, 1 photo), 'Cắt Đoạn' (2000-char single paragraph), short 'Ok!', emoji, Vietnamese diacritics, 3 photos, long-but-fitting, no photo. Printed with Chromium Page.printToPDF (print media, preferCSSPageSize).
+  1. Cut-off clipping (AC: no text outside its card) -> A5/A4/Letter each 32 pages, exact sizes 420x594.96 / 594.96x841.92 / 612x792 pt, all fonts embedded. pdftotext -bbox: 'Dòng' words only on the Cắt Dài page, last word yMax A5 554.5 (earlier failing run 592 of 595), A4 786.3, Letter 724.9, each above the footer text (A5 566, A4 802, Letter 750). Page images viewed: the last visible line is cut at the card's bottom edge, nothing over the footer, at all 3 sizes. The 2000-char paragraph note (Cắt Đoạn) also stays inside the card at all 3 sizes.
+  2. Print screen lists the cut notes: 'Cắt Dài, 5 pt, vẫn bị cắt bớt' (A5; 7.5 pt at A4/Letter) with a working 'Mở trong hộp thư' link (clicked: lands on /notes?note=<id>, that card focused and visible).
+  3. contain:size did not distort normal notes: A5 run vs my earlier passing PDF (out/real.pdf, same fixture, 24 pages/21 photos): pages 1-23 (cover, profile/motto, 21 notes incl. the 2000-char and the medium note) have word boxes identical to within 0.5 pt, same text, and 50-dpi page images with 0 differing pixels; back page identical (0 diff). The 8 added notes (short, medium, emoji, diacritics, 3 photos, no photo, long-but-fitting) viewed as contact sheets at A5 and Letter: boxes, ruled lines, photos, polaroid placeholder all normal.
+  4. Fidelity: node tools/print-check/fidelity.mjs regenerated the 4 pictures: 0 differing pixels vs committed docs/templates/memory-book-fidelity-*.jpg; largest edge delta 1.1 mm (<= 1.5 tolerance).
+  5. make print-check: 19/19 pass (incl. the 6 new cut-off tests). web: lint, typecheck, lint:i18n, check:api ok; vitest 18 files / 290 tests pass; build ok.
+  Non-blocking (unchanged): inbox extra-answer order and thank-you card quoting how_we_met (pre-existing). Branch is behind develop only by T-079 test changes (no conflict expected). Cleaned up: my API/Vite stopped, private DB dropped, Redis db 13 flushed; :5173 untouched.
+- 2026-10-16 18:24Z · leader · merged 402d685 (PR #68). Review: web template + manifest + print-check; the cut-off defect (text running out of the card in print) fixed at the cause with contain:size and 6 new print-check tests that fail without the fix; QA re-verified the printed PDFs at A5/A4/Letter (identical positions for normal notes, fidelity pictures within 1.5 mm); CI green, QA_PASS on the same head. For owner to check: set a book's template by SQL (no API sets template_id until T-061), open /yearbooks/<id>/book, print to PDF; sample PDFs in docs/templates/memory-book-*.pdf; the Vietnamese strings in the PR description (print screen shrunk-note list etc). Open (pre-existing, not from this PR): inbox lists extra answers in MySQL JSON key order; the thank-you card quotes how_we_met instead of the message.
 
 ### T-060 — [E05] HTML template navy-classic (design temp2)
 - **Status:** IN_PROGRESS
@@ -2777,7 +2785,7 @@ Navy and gold canvas as the second HTML template.
 - 2026-10-16 09:50Z · leader · unblocked: T-058 merged. Read the addendum at the bottom of the spec.
 
 ### T-061 — [E05] Web: template picker and print screen with device guidance
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -2788,8 +2796,8 @@ Navy and gold canvas as the second HTML template.
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-16 18:24Z by leader
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/12-template-picker-and-print-screen.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2798,6 +2806,7 @@ Navy and gold canvas as the second HTML template.
 Pick a template for the page size, print with per-browser guidance, anonymous worked-or-not feedback counter.
 
 #### Comments
+- 2026-10-16 18:24Z · leader · unblocked: T-058 and T-059 merged. AC1 and AC3 were rewritten to the v2 routes (GET /api/template/get-list, template_id via POST /api/yearbook/update, public print-feedback counter). Risk high: owner approval before merge. T-060 (navy-classic) is in progress; the picker works with one template and lists the second when it lands.
 
 ### T-062 — [E01] CI: get the newest Go patch straight from go.dev (no manifest lag)
 - **Status:** DONE
@@ -3810,3 +3819,4 @@ Spec: .team/epics/E10-skills-alignment/12-lint-anchors-userfrom-guard.md (read i
 - 2026-10-16 — T-058 (HTML book renderer core, PR #66) merged b219943. T-059 and T-060 (templates) promoted to TODO; T-061 (print screen, high risk) follows T-059. T-056/T-082 accepted. T-072 (quality sweep) in progress.
 - 2026-10-16 — T-072 (quality sweep, PR #67) merged 715b960: transition switch removed, forbidigo/mnd on, strict auth bodies. T-058 accepted. T-085 (P3) added for two QA nits (lint regex anchors, UserFrom guard). Dev on T-059.
 - 2026-10-17 — T-079 (flaky-test tolerance, PR #69) merged 3429df4. T-072 merged earlier, awaiting owner accept. T-059 in rework 1 (print clipping of cut-off notes). Heartbeat recurring (ce6d77f6).
+- 2026-10-17 — T-059 (memory-book template, PR #68) merged 402d685 after rework 1 (cut-off notes ran out of the card in print; fixed with contain:size + print-check cases). T-079 merged. T-061 (picker + print screen, high risk) promoted to TODO. Awaiting owner accept: T-072, T-079, T-059.
