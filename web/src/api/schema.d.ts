@@ -598,6 +598,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/book-data/get": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the whole book for the browser renderer
+         * @description Called by the signed-in owner's book screens (preview and print) to draw the book from one request (decision D-24): the yearbook, the owner's profile and the approved notes, nothing else. Notes are in book order (the order of `GET /api/note/get-list?status=approved`); pending and hidden notes never appear. At most 300 notes with at most 3 photos each. A book with more approved notes is cut after the 300th in book order, never silently: `truncated` (always present) is true and `approved_total` is the real number of approved notes, while `note_count` stays the number returned. The renderer must show a visible warning when `truncated` is true. The answer is about 690 KB for 300 notes with 3 photos and the longest answers of the built-in templates; the API does not compress it. Media are public ids; the bytes come from `GET /api/media/get-content?id=&variant=print`. The answers are stored text: render them escaped, never as HTML. No storage key, hash, email, birthday or internal id is part of the answer. `yearbook_id` must be a canonical ULID (26 upper-case characters), else `ERROR_PARAM`. Needs a verified email (`ERROR_EMAIL_NOT_VERIFIED`, as the note list). A missing yearbook and one owned by someone else both answer `ERROR_NOT_FOUND`. Safe to repeat.
+         */
+        get: operations["getBookData"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/public-collect/get": {
         parameters: {
             query?: never;
@@ -1134,6 +1154,75 @@ export interface components {
                 /** @description Opaque cursor for the next page; the empty string on the last page. */
                 next_id: string;
                 counts: components["schemas"]["NoteCounts"];
+            };
+        };
+        BookDataResponse: {
+            /**
+             * @description Always `OK` on success.
+             * @constant
+             */
+            status: "OK";
+            /** @description The book as the renderer needs it. */
+            data: {
+                /** @description The yearbook's printed information. */
+                yearbook: {
+                    /** @description The book's title. */
+                    title: string;
+                    /** @description School name; empty when unset. */
+                    school_name: string;
+                    /** @description Class name; empty when unset. */
+                    class_name: string;
+                    /** @description Graduation year; null when unset. */
+                    graduation_year: number | null;
+                    /** @description Motto; empty when unset. */
+                    motto: string;
+                    /**
+                     * @description Language of the book: `en` or `vi`.
+                     * @enum {string}
+                     */
+                    language: "en" | "vi";
+                    /**
+                     * @description Page size: `A5`, `A4` or `Letter`.
+                     * @enum {string}
+                     */
+                    page_size: "A5" | "A4" | "Letter";
+                    /** @description Template id; null when none was chosen (the renderer uses its default). */
+                    template_id: string | null;
+                    /** @description Public id of the cover photo; null when there is none. */
+                    cover_media_id: string | null;
+                };
+                /** @description The owner's profile page. The birthday is not part of it. */
+                profile: {
+                    /** @description Full name. */
+                    full_name: string;
+                    /** @description Nickname; empty when unset. */
+                    nickname: string;
+                    /** @description Favourite quote; empty when unset. */
+                    quote: string;
+                    /** @description Hobbies; empty when unset. */
+                    hobbies: string;
+                    /** @description Future plans; empty when unset. */
+                    future_plans: string;
+                    /** @description Public id of the profile photo; null when there is none. */
+                    photo_media_id: string | null;
+                };
+                /** @description The approved notes in book order, at most 300. */
+                notes: {
+                    /** @description The note's public id, a ULID. */
+                    id: string;
+                    /** @description The friend's answers as stored, field id to text (docs/note-fields.md). Plain text; never render it as HTML. */
+                    answers: {
+                        [key: string]: string;
+                    };
+                    /** @description Public ids of the note's photos in order, at most 3; empty when it has none. Content is read with `GET /api/media/get-content?id=&variant=print`. */
+                    photo_ids: string[];
+                }[];
+                /** @description Number of notes in `notes`. */
+                note_count: number;
+                /** @description Number of approved notes the book has, also when more than 300 (then `notes` holds the first 300 in book order). */
+                approved_total: number;
+                /** @description True when the book has more approved notes than the 300 returned (`approved_total` > `note_count`); the renderer shows a warning. Always present. */
+                truncated: boolean;
             };
         };
         NoteUpdateStatusRequest: {
@@ -2391,6 +2480,35 @@ export interface operations {
             415: components["responses"]["ApiUnsupportedMediaType"];
             429: components["responses"]["ApiRateLimited"];
             502: components["responses"]["ApiBadGateway"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    getBookData: {
+        parameters: {
+            query: {
+                /** @description Yearbook ULID (canonical upper case). */
+                yearbook_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The book. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookDataResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            500: components["responses"]["ApiInternal"];
             503: components["responses"]["ApiSessionStoreUnavailable"];
         };
     };
