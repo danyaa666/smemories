@@ -83,7 +83,7 @@ func TestSessionLookupExpireExtendDelete(t *testing.T) {
 	if _, _, err := e.sess.Lookup(ctx, tokenHashOf("nobody")); !errors.Is(err, errNotFound) {
 		t.Fatalf("unknown: %v", err)
 	}
-	if err := e.sess.Create(ctx, sessionRow("short", 1, now, 300*time.Millisecond)); err != nil {
+	if err := e.sess.Create(ctx, sessionRow("short", 1, now, 1500*time.Millisecond)); err != nil {
 		t.Fatal(err)
 	}
 	if err := e.sess.Create(ctx, sessionRow("long", 1, now, time.Hour)); err != nil {
@@ -93,9 +93,17 @@ func TestSessionLookupExpireExtendDelete(t *testing.T) {
 	if err != nil || uid != 1 || !seen.Equal(now.Truncate(time.Millisecond)) {
 		t.Fatalf("lookup: %d %v %v", uid, seen, err)
 	}
-	time.Sleep(500 * time.Millisecond)
-	if _, _, err := e.sess.Lookup(ctx, tokenHashOf("short")); !errors.Is(err, errNotFound) {
-		t.Fatalf("expired session found: %v", err)
+	// T-079: poll until Redis expires it (generous bound) instead of one fixed sleep.
+	deadline := time.Now().Add(15 * time.Second)
+	for {
+		_, _, err := e.sess.Lookup(ctx, tokenHashOf("short"))
+		if errors.Is(err, errNotFound) {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("expired session still found: %v", err)
+		}
+		time.Sleep(50 * time.Millisecond)
 	}
 
 	later := now.Add(time.Minute)

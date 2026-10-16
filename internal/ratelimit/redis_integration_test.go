@@ -35,22 +35,28 @@ func keys(t testing.TB, c *redis.Client) []string {
 // AC5: exactly N pass, then it refuses with an accurate retry-after, and the window slides.
 func TestRedisLimitRetryAfterAndWindow(t *testing.T) {
 	c := redistest.New(t)
-	l := ratelimit.NewRedis(c, "t", 3, time.Second, nil)
+	// T-079: a controlled clock (ARGV[4]) instead of real sleeps, so a starved runner cannot move the numbers.
+	now := time.Date(2026, 10, 7, 12, 0, 0, 0, time.UTC)
+	l := ratelimit.NewRedis(c, "t", 3, time.Second, func() time.Time { return now })
 	for i := range 3 {
 		if ok, _ := take(t, l, "k"); !ok {
 			t.Fatalf("hit %d refused", i)
 		}
-		time.Sleep(50 * time.Millisecond)
+		now = now.Add(50 * time.Millisecond)
 	}
 	ok, retry := take(t, l, "k")
-	// the oldest hit is about 150 ms old in a 1 s window
-	if ok || retry < 700*time.Millisecond || retry > 900*time.Millisecond {
-		t.Fatalf("ok=%v retry=%v, want refused with about 850ms", ok, retry)
+	// the oldest hit is exactly 150 ms old in a 1 s window
+	if ok || retry != 850*time.Millisecond {
+		t.Fatalf("ok=%v retry=%v, want refused with exactly 850ms", ok, retry)
 	}
 	if ok, _ := take(t, l, "other"); !ok {
 		t.Fatal("keys are independent")
 	}
-	time.Sleep(retry + 20*time.Millisecond)
+	now = now.Add(retry - time.Millisecond)
+	if ok, _ := take(t, l, "k"); ok {
+		t.Fatal("one millisecond before the oldest hit leaves the window, the slot must still be taken")
+	}
+	now = now.Add(time.Millisecond)
 	if ok, _ := take(t, l, "k"); !ok {
 		t.Fatal("the oldest hit left the window; one slot must be free")
 	}

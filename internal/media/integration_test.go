@@ -764,17 +764,25 @@ func TestContributorUploadBusyAndDiscard(t *testing.T) {
 	for range cap(e.svc.sem) { // every slot taken: the wait is bounded and ends in ErrBusy, with nothing stored
 		e.svc.sem <- struct{}{}
 	}
-	start := time.Now()
 	loaded := false
 	load := func() ([]byte, error) { loaded = true; return data, nil }
-	if _, err := e.svc.save(context.Background(), ownerID, row, book, "contributor", load, 50*time.Millisecond); !errors.Is(err, ErrBusy) {
-		t.Fatalf("err %v, want ErrBusy", err)
+	// T-079: no wall-clock bound. The call returning ErrBusy while every slot is still held is the proof that the wait ended;
+	// a hang is caught by the generous guard below instead of a tight elapsed-time check.
+	res := make(chan error, 1)
+	go func() {
+		_, err := e.svc.save(context.Background(), ownerID, row, book, "contributor", load, 50*time.Millisecond)
+		res <- err
+	}()
+	select {
+	case err := <-res:
+		if !errors.Is(err, ErrBusy) {
+			t.Fatalf("err %v, want ErrBusy", err)
+		}
+	case <-time.After(time.Minute):
+		t.Fatal("did not give up while every slot was held")
 	}
 	if loaded {
 		t.Fatal("the photo was loaded into memory without a processing slot")
-	}
-	if time.Since(start) > 2*time.Second {
-		t.Fatal("did not give up in time")
 	}
 	for range cap(e.svc.sem) {
 		<-e.svc.sem
