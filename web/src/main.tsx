@@ -9,6 +9,7 @@ import "./styles/tokens.css";
 import "./styles/fonts.css";
 import "./styles.css";
 import "./styles/ui.css";
+import "./styles/note.css";
 
 const queryClient = makeQueryClient(3);
 
