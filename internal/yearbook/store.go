@@ -218,9 +218,9 @@ func (s *Store) create(ctx context.Context, ownerID uint64, y *Yearbook) error {
 		return ErrLimitReached
 	}
 	res, err := tx.ExecContext(ctx,
-		`INSERT INTO yearbook_tab (public_id, owner_id, title, school_name, class_name, graduation_year, motto, language, page_size, created_at, updated_at)
-		 VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
-		y.ID, ownerID, y.Title, y.SchoolName, y.ClassName, y.GraduationYear, y.Motto, y.Language, y.PageSize, y.CreatedAt, y.UpdatedAt)
+		`INSERT INTO yearbook_tab (public_id, owner_id, title, school_name, class_name, graduation_year, motto, language, page_size, template_id, created_at, updated_at)
+		 VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+		y.ID, ownerID, y.Title, y.SchoolName, y.ClassName, y.GraduationYear, y.Motto, y.Language, y.PageSize, y.TemplateID, y.CreatedAt, y.UpdatedAt)
 	if err != nil {
 		return err
 	}
@@ -341,8 +341,8 @@ func (s *Store) modify(ctx context.Context, ownerID uint64, publicID string, now
 		return nil, err
 	}
 	if _, err := tx.ExecContext(ctx,
-		`UPDATE yearbook_tab SET title=?, school_name=?, class_name=?, graduation_year=?, motto=?, language=?, page_size=?, cover_media_id=?, updated_at=? WHERE id = ?`,
-		y.Title, y.SchoolName, y.ClassName, y.GraduationYear, y.Motto, y.Language, y.PageSize, cover, y.UpdatedAt, y.internalID); err != nil {
+		`UPDATE yearbook_tab SET title=?, school_name=?, class_name=?, graduation_year=?, motto=?, language=?, page_size=?, template_id=?, cover_media_id=?, updated_at=? WHERE id = ?`,
+		y.Title, y.SchoolName, y.ClassName, y.GraduationYear, y.Motto, y.Language, y.PageSize, y.TemplateID, cover, y.UpdatedAt, y.internalID); err != nil {
 		return nil, err
 	}
 	p := y.Profile

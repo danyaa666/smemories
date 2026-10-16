@@ -22,9 +22,11 @@ import (
 	"github.com/danyaa666/smemories/internal/media"
 	"github.com/danyaa666/smemories/internal/metrics"
 	"github.com/danyaa666/smemories/internal/notes"
+	"github.com/danyaa666/smemories/internal/printfeedback"
 	"github.com/danyaa666/smemories/internal/ratelimit"
 	"github.com/danyaa666/smemories/internal/redis"
 	"github.com/danyaa666/smemories/internal/storage"
+	"github.com/danyaa666/smemories/internal/templateapi"
 	"github.com/danyaa666/smemories/internal/yearbook"
 )
 
@@ -141,13 +143,15 @@ func main() {
 	bookSvc := yearbook.NewService(bookStore, cursors, mediaSvc, nil, mediaSvc, notesSvc)
 	bookH := yearbook.NewHandler(bookSvc, authH.RequireUser, cfg.AllowedOrigins)
 	bookDataH := bookdata.NewHandler(bookdata.NewService(bookSvc, notesSvc), authH.RequireUser)
+	templateH := templateapi.NewHandler(authH.RequireUser)
+	feedbackH := printfeedback.NewHandler(printfeedback.NewService(printfeedback.NewStore(d), limiters, nil), cfg.AllowedOrigins, authH.ClientIP)
 	notesH := notes.NewHandler(notesSvc, cfg.MediaMaxBytes, authH.RequireUser, cfg.AllowedOrigins, authH.ClientIP, logger)
 	notesH.SetUploadLimits(cfg.PublicUploadConns, cfg.PublicUploadsPerIP, cfg.UploadTmpDir)
 	mt.Gauge("public_uploads_in_progress", "Public note submissions in progress.", func() float64 { return float64(notesH.UploadsInProgress()) })
 	mt.Gauge("public_uploads_max", "Public note submissions allowed at once (SMEM_PUBLIC_UPLOAD_MAX_CONNS).", func() float64 { return float64(cfg.PublicUploadConns) })
 	notesH.SweepSpool() // files a crash or kill left behind; before the listener accepts traffic
 
-	srv := httpx.NewServer(cfg.HTTPAddr, httpx.NewRouterWith(logger, httpx.RouterConfig{RequestTimeout: cfg.RequestTimeout, TrustProxy: cfg.TrustProxy, Metrics: mt}, httpx.Ready(d, logger, httpx.Dep{Name: "redis", Ping: rc.Ready}), authH.Routes, bookH.Routes, mediaH.Routes, notesH.Routes, bookDataH.Routes))
+	srv := httpx.NewServer(cfg.HTTPAddr, httpx.NewRouterWith(logger, httpx.RouterConfig{RequestTimeout: cfg.RequestTimeout, TrustProxy: cfg.TrustProxy, Metrics: mt}, httpx.Ready(d, logger, httpx.Dep{Name: "redis", Ping: rc.Ready}), authH.Routes, bookH.Routes, mediaH.Routes, notesH.Routes, bookDataH.Routes, templateH.Routes, feedbackH.Routes))
 	if cfg.MetricsAddr != "" { // internal listener only; the public mux never serves /metrics
 		mln, err := net.Listen("tcp", cfg.MetricsAddr)
 		if err != nil {
