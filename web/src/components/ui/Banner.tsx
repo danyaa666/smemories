@@ -1,12 +1,12 @@
 import type { ReactNode } from "react";
 
-/** A full-width message: "offline" is polite (role="status"), "error" is announced at once (role="alert"). */
+/** A full-width message: "offline" and "warning" are polite (role="status"), "error" is announced at once (role="alert"). */
 export function Banner({
   variant,
   children,
   action,
 }: {
-  variant: "offline" | "error";
+  variant: "offline" | "warning" | "error";
   children: ReactNode;
   action?: ReactNode;
 }) {

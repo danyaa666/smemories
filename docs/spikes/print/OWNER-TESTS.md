@@ -4,20 +4,20 @@ Safari, Android Chrome and iOS Safari are untested. If one fails, ADR 0003 Optio
 
 ## Setup
 
-On the computer: `cd web && npm ci && npm run dev -- --host`, then open
-`http://localhost:5173/spike/print?design=memory&size=a5&lang=vi`.
-From a phone on the same Wi-Fi use `http://<computer-ip>:5173/spike/print?design=memory&size=a5&lang=vi`.
-Other pages: `design=classic`, `size=a4` or `size=letter`, `lang=en`.
+The throwaway spike page is gone (T-058 replaced it with the real book screen), so the test uses a real book:
+on the computer `make up && make migrate`, `go run ./cmd/smemories-api` and `cd web && npm ci && npm run dev -- --host`, register, create a yearbook
+(choose the page size A5, A4 or Letter), collect and approve some notes (up to 300; photos make it a realistic test), then open
+`http://localhost:5173/yearbooks/<id>/book` ("Preview and print" in the menu).
+From a phone on the same Wi-Fi use `http://<computer-ip>:5173/...` (the API must be reachable through the same Vite proxy).
 
-Press "Save as PDF" and record, for each browser:
+Press "Print or save as PDF" (it is enabled once the fonts and photos are loaded) and record, for each browser:
 
 - paper size offered, margins, headers and footers on by default
 - background graphics option: does the page print its colours when it is off?
-- page count (expected 24 for memory, 4 or 5 for classic) and any blank last page
+- page count (expected: 3 plus one per 4 approved notes) and any blank last page
 - photo sharpness (zoom the PDF to 400 %) and file size
 - seconds from the click to the preview, and whether the tab survives
 - whether the Vietnamese text can be selected and pasted
-- whether the dotted background looks right
 
 ## Steps
 
@@ -25,8 +25,7 @@ Press "Save as PDF" and record, for each browser:
 2. **Firefox (desktop)**: File > Print, destination "Save to PDF", paper size A5, Margins None, "Print backgrounds" on. Look for the black dotted background (known finding) and the file size.
 3. **Safari (desktop)**: File > Print, PDF button at the lower left > "Save as PDF"; Paper size A5; tick "Print backgrounds" in the print panel (off by default); check page count and background.
 4. **Android Chrome**: open the URL, menu (three dots) > Share > Print, "Save as PDF"; open the paper size list (is A5 there? does the page keep its size when you pick A4?), find a background option and check the colours. Note the time and whether the page crashes with the 24-page book.
-5. **iOS Safari**: Share > Print, pinch the page preview outwards (this turns it into a PDF), Share > Save to Files. Check page count, whether the paper size is Letter whatever `@page` asks, backgrounds, and whether the tab survives 24 pages with 30 photos (also try `size=letter`).
-6. Repeat 1 and 4 with `scale=transform` appended to the URL if page counts differ.
+5. **iOS Safari**: Share > Print, pinch the page preview outwards (this turns it into a PDF), Share > Save to Files. Check page count, whether the paper size is Letter whatever `@page` asks, backgrounds, and whether the tab survives 24 pages with 30 photos (also try a Letter book).
 
 ## Result table (copy, fill in, send to the leader)
 

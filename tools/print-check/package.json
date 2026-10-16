@@ -1,0 +1,12 @@
+{
+  "name": "print-check",
+  "private": true,
+  "type": "module",
+  "description": "Headless print check of the HTML book renderer (T-058, ADR 0003): renders a fixture book to PDF with Chromium and inspects the PDF. Not part of the app or web/package.json.",
+  "scripts": {
+    "test": "node --test check.test.mjs"
+  },
+  "dependencies": {
+    "playwright": "1.64.0"
+  }
+}

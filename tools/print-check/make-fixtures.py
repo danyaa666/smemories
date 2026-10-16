@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Synthetic photos for spike T-054 (no real people, no real data).
+"""Synthetic photos for T-054, T-058 (no real people, no real data).
 
-  make-fixtures.py small OUT_DIR   30 JPEGs, 1600x1200 or 1200x1600, smooth (committed under web/src/spike/print/fixtures)
+  make-fixtures.py small OUT_DIR   30 JPEGs, 1600x1200 or 1200x1600, smooth (committed under tools/print-check/fixtures)
   make-fixtures.py large OUT_DIR   30 JPEGs, 3000x2250 or 2250x3000 with sensor-like noise (about 1 MB each, not committed;
                                    3000 px is the longest side the media pipeline stores, docs/media.md)
 Needs Pillow only.

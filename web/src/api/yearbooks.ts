@@ -51,7 +51,7 @@ export const listMedia = (id: string, nextId?: string) =>
 export const deleteMedia = (id: string) => postJson<void>("/media/delete", { id });
 
 /** Same-origin image URL; the session cookie authorises it. The path is built from the photo id only. */
-export const mediaUrl = (id: string, variant: "thumb" | "display" = "thumb") =>
+export const mediaUrl = (id: string, variant: "thumb" | "display" | "print" = "thumb") =>
   `/api/media/get-content?id=${encodeURIComponent(id)}&variant=${variant}`;
 
 const DEFAULT_MAX_BYTES = 10 * 1024 * 1024; // SMEM_MEDIA_MAX_BYTES default

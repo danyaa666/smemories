@@ -23,8 +23,7 @@ export type NavItem = {
 };
 
 /**
- * One entry per screen that exists. An item whose route does not exist yet is simply not listed:
- * The print task adds "Preview and print" here.
+ * One entry per screen that exists. An item whose route does not exist yet is simply not listed.
  */
 export const NAV_ITEMS: NavItem[] = [
   { key: "books", to: () => "/yearbooks", label: "nav.yearbooks", tab: "nav.tabBooks" },
@@ -45,6 +44,12 @@ export const NAV_ITEMS: NavItem[] = [
     to: (id) => (id ? `/yearbooks/${id}/note-links` : null),
     label: "nav.links",
     tab: "nav.tabLinks",
+  },
+  {
+    key: "book",
+    to: (id) => (id ? `/yearbooks/${id}/book` : null),
+    label: "nav.print",
+    tab: "nav.tabPrint",
   },
 ];
 

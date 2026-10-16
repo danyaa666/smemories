@@ -37,7 +37,9 @@
     "notes": "Notes from friends",
     "links": "Note links",
     "tabNotes": "Notes",
-    "tabLinks": "Links"
+    "tabLinks": "Links",
+    "print": "Preview and print",
+    "tabPrint": "Print"
   },
   "fields": {
     "email": "Email",
@@ -392,5 +394,40 @@
     "revoke": "Revoke",
     "revokeTitle": "Revoke this link?",
     "revokeBody": "Friends can no longer use it. Notes already sent stay in your inbox."
+  },
+  "bookPages": {
+    "classOf": "Class of {{year}}",
+    "aboutMe": "All about me",
+    "quote": "Favourite quote",
+    "hobbies": "Hobbies",
+    "futurePlans": "Plans for the future",
+    "notes": "Notes from friends",
+    "thanks": "Thank you for being part of this book.",
+    "fields": {
+      "how_we_met": "How we met",
+      "first_impression": "First impression",
+      "best_memory": "Best memory together",
+      "wish": "My wish for you",
+      "advice": "My advice"
+    }
+  },
+  "print": {
+    "title": "Preview and print",
+    "loading": "Loading your book...",
+    "back": "Back to the book",
+    "truncated": "Only {{shown}} of {{total}} approved notes are included in this book. The notes after the first {{shown}} (in book order) will not be printed.",
+    "noNotes": "There are no approved notes yet. The book has the cover, your profile page and the back page only.",
+    "photosFailed": "Photos that could not be loaded: {{count}}. They will be empty frames in the printout. Reload the page to try again.",
+    "cutNotes": "Notes that are too long for their space and are cut off in the printout: {{count}}.",
+    "cutOther": "Texts on your own pages that are too long for their space and are cut off in the printout: {{count}}.",
+    "smaller": "Texts set in a smaller size to fit: {{count}}.",
+    "ready": "Ready to print: {{pages}} pages.",
+    "preparing": "Getting fonts and photos ready ({{done}} of {{total}} photos)...",
+    "print": "Print or save as PDF",
+    "helpTitle": "When the print window opens",
+    "help1": "Destination: Save as PDF.",
+    "help2": "Paper size: {{size}}.",
+    "help3": "Margins: None. Scale: 100 %.",
+    "help4": "Turn headers and footers off and background graphics on."
   }
 }

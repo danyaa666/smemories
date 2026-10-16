@@ -37,7 +37,9 @@
     "notes": "Lời nhắn từ bạn bè",
     "links": "Liên kết lời nhắn",
     "tabNotes": "Lời nhắn",
-    "tabLinks": "Liên kết"
+    "tabLinks": "Liên kết",
+    "print": "Xem trước và in",
+    "tabPrint": "In"
   },
   "fields": {
     "email": "Email",
@@ -392,5 +394,40 @@
     "revoke": "Thu hồi",
     "revokeTitle": "Thu hồi liên kết này?",
     "revokeBody": "Bạn bè sẽ không dùng được nữa. Các lời nhắn đã gửi vẫn nằm trong hộp thư của bạn."
+  },
+  "bookPages": {
+    "classOf": "Khóa {{year}}",
+    "aboutMe": "Giới thiệu về mình",
+    "quote": "Câu nói yêu thích",
+    "hobbies": "Sở thích",
+    "futurePlans": "Dự định tương lai",
+    "notes": "Lời nhắn từ bạn bè",
+    "thanks": "Cảm ơn bạn đã là một phần của cuốn lưu bút này.",
+    "fields": {
+      "how_we_met": "Chúng mình quen nhau thế nào",
+      "first_impression": "Ấn tượng đầu tiên",
+      "best_memory": "Kỷ niệm đẹp nhất của chúng ta",
+      "wish": "Điều mình ước cho bạn",
+      "advice": "Lời khuyên"
+    }
+  },
+  "print": {
+    "title": "Xem trước và in",
+    "loading": "Đang tải cuốn lưu bút...",
+    "back": "Về trang cuốn lưu bút",
+    "truncated": "Cuốn lưu bút này chỉ gồm {{shown}} trên {{total}} lời nhắn đã duyệt. Các lời nhắn sau {{shown}} lời đầu tiên (theo thứ tự trong sách) sẽ không được in.",
+    "noNotes": "Chưa có lời nhắn nào được duyệt. Cuốn lưu bút chỉ có bìa, trang giới thiệu của bạn và bìa sau.",
+    "photosFailed": "Số ảnh không tải được: {{count}}. Các ảnh này sẽ là khung trống khi in. Hãy tải lại trang để thử lại.",
+    "cutNotes": "Số lời nhắn quá dài so với khung và bị cắt bớt trong bản in: {{count}}.",
+    "cutOther": "Số đoạn văn trên các trang của bạn quá dài so với khung và bị cắt bớt trong bản in: {{count}}.",
+    "smaller": "Số đoạn văn được thu nhỏ chữ cho vừa khung: {{count}}.",
+    "ready": "Sẵn sàng để in: {{pages}} trang.",
+    "preparing": "Đang chuẩn bị phông chữ và ảnh ({{done}}/{{total}} ảnh)...",
+    "print": "In hoặc lưu thành PDF",
+    "helpTitle": "Khi cửa sổ in mở ra",
+    "help1": "Máy in: chọn \"Lưu dưới dạng PDF\".",
+    "help2": "Khổ giấy: {{size}}.",
+    "help3": "Lề: Không có. Tỷ lệ: 100 %.",
+    "help4": "Tắt \"Đầu trang và chân trang\", bật \"Đồ họa nền\"."
   }
 }

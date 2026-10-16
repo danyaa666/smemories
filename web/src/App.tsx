@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { lazy, Suspense } from "react";
-import { Outlet, Route, Routes, useLocation } from "react-router-dom";
+import { Outlet, Route, Routes } from "react-router-dom";
 import { RequireAuth } from "./auth/RequireAuth";
 import { AuthNav } from "./components/AuthNav";
 import { LanguageSwitcher } from "./components/LanguageSwitcher";
@@ -20,18 +20,10 @@ import { YearbookEdit } from "./pages/YearbookEdit";
 import { YearbookNew } from "./pages/YearbookNew";
 import { Yearbooks } from "./pages/Yearbooks";
 
-// Spike T-054 (browser print-to-PDF). Dev server only: the condition is false in a production build, so the chunk is not emitted.
-const PrintSpike = import.meta.env.DEV ? lazy(() => import("./spike/print/PrintSpike")) : null;
+// The book screen carries its own CSS and the book fonts, so it is a separate chunk (T-058).
+const Book = lazy(() => import("./pages/Book").then((m) => ({ default: m.Book })));
 
 export function App() {
-  const { pathname } = useLocation();
-  if (PrintSpike && pathname === "/spike/print") {
-    return (
-      <Suspense fallback={null}>
-        <PrintSpike />
-      </Suspense>
-    );
-  }
   return (
     <Routes>
       <Route path="/c/:token" element={<NoteForm />} />
@@ -54,6 +46,14 @@ export function App() {
           <Route path="/yearbooks/:id" element={<YearbookEdit />} />
           <Route path="/yearbooks/:id/notes" element={<NotesInbox />} />
           <Route path="/yearbooks/:id/note-links" element={<NoteLinks />} />
+          <Route
+            path="/yearbooks/:id/book"
+            element={
+              <Suspense fallback={null}>
+                <Book />
+              </Suspense>
+            }
+          />
         </Route>
       </Route>
     </Routes>
