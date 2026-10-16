@@ -7,6 +7,7 @@ import { BOOK_ID, photoId } from "./fixture.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const ROOT = path.resolve(HERE, "../..");
+const PHOTOS = process.env.PRINT_CHECK_PHOTOS ?? path.join(HERE, "fixtures"); // the sample PDFs use lighter photos (make-samples.mjs)
 export const PORT = Number(process.env.PRINT_CHECK_PORT ?? 5199);
 export const BASE = `http://localhost:${PORT}`;
 
@@ -46,7 +47,7 @@ export async function serveBook(page, book) {
       seen.media++;
       const f = files.get(u.searchParams.get("id") ?? "");
       if (u.searchParams.get("variant") !== "print" || !f) return route.fulfill({ status: 404, contentType: "application/json", body: '{"status":"ERROR_NOT_FOUND"}' });
-      return route.fulfill({ status: 200, contentType: "image/jpeg", headers: { "Cache-Control": "private, max-age=3600" }, body: readFileSync(path.join(HERE, "fixtures", f)) });
+      return route.fulfill({ status: 200, contentType: "image/jpeg", headers: { "Cache-Control": "private, max-age=3600" }, body: readFileSync(path.join(PHOTOS, f)) });
     }
     return route.fulfill({ status: 404, contentType: "application/json", body: '{"status":"ERROR_NOT_FOUND"}' });
   });
@@ -82,7 +83,15 @@ export function inspect(file) {
     .map((l) => ({ name: l.split(/\s+/)[0], emb: /\s(yes|no)\s+(yes|no)\s+(yes|no)\s+\d+\s+\d+\s*$/.exec(l)?.[1] }));
   const images = run("pdfimages", "-list", file).split("\n").slice(2).filter(Boolean).map((l) => l.trim().split(/\s+/));
   // columns: page num type width height color comp bpc enc interp object ID x-ppi y-ppi size ratio
-  const photos = images.filter((c) => c[2] === "image" && c[5] !== "gray" && Number(c[3]) >= 400);
+  // A picture drawn on more than 3 pages is the paper texture of a template (the dotted paper), not a photo; a photo is counted once.
+  const pagesOf = new Map();
+  for (const c of images) pagesOf.set(c[10], (pagesOf.get(c[10]) ?? 0) + 1);
+  const seen = new Set();
+  const photos = images.filter((c) => {
+    const isPhoto = c[2] === "image" && c[5] !== "gray" && Number(c[3]) >= 400 && pagesOf.get(c[10]) <= 3 && !seen.has(c[10]);
+    if (isPhoto) seen.add(c[10]);
+    return isPhoto;
+  });
   const ppis = photos.map((c) => Number(c[12]));
   return {
     pages: Number(get(/Pages:\s+(\d+)/)),
@@ -95,3 +104,29 @@ export function inspect(file) {
 }
 
 export const text = (file) => run("pdftotext", "-layout", file, "-").normalize("NFC");
+
+/** Every word of the PDF with its box in points, per page: [{ w, h, words: [{ t, x0, y0, x1, y1 }] }] (pdftotext -bbox). */
+export function words(file) {
+  const xml = run("pdftotext", "-bbox", file, "-");
+  return [...xml.matchAll(/<page width="([\d.]+)" height="([\d.]+)">([\s\S]*?)<\/page>/g)].map(([, w, h, body]) => ({
+    w: +w,
+    h: +h,
+    words: [...body.matchAll(/<word xMin="([\d.]+)" yMin="([\d.]+)" xMax="([\d.]+)" yMax="([\d.]+)">([^<]*)<\/word>/g)].map((m) => ({
+      x0: +m[1], y0: +m[2], x1: +m[3], y1: +m[4], t: m[5].replaceAll("&amp;", "&").normalize("NFC"),
+    })),
+  }));
+}
+
+/** The text boxes (.bk-fit) of every page in print layout, as fractions of their sheet: [page][{ text, x0, y0, x1, y1 }]. */
+export async function fitBoxes(page) {
+  await page.emulateMedia({ media: "print" });
+  return page.evaluate(() =>
+    [...document.querySelectorAll(".bk-sheet")].map((sheet) => {
+      const s = sheet.getBoundingClientRect();
+      return [...sheet.querySelectorAll(".bk-fit")].map((e) => {
+        const r = e.getBoundingClientRect();
+        return { text: e.textContent, x0: (r.left - s.left) / s.width, y0: (r.top - s.top) / s.height, x1: (r.right - s.left) / s.width, y1: (r.bottom - s.top) / s.height };
+      });
+    }),
+  );
+}

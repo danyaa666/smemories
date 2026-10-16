@@ -54,6 +54,9 @@ func sampleBook(t testing.TB) (Book, mapSource) {
 func TestSamples(t *testing.T) {
 	b, src := sampleBook(t)
 	for _, info := range templates.List() {
+		if info.Renderer == templates.RendererHTML {
+			continue // drawn by the web app (the memory-book samples are made by tools/print-check/make-samples.mjs)
+		}
 		id := info.ID
 		out, rep := render(t, id, b, src, Options{Lang: "vi"})
 		// Every template: cover, profile, at least one notes page and a back page. The exact count and the

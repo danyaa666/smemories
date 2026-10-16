@@ -408,7 +408,36 @@
       "first_impression": "First impression",
       "best_memory": "Best memory together",
       "wish": "My wish for you",
-      "advice": "My advice"
+      "advice": "My advice",
+      "name": "Name",
+      "nickname": "Nickname",
+      "relationship": "Relationship",
+      "message": "Message"
+    },
+    "memory": {
+      "belongs": "this book belongs to",
+      "owner": "{{name}}’s",
+      "sticker": "please\nwrite\nin me!",
+      "ownerOf": "the owner of this book",
+      "fullName": "Full name",
+      "nickname": "Nickname",
+      "class": "Class",
+      "school": "School",
+      "friendTitle": "From a Friend",
+      "stickPhoto": "stick your\nphoto here",
+      "no": "No.",
+      "touchTitle": "Let’s Stay in Touch",
+      "touchSub": "so we never lose each other",
+      "colName": "Name",
+      "colPhone": "Phone",
+      "colSocial": "Facebook / Zalo / IG",
+      "colBirthday": "Birthday",
+      "pact": "Reunion pact",
+      "pactSub": "we promise to meet again — no excuses!",
+      "date": "Date",
+      "place": "Place",
+      "graduation": "Graduation year",
+      "forYou": "a note for {{name}}"
     }
   },
   "print": {
@@ -428,6 +457,13 @@
     "help1": "Destination: Save as PDF.",
     "help2": "Paper size: {{size}}.",
     "help3": "Margins: None. Scale: 100 %.",
-    "help4": "Turn headers and footers off and background graphics on."
+    "help4": "Turn headers and footers off and background graphics on.",
+    "fitTitle": "Notes in a smaller size or cut off: {{count}}",
+    "fitHelp": "Open a note in the inbox to hide it, or ask your friend to write a shorter one.",
+    "fitSmaller": "{{name}}, {{pt}} pt",
+    "fitCut": "{{name}}, {{pt}} pt, and still cut off",
+    "fitNoName": "Note {{number}}",
+    "fitOpen": "Open in the inbox",
+    "fitOpenFor": "Open the note of {{name}} in the inbox"
   }
 }

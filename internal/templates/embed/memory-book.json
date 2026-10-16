@@ -1,0 +1,14 @@
+{
+  "id": "memory-book",
+  "renderer": "html",
+  "name": {"en": "Memory Book", "vi": "Lưu bút"},
+  "page_sizes": ["A5", "A4", "Letter"],
+  "note_fields": [
+    {"id": "name", "required": true},
+    {"id": "how_we_met"},
+    {"id": "first_impression"},
+    {"id": "best_memory"},
+    {"id": "wish"},
+    {"id": "message", "required": true}
+  ]
+}

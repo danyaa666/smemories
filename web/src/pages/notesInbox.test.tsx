@@ -185,6 +185,37 @@ describe("inbox list", () => {
     );
   });
 
+  it("opens the approved tab at the note a link from the print screen names, and focuses it", async () => {
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    const s = fake([
+      note(1, "pending"),
+      note(2, "approved"),
+      note(3, "approved"),
+      note(4, "hidden"),
+    ]);
+    await open(1280, `/yearbooks/${BOOK}/notes?note=${nid(3)}`);
+    const c = await card("Friend 3");
+    expect(screen.getByRole("button", { name: /Approved 2/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.queryByText("Friend 1", S)).not.toBeInTheDocument(); // not in the approved tab
+    await waitFor(() =>
+      expect(
+        within(c).getByRole("button", { name: "More actions for Friend 3's note" }),
+      ).toHaveFocus(),
+    );
+    expect(scroll).toHaveBeenCalledTimes(1);
+    expect(s.calls.some((x) => x.path.includes("status=approved"))).toBe(true);
+  });
+
+  it("ignores a link to a note that is not in the book", async () => {
+    fake([note(1, "approved")]);
+    await open(1280, `/yearbooks/${BOOK}/notes?note=%22%5D%5Bx`);
+    expect(await card("Friend 1")).toBeInTheDocument();
+  });
+
   it("invites a first run to create a link", async () => {
     fake([]);
     await open();

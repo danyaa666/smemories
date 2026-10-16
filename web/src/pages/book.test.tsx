@@ -224,3 +224,169 @@ describe("book preview and print", () => {
     expect(calls.filter((c) => c.path.startsWith("/book-data/get"))).toHaveLength(1);
   });
 });
+
+describe("memory-book template", () => {
+  const full = (i: number, over: Record<string, string> = {}) =>
+    note(i, {
+      answers: {
+        name: `Nguyễn Thị Hồng Ánh ${i}`,
+        nickname: "Ánh",
+        relationship: "Bạn cùng lớp",
+        how_we_met: "Ngồi cạnh nhau",
+        first_impression: "Nói nhiều 😄",
+        best_memory: "Đà Lạt",
+        wish: "Thi đỗ nhé",
+        advice: "Đừng bỏ cuộc",
+        message: "Giữ liên lạc nhé",
+        ...over,
+      },
+    });
+  const memory = (notes: BookData["notes"], language: "en" | "vi" = "en") => {
+    const data = bookData(notes);
+    data.yearbook.template_id = "memory-book";
+    data.yearbook.language = language;
+    data.profile = {
+      ...data.profile,
+      quote: "Hãy sống",
+      hobbies: "Đọc sách",
+      future_plans: "Thiết kế",
+    };
+    return data;
+  };
+
+  it.each([
+    [0, 3],
+    [1, 4],
+    [21, 24],
+  ])("a book with %i notes has %i pages: one note per page", async (n, pages) => {
+    serve(memory(Array.from({ length: n }, (_, i) => full(i + 1))));
+    open();
+    await waitFor(() => expect(sheets()).toHaveLength(pages));
+    expect(sheets("notes")).toHaveLength(n);
+    expect(document.querySelectorAll(".mb-page")).toHaveLength(pages);
+  });
+
+  it("binds the profile, the cover and every answer of the note, in the book's language", async () => {
+    serve(memory([full(1)], "vi"));
+    open();
+    await waitFor(() => expect(sheets()).toHaveLength(4));
+    const page = (label: string) => sheets(label)[0] as HTMLElement;
+    const cover = page("cover").textContent ?? "";
+    expect(cover).toContain("Nguyễn Thị Hồng");
+    expect(cover).toContain("Lớp 12A1");
+    expect(cover).toContain("Học, học nữa, học mãi");
+    const profile = page("profile").textContent ?? "";
+    for (const s of ["Giới thiệu về mình", "Đọc sách", "Thiết kế", "Hãy sống", "THPT Chu Văn An"])
+      expect(profile).toContain(s);
+    const friend = page("notes").textContent ?? "";
+    for (const s of [
+      "Từ một người bạn",
+      "Nguyễn Thị Hồng Ánh 1",
+      "Bạn cùng lớp",
+      "Ngồi cạnh nhau",
+      "Nói nhiều 😄",
+      "Đà Lạt",
+      "Thi đỗ nhé",
+      "Đừng bỏ cuộc",
+      "Giữ liên lạc nhé",
+      "Chúng mình quen nhau thế nào",
+      "Số 1",
+    ])
+      expect(friend).toContain(s);
+    expect(page("back").textContent).toContain("Giữ liên lạc nhé");
+  });
+
+  it("prints English labels for an English book although the app is in Vietnamese", async () => {
+    serve(memory([full(1)], "en"));
+    open();
+    await waitFor(() => expect(sheets()).toHaveLength(4));
+    expect(sheets("notes")[0]!.textContent).toContain("From a Friend");
+    expect(sheets("notes")[0]!.textContent).toContain("How we met");
+    expect(sheets("back")[0]!.textContent).toContain("Let’s Stay in Touch");
+    expect(sheets("cover")[0]!.textContent).toContain("Class of 2026");
+  });
+
+  it("leaves out the boxes of fields the template did not ask, and shows a photo frame when there is no photo", async () => {
+    serve(
+      memory([
+        note(1, { answers: { name: "Linh", message: "Chúc bạn vui" }, photo_ids: [] }),
+        note(2, { answers: { name: "Mai", message: "Nhớ bạn" }, photo_ids: [PHOTO(1), PHOTO(2)] }),
+      ]),
+    );
+    open();
+    await waitFor(() => expect(sheets("notes")).toHaveLength(2));
+    const [a, b] = [...sheets("notes")];
+    expect(a!.querySelectorAll(".mb-ruled")).toHaveLength(1); // only the message
+    expect(a!.querySelector(".mb-stick")).not.toBeNull(); // "stick your photo here"
+    expect(a!.querySelector("img")).toBeNull();
+    expect(b!.querySelectorAll("img")).toHaveLength(2); // the first photo in the frame, the second beside the message
+    expect(b!.querySelector(".mb-side img")).not.toBeNull();
+  });
+
+  it("draws user text as text, never as HTML", async () => {
+    const evil = "<img src=x onerror=alert(1)><b>đậm</b> & 😄";
+    serve(memory([full(1, { name: evil, message: evil, wish: evil })]));
+    open();
+    await waitFor(() => expect(sheets()).toHaveLength(4));
+    expect(document.querySelector("img[src='x']")).toBeNull();
+    expect(document.querySelector(".mb-page b")).toBeNull();
+    expect(sheets("notes")[0]!.textContent).toContain("<img src=x onerror=alert(1)>");
+  });
+
+  describe("which notes were shrunk or cut", () => {
+    // jsdom has no layout: a box needs 1/8 px of height per character and font px, and has 100 px.
+    beforeEach(() => {
+      vi.spyOn(HTMLElement.prototype, "scrollHeight", "get").mockImplementation(function (
+        this: HTMLElement,
+      ) {
+        return ((this.textContent ?? "").length * (parseFloat(this.style.fontSize) || 20)) / 8;
+      });
+      vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(100);
+    });
+    afterEach(() => vi.restoreAllMocks());
+
+    it("lists a note of 2000 characters as cut, a longer note as smaller, each with a link to the inbox", async () => {
+      const long = note(1, { answers: { name: "Linh", message: "x".repeat(2000) } });
+      const medium = note(2, { answers: { name: "Hoa", message: "y".repeat(60) } });
+      const short = note(3, { answers: { name: "Minh", message: "ok" } });
+      serve(memory([long, medium, short]));
+      open();
+      const summary = await screen.findByText("Notes in a smaller size or cut off: 2");
+      const box = summary.closest("details")!;
+      expect(box).toHaveAttribute("open"); // a cut note: open without a click
+      const items = [...box.querySelectorAll("li")];
+      expect(items).toHaveLength(2); // Minh fits as designed
+      // A5: 20 design px are 10.3 pt. The cut note comes first: 10 design px (the floor of 50 %) are 5 pt.
+      expect(items[0]!.textContent).toContain("Linh, 5 pt, and still cut off");
+      expect(items[1]!.textContent).toContain("Hoa, 7 pt");
+      expect(items[1]!.textContent).not.toContain("cut off");
+      expect(box.textContent).not.toContain("Minh");
+      const links = [...box.querySelectorAll("a")].map((a) => a.getAttribute("href"));
+      expect(links).toEqual([
+        `/yearbooks/${BOOK}/notes?note=${long.id}`,
+        `/yearbooks/${BOOK}/notes?note=${medium.id}`,
+      ]);
+      expect(
+        screen.getByRole("link", { name: "Open the note of Linh in the inbox" }),
+      ).toBeVisible();
+      expect(
+        screen.getByText(
+          "Notes that are too long for their space and are cut off in the printout: 1.",
+        ),
+      ).toBeInTheDocument();
+    });
+
+    it("says nothing when every note fits", async () => {
+      serve(memory([note(1, { answers: { name: "Minh", message: "ok" } })]));
+      open();
+      await waitFor(() => expect(sheets()).toHaveLength(4));
+      expect(screen.queryByText(/Notes in a smaller size/)).not.toBeInTheDocument();
+    });
+
+    it("names a note without a name by its position", async () => {
+      serve(memory([note(1, { answers: { message: "z".repeat(2000) } })]));
+      open();
+      expect(await screen.findByText(/Note 1, 5 pt, and still cut off/)).toBeInTheDocument();
+    });
+  });
+});

@@ -81,6 +81,11 @@ other value is rejected.
 `reference` or `theme` (the validator rejects them). `templates.List()` returns Go and html templates, with a
 `Renderer` field; `pdf.Render` refuses an html template.
 
+The built-in html template is `memory-book` (T-059, the pastel Memory Book of design `temp1`; the page components are
+`web/src/book/templates/memory.tsx`). Its form asks `name` and `message` (required), `how_we_met`, `first_impression`,
+`best_memory` and `wish`; the page also prints `nickname`, `relationship` and `advice` when a note has them (older
+notes, or a later manifest that asks for them).
+
 ## Elements
 
 Every element has `type`, `x`, `y`, `w`, `h` (the box, which must lie inside the page, or inside the item for

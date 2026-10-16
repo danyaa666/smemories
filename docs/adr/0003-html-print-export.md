@@ -150,7 +150,7 @@ Default if the owner does not run the tests: C for M1 (it is built and verified)
 ## Reproduce
 
 **T-058 folded the spike into the product.** The throwaway route `/spike/print`, its fixtures and the measuring scripts (`measure.mjs`, `firefox-bidi.mjs`) were removed; the last commit that has them is `82b5151` (`git show 82b5151:web/src/spike/print/PrintSpike.tsx`).
-Their successors: the renderer in `web/src/book/` and the route `/yearbooks/:id/book`, the self-hosted fonts in `web/src/book/fonts/`, and the automated check in `tools/print-check/`:
+Their successors: the renderer in `web/src/book/` (the first designed template, `memory-book` of T-059, draws the dotted paper as one picture, `web/src/book/templates/memory-dots.png`, which Chromium stores once in the PDF: finding 5 measured +8 MB for 24 pages with one vector dot each, +0.05 MB with the picture, about 1.3 s more PDF time) and the route `/yearbooks/:id/book`, the self-hosted fonts in `web/src/book/fonts/`, and the automated check in `tools/print-check/`:
 
 ```
 make print-check        # cd tools/print-check && npm ci && npx playwright install chromium && npm test
