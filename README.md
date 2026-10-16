@@ -119,6 +119,8 @@ containers and volumes and `make down` in one leaves the others running. The hos
 checkout free ones in its `.env`: `MYSQL_PORT`, `REDIS_PORT`, `MINIO_PORT`, `MINIO_CONSOLE_PORT` (and match the port in `SMEM_DB_DSN`,
 `SMEM_TEST_DB_DSN`, `SMEM_REDIS_URL` and `SMEM_TEST_REDIS_URL`). A checkout whose stack already runs under the old fixed name `smemories` keeps that name; to retire an
 old stack run `COMPOSE_PROJECT_NAME=smemories docker compose down` once from the directory that started it.
+Always start and stop the stack with `make up` / `make down`: a bare `docker compose ...` outside make targets the old shared `smemories`
+project, and a bare `docker compose down -v` would delete that project's data volumes.
 
 MinIO console: <http://127.0.0.1:9001> (credentials in `.env`). MinIO stopped publishing Docker images, so
 the compose file uses a frozen Bitnami build; it is for local development only.
