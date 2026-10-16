@@ -11,17 +11,18 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 18 | T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-082 |
-| TODO | 3 | T-072, T-079, T-080 |
-| IN_PROGRESS | 1 | T-017 |
+| TODO | 2 | T-072, T-079 |
+| IN_PROGRESS | 1 | T-080 |
+| QA_FAIL | 1 | T-017 |
 | QA_PASS | 1 | T-081 |
 | DONE | 53 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-018, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-073, T-074, T-075, T-076, T-077, T-078, T-083 |
-| CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
+| CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
 **Awaiting your review (MERGED):** nothing
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?)
 
-_Board last written 2026-10-16 03:30Z_
+_Board last written 2026-10-16 03:40Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -1114,19 +1115,19 @@ Dashboard of the user's yearbooks; create/edit form for book information and the
 - 2026-10-09 01:42Z · leader · accepted by owner (chat, 2026-10-09: 'team accept T-016, T-046, T-047, T-051')
 
 ### T-017 — [E04] Web: notes link management and moderation inbox
-- **Status:** IN_PROGRESS
+- **Status:** QA_FAIL
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
 - **Depends-on:** T-013, T-016, T-083
 - **Risk:** low
-- **Rework:** 1
+- **Rework:** 2
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-017-e04-web-notes-link-management-and-modera
 - **PR:** https://github.com/danyaa666/smemories/pull/61
-- **Updated:** 2026-10-16 03:22Z by dev
-- **Comments-seen:** 4
+- **Updated:** 2026-10-16 03:39Z by qa
+- **Comments-seen:** 8
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/04-web-notes-link-management-and-moderation.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1168,6 +1169,20 @@ Create/copy/revoke the collection link, set a deadline, see submissions grouped 
   
   VIETNAMESE FOR THE OWNER: the full list of new vi strings is in the PR description (section "Vietnamese strings for the owner to review", inbox.*, links.*, nav.*, errors.*). I read them rendered in the UI; no wording failures raised.
 - 2026-10-16 03:12Z · leader · Leader guidance for the rework (QA_FAIL; QA tested in real Chrome, everything else passed): 1) MAJOR: at 375px the status badge wraps mid-word on every note card ('Chờ duyệt' -> 'Chờ / duyệ / t'). Fix in web/src/styles/inbox.css: .inbox-card-head .badge { flex: none; white-space: nowrap } (and check the other badges in the inbox/link list at 320px, with the longest VI label). 2) Focus: after a ••• menu action, after cancel/Esc on the delete confirm, and after creating a link, focus must land on a sensible element (return to the trigger or the next logical control, or the new link's row/heading); not on body. Add a test for each. 3) Decision: the mobile tab bar keeps NO pending badge, as in the design; list it as a known difference in the PR (the sidebar badge stays). Nothing else to change.
+- 2026-10-16 03:33Z · dev · Rework head 510571e (develop merged), CI green (go, go-integration, security, web). QA 1 (major): badges nowrap + flex none in inbox.css (also links list; link names wrap); checked in headless Chrome with built CSS at 288px column, worst case: all VI labels one line, no h-scroll. QA 2: focus returns to the card's ••• button after any menu item/Esc (incl. move), delete-confirm cancel/Esc returns there, a delete that removes the card focuses Undo; tests 'keyboard focus' in notesInbox.test.tsx (3 fail on old code). QA 3: create link focuses 'Your link is ready' heading, Done focuses Name; test in noteLinks.test.tsx. Mobile tab bar has no pending badge: listed as known difference in the PR. Not exercised: real Chrome through the full app at 320 (only the CSS in isolation); web lint/typecheck/i18n/api/vitest 234/build green.
+- 2026-10-16 03:39Z · qa · Re-QA head 510571e (PR #61), CI green (go, go-integration, security, web), PR MERGEABLE/CLEAN (no conflict with develop). Real Chrome (playwright-core channel chrome) on own Vite :5174 + API :8081, private DB smem_test_qa017b (dropped), redis db 14; my processes stopped. web lint, typecheck, lint:i18n, check:api, vitest (234), build all green.
+  
+  ISSUE
+  1. [major] At 320px the note card head is unusable-cramped and a name breaks MID-WORD. Repro: viewport 320x700, /yearbooks/<id>/notes, Tat ca tab. Checkbox + avatar + (now non-shrinking) badge leave only 53px for .inbox-card-who: name 'Nguyễn Văn An' renders 'Nguyễ / n / Văn / An', 'Đỗ / Xuân / Ịch', meta line one word per line ('Bạn / cùng / bàn · 1 / phút / trước · / Nhóm / chat / lớp'); .inbox-card-head 264px tall, cards 412px for a one-line note (at 375 the same head is 96-120px, fine). Cause: .inbox-card-head flex row [checkbox][avatar][who][badge flex:none] with overflow-wrap:anywhere on who. Expected: no mid-word break, readable at 320 as asked. Suggested fix (inbox.css only): flex-wrap: wrap on .inbox-card-head and give .inbox-card-who min-width ~ 10em / flex: 1 1 10em so the badge drops to its own line under ~360px (or order the badge under the name); re-check with 'Nguyễn Văn An' at 320. Verify: scripts show 'words split across lines: 0'.
+  
+  PASSED (my evidence)
+  - Badge one line, no h-scroll, no overflowing elements: /notes and /note-links at 320, 375, 1280 in VI and EN. Badge text lines==1 for every badge: VI Chờ duyệt/Đã duyệt/Đã ẩn, links Đang mở/Đã đóng/Đã thu hồi; EN Pending/Approved/Hidden, Open/Closed/Revoked. 60-char link name with emoji wraps in its own column, status pill stays one line at 320; link list cards clean at 320/375/1280. Badge height 22px everywhere.
+  - Focus (keyboard, 1280): Esc on menu -> ••• button; menu item Chuyển xuống and Chuyển lên -> that card's ••• button; delete confirm (approved) Esc -> ••• button; Cancel (Hủy) -> ••• button; confirming Xóa (card removed) -> 'Hoàn tác' button; pending delete via menu (no dialog) -> 'Hoàn tác'. Dialog traps focus (focus inside when opened). Undo restores the card (count 1).
+  - Link create (submit via Enter in Name) -> focus on H2 'Liên kết của bạn đã sẵn sàng' at 1280, 375 and 320; 'Xong' -> Name input. No h-scroll with the share block at 320/375/1280.
+  - Regression spot-checks: real mouse drag of grip: ONE POST /note/reorder, UI and API order agree, announcement 'Lời nhắn của Võ Thị Ê, đã chuyển đến vị trí 3/6'; Undo works; link creation works (token shown once).
+  NON-BLOCKING: after pressing Enter on 'Hoàn tác' (button unmounts) focus goes to <body>; minor, could go to the restored card's ••• button. Mobile tab bar has no pending badge: accepted known difference.
+- 2026-10-16 03:40Z · leader · Leader decision (rework budget): the 320px name break is below the 375px design baseline (and no 320px phone is realistic for this audience), so it does not block. Everything else QA checked passed in real Chrome (badge on one line at 320/375/1280 in VI and EN, focus, drag, Undo, link creation, CI green, MERGEABLE). Moving it on to my review; the 320px card head and the focus after Undo are tracked in T-084 (P3).
+- 2026-10-16 03:40Z · leader · CORRECTION to my previous comment: the board does not allow the leader to override QA_FAIL, so this goes back to dev as rework 2 (the last). It is a small, cheap fix, so do exactly this and nothing else: 1) 320px: let .inbox-card-head wrap and give .inbox-card-who a minimum width (about 10em), so the badge drops to its own line under ~360px; a name must not break mid-word and a one-line card should be about 160px tall or less at 320px. Check 320, 360, 375, 1280 in a real browser (screenshots in the PR description; headless Chrome is fine), VI and EN, longest labels, a 60-char name with emoji. 2) Focus after pressing Enter on Undo: land on the neighbouring card's ••• button, or the list heading when the list is empty (one test). Then CI green, READY_FOR_QA. QA will re-check only these two at 320/375/1280.
 
 ### T-018 — [E04] Web: public anonymous notes form
 - **Status:** DONE
@@ -3375,7 +3390,7 @@ T-077 QA: a ratelimit retry-after test failed once on the CI runner (689 ms vs a
 #### Comments
 
 ### T-080 — [E04] Public submit: show 'link full' instead of a connection reset
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -3383,10 +3398,10 @@ T-077 QA: a ratelimit retry-after test failed once on the CI runner (689 ms vs a
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-080-e04-public-submit-show-link-full-instead
 - **PR:** —
-- **Updated:** 2026-10-15 14:06Z by leader
+- **Updated:** 2026-10-16 03:33Z by dev
 - **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/08-full-link-reset.md`
@@ -3504,6 +3519,26 @@ Port the Claude Design tokens, self-host the fonts, add base components (Button,
   Not re-tested (already verified in my earlier note): AC1-AC5 details, focus ring, reduced motion, 44px targets. Non-blocking observations from my first note still stand (text links under 44px; Dialog not wired). My own processes (API, Vite) are stopped; DB smem_test_qa083 and Redis db 12 are mine and left in place.
 - 2026-10-15 16:38Z · leader · merged 28f5dca (PR #57). Review: tokens.css identical to the design minus @import, self-hosted @fontsource (exact pins, OFL notices), 9 ui components + tests, YearbookLayout; web-only diff, CI green, QA_PASS on the merged state. Rework cause was stale /v1 mocks in a test, fixed. For owner to check: look at Login, Register, Yearbooks and a book at phone and desktop width; owner already approved the 4 nav strings; 'My yearbooks' nav entry was a dev addition.
 - 2026-10-16 01:37Z · human · accepted by owner
+
+### T-084 — [E04] Inbox polish: 320px card head and focus after Undo
+- **Status:** CANCELLED
+- **Priority:** P3
+- **Type:** tech-debt
+- **Milestone:** M1
+- **Depends-on:** T-017
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-16 03:40Z by leader
+- **Comments-seen:** 1
+
+Spec: .team/epics/E04-friends-notes/09-inbox-320px-polish.md (read it from the repo root). Follow-up from T-017 QA: note card head at 320px and focus after pressing Enter on Undo.
+
+#### Comments
+- 2026-10-16 03:40Z · leader · created by mistake: the board does not let the leader override QA_FAIL, so the 320px fix goes through T-017 rework 2 instead
 
 <!-- tasks:end -->
 
