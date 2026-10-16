@@ -10,18 +10,18 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 15 | T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-059, T-060, T-061 |
-| TODO | 2 | T-072, T-079 |
-| IN_PROGRESS | 1 | T-058 |
-| MERGED | 2 | T-056, T-082 |
-| DONE | 56 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-073, T-074, T-075, T-076, T-077, T-078, T-080, T-081, T-083 |
+| BACKLOG | 14 | T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-059, T-060, T-061 |
+| TODO | 2 | T-032, T-079 |
+| IN_PROGRESS | 1 | T-072 |
+| IN_QA | 1 | T-058 |
+| DONE | 58 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-073, T-074, T-075, T-076, T-077, T-078, T-080, T-081, T-082, T-083 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-056 ([E05] Book data endpoint for rendering (owner-only, approved notes)); T-082 ([E02] Web: show and change the username on the account page)
+**Awaiting your review (MERGED):** nothing
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?)
 
-_Board last written 2026-10-16 09:19Z_
+_Board last written 2026-10-16 09:43Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -1603,7 +1603,7 @@ Items from the T-006 review that only matter at scale or in production: (1) the 
 - 2026-10-07 07:07Z · leader · From the T-006 review: also require at least one visible character in a display name (a name made only of U+200D passes today), preferably through one shared helper that T-008 and later text fields reuse.
 
 ### T-032 — [E01] db.Open: treat MySQL 1044 as permanent; README warning about bare docker compose
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -1614,8 +1614,8 @@ Items from the T-006 review that only matter at scale or in production: (1) the 
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-16 09:43Z by leader
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/08-db-open-treat-mysql-1044-as-permanent-readme.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1624,6 +1624,7 @@ Items from the T-006 review that only matter at scale or in production: (1) the 
 db.Open: treat MySQL 1044 as permanent; README warning about bare docker compose
 
 #### Comments
+- 2026-10-16 09:43Z · leader · promoted to keep the dev queue at 4; small P3.
 
 ### T-033 — [E01] CI: do not cancel in-progress runs on develop and main
 - **Status:** DONE
@@ -2496,7 +2497,7 @@ Replace the numeric-id paging cursor with a signed opaque cursor and a shared he
 - 2026-10-09 13:15Z · leader · Absorbed by E10: T-069 (media API v2) and T-070 (yearbook API v2) return an opaque next_id from one shared helper; doing it twice on /v1 would be thrown away.
 
 ### T-056 — [E05] Book data endpoint for rendering (owner-only, approved notes)
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -2507,8 +2508,8 @@ Replace the numeric-id paging cursor with a signed opaque cursor and a shared he
 - **Assignee:** —
 - **Branch:** task/t-056-e05-book-data-endpoint-for-rendering-own
 - **PR:** https://github.com/danyaa666/smemories/pull/64
-- **Updated:** 2026-10-16 08:59Z by leader
-- **Comments-seen:** 8
+- **Updated:** 2026-10-16 09:33Z by human
+- **Comments-seen:** 9
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/07-book-data-endpoint.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2540,6 +2541,7 @@ One owner-only request returns the yearbook, profile and approved notes with ans
   3) make reset-limits was NOT run: it flushes rl keys in the shared dev Redis db 0; I cleared my own private Redis db instead (no rate-limit state needed beyond that).
   4) Unverified check runs before id validation (malformed id + unverified = 403), same as note/get-list.
 - 2026-10-16 08:59Z · leader · merged b20bf33 (PR #64). Review: owner-only via the locked ownership check, approved-only in T-013 order, 4 queries (5 at the cap), explicit truncated + approved_total instead of a silent cut, no internal ids/keys/emails in the JSON; CI green, QA_PASS on the same head (concurrency: 30k reads, no torn order). Owner approved the task before the build; the only change after that was the truncated flag (leader decision). For owner to check: GET /api/book-data/get?yearbook_id=<id> as the signed-in owner. Note for T-058/T-061: response can exceed 1 MiB (1.02 MiB dense Vietnamese, 2.48 MiB emoji, 3.7 MiB for text full of < and &, because Go escapes them), and there is no gzip in the router yet.
+- 2026-10-16 09:33Z · human · accepted by owner
 
 ### T-057 — [E05] Media print-size variant (1800 px) with backfill
 - **Status:** DONE
@@ -2578,7 +2580,7 @@ Third stored size for printing: lighter PDFs and faster print (spike: 63 MB and 
 - 2026-10-10 03:29Z · human · accepted by owner
 
 ### T-058 — [E05] Web: HTML book renderer core and print preview (browser print-to-PDF)
-- **Status:** IN_PROGRESS
+- **Status:** IN_QA
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -2586,11 +2588,11 @@ Third stored size for printing: lighter PDFs and faster print (spike: 63 MB and 
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** qa
 - **Branch:** task/t-058-e05-web-html-book-renderer-core-and-prin
-- **PR:** —
-- **Updated:** 2026-10-16 09:10Z by dev
-- **Comments-seen:** 1
+- **PR:** https://github.com/danyaa666/smemories/pull/66
+- **Updated:** 2026-10-16 09:39Z by qa
+- **Comments-seen:** 2
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/09-html-book-renderer-core.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2600,6 +2602,7 @@ Fixed-size HTML pages, pagination, text fit, print CSS, readiness gate and a hea
 
 #### Comments
 - 2026-10-16 09:00Z · leader · unblocked: T-056 merged (GET /api/book-data/get?yearbook_id=; truncated + approved_total, see spec addendum), T-054 and T-057 done. The addendum at the bottom of the spec is part of the requirements.
+- 2026-10-16 09:38Z · dev · PR #66 head 313c9af, CI green (go, go-integration, web, security). Route /yearbooks/:id/book, renderer in web/src/book, truncated warning + 300-note fixture tests, tools/print-check (make print-check, not in CI). Checked 320/375/1280 in a real browser against own API+private DB. Left out: measured-fit pagination (declared capacity used), Firefox/Safari/phones, CI job for print-check. Vietnamese strings listed in PR. OWNER-TESTS.md now uses a real book (spike page removed).
 
 ### T-059 — [E05] HTML template memory-book (design temp1)
 - **Status:** BACKLOG
@@ -3161,7 +3164,7 @@ Moves auth to /api/auth/* and /api/user/get-me, Google callback path, last domai
 - 2026-10-16 01:37Z · human · accepted by owner
 
 ### T-072 — [E10] Quality sweep: mnd, forbidigo, pointer parameters, pool defaults, remove the transition switch
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -3169,10 +3172,10 @@ Moves auth to /api/auth/* and /api/user/get-me, Google callback path, last domai
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-072-e10-quality-sweep-mnd-forbidigo-pointer-
 - **PR:** —
-- **Updated:** 2026-10-15 14:52Z by leader
+- **Updated:** 2026-10-16 09:39Z by dev
 - **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/10-sweep.md`
@@ -3492,7 +3495,7 @@ Owner decision D-28: every user gets a unique public username (default user-xxxx
 - 2026-10-16 03:59Z · human · accepted by owner
 
 ### T-082 — [E02] Web: show and change the username on the account page
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
@@ -3503,8 +3506,8 @@ Owner decision D-28: every user gets a unique public username (default user-xxxx
 - **Assignee:** —
 - **Branch:** task/t-082-e02-web-show-and-change-the-username-on-
 - **PR:** 65
-- **Updated:** 2026-10-16 09:19Z by leader
-- **Comments-seen:** 4
+- **Updated:** 2026-10-16 09:33Z by human
+- **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/14-web-username.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -3524,6 +3527,7 @@ Account page shows the username and lets the user change it (weekly limit, local
   New Vietnamese strings for the owner (10 keys, also in the PR description): account.username 'Tên người dùng'; account.usernameNew 'Tên người dùng mới'; account.usernameHelp 'Từ 3 đến 30 ký tự: chữ thường, chữ số, dấu chấm, dấu gạch dưới hoặc dấu gạch ngang. Tên này công khai và không dùng để đăng nhập.'; account.usernameSave 'Lưu tên người dùng'; account.usernameSaved 'Đã lưu tên người dùng.'; account.usernameCooldown 'Bạn có thể đổi lại tên người dùng vào {{date}}.'; errors.invalid_username 'Dùng từ 3 đến 30 ký tự: chữ cái, chữ số, dấu chấm, dấu gạch dưới hoặc dấu gạch ngang, bắt đầu và kết thúc bằng chữ cái hoặc chữ số.'; errors.username_reserved 'Tên người dùng này không dùng được. Hãy chọn tên khác.'; errors.username_taken 'Tên người dùng này đã có người dùng. Hãy chọn tên khác.'; errors.username_change_too_soon 'Bạn vừa đổi tên người dùng. Bạn có thể đổi lại vào {{date}}.'
   Cleanup done: my API/Vite stopped, DB smem_test_qa082 and dev's smem_test_t082 dropped, redis db 15 and db 11 flushed.
 - 2026-10-16 09:19Z · leader · merged de0eb3c (PR #65). Review: web-only, no retry on 4xx, focus back on the field on errors, double submit sent once, lock survives reload, typed user.username in the layout; QA_PASS on the same head at 320/375/1280 EN+VI, CI green. Minor open item: the lock text is not linked to the disabled field by aria-describedby. For owner to check: /account (username block), the 10 Vietnamese strings (account.username*, errors.invalid_username / username_reserved / username_taken / username_change_too_soon); run make migrate first.
+- 2026-10-16 09:33Z · human · accepted by owner
 
 ### T-083 — [E01] Web: design system foundation (tokens, fonts, base components, yearbook shell)
 - **Status:** DONE
