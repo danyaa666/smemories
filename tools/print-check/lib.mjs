@@ -104,3 +104,29 @@ export function inspect(file) {
 }
 
 export const text = (file) => run("pdftotext", "-layout", file, "-").normalize("NFC");
+
+/** Every word of the PDF with its box in points, per page: [{ w, h, words: [{ t, x0, y0, x1, y1 }] }] (pdftotext -bbox). */
+export function words(file) {
+  const xml = run("pdftotext", "-bbox", file, "-");
+  return [...xml.matchAll(/<page width="([\d.]+)" height="([\d.]+)">([\s\S]*?)<\/page>/g)].map(([, w, h, body]) => ({
+    w: +w,
+    h: +h,
+    words: [...body.matchAll(/<word xMin="([\d.]+)" yMin="([\d.]+)" xMax="([\d.]+)" yMax="([\d.]+)">([^<]*)<\/word>/g)].map((m) => ({
+      x0: +m[1], y0: +m[2], x1: +m[3], y1: +m[4], t: m[5].replaceAll("&amp;", "&").normalize("NFC"),
+    })),
+  }));
+}
+
+/** The text boxes (.bk-fit) of every page in print layout, as fractions of their sheet: [page][{ text, x0, y0, x1, y1 }]. */
+export async function fitBoxes(page) {
+  await page.emulateMedia({ media: "print" });
+  return page.evaluate(() =>
+    [...document.querySelectorAll(".bk-sheet")].map((sheet) => {
+      const s = sheet.getBoundingClientRect();
+      return [...sheet.querySelectorAll(".bk-fit")].map((e) => {
+        const r = e.getBoundingClientRect();
+        return { text: e.textContent, x0: (r.left - s.left) / s.width, y0: (r.top - s.top) / s.height, x1: (r.right - s.left) / s.width, y1: (r.bottom - s.top) / s.height };
+      });
+    }),
+  );
+}

@@ -9,7 +9,7 @@ import path from "node:path";
 import { after, before, describe, test } from "node:test";
 import { chromium } from "playwright";
 import { makeBook } from "./fixture.mjs";
-import { BASE, inspect, open, savePdf, serveBook, startServer, text } from "./lib.mjs";
+import { BASE, fitBoxes, inspect, open, savePdf, serveBook, startServer, text, words } from "./lib.mjs";
 
 const PT = { A5: [419.53, 595.28], A4: [595.28, 841.89], Letter: [612, 792] }; // exact sizes in points
 const tmp = mkdtempSync(path.join(os.tmpdir(), "print-check-"));
@@ -157,6 +157,38 @@ describe("memory-book template: 24 pages, 30 photos, 21 notes", () => {
     await page.close();
   });
 });
+
+// A note that is still too long at the smallest font is cut off at its box. In the printed PDF (not only on screen) no word of it may lie
+// outside that box: it must not run over the footer or off the page (T-059 QA). Two notes: 400 short lines, and 2000 characters in one paragraph.
+for (const template of ["memory-book", "basic"]) {
+  for (const size of ["A5", "A4", "Letter"]) {
+    test(`${template} ${size}: a cut-off note is clipped inside its box in the PDF`, async () => {
+      const page = await browser.newPage();
+      await serveBook(page, makeBook({ size, notes: 2, template: template === "basic" ? null : template, cutOff: true }));
+      await open(page);
+      assert.ok((await page.locator("[data-fit=overflow]").count()) >= 1, "the 400-line message is cut off at the smallest font");
+      const boxes = await fitBoxes(page);
+      const file = path.join(tmp, `cutoff-${template}-${size}.pdf`);
+      await savePdf(page, file);
+      await page.close();
+      const pdf = words(file);
+      assert.equal(pdf.length, boxes.length, "one PDF page per sheet");
+      for (const [marker, mark] of [["Dòng", new Set(["Dòng"])], ["Một đoạn", new Set(["đoạn", "dài", "xuống"])]]) {
+        let seen = 0;
+        for (const [p, { w, h, words: ws }] of pdf.entries()) {
+          const box = boxes[p].find((b) => b.text.includes(marker));
+          if (!box) continue;
+          for (const x of ws.filter((x) => mark.has(x.t))) {
+            seen++;
+            const cx = (x.x0 + x.x1) / 2 / w, cy = (x.y0 + x.y1) / 2 / h; // the centre of the word's box: a last line cut in half still counts as inside
+            assert.ok(cx >= box.x0 && cx <= box.x1 && cy >= box.y0 && cy <= box.y1, `${marker}: "${x.t}" at (${cx.toFixed(3)}, ${cy.toFixed(3)}) of page ${p + 1} lies outside its box x ${box.x0.toFixed(3)}-${box.x1.toFixed(3)}, y ${box.y0.toFixed(3)}-${box.y1.toFixed(3)}`);
+          }
+        }
+        assert.ok(seen > 0, `${marker}: its words are in the PDF`);
+      }
+    });
+  }
+}
 
 test("a book cut at 300 notes warns on screen and prints only the book", async () => {
   const r = await render(makeBook({ notes: 5, truncatedOf: 350 }), "truncated");

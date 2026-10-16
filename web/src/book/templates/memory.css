@@ -208,6 +208,7 @@
 .mb-lines {
   flex: 1 1 0;
   min-width: 0;
+  contain: size; /* see .mb-motto-text */
   line-height: 1.7;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -256,6 +257,10 @@
   align-self: stretch;
   flex: 1 1 0;
   min-width: 0;
+  /* The size of these boxes comes from the flex layout, not from their text. In the PRINTED page the print fragmentation lets a text
+     taller than such a box run out of it (overflow:hidden, contain:paint and clip-path do not stop it: the lines reached the page edge);
+     contain:size makes the box's size independent of its content, so the text is clipped at the box. The screen already clipped it. */
+  contain: size;
   line-height: 30px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
