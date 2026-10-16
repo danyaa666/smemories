@@ -13,15 +13,14 @@
 | BACKLOG | 12 | T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-061 |
 | TODO | 4 | T-032, T-059, T-060, T-079 |
 | READY_FOR_QA | 1 | T-072 |
-| MERGED | 1 | T-058 |
-| DONE | 58 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-073, T-074, T-075, T-076, T-077, T-078, T-080, T-081, T-082, T-083 |
+| DONE | 59 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-073, T-074, T-075, T-076, T-077, T-078, T-080, T-081, T-082, T-083 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-058 ([E05] Web: HTML book renderer core and print preview (browser print-to-PDF))
+**Awaiting your review (MERGED):** nothing
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?)
 
-_Board last written 2026-10-16 10:12Z_
+_Board last written 2026-10-16 13:02Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -2580,7 +2579,7 @@ Third stored size for printing: lighter PDFs and faster print (spike: 63 MB and 
 - 2026-10-10 03:29Z · human · accepted by owner
 
 ### T-058 — [E05] Web: HTML book renderer core and print preview (browser print-to-PDF)
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -2591,8 +2590,8 @@ Third stored size for printing: lighter PDFs and faster print (spike: 63 MB and 
 - **Assignee:** —
 - **Branch:** task/t-058-e05-web-html-book-renderer-core-and-prin
 - **PR:** https://github.com/danyaa666/smemories/pull/66
-- **Updated:** 2026-10-16 09:50Z by leader
-- **Comments-seen:** 4
+- **Updated:** 2026-10-16 11:13Z by human
+- **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/09-html-book-renderer-core.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2629,6 +2628,7 @@ Fixed-size HTML pages, pagination, text fit, print CSS, readiness gate and a hea
   
   NEW VIETNAMESE STRINGS FOR THE OWNER: listed in the PR #66 description (keys print.*, bookPages.*, nav.print, nav.tabPrint). I read them rendered; no wording fail. Menu "Xem trước và in", tab "In", button "In hoặc lưu thành PDF", warning "Cuốn lưu bút này chỉ gồm {{shown}} trên {{total}} lời nhắn đã duyệt...".
 - 2026-10-16 09:50Z · leader · merged b219943 (PR #66). Review: web-only renderer reading GET /api/book-data/get, React-escaped (no innerHTML), photos at print size with Print disabled until loaded, truncated banner on screen only, 4xx not retried; real Chrome PDFs at A5/A4/Letter have exact page sizes, embedded fonts, extractable Vietnamese, 78 pages for 300 notes; make print-check 5/5; CI green, QA_PASS on the same head. Known gaps (documented): 4 notes per page fixed capacity, text-fit floor 50% (a note over ~850 chars prints under 7 pt on A5, the 2000-char max about 4 pt, pathological text clipped inside its card); print-check is a make target, not CI; Firefox/Safari/phones untested. For owner to check: /yearbooks/<id>/book (Preview and print), try Print to PDF from Chrome; the Vietnamese strings print.*, bookPages.*, nav.print, nav.tabPrint.
+- 2026-10-16 11:13Z · human · accepted by owner
 
 ### T-059 — [E05] HTML template memory-book (design temp1)
 - **Status:** TODO
