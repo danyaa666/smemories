@@ -185,6 +185,41 @@ func (s *Store) removeRow(ctx context.Context, rowID int64, refs RefClearer) err
 	return nil
 }
 
+// byRows returns the photos with these internal ids (those that still exist).
+func (s *Store) byRows(ctx context.Context, rowIDs []int64) ([]Media, error) {
+	if len(rowIDs) == 0 {
+		return nil, nil
+	}
+	args := make([]any, len(rowIDs))
+	for i, id := range rowIDs {
+		args[i] = id
+	}
+	rows, err := s.db.QueryContext(ctx,
+		strings.Replace(`SELECT id, object_key, thumb_key, print_key FROM media_tab WHERE id IN (?)`, "(?)", "(?"+strings.Repeat(",?", len(rowIDs)-1)+")", 1), args...)
+	if err != nil {
+		return nil, dbError(err, "select photos by row")
+	}
+	defer func() { _ = rows.Close() }()
+	var out []Media
+	for rows.Next() {
+		var m Media
+		var printKey sql.NullString
+		if err := rows.Scan(&m.RowID, &m.ObjectKey, &m.ThumbKey, &printKey); err != nil {
+			return nil, dbError(err, "scan photo")
+		}
+		m.PrintKey = printKey.String
+		out = append(out, m)
+	}
+	return out, dbErrorOrNil(rows.Err(), "read photos by row")
+}
+
+func dbErrorOrNil(err error, what string) error {
+	if err == nil {
+		return nil
+	}
+	return dbError(err, what)
+}
+
 // deleteByYearbook removes every photo row of a yearbook inside the caller's transaction (which holds the yearbook lock).
 func deleteByYearbook(ctx context.Context, tx *sql.Tx, yearbookID uint64) error {
 	if _, err := tx.ExecContext(ctx, `DELETE FROM media_tab WHERE yearbook_id = ?`, yearbookID); err != nil {

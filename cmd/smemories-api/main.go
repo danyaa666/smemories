@@ -129,7 +129,7 @@ func main() {
 	mediaH := media.NewHandler(mediaSvc, cfg.MediaMaxBytes, authH.RequireUser, cfg.AllowedOrigins, cursors, logger)
 	bookStore := yearbook.NewStore(d)
 	notesStore := notes.NewStore(d)
-	notesSvc := notes.NewService(notesStore, mediaSvc, limiters, logger, nil)
+	notesSvc := notes.NewService(notesStore, mediaSvc, cursors, limiters, logger, nil)
 	mediaSvc.SetRefClearer(bookStore, notesSvc) // the yearbook store first: it locks the photo's book
 	bookH := yearbook.NewHandler(yearbook.NewService(bookStore, cursors, mediaSvc, nil, mediaSvc, notesSvc), authH.RequireUser, cfg.AllowedOrigins)
 	notesH := notes.NewHandler(notesSvc, cfg.MediaMaxBytes, authH.RequireUser, cfg.AllowedOrigins, authH.ClientIP, logger)

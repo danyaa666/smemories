@@ -498,6 +498,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/note/get-list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List a yearbook's notes for moderation
+         * @description Called by the signed-in owner's inbox. Returns one page of the notes of a yearbook and, in `counts`, the number of notes of the whole book per status (for the tabs and the header), whatever the filter. `status` is optional: `pending` (not looked at yet), `approved` (in the book) or `hidden`; omitted means all. `status=approved` is in book order (`position` 1, 2, 3 ...); every other value is newest first. `limit` defaults to 50, at most 100 (`ERROR_PARAM` above). `next_id` is the opaque cursor of the previous page, bound to this yearbook and this `status`; a malformed, tampered or foreign one is `ERROR_PARAM`. Items carry the answers as stored (the display name is `answers.name`, the client falls back to "Anonymous"), photo ids only (content through `media/get-content`), the label of the link the note arrived through, and no token. Needs a verified email (`ERROR_EMAIL_NOT_VERIFIED`). A missing yearbook and one owned by someone else both answer `ERROR_NOT_FOUND`. Safe to repeat.
+         */
+        get: operations["listNotes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/note/batch-update-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve, hide or reset the status of up to 100 notes
+         * @description Called by the owner's inbox. Sets `status` (`pending`, `approved` or `hidden`; anything else is `ERROR_PARAM`) on 1 to 100 notes of one yearbook (`ids` must not repeat; more than 100 is `ERROR_TOO_MANY_IDS`). All or nothing, in one transaction: if any id is not a note of that yearbook, or of someone else's, the whole batch is `ERROR_NOT_FOUND` and nothing changes. Approving appends the notes to the end of the approved order in the order of `ids`; a note that is already approved keeps its place. Hiding or setting a note to `pending` removes its position and closes the gap, so positions of approved notes are always 1..n. One note is a batch of one. Setting the status a note already has changes nothing and succeeds, so a lost answer can be retried. Returns the new `counts`. Needs a verified email. At most 120 moderation writes per user per minute (`ERROR_RATE_LIMITED`, with `Retry-After`). A request with the session cookie must come from an allowed Origin.
+         */
+        post: operations["updateNoteStatus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/note/reorder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Put the approved notes in a new order
+         * @description Called by the owner's inbox after a drag. `ids` must be exactly the notes that are approved right now, in the wanted order (at most 300; a repeated id is `ERROR_PARAM`, more than 300 is `ERROR_TOO_MANY_IDS`). If the approved set differs, for example a note was approved or hidden meanwhile, or an id is not an approved note of the yearbook, the answer is `ERROR_ORDER_STALE` (409), nothing changes and the client reloads the list. Positions stay 1..n. Repeating a successful reorder succeeds. An empty `ids` is valid when no note is approved. Needs a verified email. At most 120 moderation writes per user per minute. A request with the session cookie must come from an allowed Origin.
+         */
+        post: operations["reorderNotes"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/note/batch-delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Delete up to 100 notes with their photos
+         * @description Called by the owner's inbox (the web delays the call so the owner can undo, see T-017). Deletes 1 to 100 notes of one yearbook (`ids` must not repeat; more than 100 is `ERROR_TOO_MANY_IDS`) and their photos: the stored objects first, then the note, note-photo and photo rows in one transaction. Hard delete, there is no undo on the server. All or nothing: any id that is not a note of that yearbook, or of someone else's, is `ERROR_NOT_FOUND` for the whole batch. If the object store fails the answer is `ERROR_STORAGE_ERROR` (502) and the notes are still there: retry the same call. Notes that were already deleted are `ERROR_NOT_FOUND`, so after a lost answer the client reloads. The positions of the remaining approved notes close up. A photo that is also the yearbook's cover or profile photo is cleared there. Returns the new `counts`. Needs a verified email. At most 120 moderation writes per user per minute. A request with the session cookie must come from an allowed Origin.
+         */
+        post: operations["deleteNotes"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/public-collect/get": {
         parameters: {
             query?: never;
@@ -956,6 +1036,94 @@ export interface components {
         NoteCollectionRevokeRequest: {
             /** @description Required. ULID of a collection of one of the caller's yearbooks. */
             id: string;
+        };
+        /** @description The notes of a whole yearbook by status. */
+        NoteCounts: {
+            /** @description Notes in any status (the sum of the three below). */
+            all: number;
+            /** @description Notes the owner has not looked at yet. */
+            pending: number;
+            /** @description Notes that are in the book. */
+            approved: number;
+            /** @description Notes the owner hid. */
+            hidden: number;
+        };
+        NoteCountsResponse: {
+            /**
+             * @description Always `OK` on success.
+             * @constant
+             */
+            status: "OK";
+            /** @description The counts after the change. */
+            data: {
+                counts: components["schemas"]["NoteCounts"];
+            };
+        };
+        /** @description One note as the owner sees it. */
+        NoteItem: {
+            /** @description The note's public id, a ULID. */
+            id: string;
+            /**
+             * @description `pending` not looked at yet, `approved` in the book, `hidden` kept out of it.
+             * @enum {string}
+             */
+            status: "pending" | "approved" | "hidden";
+            /** @description The friend's answers as stored, field id to text (`name`, `relationship`, `message`, ...; docs/note-fields.md). The display name is `answers.name`; the client shows "Anonymous" when it is missing. */
+            answers: {
+                [key: string]: string;
+            };
+            /** @description The note's photos in order (at most 3). Content is read with `GET /api/media/get-content?id=`. */
+            photos: {
+                /** @description The photo's public id, a ULID. */
+                id: string;
+            }[];
+            /** @description Label of the collection link the note came through; empty when the link had none. */
+            link_label: string;
+            /**
+             * Format: int64
+             * @description When the friend sent the note, Unix ms.
+             */
+            created_at: number;
+            /** @description 1-based place among the approved notes; null unless `status` is `approved`. */
+            position: number | null;
+        };
+        NoteListResponse: {
+            /**
+             * @description Always `OK` on success.
+             * @constant
+             */
+            status: "OK";
+            /** @description One page of notes and the counts of the whole yearbook. */
+            data: {
+                /** @description The notes: book order for `status=approved`, newest first otherwise. */
+                items: components["schemas"]["NoteItem"][];
+                /** @description Opaque cursor for the next page; the empty string on the last page. */
+                next_id: string;
+                counts: components["schemas"]["NoteCounts"];
+            };
+        };
+        NoteUpdateStatusRequest: {
+            /** @description Required. ULID of a yearbook the caller owns. */
+            yearbook_id: string;
+            /** @description Required. 1 to 100 note ULIDs of that yearbook, no repeats. When approving, the order sets the order at the end of the book. */
+            ids: string[];
+            /**
+             * @description Required. The status to set: `pending`, `approved` or `hidden`.
+             * @enum {string}
+             */
+            status: "pending" | "approved" | "hidden";
+        };
+        NoteReorderRequest: {
+            /** @description Required. ULID of a yearbook the caller owns. */
+            yearbook_id: string;
+            /** @description Required. Exactly the ULIDs of the notes that are approved now, in the wanted order, no repeats. At most 300; may be empty only when no note is approved. */
+            ids: string[];
+        };
+        NoteDeleteRequest: {
+            /** @description Required. ULID of a yearbook the caller owns. */
+            yearbook_id: string;
+            /** @description Required. 1 to 100 note ULIDs of that yearbook, no repeats. */
+            ids: string[];
         };
         PublicCollectGetResponse: {
             /**
@@ -2024,6 +2192,138 @@ export interface operations {
             404: components["responses"]["ApiNotFound"];
             413: components["responses"]["ApiTooLarge"];
             415: components["responses"]["ApiUnsupportedMediaType"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    listNotes: {
+        parameters: {
+            query: {
+                /** @description Yearbook ULID. */
+                yearbook_id: string;
+                /** @description Only notes in this status; omitted means all. `approved` is in book order, the others newest first. */
+                status?: "pending" | "approved" | "hidden";
+                /** @description Page size. */
+                limit?: number;
+                /** @description Opaque cursor from the previous page's `next_id`; omit for the first page. */
+                next_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of notes and the counts of the whole yearbook. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoteListResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    updateNoteStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NoteUpdateStatusRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoteCountsResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            429: components["responses"]["ApiRateLimited"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    reorderNotes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NoteReorderRequest"];
+            };
+        };
+        responses: {
+            /** @description Reordered. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmptyResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            409: components["responses"]["ApiConflict"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            429: components["responses"]["ApiRateLimited"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    deleteNotes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NoteDeleteRequest"];
+            };
+        };
+        responses: {
+            /** @description Deleted. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoteCountsResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            429: components["responses"]["ApiRateLimited"];
+            502: components["responses"]["ApiBadGateway"];
             503: components["responses"]["ApiSessionStoreUnavailable"];
         };
     };

@@ -140,7 +140,7 @@ Photos (see `.env.example`): `SMEM_S3_ENDPOINT` (empty for AWS S3, `http://127.0
 for MinIO), `SMEM_MEDIA_MAX_BYTES` (10 MiB upload cap) and `SMEM_MEDIA_MAX_CONCURRENT` (2 images processed at once; memory budget in `docs/media.md`) and `SMEM_MEMORY_LIMIT_MIB` (soft Go memory limit, 0 = unset; about 75% of the container memory) and `SMEM_METRICS_ADDR` (internal Prometheus `/metrics` listener, empty = off; see `docs/observability.md`) and the public note upload settings `SMEM_PUBLIC_UPLOAD_MAX_CONNS` (48; submissions in progress at once, each spooled to disk while it arrives), `SMEM_PUBLIC_UPLOAD_CONCURRENT_PER_IP` (8; of which one client IP may have) and `SMEM_UPLOAD_TMP_DIR` (spool directory, default the OS temp dir; worst case 48 x 32 MiB of disk, see `docs/media.md`).
 An invalid value stops the process with a message naming the variable. The API contract is
 `api/openapi.yaml`; the Postman collections live in `postman/` (`newman run postman/platform.postman_collection.json`
-against a running API; the media collection uploads files, so run it from `postman/` with `--working-dir .`; the notes collection needs verified test accounts: see its description and `make verify-newman-users`).
+against a running API; the media collection uploads files, so run it from `postman/` with `--working-dir .`; the notes collection needs verified test accounts: see its description and `make verify-newman-users`; the notes-moderation collection uses the same accounts and also uploads a fixture, see [docs/moderation.md](docs/moderation.md)).
 
 ### Google sign-in setup
 
