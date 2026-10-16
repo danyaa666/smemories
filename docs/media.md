@@ -55,7 +55,7 @@ processed, one at a time: each photo is read from the file into memory **after**
 A refused submission (`503 ERROR_BUSY`, 2 to 6 s random `Retry-After`) is answered before any byte of its body is read and is not counted against
 the per-IP request limits, so a class that retries cannot lock itself out. A body must keep moving: no byte for 10 s, or less than 16 KiB/s on
 average after a 15 s grace period, or more than 120 s in total is dropped with `408`. The link is resolved first, from the query parameter `token`
-(T-034 order, kept by T-068): an unknown, malformed or revoked token is a `404` sent at once, without reading or spooling the body. The other rejections (closed link,
+(T-034 order, kept by T-068): an unknown, malformed or revoked token is a `404` sent at once, without reading or spooling the body. The other rejections (full link, closed link,
 rate limit, bad text) are sent only after the rest of the body has been read (same limits), so a browser shows the answer instead of a connection reset.
 
 **Disk sizing.** Worst case is `SMEM_PUBLIC_UPLOAD_MAX_CONNS` x 32 MiB = 1.5 GiB of temporary files (48 x 32 MiB), in practice far less. In production
