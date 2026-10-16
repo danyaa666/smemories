@@ -74,9 +74,7 @@ export function YearbookLayout({ items = NAV_ITEMS }: { items?: NavItem[] }) {
       : [{ ...i, to, badge: i.key === "notes" && pending !== undefined ? pending : i.badge }];
   });
 
-  // `username` arrives with T-081/T-082; until the API sends it the email local part is shown.
-  const username = (user as { username?: string } | null | undefined)?.username;
-  const handle = user ? username || (user.email.split("@")[0] ?? "") : "";
+  const handle = user?.username ?? "";
   const chip = (
     <div className="user-chip">
       <Link to="/account" className="user-chip-name" title={user?.email}>

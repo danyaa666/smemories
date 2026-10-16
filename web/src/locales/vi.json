@@ -93,7 +93,13 @@
     "title": "Tài khoản của tôi",
     "verified": "Email đã xác minh",
     "notVerified": "Email chưa được xác minh. Hãy nhập mã chúng tôi đã gửi.",
-    "verifyLink": "Xác minh email"
+    "verifyLink": "Xác minh email",
+    "username": "Tên người dùng",
+    "usernameNew": "Tên người dùng mới",
+    "usernameHelp": "Từ 3 đến 30 ký tự: chữ thường, chữ số, dấu chấm, dấu gạch dưới hoặc dấu gạch ngang. Tên này công khai và không dùng để đăng nhập.",
+    "usernameSave": "Lưu tên người dùng",
+    "usernameSaved": "Đã lưu tên người dùng.",
+    "usernameCooldown": "Bạn có thể đổi lại tên người dùng vào {{date}}."
   },
   "errors": {
     "generic": "Đã xảy ra lỗi. Vui lòng thử lại.",
@@ -136,7 +142,11 @@
     "order_stale": "Thứ tự đã thay đổi ở nơi khác. Hãy tải lại rồi thử lại.",
     "invalid_label": "Tên tối đa 60 ký tự, không chứa ký tự ẩn hoặc ký tự điều khiển.",
     "invalid_deadline": "Hãy chọn một ngày trong tương lai, cách hôm nay chưa đến một năm.",
-    "too_many_ids": "Chọn quá nhiều cùng lúc. Hãy chọn ít lời nhắn hơn."
+    "too_many_ids": "Chọn quá nhiều cùng lúc. Hãy chọn ít lời nhắn hơn.",
+    "invalid_username": "Dùng từ 3 đến 30 ký tự: chữ cái, chữ số, dấu chấm, dấu gạch dưới hoặc dấu gạch ngang, bắt đầu và kết thúc bằng chữ cái hoặc chữ số.",
+    "username_reserved": "Tên người dùng này không dùng được. Hãy chọn tên khác.",
+    "username_taken": "Tên người dùng này đã có người dùng. Hãy chọn tên khác.",
+    "username_change_too_soon": "Bạn vừa đổi tên người dùng. Bạn có thể đổi lại vào {{date}}."
   },
   "books": {
     "title": "Kỷ yếu của tôi",
