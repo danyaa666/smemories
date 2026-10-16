@@ -11,17 +11,17 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 11 | T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050 |
-| READY_FOR_QA | 2 | T-032, T-085 |
+| IN_QA | 1 | T-085 |
 | QA_PASS | 1 | T-061 |
-| MERGED | 4 | T-059, T-060, T-072, T-079 |
+| MERGED | 5 | T-032, T-059, T-060, T-072, T-079 |
 | DONE | 59 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-073, T-074, T-075, T-076, T-077, T-078, T-080, T-081, T-082, T-083 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-059 ([E05] HTML template memory-book (design temp1)); T-060 ([E05] HTML template navy-classic (design temp2)); T-072 ([E10] Quality sweep: mnd, forbidigo, pointer parameters, pool defaults, remove the transition switch); T-079 ([E01] Make the timing-sensitive integration tests tolerant of a starved CI runner)
+**Awaiting your review (MERGED):** T-032 ([E01] db.Open: treat MySQL 1044 as permanent; README warning about bare docker compose); T-059 ([E05] HTML template memory-book (design temp1)); T-060 ([E05] HTML template navy-classic (design temp2)); T-072 ([E10] Quality sweep: mnd, forbidigo, pointer parameters, pool defaults, remove the transition switch); T-079 ([E01] Make the timing-sensitive integration tests tolerant of a starved CI runner)
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-032 (Approve merge of T-061 (template picker, print guide, public print-feedback counter, PR #71)?)
 
-_Board last written 2026-10-16 23:35Z_
+_Board last written 2026-10-16 23:43Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -1318,14 +1318,14 @@ Choose a template (thumbnails from sample renders), trigger export, show progres
 - **Priority:** P1
 - **Type:** infra
 - **Milestone:** M1
-- **Depends-on:** T-017, T-018, T-019
+- **Depends-on:** T-017, T-018, T-061
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
+- **Updated:** 2026-10-16 23:43Z by leader
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/10-end-to-end-smoke-test-of-the-m1-journey-in.md`
@@ -1610,7 +1610,7 @@ Items from the T-006 review that only matter at scale or in production: (1) the 
 - 2026-10-07 07:07Z · leader · From the T-006 review: also require at least one visible character in a display name (a name made only of U+200D passes today), preferably through one shared helper that T-008 and later text fields reuse.
 
 ### T-032 — [E01] db.Open: treat MySQL 1044 as permanent; README warning about bare docker compose
-- **Status:** READY_FOR_QA
+- **Status:** MERGED
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -1621,8 +1621,8 @@ Items from the T-006 review that only matter at scale or in production: (1) the 
 - **Assignee:** —
 - **Branch:** task/t-032-e01-db-open-treat-mysql-1044-as-permanen
 - **PR:** 72
-- **Updated:** 2026-10-16 23:27Z by dev
-- **Comments-seen:** 2
+- **Updated:** 2026-10-16 23:42Z by leader
+- **Comments-seen:** 4
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/08-db-open-treat-mysql-1044-as-permanent-readme.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1633,6 +1633,8 @@ db.Open: treat MySQL 1044 as permanent; README warning about bare docker compose
 #### Comments
 - 2026-10-16 09:43Z · leader · promoted to keep the dev queue at 4; small P3.
 - 2026-10-16 23:27Z · dev · 1044 added to permanent() + test case; README compose warning. go test ./... and make lint green. Head 164f192.
+- 2026-10-16 23:39Z · qa · Head 164f192, CI green (go, go-integration, security, web). Evidence: (1) permanent() now includes 1044; test TestWaitReadyFailsFastOnPermanentErrors covers 1044/1045/1049 (one attempt, <1s, error names addr+user). (2) Live check vs smemories-mysql (scratch test, removed): unknown DB nosuchdb_zz -> 1044 fails in 4ms with 'refused user smemories (check credentials...)' ; wrong password -> 1045 in 7ms; port 1 refused -> still retries full 10s then 'not reachable after 10s'; 1040 transient retried (existing test TestWaitReadyRetriesTransientErrors). No password in any error. (3) README warning correct: docker-compose.yml has 'name: smemories', Makefile overrides COMPOSE_PROJECT_NAME per checkout, so bare compose/down -v targets old smemories project; wording accurate. (4) make lint build test OK; go test -race -tags integration ./internal/db/... OK. Non-blocking: none.
+- 2026-10-16 23:42Z · leader · merged ea20f0f (PR #72). Review: 3 files; MySQL 1044 joins 1045/1049 as a permanent error in db.Open (fail fast, test covers all three), README tells readers to use make up/down instead of a bare docker compose; CI green, QA_PASS on the same head. For owner to check: nothing visible.
 
 ### T-033 — [E01] CI: do not cancel in-progress runs on develop and main
 - **Status:** DONE
@@ -3832,7 +3834,7 @@ Spec: .team/epics/E04-friends-notes/09-inbox-320px-polish.md (read it from the r
 - 2026-10-16 03:40Z · leader · created by mistake: the board does not let the leader override QA_FAIL, so the 320px fix goes through T-017 rework 2 instead
 
 ### T-085 — [E10] Lint exclusions anchored and a guard for auth.UserFrom
-- **Status:** READY_FOR_QA
+- **Status:** IN_QA
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -3840,10 +3842,10 @@ Spec: .team/epics/E04-friends-notes/09-inbox-320px-polish.md (read it from the r
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** qa
 - **Branch:** task/t-085-e10-lint-exclusions-anchored-and-a-guard
 - **PR:** 73
-- **Updated:** 2026-10-16 23:34Z by dev
+- **Updated:** 2026-10-16 23:39Z by qa
 - **Comments-seen:** 2
 
 Spec: .team/epics/E10-skills-alignment/12-lint-anchors-userfrom-guard.md (read it from the repo root). Two non-blocking findings of the T-072 QA.
@@ -3891,3 +3893,4 @@ Spec: .team/epics/E10-skills-alignment/12-lint-anchors-userfrom-guard.md (read i
 - 2026-10-17 — T-059 (memory-book template, PR #68) merged 402d685 after rework 1 (cut-off notes ran out of the card in print; fixed with contain:size + print-check cases). T-079 merged. T-061 (picker + print screen, high risk) promoted to TODO. Awaiting owner accept: T-072, T-079, T-059.
 - 2026-10-17 — T-060 QA_FAIL: navy-classic profile page lost the quote and signature in print with long valid fields; rework 1. Open item for later: the public form offers 'Add photo' even when the template (navy-classic) never prints friends' photos; drive it from the template manifest.
 - 2026-10-17 — T-060 (navy-classic template, PR #70) merged 8f1f885 after rework 1 (profile quote and signature lost in print; fixed, 18 profile-at-maximum print-check cases). T-061 QA_PASS, awaiting owner approval (Q-032). T-032 and T-085 in QA. Owner to accept: T-059, T-060, T-072, T-079.
+- 2026-10-17 — T-032 (db 1044 permanent error + README compose warning, PR #72) merged ea20f0f. T-020 (end-to-end Playwright journey in CI) got its full spec and new dependencies (T-017, T-018, T-061); it starts when T-061 merges.
