@@ -122,21 +122,14 @@ describe("YearbookLayout", () => {
     expect(within(nav).queryByRole("link", { name: "My profile page" })).not.toBeInTheDocument();
   });
 
-  it("shows the username when the user has one, else the email local part", async () => {
+  it("shows the username in the user chip", async () => {
     viewport(1280);
     mockApi({
       "GET /user/get-me": Response.json({ status: "OK", data: user({ username: "lan.nguyen" }) }),
       "GET /yearbook/get-list": Response.json({ status: "OK", data: { items: [], next_id: "" } }),
     });
-    const { unmount } = renderApp("/yearbooks");
-    expect(await screen.findByRole("link", { name: "lan.nguyen" })).toBeInTheDocument();
-    unmount();
-    mockApi({
-      "GET /user/get-me": Response.json({ status: "OK", data: user() }),
-      "GET /yearbook/get-list": Response.json({ status: "OK", data: { items: [], next_id: "" } }),
-    });
     renderApp("/yearbooks");
-    expect(await screen.findByRole("link", { name: "lan" })).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "lan.nguyen" })).toBeInTheDocument();
   });
 
   it("takes extra items and shows a pending count badge", async () => {

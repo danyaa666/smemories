@@ -383,3 +383,15 @@ li:nth-child(3n) > .photo-tile > .tape {
   gap: var(--space-2);
   margin-top: var(--space-6);
 }
+
+/* ── Account: username ────────────────────────── */
+.username-block {
+  margin-top: var(--space-6);
+  max-width: var(--form-max);
+}
+
+.username-current {
+  font-family: var(--font-mono);
+  font-size: var(--text-h3);
+  overflow-wrap: anywhere; /* 30 characters with no space must not widen a 320 px screen */
+}

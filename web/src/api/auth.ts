@@ -30,3 +30,5 @@ export const resendVerification = () =>
 export const forgotPassword = (email: string) => postJson<void>("/auth/forgot-password", { email });
 export const resetPassword = (email: string, code: string, password: string) =>
   postJson<void>("/auth/reset-password", { email, code, password });
+export const updateUsername = (username: string) =>
+  postJson<User>("/user/update-username", { username });

@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { useMe } from "../auth/useMe";
+import { UsernameForm } from "../components/UsernameForm";
 
 export function Account() {
   const { t } = useTranslation();
@@ -20,6 +21,7 @@ export function Account() {
           <Link to="/verify-email">{t("account.verifyLink")}</Link>
         </>
       )}
+      <UsernameForm user={user} />
     </>
   );
 }

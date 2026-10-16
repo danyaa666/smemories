@@ -91,7 +91,13 @@
     "title": "My account",
     "verified": "Email verified",
     "notVerified": "Email not verified yet. Enter the code we sent you.",
-    "verifyLink": "Verify your email"
+    "verifyLink": "Verify your email",
+    "username": "Username",
+    "usernameNew": "New username",
+    "usernameHelp": "3 to 30 characters: lower-case letters, digits, dot, underscore or hyphen. It is public and not used to sign in.",
+    "usernameSave": "Save username",
+    "usernameSaved": "Username saved.",
+    "usernameCooldown": "You can change your username again on {{date}}."
   },
   "errors": {
     "generic": "Something went wrong. Please try again.",
@@ -134,7 +140,11 @@
     "order_stale": "The order changed somewhere else. Reload and try again.",
     "invalid_label": "The name can have at most 60 characters, without invisible or control characters.",
     "invalid_deadline": "Pick a day that is in the future and less than a year away.",
-    "too_many_ids": "That is too many at once. Select fewer notes."
+    "too_many_ids": "That is too many at once. Select fewer notes.",
+    "invalid_username": "Use 3 to 30 characters: letters, digits, dot, underscore or hyphen, starting and ending with a letter or digit.",
+    "username_reserved": "This username is not available. Choose another one.",
+    "username_taken": "This username is already taken. Choose another one.",
+    "username_change_too_soon": "You changed your username recently. You can change it again on {{date}}."
   },
   "books": {
     "title": "My yearbooks",

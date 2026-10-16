@@ -38,6 +38,8 @@ export const user = (over: object = {}) => ({
   display_name: "Lan Nguyễn",
   locale: "en",
   created_at: 1759276800000,
+  username: "user-0c1d2e3f",
+  username_next_change_at: null,
   ...over,
 });
 
