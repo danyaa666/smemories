@@ -12,6 +12,7 @@ import { Register } from "./pages/Register";
 import { ResetPassword } from "./pages/ResetPassword";
 import { VerifyEmail } from "./pages/VerifyEmail";
 import { Home } from "./pages/Home";
+import { NoteForm } from "./pages/NoteForm";
 import { NotFound } from "./pages/NotFound";
 import { YearbookEdit } from "./pages/YearbookEdit";
 import { YearbookNew } from "./pages/YearbookNew";
@@ -31,6 +32,7 @@ export function App() {
   }
   return (
     <Routes>
+      <Route path="/c/:token" element={<NoteForm />} />
       <Route element={<PublicLayout />}>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />

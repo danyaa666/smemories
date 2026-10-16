@@ -124,7 +124,8 @@
     "code_expired": "This code has expired. Send a new code.",
     "code_locked": "Too many wrong attempts on this code. Send a new code.",
     "code_store_unavailable": "We cannot check codes right now. Please try again in a moment.",
-    "session_store_unavailable": "We cannot reach the sign-in service right now. Please try again in a moment."
+    "session_store_unavailable": "We cannot reach the sign-in service right now. Please try again in a moment.",
+    "request_timeout": "The connection stalled. Your note is still here: press Send to try again."
   },
   "books": {
     "title": "My yearbooks",
@@ -187,5 +188,58 @@
     "resend": "Send a new code",
     "resendIn": "Send a new code ({{seconds}}s)",
     "resent": "We sent a new code."
+  },
+  "note": {
+    "writingIn": "you're writing in",
+    "privacy": "Only {{name}} will see your note. They choose which ones go in the book.",
+    "optional": "(optional)",
+    "required": "Write a few words before sending.",
+    "invalidAnswer": "This contains characters we can't accept. Remove them and try again.",
+    "fix": "Please fix the fields marked below before sending.",
+    "photos": "Photos",
+    "photoTotal": "{{n}} of {{max}}",
+    "addPhoto": "Add photo",
+    "photoHint": "JPG, PNG or WebP, up to 10 MB each. Up to 3 photos.",
+    "photoAlt": "Your photo {{n}}",
+    "removePhoto": "Remove photo {{n}}",
+    "photoType": "{{name}}: only JPG, PNG or WebP photos work.",
+    "photoSize": "{{name}} is larger than 10 MB.",
+    "photoCount": "You can add up to {{max}} photos.",
+    "consent": "By sending, you're OK with {{name}} printing your note and photos in their book.",
+    "send": "Send my note",
+    "sending": "Sending…",
+    "progress": "Sending your note",
+    "slow": "Slow connection. Still sending. Keep this page open.",
+    "saved": "Your words are saved on this phone, so nothing gets lost.",
+    "busyRetry": "Still sending. The server is busy, trying again…",
+    "what": "What is SMemories?",
+    "theOwner": "the owner",
+    "photoFail": {
+      "title": "Not sent",
+      "body": "A photo didn't upload. Your words are fine.",
+      "retry": "Try again",
+      "remove": "Remove photos",
+      "without": "Send without photos"
+    },
+    "sent": {
+      "title": "Sent! Thank you.",
+      "titleName": "Sent! Thank you, {{name}}.",
+      "body": "{{name}} will see your note soon. It goes in their book once they approve it.",
+      "another": "Write another note",
+      "cta": "Graduating too?",
+      "make": "Make your own yearbook"
+    },
+    "closed": {
+      "title": "This link has closed",
+      "body": "Notes are no longer being collected here. If you still want to write, ask {{name}} for a new link."
+    },
+    "full": {
+      "title": "This link is full",
+      "body": "This link has reached its limit. Ask {{name}} to open a new link."
+    },
+    "gone": {
+      "title": "This link doesn't work anymore",
+      "body": "The owner turned it off. If you think that's a mistake, ask them for a new link."
+    }
   }
 }

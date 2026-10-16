@@ -124,7 +124,8 @@
     "code_expired": "Mã đã hết hạn. Hãy gửi mã mới.",
     "code_locked": "Bạn đã nhập sai quá nhiều lần với mã này. Hãy gửi mã mới.",
     "code_store_unavailable": "Hiện chúng tôi chưa kiểm tra được mã. Vui lòng thử lại sau giây lát.",
-    "session_store_unavailable": "Hiện chưa kết nối được dịch vụ đăng nhập. Vui lòng thử lại sau giây lát."
+    "session_store_unavailable": "Hiện chưa kết nối được dịch vụ đăng nhập. Vui lòng thử lại sau giây lát.",
+    "request_timeout": "Kết nối bị gián đoạn. Lời nhắn của bạn vẫn còn: bấm Gửi để thử lại."
   },
   "books": {
     "title": "Kỷ yếu của tôi",
@@ -187,5 +188,58 @@
     "resend": "Gửi mã mới",
     "resendIn": "Gửi mã mới ({{seconds}}s)",
     "resent": "Chúng tôi đã gửi mã mới."
+  },
+  "note": {
+    "writingIn": "bạn đang viết vào",
+    "privacy": "Chỉ {{name}} đọc được lời nhắn này. Bạn ấy sẽ chọn lời nhắn nào được in vào sách.",
+    "optional": "(không bắt buộc)",
+    "required": "Hãy viết vài chữ trước khi gửi.",
+    "invalidAnswer": "Nội dung có ký tự không được chấp nhận. Hãy xoá chúng rồi thử lại.",
+    "fix": "Hãy sửa các ô được đánh dấu bên dưới trước khi gửi.",
+    "photos": "Ảnh",
+    "photoTotal": "{{n}} / {{max}}",
+    "addPhoto": "Thêm ảnh",
+    "photoHint": "JPG, PNG hoặc WebP, tối đa 10 MB mỗi ảnh. Tối đa 3 ảnh.",
+    "photoAlt": "Ảnh {{n}} của bạn",
+    "removePhoto": "Xoá ảnh {{n}}",
+    "photoType": "{{name}}: chỉ nhận ảnh JPG, PNG hoặc WebP.",
+    "photoSize": "{{name}} lớn hơn 10 MB.",
+    "photoCount": "Bạn chỉ có thể thêm tối đa {{max}} ảnh.",
+    "consent": "Khi gửi, bạn đồng ý để {{name}} in lời nhắn và ảnh của bạn vào sách của bạn ấy.",
+    "send": "Gửi lời nhắn",
+    "sending": "Đang gửi…",
+    "progress": "Đang gửi lời nhắn của bạn",
+    "slow": "Mạng chậm. Vẫn đang gửi. Hãy giữ trang này mở.",
+    "saved": "Lời bạn viết đã được lưu trên máy này nên sẽ không bị mất.",
+    "busyRetry": "Vẫn đang gửi. Máy chủ đang bận, đang thử lại…",
+    "what": "SMemories là gì?",
+    "theOwner": "chủ sách",
+    "photoFail": {
+      "title": "Chưa gửi được",
+      "body": "Có ảnh chưa tải lên được. Lời bạn viết vẫn còn nguyên.",
+      "retry": "Thử lại",
+      "remove": "Bỏ các ảnh",
+      "without": "Gửi không kèm ảnh"
+    },
+    "sent": {
+      "title": "Đã gửi! Cảm ơn bạn.",
+      "titleName": "Đã gửi! Cảm ơn {{name}}.",
+      "body": "{{name}} sẽ sớm đọc được lời nhắn của bạn. Lời nhắn được in vào sách sau khi bạn ấy duyệt.",
+      "another": "Viết thêm lời nhắn",
+      "cta": "Bạn cũng sắp tốt nghiệp?",
+      "make": "Tự làm lưu bút của bạn"
+    },
+    "closed": {
+      "title": "Liên kết này đã đóng",
+      "body": "Liên kết này không còn nhận lời nhắn. Nếu vẫn muốn viết, hãy xin {{name}} một liên kết mới."
+    },
+    "full": {
+      "title": "Liên kết này đã đầy",
+      "body": "Liên kết này đã đạt giới hạn. Hãy nhờ {{name}} mở một liên kết mới."
+    },
+    "gone": {
+      "title": "Liên kết này không còn dùng được",
+      "body": "Chủ sách đã tắt liên kết. Nếu bạn nghĩ đây là nhầm lẫn, hãy xin bạn ấy một liên kết mới."
+    }
   }
 }
