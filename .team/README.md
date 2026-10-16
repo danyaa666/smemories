@@ -11,16 +11,16 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 19 | T-017, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-082 |
-| TODO | 6 | T-013, T-018, T-072, T-079, T-080, T-081 |
-| MERGED | 2 | T-071, T-083 |
-| DONE | 49 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-073, T-074, T-075, T-076, T-077, T-078 |
+| TODO | 5 | T-013, T-072, T-079, T-080, T-081 |
+| CHANGES_REQUESTED | 1 | T-018 |
+| DONE | 51 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-073, T-074, T-075, T-076, T-077, T-078, T-083 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
 
-**Awaiting your review (MERGED):** T-071 ([E10] API v2: auth and user domain; remove the /v1 paths and the web shim); T-083 ([E01] Web: design system foundation (tokens, fonts, base components, yearbook shell))
+**Awaiting your review (MERGED):** nothing
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?)
 
-_Board last written 2026-10-16 01:36Z_
+_Board last written 2026-10-16 01:42Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -1099,19 +1099,19 @@ Create/copy/revoke the collection link, set a deadline, see submissions grouped 
 #### Comments
 
 ### T-018 — [E04] Web: public anonymous notes form
-- **Status:** TODO
+- **Status:** CHANGES_REQUESTED
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
 - **Depends-on:** T-003, T-034, T-068, T-083
 - **Risk:** low
-- **Rework:** 0
+- **Rework:** 1
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-15 16:38Z by leader
-- **Comments-seen:** 1
+- **Branch:** task/t-018-e04-web-public-anonymous-notes-form
+- **PR:** https://github.com/danyaa666/smemories/pull/59
+- **Updated:** 2026-10-16 01:42Z by leader
+- **Comments-seen:** 3
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/05-web-public-anonymous-notes-form.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1121,6 +1121,8 @@ Mobile-first public page opened from the shared link: name, relationship, messag
 
 #### Comments
 - 2026-10-15 16:38Z · leader · unblocked: T-083 merged (design foundation) and T-068 done. Spec has the design source (docs/design/notes) and the known-differences list.
+- 2026-10-16 01:42Z · dev · PR #59 head 1227dac. Page /n/:token, form from API fields, XHR multipart answers-first, N7/N8/N9/N10/N5 screens, draft in localStorage, EN+VI. Verify: cd web && npm test (188), open /n/<token> in dev. Decisions flagged in PR: route /n/:token (T-017 must build links with it); auto-retry only on 503 busy, network error = user presses Send again. VI strings are a draft for the owner (list in PR). N11 preview not shipped.
+- 2026-10-16 01:42Z · leader · Blocking: 1) wrong route. api/openapi.yaml (note-collection/create) fixes the public link as <app>/c/<token>; the PR uses /n/:token. Change the route, the router test and every link in tests/docs to /c/:token. 2) The token is a bearer secret in the URL: add a no-referrer policy for this page (meta name=referrer content=no-referrer set while the form is mounted, or the host header) and check the draft key in localStorage does not contain the raw token (use a hash or the collection label). Decision 2 (auto-retry only on 503 busy, keep answers on network error/408 and let the user press Send) is accepted. Not shipping N11 desktop preview and 'send without photos' during N4 is accepted, list them as known differences in the PR. Then merge develop if needed, re-run web checks, READY_FOR_QA. Spec 05 now states the decision at the bottom.
 
 ### T-019 — [E05] Web: template picker, PDF preview (pdf.js) and export/download
 - **Status:** CANCELLED
@@ -2925,7 +2927,7 @@ Moves the yearbook endpoints to /api/yearbook/*, introduces yearbook.Service (ru
 - 2026-10-15 14:19Z · human · accepted by owner
 
 ### T-071 — [E10] API v2: auth and user domain; remove the /v1 paths and the web shim
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -2936,7 +2938,7 @@ Moves the yearbook endpoints to /api/yearbook/*, introduces yearbook.Service (ru
 - **Assignee:** —
 - **Branch:** task/t-071-e10-api-v2-auth-and-user-domain-remove-t
 - **PR:** https://github.com/danyaa666/smemories/pull/58
-- **Updated:** 2026-10-15 14:52Z by leader
+- **Updated:** 2026-10-16 01:37Z by human
 - **Comments-seen:** 6
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/09-api-auth.md`
@@ -2975,6 +2977,7 @@ Moves auth to /api/auth/* and /api/user/get-me, Google callback path, last domai
 - 2026-10-15 14:42Z · leader · Leader review OK on f189d67 (f3d640f + QA test-only commit): handler decodes and maps only, cookie name/flags unchanged, fail-closed stores keep Retry-After, 499 is debug-logged only, get-me = single auth.User (T-081 adds username there), /v1 gone, web shim removed. QA probes clean. Waiting for: (1) CI go + go-integration green on f189d67, (2) owner approval (Risk high). Follow-ups moved into T-072 spec. For owner: register <PUBLIC_BASE_URL>/api/auth/google-callback in the Google console before deploy.
 - 2026-10-15 14:52Z · human · owner approved merge
 - 2026-10-15 14:52Z · leader · merged 3c4b149 (PR #58). Review: handler decodes/maps only, cookie/CSRF/limits unchanged, 499 debug-only, single auth.User for get-me, /v1 gone; QA probes clean, CI green on f189d67, owner approved. For owner to check: sign in/out, register + code 123123, forgot/reset, Google sign-in after registering <PUBLIC_BASE_URL>/api/auth/google-callback in the Google console.
+- 2026-10-16 01:37Z · human · accepted by owner
 
 ### T-072 — [E10] Quality sweep: mnd, forbidigo, pointer parameters, pool defaults, remove the transition switch
 - **Status:** TODO
@@ -3311,7 +3314,7 @@ Account page shows the username and lets the user change it (weekly limit, local
 #### Comments
 
 ### T-083 — [E01] Web: design system foundation (tokens, fonts, base components, yearbook shell)
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -3322,7 +3325,7 @@ Account page shows the username and lets the user change it (weekly limit, local
 - **Assignee:** —
 - **Branch:** task/t-083-e01-web-design-system-foundation-tokens-
 - **PR:** 57
-- **Updated:** 2026-10-15 16:38Z by leader
+- **Updated:** 2026-10-16 01:37Z by human
 - **Comments-seen:** 7
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/15-web-design-system-foundation.md`
@@ -3363,6 +3366,7 @@ Port the Claude Design tokens, self-host the fonts, add base components (Button,
   5. vi nav strings in src/locales/vi.json unchanged: main 'Kỷ yếu', profile 'Trang hồ sơ của tôi', tabBooks 'Kỷ yếu', tabProfile 'Hồ sơ'.
   Not re-tested (already verified in my earlier note): AC1-AC5 details, focus ring, reduced motion, 44px targets. Non-blocking observations from my first note still stand (text links under 44px; Dialog not wired). My own processes (API, Vite) are stopped; DB smem_test_qa083 and Redis db 12 are mine and left in place.
 - 2026-10-15 16:38Z · leader · merged 28f5dca (PR #57). Review: tokens.css identical to the design minus @import, self-hosted @fontsource (exact pins, OFL notices), 9 ui components + tests, YearbookLayout; web-only diff, CI green, QA_PASS on the merged state. Rework cause was stale /v1 mocks in a test, fixed. For owner to check: look at Login, Register, Yearbooks and a book at phone and desktop width; owner already approved the 4 nav strings; 'My yearbooks' nav entry was a dev addition.
+- 2026-10-16 01:37Z · human · accepted by owner
 
 <!-- tasks:end -->
 

@@ -34,3 +34,6 @@ Visual source: `docs/design/notes/Public Note Form.dc.html` (screens N1 to N11),
 6. Slow connection (N4): no auto-retry that could double-post; the single Send is disabled while sending; after a network error the user presses Send again (the server rate-limits per link and per IP).
 7. The desktop live preview (N11) is `aria-hidden` decoration and may ship last; the success screen (N5) and "Make your own yearbook" link (to the register page) are required.
 8. Language: EN/VI switcher as in the design; the Vietnamese strings from N6 are a draft for the owner's review.
+
+#### Decision (leader, 2026-10-16): the public link shape
+The link is `<app>/c/<token>` (api/openapi.yaml, `note-collection/create`: "the web link is `<app>/c/<token>`"). The form route is `/c/:token`; T-017 builds the owner share link as `<SMEM_PUBLIC_BASE_URL>/c/<token>`. The page must send `Referrer-Policy: no-referrer` (meta tag or header via the dev/prod host config) because the token is a bearer secret in the URL, and must not put the token in analytics, error messages or `localStorage` keys in clear (hash it for the draft key).
