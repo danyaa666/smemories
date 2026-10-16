@@ -33,7 +33,11 @@
     "main": "Yearbook",
     "profile": "My profile page",
     "tabBooks": "Books",
-    "tabProfile": "Profile"
+    "tabProfile": "Profile",
+    "notes": "Notes from friends",
+    "links": "Note links",
+    "tabNotes": "Notes",
+    "tabLinks": "Links"
   },
   "fields": {
     "email": "Email",
@@ -125,7 +129,12 @@
     "code_locked": "Too many wrong attempts on this code. Send a new code.",
     "code_store_unavailable": "We cannot check codes right now. Please try again in a moment.",
     "session_store_unavailable": "We cannot reach the sign-in service right now. Please try again in a moment.",
-    "request_timeout": "The connection stalled. Your note is still here: press Send to try again."
+    "request_timeout": "The connection stalled. Your note is still here: press Send to try again.",
+    "email_not_verified": "Verify your email address first, then try again.",
+    "order_stale": "The order changed somewhere else. Reload and try again.",
+    "invalid_label": "The name can have at most 60 characters, without invisible or control characters.",
+    "invalid_deadline": "Pick a day that is in the future and less than a year away.",
+    "too_many_ids": "That is too many at once. Select fewer notes."
   },
   "books": {
     "title": "My yearbooks",
@@ -241,5 +250,137 @@
       "title": "This link doesn't work anymore",
       "body": "The owner turned it off. If you think that's a mistake, ask them for a new link."
     }
+  },
+  "inbox": {
+    "title": "Notes from friends",
+    "summary": "{{pending}} waiting for you · {{approved}} in your book · only approved notes print",
+    "summaryClear": "All caught up · {{approved}} notes in your book",
+    "getLink": "Get a note link",
+    "filter": "Show notes",
+    "tab": {
+      "all": "All",
+      "pending": "Pending",
+      "approved": "Approved",
+      "hidden": "Hidden"
+    },
+    "status": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "hidden": "Hidden"
+    },
+    "anonymous": "Anonymous",
+    "select": "Select {{name}}'s note",
+    "selectAll": "Select all",
+    "selected": "{{count}} selected",
+    "bulk": "Actions for the selected notes",
+    "clear": "Clear selection",
+    "approve": "Approve",
+    "hide": "Hide",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "hideInstead": "Hide instead",
+    "more": "Show more",
+    "moreActions": "More actions for {{name}}'s note",
+    "grip": "Drag to reorder {{name}}'s note",
+    "position": "{{n}} of {{total}}",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "moveUpName": "Move {{name}}'s note up",
+    "moveDownName": "Move {{name}}'s note down",
+    "moved": "{{name}}'s note, moved to position {{position}} of {{total}}",
+    "stale": "The order changed somewhere else. We reloaded your notes, please try again.",
+    "openPhoto": "Open photo {{n}} from {{name}}",
+    "undo": "Undo",
+    "hintWide": "Drag by the grip to set the order notes appear in your book. Keyboard: ••• then Move up or Move down.",
+    "hintNarrow": "Only approved notes are listed, the top one prints first. Tap Book order to rearrange them.",
+    "bookOrder": "Book order",
+    "done": "Done",
+    "offline": "You're offline.",
+    "offlineBody": "Check your connection.",
+    "loadError": "We couldn't load your notes",
+    "loadErrorBody": "They're safe. Check your connection and try again.",
+    "firstRun": {
+      "title": "No notes yet",
+      "body": "Share a link in your class chat. Friends write in your book without making an account.",
+      "cta": "Create a note link"
+    },
+    "empty": {
+      "all": {
+        "title": "No notes yet",
+        "body": "Share a link and friends can write in your book."
+      },
+      "pending": {
+        "title": "You're all caught up",
+        "body": "New notes from friends land here first."
+      },
+      "approved": {
+        "title": "Nothing approved yet",
+        "body": "Approve a note and it goes into your book."
+      },
+      "hidden": {
+        "title": "No hidden notes",
+        "body": "Notes you hide stay here, out of the book. You can bring them back any time."
+      }
+    },
+    "confirm": {
+      "titleOne": "Delete this note?",
+      "titleMany": "Delete {{count}} notes?",
+      "bodyOne": "It is removed for good, photos included. Hide it instead to keep it out of the book.",
+      "bodyMany": "They are removed for good, photos included. Hide them instead to keep them out of the book."
+    },
+    "toast": {
+      "approvedOne": "{{name}}'s note approved.",
+      "approvedMany": "{{count}} notes approved.",
+      "hiddenOne": "{{name}}'s note hidden.",
+      "hiddenMany": "{{count}} notes hidden.",
+      "deletedOne": "Note deleted.",
+      "deletedMany": "{{count}} notes deleted."
+    },
+    "fields": {
+      "name": "Name",
+      "nickname": "Nickname",
+      "relationship": "Relationship",
+      "message": "Message",
+      "how_we_met": "How we met",
+      "first_impression": "First impression",
+      "best_memory": "Best memory together",
+      "wish": "Their wish for you",
+      "advice": "Their advice"
+    }
+  },
+  "links": {
+    "back": "Back to notes",
+    "title": "Note links",
+    "intro": "Friends open a link, write a note and add photos without making an account. You decide which notes go in your book.",
+    "created": "Your link is ready",
+    "once": "This is the only time we show it. Copy it now and share it. If you lose it, revoke it and create a new one.",
+    "link": "Link",
+    "linkNamed": "Link for {{label}}",
+    "copy": "Copy link",
+    "copied": "Copied",
+    "done": "Done",
+    "new": "Create a new link",
+    "label": "Name (optional)",
+    "labelHelp": "Only you see it, for example \"Class chat\".",
+    "deadline": "Last day to write (optional)",
+    "deadlineHelp": "After this day the link stops working. Leave it empty for no deadline.",
+    "create": "Create link",
+    "limitReached": "You can have at most {{max}} open links. Revoke one to make room.",
+    "existing": "Your links",
+    "loadError": "We couldn't load your links",
+    "none": "No links yet.",
+    "unnamed": "Untitled link",
+    "status": {
+      "open": "Open",
+      "closed": "Closed",
+      "revoked": "Revoked"
+    },
+    "notes": "Notes: {{count}}",
+    "createdOn": "Created {{date}}",
+    "until": "Open until {{date}}",
+    "noDeadline": "No deadline",
+    "revoke": "Revoke",
+    "revokeTitle": "Revoke this link?",
+    "revokeBody": "Friends can no longer use it. Notes already sent stay in your inbox."
   }
 }

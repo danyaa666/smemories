@@ -33,7 +33,11 @@
     "main": "Kỷ yếu",
     "profile": "Trang hồ sơ của tôi",
     "tabBooks": "Kỷ yếu",
-    "tabProfile": "Hồ sơ"
+    "tabProfile": "Hồ sơ",
+    "notes": "Lời nhắn từ bạn bè",
+    "links": "Liên kết lời nhắn",
+    "tabNotes": "Lời nhắn",
+    "tabLinks": "Liên kết"
   },
   "fields": {
     "email": "Email",
@@ -125,7 +129,12 @@
     "code_locked": "Bạn đã nhập sai quá nhiều lần với mã này. Hãy gửi mã mới.",
     "code_store_unavailable": "Hiện chúng tôi chưa kiểm tra được mã. Vui lòng thử lại sau giây lát.",
     "session_store_unavailable": "Hiện chưa kết nối được dịch vụ đăng nhập. Vui lòng thử lại sau giây lát.",
-    "request_timeout": "Kết nối bị gián đoạn. Lời nhắn của bạn vẫn còn: bấm Gửi để thử lại."
+    "request_timeout": "Kết nối bị gián đoạn. Lời nhắn của bạn vẫn còn: bấm Gửi để thử lại.",
+    "email_not_verified": "Hãy xác minh địa chỉ email trước, rồi thử lại.",
+    "order_stale": "Thứ tự đã thay đổi ở nơi khác. Hãy tải lại rồi thử lại.",
+    "invalid_label": "Tên tối đa 60 ký tự, không chứa ký tự ẩn hoặc ký tự điều khiển.",
+    "invalid_deadline": "Hãy chọn một ngày trong tương lai, cách hôm nay chưa đến một năm.",
+    "too_many_ids": "Chọn quá nhiều cùng lúc. Hãy chọn ít lời nhắn hơn."
   },
   "books": {
     "title": "Kỷ yếu của tôi",
@@ -241,5 +250,137 @@
       "title": "Liên kết này không còn dùng được",
       "body": "Chủ sách đã tắt liên kết. Nếu bạn nghĩ đây là nhầm lẫn, hãy xin bạn ấy một liên kết mới."
     }
+  },
+  "inbox": {
+    "title": "Lời nhắn từ bạn bè",
+    "summary": "{{pending}} đang chờ bạn duyệt · {{approved}} trong sách · chỉ lời nhắn đã duyệt mới được in",
+    "summaryClear": "Đã duyệt hết · {{approved}} lời nhắn trong sách",
+    "getLink": "Lấy liên kết lời nhắn",
+    "filter": "Lọc lời nhắn",
+    "tab": {
+      "all": "Tất cả",
+      "pending": "Chờ duyệt",
+      "approved": "Đã duyệt",
+      "hidden": "Đã ẩn"
+    },
+    "status": {
+      "pending": "Chờ duyệt",
+      "approved": "Đã duyệt",
+      "hidden": "Đã ẩn"
+    },
+    "anonymous": "Ẩn danh",
+    "select": "Chọn lời nhắn của {{name}}",
+    "selectAll": "Chọn tất cả",
+    "selected": "Đã chọn {{count}}",
+    "bulk": "Thao tác với các lời nhắn đã chọn",
+    "clear": "Bỏ chọn",
+    "approve": "Duyệt",
+    "hide": "Ẩn",
+    "delete": "Xóa",
+    "cancel": "Hủy",
+    "hideInstead": "Ẩn thay vì xóa",
+    "more": "Xem thêm",
+    "moreActions": "Thêm thao tác cho lời nhắn của {{name}}",
+    "grip": "Kéo để sắp xếp lời nhắn của {{name}}",
+    "position": "{{n}}/{{total}}",
+    "moveUp": "Chuyển lên",
+    "moveDown": "Chuyển xuống",
+    "moveUpName": "Chuyển lời nhắn của {{name}} lên",
+    "moveDownName": "Chuyển lời nhắn của {{name}} xuống",
+    "moved": "Lời nhắn của {{name}}, đã chuyển đến vị trí {{position}}/{{total}}",
+    "stale": "Thứ tự đã thay đổi ở nơi khác. Chúng mình đã tải lại lời nhắn, bạn thử lại nhé.",
+    "openPhoto": "Mở ảnh {{n}} của {{name}}",
+    "undo": "Hoàn tác",
+    "hintWide": "Kéo biểu tượng ⠿ để sắp xếp thứ tự lời nhắn trong sách. Bàn phím: ••• rồi Chuyển lên hoặc Chuyển xuống.",
+    "hintNarrow": "Chỉ hiện các lời nhắn đã duyệt, lời nhắn trên cùng được in trước. Chạm Thứ tự trong sách để sắp xếp.",
+    "bookOrder": "Thứ tự trong sách",
+    "done": "Xong",
+    "offline": "Bạn đang offline.",
+    "offlineBody": "Hãy kiểm tra kết nối.",
+    "loadError": "Không tải được lời nhắn",
+    "loadErrorBody": "Lời nhắn vẫn an toàn. Hãy kiểm tra kết nối rồi thử lại.",
+    "firstRun": {
+      "title": "Chưa có lời nhắn nào",
+      "body": "Gửi liên kết vào nhóm chat của lớp. Bạn bè viết vào sách của bạn mà không cần tạo tài khoản.",
+      "cta": "Tạo liên kết lời nhắn"
+    },
+    "empty": {
+      "all": {
+        "title": "Chưa có lời nhắn nào",
+        "body": "Chia sẻ một liên kết để bạn bè viết vào sách của bạn."
+      },
+      "pending": {
+        "title": "Bạn đã duyệt hết rồi",
+        "body": "Lời nhắn mới từ bạn bè sẽ xuất hiện ở đây trước."
+      },
+      "approved": {
+        "title": "Chưa duyệt lời nhắn nào",
+        "body": "Duyệt một lời nhắn để đưa nó vào sách."
+      },
+      "hidden": {
+        "title": "Không có lời nhắn bị ẩn",
+        "body": "Lời nhắn bạn ẩn sẽ nằm ở đây, ngoài sách. Bạn có thể đưa chúng trở lại bất cứ lúc nào."
+      }
+    },
+    "confirm": {
+      "titleOne": "Xóa lời nhắn này?",
+      "titleMany": "Xóa {{count}} lời nhắn?",
+      "bodyOne": "Lời nhắn sẽ bị xóa vĩnh viễn, cả ảnh đi kèm. Hãy ẩn nếu bạn chỉ muốn loại nó khỏi sách.",
+      "bodyMany": "Các lời nhắn sẽ bị xóa vĩnh viễn, cả ảnh đi kèm. Hãy ẩn nếu bạn chỉ muốn loại chúng khỏi sách."
+    },
+    "toast": {
+      "approvedOne": "Đã duyệt lời nhắn của {{name}}.",
+      "approvedMany": "Đã duyệt {{count}} lời nhắn.",
+      "hiddenOne": "Đã ẩn lời nhắn của {{name}}.",
+      "hiddenMany": "Đã ẩn {{count}} lời nhắn.",
+      "deletedOne": "Đã xóa lời nhắn.",
+      "deletedMany": "Đã xóa {{count}} lời nhắn."
+    },
+    "fields": {
+      "name": "Tên",
+      "nickname": "Biệt danh",
+      "relationship": "Mối quan hệ",
+      "message": "Lời nhắn",
+      "how_we_met": "Chúng mình quen nhau thế nào",
+      "first_impression": "Ấn tượng đầu tiên",
+      "best_memory": "Kỷ niệm đẹp nhất của chúng ta",
+      "wish": "Điều bạn ấy ước cho bạn",
+      "advice": "Lời khuyên của bạn ấy"
+    }
+  },
+  "links": {
+    "back": "Quay lại lời nhắn",
+    "title": "Liên kết lời nhắn",
+    "intro": "Bạn bè mở liên kết, viết lời nhắn và thêm ảnh mà không cần tạo tài khoản. Bạn quyết định lời nhắn nào được vào sách.",
+    "created": "Liên kết của bạn đã sẵn sàng",
+    "once": "Chúng mình chỉ hiện liên kết này một lần. Hãy sao chép và chia sẻ ngay. Nếu bạn làm mất, hãy thu hồi và tạo liên kết mới.",
+    "link": "Liên kết",
+    "linkNamed": "Liên kết cho {{label}}",
+    "copy": "Sao chép liên kết",
+    "copied": "Đã sao chép",
+    "done": "Xong",
+    "new": "Tạo liên kết mới",
+    "label": "Tên (không bắt buộc)",
+    "labelHelp": "Chỉ mình bạn thấy, ví dụ \"Nhóm chat lớp\".",
+    "deadline": "Ngày cuối được viết (không bắt buộc)",
+    "deadlineHelp": "Sau ngày này liên kết sẽ ngừng hoạt động. Để trống nếu không giới hạn.",
+    "create": "Tạo liên kết",
+    "limitReached": "Bạn chỉ có thể có tối đa {{max}} liên kết đang mở. Hãy thu hồi một liên kết để có chỗ.",
+    "existing": "Các liên kết của bạn",
+    "loadError": "Không tải được các liên kết",
+    "none": "Chưa có liên kết nào.",
+    "unnamed": "Liên kết chưa đặt tên",
+    "status": {
+      "open": "Đang mở",
+      "closed": "Đã đóng",
+      "revoked": "Đã thu hồi"
+    },
+    "notes": "Lời nhắn: {{count}}",
+    "createdOn": "Tạo ngày {{date}}",
+    "until": "Mở đến {{date}}",
+    "noDeadline": "Không giới hạn",
+    "revoke": "Thu hồi",
+    "revokeTitle": "Thu hồi liên kết này?",
+    "revokeBody": "Bạn bè sẽ không dùng được nữa. Các lời nhắn đã gửi vẫn nằm trong hộp thư của bạn."
   }
 }

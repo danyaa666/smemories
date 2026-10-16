@@ -10,6 +10,7 @@ import "./styles/fonts.css";
 import "./styles.css";
 import "./styles/ui.css";
 import "./styles/note.css";
+import "./styles/inbox.css";
 
 const queryClient = makeQueryClient(3);
 
