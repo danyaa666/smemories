@@ -10,18 +10,18 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 19 | T-017, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-082 |
-| TODO | 4 | T-072, T-079, T-080, T-081 |
-| IN_PROGRESS | 1 | T-013 |
-| QA_FAIL | 1 | T-018 |
+| BACKLOG | 18 | T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-082 |
+| TODO | 5 | T-017, T-072, T-079, T-080, T-081 |
+| IN_PROGRESS | 1 | T-018 |
+| MERGED | 1 | T-013 |
 | DONE | 51 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-073, T-074, T-075, T-076, T-077, T-078, T-083 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
 
-**Awaiting your review (MERGED):** nothing
+**Awaiting your review (MERGED):** T-013 ([E04] Notes moderation API (approve, hide, reorder, delete))
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?)
 
-_Board last written 2026-10-16 02:16Z_
+_Board last written 2026-10-16 02:28Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -948,7 +948,7 @@ Owner-created private collection links (create, list, revoke) and the public loo
 - 2026-10-08 02:46Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-011, T-012')
 
 ### T-013 — [E04] Notes moderation API (approve, hide, reorder, delete)
-- **Status:** IN_PROGRESS
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
@@ -956,11 +956,11 @@ Owner-created private collection links (create, list, revoke) and the public loo
 - **Risk:** low
 - **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-013-e04-notes-moderation-api-approve-hide-re
 - **PR:** https://github.com/danyaa666/smemories/pull/60
-- **Updated:** 2026-10-16 02:07Z by dev
-- **Comments-seen:** 7
+- **Updated:** 2026-10-16 02:28Z by leader
+- **Comments-seen:** 10
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/03-notes-moderation-api-approve-hide-reorder.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -991,6 +991,17 @@ Owner lists pending/approved/hidden notes per yearbook, approves or hides them, 
   - CI on b9ba229: go, security, web pass; go-integration was pending at my last look.
   - Note for the next QA run: yearbooks.postman_collection.json reads origin from a collection variable, so the API must allow http://localhost:5173 when running it (not a PR issue).
 - 2026-10-16 02:07Z · leader · Leader guidance for the rework (QA_FAIL): 1) Fix the lower-case id bug at the root, not in setStatus: ids are canonical upper-case ULIDs, so checkIDs (and the yearbook_id / id params of the other note endpoints) must validate the canonical form (26 chars, Crockford base32, upper-case) and answer ERROR_PARAM for anything else; additionally make lockNotes tolerate a collation-matched row (never index a map with a key the row might not have, and return ERROR_NOT_FOUND instead of panicking). QA's failing test is on the branch (c887e8b, moderation_qa_integration_test.go): adapt its expectation to ERROR_PARAM for lower-case ids if you choose validation, keep it otherwise. Check the other handlers of this package for the same pattern (grep for ids used as map keys after a SELECT ... IN). 2) Postman: make notes-moderation register the same shared Newman accounts as notes.postman_collection.json (Newman Alice Đặng ...) or use its own distinct emails so neither collection breaks the other regardless of run order; run both orders. Then CI green, READY_FOR_QA.
+- 2026-10-16 02:22Z · dev · PR #60 head 60bebf2, CI green (go, go-integration, security, web). (1) Lower-case id 500: checkIDs and checkOwner (yearbook_id, so all 4 routes) now require a canonical upper-case Crockford ULID, else 400 ERROR_PARAM (isPublicID in moderation.go); [ID, id.lower()] rejected the same way; lockNotes checks every requested id against its map and returns ErrNotFound instead of handing out a hole. Grepped the package: setStatus and reorder are the only map-by-public-id users; noteRowIDs/photoRows are count-based. Tests: QA test kept and adapted (TestQAMixedCaseNoteIDIsParamError: 400 on all 4 routes, lower-case yearbook_id, duplicate pair, counts unchanged, canonical id still 200), unit TestCheckIDs/TestIsPublicID. (2) Postman: notes-moderation registers the same display names as notes (Newman Alice Dang, Bob, Carol); +2 edge requests (lower-case note id, lower-case yearbook_id). Newman on own API :18014, fresh DB each: moderation, notes, moderation; and notes, moderation, notes: 71 req/138 assertions and 74/141, 0 failed. make lint, go test -race ./..., make test-integration green. docs/moderation.md updated.
+- 2026-10-16 02:28Z · qa · QA_PASS T-013 re-verify, PR #60 head 60bebf2 (CI go, go-integration, security, web all green on this head). Own API :18013 built from the branch, private DB smem_test_qa013r3 (utf8mb4_0900_ai_ci), Redis db 11 only (nothing in db 5), processes stopped. Probe script: scratchpad p013r3.py.
+  Fix 1 (lower-case ids) -> ok:
+  - Note ids on batch-update-status, reorder, batch-delete: lower-case, mixed-case, leading/trailing/inner space, tab, newline, NUL, 25 and 27 chars, empty, invalid Crockford letters I L O U (also lower-case i), dash, full-width/Kelvin unicode, literal %-encoded string (78 chars), %-prefixed: all 400 ERROR_PARAM (42 variants x 3 routes pass). [ID, lower(ID)] duplicate and [valid, lower-other] mixed batches: 400 on all 3. DB rows (status, order, existence) identical before/after = nothing mutated.
+  - yearbook_id on all 4 routes (update, reorder, delete, get-list): same 12 variants all 400 ERROR_PARAM. get-list with %-encoded canonical id decodes to canonical -> 200; %-encoded lower -> 400; repeated param: first value wins (canon+lower 200, lower+canon 400).
+  - No 500, no panic in the API log for the whole session.
+  Ownership/no leak -> ok: with canonical ids all 404 ERROR_NOT_FOUND unchanged (B on A's book/notes, A's note in B's book, nonexistent note, nonexistent book, A listing B's book). 400 for a malformed yearbook_id depends only on the string format, never on whether the book exists or who owns it (B on A's lower-case id and B on a nonexistent lower-case id both 400), so it leaks nothing; anonymous still 401 first. Canonical happy paths 200 (update, reorder, list, delete).
+  Fix 2 (Postman) -> ok: Newman 6.2.3, fresh DB + Redis db flush + Setup + verify of A/B between orders: moderation, notes, moderation = 71/138, 74/141, 71/138; notes, moderation, notes = 74/141, 71/138, 74/141; 0 failed everywhere. New edge requests (lower-case note id, lower-case yearbook_id) are in the run.
+  Gate on 60bebf2: make lint exit 0 (gofmt, vet, vet -tags integration, golangci-lint, web lint/typecheck/i18n/api schema); go build ./... 0; go test -race -count=1 ./... 0; make test-integration (-race -tags integration, incl. TestQAMixedCaseNoteIDIsParamError) all packages ok, 0 FAIL.
+  Non-blocking observations: (a) consistency: other domains are lenient, note-collection/create and yearbook/get accept a lower-case yearbook id (200, case-insensitive collation) and answer 404 for a malformed one, while moderation answers 400 ERROR_PARAM. docs/api-contract.md only defines ERROR_PARAM as malformed body or query, so 400 for a malformed id is within it and is documented in docs/moderation.md; leader may want to align the other domains (or the contract) in an E10 task. (b) the 400 is determined before ownership, which is the safe direction.
+- 2026-10-16 02:28Z · leader · merged c780423 (PR #60). Review: every query scoped by the locked owned book (book row FOR UPDATE first, then note rows by id), IN lists bounded to 100, keyset list with LIMIT, canonical-ULID validation answers ERROR_PARAM, photos purged before rows; CI green, QA_PASS on the same head after one rework. For owner to check: nothing visible until T-017 (moderation inbox) lands; API docs in docs/moderation.md.
 
 ### T-014 — [E05] Export job: assemble book, render PDF, store, download
 - **Status:** CANCELLED
@@ -1095,7 +1106,7 @@ Dashboard of the user's yearbooks; create/edit form for book information and the
 - 2026-10-09 01:42Z · leader · accepted by owner (chat, 2026-10-09: 'team accept T-016, T-046, T-047, T-051')
 
 ### T-017 — [E04] Web: notes link management and moderation inbox
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
@@ -1106,8 +1117,8 @@ Dashboard of the user's yearbooks; create/edit form for book information and the
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-15 08:38Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-16 02:28Z by leader
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/04-web-notes-link-management-and-moderation.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1116,9 +1127,10 @@ Dashboard of the user's yearbooks; create/edit form for book information and the
 Create/copy/revoke the collection link, set a deadline, see submissions grouped by status, approve/hide/reorder, preview the note as it will print.
 
 #### Comments
+- 2026-10-16 02:28Z · leader · unblocked: T-013 merged (API) and T-083 done. Link shape is <app>/c/<token> (see specs). Depends on T-016 which is done.
 
 ### T-018 — [E04] Web: public anonymous notes form
-- **Status:** QA_FAIL
+- **Status:** IN_PROGRESS
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -1126,10 +1138,10 @@ Create/copy/revoke the collection link, set a deadline, see submissions grouped 
 - **Risk:** low
 - **Rework:** 2
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** dev
 - **Branch:** task/t-018-e04-web-public-anonymous-notes-form
 - **PR:** https://github.com/danyaa666/smemories/pull/59
-- **Updated:** 2026-10-16 02:15Z by qa
+- **Updated:** 2026-10-16 02:23Z by dev
 - **Comments-seen:** 8
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/05-web-public-anonymous-notes-form.md`
@@ -3449,3 +3461,4 @@ Port the Claude Design tokens, self-host the fonts, add base components (Button,
 - 2026-10-15 — T-070 (API v2 yearbook, PR #56) merged c50ee9a after rework 1 (conflict with T-073 resolved by dev); awaiting owner accept. Heartbeat back to recurring (job 676f3351) after the one-shot wake; dev now on T-083. Note: local stack runs as compose project `smemories` (old volumes) after the Docker restart, not `awesomeproject1`.
 - 2026-10-15 — T-070 and T-073 accepted. T-071 (API v2 auth/user, PR #58, owner-approved Q-030) merged 3c4b149; owner action before deploy: register <PUBLIC_BASE_URL>/api/auth/google-callback in the Google console. T-083 got QA_FAIL (flaky layout test on CI), rework running. T-081, T-072, T-080 promoted to TODO. Owner approved the four new nav strings of T-083.
 - 2026-10-15 — T-083 (web design system foundation, PR #57) merged 28f5dca after rework 1 (a test still mocked /v1 routes after T-070; fixed, QA re-passed on the merged state). T-018 promoted to TODO; T-017 waits for T-013.
+- 2026-10-16 — T-013 (notes moderation API, PR #60) merged c780423 after rework 1 (lower-case ids gave 500; now canonical-ULID validation, ERROR_PARAM). T-017 promoted to TODO. T-018 is in its last rework (retry on 4xx).
