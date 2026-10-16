@@ -35,7 +35,12 @@ type User struct {
 	DisplayName   string `json:"display_name"`
 	Locale        string `json:"locale"`
 	CreatedAt     int64  `json:"created_at"` // Unix ms
-	InternalID    uint64 `json:"-"`
+	Username      string `json:"username"`   // lower case, unique, public (T-081)
+	// UsernameNextChangeAt is when the username may change again (Unix ms); nil when a change is allowed now. The service fills it
+	// from its clock (Service.expose); the store only knows UsernameChangedAt.
+	UsernameNextChangeAt *int64 `json:"username_next_change_at"`
+	UsernameChangedAt    int64  `json:"-"` // Unix ms of the last user-made change, 0 = never
+	InternalID           uint64 `json:"-"`
 }
 
 // Store is the users persistence (sessions live in Redis, see sessions.go). Every query is parameterised.
@@ -43,11 +48,11 @@ type Store struct{ db *sql.DB }
 
 func NewStore(db *sql.DB) *Store { return &Store{db: db} }
 
-const userCols = `u.id, u.public_id, u.email, u.email_verified_at IS NOT NULL, u.display_name, u.locale, u.created_at`
+const userCols = `u.id, u.public_id, u.email, u.email_verified_at IS NOT NULL, u.display_name, u.locale, u.created_at, u.username, u.username_changed_at`
 
 func scanUser(sc interface{ Scan(...any) error }, extra ...any) (User, error) {
 	var u User
-	dest := append([]any{&u.InternalID, &u.ID, &u.Email, &u.EmailVerified, &u.DisplayName, &u.Locale, &u.CreatedAt}, extra...)
+	dest := append([]any{&u.InternalID, &u.ID, &u.Email, &u.EmailVerified, &u.DisplayName, &u.Locale, &u.CreatedAt, &u.Username, &u.UsernameChangedAt}, extra...)
 	if err := sc.Scan(dest...); err != nil {
 		return User{}, err
 	}
@@ -62,28 +67,70 @@ func (s *Store) createUser(ctx context.Context, u *User, passwordHash string, wi
 		return err
 	}
 	defer func() { _ = tx.Rollback() }()
-	res, err := tx.ExecContext(ctx,
-		`INSERT INTO user_tab (public_id, email, password_hash, display_name, locale, created_at, updated_at) VALUES (?,?,?,?,?,?,?)`,
-		u.ID, u.Email, passwordHash, u.DisplayName, u.Locale, u.CreatedAt, u.CreatedAt)
-	if err != nil {
+	if err := insertUser(ctx, tx, u, passwordHash, nil); err != nil {
 		var me *mysql.MySQLError
-		if errors.As(err, &me) && me.Number == mysqlDuplicateEntry {
+		if errors.As(err, &me) && me.Number == mysqlDuplicateEntry && !isUsernameConflict(err) {
 			return ErrEmailTaken
 		}
 		return err
 	}
-	id, err := res.LastInsertId()
-	if err != nil {
-		return err
-	}
-	if id <= 0 {
-		return errors.New("auth: insert returned a non-positive user id")
-	}
-	u.InternalID = uint64(id)
 	if err := withUser(u.InternalID); err != nil {
 		return err
 	}
 	return tx.Commit()
+}
+
+// isUsernameConflict reports whether err is the unique key on user_tab.username (and not the email key).
+func isUsernameConflict(err error) bool {
+	var me *mysql.MySQLError
+	return errors.As(err, &me) && me.Number == mysqlDuplicateEntry && strings.Contains(me.Message, "uq_user_tab_username")
+}
+
+// insertUser inserts u (public_id, email, display_name, locale, created_at set; passwordHash and verifiedAt may be nil) and
+// sets InternalID and Username. The default username is tried with each slice of the public id in turn on a username
+// conflict, so a registration never fails because of it; any other error (a duplicate email included) is returned as is. A
+// failed statement does not abort the surrounding transaction.
+func insertUser(ctx context.Context, tx *sql.Tx, u *User, passwordHash, verifiedAt any) error {
+	for attempt := range defaultSuffixLens {
+		u.Username = defaultUsername(u.ID, attempt)
+		res, err := tx.ExecContext(ctx,
+			`INSERT INTO user_tab (public_id, email, password_hash, email_verified_at, display_name, locale, username, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?)`,
+			u.ID, u.Email, passwordHash, verifiedAt, u.DisplayName, u.Locale, u.Username, u.CreatedAt, u.CreatedAt)
+		if err != nil {
+			if isUsernameConflict(err) && attempt < len(defaultSuffixLens)-1 {
+				continue
+			}
+			return err
+		}
+		id, err := res.LastInsertId()
+		if err != nil {
+			return err
+		}
+		if id <= 0 {
+			return errors.New("auth: insert returned a non-positive user id")
+		}
+		u.InternalID = uint64(id)
+		return nil
+	}
+	return errors.New("auth: no username attempt") // unreachable: the last attempt returns above
+}
+
+// changeUsername sets the username in one conditional UPDATE: it matches only while the cooldown is over (username_changed_at <=
+// allowedBefore), so two concurrent changes of one user cannot both pass. changed is false when nothing matched (cooldown still
+// running, or the user is gone); a taken name is ErrUsernameTaken. A taken name is only reported when the cooldown is over,
+// because the WHERE clause is checked before the unique key, so the cooldown answer never leaks whether a name exists.
+func (s *Store) changeUsername(ctx context.Context, id uint64, name string, nowMs, allowedBefore int64) (changed bool, err error) {
+	res, err := s.db.ExecContext(ctx,
+		`UPDATE user_tab SET username = ?, username_changed_at = ?, updated_at = ? WHERE id = ? AND username_changed_at <= ?`,
+		name, nowMs, nowMs, id, allowedBefore)
+	if err != nil {
+		if isUsernameConflict(err) {
+			return false, ErrUsernameTaken
+		}
+		return false, err
+	}
+	n, err := res.RowsAffected()
+	return n == 1, err
 }
 
 // userByEmail returns the user and their password hash ("" when the account has none).
@@ -202,17 +249,9 @@ func (s *Store) googleUserTx(ctx context.Context, id GoogleIdentity, want User, 
 	case err == nil:
 	case errors.Is(err, sql.ErrNoRows):
 		u = User{ID: ulid.New(now), Email: id.Email, EmailVerified: true, DisplayName: want.DisplayName, Locale: want.Locale, CreatedAt: ms}
-		res, err := tx.ExecContext(ctx,
-			`INSERT INTO user_tab (public_id, email, password_hash, email_verified_at, display_name, locale, created_at, updated_at) VALUES (?,?,NULL,?,?,?,?,?)`,
-			u.ID, u.Email, ms, u.DisplayName, u.Locale, ms, ms)
-		if err != nil {
+		if err := insertUser(ctx, tx, &u, nil, ms); err != nil {
 			return User{}, err
 		}
-		n, err := res.LastInsertId()
-		if err != nil || n <= 0 {
-			return User{}, errors.New("auth: insert returned no user id")
-		}
-		u.InternalID = uint64(n)
 	default:
 		return User{}, err
 	}

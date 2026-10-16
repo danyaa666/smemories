@@ -49,7 +49,7 @@ export interface paths {
         put?: never;
         /**
          * Create an account and sign in
-         * @description Called by the sign-up form. Creates the account and signs the caller in (the session cookie is set) and sends the 6-digit verification code by email. The email is trimmed, lower-cased and normalised to NFC; a duplicate (case-insensitive, and NFC/NFD spellings are the same address) is `ERROR_EMAIL_TAKEN`. Password: 10-128 characters after NFKC normalisation and not equal to the email. Display name: 1-100 characters after trimming, no control or format characters. Rate limit: 5 per hour per IP, counted once the input is valid. A cookie-less request needs no Origin; one that carries a session cookie must come from an allowed Origin. Not idempotent: a repeated call is `ERROR_EMAIL_TAKEN`. Unknown body fields are ignored.
+         * @description Called by the sign-up form. Creates the account and signs the caller in (the session cookie is set) and sends the 6-digit verification code by email. The email is trimmed, lower-cased and normalised to NFC; a duplicate (case-insensitive, and NFC/NFD spellings are the same address) is `ERROR_EMAIL_TAKEN`. Password: 10-128 characters after NFKC normalisation and not equal to the email. Display name: 1-100 characters after trimming, no control or format characters. Rate limit: 5 per hour per IP, counted once the input is valid. A cookie-less request needs no Origin; one that carries a session cookie must come from an allowed Origin. The account gets a default `username` (`user-` plus the last 8 characters of its id; longer slices on a clash, never an error). Not idempotent: a repeated call is `ERROR_EMAIL_TAKEN`. Unknown body fields are ignored.
          */
         post: operations["register"];
         delete?: never;
@@ -227,11 +227,31 @@ export interface paths {
         };
         /**
          * The signed-in user
-         * @description Called on every page load as the session bootstrap; `ERROR_UNAUTHORIZED` (401) means signed out. Sliding expiry: once more than half of the 30-day session lifetime has elapsed the expiry is extended and the cookie is sent again. Read-only and idempotent.
+         * @description Called on every page load as the session bootstrap; `ERROR_UNAUTHORIZED` (401) means signed out. Sliding expiry: once more than half of the 30-day session lifetime has elapsed the expiry is extended and the cookie is sent again. `username` is the public handle (D-28); `username_next_change_at` is when it may change again, `null` when a change is allowed now. Read-only and idempotent.
          */
         get: operations["getMe"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/user/update-username": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Change the signed-in user's public username
+         * @description Called by the profile form. The username is a unique, public handle (not a login name; sign-in stays email + password or Google). The input is trimmed and lower-cased, then must be 3-30 characters of `a-z 0-9 . _ -`, start and end with a letter or digit, and have no two special characters in a row (`ERROR_INVALID_USERNAME`). A fixed list (`admin`, `support`, `root`, `smemories`, ...) and every name starting with `user-` that is not the caller's own generated default are `ERROR_USERNAME_RESERVED`. A name already in use is `ERROR_USERNAME_TAKEN` (case-insensitive). A change is allowed once every 7 days after a user-made change (the first change from the default is allowed at once); a too-early change is `ERROR_USERNAME_CHANGE_TOO_SOON` with `Retry-After` in seconds and the allowed time in the message. Setting the current name again succeeds and does not start the cooldown. The cooldown check and the write are one conditional update, so concurrent requests cannot both pass. Taken, invalid and reserved attempts are limited to 20 per hour per user (`ERROR_RATE_LIMITED`) so the endpoint cannot be used to probe which names exist; successes, no-ops and cooldown answers do not count. Not idempotent in effect (it starts the cooldown). A request with the session cookie must come from an allowed Origin.
+         */
+        post: operations["updateUsername"];
         delete?: never;
         options?: never;
         head?: never;
@@ -626,7 +646,7 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** @description The signed-in account. Fields are only ever added (the username arrives with T-081). */
+        /** @description The signed-in account. Fields are only ever added. */
         User: {
             /**
              * @description The account's public id, a ULID. Always present.
@@ -649,6 +669,20 @@ export interface components {
              * @description When the account was created, Unix ms. Always present.
              */
             created_at: number;
+            /** @description The public handle, lower case, unique. A generated `user-xxxxxxxx` until the user changes it. Not a login name. Always present. */
+            username: string;
+            /**
+             * Format: int64
+             * @description When the username may be changed again, Unix ms; `null` when a change is allowed now (never changed, or the 7-day cooldown is over). Always present.
+             */
+            username_next_change_at: number | null;
+        };
+        UpdateUsernameRequest: {
+            /**
+             * @description Required. Trimmed and lower-cased (`Alice` is stored as `alice`), then 3-30 characters of `a-z 0-9 . _ -`, starting and ending with a letter or digit, with no two specials in a row; otherwise `ERROR_INVALID_USERNAME`. Non-ASCII characters are never valid. A non-string is `ERROR_PARAM`.
+             * @example lan.nguyen
+             */
+            username: string;
         };
         UserResponse: {
             /**
@@ -1756,6 +1790,39 @@ export interface operations {
             401: components["responses"]["ApiUnauthorized"];
             500: components["responses"]["ApiInternal"];
             503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    updateUsername: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateUsernameRequest"];
+            };
+        };
+        responses: {
+            /** @description The username is now the requested one (or already was); the body is the same user object as `get-me`. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            409: components["responses"]["ApiConflict"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            429: components["responses"]["ApiRateLimited"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiAuthUnavailable"];
         };
     };
     createYearbook: {

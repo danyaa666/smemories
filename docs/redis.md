@@ -105,6 +105,7 @@ Fail policy when Redis is unreachable (`ratelimit.Factory`): **open** lets the r
 | `reset_tries` | 20 | 1 h | IP | closed |
 | `verify_resend` | 3 | 1 h | user id | open |
 | `verify_tries` | 20 | 1 h | user id | closed |
+| `username_tries` | 20 failed changes (taken, invalid, reserved) | 1 h | user id | closed |
 | `google_start` | 30 | 15 min | IP | open |
 | `google_callback` | 30 | 15 min | IP | open |
 | `public_misses` | 60 (only misses count) | 15 min | IP | open |

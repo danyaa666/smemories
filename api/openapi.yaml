@@ -65,7 +65,7 @@ paths:
         The email is trimmed, lower-cased and normalised to NFC; a duplicate (case-insensitive, and NFC/NFD spellings are the same address) is `ERROR_EMAIL_TAKEN`.
         Password: 10-128 characters after NFKC normalisation and not equal to the email. Display name: 1-100 characters after trimming, no control or format characters.
         Rate limit: 5 per hour per IP, counted once the input is valid. A cookie-less request needs no Origin; one that carries a session cookie must come from an allowed Origin.
-        Not idempotent: a repeated call is `ERROR_EMAIL_TAKEN`. Unknown body fields are ignored.
+        The account gets a default `username` (`user-` plus the last 8 characters of its id; longer slices on a clash, never an error). Not idempotent: a repeated call is `ERROR_EMAIL_TAKEN`. Unknown body fields are ignored.
       x-auth: public
       x-error-codes:
         - {code: ERROR_INVALID_EMAIL, description: "Field `email`: not a single address, over 254 characters, local part over 64 bytes, or containing control or format characters."}
@@ -98,7 +98,7 @@ paths:
               schema: {$ref: "#/components/schemas/UserResponse"}
               examples:
                 created:
-                  value: {status: OK, data: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, email: lan@example.com, email_verified: false, display_name: "Nguyễn Thị Lan", locale: vi, created_at: 1760000000000}}
+                  value: {status: OK, data: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, email: lan@example.com, email_verified: false, display_name: "Nguyễn Thị Lan", locale: vi, created_at: 1760000000000, username: user-0c1d2e3f, username_next_change_at: null}}
         "400": {$ref: "#/components/responses/ApiBadRequest"}
         "403": {$ref: "#/components/responses/ApiForbidden"}
         "409": {$ref: "#/components/responses/ApiConflict"}
@@ -146,7 +146,7 @@ paths:
               schema: {$ref: "#/components/schemas/UserResponse"}
               examples:
                 signedIn:
-                  value: {status: OK, data: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, email: lan@example.com, email_verified: true, display_name: "Nguyễn Thị Lan", locale: vi, created_at: 1760000000000}}
+                  value: {status: OK, data: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, email: lan@example.com, email_verified: true, display_name: "Nguyễn Thị Lan", locale: vi, created_at: 1760000000000, username: user-0c1d2e3f, username_next_change_at: null}}
         "400": {$ref: "#/components/responses/ApiBadRequest"}
         "401":
           description: Wrong email or password (`ERROR_INVALID_CREDENTIALS`).
@@ -434,7 +434,7 @@ paths:
       summary: The signed-in user
       description: >-
         Called on every page load as the session bootstrap; `ERROR_UNAUTHORIZED` (401) means signed out. Sliding expiry: once more than half of the 30-day session lifetime has elapsed the
-        expiry is extended and the cookie is sent again. Read-only and idempotent.
+        expiry is extended and the cookie is sent again. `username` is the public handle (D-28); `username_next_change_at` is when it may change again, `null` when a change is allowed now. Read-only and idempotent.
       x-auth: required
       x-error-codes:
         - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed (the caller is not treated as signed out). Retry after `Retry-After`."}
@@ -452,10 +452,64 @@ paths:
               schema: {$ref: "#/components/schemas/UserResponse"}
               examples:
                 me:
-                  value: {status: OK, data: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, email: lan@example.com, email_verified: true, display_name: "Nguyễn Thị Lan", locale: vi, created_at: 1760000000000}}
+                  value: {status: OK, data: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, email: lan@example.com, email_verified: true, display_name: "Nguyễn Thị Lan", locale: vi, created_at: 1760000000000, username: user-0c1d2e3f, username_next_change_at: null}}
         "401": {$ref: "#/components/responses/ApiUnauthorized"}
         "500": {$ref: "#/components/responses/ApiInternal"}
         "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/user/update-username:
+    post:
+      operationId: updateUsername
+      tags: [auth]
+      summary: Change the signed-in user's public username
+      description: >-
+        Called by the profile form. The username is a unique, public handle (not a login name; sign-in stays email + password or Google). The input is trimmed and lower-cased,
+        then must be 3-30 characters of `a-z 0-9 . _ -`, start and end with a letter or digit, and have no two special characters in a row (`ERROR_INVALID_USERNAME`).
+        A fixed list (`admin`, `support`, `root`, `smemories`, ...) and every name starting with `user-` that is not the caller's own generated default are `ERROR_USERNAME_RESERVED`.
+        A name already in use is `ERROR_USERNAME_TAKEN` (case-insensitive). A change is allowed once every 7 days after a user-made change (the first change from the default is
+        allowed at once); a too-early change is `ERROR_USERNAME_CHANGE_TOO_SOON` with `Retry-After` in seconds and the allowed time in the message. Setting the current name again
+        succeeds and does not start the cooldown. The cooldown check and the write are one conditional update, so concurrent requests cannot both pass. Taken, invalid and reserved
+        attempts are limited to 20 per hour per user (`ERROR_RATE_LIMITED`) so the endpoint cannot be used to probe which names exist; successes, no-ops and cooldown answers do not
+        count. Not idempotent in effect (it starts the cooldown). A request with the session cookie must come from an allowed Origin.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_INVALID_USERNAME, description: "Field `username`: not 3-30 characters of a-z 0-9 . _ - after trimming and lower-casing, or it starts or ends with a special character, or has two in a row."}
+        - {code: ERROR_USERNAME_RESERVED, description: "Field `username`: on the reserved list, or a `user-` name that is not the caller's own default."}
+        - {code: ERROR_USERNAME_TAKEN, description: "Another account already uses this username (case-insensitive)."}
+        - {code: ERROR_USERNAME_CHANGE_TOO_SOON, description: "The last user-made change was less than 7 days ago; the message has the allowed time and `Retry-After` the seconds to wait."}
+        - {code: ERROR_RATE_LIMITED, description: "More than 20 failed attempts (taken, invalid, reserved) in an hour for this user; wait for `Retry-After` seconds."}
+        - {code: ERROR_LIMITER_UNAVAILABLE, description: "The failed-attempt counter in Redis did not answer, so the request fails closed. Retry after `Retry-After`."}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/UpdateUsernameRequest"}
+            examples:
+              change:
+                value: {username: lan.nguyen}
+      responses:
+        "200":
+          description: The username is now the requested one (or already was); the body is the same user object as `get-me`.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/UserResponse"}
+              examples:
+                changed:
+                  value: {status: OK, data: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, email: lan@example.com, email_verified: true, display_name: "Nguyễn Thị Lan", locale: vi, created_at: 1760000000000, username: lan.nguyen, username_next_change_at: 1760604800000}}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "409": {$ref: "#/components/responses/ApiConflict"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "429": {$ref: "#/components/responses/ApiRateLimited"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiAuthUnavailable"}
   /api/yearbook/create:
     post:
       operationId: createYearbook
@@ -1536,8 +1590,8 @@ components:
   schemas:
     User:
       type: object
-      description: The signed-in account. Fields are only ever added (the username arrives with T-081).
-      required: [id, email, email_verified, display_name, locale, created_at]
+      description: The signed-in account. Fields are only ever added.
+      required: [id, email, email_verified, display_name, locale, created_at, username, username_next_change_at]
       properties:
         id: {type: string, description: "The account's public id, a ULID. Always present.", examples: ["01J9Z3K6V8Q4M7N2P5R8T0W1XY"]}
         email: {type: string, description: "The normalised (trimmed, lower-cased, NFC) address. Always present."}
@@ -1545,6 +1599,18 @@ components:
         display_name: {type: string, description: "1-100 characters, NFC. Always present."}
         locale: {type: string, enum: [en, vi], description: "UI language and language of the emails: `en` English, `vi` Vietnamese. Always present."}
         created_at: {type: integer, format: int64, description: "When the account was created, Unix ms. Always present."}
+        username: {type: string, minLength: 3, maxLength: 30, pattern: "^[a-z0-9]+([._-][a-z0-9]+)*$", description: "The public handle, lower case, unique. A generated `user-xxxxxxxx` until the user changes it. Not a login name. Always present."}
+        username_next_change_at: {type: [integer, "null"], format: int64, description: "When the username may be changed again, Unix ms; `null` when a change is allowed now (never changed, or the 7-day cooldown is over). Always present."}
+    UpdateUsernameRequest:
+      type: object
+      required: [username]
+      properties:
+        username:
+          type: string
+          description: >-
+            Required. Trimmed and lower-cased (`Alice` is stored as `alice`), then 3-30 characters of `a-z 0-9 . _ -`, starting and ending with a letter or digit, with no two specials in a row;
+            otherwise `ERROR_INVALID_USERNAME`. Non-ASCII characters are never valid. A non-string is `ERROR_PARAM`.
+          examples: [lan.nguyen]
     UserResponse:
       type: object
       required: [status, data]

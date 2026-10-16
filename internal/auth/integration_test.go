@@ -258,8 +258,8 @@ func TestRegisterMeLogoutFlow(t *testing.T) {
 	for k := range u {
 		keys[k] = true
 	}
-	if len(u) != 6 || !keys["id"] || !keys["email"] || !keys["email_verified"] || !keys["display_name"] || !keys["locale"] || !keys["created_at"] {
-		t.Fatalf("user object must be exactly {id,email,email_verified,display_name,locale,created_at}, got %v", u)
+	if len(u) != 8 || !keys["id"] || !keys["email"] || !keys["email_verified"] || !keys["display_name"] || !keys["locale"] || !keys["created_at"] || !keys["username"] || !keys["username_next_change_at"] {
+		t.Fatalf("user object must be exactly {id,email,email_verified,display_name,locale,created_at,username,username_next_change_at}, got %v", u)
 	}
 	if !regexp.MustCompile(`^[0-9A-HJKMNP-TV-Z]{26}$`).MatchString(u["id"].(string)) {
 		t.Fatalf("id is not a ULID: %v", u["id"])

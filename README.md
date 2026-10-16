@@ -75,7 +75,7 @@ Structured fields for the content that goes into the book:
 | Topic | Decision |
 |---|---|
 | Audience | University and college students (18+) first. School-age (under 18) support is a later milestone. |
-| Accounts | Owners and students sign in with email + password or Google. Contributors never need an account. |
+| Accounts | Owners and students sign in with email + password or Google. Contributors never need an account. Every user has a unique public **username** (default `user-xxxxxxxx`, changeable once every 7 days via `POST /api/user/update-username`; rules in [docs/usernames.md](docs/usernames.md)); it is a public handle, not a login name. |
 | Moderation | Owners approve or hide every note before it can be printed. |
 | Languages | English and Vietnamese from the first screen. |
 | First release | Personal yearbook, end to end. Class yearbooks come after go-live. |

@@ -43,7 +43,7 @@ func TestQAAssertNoOrphansCatchesPlantedOrphans(t *testing.T) {
 		}
 	}
 	check("")
-	exec(`INSERT INTO user_tab (public_id, email, display_name, created_at, updated_at) VALUES ('U1', 'a@example.com', 'A', 1, 1)`)
+	exec(`INSERT INTO user_tab (public_id, email, display_name, username, created_at, updated_at) VALUES ('U1', 'a@example.com', 'A', 'user-u1', 1, 1)`)
 	exec(`INSERT INTO user_identity_tab (user_id, provider, subject, email, created_at, updated_at) SELECT id, 'google', 'sub-1', 'a@example.com', 1, 1 FROM user_tab`)
 	exec(`INSERT INTO yearbook_tab (public_id, owner_id, title, language, created_at, updated_at) SELECT 'B1', id, 'One', 'en', 1, 1 FROM user_tab`)
 	exec(`INSERT INTO profile_tab (public_id, yearbook_id, is_owner, full_name, created_at, updated_at) SELECT 'P1', id, 1, 'N', 1, 1 FROM yearbook_tab`)
