@@ -11,8 +11,9 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 13 | T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-061, T-085 |
-| TODO | 3 | T-032, T-060, T-079 |
-| IN_PROGRESS | 1 | T-059 |
+| TODO | 2 | T-032, T-060 |
+| IN_PROGRESS | 1 | T-079 |
+| IN_QA | 1 | T-059 |
 | MERGED | 1 | T-072 |
 | DONE | 59 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-073, T-074, T-075, T-076, T-077, T-078, T-080, T-081, T-082, T-083 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
@@ -21,7 +22,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?)
 
-_Board last written 2026-10-16 13:19Z_
+_Board last written 2026-10-16 13:45Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -2632,7 +2633,7 @@ Fixed-size HTML pages, pagination, text fit, print CSS, readiness gate and a hea
 - 2026-10-16 11:13Z · human · accepted by owner
 
 ### T-059 — [E05] HTML template memory-book (design temp1)
-- **Status:** IN_PROGRESS
+- **Status:** IN_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
@@ -2640,11 +2641,11 @@ Fixed-size HTML pages, pagination, text fit, print CSS, readiness gate and a hea
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** qa
 - **Branch:** task/t-059-e05-html-template-memory-book-design-tem
-- **PR:** —
-- **Updated:** 2026-10-16 13:02Z by dev
-- **Comments-seen:** 1
+- **PR:** https://github.com/danyaa666/smemories/pull/68
+- **Updated:** 2026-10-16 13:45Z by qa
+- **Comments-seen:** 2
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/10-html-template-memory-book.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2654,6 +2655,7 @@ Pastel Memory Book canvas as an HTML template, EN and VI, four page kinds.
 
 #### Comments
 - 2026-10-16 09:50Z · leader · unblocked: T-058 merged (renderer core in web/src/book/), T-044 done. Read the addendum at the bottom of the spec (which notes were shrunk/cut).
+- 2026-10-16 13:44Z · dev · PR #68 head 13cba05, CI green. memory-book template (cover, profile, friend page 1 note/page, back), Baloo 2 + Patrick Hand fonts (Vietnamese), html manifest memory-book.json (no API sets template_id yet: T-061; tested with template_id set by SQL), addendum list of shrunk/cut notes with inbox links (+ ?note= deep link in the inbox). Verify: make print-check (13 tests), samples docs/templates/memory-book-*.pdf, fidelity jpgs, VI strings in PR body. Not checked: Firefox/Safari/mobile, print dialog. Decisions to confirm: form asks name, how_we_met, first_impression, best_memory, wish, message only; back page left blank for handwriting; core tweaks (Template.Notes gets data+first, fit tolerance 0.2em).
 
 ### T-060 — [E05] HTML template navy-classic (design temp2)
 - **Status:** TODO
@@ -3448,7 +3450,7 @@ T-065 QA found: a book delete racing a read gives 500 'yearbook without its owne
 - 2026-10-12 04:00Z · human · accepted by owner
 
 ### T-079 — [E01] Make the timing-sensitive integration tests tolerant of a starved CI runner
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -3456,10 +3458,10 @@ T-065 QA found: a book delete racing a read gives 500 'yearbook without its owne
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-079-e01-make-the-timing-sensitive-integratio
 - **PR:** —
-- **Updated:** 2026-10-12 04:42Z by leader
+- **Updated:** 2026-10-16 13:45Z by dev
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/14-timing-sensitive-integration-tests.md`
