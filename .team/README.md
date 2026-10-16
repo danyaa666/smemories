@@ -12,8 +12,8 @@
 |---|---:|---|
 | BACKLOG | 19 | T-017, T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-082 |
 | TODO | 4 | T-072, T-079, T-080, T-081 |
-| READY_FOR_QA | 1 | T-018 |
-| QA_FAIL | 1 | T-013 |
+| IN_PROGRESS | 1 | T-013 |
+| QA_FAIL | 1 | T-018 |
 | DONE | 51 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-073, T-074, T-075, T-076, T-077, T-078, T-083 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
 
@@ -21,7 +21,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?)
 
-_Board last written 2026-10-16 02:07Z_
+_Board last written 2026-10-16 02:16Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -948,7 +948,7 @@ Owner-created private collection links (create, list, revoke) and the public loo
 - 2026-10-08 02:46Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-011, T-012')
 
 ### T-013 — [E04] Notes moderation API (approve, hide, reorder, delete)
-- **Status:** QA_FAIL
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
@@ -956,10 +956,10 @@ Owner-created private collection links (create, list, revoke) and the public loo
 - **Risk:** low
 - **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** dev
 - **Branch:** task/t-013-e04-notes-moderation-api-approve-hide-re
 - **PR:** https://github.com/danyaa666/smemories/pull/60
-- **Updated:** 2026-10-16 02:06Z by qa
+- **Updated:** 2026-10-16 02:07Z by dev
 - **Comments-seen:** 7
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/03-notes-moderation-api-approve-hide-reorder.md`
@@ -1118,19 +1118,19 @@ Create/copy/revoke the collection link, set a deadline, see submissions grouped 
 #### Comments
 
 ### T-018 — [E04] Web: public anonymous notes form
-- **Status:** READY_FOR_QA
+- **Status:** QA_FAIL
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
 - **Depends-on:** T-003, T-034, T-068, T-083
 - **Risk:** low
-- **Rework:** 1
+- **Rework:** 2
 - **Owner-approved:** —
 - **Assignee:** —
 - **Branch:** task/t-018-e04-web-public-anonymous-notes-form
 - **PR:** https://github.com/danyaa666/smemories/pull/59
-- **Updated:** 2026-10-16 02:07Z by leader
-- **Comments-seen:** 6
+- **Updated:** 2026-10-16 02:15Z by qa
+- **Comments-seen:** 8
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/05-web-public-anonymous-notes-form.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1145,6 +1145,38 @@ Mobile-first public page opened from the shared link: name, relationship, messag
 - 2026-10-16 01:44Z · dev · PR #59 head 950f45d. Fixed: 1) route now /c/:token (App.tsx, tests). 2) no-referrer meta set while form mounted (+ test), draft key uses hash of token (+ test). Known differences listed in PR. Verify: cd web && npm test (190), lint, build green; open /c/<token>.
 - 2026-10-16 02:06Z · qa · QA: I claimed this by mistake right after T-013 while usage_gate.py said SLEEP (cache stale, 471 s; qa does not refresh). No testing was done on PR #59 head 950f45d. Leader: please reset T-018 IN_QA -> READY_FOR_QA (qa is not allowed to) so the next QA wake-up picks it up after a fresh gate.
 - 2026-10-16 02:07Z · leader · Reset by leader: QA's command chain claimed it after the gate went SLEEP (cache stale); no testing was done on head 950f45d.
+- 2026-10-16 02:15Z · qa · QA_FAIL, PR #59 head 950f45d (rework 1). One major issue; everything else passed (evidence below). Fix 1 and send back.
+  
+  ISSUES
+  1. [major] Dead-end screens (N7 expired 410, N9 revoked/unknown 404) appear only after ~7.3 s of "Loading..." and every dead-link open sends 4 GETs. Cause: web/src/main.tsx builds makeQueryClient(3) (global retry 3, backoff 1+2+4 s) and NoteForm.tsx useQuery({queryKey:["public-collect",token], queryFn:getNoteForm}) sets no retry override, so a permanent 404/410 is retried 3 times. The unit tests use makeQueryClient() (retry false), so they do not see it.
+     Repro: own API from origin/develop f3825c0 + Vite on the PR head; revoke a link (POST /api/note-collection/revoke) or set deadline_at in the past; open /c/<token> in a fresh browser at 375 and 1280 px. Measured in Chromium: "Loading..." for 7264 / 7267 / 7265 ms (expired / revoked / unknown token), 4 GET /api/public-collect/get each (API log: 18x 404 + 8x 410 for 5 such opens plus my curls).
+     Expected: the dead-end screen straight away (one request). Actual: 7 s spinner, 4 requests. It also matters for the API contract: openapi public-collect/get says misses (unknown/revoked) count against a tight limit of 60 per client IP per 15 min "so a class behind one address can open the same link"; 4 misses per open means 15 friends opening a revoked link from one school IP exhaust it.
+     Suggested fix: useQuery({..., retry: (n, e) => !(e instanceof ApiError && e.status >= 400 && e.status < 500 && e.status !== 429) && n < 3}) (or retry:false, the page already has a Retry button), plus a test that wraps NoteForm in makeQueryClient(3) and asserts a 404 shows N9 with exactly one fetch.
+  
+  EVIDENCE (all executed by me; own Vite :5291 from the PR worktree + own API :8291 built from origin/develop, private DB smem_test_qa018, Redis db 14, MinIO bucket smemories-dev (objects added, none deleted); Playwright + the cached Chromium, 375x812 and 1280x800)
+  - CI on head 950f45d: go, go-integration, security, web all pass.
+  - web (worktree): npm run lint (eslint + prettier) OK; typecheck OK; lint:i18n OK; check:api OK; vitest 13 files / 190 tests OK; build OK.
+  - Route /c/:token: opens the form from the link created via POST note-collection/create (token has - and _ chars; works).
+  - Meta: document head has referrer=no-referrer (plus the global one) and robots=noindex while mounted; no cookie set (document.cookie empty); no /auth or /me request on the page.
+  - Draft: typed name/relationship/message (Vietnamese), reload restores all; localStorage key is smemories.note-draft.aca69ilntw, raw token appears in no key or value, nor in sessionStorage; cleared (storage empty) after success.
+  - Send with 2 photos (png + jpg): 200, sent screen N5 "Sent! Thank you, <name>", quote card, "Make your own yearbook" -> /register; DB: note pending with 2 note_photo rows. Without photos: 200, 0 photos. "Write another note" resets the form.
+  - Photo checks in the browser: .txt and .gif rejected (type), 11 MB png rejected (size), 4 files -> 3 kept + count message, add button hidden at 3; remove works.
+  - Server photo rejection (png with garbage content): 415, N10 panel "Not sent" with Try again / Remove photos / Send without photos, no photo named, typed answers kept; Try again re-sends and returns to the panel; Remove photos clears tiles+panel; Send without photos -> 200 and a note without photos.
+  - Network behaviour (route interception): connection reset -> "Could not reach the server..." 1 POST, answers+photo kept, Send enabled again; 408 -> "The connection stalled. Your note is still here..." 1 POST; 429 -> "Too many attempts. Try again in 1 min."; 400 invalid_answer naming message -> banner + message under the field; 500 -> generic. 503 busy twice then ok: "Still sending. The server is busy, trying again..." then the sent screen, exactly 3 POSTs and 1 note stored; 503 forever: 4 POSTs (1+3 retries) then "The server is busy. Try again in a moment." No double-post anywhere.
+  - Dead ends: expired 410 -> "This link has closed"; revoked, unknown and malformed tokens ("short", "%00", "<script>..") -> "This link doesn't work anymore"; none shows the owner name, the book title or a number; full link (300 notes) -> the lookup is open, submit answers 409 -> "This link is full. Ask Nguyen Thi Lan to open a new link." with no number (the owner name is on the 409 screen by the known difference 2/3). Only the retry delay (issue 1) is wrong.
+  - No horizontal scroll (scrollWidth == innerWidth) on form, errors, 3 photos, sent, N10, every dead end, vi form, with 1500-char and 60-char unbroken strings; both widths.
+  - Keyboard: Tab order lang buttons -> name -> relationship -> message -> file picker -> Send; honeypot not reachable; file picker shows a 2 px focus ring on its label; whole note sent with the keyboard only (Enter on Send) -> 200. Empty submit focuses the first invalid field (aria-invalid) with banner and field errors.
+  - Vietnamese: VI switch renders diacritics correctly (Be Vietnam Pro / Fraunces, local fonts), form, errors, closed/gone screens translated.
+  - Network hosts seen: localhost:5291 only (no googleapis / gstatic).
+  - Screenshots: scratchpad shots/m-* (375) and d-* (1280).
+  
+  NON-BLOCKING (do not fix for this verdict)
+  - N7 copy starts with a lowercase "the owner stopped collecting notes" (EN) / "chủ sách đã ngừng nhận lời nhắn" (VI): the t("note.theOwner") fallback is used at the start of the sentence; capitalise or reword the 410 bodies.
+  - After the sent screen appears, document.activeElement is BODY (the form unmounted); moving focus to the sent heading would help keyboard/screen-reader users.
+  - The red "You can add up to 3 photos." line stays until the next pick; fine.
+  
+  VIETNAMESE STRINGS FOR THE OWNER (draft, from the PR description; not a fail reason): note.writingIn "bạn đang viết vào"; privacy "Chỉ {{name}} đọc được lời nhắn này. Bạn ấy sẽ chọn lời nhắn nào được in vào sách."; optional "(không bắt buộc)"; required "Hãy viết vài chữ trước khi gửi."; photos "Ảnh"; addPhoto "Thêm ảnh"; consent "Khi gửi, bạn đồng ý để {{name}} in lời nhắn và ảnh của bạn vào sách của bạn ấy."; send "Gửi lời nhắn"; sending "Đang gửi…"; what "SMemories là gì?"; theOwner "chủ sách"; photoFail title "Chưa gửi được" / retry "Thử lại" / remove "Bỏ các ảnh" / without "Gửi không kèm ảnh"; sent "Đã gửi! Cảm ơn {{name}}." / another "Viết thêm lời nhắn" / cta "Bạn cũng sắp tốt nghiệp?" / make "Tự làm lưu bút của bạn"; closed "Liên kết này đã đóng"; gone "Liên kết này không còn dùng được"; errors.request_timeout. Full list: web/src/locales/vi.json under note.*.
+- 2026-10-16 02:16Z · leader · Leader guidance for the rework (QA_FAIL, rework 2 of 2 left after this: keep it tight): 1) MAJOR: a revoked/unknown/expired link spends ~7.3 s on 'Loading...' and sends 4 GETs because NoteForm's useQuery inherits makeQueryClient(3) retries (web/src/main.tsx) and 404/410 are retried. The public lookup is rate limited (misses 60 per IP per 15 min), so a classroom behind one IP would exhaust it. Fix: set retry on that query so it never retries an ApiError with status 4xx (retry only network errors/5xx, at most 1), and add a test that builds the client with makeQueryClient(3) (not retry:false) and asserts exactly one fetch for a 404 and for a 410. Check the other public-page queries for the same inheritance. 2) Cheap, take them now: N7 copy starting with a lowercase 'the owner' (VI 'chủ sách'), and move focus to the sent-screen heading after submit. Everything else QA checked passed; keep the strings and the /c/:token behaviour as is.
 
 ### T-019 — [E05] Web: template picker, PDF preview (pdf.js) and export/download
 - **Status:** CANCELLED
