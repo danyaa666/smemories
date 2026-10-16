@@ -11,17 +11,16 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 11 | T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050 |
-| IN_QA | 1 | T-085 |
 | QA_PASS | 1 | T-061 |
-| MERGED | 5 | T-032, T-059, T-060, T-072, T-079 |
+| MERGED | 6 | T-032, T-059, T-060, T-072, T-079, T-085 |
 | DONE | 59 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-073, T-074, T-075, T-076, T-077, T-078, T-080, T-081, T-082, T-083 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-032 ([E01] db.Open: treat MySQL 1044 as permanent; README warning about bare docker compose); T-059 ([E05] HTML template memory-book (design temp1)); T-060 ([E05] HTML template navy-classic (design temp2)); T-072 ([E10] Quality sweep: mnd, forbidigo, pointer parameters, pool defaults, remove the transition switch); T-079 ([E01] Make the timing-sensitive integration tests tolerant of a starved CI runner)
+**Awaiting your review (MERGED):** T-032 ([E01] db.Open: treat MySQL 1044 as permanent; README warning about bare docker compose); T-059 ([E05] HTML template memory-book (design temp1)); T-060 ([E05] HTML template navy-classic (design temp2)); T-072 ([E10] Quality sweep: mnd, forbidigo, pointer parameters, pool defaults, remove the transition switch); T-079 ([E01] Make the timing-sensitive integration tests tolerant of a starved CI runner); T-085 ([E10] Lint exclusions anchored and a guard for auth.UserFrom)
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-032 (Approve merge of T-061 (template picker, print guide, public print-feedback counter, PR #71)?)
 
-_Board last written 2026-10-16 23:43Z_
+_Board last written 2026-10-16 23:48Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -3834,7 +3833,7 @@ Spec: .team/epics/E04-friends-notes/09-inbox-320px-polish.md (read it from the r
 - 2026-10-16 03:40Z · leader · created by mistake: the board does not let the leader override QA_FAIL, so the 320px fix goes through T-017 rework 2 instead
 
 ### T-085 — [E10] Lint exclusions anchored and a guard for auth.UserFrom
-- **Status:** IN_QA
+- **Status:** MERGED
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -3842,17 +3841,19 @@ Spec: .team/epics/E04-friends-notes/09-inbox-320px-polish.md (read it from the r
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** —
 - **Branch:** task/t-085-e10-lint-exclusions-anchored-and-a-guard
 - **PR:** 73
-- **Updated:** 2026-10-16 23:39Z by qa
-- **Comments-seen:** 2
+- **Updated:** 2026-10-16 23:48Z by leader
+- **Comments-seen:** 4
 
 Spec: .team/epics/E10-skills-alignment/12-lint-anchors-userfrom-guard.md (read it from the repo root). Two non-blocking findings of the T-072 QA.
 
 #### Comments
 - 2026-10-16 18:19Z · leader · promoted to keep the dev queue at 4; spec 12-lint-anchors-userfrom-guard.md
 - 2026-10-16 23:34Z · dev · Lint regexes anchored (scratch internal/latest flagged); auth.MustUser used by all user handlers; per-package 401 tests; lint, unit and integration green. Head 99f32a1.
+- 2026-10-16 23:47Z · qa · Head 99f32a1, CI green (go, go-integration, security, web). Evidence: AC1: scratch copy with fmt.Errorf + magic number in internal/latest and internal/zz -> golangci-lint flags forbidigo AND mnd in both; scratch pkg under internal/db/dbtest/ stays exempt; regexes name only dbtest|redistest|storagetest|oidctest; 0 new nolint in diff. AC2: grep UserFrom/WithUser/MustUser: UserFrom only inside auth (MustUser, RequireUser path); every handler in auth(4), notes(7), yearbook(6), media(4), bookdata(1) uses MustUser; WithUser used only by RequireUser + tests; yearbook caller() and media owner() removed. Mutation: replaced the guard by UserFrom in one handler per package (yearbook delete, media delete, notes list, bookdata get, auth me) -> each must_user_test.go failed (3 assertions, 2 nil-deref panics); restored. AC3: make lint build test OK; go test -race -tags integration ./... all ok. Behaviour sweep (own API on :18085 develop vs :18086 PR head, private DBs, Redis db 9/10): 85 requests over all authed routes (401 unauth x22, 400 bad JSON/empty body x24, 200 happy paths, 404 other owner x12) -> output identical after normalising ids/request_id/random username. Newman against PR head (private DB/Redis): yearbooks x2 98 req 0 fail; notes x2 0 fail; notes-moderation x2 0 fail; media x2 0 fail; auth x2 20 assertion failures = OIDC/Google only (same 20 on develop; no SMEM_GOOGLE_* configured; covered by Go oidctest in integration); platform 1 failure = 503 not-ready case needs DB down (env). No templates Newman collection exists; templates covered by go tests. Non-blocking: in auth verifyEmail and updateUsername the guard runs after body decode (order kept from before, so behaviour behind RequireUser unchanged); on a route mounted without RequireUser a bad body would answer 400 before 401. Cleanup done: my APIs stopped, private DBs dropped, Redis 9/10 flushed.
+- 2026-10-16 23:48Z · leader · merged e15e5e0 (PR #73). Review: forbidigo/mnd exclusions now name only dbtest, redistest, storagetest, oidctest (scratch internal/latest and internal/zz flagged); auth.MustUser guard used by every user handler in auth, notes, yearbook, media, bookdata; QA mutated one handler per package and each must_user_test failed, and 85 authed requests gave identical output before/after; CI green, QA_PASS on the same head. For owner to check: nothing visible. Note: verifyEmail and updateUsername run the guard after body decode (as before); harmless behind RequireUser.
 
 <!-- tasks:end -->
 
@@ -3894,3 +3895,4 @@ Spec: .team/epics/E10-skills-alignment/12-lint-anchors-userfrom-guard.md (read i
 - 2026-10-17 — T-060 QA_FAIL: navy-classic profile page lost the quote and signature in print with long valid fields; rework 1. Open item for later: the public form offers 'Add photo' even when the template (navy-classic) never prints friends' photos; drive it from the template manifest.
 - 2026-10-17 — T-060 (navy-classic template, PR #70) merged 8f1f885 after rework 1 (profile quote and signature lost in print; fixed, 18 profile-at-maximum print-check cases). T-061 QA_PASS, awaiting owner approval (Q-032). T-032 and T-085 in QA. Owner to accept: T-059, T-060, T-072, T-079.
 - 2026-10-17 — T-032 (db 1044 permanent error + README compose warning, PR #72) merged ea20f0f. T-020 (end-to-end Playwright journey in CI) got its full spec and new dependencies (T-017, T-018, T-061); it starts when T-061 merges.
+- 2026-10-17 — T-085 (lint anchors + auth.MustUser guard, PR #73) merged e15e5e0. Nothing is left in dev/QA; T-061 waits for the owner's approval (Q-032); T-020 starts after it.
