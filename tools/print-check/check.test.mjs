@@ -313,6 +313,44 @@ for (const template of ["memory-book", "navy-classic", "basic"]) {
   }
 }
 
+// The owner's own profile text is never lost in print (T-060 QA): every owner field at its validated maximum, with and without the portrait.
+// The page-2 PDF must contain the first word of each text and the name and the sign line, inside the page and inside the text's own box.
+for (const template of ["navy-classic", "memory-book", "basic"]) {
+  for (const size of ["A5", "A4", "Letter"]) {
+    for (const portrait of [true, false]) {
+      test(`${template} ${size}${portrait ? "" : ", no portrait"}: profile fields at their maximum length are all in the PDF, inside the page and their boxes`, async () => {
+        const page = await browser.newPage();
+        await serveBook(page, makeBook({ size, notes: 1, template: template === "basic" ? null : template, profileMax: true, portrait }));
+        await open(page);
+        const boxes = (await fitBoxes(page))[1]; // the profile sheet
+        const file = path.join(tmp, `profile-${template}-${size}-${portrait}.pdf`);
+        await savePdf(page, file);
+        await page.close();
+        const { w, h, words: ws } = words(file)[1];
+        const want = template === "navy-classic" ? ["Hmark", "Pmark", "Qmark", "Zname", "Knick"] : ["Hmark", "Pmark", "Qmark", "Zname"]; // Knick: the nickname opens the sign line of navy-classic
+        for (const marker of want) {
+          // a letter-spaced capital line comes out of pdftotext one letter per word ("K N I C K"): join the letters
+          const hits = ws.flatMap((x, i) => {
+            for (let j = i, joined = ""; j < ws.length && joined.length < marker.length; j++) {
+              joined += ws[j].t.toLowerCase();
+              if (joined === marker.toLowerCase()) return [{ x0: x.x0, y0: x.y0, x1: ws[j].x1, y1: ws[j].y1 }];
+              if (!marker.toLowerCase().startsWith(joined)) break;
+            }
+            return [];
+          });
+          assert.ok(hits.length > 0, `${marker} is missing from the profile page of the PDF`);
+          const box = boxes.find((b) => b.text.toLowerCase().includes(marker.toLowerCase()));
+          for (const x of hits) {
+            const cx = (x.x0 + x.x1) / 2 / w, cy = (x.y0 + x.y1) / 2 / h;
+            assert.ok(cx > 0 && cx < 1 && cy > 0 && cy < 1, `${marker} at (${cx.toFixed(3)}, ${cy.toFixed(3)}) is off the page`);
+            if (box) assert.ok(cx >= box.x0 && cx <= box.x1 && cy >= box.y0 && cy <= box.y1, `${marker} at (${cx.toFixed(3)}, ${cy.toFixed(3)}) lies outside its box x ${box.x0.toFixed(3)}-${box.x1.toFixed(3)}, y ${box.y0.toFixed(3)}-${box.y1.toFixed(3)}`);
+          }
+        }
+      });
+    }
+  }
+}
+
 test("a book cut at 300 notes warns on screen and prints only the book", async () => {
   const r = await render(makeBook({ notes: 5, truncatedOf: 350 }), "truncated");
   assert.match(r.screenText, /Only 5 of 350 approved notes are included/);

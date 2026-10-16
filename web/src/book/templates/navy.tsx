@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { BookData, BookNote } from "../../api/book";
 import { FitText } from "../fit";
 import { Photo, Sheet, useBookEnv } from "../env";
+import { designHeight } from "../sizes";
 import type { Template } from "./index";
 import "./navy.css";
 
@@ -144,25 +145,32 @@ function Cover({ data }: { data: BookData }) {
 /**
  * The welcome letter: the owner's answers as its paragraphs (hobbies, plans, favourite quote), the oval portrait at the right,
  * the name as the signature. A paragraph is as tall as its text needs at the designed size (an estimate: 38 characters per line,
- * 34 px per line); a text that needs more than the page has shrinks in proportion (flex-shrink), then its font shrinks to fit.
+ * 34 px per line); when the estimates do not fit above the signature they shrink in proportion, and the font shrinks to fit the box.
+ * The heights are computed here and set in px, never left to flex-shrink: in the PRINTED page the flex layout of a letter with long
+ * fields differed from the screen's and pushed the quote and the signature off the page (T-060 QA).
  */
 const paraHeight = (text: string) =>
   24 + 34 * text.split("\n").reduce((n, l) => n + Math.max(1, Math.ceil(l.length / 38)), 0);
+const LETTER_TOP = 270;
+const LETTER_BOTTOM = 96;
+const LETTER_GAP = 18;
+const SIGN_H = 80; // the name (56), its line (20) and the gap between them (2), rounded up
 
 function Para({
   fitKey,
   label,
   text,
+  height,
   italic,
 }: {
   fitKey: string;
   label: string;
   text: string;
+  height: number;
   italic?: boolean;
 }) {
-  if (!text) return null;
   return (
-    <div className="nc-para" style={{ flexBasis: paraHeight(text) }}>
+    <div className="nc-para" style={{ height }}>
       <div className="caps nc-para-label">{label}</div>
       <FitText
         fitKey={fitKey}
@@ -176,10 +184,17 @@ function Para({
 }
 
 function Profile({ data }: { data: BookData }) {
-  const { t } = useBookEnv();
+  const { t, size } = useBookEnv();
   const p = data.profile;
   const y = data.yearbook;
   const signLine = [p.nickname, y.class_name, y.school_name].filter(Boolean).join(" · ");
+  const paras = [
+    { fitKey: "profile:hobbies", label: t("bookPages.hobbies"), text: p.hobbies },
+    { fitKey: "profile:future", label: t("bookPages.futurePlans"), text: p.future_plans },
+    { fitKey: "profile:quote", label: t("bookPages.quote"), text: p.quote, italic: true },
+  ].filter((q) => q.text);
+  const room = designHeight(size) - LETTER_TOP - LETTER_BOTTOM - SIGN_H - LETTER_GAP * paras.length;
+  const scale = Math.min(1, room / paras.reduce((n, q) => n + paraHeight(q.text), 0));
   return (
     <Sheet label="profile">
       <div className="nc-page nc-cream">
@@ -188,13 +203,9 @@ function Profile({ data }: { data: BookData }) {
         </Head>
         <div className="nc-letter">
           <div className="nc-letter-text">
-            <Para fitKey="profile:hobbies" label={t("bookPages.hobbies")} text={p.hobbies} />
-            <Para
-              fitKey="profile:future"
-              label={t("bookPages.futurePlans")}
-              text={p.future_plans}
-            />
-            <Para fitKey="profile:quote" label={t("bookPages.quote")} text={p.quote} italic />
+            {paras.map((q) => (
+              <Para key={q.fitKey} {...q} height={Math.floor(paraHeight(q.text) * scale)} />
+            ))}
             <div className="nc-sign">
               <FitText
                 fitKey="profile:name"
