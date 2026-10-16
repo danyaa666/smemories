@@ -25,3 +25,6 @@ Visual source: `docs/design/notes/Notes Inbox.dc.html` (screens I1 to I6), token
 6. **States:** first run (I4, button "Create a note link"), loading skeleton (I5), offline banner and load error with Try again (I6); the app-wide offline banner is a T-083 `Banner`.
 7. **Header handle:** the design shows `@thaolinh.26`; show the username when the user object has it (T-081/T-082), otherwise the email local part.
 8. **Out of scope here:** the "Preview & print" and "Photos" and "My profile page" entries (existing or later tasks), dark theme.
+
+#### Decision (leader, 2026-10-16): the public link shape
+The link is `<app>/c/<token>` (api/openapi.yaml, `note-collection/create`: "the web link is `<app>/c/<token>`"). The form route is `/c/:token`; T-017 builds the owner share link as `<SMEM_PUBLIC_BASE_URL>/c/<token>`. The page must send `Referrer-Policy: no-referrer` (meta tag or header via the dev/prod host config) because the token is a bearer secret in the URL, and must not put the token in analytics, error messages or `localStorage` keys in clear (hash it for the draft key).
