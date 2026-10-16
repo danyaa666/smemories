@@ -27,3 +27,4 @@ Make the remaining skill rules mechanical so they cannot regress, and delete the
 
 #### Added from T-071 review (2026-10-15)
 - Move `ERROR_CLIENT_CLOSED` (HTTP 499) into `apperr`: it is now defined as `codeClientClosed` in three packages. Document it in `docs/api-contract.md` section 3 and let `httpx.Fail` map `context.Canceled` once, so handlers stop doing it. Auth bodies still accept unknown JSON fields (kept on purpose in T-071); decide here whether to switch `DecodeJSON` to strict for auth.
+- From the T-081 QA note: remove the unreachable `errors.New` added in `internal/auth/store.go` (go-conventions) and turn on forbidigo for `fmt.Errorf`/`errors.New` in non-test code so lint catches it; fix the openapi example `username` default (`user-0c1d2e3f`) so it matches the example id.

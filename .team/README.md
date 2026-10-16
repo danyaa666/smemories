@@ -11,17 +11,18 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 18 | T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-082 |
-| TODO | 3 | T-072, T-079, T-080 |
-| IN_PROGRESS | 1 | T-081 |
+| TODO | 2 | T-072, T-079 |
+| IN_PROGRESS | 1 | T-080 |
 | QA_FAIL | 1 | T-017 |
+| QA_PASS | 1 | T-081 |
 | DONE | 53 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-018, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-073, T-074, T-075, T-076, T-077, T-078, T-083 |
-| CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
+| CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
 **Awaiting your review (MERGED):** nothing
 
-**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?)
+**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?)
 
-_Board last written 2026-10-16 03:12Z_
+_Board last written 2026-10-16 03:40Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -396,6 +397,13 @@ Small CI-file change (go-integration timeout-minutes 15 -> 40) plus 'make test-i
 - **Blocks:** T-071
 - **Recommendation:** approve
 - **Answer:** approved by owner via team approve T-071
+
+### Q-031 — Approve merge of T-081 (username API + user_tab migration, PR #62)?
+- **Status:** OPEN
+- **Asked:** 2026-10-16 03:30Z
+- **Blocks:** T-081
+- **Recommendation:** approve
+- **Answer:** _(pending)_
 
 <!-- questions:end -->
 
@@ -1113,13 +1121,13 @@ Dashboard of the user's yearbooks; create/edit form for book information and the
 - **Milestone:** M1
 - **Depends-on:** T-013, T-016, T-083
 - **Risk:** low
-- **Rework:** 1
+- **Rework:** 2
 - **Owner-approved:** —
 - **Assignee:** —
 - **Branch:** task/t-017-e04-web-notes-link-management-and-modera
 - **PR:** https://github.com/danyaa666/smemories/pull/61
-- **Updated:** 2026-10-16 03:12Z by qa
-- **Comments-seen:** 4
+- **Updated:** 2026-10-16 03:39Z by qa
+- **Comments-seen:** 8
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/04-web-notes-link-management-and-moderation.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1161,6 +1169,20 @@ Create/copy/revoke the collection link, set a deadline, see submissions grouped 
   
   VIETNAMESE FOR THE OWNER: the full list of new vi strings is in the PR description (section "Vietnamese strings for the owner to review", inbox.*, links.*, nav.*, errors.*). I read them rendered in the UI; no wording failures raised.
 - 2026-10-16 03:12Z · leader · Leader guidance for the rework (QA_FAIL; QA tested in real Chrome, everything else passed): 1) MAJOR: at 375px the status badge wraps mid-word on every note card ('Chờ duyệt' -> 'Chờ / duyệ / t'). Fix in web/src/styles/inbox.css: .inbox-card-head .badge { flex: none; white-space: nowrap } (and check the other badges in the inbox/link list at 320px, with the longest VI label). 2) Focus: after a ••• menu action, after cancel/Esc on the delete confirm, and after creating a link, focus must land on a sensible element (return to the trigger or the next logical control, or the new link's row/heading); not on body. Add a test for each. 3) Decision: the mobile tab bar keeps NO pending badge, as in the design; list it as a known difference in the PR (the sidebar badge stays). Nothing else to change.
+- 2026-10-16 03:33Z · dev · Rework head 510571e (develop merged), CI green (go, go-integration, security, web). QA 1 (major): badges nowrap + flex none in inbox.css (also links list; link names wrap); checked in headless Chrome with built CSS at 288px column, worst case: all VI labels one line, no h-scroll. QA 2: focus returns to the card's ••• button after any menu item/Esc (incl. move), delete-confirm cancel/Esc returns there, a delete that removes the card focuses Undo; tests 'keyboard focus' in notesInbox.test.tsx (3 fail on old code). QA 3: create link focuses 'Your link is ready' heading, Done focuses Name; test in noteLinks.test.tsx. Mobile tab bar has no pending badge: listed as known difference in the PR. Not exercised: real Chrome through the full app at 320 (only the CSS in isolation); web lint/typecheck/i18n/api/vitest 234/build green.
+- 2026-10-16 03:39Z · qa · Re-QA head 510571e (PR #61), CI green (go, go-integration, security, web), PR MERGEABLE/CLEAN (no conflict with develop). Real Chrome (playwright-core channel chrome) on own Vite :5174 + API :8081, private DB smem_test_qa017b (dropped), redis db 14; my processes stopped. web lint, typecheck, lint:i18n, check:api, vitest (234), build all green.
+  
+  ISSUE
+  1. [major] At 320px the note card head is unusable-cramped and a name breaks MID-WORD. Repro: viewport 320x700, /yearbooks/<id>/notes, Tat ca tab. Checkbox + avatar + (now non-shrinking) badge leave only 53px for .inbox-card-who: name 'Nguyễn Văn An' renders 'Nguyễ / n / Văn / An', 'Đỗ / Xuân / Ịch', meta line one word per line ('Bạn / cùng / bàn · 1 / phút / trước · / Nhóm / chat / lớp'); .inbox-card-head 264px tall, cards 412px for a one-line note (at 375 the same head is 96-120px, fine). Cause: .inbox-card-head flex row [checkbox][avatar][who][badge flex:none] with overflow-wrap:anywhere on who. Expected: no mid-word break, readable at 320 as asked. Suggested fix (inbox.css only): flex-wrap: wrap on .inbox-card-head and give .inbox-card-who min-width ~ 10em / flex: 1 1 10em so the badge drops to its own line under ~360px (or order the badge under the name); re-check with 'Nguyễn Văn An' at 320. Verify: scripts show 'words split across lines: 0'.
+  
+  PASSED (my evidence)
+  - Badge one line, no h-scroll, no overflowing elements: /notes and /note-links at 320, 375, 1280 in VI and EN. Badge text lines==1 for every badge: VI Chờ duyệt/Đã duyệt/Đã ẩn, links Đang mở/Đã đóng/Đã thu hồi; EN Pending/Approved/Hidden, Open/Closed/Revoked. 60-char link name with emoji wraps in its own column, status pill stays one line at 320; link list cards clean at 320/375/1280. Badge height 22px everywhere.
+  - Focus (keyboard, 1280): Esc on menu -> ••• button; menu item Chuyển xuống and Chuyển lên -> that card's ••• button; delete confirm (approved) Esc -> ••• button; Cancel (Hủy) -> ••• button; confirming Xóa (card removed) -> 'Hoàn tác' button; pending delete via menu (no dialog) -> 'Hoàn tác'. Dialog traps focus (focus inside when opened). Undo restores the card (count 1).
+  - Link create (submit via Enter in Name) -> focus on H2 'Liên kết của bạn đã sẵn sàng' at 1280, 375 and 320; 'Xong' -> Name input. No h-scroll with the share block at 320/375/1280.
+  - Regression spot-checks: real mouse drag of grip: ONE POST /note/reorder, UI and API order agree, announcement 'Lời nhắn của Võ Thị Ê, đã chuyển đến vị trí 3/6'; Undo works; link creation works (token shown once).
+  NON-BLOCKING: after pressing Enter on 'Hoàn tác' (button unmounts) focus goes to <body>; minor, could go to the restored card's ••• button. Mobile tab bar has no pending badge: accepted known difference.
+- 2026-10-16 03:40Z · leader · Leader decision (rework budget): the 320px name break is below the 375px design baseline (and no 320px phone is realistic for this audience), so it does not block. Everything else QA checked passed in real Chrome (badge on one line at 320/375/1280 in VI and EN, focus, drag, Undo, link creation, CI green, MERGEABLE). Moving it on to my review; the 320px card head and the focus after Undo are tracked in T-084 (P3).
+- 2026-10-16 03:40Z · leader · CORRECTION to my previous comment: the board does not allow the leader to override QA_FAIL, so this goes back to dev as rework 2 (the last). It is a small, cheap fix, so do exactly this and nothing else: 1) 320px: let .inbox-card-head wrap and give .inbox-card-who a minimum width (about 10em), so the badge drops to its own line under ~360px; a name must not break mid-word and a one-line card should be about 160px tall or less at 320px. Check 320, 360, 375, 1280 in a real browser (screenshots in the PR description; headless Chrome is fine), VI and EN, longest labels, a 60-char name with emoji. 2) Focus after pressing Enter on Undo: land on the neighbouring card's ••• button, or the list heading when the list is empty (one test). Then CI green, READY_FOR_QA. QA will re-check only these two at 320/375/1280.
 
 ### T-018 — [E04] Web: public anonymous notes form
 - **Status:** DONE
@@ -3368,7 +3390,7 @@ T-077 QA: a ratelimit retry-after test failed once on the CI runner (689 ms vs a
 #### Comments
 
 ### T-080 — [E04] Public submit: show 'link full' instead of a connection reset
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -3376,10 +3398,10 @@ T-077 QA: a ratelimit retry-after test failed once on the CI runner (689 ms vs a
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-080-e04-public-submit-show-link-full-instead
 - **PR:** —
-- **Updated:** 2026-10-15 14:06Z by leader
+- **Updated:** 2026-10-16 03:33Z by dev
 - **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/08-full-link-reset.md`
@@ -3392,7 +3414,7 @@ T-068 answers a full public link on the raw writer without reading the body; a f
 - 2026-10-15 14:06Z · leader · unblocked, small P3
 
 ### T-081 — [E02] Username: unique public handle with default and weekly change (API)
-- **Status:** IN_PROGRESS
+- **Status:** QA_PASS
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
@@ -3400,11 +3422,11 @@ T-068 answers a full public link on the raw writer without reading the body; a f
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** leader
 - **Branch:** task/t-081-e02-username-unique-public-handle-with-d
-- **PR:** —
-- **Updated:** 2026-10-16 03:03Z by dev
-- **Comments-seen:** 1
+- **PR:** https://github.com/danyaa666/smemories/pull/62
+- **Updated:** 2026-10-16 03:29Z by qa
+- **Comments-seen:** 4
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/13-username-api.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -3414,6 +3436,11 @@ Owner decision D-28: every user gets a unique public username (default user-xxxx
 
 #### Comments
 - 2026-10-15 14:52Z · leader · unblocked: T-071 merged (get-me uses the single auth.User struct; add username there). Risk high: owner approval before merge.
+- 2026-10-16 03:21Z · dev · PR #62, head 04354f8. Migration 20261016100000 + username in auth.User/get-me/register/Google, POST /api/user/update-username (cooldown in one conditional UPDATE, limiter username_tries 20/h closed). Tests: db migration test, username unit tests, auth integration (flow, rejections, limit, concurrency -race), Newman auth Full flow + Edge cases green on my own API. QA: try Alice vs alice clash, deleted user's name, two browsers at once, exactly 7 days. Note: auth collection now makes 3 counted registers per run (make reset-limits between runs). Owner approval needed (risk high).
+- 2026-10-16 03:29Z · qa · QA_PASS on head 04354f8 (CI green on that head: go, go-integration, security, web). Own API on :18081/:18083, private DB smem_test_qa81 (dropped), Redis db 14 (flushed), own valkey container for the Redis-down probe (gone).
+  AC1 migration: goose on a populated table (old schema, 5 users, then 4 more with the same last-8 incl. a lower-case variant): up gives unique valid names; clash group got user-sameend1, user-sameend1-16/-17/-18 (id appended); down restores columns+index exactly; up/down/up again OK. AC2: register by email -> user-xxxxxxxx, username_next_change_at null in register/login/get-me; Google path + 8/10/14/26 fallback covered by integration tests TestUsernameDefault* (read + ran, green); could not force a live clash (ULID random), test forces it via createUser. AC3: 35 live format/reserved cases (min/max, leading/trailing . - _, double special, space, quotes, <b>, SQL, %20, NUL, newline, tab, Cyrillic a, Kelvin sign, fullwidth, zero-width, Aring, user-12345678/USER-ZZZZZZZZ/user-abc reserved, user- alone invalid, Admin with spaces reserved): all as spec. Non-string -> ERROR_PARAM, empty/missing -> ERROR_INVALID_USERNAME, bad JSON 400, bad UTF-8 400. AC4: Alice then alice/ ' ALICE ' -> 409 TAKEN; same name (any case) = 200 no-op, default no-op leaves changed_at=0 and next=null; second change 429 ERROR_USERNAME_CHANGE_TOO_SOON, Retry-After 604800, message has RFC3339 time; DB clock edge: 2.9 s before 7d -> 429 Retry-After 3, after boundary 200 and get-me next=null; exact-7d and -1 ms covered by fake-clock integration test (ran green); going back to own default after cooldown 200; far-future changed_at gives a sane 429. AC5: 5 rounds x 8 parallel changes by one user over 4 sessions: exactly 1x200 + 7x429, no 500; 5 rounds x 6 users same name: 1x200 + 5x409; 24 users x 3 random names from a pool of 10: only 200/409/429, no 500/deadlock, pool names unique in DB; API log has 0 ERROR lines. AC6: 21st failed attempt 429 ERROR_RATE_LIMITED Retry-After 3600 (key smem:dev:rl:username_tries:<user>, ttl 1h), per user, cooldown answers identical for free/taken name (WHERE runs before the unique key). Redis down (own valkey stopped): update-username and get-me 503 ERROR_SESSION_STORE_UNAVAILABLE, DB unchanged (fail closed; the limiter itself is Closed() by code). Deleted user's name (hard delete via SQL): next user claims it 200; the deleted user's session gets 401. CSRF: wrong or missing Origin with cookie 403 ERROR_CSRF_ORIGIN_MISMATCH, text/plain 415, GET 405, no cookie 401. AC7: make lint build test (go race + web vitest 193, i18n, check:api, build) green; SMEM_TEST_REDIS_URL=db14 make test-integration green (auth 208 s); newman auth 93 req/210 assertions twice back to back, 0 failures (Google folder needs SMEM_GOOGLE_* env, ran with fake ones); platform (only the documented manual 503 step fails), yearbooks, notes, notes-moderation (after verifying the two accounts), media all green; no .team/ files in the PR; handler imports no store.
+  Non-blocking observations: (1) store.go adds a new errors.New ("auth: no username attempt", unreachable) in application code, against go-conventions line 32; forbidigo is not actually configured in .golangci.yml so lint does not catch it (pre-existing errors.New all over internal/auth, E10 work). (2) openapi example default user-0c1d2e3f does not match the example id ...B0C1D2E (would be user-8b0c1d2e), cosmetic. (3) Enumeration: TAKEN is inherent; limited to 20 failed tries/h per user, but a fresh account (register 5/h/IP) gets another 20, and a user in cooldown cannot probe at all; names are public anyway, acceptable. (4) After the 20-fail limit even a valid change or no-op is 429 until the hour passes (by design). (5) Unicode spaces (NBSP, U+3000) are trimmed by TrimSpace, ' Nbsp-trim　' is stored as nbsp-trim; harmless. (6) A backfilled clash user (user-sameend1-16) cannot return to that name after leaving it (reserved as foreign user- name); negligible. (7) Email-unverified users can change username (spec silent). Owner approval still required before merge (risk high).
+- 2026-10-16 03:30Z · leader · Leader review OK on 04354f8: migration is safe on a populated table (backfill, deterministic clash fix, unique key last, down restores), username assigned at email and Google signup, 7-day cooldown is one conditional UPDATE (4 parallel sessions -> one 200), TAKEN races give exactly one winner, fail-closed behaviour with Redis down, get-me carries username via the single auth.User. CI green on the head, QA_PASS. Non-blocking nits moved to T-072 (errors.New in store.go, openapi example). Deploy note for T-022/T-023: run migrations as the one-off task BEFORE starting the new API version (user_tab.username has no default, so an old API instance cannot insert users after the migration). Waiting for owner approval (Risk high).
 
 ### T-082 — [E02] Web: show and change the username on the account page
 - **Status:** BACKLOG
@@ -3492,6 +3519,26 @@ Port the Claude Design tokens, self-host the fonts, add base components (Button,
   Not re-tested (already verified in my earlier note): AC1-AC5 details, focus ring, reduced motion, 44px targets. Non-blocking observations from my first note still stand (text links under 44px; Dialog not wired). My own processes (API, Vite) are stopped; DB smem_test_qa083 and Redis db 12 are mine and left in place.
 - 2026-10-15 16:38Z · leader · merged 28f5dca (PR #57). Review: tokens.css identical to the design minus @import, self-hosted @fontsource (exact pins, OFL notices), 9 ui components + tests, YearbookLayout; web-only diff, CI green, QA_PASS on the merged state. Rework cause was stale /v1 mocks in a test, fixed. For owner to check: look at Login, Register, Yearbooks and a book at phone and desktop width; owner already approved the 4 nav strings; 'My yearbooks' nav entry was a dev addition.
 - 2026-10-16 01:37Z · human · accepted by owner
+
+### T-084 — [E04] Inbox polish: 320px card head and focus after Undo
+- **Status:** CANCELLED
+- **Priority:** P3
+- **Type:** tech-debt
+- **Milestone:** M1
+- **Depends-on:** T-017
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-16 03:40Z by leader
+- **Comments-seen:** 1
+
+Spec: .team/epics/E04-friends-notes/09-inbox-320px-polish.md (read it from the repo root). Follow-up from T-017 QA: note card head at 320px and focus after pressing Enter on Undo.
+
+#### Comments
+- 2026-10-16 03:40Z · leader · created by mistake: the board does not let the leader override QA_FAIL, so the 320px fix goes through T-017 rework 2 instead
 
 <!-- tasks:end -->
 
