@@ -12,7 +12,7 @@ COMPOSE_PROJECT_NAME := $(shell if docker ps -a --filter label=com.docker.compos
 endif
 export COMPOSE_PROJECT_NAME
 
-.PHONY: build test lint run web-install web-build web-test web-lint up down migrate migrate-down test-integration reset-limits
+.PHONY: build test lint run web-install web-build web-test web-lint print-check up down migrate migrate-down test-integration reset-limits
 
 build:
 	go build -o bin/smemories-api ./cmd/smemories-api
@@ -52,6 +52,11 @@ web-test: web/node_modules
 
 web-lint: web/node_modules
 	cd web && npm run lint && npm run typecheck && npm run lint:i18n && npm run check:api
+
+# Headless print check of the HTML book renderer (T-058, ADR 0003): prints a fixture book to PDF with Chromium and inspects the PDF.
+# Needs poppler (pdfinfo, pdffonts, pdfimages, pdftotext) on the PATH; not part of `make test`.
+print-check: web/node_modules
+	cd tools/print-check && npm ci && npx playwright install chromium && npm test
 
 # Starts MySQL 8.4, Valkey and MinIO and returns once all are healthy and the bucket exists.
 up:

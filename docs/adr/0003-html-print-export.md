@@ -1,6 +1,6 @@
 # ADR 0003: HTML templates printed by the browser instead of server-side PDF rendering
 
-Status: **Accepted** (owner decision D-24, 2026-10-09: export is browser print of HTML templates; the Go renderer stays as a fallback and is not extended). Written as "proposed" by spike T-054 on 2026-10-08; the sections below are the spike's original analysis. The owner is testing Safari, Android Chrome and iOS Safari and will report; the steps are in [OWNER-TESTS.md](../spikes/print/OWNER-TESTS.md). If a device class fails, the exit path (Option B) applies and needs its own decision.
+Status: **Accepted** (owner decision D-24, 2026-10-09: export is browser print of HTML templates; the Go renderer stays as a fallback and is not extended). Written as "proposed" by spike T-054 on 2026-10-08; the sections below are the spike's original analysis. The renderer was built for the product in T-058 (the spike code is gone, see "Reproduce"). The owner is testing Safari, Android Chrome and iOS Safari and will report; the steps are in [OWNER-TESTS.md](../spikes/print/OWNER-TESTS.md). If a device class fails, the exit path (Option B) applies and needs its own decision.
 Context: owner idea of 2026-10-08, related to D-06 and D-12 (pure-Go PDF engine, [ADR 0002](0002-pdf-engine.md)), L-12 (designer templates as
 pre-rendered backgrounds plus slots) and the epics E05 and E08.
 
@@ -149,12 +149,15 @@ Default if the owner does not run the tests: C for M1 (it is built and verified)
 
 ## Reproduce
 
+**T-058 folded the spike into the product.** The throwaway route `/spike/print`, its fixtures and the measuring scripts (`measure.mjs`, `firefox-bidi.mjs`) were removed; the last commit that has them is `82b5151` (`git show 82b5151:web/src/spike/print/PrintSpike.tsx`).
+Their successors: the renderer in `web/src/book/` and the route `/yearbooks/:id/book`, the self-hosted fonts in `web/src/book/fonts/`, and the automated check in `tools/print-check/`:
+
 ```
-cd web && npm ci && npm run dev                      # prototype at http://localhost:5173/spike/print
-cd tools/print-spike && npm install && npx playwright install chromium
-npm test                                             # AC3: 24 pages, page size, fonts, Vietnamese text, photo ppi, no external request
-python3 make-fixtures.py large /tmp/photos3000 && LARGE_PHOTOS=/tmp/photos3000 FIREFOX=/path/to/firefox node measure.mjs   # the matrix, writes docs/spikes/print/
+make print-check        # cd tools/print-check && npm ci && npx playwright install chromium && npm test
 ```
 
-The automated check needs poppler (`pdfinfo`, `pdffonts`, `pdfimages`, `pdftotext`) on the PATH. To keep the repository small, `docs/spikes/print/` holds only `results.json` (every measurement, including the file sizes)
-and three evidence images; the PDFs are not committed (`*.pdf` there is git-ignored) and `measure.mjs` regenerates them. The interactive output of the same Chromium engine was not compared with the headless output: the dialog adds only the settings listed in OWNER-TESTS.md.
+It opens the book screen in headless Chromium with a fixture book (84 notes, 30 photos, Vietnamese and emoji, served by Playwright routes, no API needed), prints it with `page.pdf()` and asserts on the PDF: 24 pages, exact page size for A5, A4 and Letter,
+embedded fonts, 30 photos, Vietnamese text extractable, no request to any other host. The figures in this document come from the spike's own runs and stay as they were measured.
+The 30 synthetic photos are in `tools/print-check/fixtures/` (`make-fixtures.py` makes them again). The check needs poppler (`pdfinfo`, `pdffonts`, `pdfimages`, `pdftotext`) on the PATH.
+
+`docs/spikes/print/` holds only `results.json` (every measurement, including the file sizes) and three evidence images; the PDFs were never committed. The interactive output of the same Chromium engine was not compared with the headless output: the dialog adds only the settings listed in OWNER-TESTS.md.

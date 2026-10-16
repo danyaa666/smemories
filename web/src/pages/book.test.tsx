@@ -177,7 +177,7 @@ describe("book preview and print", () => {
     );
     serve(bookData([note(1, { photo_ids: [PHOTO(1)] })]));
     open();
-    expect(await screen.findByText(/1 photos could not be loaded/)).toBeInTheDocument();
+    expect(await screen.findByText(/Photos that could not be loaded: 1/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Print or save as PDF" })).toBeEnabled();
   });
 
@@ -212,7 +212,7 @@ describe("book preview and print", () => {
     open();
     expect(
       await screen.findByText(
-        "2 notes are too long for their space and are cut off in the printout.",
+        "Notes that are too long for their space and are cut off in the printout: 2.",
       ),
     ).toBeInTheDocument();
   });
