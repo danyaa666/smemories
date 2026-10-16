@@ -10,18 +10,18 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 14 | T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-059, T-060, T-061 |
-| TODO | 2 | T-032, T-079 |
+| BACKLOG | 12 | T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-061 |
+| TODO | 4 | T-032, T-059, T-060, T-079 |
 | IN_PROGRESS | 1 | T-072 |
-| IN_QA | 1 | T-058 |
+| MERGED | 1 | T-058 |
 | DONE | 58 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-073, T-074, T-075, T-076, T-077, T-078, T-080, T-081, T-082, T-083 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** nothing
+**Awaiting your review (MERGED):** T-058 ([E05] Web: HTML book renderer core and print preview (browser print-to-PDF))
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?)
 
-_Board last written 2026-10-16 09:43Z_
+_Board last written 2026-10-16 09:50Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -2580,7 +2580,7 @@ Third stored size for printing: lighter PDFs and faster print (spike: 63 MB and 
 - 2026-10-10 03:29Z · human · accepted by owner
 
 ### T-058 — [E05] Web: HTML book renderer core and print preview (browser print-to-PDF)
-- **Status:** IN_QA
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -2588,11 +2588,11 @@ Third stored size for printing: lighter PDFs and faster print (spike: 63 MB and 
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** —
 - **Branch:** task/t-058-e05-web-html-book-renderer-core-and-prin
 - **PR:** https://github.com/danyaa666/smemories/pull/66
-- **Updated:** 2026-10-16 09:39Z by qa
-- **Comments-seen:** 2
+- **Updated:** 2026-10-16 09:50Z by leader
+- **Comments-seen:** 4
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/09-html-book-renderer-core.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2603,9 +2603,35 @@ Fixed-size HTML pages, pagination, text fit, print CSS, readiness gate and a hea
 #### Comments
 - 2026-10-16 09:00Z · leader · unblocked: T-056 merged (GET /api/book-data/get?yearbook_id=; truncated + approved_total, see spec addendum), T-054 and T-057 done. The addendum at the bottom of the spec is part of the requirements.
 - 2026-10-16 09:38Z · dev · PR #66 head 313c9af, CI green (go, go-integration, web, security). Route /yearbooks/:id/book, renderer in web/src/book, truncated warning + 300-note fixture tests, tools/print-check (make print-check, not in CI). Checked 320/375/1280 in a real browser against own API+private DB. Left out: measured-fit pagination (declared capacity used), Firefox/Safari/phones, CI job for print-check. Vietnamese strings listed in PR. OWNER-TESTS.md now uses a real book (spike page removed).
+- 2026-10-16 09:49Z · qa · QA_PASS T-058, PR #66 head 313c9af. CI green (go, go-integration, web, security). No .team/ files in the PR. Real Chrome 155 (Playwright channel=chrome), own Vite :15358 + own API :18158, private DB smem_test_qa058 (latest schema), Redis db 11, all dropped/stopped afterwards.
+  
+  EVIDENCE (AC -> how -> result)
+  - Mechanical: web lint, typecheck, lint:i18n, check:api, vitest (18 files, 270 tests), build all exit 0; `make print-check` 5/5 pass (24-page A5/A4/Letter, 301-note truncated, 0 notes).
+  - Seed: user, 3 yearbooks (A5, A4, Letter) each with cover + profile photo, link, 8 notes (63-char-class Vietnamese long name, relationship, 2000-char message, emoji incl. ZWJ family, 3 photos / 1 photo / 0 photos, <script>, <img onerror>, & < > quotes, entities, newlines, 150-char unbroken word), approved + reordered; plus 0-note book, 1-note book, 301-approved-note book (300 rows inserted in my private DB; API says truncated=true approved_total=301 note_count=300).
+  - AC1 route/sizes: /yearbooks/:id/book renders at 320, 375, 1280: documentElement scrollWidth == clientWidth in all 18 combos (no horizontal scroll); no console errors or 4xx/5xx except /favicon.ico 404 (app-wide, no favicon in web/public, not from this PR). Order on screen == API order == the order I set with note/reorder. A5/A4/Letter: PDF page size 420x594.96 / 594.96x841.92 / 612x792 pt on every page. @page rule + print media: app chrome display:none, sheet transform none. Nav entry "Xem trước và in" (EN "Preview and print") with aria-current, mobile tab "In".
+  - AC2 pagination: 8 notes -> 5 pages, 0 -> 3, 1 -> 4, 300 -> 78 (3 + 75), PDF page counts identical to the on-screen count in all six books.
+  - AC3 fit: long (2000 char) note shrunk (9px of 16) and reported "Số đoạn văn được thu nhỏ chữ cho vừa khung: 1"; stress book (2000 chars of blank-line text, 1000 lines, 60 W + 60 M name, 80 W title) -> banners "cut off: 3" and "pages cut off: 1"; text clipped inside its card, no overlap into the next card (PDF viewed).
+  - AC4 readiness: media responses delayed 1.5 s: Print disabled with "Đang chuẩn bị phông chữ và ảnh (0/11 ảnh)..." then (9/11) then enabled "Sẵn sàng để in: 5 trang."; all 11 media requests are variant=print; beforeprint flips images to loading=eager/decoding=sync, afterprint back to lazy. One photo aborted: warning "Số ảnh không tải được: 1 ... khung trống", Print still enabled, empty frame in the PDF (as spec'd). 300-note book: ready 1.4 s (plain) / 8.5 s (299 notes x 960 KB of text all shrinking), PDF 6.5-11.8 s, 78 pages 18-19 MB.
+  - AC5 fonts: pdffonts on A5/big: every font emb=yes (Nunito, Cormorant Garamond, Fraunces, AppleColorEmoji); no third-party host requested (page requests all to :15358). Vietnamese extractable with pdftotext (diacritics, long names, line breaks, emoji present); photos present (pdfimages: cover 275 ppi, profile 700 ppi, note photos 755-1129 ppi); backgrounds printed even with printBackground:false (print-color-adjust exact, placeholder colour visible); no blank pages (every page of the 78-page PDF has text, last page = back cover).
+  - AC6: make print-check green (see above). AC7: spike route/files removed (diff), ADR updated.
+  - Addendum 1 truncated: banner "Cuốn lưu bút này chỉ gồm 300 trên 301 lời nhắn đã duyệt ... sẽ không được in." shown at 375 and 1280, screen-only, not in the PDF (grep: no "sẽ không được in"), PDF has 300 notes. Addendum 2: loading state "Đang tải cuốn lưu bút..." with a 2.5 s delayed API; 960 KB body (no size assumption) parsed fine.
+  - Empty state (0 notes) banner "Chưa có lời nhắn nào được duyệt..." and 3-page PDF; 1 note -> 4 pages.
+  - Escaping: <script>alert(1)</script>, <img src=x onerror=...>, & < > " ' and &amp; &lt;b&gt; render as literal text in DOM (0 script/img[onerror] elements) and in the PDF text.
+  - Keyboard: Tab order sidebar -> EN/VI -> Print button -> help summary, focus ring visible on all, Enter and Space on Print call window.print (stubbed), summary toggles with Enter. One h1.
+  - Retry: 404/403/401 -> exactly 1 request; 500 -> 2 requests (one retry). Logged out -> /login; another user's book -> 404 "We could not find that." with Try again; bad id -> generic error. No refetch on focus.
+  
+  NON-BLOCKING OBSERVATIONS (for T-059/T-060/T-061, none violates an AC)
+  1. Text-fit floor is 50% and the page is zoomed to the paper. On A5 the built-in 16 px note text prints at about 8.2 pt; a note over roughly 850 characters drops under 7 pt, and the 2000-character maximum prints at about 4 pt (8 px design x 0.685 zoom). On A4 about twice as comfortable (7 pt floor reached near 1500 chars). The owner only sees a count ("texts set in a smaller size: N" / "cut off: N"), not which note nor the resulting point size. Suggest: show the note names or the page, and a "too small to read" threshold.
+  2. Fixed capacity of 4 cards of equal height: one long note cannot borrow the free space of its neighbours (a one-line neighbour leaves a lot of white). A pathological note (blank-line-separated text, 1000 lines) is clipped inside its card without damaging other cards; owner is told how many, not which. No real book prints wrongly in my runs; worst case is a clipped or tiny long note, always reported.
+  3. A 404/403 on the book shows "Try again" (pointless for a 4xx); cosmetic.
+  4. Only Chromium-family (real Chrome 155, Page.printToPDF) tested; the interactive print dialog, Firefox, Safari, phones are not tested by me (OWNER-TESTS.md). print-check is not in CI (spec allows make target).
+  5. Pre-existing: /favicon.ico 404 on every route.
+  
+  NEW VIETNAMESE STRINGS FOR THE OWNER: listed in the PR #66 description (keys print.*, bookPages.*, nav.print, nav.tabPrint). I read them rendered; no wording fail. Menu "Xem trước và in", tab "In", button "In hoặc lưu thành PDF", warning "Cuốn lưu bút này chỉ gồm {{shown}} trên {{total}} lời nhắn đã duyệt...".
+- 2026-10-16 09:50Z · leader · merged b219943 (PR #66). Review: web-only renderer reading GET /api/book-data/get, React-escaped (no innerHTML), photos at print size with Print disabled until loaded, truncated banner on screen only, 4xx not retried; real Chrome PDFs at A5/A4/Letter have exact page sizes, embedded fonts, extractable Vietnamese, 78 pages for 300 notes; make print-check 5/5; CI green, QA_PASS on the same head. Known gaps (documented): 4 notes per page fixed capacity, text-fit floor 50% (a note over ~850 chars prints under 7 pt on A5, the 2000-char max about 4 pt, pathological text clipped inside its card); print-check is a make target, not CI; Firefox/Safari/phones untested. For owner to check: /yearbooks/<id>/book (Preview and print), try Print to PDF from Chrome; the Vietnamese strings print.*, bookPages.*, nav.print, nav.tabPrint.
 
 ### T-059 — [E05] HTML template memory-book (design temp1)
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
@@ -2616,8 +2642,8 @@ Fixed-size HTML pages, pagination, text fit, print CSS, readiness gate and a hea
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-16 09:50Z by leader
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/10-html-template-memory-book.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2626,9 +2652,10 @@ Fixed-size HTML pages, pagination, text fit, print CSS, readiness gate and a hea
 Pastel Memory Book canvas as an HTML template, EN and VI, four page kinds.
 
 #### Comments
+- 2026-10-16 09:50Z · leader · unblocked: T-058 merged (renderer core in web/src/book/), T-044 done. Read the addendum at the bottom of the spec (which notes were shrunk/cut).
 
 ### T-060 — [E05] HTML template navy-classic (design temp2)
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
@@ -2639,8 +2666,8 @@ Pastel Memory Book canvas as an HTML template, EN and VI, four page kinds.
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-16 09:50Z by leader
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/11-html-template-navy-classic.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2649,6 +2676,7 @@ Pastel Memory Book canvas as an HTML template, EN and VI, four page kinds.
 Navy and gold canvas as the second HTML template.
 
 #### Comments
+- 2026-10-16 09:50Z · leader · unblocked: T-058 merged. Read the addendum at the bottom of the spec.
 
 ### T-061 — [E05] Web: template picker and print screen with device guidance
 - **Status:** BACKLOG
@@ -3637,3 +3665,4 @@ Spec: .team/epics/E04-friends-notes/09-inbox-320px-polish.md (read it from the r
 - 2026-10-16 — T-017 (moderation inbox, PR #61) merged 445a11c after 2 reworks (badge wrap, focus, 320px head); T-080 (full-link drain, PR #63) merged d8e9d7c. T-081 accepted. T-056 (book data endpoint, high risk, route GET /api/book-data/get) promoted to TODO; the printing path T-058..T-061 follows it.
 - 2026-10-16 — T-056 (book data endpoint, PR #64, owner-approved) merged b20bf33: GET /api/book-data/get with explicit truncated/approved_total (no silent cut at 300 notes; renderer must warn). T-017/T-080 accepted. T-058 (HTML renderer core) promoted to TODO; T-072 free to start. Dev now on T-082.
 - 2026-10-16 — T-082 (web username on the account page, PR #65) merged de0eb3c. Dev on T-058 (HTML renderer); T-072 next.
+- 2026-10-16 — T-058 (HTML book renderer core, PR #66) merged b219943. T-059 and T-060 (templates) promoted to TODO; T-061 (print screen, high risk) follows T-059. T-056/T-082 accepted. T-072 (quality sweep) in progress.

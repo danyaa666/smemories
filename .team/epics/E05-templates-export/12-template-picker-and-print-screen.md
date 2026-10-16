@@ -30,3 +30,6 @@ Owner-only data stays behind the session; no user text is rendered as HTML; phot
 
 #### Added by the leader (2026-10-16, from T-056)
 The book-data response has `truncated` (true when the book has more approved notes than the 300-note cap returned) and `approved_total`. When `truncated` is true the preview and the print screen MUST show a visible warning ("X of Y notes are included") and must not silently print the shorter book; add a test for it.
+
+#### Added by the leader (2026-10-16, from the T-058 QA)
+T-058 sets four notes per page and shrinks long text down to a floor of 50% (a note over ~850 characters prints under 7 pt on A5; the 2000-character maximum about 4 pt; pathological text is clipped inside its card). The owner currently only sees a count. Required here: the preview/print screen lists WHICH notes were shrunk or cut (author name and how small, e.g. "Linh, 6 pt"), each with a link to that note in the moderation inbox so the owner can hide or ask the friend to shorten it; a test with one 2000-character note. Do not change the capacity rule in this task unless the template needs it.
