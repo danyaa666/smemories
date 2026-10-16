@@ -11,16 +11,17 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 18 | T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-082 |
-| TODO | 5 | T-017, T-072, T-079, T-080, T-081 |
-| MERGED | 2 | T-013, T-018 |
-| DONE | 51 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-073, T-074, T-075, T-076, T-077, T-078, T-083 |
+| TODO | 3 | T-072, T-079, T-080 |
+| IN_PROGRESS | 1 | T-081 |
+| QA_FAIL | 1 | T-017 |
+| DONE | 53 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-018, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-073, T-074, T-075, T-076, T-077, T-078, T-083 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
 
-**Awaiting your review (MERGED):** T-013 ([E04] Notes moderation API (approve, hide, reorder, delete)); T-018 ([E04] Web: public anonymous notes form)
+**Awaiting your review (MERGED):** nothing
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?)
 
-_Board last written 2026-10-16 02:38Z_
+_Board last written 2026-10-16 03:12Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -947,7 +948,7 @@ Owner-created private collection links (create, list, revoke) and the public loo
 - 2026-10-08 02:46Z · leader · accepted by owner (chat, 2026-10-08: 'team accept T-011, T-012')
 
 ### T-013 — [E04] Notes moderation API (approve, hide, reorder, delete)
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
@@ -958,7 +959,7 @@ Owner-created private collection links (create, list, revoke) and the public loo
 - **Assignee:** —
 - **Branch:** task/t-013-e04-notes-moderation-api-approve-hide-re
 - **PR:** https://github.com/danyaa666/smemories/pull/60
-- **Updated:** 2026-10-16 02:28Z by leader
+- **Updated:** 2026-10-16 02:43Z by human
 - **Comments-seen:** 10
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/03-notes-moderation-api-approve-hide-reorder.md`
@@ -1001,6 +1002,7 @@ Owner lists pending/approved/hidden notes per yearbook, approves or hides them, 
   Gate on 60bebf2: make lint exit 0 (gofmt, vet, vet -tags integration, golangci-lint, web lint/typecheck/i18n/api schema); go build ./... 0; go test -race -count=1 ./... 0; make test-integration (-race -tags integration, incl. TestQAMixedCaseNoteIDIsParamError) all packages ok, 0 FAIL.
   Non-blocking observations: (a) consistency: other domains are lenient, note-collection/create and yearbook/get accept a lower-case yearbook id (200, case-insensitive collation) and answer 404 for a malformed one, while moderation answers 400 ERROR_PARAM. docs/api-contract.md only defines ERROR_PARAM as malformed body or query, so 400 for a malformed id is within it and is documented in docs/moderation.md; leader may want to align the other domains (or the contract) in an E10 task. (b) the 400 is determined before ownership, which is the safe direction.
 - 2026-10-16 02:28Z · leader · merged c780423 (PR #60). Review: every query scoped by the locked owned book (book row FOR UPDATE first, then note rows by id), IN lists bounded to 100, keyset list with LIMIT, canonical-ULID validation answers ERROR_PARAM, photos purged before rows; CI green, QA_PASS on the same head after one rework. For owner to check: nothing visible until T-017 (moderation inbox) lands; API docs in docs/moderation.md.
+- 2026-10-16 02:43Z · human · accepted by owner
 
 ### T-014 — [E05] Export job: assemble book, render PDF, store, download
 - **Status:** CANCELLED
@@ -1105,19 +1107,19 @@ Dashboard of the user's yearbooks; create/edit form for book information and the
 - 2026-10-09 01:42Z · leader · accepted by owner (chat, 2026-10-09: 'team accept T-016, T-046, T-047, T-051')
 
 ### T-017 — [E04] Web: notes link management and moderation inbox
-- **Status:** TODO
+- **Status:** QA_FAIL
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
 - **Depends-on:** T-013, T-016, T-083
 - **Risk:** low
-- **Rework:** 0
+- **Rework:** 1
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-16 02:28Z by leader
-- **Comments-seen:** 1
+- **Branch:** task/t-017-e04-web-notes-link-management-and-modera
+- **PR:** https://github.com/danyaa666/smemories/pull/61
+- **Updated:** 2026-10-16 03:12Z by qa
+- **Comments-seen:** 4
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/04-web-notes-link-management-and-moderation.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1127,9 +1129,41 @@ Create/copy/revoke the collection link, set a deadline, see submissions grouped 
 
 #### Comments
 - 2026-10-16 02:28Z · leader · unblocked: T-013 merged (API) and T-083 done. Link shape is <app>/c/<token> (see specs). Depends on T-016 which is done.
+- 2026-10-16 03:02Z · dev · PR #61 head 47064cf, CI green (go, go-integration, security, web). Web only: /yearbooks/:id/notes inbox (tabs, approve/hide/bulk, delete with 6s client Undo, reorder by drag/keys/menu/mobile Book order) and /yearbooks/:id/note-links (create, show token once + copy, revoke); sidebar+tab entries with pending badge. 36 new tests; lint/typecheck/build/i18n/api checks green. To verify in a browser (jsdom only so far): layout at 1280 and 375, real pointer drag, copy button. Link base = VITE_PUBLIC_BASE_URL else window origin. vi strings listed in PR.
+- 2026-10-16 03:12Z · qa · QA on head 47064cf (PR #61), real Chrome (playwright-core, channel chrome) against own Vite :5174 + API :8081 from the PR worktree, private DB smem_test_qa017 (dropped), redis db 14. CI green (go, go-integration, web, security). web lint/typecheck/lint:i18n/check:api/vitest (229)/build all green.
+  
+  ISSUES
+  1. [major] Mobile (375px) status badge wraps mid-word on every note card: "Chờ duyệt" renders as "Chờ / duyệ / t" in a squashed 59x58 px pill (Đã duyệt: "Đã / duyệ / t"; also grows card height). Repro: log in, open /yearbooks/<id>/notes at viewport 375x812, any note with a status badge (Tất cả tab). Cause: .inbox-card-head is a flex row, the .badge has white-space normal and shrinks; the meta line ("Bạn cùng lớp · bây giờ · Nhóm chat lớp") and name win the space. Expected: badge on one line (design I2 mobile). Fix area: web/src/styles/inbox.css (.inbox-card-head .badge { flex: none; white-space: nowrap }) or let the meta wrap and not the badge; re-check at 360 and 320.
+  2. [minor] Focus is lost to <body> after choosing an item of the ••• menu (Chuyển lên / Chuyển xuống / Xóa) and after cancelling or Esc on the delete confirm dialog opened from that menu (menu item unmounts, dialog returns focus to a removed node). Keyboard users restart from the top. Expected: focus returns to the card's ••• button (or the grip after a move). Esc on the menu itself correctly returns focus to the ••• button. Area: NoteCard menu + Dialog return-focus target.
+  3. [minor] After link create, focus stays on the (now cleared) Create button; the new link block appears above it and nothing announces it except the section. Consider focusing the read-only link field or the section heading. After "Xong" focus goes to <body>.
+  
+  NON-BLOCKING OBSERVATIONS
+  - Mobile bottom tab bar has "Lời nhắn" and "Liên kết" but no pending badge (sidebar at 1280 has it, updates live: 2 -> hidden at 0 -> 1 after a new note). The design's mobile tab bar has no badge either, so not failed; the spec line 1 could be read both ways, leader to decide.
+  - At 375 the four filter tabs wrap into a 2x2 grid; design shows one scrollable row.
+  - In card mode at 375 every approved card shows a grip too (touch drag works, but the page does not auto-scroll while dragging; Book order mode with arrows covers it).
+  - /favicon.ico 404 in console is pre-existing and unrelated.
+  
+  EVIDENCE (what passed, real browser)
+  - Layout 1280 and 375: inbox, link management; no horizontal scroll (scrollWidth == clientWidth on both pages); zero googleapis/gstatic requests; no console errors other than favicon.
+  - Photos: thumbs load from /api/media/get-content?id=..&variant=thumb|display with owner session (3 photos + 1 photo notes, naturalWidth 480); click target opens display variant in new tab, rel noopener.
+  - Real mouse drag of the grip (approved tab): drop line classes during drag, order saved with ONE POST /note/reorder after ~700 ms, API order matches UI; announcement "Lời nhắn của Võ Thị Ê, đã chuyển đến vị trí 3/6". Touch drag via CDP touch events in Book order mode works (reorder persisted).
+  - Keyboard: ArrowUp/Down on the grip moves, focus stays on the grip, live region (aria-live=polite) announces "<name>, đã chuyển đến vị trí X/N"; ••• menu Move up/down works, Esc closes menu and returns focus to the trigger. Reorder flushed when leaving the page within 700 ms (API order changed).
+  - Mobile Book order: arrows + Xong work; announce text correct.
+  - Stale: mocked 409 ERROR_ORDER_STALE on reorder -> toast "Thứ tự đã thay đổi ở nơi khác..." and exactly 1 get-list refetch, UI order restored.
+  - Delete: pending note deletes with no confirm; toast "Đã xóa lời nhắn." + Hoàn tác; Undo -> 0 batch-delete requests, note back, counts unchanged; expiry -> batch-delete sent 6.05 s after click, counts all 10->9 / pending 3->2 on the API; leave page (in-app link) within 6 s -> no request, note stays; reload within 6 s -> no request, note stays. Approved note -> confirm dialog (role=dialog aria-modal, focus trapped over 6 Tabs, "Ẩn thay vì xóa" works: approved 8->7, hidden 1->2). Mocked 502 ERROR_STORAGE_ERROR on batch-delete -> toast "Kho lưu ảnh không phản hồi. Vui lòng thử lại." and the note is back.
+  - Bulk: select all in Chờ duyệt, bar "Đã chọn 2 | Duyệt | Ẩn | Xóa | Bỏ chọn", Duyệt -> toast, counts (API and tabs) match, sidebar badge disappears, empty state "Bạn đã duyệt hết rồi". Hide / approve from hidden tab restores counts.
+  - Tabs with counts correct vs API at every step; first-run not retested in browser (jsdom).
+  - No retry on 4xx: mocked 403 on note/get-list -> exactly 1 list call + 1 counts call, error state with Try again; mocked 404 on note-collection/get-list -> 1 call. Offline (375): banner "Bạn đang offline. Hãy kiểm tra kết nối." + load error with Thử lại; after going online, Thử lại loads the tab.
+  - Links: create (name + deadline +5 days) shows the token once in a read-only field (32 chars), URL http://localhost:5174/c/<token>; request body uses label + end-of-day deadline; Copy puts exactly that URL on the clipboard and status "Đã sao chép" appears; token not in localStorage/sessionStorage/IndexedDB/cookies/page URL/console; after reload the token is gone and the list shows only label/status/notes/dates. Create button disabled at 5 active links with the limit text; revoke confirm dialog -> status "Đã thu hồi" and the public link then answers 404 (public form page: "Liên kết này không còn dùng được"). Referrer meta no-referrer is in index.html.
+  - Public flow: opened /c/<token> from a link just created, sent a Vietnamese note "Bạn Mới QA"; it appeared at the top of the inbox as Chờ duyệt with the link name "Nhóm Zalo ✨", sidebar badge 1.
+  - Vietnamese diacritics render correctly (Đ, Ệ, Ị, ✨); EN toggle switches the inbox. Keyboard focus ring present (box-shadow) on tabs, checkboxes, grips, buttons; tab order checkbox, grip, actions, •••.
+  - Not exercised in a browser: Postman collection not applicable (web only, no endpoint change); load more beyond 100 notes (jsdom only); ERROR_STORAGE_ERROR and ERROR_ORDER_STALE were mocked because the real API cannot be made to fail on demand.
+  
+  VIETNAMESE FOR THE OWNER: the full list of new vi strings is in the PR description (section "Vietnamese strings for the owner to review", inbox.*, links.*, nav.*, errors.*). I read them rendered in the UI; no wording failures raised.
+- 2026-10-16 03:12Z · leader · Leader guidance for the rework (QA_FAIL; QA tested in real Chrome, everything else passed): 1) MAJOR: at 375px the status badge wraps mid-word on every note card ('Chờ duyệt' -> 'Chờ / duyệ / t'). Fix in web/src/styles/inbox.css: .inbox-card-head .badge { flex: none; white-space: nowrap } (and check the other badges in the inbox/link list at 320px, with the longest VI label). 2) Focus: after a ••• menu action, after cancel/Esc on the delete confirm, and after creating a link, focus must land on a sensible element (return to the trigger or the next logical control, or the new link's row/heading); not on body. Add a test for each. 3) Decision: the mobile tab bar keeps NO pending badge, as in the design; list it as a known difference in the PR (the sidebar badge stays). Nothing else to change.
 
 ### T-018 — [E04] Web: public anonymous notes form
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -1140,7 +1174,7 @@ Create/copy/revoke the collection link, set a deadline, see submissions grouped 
 - **Assignee:** —
 - **Branch:** task/t-018-e04-web-public-anonymous-notes-form
 - **PR:** https://github.com/danyaa666/smemories/pull/59
-- **Updated:** 2026-10-16 02:38Z by leader
+- **Updated:** 2026-10-16 02:43Z by human
 - **Comments-seen:** 11
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/05-web-public-anonymous-notes-form.md`
@@ -1213,6 +1247,7 @@ Mobile-first public page opened from the shared link: name, relationship, messag
   - EN counterpart: "Notes are no longer being collected here. If you still want to write, ask {{name}} for a new link."
   No other locale string changed since the rework 1 list.
 - 2026-10-16 02:38Z · leader · merged 2aae76e (PR #59). Review: 4xx never retried (1 GET, dead end in ~150 ms), 503/network one retry, no-referrer + noindex while mounted, draft key hashed, route /c/:token as in openapi; web-only, CI green, QA_PASS on the same head after 2 reworks. For owner to check: the new Vietnamese strings under note.* in web/src/locales/vi.json and errors.request_timeout; open /c/<token> of a link at phone width.
+- 2026-10-16 02:43Z · human · accepted by owner
 
 ### T-019 — [E05] Web: template picker, PDF preview (pdf.js) and export/download
 - **Status:** CANCELLED
@@ -3357,7 +3392,7 @@ T-068 answers a full public link on the raw writer without reading the body; a f
 - 2026-10-15 14:06Z · leader · unblocked, small P3
 
 ### T-081 — [E02] Username: unique public handle with default and weekly change (API)
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
@@ -3365,10 +3400,10 @@ T-068 answers a full public link on the raw writer without reading the body; a f
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-081-e02-username-unique-public-handle-with-d
 - **PR:** —
-- **Updated:** 2026-10-15 14:52Z by leader
+- **Updated:** 2026-10-16 03:03Z by dev
 - **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/13-username-api.md`
