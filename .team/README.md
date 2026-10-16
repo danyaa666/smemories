@@ -11,8 +11,9 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 11 | T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050 |
-| TODO | 3 | T-032, T-061, T-085 |
-| IN_PROGRESS | 1 | T-060 |
+| TODO | 2 | T-032, T-085 |
+| IN_PROGRESS | 1 | T-061 |
+| QA_FAIL | 1 | T-060 |
 | MERGED | 3 | T-059, T-072, T-079 |
 | DONE | 59 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-073, T-074, T-075, T-076, T-077, T-078, T-080, T-081, T-082, T-083 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
@@ -21,7 +22,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?)
 
-_Board last written 2026-10-16 18:24Z_
+_Board last written 2026-10-16 19:11Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -2761,19 +2762,19 @@ Pastel Memory Book canvas as an HTML template, EN and VI, four page kinds.
 - 2026-10-16 18:24Z · leader · merged 402d685 (PR #68). Review: web template + manifest + print-check; the cut-off defect (text running out of the card in print) fixed at the cause with contain:size and 6 new print-check tests that fail without the fix; QA re-verified the printed PDFs at A5/A4/Letter (identical positions for normal notes, fidelity pictures within 1.5 mm); CI green, QA_PASS on the same head. For owner to check: set a book's template by SQL (no API sets template_id until T-061), open /yearbooks/<id>/book, print to PDF; sample PDFs in docs/templates/memory-book-*.pdf; the Vietnamese strings in the PR description (print screen shrunk-note list etc). Open (pre-existing, not from this PR): inbox lists extra answers in MySQL JSON key order; the thank-you card quotes how_we_met instead of the message.
 
 ### T-060 — [E05] HTML template navy-classic (design temp2)
-- **Status:** IN_PROGRESS
+- **Status:** QA_FAIL
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
 - **Depends-on:** T-058, T-044
 - **Risk:** low
-- **Rework:** 0
+- **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-060-e05-html-template-navy-classic-design-te
-- **PR:** —
-- **Updated:** 2026-10-16 18:17Z by dev
-- **Comments-seen:** 1
+- **PR:** https://github.com/danyaa666/smemories/pull/70
+- **Updated:** 2026-10-16 19:10Z by qa
+- **Comments-seen:** 4
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/11-html-template-navy-classic.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2783,9 +2784,36 @@ Navy and gold canvas as the second HTML template.
 
 #### Comments
 - 2026-10-16 09:50Z · leader · unblocked: T-058 merged. Read the addendum at the bottom of the spec.
+- 2026-10-16 18:47Z · dev · PR #70, head d5eaf95 (T-059 merged, branch merged with develop), CI green (web job failed once on unrelated flaky codes.test.tsx toHaveFocus, rerun green). navy-classic: cover, profile (oval), Autographs 4/page, back; Be Vietnam Pro for Jost; make print-check 31/31 incl. cut-off tests at A5/A4/Letter (400-line + 2000-char, bbox centres inside box; verified they fail with overflow visible); real browser 320/375/1280 on own Vite+API+private DB (dropped, objects removed). Verify: Vietnamese table in PR, samples docs/templates/navy-classic-*.pdf. Design has no place for cover/friend photos (not fetched). Port 5199 was taken by someone else, use PRINT_CHECK_PORT.
+- 2026-10-16 19:10Z · qa · QA_FAIL on PR #70 head d5eaf95: one major print defect; everything else verified (evidence below).
+  
+  ISSUES
+  1. [MAJOR] Owner's own profile text is missing from the real PDF while the screen preview shows it. In the printed profile page the favourite-quote text AND the signature (owner name + sign line) are absent (only the heading FAVOURITE QUOTE prints), at A5, A4 and Letter. Valid input per the API (hobbies 300, future_plans 300, quote 500 chars).
+     Repro (own Vite+API+private DB, book template_id=navy-classic): update-profile with full_name "Tester Marker", hobbies = "Hobby words here " repeated to 300 chars, future_plans = "Future plan words " to 300, quote = "Quote marker text " to 500, no photo. Open /yearbooks/<id>/book (screen shows quote + name, "Texts on your own pages ... cut off" banner only counts), then Page.printToPDF (page.pdf preferCSSPageSize+printBackground, real Chrome) -> pdftotext -f 2 -l 2: "Quote marker"=0, "Tester Marker"=0 at A5/A4/Letter. Same with the longer name in my max-length book (full_name 100 chars). Matrix: hobbies/plans/quote 100/100/200 -> all present; 0/0/500 -> present; 300/300/100 -> quote present, name present at A5/A4 but name MISSING at Letter; 300/300/500 -> quote+name missing at all three sizes.
+     Expected: every text inside its box (shrunk/clipped inside the card, listed on the print screen), nothing lost. Actual: text silently gone from the PDF; emulateMedia(print) in the same browser shows the page correct (quote at y 620-886, name at 904 of 1056), so it is the real print layout of the profile page (web/src/book/templates/navy.css .nc-letter / .nc-letter-text flex column, .nc-para flexBasis estimate paraHeight(), .nc-sign margin-top:auto) that differs: this is the T-059 lesson (flex-sized text boxes in PRINT) not covered by the print-check, which tests the 400-line and 2000-char NOTES but not max-length profile fields. Please add a print-check case with maximum-length hobbies+future_plans+quote (and long full_name) at A5/A4/Letter that asserts the quote text and the name are in the PDF inside the page, and fix the profile layout (fixed-height boxes with overflow hidden, like the notes cards).
+  2. [minor, same area] In the same max-length book the cover title/school name/motto shrink to ~3 pt (unreadable) and the print screen only counts "texts on your own pages" (no list of which); acceptable per spec (addendum lists notes only), mention only.
+  
+  VERIFIED OK (evidence I produced)
+  - CI on d5eaf95: go, go-integration, security, web all pass. Dev says web failed once on flaky codes.test.tsx toHaveFocus and passed on rerun: I ran full vitest 304/304 once and src/pages (180 tests) twice, all green; could not reproduce.
+  - PR diff vs origin/develop: 30 files, 0 under .team/, only T-060 files (docs/templates, internal/templates, tools/print-check, web/src/book, locales, Book.tsx, book tests). mergeable.
+  - make print-check (PRINT_CHECK_PORT=5287): 31/31 pass. web: lint, typecheck, lint:i18n, check:api, vitest 304/304, build all OK. Go: go vet ./internal/templates, go test ./internal/templates, golangci-lint 0 issues, gofmt clean.
+  - Real Chrome (channel chrome) on my own stack (Vite :15173, API :18080, DB smem_test_qa060, Redis db 11): 320/375/1280 px no horizontal overflow, preview+print screen fine, no console errors except favicon 404.
+  - PDFs via page.pdf at A5/A4/Letter for books of 0, 1, 9, 84, 300 notes: sizes exact (420x594.96, 594.96x841.92, 612x792 pt); page counts 3/4/6/24/78 = 2 + ceil(n/4) + 1 (84 -> 24, 300 -> 78); all fonts embedded (CormorantGaramond, BeVietnamPro, AppleColorEmoji fallback for emoji); no blank pages; pdftotext finds all 84 and all 300 messages and names at every size; Vietnamese and emoji extractable; backgrounds printed; cover/profile(oval)/Autographs(4 per page)/back in cover frame as designed.
+  - Oval portrait: portrait and landscape source photos both fill the oval (cover fit); no profile photo prints the grey oval placeholder of the design.
+  - 3-photo note, 1-photo note, no-photo note: the design (canvas temp2, side-by-side docs/templates/navy-classic-fidelity-*.jpg) has no place for cover or friends' photos; Template.photos=false confirmed: navy book = 1 media request (profile photo) + 1 book-data, same data under memory-book = 6 media requests.
+  - Footer: canvas '[Page #]' replaced by the book title on the profile page (ellipsis when very long); notes pages use the design's farewell line. Judged against the canvas: OK.
+  - 400-line message and 2000-char paragraph (notes): text stays inside its card in the PDF at A5/A4/Letter (clipped at the card, last visible line cut), listed on the print screen as "Khoa, 5 pt, and still cut off" / "Linh, 5 pt, and still cut off" plus "Nguyen ... Thu, 6.5 pt"; each link opens /yearbooks/<id>/notes?note=<id> and the inbox scrolls to that note (clicked in browser).
+  - Text escaping: note with <b>, <script>alert(1)</script>, & and quotes prints literally on screen and in the PDF; form submit with <img onerror> stored and printed as text.
+  - Public form (/c/<token>, navy-classic manifest): labels Your name, Your relationship (optional), Your message; name and message required, relationship optional. Submitted "Phạm Thị Ánh Tuyết" via the real form, approved it, it printed. (Observation: the form still offers 'Add photo' although navy-classic never prints friends' photos; not in the spec.)
+  - T-059 regression: same book with template_id=memory-book rendered on the PR branch and on a clean origin/develop (19d6842) Vite: 12 pages each, pdftotext identical and pixel-identical at 50 dpi for A5, A4, Letter.
+  - Bare book (no year/school/motto/photo) prints cover, profile, back without errors.
+  
+  NEW VIETNAMESE STRINGS FOR THE OWNER (bookPages.navy.*, en -> vi): classOf "Class of" -> "Khóa"; profileEyebrow "A few words about me" -> "Vài điều về mình"; autographsEyebrow "Leave a few words" -> "Để lại đôi lời"; autographs "Autographs" -> "Lưu bút"; farewell "Farewell" -> "Tạm biệt"; farewellYear "Farewell, Class of {{year}}" -> "Tạm biệt, khóa {{year}}".
+  Cleanup done: my API/Vite processes stopped, private DB dropped, Redis db 11 flushed, my yearbooks deleted via API (media gone), worktree clean.
+- 2026-10-16 19:11Z · leader · Leader guidance for the rework (QA_FAIL, one major; everything else passed): the real PDF LOSES owner text that the screen shows. On the profile page the favourite-quote text and the signature (owner name + sign line) are missing at A5, A4 and Letter when the profile fields are long but valid: hobbies 300, future_plans 300, quote 500 characters, no photo => neither the quote marker nor the name in the PDF; 100/100/200 prints fine; 300/300/100 loses the name at Letter only. Silent loss of the owner's own text is worse than clipping. Fix at the cause in print (compare with how T-059 memory-book lays out the profile and with the contain:size lesson; the profile boxes must be height-bounded AND the shrink-to-fit must run for every profile field, or the layout must give the quote and the signature a reserved area that long fields cannot push out), at A5/A4/Letter. Then extend make print-check with PROFILE cases at the validated maximum lengths (hobbies 300, future_plans 300, quote 500, motto/name at their maximum, with and without the portrait): assert via pdftotext -bbox that the quote, the name and the sign line are present and inside the page and their boxes. IMPORTANT: run the same profile cases against the T-059 memory-book template and the T-058 basic template; if either loses text too, fix it in this PR (same cause, small) and say so. Also decide cheaply: the public form still offers 'Add photo' although navy-classic never prints friends' photos; leave it as is, we will drive it from the template manifest later (do not change the form here). Strings bookPages.navy.* accepted. CI green on the new head, READY_FOR_QA.
 
 ### T-061 — [E05] Web: template picker and print screen with device guidance
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -2793,10 +2821,10 @@ Navy and gold canvas as the second HTML template.
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-061-e05-web-template-picker-and-print-screen
 - **PR:** —
-- **Updated:** 2026-10-16 18:24Z by leader
+- **Updated:** 2026-10-16 18:48Z by dev
 - **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/12-template-picker-and-print-screen.md`
@@ -3820,3 +3848,4 @@ Spec: .team/epics/E10-skills-alignment/12-lint-anchors-userfrom-guard.md (read i
 - 2026-10-16 — T-072 (quality sweep, PR #67) merged 715b960: transition switch removed, forbidigo/mnd on, strict auth bodies. T-058 accepted. T-085 (P3) added for two QA nits (lint regex anchors, UserFrom guard). Dev on T-059.
 - 2026-10-17 — T-079 (flaky-test tolerance, PR #69) merged 3429df4. T-072 merged earlier, awaiting owner accept. T-059 in rework 1 (print clipping of cut-off notes). Heartbeat recurring (ce6d77f6).
 - 2026-10-17 — T-059 (memory-book template, PR #68) merged 402d685 after rework 1 (cut-off notes ran out of the card in print; fixed with contain:size + print-check cases). T-079 merged. T-061 (picker + print screen, high risk) promoted to TODO. Awaiting owner accept: T-072, T-079, T-059.
+- 2026-10-17 — T-060 QA_FAIL: navy-classic profile page lost the quote and signature in print with long valid fields; rework 1. Open item for later: the public form offers 'Add photo' even when the template (navy-classic) never prints friends' photos; drive it from the template manifest.
