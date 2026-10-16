@@ -11,6 +11,22 @@ linters:
   enable:
     - bodyclose
     - gosec
+    - mnd
+    - forbidigo
+  settings:
+    mnd:
+      # HTTP status codes in code definitions are the one place a bare number is the name.
+      ignored-functions:
+        - ^(apperr\.)?NewCode$
+      # Halving and doubling (x/2, 2*x) is arithmetic, not a tunable.
+      ignored-numbers:
+        - "2"
+    forbidigo:
+      forbid:
+        - pattern: ^fmt\.Errorf$
+          msg: use apperr.New / apperr.Wrap (docs/go-conventions.md)
+        - pattern: ^errors\.New$
+          msg: use apperr.New / apperr.Wrap (docs/go-conventions.md)
   exclusions:
     presets:
       - std-error-handling
@@ -19,6 +35,19 @@ linters:
       - path: _test\.go
         linters:
           - gosec
+      # forbidigo: the command-line mains, config validation (start-up messages for the operator) and the *test helper
+      # packages keep plain errors; so do tests.
+      - path: (_test\.go|^cmd/|^internal/config/|test/[^/]+\.go$|^internal/[a-z]+/[a-z]*test/)
+        linters:
+          - forbidigo
+      # Test helper packages (dbtest, redistest, storagetest, oidctest) hold fixture sizes and timeouts.
+      - path: ^internal/[a-z/]+test/
+        linters:
+          - mnd
+      # The JPEG/EXIF reader is a binary-format parser: its offsets and tags are the format's own numbers.
+      - path: ^internal/media/image\.go$
+        linters:
+          - mnd
 
 formatters:
   enable:

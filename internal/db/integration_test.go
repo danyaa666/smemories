@@ -121,7 +121,7 @@ func TestReadyzAgainstRealDatabase(t *testing.T) {
 	}
 	_ = d.Close() // a closed pool cannot ping
 	rec := get()
-	if rec.Code != http.StatusServiceUnavailable || !strings.Contains(rec.Body.String(), `"not_ready"`) {
+	if rec.Code != http.StatusServiceUnavailable || !strings.Contains(rec.Body.String(), `"ERROR_NOT_READY"`) {
 		t.Fatalf("got %d %s", rec.Code, rec.Body.String())
 	}
 	if strings.Contains(rec.Body.String(), "sql:") {

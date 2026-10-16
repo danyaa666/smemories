@@ -30,6 +30,8 @@ var (
 	TooLarge     = NewCode("ERROR_TOO_LARGE", 413)
 	Unavailable  = NewCode("ERROR_UNAVAILABLE", 503)
 	BadGateway   = NewCode("ERROR_BAD_GATEWAY", 502)
+	// ClientClosed is nginx's 499: the client went away, nobody reads the answer. httpx.Fail answers it for context.Canceled.
+	ClientClosed = NewCode("ERROR_CLIENT_CLOSED", 499)
 )
 
 // Error is an error with a Code. msg is the English text for the client (4xx) or context for

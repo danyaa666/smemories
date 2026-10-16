@@ -27,13 +27,19 @@ const (
 	// never memory or a processing slot. It must keep moving (submitPace), then get at most submitProcessing for the
 	// photos. This route extends its own deadlines instead of raising the global ones.
 	submitProcessing   = 60 * time.Second
-	submitRouteTimeout = 120*time.Second + submitProcessing
+	retryJitterMin     = 2 // seconds
+	retryJitterSpan    = 5
+	submitIdle         = 10 * time.Second
+	submitTotal        = 120 * time.Second
+	submitMinRate      = 16 << 10 // bytes per second
+	submitGrace        = 15 * time.Second
+	submitRouteTimeout = submitTotal + submitProcessing
 	submitWriteTimeout = submitRouteTimeout + 10*time.Second
 )
 
 // submitPace is a variable only so that a test can shorten it: 10 s without a byte, 120 s in total, and after a
 // 15 s grace period at least 16 KiB/s on average.
-var submitPace = httpx.BodyPace{Idle: 10 * time.Second, Total: 120 * time.Second, MinRate: 16 << 10, Grace: 15 * time.Second}
+var submitPace = httpx.BodyPace{Idle: submitIdle, Total: submitTotal, MinRate: submitMinRate, Grace: submitGrace}
 
 // scan is what the multipart body held, without the photo bytes.
 type scan struct {
@@ -163,7 +169,7 @@ func (h *Handler) loadPhoto(f *os.File, size int64, boundary string, n int) func
 // retryJitter is the Retry-After of a 503 busy: 2 to 6 seconds at random, so a class that was turned away does not
 // come back in one wave.
 func retryJitter() time.Duration {
-	return time.Duration(2+rand.IntN(5)) * time.Second //nolint:gosec // spreading retries, not a secret
+	return time.Duration(retryJitterMin+rand.IntN(retryJitterSpan)) * time.Second //nolint:gosec // spreading retries, not a secret
 }
 
 // scan walks the spooled body once and returns the error to answer (false) when the structure is wrong: a part too

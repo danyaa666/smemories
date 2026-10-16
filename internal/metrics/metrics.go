@@ -104,13 +104,13 @@ func knownMethod(m string) string {
 
 func statusClass(code int) string {
 	switch {
-	case code >= 500:
+	case code >= http.StatusInternalServerError:
 		return "5xx"
-	case code >= 400:
+	case code >= http.StatusBadRequest:
 		return "4xx"
-	case code >= 300:
+	case code >= http.StatusMultipleChoices:
 		return "3xx"
-	case code >= 200:
+	case code >= http.StatusOK:
 		return "2xx"
 	}
 	return "1xx"

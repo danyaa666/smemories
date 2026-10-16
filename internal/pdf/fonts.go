@@ -9,6 +9,7 @@ import (
 	"golang.org/x/image/font/sfnt"
 	"golang.org/x/text/unicode/norm"
 
+	"github.com/danyaa666/smemories/internal/apperr"
 	"github.com/danyaa666/smemories/internal/pdf/fonts"
 )
 
@@ -21,10 +22,12 @@ const (
 const (
 	famEmoji = "emoji"
 	// maxTextRunes bounds the text laid out per element (book text is untrusted).
-	maxTextRunes = 20000
-	puaBase      = 0xE000
-	emojiLo      = 0x1F000
-	emojiHi      = 0x1FAFF
+	maxTextRunes  = 20000
+	puaBase       = 0xE000
+	emojiLo       = 0x1F000
+	emojiHi       = 0x1FAFF
+	byteOrderMark = 0xFEFF // zero-width no-break space
+	wordJoiner    = 0x2060 // invisible, dropped like the other zero-width and variation-selector code points
 )
 
 // glyphs knows which font of one family (then the emoji fallback) has a glyph for a rune. Not safe for
@@ -49,7 +52,7 @@ type glyph struct {
 func newGlyphs(name string) (*glyphs, error) {
 	fam, ok := fonts.Lookup(name)
 	if !ok {
-		return nil, fmt.Errorf("font family %q is not registered", name)
+		return nil, apperr.New(apperr.Internal, fmt.Sprintf("font family %q is not registered", name))
 	}
 	g := &glyphs{name: name, fam: fam, pdfFam: cmp.Or(fam.Key, "f-"+name), memo: map[rune]glyph{}}
 	data, _ := fam.Face(false) // coverage is judged on the regular face (the other face passed the same check)
@@ -111,7 +114,7 @@ func prepareText(s string) (out string, cut bool) {
 			r = ' '
 		case r == '\n' || r == ' ':
 		case r < 0x20 || (r >= 0x7F && r < 0xA0), r >= 0x200B && r <= 0x200F, r >= 0x202A && r <= 0x202E,
-			r == 0x2060, r == 0xFEFF, r >= 0xFE00 && r <= 0xFE0F:
+			r == wordJoiner, r == byteOrderMark, r >= 0xFE00 && r <= 0xFE0F:
 			continue
 		}
 		if n == maxTextRunes {

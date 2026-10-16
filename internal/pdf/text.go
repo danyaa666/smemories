@@ -3,10 +3,16 @@ package pdf
 import "strings"
 
 const (
-	ptMM         = 25.4 / 72 // one point in millimetres
-	shrinkStep   = 0.5       // pt
+	mmPerInch    = 25.4
+	ptMM         = mmPerInch / 72 // one point in millimetres
+	shrinkStep   = 0.5            // pt
 	ellipsis     = '…'
 	defaultLineH = 1.3
+	baselineEm   = 0.35 // baseline offset below the line centre, in em: the em box centred in the line
+
+	// Width probe: the glyph is measured at probeSize pt; the library reports it in 1/glyphUnits em.
+	probeSize  = 10
+	glyphUnits = 1000
 )
 
 // unit is one drawn character with its width in em.
@@ -63,8 +69,8 @@ func (r *renderer) emWidth(face *glyphs, g glyph, bold bool) float64 {
 		return w
 	}
 	fam, style := fontFor(face, g.font, bold)
-	r.pdf.SetFont(fam, style, 10)
-	w := float64(r.pdf.GetStringSymbolWidth(string(g.draw))) / 1000
+	r.pdf.SetFont(fam, style, probeSize)
+	w := float64(r.pdf.GetStringSymbolWidth(string(g.draw))) / glyphUnits
 	r.widths[k] = w
 	return w
 }

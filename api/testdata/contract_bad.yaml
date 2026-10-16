@@ -13,7 +13,7 @@ x-ok-response: &ok
         examples:
           sample: {value: {status: OK}}
 paths:
-  /v1/legacy: {get: {}}
+  /legacy: {get: {}}
   /healthz: {get: {}}
   /api/bad/no-summary:
     post:

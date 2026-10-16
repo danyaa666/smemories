@@ -30,17 +30,17 @@ func (f *fakeStore) note(s string) {
 	}
 }
 
-func (f *fakeStore) create(_ context.Context, _ uint64, y Yearbook) error {
-	f.created = append(f.created, y)
+func (f *fakeStore) create(_ context.Context, _ uint64, y *Yearbook) error {
+	f.created = append(f.created, *y)
 	return f.createErr
 }
 
-func (f *fakeStore) get(_ context.Context, owner uint64, id string) (Yearbook, error) {
+func (f *fakeStore) get(_ context.Context, owner uint64, id string) (*Yearbook, error) {
 	f.note("get")
 	if y, ok := f.books[owner][id]; ok {
-		return y, nil
+		return &y, nil // y is a copy, so the stored book is untouched
 	}
-	return Yearbook{}, ErrNotFound // also another owner's book: the fake, like the SQL, is scoped by owner
+	return nil, ErrNotFound // also another owner's book: the fake, like the SQL, is scoped by owner
 }
 
 func (f *fakeStore) list(_ context.Context, _ uint64, c *cursor, limit int) ([]Yearbook, *cursor, error) {
@@ -48,13 +48,13 @@ func (f *fakeStore) list(_ context.Context, _ uint64, c *cursor, limit int) ([]Y
 	return nil, f.nextOut, nil
 }
 
-func (f *fakeStore) modify(_ context.Context, owner uint64, id string, nowMs int64, change func(*Yearbook) error) (Yearbook, error) {
+func (f *fakeStore) modify(_ context.Context, owner uint64, id string, nowMs int64, change func(*Yearbook) error) (*Yearbook, error) {
 	y, err := f.get(context.Background(), owner, id)
 	if err != nil {
-		return Yearbook{}, err
+		return nil, err
 	}
-	if err := change(&y); err != nil {
-		return Yearbook{}, err
+	if err := change(y); err != nil {
+		return nil, err
 	}
 	f.modifiedN, y.UpdatedAt = nowMs, nowMs
 	return y, nil

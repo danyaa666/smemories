@@ -4,11 +4,12 @@ package storage
 
 import (
 	"context"
-	"errors"
+
+	"github.com/danyaa666/smemories/internal/apperr"
 )
 
 // ErrNotFound is returned by Get for a key that does not exist.
-var ErrNotFound = errors.New("storage: object not found")
+var ErrNotFound = apperr.New(apperr.Internal, "storage: object not found")
 
 // Storage is the small slice of an S3-compatible store the app needs.
 type Storage interface {

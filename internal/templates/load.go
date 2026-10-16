@@ -11,6 +11,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/danyaa666/smemories/internal/apperr"
 	"github.com/danyaa666/smemories/internal/notefields"
 )
 
@@ -39,16 +40,16 @@ func Parse(data []byte) (*Template, error) { return ParseFS(data, assetRoot) }
 // ParseFS is Parse with the background assets read from assets (paths in the spec are relative to it).
 func ParseFS(data []byte, assets fs.FS) (*Template, error) {
 	if len(data) > maxSpecBytes {
-		return nil, fmt.Errorf("template spec is %d bytes, the limit is %d", len(data), maxSpecBytes)
+		return nil, apperr.New(apperr.Internal, fmt.Sprintf("template spec is %d bytes, the limit is %d", len(data), maxSpecBytes))
 	}
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.DisallowUnknownFields()
 	var t Template
 	if err := dec.Decode(&t); err != nil {
-		return nil, fmt.Errorf("template spec: %w", err)
+		return nil, apperr.Wrap(apperr.Internal, err, "template spec")
 	}
 	if _, err := dec.Token(); err != io.EOF {
-		return nil, fmt.Errorf("template spec: unexpected data after the JSON object")
+		return nil, apperr.New(apperr.Internal, "template spec: unexpected data after the JSON object")
 	}
 	t.assets = assets
 	if err := Validate(&t); err != nil {

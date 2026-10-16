@@ -11,10 +11,14 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+
+	"github.com/danyaa666/smemories/internal/apperr"
 )
 
 // S3Config describes an S3-compatible bucket. Endpoint is empty for AWS S3 and set (with PathStyle)
 // for MinIO. ponytail: static keys only; M2 (T-023) adds the default credential chain for task roles.
+//
+// S3Config is passed by value on purpose: start-up settings, read once.
 type S3Config struct {
 	Endpoint  string
 	Region    string
@@ -76,9 +80,12 @@ func (s *S3) Get(ctx context.Context, key string) ([]byte, error) {
 	return io.ReadAll(out.Body)
 }
 
+// deleteBatchMax is the most keys one DeleteObjects call takes.
+const deleteBatchMax = 1000
+
 func (s *S3) Delete(ctx context.Context, keys ...string) error {
-	for i := 0; i < len(keys); i += 1000 { // DeleteObjects takes at most 1000 keys
-		if err := s.deleteBatch(ctx, keys[i:min(i+1000, len(keys))]); err != nil {
+	for i := 0; i < len(keys); i += deleteBatchMax {
+		if err := s.deleteBatch(ctx, keys[i:min(i+deleteBatchMax, len(keys))]); err != nil {
 			return err
 		}
 	}
@@ -95,7 +102,7 @@ func (s *S3) deleteBatch(ctx context.Context, keys []string) error {
 		return err
 	}
 	if len(out.Errors) > 0 { // per-key failures come back with a 200
-		return fmt.Errorf("storage: delete %q: %s", aws.ToString(out.Errors[0].Key), aws.ToString(out.Errors[0].Code))
+		return apperr.New(apperr.Internal, fmt.Sprintf("storage: delete %q: %s", aws.ToString(out.Errors[0].Key), aws.ToString(out.Errors[0].Code)))
 	}
 	return nil
 }

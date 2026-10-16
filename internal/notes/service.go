@@ -37,6 +37,7 @@ const (
 	submitPerCollectionHour = 60
 
 	maxDeadlineYears = 1
+	day              = 24 * time.Hour
 	mediaBusyRetry   = 2 * time.Second
 )
 
@@ -55,7 +56,7 @@ type store interface {
 
 // photos is the part of the media service that submissions use.
 type photos interface {
-	UploadContributorFrom(ctx context.Context, yearbookRow uint64, load func() ([]byte, error)) (media.Media, error)
+	UploadContributorFrom(ctx context.Context, yearbookRow uint64, load func() ([]byte, error)) (*media.Media, error)
 	Discard(ms ...media.Media) error
 }
 
@@ -87,7 +88,7 @@ func NewService(st *Store, mediaSvc *media.Service, tokens Tokens, limiters *rat
 	}
 	return &Service{store: st, media: mediaSvc, logger: logger, now: now,
 		misses: limiters.Open("public_misses", missesPerWindow, publicWindow), all: limiters.Open("public_all", allPerWindow, publicWindow),
-		subIPHr: limiters.Open("submit_ip_hour", submitPerIPHour, time.Hour), subIPDay: limiters.Open("submit_ip_day", submitPerIPDay, 24*time.Hour),
+		subIPHr: limiters.Open("submit_ip_hour", submitPerIPHour, time.Hour), subIPDay: limiters.Open("submit_ip_day", submitPerIPDay, day),
 		subColl: limiters.Open("submit_collection_hour", submitPerCollectionHour, time.Hour),
 		mod:     st, purge: mediaSvc, tokens: tokens, moderation: limiters.Open("note_moderation", moderationPerMinute, time.Minute)}
 }
@@ -255,7 +256,7 @@ func (s *Service) SubmitNote(ctx context.Context, p *Public, in *Submission) (st
 		if err != nil {
 			return "", fail(err)
 		}
-		stored = append(stored, m)
+		stored = append(stored, *m)
 		rows = append(rows, m.RowID)
 	}
 	answers, err := json.Marshal(clean)

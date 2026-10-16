@@ -65,10 +65,10 @@ func envelopeNotFound(mux *http.ServeMux) http.Handler {
 		h.ServeHTTP(p, r)
 		switch p.code {
 		case http.StatusNotFound:
-			WriteError(w, r, http.StatusNotFound, "not_found", "route not found")
+			WriteError(w, r, http.StatusNotFound, "ERROR_NOT_FOUND", "route not found")
 		case http.StatusMethodNotAllowed:
 			w.Header().Set("Allow", p.header.Get("Allow"))
-			WriteError(w, r, http.StatusMethodNotAllowed, "method_not_allowed", "method not allowed")
+			WriteError(w, r, http.StatusMethodNotAllowed, "ERROR_METHOD_NOT_ALLOWED", "method not allowed")
 		default:
 			for k, v := range p.header {
 				w.Header()[k] = v

@@ -21,7 +21,7 @@ type Config struct {
 
 	DBDSN             string        // SMEM_DB_DSN: user:pass@tcp(host:port)/dbname; required unless Env is "test" (db.Open still rejects an empty one). Never log it.
 	DBMaxOpen         int           // SMEM_DB_MAX_OPEN, default 20
-	DBMaxIdle         int           // SMEM_DB_MAX_IDLE, default 5
+	DBMaxIdle         int           // SMEM_DB_MAX_IDLE, default DBMaxOpen (a smaller idle pool closes and redials connections under steady load)
 	DBConnMaxLifetime time.Duration // SMEM_DB_CONN_MAX_LIFETIME, default 5m
 
 	AllowedOrigins    []string      // SMEM_ALLOWED_ORIGINS: comma-separated browser origins; required in prod, default http://localhost:5173 otherwise
@@ -67,7 +67,11 @@ type Config struct {
 // devOTPKey is the HMAC key of the email codes in dev and test when SMEM_OTP_KEY is unset. Not a secret.
 const devOTPKey = "smemories-dev-only-otp-key-not-a-secret"
 
-const minOTPKeyBytes = 32
+const (
+	minOTPKeyBytes    = 32
+	minOIDCKeyBytes   = 32
+	minArgonMemoryKiB = 8
+)
 
 var logLevels = map[string]slog.Level{
 	"debug": slog.LevelDebug,
@@ -132,7 +136,7 @@ func load(getenv func(string) string, forAPI bool) (Config, error) {
 	if cfg.DBMaxOpen, err = getInt(get, "SMEM_DB_MAX_OPEN", "20", 1); err != nil {
 		return Config{}, err
 	}
-	if cfg.DBMaxIdle, err = getInt(get, "SMEM_DB_MAX_IDLE", "5", 0); err != nil {
+	if cfg.DBMaxIdle, err = getInt(get, "SMEM_DB_MAX_IDLE", strconv.Itoa(cfg.DBMaxOpen), 0); err != nil {
 		return Config{}, err
 	}
 	raw = get("SMEM_DB_CONN_MAX_LIFETIME", "5m")
@@ -179,7 +183,7 @@ func load(getenv func(string) string, forAPI bool) (Config, error) {
 		return Config{}, err
 	}
 	var n int
-	if n, err = getInt(get, "SMEM_AUTH_ARGON_MEMORY_KIB", "19456", 8); err != nil || n > 1<<20 {
+	if n, err = getInt(get, "SMEM_AUTH_ARGON_MEMORY_KIB", "19456", minArgonMemoryKiB); err != nil || n > 1<<20 {
 		return Config{}, fmt.Errorf("SMEM_AUTH_ARGON_MEMORY_KIB=%q: want an integer between 8 and 1048576", get("SMEM_AUTH_ARGON_MEMORY_KIB", "19456"))
 	}
 	cfg.ArgonMemoryKiB = uint32(n) //nolint:gosec // G115: 8 <= n <= 1<<20 checked above
@@ -333,7 +337,7 @@ func (cfg *Config) loadGoogle(getenv func(string) string, get func(key, def stri
 	if key == "" {
 		return fmt.Errorf("SMEM_OIDC_COOKIE_KEY is required when SMEM_GOOGLE_CLIENT_ID is set (at least 32 random bytes)")
 	}
-	if len(key) < 32 {
+	if len(key) < minOIDCKeyBytes {
 		return fmt.Errorf("SMEM_OIDC_COOKIE_KEY is too short: %d bytes, want at least 32", len(key))
 	}
 	cfg.OIDCCookieKey = []byte(key)

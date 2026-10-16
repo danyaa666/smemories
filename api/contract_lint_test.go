@@ -282,7 +282,7 @@ func TestContractLintFixtures(t *testing.T) {
 		}
 	}
 	for _, v := range bad {
-		if strings.Contains(v, "/v1/") || strings.Contains(v, "/healthz") {
+		if strings.Contains(v, "/legacy") || strings.Contains(v, "/healthz") {
 			t.Errorf("only /api/ operations are linted, got %q", v)
 		}
 	}

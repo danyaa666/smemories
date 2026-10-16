@@ -15,12 +15,19 @@ import (
 
 	goredis "github.com/redis/go-redis/v9"
 
+	"github.com/danyaa666/smemories/internal/apperr"
 	"github.com/danyaa666/smemories/internal/config"
 )
 
 // ErrUnavailable marks a network failure, timeout or exhausted pool, so callers can apply their own policy
 // (fail open for rate limiters, fail closed for codes and sessions). Test with errors.Is.
-var ErrUnavailable = errors.New("redis unavailable")
+var ErrUnavailable = apperr.New(apperr.Internal, "redis unavailable")
+
+// unavailableError is ErrUnavailable plus the cause, both reachable with errors.Is / errors.As.
+type unavailableError struct{ cause error }
+
+func (e unavailableError) Error() string   { return ErrUnavailable.Error() + ": " + e.cause.Error() }
+func (e unavailableError) Unwrap() []error { return []error{ErrUnavailable, e.cause} }
 
 // Client is a go-redis client plus the key prefix of this environment. Safe for concurrent use.
 type Client struct {
@@ -47,7 +54,7 @@ func (p slogPrinter) Printf(ctx context.Context, format string, v ...interface{}
 func New(cfg config.Config) (*Client, error) {
 	o, err := goredis.ParseURL(cfg.RedisURL)
 	if err != nil {
-		return nil, errors.New("SMEM_REDIS_URL: not a valid redis:// or rediss:// URL")
+		return nil, apperr.New(apperr.Internal, "SMEM_REDIS_URL: not a valid redis:// or rediss:// URL")
 	}
 	if o.Password == "" {
 		o.Password = cfg.RedisPassword
@@ -76,7 +83,7 @@ func (c *Client) Close() error { return c.rdb.Close() }
 func (c *Client) Ping(ctx context.Context) error {
 	err := Classify(c.rdb.Ping(ctx).Err())
 	if err != nil && c.tls {
-		return fmt.Errorf("%w (rediss:// URL: is the server TLS-enabled?)", err)
+		return apperr.Wrap(apperr.Internal, err, "rediss:// URL: is the server TLS-enabled?")
 	}
 	return err
 }
@@ -111,7 +118,7 @@ func Classify(err error) error {
 	}
 	if errors.As(err, &ne) || errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) ||
 		errors.Is(err, goredis.ErrPoolTimeout) || errors.Is(err, goredis.ErrClosed) {
-		return fmt.Errorf("%w: %w", ErrUnavailable, err)
+		return unavailableError{err}
 	}
 	return err
 }

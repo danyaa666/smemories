@@ -26,6 +26,7 @@ const (
 	minBirthYear  = 1900 // MySQL DATE reaches further back, but nobody in a yearbook was born before this
 	dateLayout    = "2006-01-02"
 	maxBooksOwned = 20
+	day           = 24 * time.Hour
 )
 
 // Accepted values of the VARCHAR columns language and page_size (no database ENUM: a new value needs no ALTER).
@@ -161,7 +162,7 @@ func (in ProfileInput) applyTo(p *Profile, now time.Time) error {
 	}
 	if in.Birthday != nil {
 		d, err := time.Parse(dateLayout, *in.Birthday)
-		if err != nil || d.Format(dateLayout) != *in.Birthday || d.Year() < minBirthYear || !d.Before(now.UTC().Truncate(24*time.Hour)) {
+		if err != nil || d.Format(dateLayout) != *in.Birthday || d.Year() < minBirthYear || !d.Before(now.UTC().Truncate(day)) {
 			return invalid("birthday")
 		}
 		s := d.Format(dateLayout)

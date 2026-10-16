@@ -29,7 +29,7 @@ func TestLoadDefaults(t *testing.T) {
 	if cfg.HTTPAddr != ":8080" || cfg.Env != "dev" || cfg.LogLevel != slog.LevelInfo {
 		t.Fatalf("unexpected defaults: %+v", cfg)
 	}
-	if cfg.DBDSN != dsn || cfg.DBMaxOpen != 20 || cfg.DBMaxIdle != 5 || cfg.DBConnMaxLifetime != 5*time.Minute {
+	if cfg.DBDSN != dsn || cfg.DBMaxOpen != 20 || cfg.DBMaxIdle != 20 || cfg.DBConnMaxLifetime != 5*time.Minute {
 		t.Fatalf("unexpected db defaults: %+v", cfg)
 	}
 }
@@ -52,6 +52,11 @@ func TestLoadPoolSettings(t *testing.T) {
 	}
 	if cfg.DBMaxOpen != 7 || cfg.DBMaxIdle != 0 || cfg.DBConnMaxLifetime != 90*time.Second {
 		t.Fatalf("unexpected pool settings: %+v", cfg)
+	}
+	// An unset SMEM_DB_MAX_IDLE follows SMEM_DB_MAX_OPEN.
+	cfg, err = Load(env(map[string]string{"SMEM_DB_DSN": dsn, "SMEM_DB_MAX_OPEN": "7"}))
+	if err != nil || cfg.DBMaxIdle != 7 {
+		t.Fatalf("idle default: %+v, %v", cfg, err)
 	}
 }
 

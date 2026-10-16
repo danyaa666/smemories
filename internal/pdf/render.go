@@ -12,6 +12,7 @@ import (
 
 	"codeberg.org/go-pdf/fpdf"
 
+	"github.com/danyaa666/smemories/internal/apperr"
 	"github.com/danyaa666/smemories/internal/pdf/fonts"
 	"github.com/danyaa666/smemories/internal/templates"
 )
@@ -72,14 +73,14 @@ type slotData struct {
 // photos) are reported in Report and never fail the render; an error means the PDF is not complete.
 func Render(ctx context.Context, tmpl *templates.Template, book Book, images ImageSource, w io.Writer, opts Options) (rep Report, err error) {
 	if tmpl.IsHTML() {
-		return Report{}, fmt.Errorf("template %q is an html template: the web app draws it, not this renderer", tmpl.ID)
+		return Report{}, apperr.New(apperr.Internal, fmt.Sprintf("template %q is an html template: the web app draws it, not this renderer", tmpl.ID))
 	}
 	if opts.PageSize == "" {
 		opts.PageSize = "A5"
 	}
 	dims, ok := templates.PageDims(opts.PageSize)
 	if !ok || !tmpl.Supports(opts.PageSize) {
-		return Report{}, fmt.Errorf("template %q does not support page size %q", tmpl.ID, opts.PageSize)
+		return Report{}, apperr.New(apperr.Internal, fmt.Sprintf("template %q does not support page size %q", tmpl.ID, opts.PageSize))
 	}
 	if opts.Lang == "" {
 		opts.Lang = "en"
@@ -96,7 +97,7 @@ func Render(ctx context.Context, tmpl *templates.Template, book Book, images Ima
 	// fpdf can panic on input it does not expect; the caller must get an error, not a crash.
 	defer func() {
 		if p := recover(); p != nil {
-			rep, err = r.report, fmt.Errorf("render pdf: internal error: %v", p)
+			rep, err = r.report, apperr.New(apperr.Internal, fmt.Sprintf("render pdf: internal error: %v", p))
 		}
 	}()
 	r.pdf = r.newDoc(dims, opts.Now)
@@ -105,7 +106,7 @@ func Render(ctx context.Context, tmpl *templates.Template, book Book, images Ima
 	}
 	r.report.Pages = r.pdf.PageNo()
 	if err := r.pdf.Output(w); err != nil {
-		return r.report, fmt.Errorf("render pdf: %w", err)
+		return r.report, apperr.Wrap(apperr.Internal, err, "render pdf")
 	}
 	return r.report, nil
 }
@@ -150,7 +151,7 @@ func (r *renderer) loadFaces() error {
 		}
 		g, err := newGlyphs(n)
 		if err != nil {
-			return fmt.Errorf("render pdf: %w", err)
+			return apperr.Wrap(apperr.Internal, err, "render pdf")
 		}
 		r.faces[n] = g
 	}
@@ -193,7 +194,7 @@ func (r *renderer) build(ctx context.Context) error {
 		}
 	}
 	if err := r.pdf.Error(); err != nil {
-		return fmt.Errorf("render pdf: %w", err)
+		return apperr.Wrap(apperr.Internal, err, "render pdf")
 	}
 	return nil
 }
@@ -362,7 +363,7 @@ func (r *renderer) drawLines(l layout, b textBox, x, y float64, e templates.Elem
 		case "right":
 			lx += b.w - ln.em*em
 		}
-		base := y + float64(i)*lm + lm/2 + 0.35*em // baseline: the em box centred in the line
+		base := y + float64(i)*lm + lm/2 + baselineEm*em
 		for j := 0; j < len(ln.units); {
 			k, runEm := j, 0.0
 			var sb strings.Builder

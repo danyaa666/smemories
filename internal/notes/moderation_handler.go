@@ -37,7 +37,7 @@ func (h *Handler) listNotes(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) updateStatus(w http.ResponseWriter, r *http.Request) {
 	u, _ := auth.UserFrom(r.Context())
 	var in moderationInput
-	if !httpx.DecodeJSON(w, r, &in, true) {
+	if !httpx.DecodeJSON(w, r, &in) {
 		return
 	}
 	c, err := h.svc.UpdateStatus(r.Context(), u.InternalID, u.EmailVerified, in.YearbookID, in.IDs, in.Status)
@@ -51,7 +51,7 @@ func (h *Handler) updateStatus(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) reorder(w http.ResponseWriter, r *http.Request) {
 	u, _ := auth.UserFrom(r.Context())
 	var in moderationInput
-	if !httpx.DecodeJSON(w, r, &in, true) {
+	if !httpx.DecodeJSON(w, r, &in) {
 		return
 	}
 	if err := h.svc.ReorderNotes(r.Context(), u.InternalID, u.EmailVerified, in.YearbookID, in.IDs); err != nil {
@@ -64,7 +64,7 @@ func (h *Handler) reorder(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) deleteNotes(w http.ResponseWriter, r *http.Request) {
 	u, _ := auth.UserFrom(r.Context())
 	var in moderationInput
-	if !httpx.DecodeJSON(w, r, &in, true) {
+	if !httpx.DecodeJSON(w, r, &in) {
 		return
 	}
 	c, err := h.svc.DeleteNotes(r.Context(), u.InternalID, u.EmailVerified, in.YearbookID, in.IDs)

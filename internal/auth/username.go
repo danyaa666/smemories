@@ -91,23 +91,25 @@ func reservedUsername(name, publicID string) bool {
 }
 
 // expose fills UsernameNextChangeAt from the service clock: nil when a change is allowed now.
-func (s *Service) expose(u User) User {
-	u.UsernameNextChangeAt = nil
-	if next := u.UsernameChangedAt + usernameCooldown.Milliseconds(); u.UsernameChangedAt > 0 && next > s.now().UnixMilli() {
-		u.UsernameNextChangeAt = &next
+// It returns a copy, so the caller's user (for example the one in the request context) is never changed.
+func (s *Service) expose(u *User) *User {
+	c := *u
+	c.UsernameNextChangeAt = nil
+	if next := c.UsernameChangedAt + usernameCooldown.Milliseconds(); c.UsernameChangedAt > 0 && next > s.now().UnixMilli() {
+		c.UsernameNextChangeAt = &next
 	}
-	return u
+	return &c
 }
 
 // UpdateUsername changes u's public username (normalised: trimmed, lower-cased) at most once per usernameCooldown and returns
 // the updated user. Setting the current name again succeeds and does not start the cooldown. Taken, invalid and reserved
 // names count against usernameTriesPerHr per user (ERROR_RATE_LIMITED), so the endpoint cannot probe which names exist;
 // successes, no-ops and cooldown answers are refunded. The cooldown check and the write are one conditional UPDATE.
-func (s *Service) UpdateUsername(ctx context.Context, u User, raw string) (User, error) {
+func (s *Service) UpdateUsername(ctx context.Context, u *User, raw string) (*User, error) {
 	if ok, retry, err := s.usernameFails.Take(ctx, u.ID); err != nil {
-		return User{}, err
+		return nil, err
 	} else if !ok {
-		return User{}, RateLimitedError{retry}
+		return nil, RateLimitedError{retry}
 	}
 	failed := true
 	defer func() {
@@ -119,35 +121,36 @@ func (s *Service) UpdateUsername(ctx context.Context, u User, raw string) (User,
 	name := normalizeUsername(raw)
 	switch {
 	case !validUsername(name):
-		return User{}, errInvalidUsername
+		return nil, errInvalidUsername
 	case name == u.Username:
 		failed = false
 		return s.expose(u), nil
 	case reservedUsername(name, u.ID):
-		return User{}, errUsernameReserved
+		return nil, errUsernameReserved
 	}
 	now := s.now().UTC()
 	nowMs := now.UnixMilli()
 	changed, err := s.store.changeUsername(ctx, u.InternalID, name, nowMs, nowMs-usernameCooldown.Milliseconds())
 	if errors.Is(err, ErrUsernameTaken) {
-		return User{}, err // counts as a failed attempt
+		return nil, err // counts as a failed attempt
 	}
 	if err != nil {
 		failed = false // our fault, not the caller's
-		return User{}, err
+		return nil, err
 	}
 	failed = false
 	if !changed { // cooldown still running, or the account is gone: read the row to tell which
 		cur, err := s.store.userByID(ctx, u.InternalID)
 		if errors.Is(err, errNotFound) {
-			return User{}, ErrUnauthenticated
+			return nil, ErrUnauthenticated
 		}
 		if err != nil {
-			return User{}, err
+			return nil, err
 		}
 		next := time.UnixMilli(cur.UsernameChangedAt + usernameCooldown.Milliseconds())
-		return User{}, UsernameCooldownError{Next: next.UTC(), RetryAfter: max(next.Sub(now), time.Second)}
+		return nil, UsernameCooldownError{Next: next.UTC(), RetryAfter: max(next.Sub(now), time.Second)}
 	}
-	u.Username, u.UsernameChangedAt = name, nowMs
-	return s.expose(u), nil
+	upd := *u
+	upd.Username, upd.UsernameChangedAt = name, nowMs
+	return s.expose(&upd), nil
 }

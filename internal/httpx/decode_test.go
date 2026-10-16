@@ -13,25 +13,23 @@ func TestDecodeJSON(t *testing.T) {
 	}
 	tests := []struct {
 		name, body string
-		strict     bool
 		ok         bool
 		status     int
 		code       string
 	}{
-		{"ok", `{"a":"x"}`, true, true, 0, ""},
-		{"unknown field lenient", `{"a":"x","b":1}`, false, true, 0, ""},
-		{"unknown field strict", `{"a":"x","b":1}`, true, false, 400, "unknown_field"},
-		{"wrong type strict", `{"a":1}`, true, false, 400, "invalid_body"},
-		{"trailing data", `{"a":"x"} {}`, true, false, 400, "invalid_body"},
-		{"empty", ``, true, false, 400, "invalid_body"},
-		{"too large", `{"a":"` + strings.Repeat("x", 100) + `"}`, true, false, 413, "payload_too_large"},
+		{"ok", `{"a":"x"}`, true, 0, ""},
+		{"unknown field", `{"a":"x","b":1}`, false, 400, "ERROR_PARAM"},
+		{"wrong type", `{"a":1}`, false, 400, "ERROR_PARAM"},
+		{"trailing data", `{"a":"x"} {}`, false, 400, "ERROR_PARAM"},
+		{"empty", ``, false, 400, "ERROR_PARAM"},
+		{"too large", `{"a":"` + strings.Repeat("x", 100) + `"}`, false, 413, "ERROR_TOO_LARGE"},
 	}
 	for _, tc := range tests {
 		r := httptest.NewRequest("POST", "/", strings.NewReader(tc.body))
 		w := httptest.NewRecorder()
 		r.Body = http.MaxBytesReader(w, r.Body, 50)
 		var v in
-		if got := DecodeJSON(w, r, &v, tc.strict); got != tc.ok {
+		if got := DecodeJSON(w, r, &v); got != tc.ok {
 			t.Errorf("%s: ok=%v", tc.name, got)
 		}
 		if !tc.ok && (w.Code != tc.status || !strings.Contains(w.Body.String(), `"`+tc.code+`"`)) {

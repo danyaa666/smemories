@@ -11,14 +11,20 @@ import (
 
 	"github.com/go-sql-driver/mysql"
 
+	"github.com/danyaa666/smemories/internal/apperr"
 	"github.com/danyaa666/smemories/internal/ulid"
 )
 
-var (
-	errNotFound = errors.New("auth: not found")
-)
+var errNotFound = apperr.New(apperr.Internal, "auth: not found") // callers test it with errors.Is and pick their own code
 
 const (
+	maxUserAgentLen = 255
+
+	// retryTx waits retryBase<<i plus up to retryGrowth times that, at most retryCap.
+	retryBase   = 5 * time.Millisecond
+	retryGrowth = 5
+	retryCap    = 200 * time.Millisecond
+
 	mysqlDuplicateEntry = 1062
 	mysqlDeadlock       = 1213
 	mysqlLockTimeout    = 1205
@@ -50,11 +56,11 @@ func NewStore(db *sql.DB) *Store { return &Store{db: db} }
 
 const userCols = `u.id, u.public_id, u.email, u.email_verified_at IS NOT NULL, u.display_name, u.locale, u.created_at, u.username, u.username_changed_at`
 
-func scanUser(sc interface{ Scan(...any) error }, extra ...any) (User, error) {
-	var u User
+func scanUser(sc interface{ Scan(...any) error }, extra ...any) (*User, error) {
+	u := new(User)
 	dest := append([]any{&u.InternalID, &u.ID, &u.Email, &u.EmailVerified, &u.DisplayName, &u.Locale, &u.CreatedAt, &u.Username, &u.UsernameChangedAt}, extra...)
 	if err := sc.Scan(dest...); err != nil {
-		return User{}, err
+		return nil, err
 	}
 	return u, nil
 }
@@ -91,7 +97,7 @@ func isUsernameConflict(err error) bool {
 // conflict, so a registration never fails because of it; any other error (a duplicate email included) is returned as is. A
 // failed statement does not abort the surrounding transaction.
 func insertUser(ctx context.Context, tx *sql.Tx, u *User, passwordHash, verifiedAt any) error {
-	for attempt := range defaultSuffixLens {
+	for attempt := 0; ; attempt++ { // the last attempt always returns, so the loop has no end
 		u.Username = defaultUsername(u.ID, attempt)
 		res, err := tx.ExecContext(ctx,
 			`INSERT INTO user_tab (public_id, email, password_hash, email_verified_at, display_name, locale, username, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?)`,
@@ -107,12 +113,11 @@ func insertUser(ctx context.Context, tx *sql.Tx, u *User, passwordHash, verified
 			return err
 		}
 		if id <= 0 {
-			return errors.New("auth: insert returned a non-positive user id")
+			return apperr.New(apperr.Internal, "auth: insert returned a non-positive user id")
 		}
 		u.InternalID = uint64(id)
 		return nil
 	}
-	return errors.New("auth: no username attempt") // unreachable: the last attempt returns above
 }
 
 // changeUsername sets the username in one conditional UPDATE: it matches only while the cooldown is over (username_changed_at <=
@@ -134,16 +139,18 @@ func (s *Store) changeUsername(ctx context.Context, id uint64, name string, nowM
 }
 
 // userByEmail returns the user and their password hash ("" when the account has none).
-func (s *Store) userByEmail(ctx context.Context, email string) (User, string, error) {
+func (s *Store) userByEmail(ctx context.Context, email string) (*User, string, error) {
 	var hash sql.NullString
 	u, err := scanUser(s.db.QueryRowContext(ctx, `SELECT `+userCols+`, u.password_hash FROM user_tab u WHERE u.email = ?`, email), &hash)
 	if errors.Is(err, sql.ErrNoRows) {
-		return User{}, "", errNotFound
+		return nil, "", errNotFound
 	}
 	return u, hash.String, err
 }
 
 // session is what Sessions.Create stores; tokenHash is the sha256 of the cookie value.
+//
+// session is passed by value on purpose: a small immutable record handed to the session store.
 type session struct {
 	tokenHash []byte
 	userID    uint64
@@ -152,20 +159,20 @@ type session struct {
 	userAgent string
 }
 
-// cleanUserAgent makes a client-supplied header safe to keep (valid UTF-8, at most 255 characters).
+// cleanUserAgent makes a client-supplied header safe to keep (valid UTF-8, at most maxUserAgentLen characters).
 func cleanUserAgent(ua string) string {
 	ua = strings.ToValidUTF8(ua, "")
-	if utf8.RuneCountInString(ua) > 255 {
-		ua = string([]rune(ua)[:255])
+	if utf8.RuneCountInString(ua) > maxUserAgentLen {
+		ua = string([]rune(ua)[:maxUserAgentLen])
 	}
 	return ua
 }
 
 // userByID returns the user with the given internal id (the owner of a session).
-func (s *Store) userByID(ctx context.Context, id uint64) (User, error) {
+func (s *Store) userByID(ctx context.Context, id uint64) (*User, error) {
 	u, err := scanUser(s.db.QueryRowContext(ctx, `SELECT `+userCols+` FROM user_tab u WHERE u.id = ?`, id))
 	if errors.Is(err, sql.ErrNoRows) {
-		return User{}, errNotFound
+		return nil, errNotFound
 	}
 	return u, err
 }
@@ -174,8 +181,8 @@ func (s *Store) userByID(ctx context.Context, id uint64) (User, error) {
 // Service.SignInGoogle for the rules). want carries the display name and locale to use if
 // the account is created. A concurrent callback for the same person can hit the unique key
 // or a deadlock; the loser retries and then finds the winner's rows.
-func (s *Store) googleUser(ctx context.Context, id GoogleIdentity, want User, now time.Time, dropSessions func(ctx context.Context, userID uint64) error) (User, error) {
-	var u User
+func (s *Store) googleUser(ctx context.Context, id *GoogleIdentity, want *User, now time.Time, dropSessions func(ctx context.Context, userID uint64) error) (*User, error) {
+	var u *User
 	err := retryTx(ctx, sleepCtx, func() (err error) {
 		u, err = s.googleUserTx(ctx, id, want, now, dropSessions)
 		return err
@@ -194,8 +201,8 @@ func isRetryable(err error) bool {
 func retryTx(ctx context.Context, sleep func(context.Context, time.Duration) error, fn func() error) error {
 	err := fn()
 	for i := 0; i < txAttempts-1 && isRetryable(err); i++ {
-		lo := 5 * time.Millisecond << i
-		hi := min(5*lo, 200*time.Millisecond)
+		lo := retryBase << i
+		hi := min(retryGrowth*lo, retryCap)
 		if serr := sleep(ctx, lo+rand.N(hi-lo)); serr != nil { //nolint:gosec // jitter, not a secret
 			return err
 		}
@@ -215,11 +222,11 @@ func sleepCtx(ctx context.Context, d time.Duration) error {
 	}
 }
 
-func (s *Store) googleUserTx(ctx context.Context, id GoogleIdentity, want User, now time.Time, dropSessions func(ctx context.Context, userID uint64) error) (User, error) {
+func (s *Store) googleUserTx(ctx context.Context, id *GoogleIdentity, want *User, now time.Time, dropSessions func(ctx context.Context, userID uint64) error) (*User, error) {
 	ms := now.UnixMilli()
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		return User{}, err
+		return nil, err
 	}
 	defer func() { _ = tx.Rollback() }()
 
@@ -230,7 +237,7 @@ func (s *Store) googleUserTx(ctx context.Context, id GoogleIdentity, want User, 
 		return u, nil // known identity
 	}
 	if !errors.Is(err, sql.ErrNoRows) {
-		return User{}, err
+		return nil, err
 	}
 
 	u, err = scanUser(tx.QueryRowContext(ctx, `SELECT `+userCols+` FROM user_tab u WHERE u.email = ? FOR UPDATE`, id.Email))
@@ -239,25 +246,25 @@ func (s *Store) googleUserTx(ctx context.Context, id GoogleIdentity, want User, 
 		// Pre-hijacking defence: whoever registered this address never proved they own it, so
 		// their password and sessions go before the real owner is linked.
 		if _, err = tx.ExecContext(ctx, `UPDATE user_tab SET password_hash = NULL, email_verified_at = ?, updated_at = ? WHERE id = ?`, ms, ms, u.InternalID); err != nil {
-			return User{}, err
+			return nil, err
 		}
 		// Before the commit, so a Redis failure rolls everything back and the next try still finds the account unverified.
 		if err = dropSessions(ctx, u.InternalID); err != nil {
-			return User{}, err
+			return nil, err
 		}
 		u.EmailVerified = true
 	case err == nil:
 	case errors.Is(err, sql.ErrNoRows):
-		u = User{ID: ulid.New(now), Email: id.Email, EmailVerified: true, DisplayName: want.DisplayName, Locale: want.Locale, CreatedAt: ms}
-		if err := insertUser(ctx, tx, &u, nil, ms); err != nil {
-			return User{}, err
+		u = &User{ID: ulid.New(now), Email: id.Email, EmailVerified: true, DisplayName: want.DisplayName, Locale: want.Locale, CreatedAt: ms}
+		if err := insertUser(ctx, tx, u, nil, ms); err != nil {
+			return nil, err
 		}
 	default:
-		return User{}, err
+		return nil, err
 	}
 	if _, err := tx.ExecContext(ctx,
 		`INSERT INTO user_identity_tab (user_id, provider, subject, email, created_at, updated_at) VALUES (?,'google',?,?,?,?)`, u.InternalID, id.Subject, id.Email, ms, ms); err != nil {
-		return User{}, err
+		return nil, err
 	}
 	return u, tx.Commit()
 }

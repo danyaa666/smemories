@@ -28,15 +28,6 @@ func do(h http.Handler, method, path string, body io.Reader, hdr ...string) *htt
 	return rec
 }
 
-func decodeError(t *testing.T, rec *httptest.ResponseRecorder) ErrorBody {
-	t.Helper()
-	var env struct{ Error ErrorBody }
-	if err := json.Unmarshal(rec.Body.Bytes(), &env); err != nil {
-		t.Fatalf("body is not an error envelope: %q (%v)", rec.Body.String(), err)
-	}
-	return env.Error
-}
-
 func TestHealthz(t *testing.T) {
 	h, _ := newTestRouter(t)
 	rec := do(h, "GET", "/healthz", nil)
@@ -48,8 +39,8 @@ func TestHealthz(t *testing.T) {
 func TestNotFoundEnvelope(t *testing.T) {
 	h, _ := newTestRouter(t)
 	rec := do(h, "GET", "/nope", nil)
-	e := decodeError(t, rec)
-	if rec.Code != 404 || e.Code != "not_found" || e.RequestID == "" || e.RequestID != rec.Header().Get("X-Request-Id") {
+	e := decodeV2(t, rec)
+	if rec.Code != 404 || e.Status != "ERROR_NOT_FOUND" || e.RequestID == "" || e.RequestID != rec.Header().Get("X-Request-Id") {
 		t.Fatalf("got %d %+v", rec.Code, e)
 	}
 }
@@ -57,8 +48,8 @@ func TestNotFoundEnvelope(t *testing.T) {
 func TestMethodNotAllowedEnvelope(t *testing.T) {
 	h, _ := newTestRouter(t)
 	rec := do(h, "POST", "/healthz", nil)
-	e := decodeError(t, rec)
-	if rec.Code != 405 || e.Code != "method_not_allowed" {
+	e := decodeV2(t, rec)
+	if rec.Code != 405 || e.Status != "ERROR_METHOD_NOT_ALLOWED" {
 		t.Fatalf("got %d %+v", rec.Code, e)
 	}
 	if allow := rec.Header().Get("Allow"); !strings.Contains(allow, "GET") {
@@ -133,7 +124,7 @@ func TestPanicRecovery(t *testing.T) {
 		m.HandleFunc("GET /boom", func(http.ResponseWriter, *http.Request) { panic("kaboom") })
 	})
 	rec := do(h, "GET", "/boom", nil)
-	if e := decodeError(t, rec); rec.Code != 500 || e.Code != "internal_error" || e.RequestID == "" {
+	if e := decodeV2(t, rec); rec.Code != 500 || e.Status != "ERROR_INTERNAL" || e.RequestID == "" {
 		t.Fatalf("got %d %+v", rec.Code, e)
 	}
 	if !strings.Contains(logs.String(), "kaboom") || !strings.Contains(logs.String(), `"stack"`) {
@@ -167,7 +158,7 @@ func TestBodyLimit(t *testing.T) {
 		t.Errorf("body exactly at the cap: got %d", rec.Code)
 	}
 	rec := do(h, "POST", "/echo", strings.NewReader(big))
-	if e := decodeError(t, rec); rec.Code != 413 || e.Code != "payload_too_large" {
+	if e := decodeV2(t, rec); rec.Code != 413 || e.Status != "ERROR_TOO_LARGE" {
 		t.Errorf("over the cap: got %d %+v", rec.Code, e)
 	}
 	if rec := do(h, "POST", "/upload", strings.NewReader(big)); rec.Code != 200 {
@@ -180,16 +171,16 @@ func TestBodyLimit(t *testing.T) {
 
 func TestPathValuesStillWork(t *testing.T) {
 	h, _ := newTestRouter(t, func(m *http.ServeMux) {
-		m.HandleFunc("GET /v1/x/{id}", func(w http.ResponseWriter, r *http.Request) { WriteJSON(w, 200, r.PathValue("id")) })
+		m.HandleFunc("GET /api/x/{id}", func(w http.ResponseWriter, r *http.Request) { WriteJSON(w, 200, r.PathValue("id")) })
 	})
-	if rec := do(h, "GET", "/v1/x/abc", nil); strings.TrimSpace(rec.Body.String()) != `"abc"` {
+	if rec := do(h, "GET", "/api/x/abc", nil); strings.TrimSpace(rec.Body.String()) != `"abc"` {
 		t.Fatalf("path value lost: %q", rec.Body.String())
 	}
 }
 
 func TestAccessLogRouteNeverLogsRawPath(t *testing.T) {
 	h, logs := newTestRouter(t, func(m *http.ServeMux) {
-		m.HandleFunc("GET /v1/secret/{token}", func(w http.ResponseWriter, r *http.Request) {
+		m.HandleFunc("GET /api/secret/{token}", func(w http.ResponseWriter, r *http.Request) {
 			WriteJSON(w, 200, map[string]string{"token": r.PathValue("token")})
 		})
 		m.HandleFunc("GET /boom/{token}", func(http.ResponseWriter, *http.Request) { panic("x") })
@@ -198,11 +189,11 @@ func TestAccessLogRouteNeverLogsRawPath(t *testing.T) {
 		method, path, route string
 		status              int
 	}{
-		{"GET", "/v1/secret/abc123secret", "GET /v1/secret/{token}", 200},
+		{"GET", "/api/secret/abc123secret", "GET /api/secret/{token}", 200},
 		{"GET", "/boom/abc123secret", "GET /boom/{token}", 500},
 		{"GET", "/nope/abc123secret", "-", 404},
 		{"POST", "/healthz", "-", 405},
-		{"GET", "/v1/secret/a%2Fb..secret?token=abc123secret", "GET /v1/secret/{token}", 200},
+		{"GET", "/api/secret/a%2Fb..secret?token=abc123secret", "GET /api/secret/{token}", 200},
 	}
 	for _, c := range cases {
 		logs.Reset()

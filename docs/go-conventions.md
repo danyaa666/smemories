@@ -29,17 +29,17 @@ The skill uses the private `go-common/errors`. We have our own equivalent with t
 | set the code on a plain error | `apperr.WithCode(apperr.DB, err)` |
 | read | `apperr.CodeOf(err)`; `errors.Is` / `errors.As` still work (`Unwrap`) |
 
-- In application code (handlers, services, stores) `fmt.Errorf` and `errors.New` are not used; lint (`forbidigo`) enforces it. Allowed: `cmd/`, `internal/config`, test files and `*test` helper packages.
+- In application code (handlers, services, stores) `fmt.Errorf` and `errors.New` are not used; lint (`forbidigo`) enforces it. Allowed: `cmd/`, `internal/config`, test files and `*test` helper packages (the exclusion is in `.golangci.yml`). A sentinel for `errors.Is` is an `apperr.New` value (`redis.ErrUnavailable`, `storage.ErrNotFound`); a cause plus a sentinel uses a small type with `Unwrap() []error`.
 - Business context is added when wrapping. Never swallow an error. `panic` only for programmer errors.
 - Stores return `apperr` codes for what the caller must tell apart (`NotFound`, `Conflict`); the service adds business codes (`ERROR_LIMIT_REACHED`).
-- One mapper in `internal/httpx` turns an `apperr` into HTTP status + envelope (`docs/api-contract.md`). Handlers do `httpx.Fail(w, r, err)`; no per-package `fail` switches.
+- One mapper in `internal/httpx` turns an `apperr` into HTTP status + envelope (`docs/api-contract.md`). Handlers do `httpx.Fail(w, r, err)`; no per-package `fail` switches. `Fail` also answers an error that wraps `context.Canceled` (the client went away) as `ERROR_CLIENT_CLOSED` 499, so no handler does that itself. `httpx.WriteError` is for middleware and router fallbacks that hold a status and a code name instead of an error; it writes the v2 envelope only.
 
 ## Code quality (code-quality.md)
 
 - `gofmt`, `golangci-lint` clean before every PR; no unused code.
-- **No magic numbers**: durations, limits, sizes are named constants (package-level, or `internal/consts` if shared) or config. `//nolint:mnd` is not allowed (crypto constants excepted). The `mnd` linter is switched on in T-072.
+- **No magic numbers**: durations, limits, sizes are named constants (package-level, or `internal/consts` if shared) or config. `//nolint:mnd` is not allowed (crypto constants excepted). The `mnd` linter is on (T-072); its allowlist in `.golangci.yml` is `apperr.NewCode` (an HTTP status is the name of the code), the number 2 (halving and doubling), the `*test` helper packages and `internal/media/image.go` (JPEG/EXIF offsets and tags are the format's own numbers).
 - Type inference: `x := 1`, not `var x int = 1` (exceptions: interfaces, nil slices/maps).
-- Pointers by default: pointer receivers; `*Struct` parameters and returns for domain structs. Value types stay for tiny immutable values, scalars, maps/slices/funcs; explain the exception in a short comment.
+- Pointers by default: pointer receivers; `*Struct` parameters and returns for domain structs. Value types stay for tiny immutable values, scalars, maps/slices/funcs (so a page of books is `[]Yearbook`, and `Discard(...Media)` takes values); explain the exception in a short comment. Start-up settings structs (`Limits`, `GoogleConfig`, `S3Config`, ...) are passed by value on purpose and say so on the type.
 - Interfaces are small and live on the consumer side; no interface for a single implementation unless a second consumer or a test seam needs it.
 - `ctx context.Context` is the first parameter all the way handler -> service -> store; never stored in a struct. Every goroutine has a cancellation path and a bounded lifetime; fan-out uses bounded pools.
 - Logging: `log/slog`, stable keys (`request_id`, `user_id`, `yearbook_id`, `reason`), `error` level for unexpected failures only, never passwords, tokens, email codes, or personal data.
@@ -71,5 +71,6 @@ New epic PRDs and task specs use the technical-design sections of the `be-td` sk
 | ClickHouse, Elasticsearch, Kafka | not used | one MySQL, Redis for time-limited data (D-23) |
 | cache reads fall back to the DB when Redis is down | sessions and email codes fail closed (503) | D-23: they have no DB copy |
 | `WithGzipMiddleware` (decode gzip requests) | not used | browsers do not gzip request bodies; body cap protects us |
+| `*Struct` for every struct | slices of structs and start-up settings structs stay values (see Code quality) | a `[]*T` page adds nil checks and allocations for no gain here |
 | soft deletes | hard delete on user request | privacy (D-26) |
 | unix-ms timestamps | `DATE` for a birthday | a calendar date is not an instant |

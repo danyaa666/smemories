@@ -80,43 +80,43 @@ func checkQuota(ctx context.Context, q rowQuerier, ownerID, yearbookID uint64, a
 
 // insert stores the row after re-checking the quotas under a lock on the user row, so parallel
 // uploads cannot all slip under a limit. It also locks the yearbook so it cannot vanish meanwhile.
-func (s *Store) insert(ctx context.Context, ownerID, yearbookID uint64, kind string, m Media) (Media, error) {
+func (s *Store) insert(ctx context.Context, ownerID, yearbookID uint64, kind string, m *Media) (*Media, error) {
 	if kind != KindOwner && kind != KindContributor {
-		return Media{}, apperr.New(apperr.Internal, "media: unknown uploader_kind "+kind)
+		return nil, apperr.New(apperr.Internal, "media: unknown uploader_kind "+kind)
 	}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		return Media{}, dbError(err, "begin insert photo")
+		return nil, dbError(err, "begin insert photo")
 	}
 	defer func() { _ = tx.Rollback() }()
 	var locked uint64
 	if err := tx.QueryRowContext(ctx, `SELECT id FROM user_tab WHERE id = ? FOR UPDATE`, ownerID).Scan(&locked); err != nil {
-		return Media{}, dbError(err, "lock user")
+		return nil, dbError(err, "lock user")
 	}
 	err = tx.QueryRowContext(ctx, `SELECT id FROM yearbook_tab WHERE id = ? AND owner_id = ? FOR SHARE`, yearbookID, ownerID).Scan(&locked)
 	if errors.Is(err, sql.ErrNoRows) {
-		return Media{}, ErrNotFound
+		return nil, ErrNotFound
 	}
 	if err != nil {
-		return Media{}, dbError(err, "lock yearbook")
+		return nil, dbError(err, "lock yearbook")
 	}
 	if err := checkQuota(ctx, tx, ownerID, yearbookID, m.Bytes); err != nil {
-		return Media{}, err
+		return nil, err
 	}
 	res, err := tx.ExecContext(ctx,
 		`INSERT INTO media_tab (public_id, yearbook_id, uploader_kind, object_key, thumb_key, print_key, content_type, bytes, width, height, sha256, created_at, updated_at)
 		 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 		m.ID, yearbookID, kind, m.ObjectKey, m.ThumbKey, m.PrintKey, m.ContentType, m.Bytes, m.Width, m.Height, m.SHA256, m.CreatedAt, m.CreatedAt)
 	if err != nil {
-		return Media{}, dbError(err, "insert photo")
+		return nil, dbError(err, "insert photo")
 	}
 	id, err := res.LastInsertId()
 	if err != nil {
-		return Media{}, dbError(err, "read photo id")
+		return nil, dbError(err, "read photo id")
 	}
 	m.RowID = id
 	if err := tx.Commit(); err != nil {
-		return Media{}, dbError(err, "commit photo")
+		return nil, dbError(err, "commit photo")
 	}
 	return m, nil
 }
@@ -134,25 +134,25 @@ func (s *Store) yearbookByRow(ctx context.Context, id uint64) (ownerID uint64, p
 }
 
 // owned returns the media with that public id if its yearbook belongs to the user.
-func (s *Store) owned(ctx context.Context, ownerID uint64, publicID string) (Media, error) {
-	var m Media
+func (s *Store) owned(ctx context.Context, ownerID uint64, publicID string) (*Media, error) {
+	m := new(Media)
 	var printKey sql.NullString
 	err := s.db.QueryRowContext(ctx,
 		`SELECT m.id, m.public_id, m.object_key, m.thumb_key, m.print_key, m.content_type, m.bytes, m.width, m.height, m.sha256, m.created_at
 		 FROM media_tab m JOIN yearbook_tab y ON y.id = m.yearbook_id WHERE y.owner_id = ? AND m.public_id = ?`, ownerID, publicID).
 		Scan(&m.RowID, &m.ID, &m.ObjectKey, &m.ThumbKey, &printKey, &m.ContentType, &m.Bytes, &m.Width, &m.Height, &m.SHA256, &m.CreatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
-		return Media{}, ErrNotFound
+		return nil, ErrNotFound
 	}
 	if err != nil {
-		return Media{}, dbError(err, "select photo")
+		return nil, dbError(err, "select photo")
 	}
 	m.PrintKey = printKey.String
 	return m, nil
 }
 
 // keys lists the objects of a photo that exist (the print object is missing until the backfill ran).
-func (m Media) keys() []string {
+func (m *Media) keys() []string {
 	if m.PrintKey == "" {
 		return []string{m.ObjectKey, m.ThumbKey}
 	}

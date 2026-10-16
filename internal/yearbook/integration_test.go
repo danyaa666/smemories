@@ -625,8 +625,8 @@ func TestV2Shapes(t *testing.T) {
 	}
 	// The v1 routes are gone, and the new ones take their own method only.
 	for _, c := range [][2]string{{"POST", "/v1/yearbooks"}, {"GET", "/v1/yearbooks"}, {"GET", "/v1/yearbooks/" + id}, {"DELETE", "/v1/yearbooks/" + id}} {
-		if code := e.do(alice, c[0], c[1], "").Code; code != 404 && code != 405 {
-			t.Errorf("%s %s: %d, want 404 or 405", c[0], c[1], code)
+		if rec := e.do(alice, c[0], c[1], ""); (rec.Code != 404 && rec.Code != 405) || !strings.Contains(rec.Body.String(), `"status":"ERROR_`) {
+			t.Errorf("%s %s: %d %s, want a v2 404 or 405", c[0], c[1], rec.Code, rec.Body)
 		}
 	}
 	e.do(alice, "GET", "/api/yearbook/delete", "").status(405, "ERROR_METHOD_NOT_ALLOWED")

@@ -11,6 +11,7 @@ import (
 
 	"codeberg.org/go-pdf/fpdf"
 
+	"github.com/danyaa666/smemories/internal/apperr"
 	"github.com/danyaa666/smemories/internal/templates"
 )
 
@@ -19,6 +20,7 @@ const (
 	maxPixels    = 64_000_000 // defensive: the upload pipeline (T-009) already bounds these
 	maxPNGPixels = 25_000_000 // fpdf decodes PNGs fully (4 bytes per pixel in memory); JPEGs are copied as is
 	maxImageSide = 20_000
+	missingGrey  = 224 // fill of the box drawn for a photo that could not be loaded
 )
 
 // ImageSource fetches photo bytes (JPEG or PNG) by media id.
@@ -39,7 +41,7 @@ type imgInfo struct {
 func coverRect(pxW, pxH int, fx, fy, fw, fh float64) (x, y, w, h, dpi float64) {
 	s := math.Max(fw/float64(pxW), fh/float64(pxH)) // mm per pixel
 	w, h = float64(pxW)*s, float64(pxH)*s
-	return fx + (fw-w)/2, fy + (fh-h)/2, w, h, 25.4 / s
+	return fx + (fw-w)/2, fy + (fh-h)/2, w, h, mmPerInch / s
 }
 
 // load fetches, checks and registers a photo once per id. A context error is returned; every other
@@ -114,7 +116,7 @@ func (r *renderer) drawImage(ctx context.Context, e templates.Element, ox, oy fl
 	end := r.clip(e, x, y, w, h)
 	defer end()
 	if !info.ok {
-		r.pdf.SetFillColor(224, 224, 224)
+		r.pdf.SetFillColor(missingGrey, missingGrey, missingGrey)
 		r.pdf.Rect(x, y, w, h, "F")
 		r.warn(Warning{Code: WarnMissingImage, Slot: e.Slot, NoteID: d.noteID, MediaID: id})
 		return nil
@@ -138,16 +140,16 @@ func (r *renderer) drawBackground(asset string, pw, ph float64) error {
 	if !ok {
 		data, err := r.tmpl.Asset(asset)
 		if err != nil {
-			return fmt.Errorf("render pdf: background: %w", err)
+			return apperr.Wrap(apperr.Internal, err, "render pdf: background")
 		}
 		_, format, err := image.DecodeConfig(bytes.NewReader(data))
 		if err != nil {
-			return fmt.Errorf("render pdf: background %q: %w", asset, err)
+			return apperr.Wrap(apperr.Internal, err, fmt.Sprintf("render pdf: background %q", asset))
 		}
 		ptype = map[string]string{"jpeg": "JPG", "png": "PNG"}[format]
 		r.pdf.RegisterImageOptionsReader(key, fpdf.ImageOptions{ImageType: ptype}, bytes.NewReader(data))
 		if err := r.pdf.Error(); err != nil {
-			return fmt.Errorf("render pdf: background %q: %w", asset, err)
+			return apperr.Wrap(apperr.Internal, err, fmt.Sprintf("render pdf: background %q", asset))
 		}
 		r.bgs[asset] = ptype
 	}

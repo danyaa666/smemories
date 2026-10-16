@@ -32,8 +32,8 @@ func TestReadyNotReadyHidesDriverError(t *testing.T) {
 		return errors.New("dial tcp 10.0.0.5:3306: secret-host refused")
 	}), slog.New(slog.NewJSONHandler(&logs, nil))))
 	rec := do(h, "GET", "/readyz", nil)
-	e := decodeError(t, rec)
-	if rec.Code != http.StatusServiceUnavailable || e.Code != "not_ready" || e.RequestID == "" {
+	e := decodeV2(t, rec)
+	if rec.Code != http.StatusServiceUnavailable || e.Status != "ERROR_NOT_READY" || e.RequestID == "" {
 		t.Fatalf("got %d %+v", rec.Code, e)
 	}
 	if strings.Contains(rec.Body.String(), "secret-host") || strings.Contains(rec.Body.String(), "dial") {

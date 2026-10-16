@@ -7,9 +7,13 @@ import (
 	"fmt"
 	"io"
 	"sync"
+
+	"github.com/danyaa666/smemories/internal/apperr"
 )
 
 // Message is one email. HTML may be empty (plain text only).
+//
+// Message is passed by value on purpose: a small immutable value.
 type Message struct {
 	To, Subject, Text, HTML string
 }
@@ -29,7 +33,7 @@ type LogMailer struct {
 // NewLog returns a LogMailer writing to w, or an error when env (SMEM_ENV) is not dev or test.
 func NewLog(env string, w io.Writer) (*LogMailer, error) {
 	if env != "dev" && env != "test" {
-		return nil, fmt.Errorf("mailer: SMEM_ENV=%q has no real mailer configured and the log mailer prints secrets; configure a mailer provider (none exists yet)", env)
+		return nil, apperr.New(apperr.Internal, fmt.Sprintf("mailer: SMEM_ENV=%q has no real mailer configured and the log mailer prints secrets; configure a mailer provider (none exists yet)", env))
 	}
 	return &LogMailer{w: w}, nil
 }

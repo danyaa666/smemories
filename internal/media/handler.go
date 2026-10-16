@@ -35,11 +35,8 @@ const (
 
 	busyRetryAfter = "2" // seconds, for a refused upload
 
-	// clientClosed is nginx's 499: the client went away, nobody reads the answer.
-	clientClosed = 499
+	uploadQueueFactor = 4 // uploads in flight per processing slot
 )
-
-var codeClientClosed = apperr.NewCode("ERROR_CLIENT_CLOSED", clientClosed)
 
 // Handler serves the media endpoints: it decodes, validates the shape, calls the Service and writes the answer.
 type Handler struct {
@@ -56,7 +53,7 @@ type Handler struct {
 // once (each buffers up to maxBytes); more get 503 ERROR_BUSY.
 func NewHandler(svc *Service, maxBytes int64, requireUser func(http.Handler) http.Handler, allowedOrigins []string, cursors *httpx.Cursors, logger *slog.Logger) *Handler {
 	return &Handler{svc: svc, maxBytes: maxBytes, requireUser: requireUser, allowedOrigins: allowedOrigins, cursors: cursors, logger: logger,
-		inflight: make(chan struct{}, 4*cap(svc.sem))}
+		inflight: make(chan struct{}, uploadQueueFactor*cap(svc.sem))}
 }
 
 // Routes registers the endpoints on mux (pass to httpx.NewRouter).
@@ -84,6 +81,8 @@ func owner(r *http.Request) uint64 {
 }
 
 // mediaJSON is a photo as the API shows it: no storage keys, no URLs (the client builds the content URL from id).
+//
+// mediaJSON is passed by value on purpose: a response body encoded once.
 type mediaJSON struct {
 	ID          string `json:"id"`
 	YearbookID  string `json:"yearbook_id"`
@@ -116,7 +115,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		h.fail(w, r, err)
 		return
 	}
-	httpx.OK(w, r, toJSON(&m, yearbookID))
+	httpx.OK(w, r, toJSON(m, yearbookID))
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
@@ -287,7 +286,7 @@ type deleteInput struct {
 
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 	var in deleteInput
-	if !httpx.DecodeJSON(w, r, &in, true) {
+	if !httpx.DecodeJSON(w, r, &in) {
 		return
 	}
 	if in.ID == "" {
@@ -301,19 +300,14 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 	httpx.OK(w, r, nil)
 }
 
-// fail answers err. A request whose client went away gets 499 and a debug line; a *RateLimitedError sets Retry-After; a
-// storage failure is logged (Fail logs only the codes that are our fault by default); the rest is httpx.Fail.
+// fail answers err. A *RateLimitedError sets Retry-After; a storage failure is logged (Fail logs only the codes that are
+// our fault by default); the rest, a gone client included, is httpx.Fail.
 func (h *Handler) fail(w http.ResponseWriter, r *http.Request, err error) {
-	if errors.Is(err, context.Canceled) { // nobody reads the answer and nothing is wrong on our side
-		h.logger.Debug("media: client gone", "request_id", httpx.RequestIDFrom(r.Context()), "error", err)
-		httpx.Fail(w, r, apperr.New(codeClientClosed, "client closed the request"))
-		return
-	}
 	var rl *RateLimitedError
 	if errors.As(err, &rl) {
 		w.Header().Set("Retry-After", strconv.Itoa(int(math.Ceil(rl.RetryAfter.Seconds()))))
 	}
-	if apperr.Is(err, CodeStorage) {
+	if apperr.Is(err, CodeStorage) && !errors.Is(err, context.Canceled) {
 		h.logger.Error("media: storage failed", "request_id", httpx.RequestIDFrom(r.Context()), "error", err)
 	}
 	httpx.Fail(w, r, err)

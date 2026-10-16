@@ -23,6 +23,7 @@ import (
 const (
 	uploadsPerWindow = 60
 	uploadWindow     = 10 * time.Minute
+	cleanupTimeout   = 10 * time.Second // deleting the objects of a failed upload, on its own context
 )
 
 // defaultContributorSlotWait is how long a public submission waits for a processing slot before it gives up
@@ -85,13 +86,13 @@ func (s *Service) SlotsInUse() int { return len(s.sem) }
 func yearbookPrefix(yearbookID string) string { return "yearbooks/" + yearbookID + "/" }
 
 // Upload validates and stores one photo for a yearbook the user owns.
-func (s *Service) Upload(ctx context.Context, ownerID uint64, yearbookID string, data []byte) (Media, error) {
+func (s *Service) Upload(ctx context.Context, ownerID uint64, yearbookID string, data []byte) (*Media, error) {
 	yb, err := s.store.ownedYearbook(ctx, ownerID, yearbookID)
 	if err != nil {
-		return Media{}, err
+		return nil, err
 	}
 	if ok, retry, _ := s.limiter.Take(ctx, strconv.FormatUint(ownerID, 10)); !ok {
-		return Media{}, tooManyUploads(retry)
+		return nil, tooManyUploads(retry)
 	}
 	return s.save(ctx, ownerID, yb, yearbookID, KindOwner, func() ([]byte, error) { return data, nil }, 0)
 }
@@ -100,25 +101,25 @@ func (s *Service) Upload(ctx context.Context, ownerID uint64, yearbookID string,
 // id yearbookRow. It counts toward the owner's quotas like any photo, takes a processing slot like
 // Upload but waits a bounded time (10 s) for it (ErrBusy), and has no per-user rate limit: the caller
 // limits the public endpoint. On success the caller owns the photo: call Discard if the submission fails later.
-func (s *Service) UploadContributor(ctx context.Context, yearbookRow uint64, data []byte) (Media, error) {
+func (s *Service) UploadContributor(ctx context.Context, yearbookRow uint64, data []byte) (*Media, error) {
 	return s.UploadContributorFrom(ctx, yearbookRow, func() ([]byte, error) { return data, nil })
 }
 
 // UploadContributorFrom is UploadContributor for a photo that waits on disk: load runs only once a processing slot
 // is held, so photos queued for a slot cost no memory.
-func (s *Service) UploadContributorFrom(ctx context.Context, yearbookRow uint64, load func() ([]byte, error)) (Media, error) {
+func (s *Service) UploadContributorFrom(ctx context.Context, yearbookRow uint64, load func() ([]byte, error)) (*Media, error) {
 	ownerID, publicID, err := s.store.yearbookByRow(ctx, yearbookRow)
 	if err != nil {
-		return Media{}, err
+		return nil, err
 	}
 	return s.save(ctx, ownerID, yearbookRow, publicID, KindContributor, load, s.contributorWait)
 }
 
 // save is the shared pipeline: quota pre-check, processing slot, load, process, put objects, insert the row.
 // slotWait 0 waits for a slot until ctx ends.
-func (s *Service) save(ctx context.Context, ownerID, yb uint64, yearbookID, kind string, load func() ([]byte, error), slotWait time.Duration) (Media, error) {
+func (s *Service) save(ctx context.Context, ownerID, yb uint64, yearbookID, kind string, load func() ([]byte, error), slotWait time.Duration) (*Media, error) {
 	if err := checkQuota(ctx, s.store.db, ownerID, yb, 0); err != nil { // cheap early exit; insert re-checks under a lock
-		return Media{}, err
+		return nil, err
 	}
 	var timeout <-chan time.Time
 	if slotWait > 0 {
@@ -129,9 +130,9 @@ func (s *Service) save(ctx context.Context, ownerID, yb uint64, yearbookID, kind
 	select {
 	case s.sem <- struct{}{}:
 	case <-timeout:
-		return Media{}, ErrBusy
+		return nil, ErrBusy
 	case <-ctx.Done():
-		return Media{}, ctx.Err()
+		return nil, ctx.Err()
 	}
 	data, err := load()
 	var p processed
@@ -140,29 +141,29 @@ func (s *Service) save(ctx context.Context, ownerID, yb uint64, yearbookID, kind
 	}
 	<-s.sem
 	if err != nil {
-		return Media{}, err
+		return nil, err
 	}
 
 	id := ulid.New(s.now())
 	sum := sha256.Sum256(p.display)
-	m := Media{ID: id, ObjectKey: yearbookPrefix(yearbookID) + id + "." + p.ext, ThumbKey: yearbookPrefix(yearbookID) + id + "-thumb.jpg",
+	m := &Media{ID: id, ObjectKey: yearbookPrefix(yearbookID) + id + "." + p.ext, ThumbKey: yearbookPrefix(yearbookID) + id + "-thumb.jpg",
 		PrintKey: printKey(yearbookPrefix(yearbookID) + id + "." + p.ext), ContentType: p.contentType, Bytes: len(p.display), Width: p.width, Height: p.height, SHA256: hex.EncodeToString(sum[:]), CreatedAt: s.now().UnixMilli()}
 
 	if err := s.st.Put(ctx, m.ObjectKey, m.ContentType, p.display); err != nil {
-		return Media{}, storageFailed(err)
+		return nil, storageFailed(err)
 	}
 	if err := s.st.Put(ctx, m.ThumbKey, "image/jpeg", p.thumb); err != nil {
 		s.cleanup(m)
-		return Media{}, storageFailed(err)
+		return nil, storageFailed(err)
 	}
 	if err := s.st.Put(ctx, m.PrintKey, m.ContentType, p.print); err != nil {
 		s.cleanup(m)
-		return Media{}, storageFailed(err)
+		return nil, storageFailed(err)
 	}
 	saved, err := s.store.insert(ctx, ownerID, yb, kind, m)
 	if err != nil {
 		s.cleanup(m) // never leave objects without a row
-		return Media{}, err
+		return nil, err
 	}
 	return saved, nil
 }
@@ -170,10 +171,10 @@ func (s *Service) save(ctx context.Context, ownerID, yb uint64, yearbookID, kind
 // Discard removes photos (objects and rows) that were stored for a submission that then failed. It uses
 // its own context, so it also runs when the client has gone away.
 func (s *Service) Discard(ms ...Media) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), cleanupTimeout)
 	defer cancel()
 	var errs []error
-	for _, m := range ms {
+	for _, m := range ms { // not N+1: only the (at most 3) photos of one failed submission
 		// The row goes even when the objects cannot be deleted: a leftover object is removed with the yearbook's prefix.
 		errs = append(errs, s.st.Delete(ctx, m.keys()...), s.store.removeRow(ctx, m.RowID, s.refs))
 	}
@@ -181,8 +182,8 @@ func (s *Service) Discard(ms ...Media) error {
 }
 
 // cleanup removes the objects of a failed upload; it must outlive a cancelled request.
-func (s *Service) cleanup(m Media) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+func (s *Service) cleanup(m *Media) {
+	ctx, cancel := context.WithTimeout(context.Background(), cleanupTimeout)
 	defer cancel()
 	_ = s.st.Delete(ctx, m.keys()...) // best effort: an orphan is still removed with its yearbook
 }
@@ -239,10 +240,10 @@ func printKey(objectKey string) string {
 
 // Content returns the stored bytes of a photo the user owns in one of the Size* versions, with the size actually
 // served: a photo that has no print object yet (the backfill has not reached it) is served in display size.
-func (s *Service) Content(ctx context.Context, ownerID uint64, mediaID, size string) (Media, []byte, string, string, error) {
+func (s *Service) Content(ctx context.Context, ownerID uint64, mediaID, size string) (*Media, []byte, string, string, error) {
 	m, err := s.store.owned(ctx, ownerID, mediaID)
 	if err != nil {
-		return Media{}, nil, "", "", err
+		return nil, nil, "", "", err
 	}
 	key, ct := m.ObjectKey, m.ContentType
 	switch {
@@ -255,10 +256,10 @@ func (s *Service) Content(ctx context.Context, ownerID uint64, mediaID, size str
 	}
 	b, err := s.st.Get(ctx, key)
 	if errors.Is(err, storage.ErrNotFound) {
-		return Media{}, nil, "", "", ErrNotFound
+		return nil, nil, "", "", ErrNotFound
 	}
 	if err != nil {
-		return Media{}, nil, "", "", storageFailed(err)
+		return nil, nil, "", "", storageFailed(err)
 	}
 	return m, b, ct, size, nil
 }

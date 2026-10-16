@@ -10,6 +10,8 @@ import (
 
 	"golang.org/x/image/font/sfnt"
 	"golang.org/x/text/unicode/norm"
+
+	"github.com/danyaa666/smemories/internal/apperr"
 )
 
 // Primary is Be Vietnam Pro, full Vietnamese coverage.
@@ -102,13 +104,13 @@ var vnTones = []rune{0, 0x0300, 0x0309, 0x0303, 0x0301, 0x0323} // none, grave, 
 func CheckVietnamese(ttf []byte) error {
 	f, err := sfnt.Parse(ttf)
 	if err != nil {
-		return fmt.Errorf("not a usable TTF: %w", err)
+		return apperr.Wrap(apperr.Internal, err, "not a usable TTF")
 	}
 	var buf sfnt.Buffer
 	has := func(s string) error {
 		for _, r := range norm.NFC.String(s) { // a letter may stay two runes if it has no composed form
 			if idx, err := f.GlyphIndex(&buf, r); err != nil || idx == 0 {
-				return fmt.Errorf("no glyph for %q (%U)", s, r)
+				return apperr.New(apperr.Internal, fmt.Sprintf("no glyph for %q (%U)", s, r))
 			}
 		}
 		return nil

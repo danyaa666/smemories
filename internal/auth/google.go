@@ -19,6 +19,7 @@ import (
 	"github.com/coreos/go-oidc/v3/oidc"
 	"golang.org/x/oauth2"
 
+	"github.com/danyaa666/smemories/internal/apperr"
 	"github.com/danyaa666/smemories/internal/httpx"
 	"github.com/danyaa666/smemories/internal/ratelimit"
 )
@@ -37,6 +38,7 @@ const (
 	googleHTTPTimeout = 5 * time.Second
 	maxReturnToLen    = 200
 	minCookieKeyLen   = 32
+	maxSubjectLen     = 255 // the column is VARCHAR(255)
 
 	// Redirect error codes (the web app localises them).
 	errOIDCState  = "oidc_state"
@@ -46,6 +48,8 @@ const (
 )
 
 // GoogleConfig turns Google sign-in on; see Handler.EnableGoogle.
+//
+// GoogleConfig is passed by value on purpose: start-up settings, read once.
 type GoogleConfig struct {
 	ClientID     string
 	ClientSecret string
@@ -71,9 +75,9 @@ type googleFlow struct {
 func (h *Handler) EnableGoogle(cfg GoogleConfig) error {
 	switch {
 	case cfg.ClientID == "" || cfg.ClientSecret == "" || cfg.Issuer == "" || cfg.RedirectURL == "":
-		return errors.New("auth: google config needs client id, secret, issuer and redirect URL")
+		return apperr.New(apperr.Internal, "auth: google config needs client id, secret, issuer and redirect URL")
 	case len(cfg.CookieKey) < minCookieKeyLen:
-		return fmt.Errorf("auth: google cookie key must be at least %d bytes", minCookieKeyLen)
+		return apperr.New(apperr.Internal, fmt.Sprintf("auth: google cookie key must be at least %d bytes", minCookieKeyLen))
 	}
 	client := cfg.HTTPClient
 	if client == nil {
@@ -119,6 +123,8 @@ func (g *googleFlow) oauth(p *oidc.Provider) *oauth2.Config {
 }
 
 // oidcState is the content of the smem_oidc cookie.
+//
+// oidcState is passed by value on purpose: the decoded cookie payload, a small immutable value.
 type oidcState struct {
 	State    string `json:"s"`
 	Nonce    string `json:"n"`
@@ -232,30 +238,30 @@ func (h *Handler) googleCallback(w http.ResponseWriter, r *http.Request) {
 
 // identity exchanges the code and returns the verified Google identity; on failure it also
 // returns the redirect error code.
-func (g *googleFlow) identity(ctx context.Context, code string, st oidcState) (GoogleIdentity, string, error) {
+func (g *googleFlow) identity(ctx context.Context, code string, st oidcState) (*GoogleIdentity, string, error) {
 	if code == "" {
-		return GoogleIdentity{}, errOIDCFailed, errors.New("no code")
+		return nil, errOIDCFailed, apperr.New(apperr.Internal, "no code")
 	}
 	p, err := g.discover(ctx)
 	if err != nil {
-		return GoogleIdentity{}, errOIDCFailed, err
+		return nil, errOIDCFailed, err
 	}
 	ctx, cancel := g.outbound(ctx)
 	defer cancel()
 	tok, err := g.oauth(p).Exchange(ctx, code, oauth2.VerifierOption(st.Verifier))
 	if err != nil {
-		return GoogleIdentity{}, errOIDCFailed, err
+		return nil, errOIDCFailed, err
 	}
 	raw, _ := tok.Extra("id_token").(string)
 	if raw == "" {
-		return GoogleIdentity{}, errOIDCFailed, errors.New("no id_token")
+		return nil, errOIDCFailed, apperr.New(apperr.Internal, "no id_token")
 	}
 	idt, err := p.Verifier(&oidc.Config{ClientID: g.cfg.ClientID}).Verify(ctx, raw) // signature, iss, aud, exp
 	if err != nil {
-		return GoogleIdentity{}, errOIDCFailed, err
+		return nil, errOIDCFailed, err
 	}
 	if subtle.ConstantTimeCompare([]byte(idt.Nonce), []byte(st.Nonce)) != 1 {
-		return GoogleIdentity{}, errOIDCFailed, errors.New("nonce mismatch")
+		return nil, errOIDCFailed, apperr.New(apperr.Internal, "nonce mismatch")
 	}
 	var c struct {
 		Email         string `json:"email"`
@@ -264,12 +270,12 @@ func (g *googleFlow) identity(ctx context.Context, code string, st oidcState) (G
 		Locale        string `json:"locale"`
 	}
 	if err := idt.Claims(&c); err != nil {
-		return GoogleIdentity{}, errOIDCFailed, err
+		return nil, errOIDCFailed, err
 	}
 	if v, _ := c.EmailVerified.(bool); !v { // the string "true" does not count
-		return GoogleIdentity{}, errUnverified, errors.New("email not verified")
+		return nil, errUnverified, apperr.New(apperr.Internal, "email not verified")
 	}
-	return GoogleIdentity{Subject: idt.Subject, Email: c.Email, Name: c.Name, Locale: c.Locale}, "", nil
+	return &GoogleIdentity{Subject: idt.Subject, Email: c.Email, Name: c.Name, Locale: c.Locale}, "", nil
 }
 
 func redirectLogin(w http.ResponseWriter, code string) {
@@ -312,16 +318,16 @@ type GoogleIdentity struct {
 }
 
 // SignInGoogle links or creates the account for a verified Google identity and signs it in.
-// oldToken (the session cookie the browser sent, if any) is revoked.
+// oldToken (the session cookie the browser sent, if any) is revoked. id.Email is normalised in place.
 //
 // Rules: a known subject signs in; else a verified local account with the same email gets
 // the identity linked; else an unverified local account (possibly squatted by someone who
 // does not own the address) loses its password and sessions, is marked verified and linked;
 // else a social-only account is created.
-func (s *Service) SignInGoogle(ctx context.Context, userAgent, oldToken string, id GoogleIdentity) (User, Session, error) {
+func (s *Service) SignInGoogle(ctx context.Context, userAgent, oldToken string, id *GoogleIdentity) (*User, *Session, error) {
 	id.Email = normalizeEmail(id.Email)
-	if !validEmail(id.Email) || id.Subject == "" || len(id.Subject) > 255 {
-		return User{}, Session{}, errors.New("auth: google identity without usable subject or email")
+	if !validEmail(id.Email) || id.Subject == "" || len(id.Subject) > maxSubjectLen {
+		return nil, nil, apperr.New(apperr.Internal, "auth: google identity without usable subject or email")
 	}
 	now := s.now().UTC()
 	name, ok := cleanDisplayName(id.Name)
@@ -335,9 +341,9 @@ func (s *Service) SignInGoogle(ctx context.Context, userAgent, oldToken string, 
 	if strings.HasPrefix(strings.ToLower(id.Locale), "vi") {
 		locale = "vi"
 	}
-	u, err := s.store.googleUser(ctx, id, User{DisplayName: name, Locale: locale}, now, s.sessions.DeleteAll)
+	u, err := s.store.googleUser(ctx, id, &User{DisplayName: name, Locale: locale}, now, s.sessions.DeleteAll)
 	if err != nil {
-		return User{}, Session{}, err
+		return nil, nil, err
 	}
 	return s.issue(ctx, u, userAgent, oldToken)
 }
