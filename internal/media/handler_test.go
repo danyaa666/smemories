@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/danyaa666/smemories/internal/auth"
 	"github.com/danyaa666/smemories/internal/httpx"
 )
 
@@ -164,7 +165,7 @@ func TestCreateBusyWhenTooManyInFlight(t *testing.T) {
 	h := &Handler{inflight: make(chan struct{}, 1), logger: nopLogger()}
 	h.inflight <- struct{}{} // one upload already running
 	rec := httptest.NewRecorder()
-	h.create(rec, httptest.NewRequest("POST", "/api/media/create", nil).WithContext(context.Background()))
+	h.create(rec, httptest.NewRequest("POST", "/api/media/create", nil).WithContext(auth.WithUser(context.Background(), &auth.User{InternalID: 1})))
 	if rec.Code != 503 || rec.Header().Get("Retry-After") == "" || !strings.Contains(rec.Body.String(), `"ERROR_BUSY"`) {
 		t.Fatalf("got %d %s", rec.Code, rec.Body)
 	}

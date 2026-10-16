@@ -18,7 +18,10 @@ type countsOut struct {
 }
 
 func (h *Handler) listNotes(w http.ResponseWriter, r *http.Request) {
-	u, _ := auth.UserFrom(r.Context())
+	u, ok := auth.MustUser(w, r)
+	if !ok {
+		return
+	}
 	limit, err := httpx.ParseLimit(r, DefaultNoteListLimit, MaxNoteListLimit)
 	if err != nil {
 		h.fail(w, r, err)
@@ -35,7 +38,10 @@ func (h *Handler) listNotes(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) updateStatus(w http.ResponseWriter, r *http.Request) {
-	u, _ := auth.UserFrom(r.Context())
+	u, ok := auth.MustUser(w, r)
+	if !ok {
+		return
+	}
 	var in moderationInput
 	if !httpx.DecodeJSON(w, r, &in) {
 		return
@@ -49,7 +55,10 @@ func (h *Handler) updateStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) reorder(w http.ResponseWriter, r *http.Request) {
-	u, _ := auth.UserFrom(r.Context())
+	u, ok := auth.MustUser(w, r)
+	if !ok {
+		return
+	}
 	var in moderationInput
 	if !httpx.DecodeJSON(w, r, &in) {
 		return
@@ -62,7 +71,10 @@ func (h *Handler) reorder(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) deleteNotes(w http.ResponseWriter, r *http.Request) {
-	u, _ := auth.UserFrom(r.Context())
+	u, ok := auth.MustUser(w, r)
+	if !ok {
+		return
+	}
 	var in moderationInput
 	if !httpx.DecodeJSON(w, r, &in) {
 		return

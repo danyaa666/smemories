@@ -97,7 +97,10 @@ type idInput struct {
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
-	u, _ := auth.UserFrom(r.Context())
+	u, ok := auth.MustUser(w, r)
+	if !ok {
+		return
+	}
 	var in createInput
 	if !httpx.DecodeJSON(w, r, &in) {
 		return
@@ -111,7 +114,10 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
-	u, _ := auth.UserFrom(r.Context())
+	u, ok := auth.MustUser(w, r)
+	if !ok {
+		return
+	}
 	cs, err := h.svc.ListCollections(r.Context(), u.InternalID, r.URL.Query().Get("yearbook_id"))
 	if err != nil {
 		h.fail(w, r, err)
@@ -125,7 +131,10 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) revoke(w http.ResponseWriter, r *http.Request) {
-	u, _ := auth.UserFrom(r.Context())
+	u, ok := auth.MustUser(w, r)
+	if !ok {
+		return
+	}
 	var in idInput
 	if !httpx.DecodeJSON(w, r, &in) {
 		return

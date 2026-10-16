@@ -50,12 +50,6 @@ type (
 	}
 )
 
-// caller is the signed-in user; RequireUser has always stored it by now.
-func caller(r *http.Request) *auth.User {
-	u, _ := auth.UserFrom(r.Context())
-	return u
-}
-
 // required is ERROR_PARAM for a missing id.
 func required(w http.ResponseWriter, r *http.Request, id, name string) bool {
 	if id == "" {
@@ -65,54 +59,77 @@ func required(w http.ResponseWriter, r *http.Request, id, name string) bool {
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
+	u, ok := auth.MustUser(w, r)
+	if !ok {
+		return
+	}
 	var in BookInput
 	if !httpx.DecodeJSON(w, r, &in) {
 		return
 	}
-	u := caller(r)
 	y, err := h.svc.Create(r.Context(), u.InternalID, u.DisplayName, &in)
 	respond(w, r, y, err)
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
+	u, ok := auth.MustUser(w, r)
+	if !ok {
+		return
+	}
 	limit, err := httpx.ParseLimit(r, DefaultListLimit, MaxListLimit)
 	if err != nil {
 		fail(w, r, err)
 		return
 	}
-	books, next, err := h.svc.List(r.Context(), caller(r).InternalID, limit, r.URL.Query().Get("next_id"))
+	books, next, err := h.svc.List(r.Context(), u.InternalID, limit, r.URL.Query().Get("next_id"))
 	respond(w, r, httpx.Page[Yearbook]{Items: books, NextID: next}, err)
 }
 
 func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
+	u, ok := auth.MustUser(w, r)
+	if !ok {
+		return
+	}
 	id := r.URL.Query().Get("id")
 	if required(w, r, id, "id") {
-		y, err := h.svc.Get(r.Context(), caller(r).InternalID, id)
+		y, err := h.svc.Get(r.Context(), u.InternalID, id)
 		respond(w, r, y, err)
 	}
 }
 
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
+	u, ok := auth.MustUser(w, r)
+	if !ok {
+		return
+	}
 	var in updateInput
 	if httpx.DecodeJSON(w, r, &in) && required(w, r, in.ID, "id") {
-		y, err := h.svc.Update(r.Context(), caller(r).InternalID, in.ID, &in.BookInput)
+		y, err := h.svc.Update(r.Context(), u.InternalID, in.ID, &in.BookInput)
 		respond(w, r, y, err)
 	}
 }
 
 func (h *Handler) updateProfile(w http.ResponseWriter, r *http.Request) {
+	u, ok := auth.MustUser(w, r)
+	if !ok {
+		return
+	}
 	var in profileUpdateInput
 	if httpx.DecodeJSON(w, r, &in) && required(w, r, in.YearbookID, "yearbook_id") {
-		y, err := h.svc.UpdateProfile(r.Context(), caller(r).InternalID, in.YearbookID, &in.ProfileInput)
+		y, err := h.svc.UpdateProfile(r.Context(), u.InternalID, in.YearbookID, &in.ProfileInput)
 		respond(w, r, y, err)
 	}
 }
 
 // delete removes the book's stored files first: if the object store fails, nothing is deleted and the caller can retry.
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
+	u, ok := auth.MustUser(w, r)
+	if !ok {
+		return
+	}
 	var in deleteInput
 	if httpx.DecodeJSON(w, r, &in) && required(w, r, in.ID, "id") {
-		respond(w, r, nil, h.svc.Delete(r.Context(), caller(r).InternalID, in.ID))
+		respond(w, r, nil, h.svc.Delete(r.Context(), u.InternalID, in.ID))
 	}
 }
 
