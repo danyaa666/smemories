@@ -20,7 +20,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?)
 
-_Board last written 2026-10-15 16:38Z_
+_Board last written 2026-10-16 01:36Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -2895,7 +2895,7 @@ Moves the media endpoints to /api/media/* (multipart create, binary get-content)
 - **Branch:** task/t-070-e10-api-v2-yearbook-domain-with-a-servic
 - **PR:** https://github.com/danyaa666/smemories/pull/56
 - **Updated:** 2026-10-15 14:19Z by human
-- **Comments-seen:** 9
+- **Comments-seen:** 10
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/08-api-yearbook.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2937,7 +2937,7 @@ Moves the yearbook endpoints to /api/yearbook/*, introduces yearbook.Service (ru
 - **Branch:** task/t-071-e10-api-v2-auth-and-user-domain-remove-t
 - **PR:** https://github.com/danyaa666/smemories/pull/58
 - **Updated:** 2026-10-15 14:52Z by leader
-- **Comments-seen:** 4
+- **Comments-seen:** 6
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/09-api-auth.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -3013,7 +3013,7 @@ Turns the remaining skill rules into lint (mnd, forbidigo), fixes what they find
 - **Branch:** task/t-073-e10-observability-request-metrics-middle
 - **PR:** https://github.com/danyaa666/smemories/pull/55
 - **Updated:** 2026-10-15 14:19Z by human
-- **Comments-seen:** 6
+- **Comments-seen:** 7
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/11-metrics.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
