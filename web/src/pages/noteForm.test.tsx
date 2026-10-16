@@ -102,6 +102,10 @@ beforeEach(() => {
 });
 afterEach(() => vi.useRealTimers());
 
+// the draft is stored under a hash of the link token, never the token itself
+const draftStorageKey = () =>
+  Object.keys(window.localStorage).find((k) => k.startsWith("smemories.note-draft.")) ?? "none";
+
 async function fill(u: ReturnType<typeof user>, name = "Khoa", message = "Thanks for everything") {
   const nameInput = await screen.findByLabelText(/Your name/);
   if (name) await u.type(nameInput, name);
@@ -113,7 +117,7 @@ const send = (u: ReturnType<typeof user>) =>
 describe("public note form", () => {
   it("builds the form from the API fields in the page language, with optional marks and counters", async () => {
     load();
-    renderApp("/n/abc");
+    renderApp("/c/abc");
     expect(await screen.findByRole("heading", { name: "Linh's yearbook" })).toBeInTheDocument();
     expect(screen.getByLabelText("Your name")).toHaveAttribute("placeholder", "e.g. Minh Khoa");
     expect(screen.getByLabelText("Your relationship (optional)")).toBeInTheDocument();
@@ -128,7 +132,7 @@ describe("public note form", () => {
 
   it("does not send with a required field empty: names it, focuses the first, no request", async () => {
     load();
-    renderApp("/n/abc");
+    renderApp("/c/abc");
     const u = user();
     await fill(u, "", "Hello");
     await send(u);
@@ -140,7 +144,7 @@ describe("public note form", () => {
   it("sends answers before photos, trims, skips empty optional fields, then shows the sent screen", async () => {
     load();
     reply(accept);
-    renderApp("/n/abc");
+    renderApp("/c/abc");
     const u = user();
     await fill(u, "  Khoa ", "Hi\nthere");
     await u.upload(document.querySelector<HTMLInputElement>('input[type="file"]')!, [
@@ -163,7 +167,7 @@ describe("public note form", () => {
       "href",
       "/register",
     );
-    expect(window.localStorage.getItem("smemories.note-draft.abc")).toBeNull();
+    expect(window.localStorage.getItem(draftStorageKey())).toBeNull();
     await u.click(screen.getByRole("button", { name: "Write another note" }));
     expect(screen.getByLabelText("Your name")).toHaveValue("");
   });
@@ -171,7 +175,7 @@ describe("public note form", () => {
   it("sends the honeypot part only when something filled it", async () => {
     load();
     reply(accept);
-    renderApp("/n/abc");
+    renderApp("/c/abc");
     const u = user();
     await fill(u);
     await u.type(document.querySelector<HTMLInputElement>('input[name="website"]')!, "http://spam");
@@ -182,15 +186,28 @@ describe("public note form", () => {
 
   it("keeps the text answers in localStorage while open and restores them", async () => {
     load();
-    const first = renderApp("/n/abc");
+    const first = renderApp("/c/abc");
     const u = user();
     await fill(u, "Khoa", "draft text");
-    expect(JSON.parse(window.localStorage.getItem("smemories.note-draft.abc")!)).toMatchObject({
+    expect(JSON.parse(window.localStorage.getItem(draftStorageKey())!)).toMatchObject({
       message: "draft text",
     });
+    expect(draftStorageKey()).not.toBe("smemories.note-draft.abc");
     first.unmount();
-    renderApp("/n/abc");
+    renderApp("/c/abc");
     expect(await screen.findByLabelText("Your message")).toHaveValue("draft text");
+  });
+
+  it("sends no referrer and asks not to be indexed while the page is open", async () => {
+    load();
+    const view = renderApp("/c/abc");
+    await screen.findByLabelText("Your message");
+    expect(
+      document.head.querySelector('meta[name="referrer"][content="no-referrer"]'),
+    ).not.toBeNull();
+    expect(document.head.querySelector('meta[name="robots"][content="noindex"]')).not.toBeNull();
+    view.unmount();
+    expect(document.head.querySelector('meta[name="referrer"]')).toBeNull();
   });
 
   it("works when storage is blocked", async () => {
@@ -199,7 +216,7 @@ describe("public note form", () => {
       throw new Error("blocked");
     });
     reply(accept);
-    renderApp("/n/abc");
+    renderApp("/c/abc");
     const u = user();
     await fill(u);
     await send(u);
@@ -211,7 +228,7 @@ describe("public note form", () => {
 
     it("checks type, size and count in the browser", async () => {
       load();
-      renderApp("/n/abc");
+      renderApp("/c/abc");
       const u = user();
       await screen.findByLabelText("Your name");
       await u.upload(input(), photo("pic.heic", "image/heic"));
@@ -232,7 +249,7 @@ describe("public note form", () => {
     it("shows the photo panel on a rejection without naming a photo; Send without photos resends the text only", async () => {
       load();
       reply(reject(400, "ERROR_INVALID_IMAGE"), accept);
-      renderApp("/n/abc");
+      renderApp("/c/abc");
       const u = user();
       await fill(u);
       await u.upload(input(), [photo("a.jpg"), photo("b.jpg")]);
@@ -248,7 +265,7 @@ describe("public note form", () => {
     it("Try again resends with the photos; Remove photos clears them", async () => {
       load();
       reply(reject(415, "ERROR_UNSUPPORTED_MEDIA_TYPE"), reject(400, "ERROR_INVALID_IMAGE"));
-      renderApp("/n/abc");
+      renderApp("/c/abc");
       const u = user();
       await fill(u);
       await u.upload(input(), photo("a.jpg"));
@@ -266,7 +283,7 @@ describe("public note form", () => {
     load();
     reply(() => {}); // the server never answers
     vi.useFakeTimers({ shouldAdvanceTime: true });
-    renderApp("/n/abc");
+    renderApp("/c/abc");
     const u = userEvent.setup({ applyAccept: false, advanceTimers: vi.advanceTimersByTime });
     await fill(u);
     await send(u);
@@ -286,7 +303,7 @@ describe("public note form", () => {
     it("503 busy is resent after Retry-After and then succeeds", async () => {
       load();
       reply(reject(503, "ERROR_BUSY", "busy", { "Retry-After": "1" }), accept);
-      renderApp("/n/abc");
+      renderApp("/c/abc");
       const u = user();
       await fill(u);
       await send(u);
@@ -298,7 +315,7 @@ describe("public note form", () => {
     it("a network error keeps the answers, sends once, and the user presses Send again", async () => {
       load();
       reply(networkError, accept);
-      renderApp("/n/abc");
+      renderApp("/c/abc");
       const u = user();
       await fill(u);
       await send(u);
@@ -314,7 +331,7 @@ describe("public note form", () => {
     it("408 request timeout asks to press Send again and keeps the form", async () => {
       load();
       reply(reject(408, "ERROR_REQUEST_TIMEOUT"));
-      renderApp("/n/abc");
+      renderApp("/c/abc");
       const u = user();
       await fill(u);
       await send(u);
@@ -328,7 +345,7 @@ describe("public note form", () => {
         reject(400, "ERROR_MISSING_ANSWER", "missing answer for field name"),
         reject(400, "ERROR_INVALID_ANSWER", "invalid answer for field message"),
       );
-      renderApp("/n/abc");
+      renderApp("/c/abc");
       const u = user();
       await fill(u);
       await send(u);
@@ -346,7 +363,7 @@ describe("public note form", () => {
     it("a full link on submit shows the full screen with the owner's name and no number", async () => {
       load();
       reply(reject(409, "ERROR_COLLECTION_FULL"));
-      renderApp("/n/abc");
+      renderApp("/c/abc");
       const u = user();
       await fill(u);
       await send(u);
@@ -360,7 +377,7 @@ describe("public note form", () => {
   describe("dead links", () => {
     it("404 (revoked, unknown, malformed) shows one screen with no name and no form", async () => {
       mockApi({ [GET]: () => err(404, "not_found") });
-      renderApp("/n/abc");
+      renderApp("/c/abc");
       expect(
         await screen.findByRole("heading", { name: "This link doesn't work anymore" }),
       ).toBeInTheDocument();
@@ -370,7 +387,7 @@ describe("public note form", () => {
 
     it("410 expired is the closed screen, before the friend writes anything", async () => {
       mockApi({ [GET]: () => err(410, "collection_closed") });
-      renderApp("/n/abc");
+      renderApp("/c/abc");
       expect(
         await screen.findByRole("heading", { name: "This link has closed" }),
       ).toBeInTheDocument();
@@ -379,7 +396,7 @@ describe("public note form", () => {
 
     it("409 full on the lookup is the full screen", async () => {
       mockApi({ [GET]: () => err(409, "collection_full") });
-      renderApp("/n/abc");
+      renderApp("/c/abc");
       expect(await screen.findByRole("heading", { name: "This link is full" })).toBeInTheDocument();
       expect(screen.getByText(/Ask the owner to open a new link/)).toBeInTheDocument();
     });
@@ -387,7 +404,7 @@ describe("public note form", () => {
     it("any other lookup failure offers Try again", async () => {
       let n = 0;
       mockApi({ [GET]: () => (n++ ? ok(formData) : err(500, "internal_error")) });
-      renderApp("/n/abc");
+      renderApp("/c/abc");
       const u = user();
       await u.click(await screen.findByRole("button", { name: "Try again" }));
       expect(await screen.findByLabelText("Your name")).toBeInTheDocument();
@@ -395,7 +412,7 @@ describe("public note form", () => {
 
     it("needs no session: the page never asks for the current user", async () => {
       const calls = load();
-      renderApp("/n/abc");
+      renderApp("/c/abc");
       await screen.findByLabelText("Your name");
       expect(calls.map((c) => c.path)).toEqual(["/public-collect/get?token=abc"]);
     });

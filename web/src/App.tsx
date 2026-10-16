@@ -32,7 +32,7 @@ export function App() {
   }
   return (
     <Routes>
-      <Route path="/n/:token" element={<NoteForm />} />
+      <Route path="/c/:token" element={<NoteForm />} />
       <Route element={<PublicLayout />}>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />

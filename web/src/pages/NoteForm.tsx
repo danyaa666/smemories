@@ -45,7 +45,20 @@ const deadOf = (e: unknown): Dead | undefined =>
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 // Text answers survive a reload while the form is open (never the photos). Storage may be blocked: every access is guarded.
-const draftKey = (token: string) => `smemories.note-draft.${token}`;
+// The link token is a bearer secret: the storage key holds only a hash of it (cyrb53), never the token.
+function hashToken(s: string): string {
+  let h1 = 0xdeadbeef;
+  let h2 = 0x41c6ce57;
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 2654435761);
+    h2 = Math.imul(h2 ^ c, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
+}
+const draftKey = (token: string) => `smemories.note-draft.${hashToken(token)}`;
 function loadDraft(token: string, fields: NoteField[]): Record<string, string> {
   try {
     const raw: unknown = JSON.parse(window.localStorage.getItem(draftKey(token)) ?? "{}");
@@ -77,12 +90,13 @@ export function NoteForm() {
   const form = useQuery({ queryKey: ["public-collect", token], queryFn: () => getNoteForm(token) });
   const [dead, setDead] = useState<Dead>();
   useEffect(() => {
-    // a link is a secret: keep it out of search indexes
-    const meta = document.createElement("meta");
-    meta.name = "robots";
-    meta.content = "noindex";
-    document.head.append(meta);
-    return () => meta.remove();
+    // a link is a secret: keep it out of search indexes and never send it in a Referer header
+    const metas = [
+      ["robots", "noindex"],
+      ["referrer", "no-referrer"],
+    ].map(([name, content]) => Object.assign(document.createElement("meta"), { name, content }));
+    document.head.append(...metas);
+    return () => metas.forEach((m) => m.remove());
   }, []);
 
   const d = dead ?? deadOf(form.error);
