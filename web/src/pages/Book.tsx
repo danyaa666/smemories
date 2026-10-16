@@ -8,6 +8,7 @@ import { retryOnce } from "../api/notes";
 import { errorText } from "../auth/errors";
 import { BookPages, pageCount } from "../book/BookPages";
 import { useFitReport } from "../book/fit";
+import { noteFits, ownFits } from "../book/fitReport";
 import { photoIds, useFontsLoaded, usePhotoPreload } from "../book/ready";
 import { SIZES, pageCss, pagePx } from "../book/sizes";
 import "../book/book.css";
@@ -54,7 +55,7 @@ export function Book() {
           </Link>
         </div>
       )}
-      {q.data && <BookScreen data={q.data} />}
+      {q.data && <BookScreen data={q.data} bookId={id} />}
     </>
   );
 }
@@ -79,7 +80,7 @@ function useStageScale(size: keyof typeof SIZES) {
   return { ref, scale };
 }
 
-function BookScreen({ data }: { data: BookData }) {
+function BookScreen({ data, bookId }: { data: BookData; bookId: string }) {
   const { t, i18n } = useTranslation();
   const size = data.yearbook.page_size;
   const language = data.yearbook.language;
@@ -114,10 +115,9 @@ function BookScreen({ data }: { data: BookData }) {
     };
   }, [ready, pages]);
 
-  const fit = Object.entries(states);
-  const cutNotes = fit.filter(([k, s]) => s === "overflow" && k.startsWith("note:")).length;
-  const cutOther = fit.filter(([k, s]) => s === "overflow" && !k.startsWith("note:")).length;
-  const smaller = fit.filter(([, s]) => s === "shrunk").length;
+  const fits = useMemo(() => noteFits(states, data), [states, data]);
+  const cutNotes = fits.filter((f) => f.cut).length;
+  const { cut: cutOther, smaller } = ownFits(states);
   const stageStyle = {
     "--pw": `${SIZES[size].w}mm`,
     "--ph": `${SIZES[size].h}mm`,
@@ -148,6 +148,28 @@ function BookScreen({ data }: { data: BookData }) {
           <Banner variant="warning">{t("print.cutOther", { count: cutOther })}</Banner>
         )}
         {smaller > 0 && <p>{t("print.smaller", { count: smaller })}</p>}
+        {fits.length > 0 && (
+          <details className="bk-fits" open={cutNotes > 0 || fits.length <= 10}>
+            <summary>{t("print.fitTitle", { count: fits.length })}</summary>
+            <p>{t("print.fitHelp")}</p>
+            <ul>
+              {fits.map((f) => {
+                const name = f.name || t("print.fitNoName", { number: f.number });
+                return (
+                  <li key={f.id}>
+                    {t(f.cut ? "print.fitCut" : "print.fitSmaller", { name, pt: f.pt })}{" "}
+                    <Link
+                      to={`/yearbooks/${bookId}/notes?note=${encodeURIComponent(f.id)}`}
+                      aria-label={t("print.fitOpenFor", { name })}
+                    >
+                      {t("print.fitOpen")}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </details>
+        )}
         <p role="status">
           {ready
             ? t("print.ready", { pages })

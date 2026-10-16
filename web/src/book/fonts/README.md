@@ -7,3 +7,17 @@ this folder; the book renderer makes no request to Google. They are part of the 
 
 Vietnamese coverage of the families (148 Vietnamese letters checked with fontTools): Nunito and Cormorant Garamond 148/148,
 Jost 56, Fredoka 46, Gaegu 14. See `docs/adr/0003-html-print-export.md`.
+
+## Vietnamese-capable lookalikes (T-059)
+
+Fredoka (rounded titles) and Gaegu (handwriting) of the memory-book canvas have no usable Vietnamese (46 and 14 of 148 letters), so
+the `memory-book` template uses lookalikes that cover all of it. Same source and method as above (Google Fonts, latin, latin-ext and
+vietnamese subsets, woff2, served from this folder). Licence texts: `OFL-Baloo2.txt`, `OFL-PatrickHand.txt` (SIL OFL 1.1).
+
+| Family                                 | Replaces | Source                                                      | Files                                            | Vietnamese letters (fontTools: every letter with its tone marks, both cases) | Licence                        |
+| -------------------------------------- | -------- | ----------------------------------------------------------- | ------------------------------------------------ | ---------------------------------------------------------------------------- | ------------------------------ |
+| Baloo 2 (variable, weights 400 to 800) | Fredoka  | fonts.google.com/specimen/Baloo+2, EkType                   | `Baloo2-{latin,latin-ext,vietnamese}.woff2`      | 148                                                                          | OFL 1.1, `OFL-Baloo2.txt`      |
+| Patrick Hand (400)                     | Gaegu    | fonts.google.com/specimen/Patrick+Hand, Patrick Wagesreiter | `PatrickHand-{latin,latin-ext,vietnamese}.woff2` | 148                                                                          | OFL 1.1, `OFL-PatrickHand.txt` |
+
+Both are used for English and Vietnamese books alike, so a Vietnamese name in an English book does not fall back letter by letter.
+Fredoka and Gaegu stay in this folder for the first designs; nothing loads them unless a template names them.

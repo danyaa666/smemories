@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import type { BookData, BookNote } from "../../api/book";
 import { basic } from "./basic";
+import { memoryBook } from "./memory";
 
 /**
  * A template is a set of page components registered under its id (`yearbook.template_id`). The notes page repeats:
@@ -12,11 +13,12 @@ export type Template = {
   notesPerPage: number;
   Cover: ComponentType<{ data: BookData }>;
   Profile: ComponentType<{ data: BookData }>;
-  Notes: ComponentType<{ notes: BookNote[] }>;
+  /** `first` is the index of the first note of the page in the book, `data` the whole book (title, year for the footer). */
+  Notes: ComponentType<{ notes: BookNote[]; data: BookData; first: number }>;
   Back: ComponentType<{ data: BookData }>;
 };
 
-const TEMPLATES: Record<string, Template> = { [basic.id]: basic };
+const TEMPLATES: Record<string, Template> = { [basic.id]: basic, [memoryBook.id]: memoryBook };
 
 /** The template of that id, else the built-in one (a book whose template was never chosen, or one this build does not know). */
 export const getTemplate = (id: string | null): Template =>

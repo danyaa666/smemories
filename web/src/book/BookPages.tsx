@@ -31,8 +31,8 @@ export const BookPages = memo(function BookPages({
     <BookEnvProvider value={env}>
       <tpl.Cover data={data} />
       <tpl.Profile data={data} />
-      {noteGroups.map((g) => (
-        <tpl.Notes key={g[0]?.id} notes={g} />
+      {noteGroups.map((g, gi) => (
+        <tpl.Notes key={g[0]?.id} notes={g} data={data} first={gi * tpl.notesPerPage} />
       ))}
       <tpl.Back data={data} />
     </BookEnvProvider>

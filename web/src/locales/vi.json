@@ -408,7 +408,36 @@
       "first_impression": "Ấn tượng đầu tiên",
       "best_memory": "Kỷ niệm đẹp nhất của chúng ta",
       "wish": "Điều mình ước cho bạn",
-      "advice": "Lời khuyên"
+      "advice": "Lời khuyên",
+      "name": "Tên",
+      "nickname": "Biệt danh",
+      "relationship": "Mối quan hệ",
+      "message": "Lời nhắn"
+    },
+    "memory": {
+      "belongs": "cuốn lưu bút này là của",
+      "owner": "{{name}}",
+      "sticker": "viết\nvào đây\nnhé!",
+      "ownerOf": "chủ nhân của cuốn lưu bút này",
+      "fullName": "Họ và tên",
+      "nickname": "Biệt danh",
+      "class": "Lớp",
+      "school": "Trường",
+      "friendTitle": "Từ một người bạn",
+      "stickPhoto": "dán ảnh\ncủa bạn vào đây",
+      "no": "Số",
+      "touchTitle": "Giữ liên lạc nhé",
+      "touchSub": "để mình không lạc mất nhau",
+      "colName": "Họ tên",
+      "colPhone": "Số điện thoại",
+      "colSocial": "Facebook / Zalo / IG",
+      "colBirthday": "Sinh nhật",
+      "pact": "Hẹn ngày gặp lại",
+      "pactSub": "hứa sẽ gặp lại, không được thất hẹn!",
+      "date": "Ngày",
+      "place": "Địa điểm",
+      "graduation": "Năm tốt nghiệp",
+      "forYou": "gửi {{name}}"
     }
   },
   "print": {
@@ -428,6 +457,13 @@
     "help1": "Máy in: chọn \"Lưu dưới dạng PDF\".",
     "help2": "Khổ giấy: {{size}}.",
     "help3": "Lề: Không có. Tỷ lệ: 100 %.",
-    "help4": "Tắt \"Đầu trang và chân trang\", bật \"Đồ họa nền\"."
+    "help4": "Tắt \"Đầu trang và chân trang\", bật \"Đồ họa nền\".",
+    "fitTitle": "Lời nhắn bị thu nhỏ chữ hoặc bị cắt bớt: {{count}}",
+    "fitHelp": "Mở lời nhắn trong hộp thư để ẩn đi, hoặc nhờ bạn viết ngắn lại.",
+    "fitSmaller": "{{name}}, {{pt}} pt",
+    "fitCut": "{{name}}, {{pt}} pt, vẫn bị cắt bớt",
+    "fitNoName": "Lời nhắn thứ {{number}}",
+    "fitOpen": "Mở trong hộp thư",
+    "fitOpenFor": "Mở lời nhắn của {{name}} trong hộp thư"
   }
 }

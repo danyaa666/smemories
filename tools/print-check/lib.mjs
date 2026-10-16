@@ -82,7 +82,15 @@ export function inspect(file) {
     .map((l) => ({ name: l.split(/\s+/)[0], emb: /\s(yes|no)\s+(yes|no)\s+(yes|no)\s+\d+\s+\d+\s*$/.exec(l)?.[1] }));
   const images = run("pdfimages", "-list", file).split("\n").slice(2).filter(Boolean).map((l) => l.trim().split(/\s+/));
   // columns: page num type width height color comp bpc enc interp object ID x-ppi y-ppi size ratio
-  const photos = images.filter((c) => c[2] === "image" && c[5] !== "gray" && Number(c[3]) >= 400);
+  // A picture drawn on more than 3 pages is the paper texture of a template (the dotted paper), not a photo; a photo is counted once.
+  const pagesOf = new Map();
+  for (const c of images) pagesOf.set(c[10], (pagesOf.get(c[10]) ?? 0) + 1);
+  const seen = new Set();
+  const photos = images.filter((c) => {
+    const isPhoto = c[2] === "image" && c[5] !== "gray" && Number(c[3]) >= 400 && pagesOf.get(c[10]) <= 3 && !seen.has(c[10]);
+    if (isPhoto) seen.add(c[10]);
+    return isPhoto;
+  });
   const ppis = photos.map((c) => Number(c[12]));
   return {
     pages: Number(get(/Pages:\s+(\d+)/)),

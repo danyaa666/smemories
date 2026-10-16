@@ -6,7 +6,7 @@ import {
 } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { ApiError } from "../api/client";
 import {
   BATCH_MAX,
@@ -91,7 +91,9 @@ function Inbox({ bookId }: { bookId: string }) {
   const { t, i18n } = useTranslation();
   const qc = useQueryClient();
   const wide = useMediaQuery("(min-width: 960px)");
-  const [filter, setFilter] = useState<Filter>("all");
+  // A link from the print screen (?note=<id>) opens the approved tab at that note (see the effect below).
+  const linked = useSearchParams()[0].get("note") ?? "";
+  const [filter, setFilter] = useState<Filter>(linked ? "approved" : "all");
   const [sel, setSel] = useState<string[]>([]);
   const [confirm, setConfirm] = useState<string[] | null>(null);
   const [ordering, setOrdering] = useState(false);
@@ -143,6 +145,19 @@ function Inbox({ bookId }: { bookId: string }) {
     refocus.current = undefined;
     target?.focus();
   }, [pending, items.length, list.isFetching]);
+
+  // the linked note: scrolled into view once, its ••• button focused (the card is found by comparing ids, never by building a selector)
+  const linkedShown = useRef(false);
+  useEffect(() => {
+    if (!linked || linkedShown.current) return;
+    const card = [...document.querySelectorAll<HTMLElement>("[data-note-id]")].find(
+      (c) => c.dataset.noteId === linked,
+    );
+    if (!card) return;
+    linkedShown.current = true;
+    card.scrollIntoView?.({ block: "center" });
+    card.querySelector<HTMLElement>("[aria-haspopup]")?.focus();
+  }, [linked, items.length]);
 
   // the list is the freshest source of the counts: share it with the tabs, the header and the sidebar badge
   useEffect(() => {
