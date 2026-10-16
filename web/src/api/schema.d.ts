@@ -607,7 +607,7 @@ export interface paths {
         };
         /**
          * Read the whole book for the browser renderer
-         * @description Called by the signed-in owner's book screens (preview and print) to draw the book from one request (decision D-24): the yearbook, the owner's profile and the approved notes, nothing else. Notes are in book order (the order of `GET /api/note/get-list?status=approved`); pending and hidden notes never appear. At most 300 notes with at most 3 photos each; a book with more approved notes is cut after the 300th (`note_count` is the number returned). Media are public ids; the bytes come from `GET /api/media/get-content?id=&variant=print`. The answers are stored text: render them escaped, never as HTML. No storage key, hash, email, birthday or internal id is part of the answer. `yearbook_id` must be a canonical ULID (26 upper-case characters), else `ERROR_PARAM`. Needs a verified email (`ERROR_EMAIL_NOT_VERIFIED`, as the note list). A missing yearbook and one owned by someone else both answer `ERROR_NOT_FOUND`. Safe to repeat.
+         * @description Called by the signed-in owner's book screens (preview and print) to draw the book from one request (decision D-24): the yearbook, the owner's profile and the approved notes, nothing else. Notes are in book order (the order of `GET /api/note/get-list?status=approved`); pending and hidden notes never appear. At most 300 notes with at most 3 photos each. A book with more approved notes is cut after the 300th in book order, never silently: `truncated` (always present) is true and `approved_total` is the real number of approved notes, while `note_count` stays the number returned. The renderer must show a visible warning when `truncated` is true. The answer is about 690 KB for 300 notes with 3 photos and the longest answers of the built-in templates; the API does not compress it. Media are public ids; the bytes come from `GET /api/media/get-content?id=&variant=print`. The answers are stored text: render them escaped, never as HTML. No storage key, hash, email, birthday or internal id is part of the answer. `yearbook_id` must be a canonical ULID (26 upper-case characters), else `ERROR_PARAM`. Needs a verified email (`ERROR_EMAIL_NOT_VERIFIED`, as the note list). A missing yearbook and one owned by someone else both answer `ERROR_NOT_FOUND`. Safe to repeat.
          */
         get: operations["getBookData"];
         put?: never;
@@ -1219,6 +1219,10 @@ export interface components {
                 }[];
                 /** @description Number of notes in `notes`. */
                 note_count: number;
+                /** @description Number of approved notes the book has, also when more than 300 (then `notes` holds the first 300 in book order). */
+                approved_total: number;
+                /** @description True when the book has more approved notes than the 300 returned (`approved_total` > `note_count`); the renderer shows a warning. Always present. */
+                truncated: boolean;
             };
         };
         NoteUpdateStatusRequest: {

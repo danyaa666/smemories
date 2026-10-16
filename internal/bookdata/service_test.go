@@ -21,12 +21,13 @@ func (f *fakeBooks) Get(context.Context, uint64, string) (*yearbook.Yearbook, er
 }
 
 type fakeNotes struct {
-	ns  []*notes.BookNote
-	err error
+	ns    []*notes.BookNote
+	total int
+	err   error
 }
 
-func (f fakeNotes) ApprovedNotes(context.Context, uint64, bool, string) ([]*notes.BookNote, error) {
-	return f.ns, f.err
+func (f fakeNotes) ApprovedNotes(context.Context, uint64, bool, string) ([]*notes.BookNote, int, error) {
+	return f.ns, f.total, f.err
 }
 
 // The notes call validates the id, so its error wins and the book is not read; a missing book is its own error.
@@ -42,8 +43,8 @@ func TestGetErrorsAndShape(t *testing.T) {
 	}
 	year := 2026
 	y := &yearbook.Yearbook{Title: "T", GraduationYear: &year, Profile: yearbook.Profile{FullName: "An", Birthday: new(string)}}
-	got, err := NewService(&fakeBooks{y: y}, fakeNotes{ns: []*notes.BookNote{{ID: "N1"}, {ID: "N2"}}}).Get(context.Background(), 1, true, "x")
-	if err != nil || got.NoteCount != 2 || got.Yearbook.Title != "T" || *got.Yearbook.GraduationYear != 2026 || got.Profile.FullName != "An" {
+	got, err := NewService(&fakeBooks{y: y}, fakeNotes{ns: []*notes.BookNote{{ID: "N1"}, {ID: "N2"}}, total: 5}).Get(context.Background(), 1, true, "x")
+	if err != nil || got.NoteCount != 2 || got.ApprovedTotal != 5 || !got.Truncated || got.Yearbook.Title != "T" || *got.Yearbook.GraduationYear != 2026 || got.Profile.FullName != "An" {
 		t.Fatalf("got %+v, %v", got, err)
 	}
 }

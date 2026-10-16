@@ -43,6 +43,8 @@ profile and the **approved** notes in book order (`sort_order`, then id: the ord
 - **Queries.** Yearbook and profile (2, plus 1 for the cover/profile photo ids), the approved notes (1) and their photo links (1, skipped when there are no notes);
   the count does not depend on the number of notes (`TestQueryCountAndCap`).
 - **Bound.** At most 300 notes, the reorder cap. The 300-note limit is per link and a book can have up to five active links, so a book with more approved
-  notes is cut after the 300th and `note_count` is the number returned. With the built-in templates' fields at their maximum length (name 60, relationship 60,
+  notes is cut after the 300th in book order, never silently: `note_count` is the number returned, `approved_total` the real approved count and `truncated`
+  (always present) is true when `approved_total` is more than `note_count` (`TestTruncatedFlag`: 299, 300, 301 notes). The renderer shows a warning then.
+  The count is one extra query, run only when the 300 cap was reached. With the built-in templates' fields at their maximum length (name 60, relationship 60,
   message 2000 characters, ASCII) and 3 photos per note the answer is about 690 KB (`TestMaximalBookIsUnderOneMiB`). Text that needs 2 or more bytes per
-  character, or a template that asks for all nine fields, can pass 1 MiB: the renderer must not assume it.
+  character, or a template that asks for all nine fields, can pass 1 MiB: the renderer must not assume it. The API does not compress the response (no gzip in the router), so that size goes over the wire.

@@ -272,8 +272,8 @@ func TestOwnerGetsApprovedNotesInBookOrder(t *testing.T) {
 		!slices.Equal(photos[0], []string{p0}) || !slices.Equal(photos[1], []string{p2, p1}) || len(photos[2]) != 0 {
 		t.Fatalf("notes %v photos %v", got, photos)
 	}
-	if d["note_count"] != float64(3) {
-		t.Fatalf("note_count %v", d["note_count"])
+	if d["note_count"] != float64(3) || d["approved_total"] != float64(3) || d["truncated"] != false {
+		t.Fatalf("note_count %v, approved_total %v, truncated %v", d["note_count"], d["approved_total"], d["truncated"])
 	}
 	want := map[string]any{"title": "Lớp 12A", "school_name": "School", "class_name": "12A", "graduation_year": float64(2026), "motto": "Motto",
 		"language": "vi", "page_size": "A4", "template_id": "classic", "cover_media_id": p4}
@@ -284,7 +284,7 @@ func TestOwnerGetsApprovedNotesInBookOrder(t *testing.T) {
 	if got := d["profile"].(map[string]any); fmt.Sprint(got) != fmt.Sprint(wantP) {
 		t.Fatalf("profile %v, want %v", got, wantP)
 	}
-	if keys := mapKeys(d); !slices.Equal(keys, []string{"note_count", "notes", "profile", "yearbook"}) {
+	if keys := mapKeys(d); !slices.Equal(keys, []string{"approved_total", "note_count", "notes", "profile", "truncated", "yearbook"}) {
 		t.Fatalf("data keys %v", keys)
 	}
 	if keys := mapKeys(d["notes"].([]any)[0].(map[string]any)); !slices.Equal(keys, []string{"answers", "id", "photo_ids"}) {
@@ -335,7 +335,7 @@ func TestEmptyBook(t *testing.T) {
 	alice := e.register("alice@example.com", true)
 	b := e.book(alice, "Empty")
 	r := e.get(e.h, alice, "?yearbook_id="+b.public).status(200, "OK")
-	if !strings.Contains(r.Body.String(), `"notes":[]`) || r.data()["note_count"] != float64(0) {
+	if !strings.Contains(r.Body.String(), `"notes":[]`) || r.data()["note_count"] != float64(0) || r.data()["approved_total"] != float64(0) || r.data()["truncated"] != false {
 		t.Fatalf("empty book: %s", r.Body.String())
 	}
 }
@@ -372,7 +372,7 @@ func TestAccessRules(t *testing.T) {
 	e.get(e.h, carol, "?yearbook_id="+b.public).status(403, "ERROR_EMAIL_NOT_VERIFIED")
 }
 
-// AC2: one query for the notes and one for the photo links whatever the number of notes, and the cap.
+// AC2: one query for the notes and one for the photo links whatever the number of notes; at the cap one more counts them.
 func TestQueryCountAndCap(t *testing.T) {
 	e := newEnv(t)
 	alice := e.register("alice@example.com", true)
@@ -405,20 +405,42 @@ func TestQueryCountAndCap(t *testing.T) {
 	}
 	e.note(b, "approved", 1, `{"name":"One"}`, e.media(b))
 	qs1, _ := run()
-
-	// 305 approved notes with 3 photos each: the response is cut at 300, in book order, with the same number of queries.
-	first300 := e.bulk(b, 2, 305, 3, `{"name":"N"}`)[:299]
-	qs300, d := run()
-	got, _ := ids(d)
-	if len(got) != 300 || d["note_count"] != float64(300) || !slices.Equal(got[1:], first300) {
-		t.Fatalf("cap: %d notes, note_count %v", len(got), d["note_count"])
+	// 1 for the notes, 1 for the photo links, 2 for the book and its profile (a third for media ids when it has a cover or photo).
+	if count(qs1, "note_tab") != 1 || count(qs1, "note_photo_tab") != 1 || len(qs1) != 4 {
+		t.Errorf("1 note: %d queries, want 4: %v", len(qs1), qs1)
 	}
-	for name, qs := range map[string][]string{"1 note": qs1, "300 notes": qs300} {
-		// 1 for the notes, 1 for the photo links, 2 for the book and its profile (a third for media ids when it has a cover or photo).
-		if count(qs, "note_tab") != 1 || count(qs, "note_photo_tab") != 1 || len(qs) != 4 {
-			t.Errorf("%s: %d queries, want 4: %v", name, len(qs), qs)
+
+	// 300 approved notes with 3 photos each: the cap is reached, so one COUNT is added and nothing else.
+	e.bulk(b, 2, 300, 3, `{"name":"N"}`)
+	qs300, _ := run()
+	if count(qs300, "COUNT(*)") != 1 || len(qs300) != 5 {
+		t.Errorf("300 notes: %d queries, want 5: %v", len(qs300), qs300)
+	}
+}
+
+// The cut is never silent: 299, 300 and 301 approved notes give truncated false, false, true, the real approved_total, and
+// the 301st (the last in book order) is the one left out.
+func TestTruncatedFlag(t *testing.T) {
+	e := newEnv(t)
+	alice := e.register("alice@example.com", true)
+	b := e.book(alice, "Edge")
+	all := e.bulk(b, 1, 299, 0, `{"name":"N"}`)
+	e.note(b, "pending", -1, `{"name":"Pending"}`) // pending notes are not counted
+	check := func(total int, truncated bool) {
+		t.Helper()
+		d := e.get(e.h, alice, "?yearbook_id="+b.public).status(200, "OK").data()
+		got, _ := ids(d)
+		want := min(total, 300)
+		if d["truncated"] != truncated || d["approved_total"] != float64(total) || d["note_count"] != float64(want) ||
+			!slices.Equal(got, all[:want]) {
+			t.Fatalf("%d approved: truncated %v, approved_total %v, note_count %v, %d notes", total, d["truncated"], d["approved_total"], d["note_count"], len(got))
 		}
 	}
+	check(299, false)
+	all = append(all, e.bulk(b, 300, 300, 0, `{"name":"N"}`)...)
+	check(300, false)
+	all = append(all, e.bulk(b, 301, 301, 0, `{"name":"N"}`)...)
+	check(301, true)
 }
 
 // AC2: 300 notes with the longest answers of the built-in templates (name, relationship, message at their maximum) and 3

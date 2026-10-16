@@ -1078,11 +1078,11 @@
                   "const b = pm.response.json(), d = b.data, v = n => pm.collectionVariables.get(n);",
                   "pm.test('envelope', () => pm.expect(b.status).to.eql('OK'));",
                   "pm.test('approved notes in book order', () => pm.expect(d.notes.map(n => n.id)).to.eql([v('n2'), v('n1')]));",
-                  "pm.test('note_count', () => pm.expect(d.note_count).to.eql(2));",
+                  "pm.test('note_count, approved_total, truncated', () => { pm.expect(d.note_count).to.eql(2); pm.expect(d.approved_total).to.eql(2); pm.expect(d.truncated).to.eql(false); });",
                   "pm.test('hidden and pending notes are not in the book', () => { const ids = d.notes.map(n => n.id); [v('n3'), v('n4'), v('n5')].forEach(x => pm.expect(ids).to.not.include(x)); });",
                   "pm.test('photo ids by note', () => pm.expect(d.notes.map(n => n.photo_ids)).to.eql([[v('photoId')], []]));",
                   "pm.test('answers as stored', () => pm.expect(d.notes[0].answers.name).to.eql('N2'));",
-                  "pm.test('shape', () => { pm.expect(Object.keys(d).sort()).to.eql(['note_count', 'notes', 'profile', 'yearbook']); pm.expect(Object.keys(d.notes[0]).sort()).to.eql(['answers', 'id', 'photo_ids']); });",
+                  "pm.test('shape', () => { pm.expect(Object.keys(d).sort()).to.eql(['approved_total', 'note_count', 'notes', 'profile', 'truncated', 'yearbook']); pm.expect(Object.keys(d.notes[0]).sort()).to.eql(['answers', 'id', 'photo_ids']); });",
                   "pm.test('yearbook and profile', () => { pm.expect(d.yearbook.title).to.eql('Newman moderation'); pm.expect(d.yearbook.language).to.eql('en'); pm.expect(d.yearbook.page_size).to.eql('A5'); pm.expect(d.profile).to.have.property('full_name'); });",
                   "pm.test('nothing internal in the body', () => { const t = pm.response.text(); ['object_key', 'thumb_key', 'print_key', 'sha256', 'owner_id', 'token', 'birthday', pm.collectionVariables.get('emailA')].forEach(x => pm.expect(t).to.not.include(x)); });"
                 ]
