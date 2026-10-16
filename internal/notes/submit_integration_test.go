@@ -982,28 +982,64 @@ func TestUnknownTokenIsAnsweredWithoutReadingTheBody(t *testing.T) {
 	}
 }
 
-// T-034 order: a full link (a valid token) is answered 409 right after the lookup, before the body is read or spooled,
-// and a filled honeypot on a full link is also 409 (the honeypot is only looked at after the full check).
-func TestFullLinkIsAnsweredWithoutReadingTheBody(t *testing.T) {
+// T-034 order + T-080: a full link (a valid token) is decided right after the lookup, before the body is spooled, but the
+// sender is a real friend: the rest of the body is drained to io.Discard (nothing on disk) and the 409 is then readable
+// over a real socket, not a connection reset. A filled honeypot on a full link is also 409 and never stored.
+func TestFullLinkIsAnsweredAfterDrainingTheBody(t *testing.T) {
 	e := newEnv(t)
 	l := e.newOpenLink()
 	e.fillCollection(l, 300)
+	srv := e.serve()
 	_, ct := multipartOf(answers("A", "m"))
-	rc := &readCounter{}
-	r := httptest.NewRequest("POST", submitURL(l.token), io.LimitReader(rc, 20<<20))
-	r.ContentLength = 20 << 20
-	r.Header.Set("Content-Type", ct)
-	r.RemoteAddr = "192.0.2.9:4000"
-	rec := httptest.NewRecorder()
-	e.h.ServeHTTP(rec, r)
-	resp{rec, t}.status(409, "ERROR_COLLECTION_FULL")
-	if n := rc.n.Load(); n != 0 {
-		t.Fatalf("%d bytes of the body were read", n)
+	body := make([]byte, 20<<20)
+
+	conn := dial(t, srv)
+	sendHead(conn, "192.0.2.9", l.token, ct, len(body))
+	start := time.Now()
+	if _, err := conn.Write(body); err != nil { // the whole upload is accepted, so the browser can read the answer
+		t.Fatal(err)
 	}
-	if len(e.spooled()) != 0 {
-		t.Fatal("spool not empty")
+	code, _, out := readResponse(t, conn, 5*time.Second)
+	if code != 409 || !strings.Contains(out, "ERROR_COLLECTION_FULL") {
+		t.Fatalf("%d %s", code, out)
 	}
+	if time.Since(start) > 10*time.Second {
+		t.Fatalf("the connection was held for %v", time.Since(start))
+	}
+	e.waitFor("slot released", func() bool { return e.inProgress() == 0 })
+	e.noSpool()
+
 	e.post(l.token, answers("Bot", "x"), text("website", "http://spam.example")).status(409, "ERROR_COLLECTION_FULL")
+	e.noSpool()
+	if e.noteCount() != 300 {
+		t.Fatal("a note was stored on a full link")
+	}
+}
+
+// T-080 AC3: the drain of a full link keeps the route's protections: a body over 32 MiB is 413, a stalled one is 408.
+func TestFullLinkDrainKeepsThePaceAndSizeLimits(t *testing.T) {
+	old := submitPace
+	submitPace.Idle = 300 * time.Millisecond
+	t.Cleanup(func() { submitPace = old })
+	e := newEnv(t)
+	l := e.newOpenLink()
+	e.fillCollection(l, 300)
+	srv := e.serve()
+
+	conn := e.stall(srv, "10.0.0.1", l.token, 100)
+	start := time.Now()
+	if got := statusOf(t, conn, 5*time.Second); got != 408 || time.Since(start) > 3*time.Second {
+		t.Fatalf("stalled: status %d after %v, want 408 within the idle window", got, time.Since(start))
+	}
+	e.waitFor("slot released", func() bool { return e.inProgress() == 0 })
+
+	big := dial(t, srv)
+	_, ct := multipartOf(answers("A", "m"))
+	sendHead(big, "10.0.0.2", l.token, ct, 40<<20)
+	go func() { _, _ = big.Write(make([]byte, 40<<20)) }()
+	if got := statusOf(t, big, 10*time.Second); got != 413 {
+		t.Fatalf("40 MiB: status %d, want 413", got)
+	}
 	e.noSpool()
 	if e.noteCount() != 300 {
 		t.Fatal("a note was stored on a full link")

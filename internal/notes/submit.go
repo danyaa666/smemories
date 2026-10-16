@@ -59,7 +59,7 @@ func (h *Handler) submit(w http.ResponseWriter, r *http.Request) {
 	httpx.PaceBody(w, r, submitPace)
 	rec := &errRecorder{r: r.Body}
 	r.Body = io.NopCloser(rec)
-	raw := w
+	raw := w                                      // only a guess or a revoked link is answered on this one
 	w = &drainWriter{ResponseWriter: w, rec: rec} // an early answer first swallows the rest of the body, so a browser can read it
 
 	p, err := h.svc.Resolve(r.Context(), ip, r.URL.Query().Get("token")) // the token is in the query, never in the body or the logs
@@ -70,7 +70,13 @@ func (h *Handler) submit(w http.ResponseWriter, r *http.Request) {
 		h.fail(w, r, err)
 		return
 	}
-	if err := h.svc.CheckOpen(r.Context(), p); err != nil { // a full link: answer at once, do not read the body (T-034 order)
+	if err := h.svc.CheckOpen(r.Context(), p); err != nil { // a full link: decided before the body is spooled (T-034 order), but the
+		// sender is a real friend with a valid token: let the browser finish its upload (to io.Discard, under the same pace and
+		// size limits, nothing on disk) so it can read the 409 instead of a connection reset (T-080)
+		if _, derr := io.Copy(io.Discard, r.Body); derr != nil {
+			httpx.WriteBodyError(raw, r, derr) // a stalled, slow or oversized body gets the same 408/413 as a normal upload
+			return
+		}
 		h.fail(raw, r, err)
 		return
 	}
