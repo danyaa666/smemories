@@ -10,17 +10,18 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 12 | T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-061 |
-| TODO | 4 | T-032, T-059, T-060, T-079 |
-| READY_FOR_QA | 1 | T-072 |
+| BACKLOG | 13 | T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-061, T-085 |
+| TODO | 3 | T-032, T-060, T-079 |
+| IN_PROGRESS | 1 | T-059 |
+| MERGED | 1 | T-072 |
 | DONE | 59 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-073, T-074, T-075, T-076, T-077, T-078, T-080, T-081, T-082, T-083 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** nothing
+**Awaiting your review (MERGED):** T-072 ([E10] Quality sweep: mnd, forbidigo, pointer parameters, pool defaults, remove the transition switch)
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?)
 
-_Board last written 2026-10-16 13:02Z_
+_Board last written 2026-10-16 13:19Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -2631,7 +2632,7 @@ Fixed-size HTML pages, pagination, text fit, print CSS, readiness gate and a hea
 - 2026-10-16 11:13Z · human · accepted by owner
 
 ### T-059 — [E05] HTML template memory-book (design temp1)
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
@@ -2639,10 +2640,10 @@ Fixed-size HTML pages, pagination, text fit, print CSS, readiness gate and a hea
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-059-e05-html-template-memory-book-design-tem
 - **PR:** —
-- **Updated:** 2026-10-16 09:50Z by leader
+- **Updated:** 2026-10-16 13:02Z by dev
 - **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/10-html-template-memory-book.md`
@@ -3192,7 +3193,7 @@ Moves auth to /api/auth/* and /api/user/get-me, Google callback path, last domai
 - 2026-10-16 01:37Z · human · accepted by owner
 
 ### T-072 — [E10] Quality sweep: mnd, forbidigo, pointer parameters, pool defaults, remove the transition switch
-- **Status:** READY_FOR_QA
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -3203,8 +3204,8 @@ Moves auth to /api/auth/* and /api/user/get-me, Google callback path, last domai
 - **Assignee:** —
 - **Branch:** task/t-072-e10-quality-sweep-mnd-forbidigo-pointer-
 - **PR:** https://github.com/danyaa666/smemories/pull/67
-- **Updated:** 2026-10-16 10:12Z by dev
-- **Comments-seen:** 2
+- **Updated:** 2026-10-16 13:18Z by leader
+- **Comments-seen:** 4
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/10-sweep.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -3215,6 +3216,20 @@ Turns the remaining skill rules into lint (mnd, forbidigo), fixes what they find
 #### Comments
 - 2026-10-15 14:52Z · leader · unblocked: T-071 merged. Includes the ERROR_CLIENT_CLOSED follow-up (see spec bottom). Dev: start it only when no other branch is open that touches many files.
 - 2026-10-16 10:12Z · dev · PR #67 head e23d459, CI green (go, go-integration, security, web). make lint build test, go test -race -tags integration ./..., Newman (private DB/Redis db 8/bucket): yearbooks, media, notes, notes-moderation, platform (minus manual DB-down), auth (minus Google folder) all pass. Decisions: auth bodies strict (unknown field ERROR_PARAM); mnd allowlist = apperr.NewCode args, number 2, *test helpers, media/image.go; pointers for User/Session/GoogleIdentity/Yearbook/Media, slices and settings structs stay values (documented). QA probe: start-up log 'database pool', readyz 503 body now v2, 404/405/413/panic bodies, SMEM_DB_MAX_IDLE explicit vs default. Leftover /v1 grep hits: tests asserting old paths 404, viteProxy test, cursor key label.
+- 2026-10-16 13:18Z · qa · QA_PASS on PR #67 head e23d459 (CI go, go-integration, security, web all green). Evidence I produced (worktree .team/worktrees/T-072, private DB smem_test_t072_qa, Redis db 10, bucket smem-t072-qa, own API on :18072, develop baseline API on :18073; all dropped/stopped after).
+  GATE: make lint exit 0 (gofmt, vet x2, golangci-lint with mnd+forbidigo, eslint, tsc, lint:i18n, check:api); make build ok; go test -race ./... ok; go test -race -count=1 -tags integration ./... ok (SMEM_TEST_REDIS_URL db 9; auth 178s, notes 160s); web vitest 247/247; no go.mod/go.sum change, nothing under .team in the PR.
+  NEWMAN (each twice back to back, limits reset in my Redis only): auth (Full flow + Edge cases) 86 req/186 assertions 0 failed x2; platform Health+Edge 7/13 x2; yearbooks 98/203 x2; media 75/144 x2; notes 71/138 x2; notes-moderation 77/161 x2. Skipped: auth Google folder (needs SMEM_GOOGLE_* and a reachable issuer; covered by the oidctest Go integration tests, which passed) and platform manual DB-down folder (replaced by my own readyz 503 test below). Note: the notes collections need user C unverified; my first run verified all newman-notes-% users by mistake and failed 2/6 assertions, rerun with only A and B verified (as make verify-newman-users does) was green: not a product issue.
+  (1) STRICT AUTH BODIES: real Chromium (playwright-core) against my API through a static+proxy server serving the built web/dist on :5174: register, verify-email wrong code (400 ERROR_INVALID_CODE), resend-verification, verify-email 123123, get-me, update-username, logout, login wrong pw (401 ERROR_INVALID_CREDENTIALS), forgot-password, reset-password, login with new pw, yearbook get-list: every request 200/expected, no ERROR_PARAM, bodies contained only declared fields (register: email,password,display_name,locale; reset: email,code,password). Google button is a plain <a href=/api/auth/google-start> (only shown with VITE_GOOGLE_SIGNIN) so there is no JSON body; I could not run the OIDC provider live, covered by Go oidctest tests. curl: unknown field on login/register/yearbook/create -> 400 ERROR_PARAM 'request body has an unknown field'.
+  (2) PROBES: /healthz 200 and /readyz 200 unchanged; with the API's Redis paused (private valkey container) /readyz 503 on both develop (legacy body) and this head (v2 {status:ERROR_NOT_READY,...}); /healthz stays 200; 404/405 on non-/api paths (/nope, POST /readyz, POST /healthz, /v1/me) are v2 ERROR_NOT_FOUND / ERROR_METHOD_NOT_ALLOWED.
+  (3) ERROR PATHS (curl sweep, script not kept): bad JSON on auth, yearbook, note-collection, note moderation -> 400 ERROR_PARAM; 2 MiB body on auth, yearbook, note -> 413 ERROR_TOO_LARGE; text/plain -> 415; bad/missing Origin -> 403 ERROR_CSRF_ORIGIN_MISMATCH; 401 ERROR_UNAUTHORIZED on all 22 x-auth:required routes of openapi (multipart media/create too); 404 for yearbook, media content, public-collect; 409 ERROR_EMAIL_TAKEN; 400 bad limit / bad next_id. Every body is the v2 envelope with request_id. grep for TRANSITION(E10), isV2, v2Code, errorEnvelope, ErrorBody: none; /v1 hits only the expected 404 tests, viteProxy test and the cursor label.
+  (4) CLIENT CLOSED: held a MySQL table lock and aborted requests after 0.5 s: yearbook get-list, media get-list, note-collection get-list, note get-list, user get-me all logged status 499 with a DEBUG 'client gone' line, 0 ERROR lines (develop identical apart from the old per-package 'yearbook: client gone' text). Observation, same on develop: an aborted request that is blocked inside a Redis call is not cancelled early (go-redis waits for its read timeout, 3 s in my test) and then answers 503, so it is logged as a failure; not a regression.
+  (5) LINT: copied the head to scratch and added violations: fmt.Errorf/errors.New flagged by forbidigo, 45*time.Second, n*7, if n>9, Sleep(3*time.Second), return n*13 flagged by mnd, so the linters bite. Allowlist is the four documented items, no //nolint:mnd added (only one new nolint: gosec on retry jitter). MINOR (non-blocking): the exclusion regexes are looser than the docs say: forbidigo uses  (unanchored) and mnd uses , so any package whose directory name ends in 'test' (for example a future internal/latest or internal/contest) is silently exempt; I confirmed internal/latest/p.go with errors.New and a magic number produced no forbidigo/mnd finding. Suggest anchoring to the real helper names (dbtest|redistest|storagetest|oidctest) in a later cleanup.
+  (6) POINTERS: read the auth diff (Service, Store, google, handler) and every UserFrom caller: handlers do  and then dereference, which would be a nil deref if a route were ever mounted without RequireUser; all 22 authed routes return 401 without a session (above), so no reachable nil today. expose and UpdateUsername copy first, request-context user not mutated. insertUser loop rewrite terminates (last attempt always returns).
+  (7) POOL: start-up line {msg:database pool,max_open,max_idle,conn_max_lifetime} only numbers; with SMEM_DB_MAX_IDLE unset -> max_idle 20; =7 -> 7; MAX_OPEN=8 unset idle -> 8; lifetime 5m0s. Wrong DB password and unreachable DB start-up errors do not print the password (grep count 0). My main .env still has SMEM_DB_MAX_IDLE=5 explicitly, so the dev API keeps 5 until it is removed there (.env.example now 20).
+  (8) schema.d.ts: npm run check:api ok (regenerated file matches openapi); contract lint test in go test ./api passes. N+1 scan: PR lists command and hits, all bounded (<=3 or 300 with a justification comment).
+  (9) CURSOR: develop API next_id token for yearbook/get-list?limit=1 works on this head (returns Book 2) and a token minted by this head works on develop: cursorKeyLabel unchanged, existing tokens still valid.
+  Non-blocking: AC wording in PR lists counts per linter as required. Docs (go-conventions deviations, README, api-contract section 3 for ERROR_CLIENT_CLOSED) updated. Rerun note: leader sees dev's main .env pool value 5 only matters for the running dev API.
+- 2026-10-16 13:18Z · leader · merged 715b960 (PR #67). Review: mechanical sweep, transition switch and old-envelope code gone, ClientClosed defined once in apperr, forbidigo/mnd on with a small allowlist, strict auth bodies proven against every web flow in real Chromium + Newman x6 collections, cursors compatible both ways; CI green, QA_PASS on the same head. For owner to check: your local .env still sets SMEM_DB_MAX_IDLE=5 (remove the line to get the new default, equal to MAX_OPEN); nothing else visible. Follow-up task for the two non-blocking findings.
 
 ### T-073 — [E10] Observability: request metrics middleware and /metrics endpoint
 - **Status:** DONE
@@ -3633,6 +3648,25 @@ Spec: .team/epics/E04-friends-notes/09-inbox-320px-polish.md (read it from the r
 #### Comments
 - 2026-10-16 03:40Z · leader · created by mistake: the board does not let the leader override QA_FAIL, so the 320px fix goes through T-017 rework 2 instead
 
+### T-085 — [E10] Lint exclusions anchored and a guard for auth.UserFrom
+- **Status:** BACKLOG
+- **Priority:** P3
+- **Type:** tech-debt
+- **Milestone:** M1
+- **Depends-on:** T-072
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-16 13:19Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E10-skills-alignment/12-lint-anchors-userfrom-guard.md (read it from the repo root). Two non-blocking findings of the T-072 QA.
+
+#### Comments
+
 <!-- tasks:end -->
 
 ## 7. Change log
@@ -3667,3 +3701,4 @@ Spec: .team/epics/E04-friends-notes/09-inbox-320px-polish.md (read it from the r
 - 2026-10-16 — T-056 (book data endpoint, PR #64, owner-approved) merged b20bf33: GET /api/book-data/get with explicit truncated/approved_total (no silent cut at 300 notes; renderer must warn). T-017/T-080 accepted. T-058 (HTML renderer core) promoted to TODO; T-072 free to start. Dev now on T-082.
 - 2026-10-16 — T-082 (web username on the account page, PR #65) merged de0eb3c. Dev on T-058 (HTML renderer); T-072 next.
 - 2026-10-16 — T-058 (HTML book renderer core, PR #66) merged b219943. T-059 and T-060 (templates) promoted to TODO; T-061 (print screen, high risk) follows T-059. T-056/T-082 accepted. T-072 (quality sweep) in progress.
+- 2026-10-16 — T-072 (quality sweep, PR #67) merged 715b960: transition switch removed, forbidigo/mnd on, strict auth bodies. T-058 accepted. T-085 (P3) added for two QA nits (lint regex anchors, UserFrom guard). Dev on T-059.
