@@ -136,8 +136,9 @@
 
 .inbox-card-head {
   display: flex;
+  flex-wrap: wrap; /* under ~360 px the badge drops to its own line instead of squeezing the name */
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2) var(--space-3);
 }
 
 /* A status label stays on one line and never shrinks; the name and meta line give way instead. */
@@ -157,9 +158,9 @@
 
 .inbox-card-who {
   display: flex;
-  flex: 1 1 auto;
+  flex: 1 1 10em;
   flex-direction: column;
-  min-width: 0;
+  min-width: 10em;
 }
 
 .inbox-card-who small,

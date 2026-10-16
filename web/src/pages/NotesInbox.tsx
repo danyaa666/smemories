@@ -104,6 +104,8 @@ function Inbox({ bookId }: { bookId: string }) {
   const delTimer = useRef<number>(undefined);
   const toastBox = useRef<HTMLDivElement>(null);
   const focusUndo = useRef(false);
+  const refocus = useRef<string>(undefined); // after Undo: the restored card whose ••• button gets the focus
+  const heading = useRef<HTMLHeadingElement>(null);
   const inflight = useRef(new Set<string>()); // ids whose batch-delete request is on its way
 
   const key = ["notes", bookId, filter] as const;
@@ -129,6 +131,18 @@ function Inbox({ bookId }: { bookId: string }) {
     focusUndo.current = false;
     toastBox.current?.querySelector<HTMLElement>(".toast-action")?.focus();
   }, [pending]);
+
+  // Undo pressed (its button is gone): focus the restored card's ••• button, else the first card, else the heading
+  useEffect(() => {
+    if (!refocus.current || list.isFetching) return;
+    const sel = (id: string) => `[data-note-id="${id}"] [aria-haspopup]`;
+    const target =
+      document.querySelector<HTMLElement>(sel(refocus.current)) ??
+      document.querySelector<HTMLElement>("[data-note-id] [aria-haspopup]") ??
+      heading.current;
+    refocus.current = undefined;
+    target?.focus();
+  }, [pending, items.length, list.isFetching]);
 
   // the list is the freshest source of the counts: share it with the tabs, the header and the sidebar badge
   useEffect(() => {
@@ -211,6 +225,7 @@ function Inbox({ bookId }: { bookId: string }) {
   function undo() {
     if (inflight.current.size > 0) return; // too late: the request is on its way
     window.clearTimeout(delTimer.current);
+    refocus.current = pending[0]?.id;
     setPending([]);
     void qc.invalidateQueries({ queryKey: ["notes", bookId] }); // `move` may have dropped them from the cache
   }
@@ -314,7 +329,9 @@ function Inbox({ bookId }: { bookId: string }) {
     <>
       <header className="inbox-head">
         <div>
-          <h1>{t("inbox.title")}</h1>
+          <h1 ref={heading} tabIndex={-1}>
+            {t("inbox.title")}
+          </h1>
           {counts && (
             <p className="inbox-summary">
               {counts.pending

@@ -634,4 +634,14 @@ describe("keyboard focus", () => {
     await userEvent.click(screen.getByRole("button", { name: "Delete" }));
     expect(await screen.findByRole("button", { name: "Undo" })).toHaveFocus();
   });
+
+  it("returns to the restored card's ••• button after Undo", async () => {
+    fake([note(1, "pending"), note(2, "pending")]);
+    await open();
+    const c = await card("Friend 1");
+    await userEvent.click(more(c, "Friend 1"));
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    await userEvent.keyboard("{Enter}"); // the focus is on Undo
+    expect(more(await card("Friend 1"), "Friend 1")).toHaveFocus();
+  });
 });
