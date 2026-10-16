@@ -12,16 +12,15 @@
 |---|---:|---|
 | BACKLOG | 18 | T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061, T-082 |
 | TODO | 5 | T-017, T-072, T-079, T-080, T-081 |
-| IN_PROGRESS | 1 | T-018 |
-| MERGED | 1 | T-013 |
+| MERGED | 2 | T-013, T-018 |
 | DONE | 51 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-015, T-016, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-073, T-074, T-075, T-076, T-077, T-078, T-083 |
 | CANCELLED | 7 | T-014, T-019, T-039, T-040, T-041, T-042, T-055 |
 
-**Awaiting your review (MERGED):** T-013 ([E04] Notes moderation API (approve, hide, reorder, delete))
+**Awaiting your review (MERGED):** T-013 ([E04] Notes moderation API (approve, hide, reorder, delete)); T-018 ([E04] Web: public anonymous notes form)
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?)
 
-_Board last written 2026-10-16 02:28Z_
+_Board last written 2026-10-16 02:38Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -1130,7 +1129,7 @@ Create/copy/revoke the collection link, set a deadline, see submissions grouped 
 - 2026-10-16 02:28Z · leader · unblocked: T-013 merged (API) and T-083 done. Link shape is <app>/c/<token> (see specs). Depends on T-016 which is done.
 
 ### T-018 — [E04] Web: public anonymous notes form
-- **Status:** IN_PROGRESS
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -1138,11 +1137,11 @@ Create/copy/revoke the collection link, set a deadline, see submissions grouped 
 - **Risk:** low
 - **Rework:** 2
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-018-e04-web-public-anonymous-notes-form
 - **PR:** https://github.com/danyaa666/smemories/pull/59
-- **Updated:** 2026-10-16 02:23Z by dev
-- **Comments-seen:** 8
+- **Updated:** 2026-10-16 02:38Z by leader
+- **Comments-seen:** 11
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/05-web-public-anonymous-notes-form.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1189,6 +1188,31 @@ Mobile-first public page opened from the shared link: name, relationship, messag
   
   VIETNAMESE STRINGS FOR THE OWNER (draft, from the PR description; not a fail reason): note.writingIn "bạn đang viết vào"; privacy "Chỉ {{name}} đọc được lời nhắn này. Bạn ấy sẽ chọn lời nhắn nào được in vào sách."; optional "(không bắt buộc)"; required "Hãy viết vài chữ trước khi gửi."; photos "Ảnh"; addPhoto "Thêm ảnh"; consent "Khi gửi, bạn đồng ý để {{name}} in lời nhắn và ảnh của bạn vào sách của bạn ấy."; send "Gửi lời nhắn"; sending "Đang gửi…"; what "SMemories là gì?"; theOwner "chủ sách"; photoFail title "Chưa gửi được" / retry "Thử lại" / remove "Bỏ các ảnh" / without "Gửi không kèm ảnh"; sent "Đã gửi! Cảm ơn {{name}}." / another "Viết thêm lời nhắn" / cta "Bạn cũng sắp tốt nghiệp?" / make "Tự làm lưu bút của bạn"; closed "Liên kết này đã đóng"; gone "Liên kết này không còn dùng được"; errors.request_timeout. Full list: web/src/locales/vi.json under note.*.
 - 2026-10-16 02:16Z · leader · Leader guidance for the rework (QA_FAIL, rework 2 of 2 left after this: keep it tight): 1) MAJOR: a revoked/unknown/expired link spends ~7.3 s on 'Loading...' and sends 4 GETs because NoteForm's useQuery inherits makeQueryClient(3) retries (web/src/main.tsx) and 404/410 are retried. The public lookup is rate limited (misses 60 per IP per 15 min), so a classroom behind one IP would exhaust it. Fix: set retry on that query so it never retries an ApiError with status 4xx (retry only network errors/5xx, at most 1), and add a test that builds the client with makeQueryClient(3) (not retry:false) and asserts exactly one fetch for a 404 and for a 410. Check the other public-page queries for the same inheritance. 2) Cheap, take them now: N7 copy starting with a lowercase 'the owner' (VI 'chủ sách'), and move focus to the sent-screen heading after submit. Everything else QA checked passed; keep the strings and the /c/:token behaviour as is.
+- 2026-10-16 02:33Z · dev · Rework 2, PR #59 head 75ad2aa (develop merged, CI go/go-integration/security/web green). 1) major: NoteForm lookup query now has its own retry: never on an ApiError 4xx (404/410/409/429), one retry for network/5xx; it was the only public-page query (others are signed-in or retry:false). Tests build the client with makeQueryClient(3) (renderApp opts.retry) and assert exactly 1 fetch for 404 and 410; 5xx = 2 fetches then Try again; they fail without the fix. 2) N7 body reworded so the name is mid-sentence (EN 'Notes are no longer being collected here... ask {{name}} for a new link', VI 'Liên kết này không còn nhận lời nhắn... hãy xin {{name}} một liên kết mới'); fallback 'the owner'/'chủ sách' is now lowercase-safe. 3) focus moves to the sent heading (h1 tabIndex -1), asserted in the sent test. Web: lint, typecheck, i18n, check:api, 193 tests, build green. Verify: open a revoked/expired /c/<token>: dead screen at once, 1 GET.
+- 2026-10-16 02:37Z · qa · QA_PASS, PR #59 head 75ad2aa (rework 2). The one major from rework 1 is fixed; nothing new found.
+  
+  EVIDENCE
+  - CI on 75ad2aa: go, go-integration, security, web all pass (gh pr checks 59).
+  - web (worktree): npm run lint OK, typecheck OK, lint:i18n OK, check:api OK, vitest 13 files / 193 tests OK, build OK.
+  - Browser (own Vite :5291 from the PR worktree + own API :8291 built from the PR head, private DB smem_test_qa018b, Redis db 14; Playwright + Chromium; network log counted per page; 375 and 1280 px):
+    * revoked link: dead-end "This link doesn't work anymore" after 191/147 ms, exactly 1 GET (was ~7.3 s and 4 GETs). Still 1 GET after waiting 8 s more.
+    * unknown token: same screen after 130 ms, 1 GET.
+    * expired link (deadline_at in the past): "This link has closed" after 131/157 ms, 1 GET.
+    * API log for the 6 dead-link opens plus 4 good ones: 4x404 (2 revoked + 2 unknown), 2x410, 4x200: no retries.
+    * lookup 503 (route-intercepted): 2 fetches (1 retry), then "The server is busy. Try again in a moment." + Try again, at ~1.2 s. Network error (connection reset): 2 fetches, "Could not reach the server..." + Try again; Try again then renders the form.
+    * Send with 2 photos (png+jpg): 200, sent screen; DB note pending with 2 photos. Send without photos: 200, 0 photos.
+    * Focus after send: document.activeElement is h1#note-sent-h ("Sent! Thank you, <name>.") in both flows.
+    * Copy: 410 EN "Notes are no longer being collected here. If you still want to write, ask the owner for a new link." (no lowercase start, falls back to "the owner" because the lookup 410 carries no name). 404 EN/VI and 410 EN/VI show no owner name, book title, or number. 409 (mocked with the API's real code ERROR_COLLECTION_FULL on submit; the real link is only found full at submit): EN "This link has reached its limit. Ask QA o to open a new link." and VI "Liên kết này đã đạt giới hạn. Hãy nhờ QA o mở một liên kết mới." Owner name appears only here, by the known difference (no number).
+  - Skipped on purpose (verified in rework 1): layout, draft, token not in storage, referrer, fonts.
+  
+  NON-BLOCKING
+  - None new.
+  
+  VIETNAMESE STRINGS CHANGED IN THIS REWORK (for the owner; draft wording)
+  - note.closed.body (expired link): "Liên kết này không còn nhận lời nhắn. Nếu vẫn muốn viết, hãy xin {{name}} một liên kết mới." ({{name}} shows "chủ sách" on this screen). Replaces "{{name}} đã ngừng nhận lời nhắn. Nếu vẫn muốn viết, hãy xin bạn ấy một liên kết mới."
+  - EN counterpart: "Notes are no longer being collected here. If you still want to write, ask {{name}} for a new link."
+  No other locale string changed since the rework 1 list.
+- 2026-10-16 02:38Z · leader · merged 2aae76e (PR #59). Review: 4xx never retried (1 GET, dead end in ~150 ms), 503/network one retry, no-referrer + noindex while mounted, draft key hashed, route /c/:token as in openapi; web-only, CI green, QA_PASS on the same head after 2 reworks. For owner to check: the new Vietnamese strings under note.* in web/src/locales/vi.json and errors.request_timeout; open /c/<token> of a link at phone width.
 
 ### T-019 — [E05] Web: template picker, PDF preview (pdf.js) and export/download
 - **Status:** CANCELLED
@@ -3462,3 +3486,4 @@ Port the Claude Design tokens, self-host the fonts, add base components (Button,
 - 2026-10-15 — T-070 and T-073 accepted. T-071 (API v2 auth/user, PR #58, owner-approved Q-030) merged 3c4b149; owner action before deploy: register <PUBLIC_BASE_URL>/api/auth/google-callback in the Google console. T-083 got QA_FAIL (flaky layout test on CI), rework running. T-081, T-072, T-080 promoted to TODO. Owner approved the four new nav strings of T-083.
 - 2026-10-15 — T-083 (web design system foundation, PR #57) merged 28f5dca after rework 1 (a test still mocked /v1 routes after T-070; fixed, QA re-passed on the merged state). T-018 promoted to TODO; T-017 waits for T-013.
 - 2026-10-16 — T-013 (notes moderation API, PR #60) merged c780423 after rework 1 (lower-case ids gave 500; now canonical-ULID validation, ERROR_PARAM). T-017 promoted to TODO. T-018 is in its last rework (retry on 4xx).
+- 2026-10-16 — T-018 (public anonymous notes form, PR #59) merged 2aae76e after 2 reworks (route /c/:token, no-referrer + hashed draft key, no retry on 4xx). Owner to review the note.* Vietnamese strings. T-017 (moderation inbox) is next for dev.
