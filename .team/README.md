@@ -11,18 +11,17 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 11 | T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050 |
-| TODO | 2 | T-032, T-085 |
-| IN_PROGRESS | 1 | T-060 |
+| READY_FOR_QA | 2 | T-032, T-085 |
 | QA_PASS | 1 | T-061 |
-| MERGED | 3 | T-059, T-072, T-079 |
+| MERGED | 4 | T-059, T-060, T-072, T-079 |
 | DONE | 59 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-073, T-074, T-075, T-076, T-077, T-078, T-080, T-081, T-082, T-083 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-059 ([E05] HTML template memory-book (design temp1)); T-072 ([E10] Quality sweep: mnd, forbidigo, pointer parameters, pool defaults, remove the transition switch); T-079 ([E01] Make the timing-sensitive integration tests tolerant of a starved CI runner)
+**Awaiting your review (MERGED):** T-059 ([E05] HTML template memory-book (design temp1)); T-060 ([E05] HTML template navy-classic (design temp2)); T-072 ([E10] Quality sweep: mnd, forbidigo, pointer parameters, pool defaults, remove the transition switch); T-079 ([E01] Make the timing-sensitive integration tests tolerant of a starved CI runner)
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-032 (Approve merge of T-061 (template picker, print guide, public print-feedback counter, PR #71)?)
 
-_Board last written 2026-10-16 23:16Z_
+_Board last written 2026-10-16 23:35Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -1611,7 +1610,7 @@ Items from the T-006 review that only matter at scale or in production: (1) the 
 - 2026-10-07 07:07Z · leader · From the T-006 review: also require at least one visible character in a display name (a name made only of U+200D passes today), preferably through one shared helper that T-008 and later text fields reuse.
 
 ### T-032 — [E01] db.Open: treat MySQL 1044 as permanent; README warning about bare docker compose
-- **Status:** TODO
+- **Status:** READY_FOR_QA
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -1620,10 +1619,10 @@ Items from the T-006 review that only matter at scale or in production: (1) the 
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-16 09:43Z by leader
-- **Comments-seen:** 1
+- **Branch:** task/t-032-e01-db-open-treat-mysql-1044-as-permanen
+- **PR:** 72
+- **Updated:** 2026-10-16 23:27Z by dev
+- **Comments-seen:** 2
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/08-db-open-treat-mysql-1044-as-permanent-readme.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1633,6 +1632,7 @@ db.Open: treat MySQL 1044 as permanent; README warning about bare docker compose
 
 #### Comments
 - 2026-10-16 09:43Z · leader · promoted to keep the dev queue at 4; small P3.
+- 2026-10-16 23:27Z · dev · 1044 added to permanent() + test case; README compose warning. go test ./... and make lint green. Head 164f192.
 
 ### T-033 — [E01] CI: do not cancel in-progress runs on develop and main
 - **Status:** DONE
@@ -2769,7 +2769,7 @@ Pastel Memory Book canvas as an HTML template, EN and VI, four page kinds.
 - 2026-10-16 18:24Z · leader · merged 402d685 (PR #68). Review: web template + manifest + print-check; the cut-off defect (text running out of the card in print) fixed at the cause with contain:size and 6 new print-check tests that fail without the fix; QA re-verified the printed PDFs at A5/A4/Letter (identical positions for normal notes, fidelity pictures within 1.5 mm); CI green, QA_PASS on the same head. For owner to check: set a book's template by SQL (no API sets template_id until T-061), open /yearbooks/<id>/book, print to PDF; sample PDFs in docs/templates/memory-book-*.pdf; the Vietnamese strings in the PR description (print screen shrunk-note list etc). Open (pre-existing, not from this PR): inbox lists extra answers in MySQL JSON key order; the thank-you card quotes how_we_met instead of the message.
 
 ### T-060 — [E05] HTML template navy-classic (design temp2)
-- **Status:** IN_PROGRESS
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
@@ -2777,11 +2777,11 @@ Pastel Memory Book canvas as an HTML template, EN and VI, four page kinds.
 - **Risk:** low
 - **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-060-e05-html-template-navy-classic-design-te
 - **PR:** https://github.com/danyaa666/smemories/pull/70
-- **Updated:** 2026-10-16 23:02Z by dev
-- **Comments-seen:** 4
+- **Updated:** 2026-10-16 23:35Z by leader
+- **Comments-seen:** 7
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/11-html-template-navy-classic.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2818,6 +2818,19 @@ Navy and gold canvas as the second HTML template.
   NEW VIETNAMESE STRINGS FOR THE OWNER (bookPages.navy.*, en -> vi): classOf "Class of" -> "Khóa"; profileEyebrow "A few words about me" -> "Vài điều về mình"; autographsEyebrow "Leave a few words" -> "Để lại đôi lời"; autographs "Autographs" -> "Lưu bút"; farewell "Farewell" -> "Tạm biệt"; farewellYear "Farewell, Class of {{year}}" -> "Tạm biệt, khóa {{year}}".
   Cleanup done: my API/Vite processes stopped, private DB dropped, Redis db 11 flushed, my yearbooks deleted via API (media gone), worktree clean.
 - 2026-10-16 19:11Z · leader · Leader guidance for the rework (QA_FAIL, one major; everything else passed): the real PDF LOSES owner text that the screen shows. On the profile page the favourite-quote text and the signature (owner name + sign line) are missing at A5, A4 and Letter when the profile fields are long but valid: hobbies 300, future_plans 300, quote 500 characters, no photo => neither the quote marker nor the name in the PDF; 100/100/200 prints fine; 300/300/100 loses the name at Letter only. Silent loss of the owner's own text is worse than clipping. Fix at the cause in print (compare with how T-059 memory-book lays out the profile and with the contain:size lesson; the profile boxes must be height-bounded AND the shrink-to-fit must run for every profile field, or the layout must give the quote and the signature a reserved area that long fields cannot push out), at A5/A4/Letter. Then extend make print-check with PROFILE cases at the validated maximum lengths (hobbies 300, future_plans 300, quote 500, motto/name at their maximum, with and without the portrait): assert via pdftotext -bbox that the quote, the name and the sign line are present and inside the page and their boxes. IMPORTANT: run the same profile cases against the T-059 memory-book template and the T-058 basic template; if either loses text too, fix it in this PR (same cause, small) and say so. Also decide cheaply: the public form still offers 'Add photo' although navy-classic never prints friends' photos; leave it as is, we will drive it from the template manifest later (do not change the form here). Strings bookPages.navy.* accepted. CI green on the new head, READY_FOR_QA.
+- 2026-10-16 23:21Z · dev · Rework 1, head 252db76 (develop merged), CI green. Issue 1 fixed at the cause: the printed flex layout of the profile letter differed from the screen's (flex-shrink on flexBasis estimates), pushing the quote and the signature off the page. Para heights are now computed in px in navy.tsx (estimate, scaled down in proportion when they exceed the room above the signature) and fixed; font shrink still runs inside each box. Test: make print-check 49/49, new 18 cases 'profile fields at their maximum length' (hobbies 300, plans 300, quote 500, name 100, nickname 50, title/school/class 120, motto 200; with and without portrait; A5/A4/Letter) assert via pdftotext -bbox on page 2 that the 3 texts, the name and the sign line (nickname first) are present, on the page and inside their .bk-fit boxes; the 6 navy cases failed before the fix. Same cases on T-059 memory-book and T-058 basic: all 12 pass unchanged, no fix needed there. Issue 2 (minor): accepted. Public form untouched. web lint/typecheck/i18n/api/vitest 304/build OK.
+- 2026-10-16 23:35Z · qa · QA_PASS on PR #70 head 252db76 (rework 1). Issue 1 (profile text lost in print) is fixed; verified by me, not only through dev's tests.
+  EVIDENCE (own Vite :15174 + own API :18081 + private DB smem_test_qa060b at latest schema, Redis db 12; real Chrome Page.printToPDF preferCSSPageSize+printBackground, template_id set by SQL; pdftotext -bbox on the profile page)
+  - Reproduced the old failure on head d5eaf95 (own Vite on a git-archive of it): hobbies 300 / plans 300 / quote 500, no photo: quote end marker and name = 0 hits at A5, A4 and Letter. On 252db76 the same case: all three end markers + name present at A5/A4/Letter, 0 words outside the page, no word-bbox overlap, signature below the quote visible (viewed PNG).
+  - navy-classic matrix, each at A5/A4/Letter, each without and with portrait (180 PDFs): A 300/300/500; B 300/300/100 (the Letter-only loss); C everything at max (title 120, school 120, class 120, motto 200, name 100, nickname 50 + 300/300/500); D Vietnamese diacritics + emoji at max; E/F/G only quote / only hobbies / only plans at max; H name+title+motto max, no paragraphs; I short fields; J 290-500 chars without spaces; O 100/100/200; P 200/200/300; K/L/M name 30/45/60 chars. Result: every paragraph end marker present, 0 out-of-page words, 3 pages, no overlap with the signature.
+  - Regression vs the earlier passing head d5eaf95 (same cases, pixel compare of page 2 at 60 dpi, PR vs old): short fields, quote-only, hobbies-only, plans-only and 100/100/200 are byte-identical at all 3 sizes (nothing moved or got squashed). Only 300/300/500 and 200/200/300 differ (the old layout was the bug; old lost the text at Letter for 200/200/300).
+  - Font floor, DOM font-size in pt (A5/A4/Letter): worst case 300/300/500 paragraphs 12.8-13.5 / 12.4-13.5 / 10.9-12.4 pt (Letter worst 10.9 pt); 300/300/100 14.3-15.8 pt; Vietnamese+emoji max 12.4-14.6 pt; no-space strings 10.5-13.1 pt; short fields 16.5 pt unchanged. Legible everywhere.
+  - Signature (owner name on the profile page): 30 pt normal, 21.8 pt at 30 chars, 15 pt at 45, 11.3 pt at 60 chars, all complete. At 80-100 chars it hits the 9 pt floor and the end of the name is cut inside its box (e.g. 'Longname Person ... Lon'); the screen then says 'Texts on your own pages that are too long ... cut off in the printout: 1'. Not a regression (the name was lost entirely before) and consistent with the notes behaviour; non-blocking.
+  - memory-book and basic with the same maximum profiles (A, B, C, D, J; A5/A4/Letter; with/without portrait; 60 PDFs): all three end markers present, 0 out-of-page words, 3 pages. basic: name complete, 0 overlaps. memory-book: unchanged code (PR touches no memory-book/basic file); a 100-char name (cases C, D) is clipped there as before; the constant 4 bbox overlaps are the same in short and max cases (design decoration), page-image unchanged.
+  MECHANICAL: CI on 252db76 all green (go, go-integration, security, web). make print-check (PRINT_CHECK_PORT=5391): 49/49 pass. web in the worktree: lint+prettier, typecheck, lint:i18n, check:api, build all OK; vitest 18 files / 304 tests pass. PR diff has 0 files under .team/. Skipped as agreed: notes pages, 300-note books, photos flag, footer, escaping, public form (verified last round).
+  NON-BLOCKING: names of about 80-100 characters at the 9 pt floor are clipped at the end (reported on the print screen); the cover shrink to ~3 pt for max-length title/school/motto noted earlier is unchanged.
+  Cleanup: my API/Vite stopped, DB smem_test_qa060b dropped, Redis db 12 flushed, my 58 yearbooks and their media deleted via API; worktree clean.
+- 2026-10-16 23:35Z · leader · merged 8f1f885 (PR #70). Review: web template navy-classic + manifest; the profile text loss in print fixed at the cause (px paragraph heights), 18 new profile-at-maximum print-check cases (49/49); QA reproduced the old failure, verified ~20 profile cases at A5/A4/Letter (worst font 10.9 pt at Letter), short profiles print byte-identical to before, memory-book and basic unaffected; CI green on the same head. Known: a name of ~80-100 characters hits the 9 pt floor and is cut inside its box (counted on the print screen); the public form still offers 'Add photo' for navy-classic although friends' photos are not printed. For owner to check: after T-061 lands, pick navy-classic and print; samples docs/templates/navy-classic-*; Vietnamese strings bookPages.navy.* (Khóa, Vài điều về mình, Để lại đôi lời, Lưu bút, Tạm biệt, Tạm biệt khóa {{year}}).
 
 ### T-061 — [E05] Web: template picker and print screen with device guidance
 - **Status:** QA_PASS
@@ -3819,7 +3832,7 @@ Spec: .team/epics/E04-friends-notes/09-inbox-320px-polish.md (read it from the r
 - 2026-10-16 03:40Z · leader · created by mistake: the board does not let the leader override QA_FAIL, so the 320px fix goes through T-017 rework 2 instead
 
 ### T-085 — [E10] Lint exclusions anchored and a guard for auth.UserFrom
-- **Status:** TODO
+- **Status:** READY_FOR_QA
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -3828,15 +3841,16 @@ Spec: .team/epics/E04-friends-notes/09-inbox-320px-polish.md (read it from the r
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-16 18:19Z by leader
-- **Comments-seen:** 1
+- **Branch:** task/t-085-e10-lint-exclusions-anchored-and-a-guard
+- **PR:** 73
+- **Updated:** 2026-10-16 23:34Z by dev
+- **Comments-seen:** 2
 
 Spec: .team/epics/E10-skills-alignment/12-lint-anchors-userfrom-guard.md (read it from the repo root). Two non-blocking findings of the T-072 QA.
 
 #### Comments
 - 2026-10-16 18:19Z · leader · promoted to keep the dev queue at 4; spec 12-lint-anchors-userfrom-guard.md
+- 2026-10-16 23:34Z · dev · Lint regexes anchored (scratch internal/latest flagged); auth.MustUser used by all user handlers; per-package 401 tests; lint, unit and integration green. Head 99f32a1.
 
 <!-- tasks:end -->
 
@@ -3876,3 +3890,4 @@ Spec: .team/epics/E10-skills-alignment/12-lint-anchors-userfrom-guard.md (read i
 - 2026-10-17 — T-079 (flaky-test tolerance, PR #69) merged 3429df4. T-072 merged earlier, awaiting owner accept. T-059 in rework 1 (print clipping of cut-off notes). Heartbeat recurring (ce6d77f6).
 - 2026-10-17 — T-059 (memory-book template, PR #68) merged 402d685 after rework 1 (cut-off notes ran out of the card in print; fixed with contain:size + print-check cases). T-079 merged. T-061 (picker + print screen, high risk) promoted to TODO. Awaiting owner accept: T-072, T-079, T-059.
 - 2026-10-17 — T-060 QA_FAIL: navy-classic profile page lost the quote and signature in print with long valid fields; rework 1. Open item for later: the public form offers 'Add photo' even when the template (navy-classic) never prints friends' photos; drive it from the template manifest.
+- 2026-10-17 — T-060 (navy-classic template, PR #70) merged 8f1f885 after rework 1 (profile quote and signature lost in print; fixed, 18 profile-at-maximum print-check cases). T-061 QA_PASS, awaiting owner approval (Q-032). T-032 and T-085 in QA. Owner to accept: T-059, T-060, T-072, T-079.
