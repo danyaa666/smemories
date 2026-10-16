@@ -11,8 +11,9 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 13 | T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-061, T-085 |
-| TODO | 3 | T-032, T-060, T-079 |
-| IN_PROGRESS | 1 | T-059 |
+| TODO | 2 | T-032, T-060 |
+| READY_FOR_QA | 1 | T-079 |
+| QA_FAIL | 1 | T-059 |
 | MERGED | 1 | T-072 |
 | DONE | 59 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-073, T-074, T-075, T-076, T-077, T-078, T-080, T-081, T-082, T-083 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
@@ -21,7 +22,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?)
 
-_Board last written 2026-10-16 13:19Z_
+_Board last written 2026-10-16 14:21Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -2632,19 +2633,19 @@ Fixed-size HTML pages, pagination, text fit, print CSS, readiness gate and a hea
 - 2026-10-16 11:13Z · human · accepted by owner
 
 ### T-059 — [E05] HTML template memory-book (design temp1)
-- **Status:** IN_PROGRESS
+- **Status:** QA_FAIL
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
 - **Depends-on:** T-058, T-044
 - **Risk:** low
-- **Rework:** 0
+- **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-059-e05-html-template-memory-book-design-tem
-- **PR:** —
-- **Updated:** 2026-10-16 13:02Z by dev
-- **Comments-seen:** 1
+- **PR:** https://github.com/danyaa666/smemories/pull/68
+- **Updated:** 2026-10-16 14:02Z by qa
+- **Comments-seen:** 4
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/10-html-template-memory-book.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2654,6 +2655,101 @@ Pastel Memory Book canvas as an HTML template, EN and VI, four page kinds.
 
 #### Comments
 - 2026-10-16 09:50Z · leader · unblocked: T-058 merged (renderer core in web/src/book/), T-044 done. Read the addendum at the bottom of the spec (which notes were shrunk/cut).
+- 2026-10-16 13:44Z · dev · PR #68 head 13cba05, CI green. memory-book template (cover, profile, friend page 1 note/page, back), Baloo 2 + Patrick Hand fonts (Vietnamese), html manifest memory-book.json (no API sets template_id yet: T-061; tested with template_id set by SQL), addendum list of shrunk/cut notes with inbox links (+ ?note= deep link in the inbox). Verify: make print-check (13 tests), samples docs/templates/memory-book-*.pdf, fidelity jpgs, VI strings in PR body. Not checked: Firefox/Safari/mobile, print dialog. Decisions to confirm: form asks name, how_we_met, first_impression, best_memory, wish, message only; back page left blank for handwriting; core tweaks (Template.Notes gets data+first, fit tolerance 0.2em).
+- 2026-10-16 14:02Z · qa · QA_FAIL on PR #68 head 13cba05: one major issue, everything else passed (details below).
+  
+  ISSUES
+  1. [major] A note that is "still cut off" is NOT clipped inside its card in the printed PDF; its text and ruled lines spill out of the card, over the page footer and down to the page edge. The preview on screen clips correctly, and the T-058 basic template clips the same text cleanly inside its slot, so this is specific to memory-book (AC4 "no text leaves its box"; addendum: pathological text is clipped inside its card).
+     Repro: private DB at latest schema, book with template_id='memory-book' (A5, language en), one approved note with name "Cat Dai" and message = "Dong\n" x 400 (2000 chars). Open /yearbooks/:id/book in Chrome 155: list says "Cat Dai, 5 pt, and still cut off" (correct) and data-fit=overflow. Page.printToPDF (preferCSSPageSize, printBackground) then pdftoppm -r 70 on that page: the "Dong" lines continue below the Message card (card bottom about y=515 of 595 pt), cross the footer line "<title> / heart / Class of" at y about 553 and reach y about 592 of the 595 pt page. pdftotext -bbox shows words at yMin 568, 577 and 586 (page height 594.96). Same result with the same note in a 60-note book (page 59).
+     Expected: nothing painted outside the card (like the screen and like basic.tsx). Actual: spill in the PDF only.
+     Suspected area: web/src/book/templates/memory.css (.mb-lines / .mb-ruled / .bk-fit overflow hidden) under Chromium print fragmentation. In my experiment, adding .bk-fit{contain:paint} or .bk-fit{clip-path:inset(0)} did NOT fix it, so look at how the box height is bounded in print (the .mb-lines box measures 634 design px in print emulation, i.e. the DOM says it is clipped, but the PDF paints past it). print-check never covers it because it asserts there is no data-fit=overflow; please add a print-check case that prints the cut note and asserts no text below the card (pdftotext -bbox yMax inside the card, or a pixel check of the footer strip).
+     Realistic exposure: only text with hundreds of line breaks (a 2000-character note of normal words fits at 5 pt, e.g. "Tran Thi Linh, 5 pt" is clean in all three paper sizes).
+  
+  EVIDENCE (all by me, own Vite :15259 + own API :18159 + private DB smem_test_qa059 at latest schema + Redis db 9, real Chrome 155, template_id set by SQL)
+  - CI green on 13cba05 (go, go-integration, security, web). make print-check: 13/13 pass. web: lint, typecheck, lint:i18n, check:api, vitest 290/290, build OK. Go: gofmt, vet, golangci-lint 0 issues, go test -race ./... all ok (internal/pdf TestSamples included), -tags integration internal/templates + ./api ok. No .team/ file in the PR. T-058 tests unchanged and pass; the fitElement tolerance (0.2 em) did not hide real cuts in my runs (the 400-line note is still reported as cut).
+  - Screen 320/375/1280: no horizontal scroll (scrollWidth == clientWidth), 24 pages ready, only the Vite origin requested, only console noise = favicon.ico 404 (pre-existing) and the expected 401 on user/get-me before sign-in; images are lazy by T-058 design (preloaded), none broken once scrolled; list of shrunk/cut notes readable at 320.
+  - PDF (Page.printToPDF, backgrounds on): A5 24 pages 420x594.96 pt, A4 24 pages 594.96x841.92, Letter 24 pages 612x792, all pages the same size, 2.6 to 2.8 MB; fonts all embedded and subset (Baloo2, Patrick Hand, Nunito, Apple Color Emoji only, no Fredoka/Gaegu/fallback); 21 JPEG photos present (1 cover + 1 profile + 19 notes); pdftotext extracts Vietnamese, emoji (🎓 🌈 🏖️ 🥳 ...) and the escaped text; contact sheet of the 24 A4 pages: no blank page, backgrounds and dotted paper printed, nothing clipped; 0 notes = 3 pages, 1 note = 4 pages, 60 notes = 63 pages (A5).
+  - Notes probed: long Vietnamese name of 58 characters, no photo (dashed "dán ảnh" box), 3 photos, emoji incl. ZWJ sequences, <script>, <img onerror>, &amp;, {{name}}, ${x}, %s, backslashes: all printed as literal text. Note with nickname + relationship + advice (only possible via SQL since the form does not ask nickname/advice) prints them; the form and the print agree (Tên, Biệt danh and Mối quan hệ lines are blank-for-handwriting when absent, per the PR decision).
+  - Addendum: 2000-char note listed as "Trần Thị Linh, 5 pt" (shrunk, not cut: all text visible at 5 pt in the PDF) and the pathological note as "Cắt Dài, 5 pt, and still cut off", each with "Open in the inbox"; link /yearbooks/:id/notes?note=<id> opens the Approved tab and focuses that note's ••• button ("More actions for ...'s note"), also at position 57 of 60 (the Approved tab loads all pages first).
+  - Public form (T-018): /c/<token> at 375 asks Tên, Chúng mình quen nhau thế nào, Ấn tượng đầu tiên, Kỷ niệm đẹp nhất, Điều mình ước, Lời nhắn + photo; no horizontal scroll; a submission with a photo was stored pending with the 6 answers and appeared in the inbox; honeypot untouched. Moderation inbox shows every answer with its label and the photos.
+  - Fidelity jpgs (cover, profile, friend, back) checked against design/canvas/temp1.html pictures: header, photo frames, tape, stickers, colours and table match; the typed-text boxes are stretched on purpose as the PR says. Patrick Hand replaces Gaegu (look is close).
+  - Cleanup: my API, Vite stopped, DB dropped, my Redis db 9 flushed, MinIO objects removed.
+  
+  NON-BLOCKING OBSERVATIONS
+  a. Inbox lists a note's extra answers in MySQL JSON key order (wish, how we met, best memory, first impression), not in form order. Pre-existing code (not in this diff) but now more visible with 6 fields.
+  b. The thank-you card after the public form quotes the first long_text answer (how_we_met), not the message, because NoteForm picks the first long_text field. Pre-existing logic, new effect with this template.
+  c. Profile page: the favourite quote is at the top of the yellow box and its label at the bottom (looks odd, but matches the box shape of the canvas motto).
+  d. Not tested: Firefox, Safari, Edge, interactive print dialog, slow network, Windows/Android emoji fonts (as the PR says).
+  e. Cover "Texts set in a smaller size to fit: 1" is the long cover title, fine.
+  
+  VIETNAMESE STRINGS FOR THE OWNER: listed in the PR body (bookPages.memory.* and print.fit*); I found no wrong diacritics in what the book prints; wording not judged.
+- 2026-10-16 14:03Z · leader · Leader guidance for the rework (QA_FAIL, one major; everything else passed): a note that is still cut off at the minimum size must be clipped INSIDE its card in the printed PDF, but in memory-book the lines of the 2000-char 'Dòng\n' x 400 message run out of the Message card, over the footer, down to the page edge (A5 words at y 568-592 of 595 pt). The screen preview clips it and the T-058 basic template clips the same text cleanly in print, so compare how the basic template bounds the box (fixed height + overflow:hidden on a block, or a grid/flex child with min-height:0) with web/src/book/templates/memory.css, and find why the memory-book card is not height-bounded in print (an auto min-height of a flex/grid item, a transformed/relative inner element, fit font-size reset by print media rules, or the new fitElement 0.2 em leading tolerance letting the last line through). Note QA already tried .bk-fit{contain:paint} and clip-path:inset(0) without success. Fix at the cause, in print output, at A5, A4 and Letter. Then extend cd web && npm ci
+  
+  added 389 packages, and audited 390 packages in 4s
+  
+  153 packages are looking for funding
+    run `npm fund` for details
+  
+  found 0 vulnerabilities
+  cd tools/print-check && npm ci && npx playwright install chromium && npm test
+  
+  added 2 packages, and audited 3 packages in 1s
+  
+  found 0 vulnerabilities
+  
+  > test
+  > node --test check.test.mjs
+  
+  TAP version 13
+  # \# A5: ready 989 ms, pdf 608 ms, 1.4 MB, /var/folders/75/3rtkmg5d7lxdzhfsngn298x00000gn/T/print-check-fELI4k/book-A5.pdf
+  # Subtest: 24-page book, 30 photos, 84 notes
+      # Subtest: A5: pages, size, fonts, text, photos
+      ok 1 - A5: pages, size, fonts, text, photos
+        ---
+        duration_ms: 1985.107875
+        type: 'test'
+        ...
+  # \# A4: ready 937 ms, pdf 578 ms, 1.4 MB, /var/folders/75/3rtkmg5d7lxdzhfsngn298x00000gn/T/print-check-fELI4k/book-A4.pdf
+      # Subtest: A4: pages, size, fonts, text, photos
+      ok 2 - A4: pages, size, fonts, text, photos
+        ---
+        duration_ms: 1784.714959
+        type: 'test'
+        ...
+  # \# Letter: ready 915 ms, pdf 592 ms, 1.4 MB, /var/folders/75/3rtkmg5d7lxdzhfsngn298x00000gn/T/print-check-fELI4k/book-Letter.pdf
+      # Subtest: Letter: pages, size, fonts, text, photos
+      ok 3 - Letter: pages, size, fonts, text, photos
+        ---
+        duration_ms: 1783.595125
+        type: 'test'
+        ...
+      1..3
+  ok 1 - 24-page book, 30 photos, 84 notes
+    ---
+    duration_ms: 7037.003791
+    type: 'suite'
+    ...
+  # Subtest: a book cut at 300 notes warns on screen and prints only the book
+  ok 2 - a book cut at 300 notes warns on screen and prints only the book
+    ---
+    duration_ms: 1299.210708
+    type: 'test'
+    ...
+  # Subtest: a book with no notes still prints cover, profile and back
+  ok 3 - a book with no notes still prints cover, profile and back
+    ---
+    duration_ms: 1110.417708
+    type: 'test'
+    ...
+  1..3
+  # tests 5
+  # suites 1
+  # pass 5
+  # fail 0
+  # cancelled 0
+  # skipped 0
+  # todo 0
+  # duration_ms 9847.317833 with a cut-off note (the 400-line message and a 2000-char single paragraph) asserting no text outside its card box in the PDF (e.g. pdftotext -bbox or the text positions vs the card rectangles) so this cannot regress; add the same case to the T-058 basic template if it is not already covered. Everything else is accepted as built (manifest, fonts, decisions 1-5). Non-blocking, leave them: inbox extra-answer order and the thank-you card quoting how_we_met (pre-existing). CI green on the new head, READY_FOR_QA.
 
 ### T-060 — [E05] HTML template navy-classic (design temp2)
 - **Status:** TODO
@@ -3448,7 +3544,7 @@ T-065 QA found: a book delete racing a read gives 500 'yearbook without its owne
 - 2026-10-12 04:00Z · human · accepted by owner
 
 ### T-079 — [E01] Make the timing-sensitive integration tests tolerant of a starved CI runner
-- **Status:** TODO
+- **Status:** READY_FOR_QA
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -3457,10 +3553,10 @@ T-065 QA found: a book delete racing a read gives 500 'yearbook without its owne
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-12 04:42Z by leader
-- **Comments-seen:** 0
+- **Branch:** task/t-079-e01-make-the-timing-sensitive-integratio
+- **PR:** 69
+- **Updated:** 2026-10-16 14:20Z by dev
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/14-timing-sensitive-integration-tests.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -3469,6 +3565,7 @@ T-065 QA found: a book delete racing a read gives 500 'yearbook without its owne
 T-077 QA: a ratelimit retry-after test failed once on the CI runner (689 ms vs about 850 ms) and the media test binary now peaks at 1.9 GB; make timing assertions deterministic and cap media test parallelism.
 
 #### Comments
+- 2026-10-16 14:20Z · dev · PR #69. ratelimit retry-after now on fake clock (exact 850ms); media busy test uses channel not 2s wall clock; redis ping best-of-20; session TTL test polls; media TestMain caps -parallel at 4 (peak 1.53->1.24 GB, wall 54->57s on 11 cores, no change on 4-core CI). Load runs: ratelimit/redis/auth Session -count=20 and media -count=5 pass with 12 busy loops. Scan findings left are listed in the PR. make test-integration green locally; CI pending.
 
 ### T-080 — [E04] Public submit: show 'link full' instead of a connection reset
 - **Status:** DONE
