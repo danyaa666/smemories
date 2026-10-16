@@ -75,11 +75,6 @@ func slowRoute(timeout, read time.Duration, next http.Handler) http.Handler {
 	}))
 }
 
-func owner(r *http.Request) uint64 {
-	u, _ := auth.UserFrom(r.Context())
-	return u.InternalID
-}
-
 // mediaJSON is a photo as the API shows it: no storage keys, no URLs (the client builds the content URL from id).
 //
 // mediaJSON is passed by value on purpose: a response body encoded once.
@@ -98,6 +93,10 @@ func toJSON(m *Media, yearbookID string) mediaJSON {
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
+	u, ok := auth.MustUser(w, r)
+	if !ok {
+		return
+	}
 	select {
 	case h.inflight <- struct{}{}:
 		defer func() { <-h.inflight }()
@@ -110,7 +109,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	m, err := h.svc.Upload(r.Context(), owner(r), yearbookID, data)
+	m, err := h.svc.Upload(r.Context(), u.InternalID, yearbookID, data)
 	if err != nil {
 		h.fail(w, r, err)
 		return
@@ -119,6 +118,10 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
+	u, ok := auth.MustUser(w, r)
+	if !ok {
+		return
+	}
 	q := r.URL.Query()
 	yearbookID := q.Get("yearbook_id")
 	if yearbookID == "" {
@@ -142,7 +145,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	items, next, err := h.svc.List(r.Context(), owner(r), yearbookID, q.Get("uploader"), limit, before)
+	items, next, err := h.svc.List(r.Context(), u.InternalID, yearbookID, q.Get("uploader"), limit, before)
 	if err != nil {
 		h.fail(w, r, err)
 		return
@@ -243,6 +246,10 @@ func (e *errRecorder) Read(p []byte) (int, error) {
 }
 
 func (h *Handler) content(w http.ResponseWriter, r *http.Request) {
+	u, ok := auth.MustUser(w, r)
+	if !ok {
+		return
+	}
 	q := r.URL.Query()
 	id := q.Get("id")
 	if id == "" {
@@ -258,7 +265,7 @@ func (h *Handler) content(w http.ResponseWriter, r *http.Request) {
 		h.fail(w, r, apperr.New(apperr.Param, "variant must be thumb, display or print"))
 		return
 	}
-	m, data, ct, variant, err := h.svc.Content(r.Context(), owner(r), id, variant)
+	m, data, ct, variant, err := h.svc.Content(r.Context(), u.InternalID, id, variant)
 	if err != nil {
 		h.fail(w, r, err) // an error is the JSON envelope with no-store (SecurityHeaders): an <img> only needs the status, and nothing is cached
 		return
@@ -285,6 +292,10 @@ type deleteInput struct {
 }
 
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
+	u, ok := auth.MustUser(w, r)
+	if !ok {
+		return
+	}
 	var in deleteInput
 	if !httpx.DecodeJSON(w, r, &in) {
 		return
@@ -293,7 +304,7 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 		h.fail(w, r, apperr.New(apperr.Param, "id is required"))
 		return
 	}
-	if err := h.svc.Delete(r.Context(), owner(r), in.ID); err != nil {
+	if err := h.svc.Delete(r.Context(), u.InternalID, in.ID); err != nil {
 		h.fail(w, r, err)
 		return
 	}

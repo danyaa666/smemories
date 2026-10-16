@@ -37,11 +37,11 @@ linters:
           - gosec
       # forbidigo: the command-line mains, config validation (start-up messages for the operator) and the *test helper
       # packages keep plain errors; so do tests.
-      - path: (_test\.go|^cmd/|^internal/config/|test/[^/]+\.go$|^internal/[a-z]+/[a-z]*test/)
+      - path: (_test\.go|^cmd/|^internal/config/|^internal/[a-z]+/(dbtest|redistest|storagetest|oidctest)/)
         linters:
           - forbidigo
       # Test helper packages (dbtest, redistest, storagetest, oidctest) hold fixture sizes and timeouts.
-      - path: ^internal/[a-z/]+test/
+      - path: ^internal/[a-z]+/(dbtest|redistest|storagetest|oidctest)/
         linters:
           - mnd
       # The JPEG/EXIF reader is a binary-format parser: its offsets and tags are the format's own numbers.
