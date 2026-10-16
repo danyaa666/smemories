@@ -90,6 +90,7 @@ type modStore interface {
 	setStatus(ctx context.Context, ownerID uint64, bookID string, ids []string, status string, now int64) (*Counts, error)
 	reorder(ctx context.Context, ownerID uint64, bookID string, ids []string, now int64) error
 	photoRows(ctx context.Context, ownerID uint64, bookID string, ids []string) ([]int64, error)
+	approvedNotes(ctx context.Context, ownerID uint64, bookID string) ([]*BookNote, error)
 	removeNotes(ctx context.Context, ownerID uint64, bookID string, ids []string, deleteRows func(ctx context.Context, tx *sql.Tx, rowIDs []int64) error) (*Counts, error)
 }
 

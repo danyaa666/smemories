@@ -1330,6 +1330,51 @@ paths:
         "429": {$ref: "#/components/responses/ApiRateLimited"}
         "502": {$ref: "#/components/responses/ApiBadGateway"}
         "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/book-data/get:
+    get:
+      operationId: getBookData
+      tags: [book-data]
+      summary: Read the whole book for the browser renderer
+      description: >-
+        Called by the signed-in owner's book screens (preview and print) to draw the book from one request (decision D-24): the
+        yearbook, the owner's profile and the approved notes, nothing else. Notes are in book order (the order of
+        `GET /api/note/get-list?status=approved`); pending and hidden notes never appear. At most 300 notes with at most 3 photos
+        each; a book with more approved notes is cut after the 300th (`note_count` is the number returned). Media are public ids;
+        the bytes come from `GET /api/media/get-content?id=&variant=print`. The answers are stored text: render them escaped,
+        never as HTML. No storage key, hash, email, birthday or internal id is part of the answer. `yearbook_id` must be a
+        canonical ULID (26 upper-case characters), else `ERROR_PARAM`. Needs a verified email (`ERROR_EMAIL_NOT_VERIFIED`, as the
+        note list). A missing yearbook and one owned by someone else both answer `ERROR_NOT_FOUND`. Safe to repeat.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: The yearbook does not exist or belongs to someone else; the two cannot be told apart.}
+        - {code: ERROR_EMAIL_NOT_VERIFIED, description: The owner's email address is not verified yet.}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
+      security:
+        - sessionCookie: []
+      parameters:
+        - {name: yearbook_id, in: query, required: true, schema: {type: string}, description: Yearbook ULID (canonical upper case).}
+      responses:
+        "200":
+          description: The book.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/BookDataResponse"}
+              examples:
+                book:
+                  value:
+                    status: OK
+                    data:
+                      yearbook: {title: "Lớp 12A1 - Trường THPT Chu Văn An", school_name: "THPT Chu Văn An", class_name: 12A1, graduation_year: 2026, motto: "Học, học nữa, học mãi", language: vi, page_size: A5, template_id: classic, cover_media_id: 01K7QC0B2C3D4E5F6G7H8J9K0M}
+                      profile: {full_name: "Nguyễn Thị Hồng", nickname: Hồng, quote: "", hobbies: "", future_plans: "", photo_media_id: null}
+                      notes:
+                        - {id: 01K7QB1B2C3D4E5F6G7H8J9K0M, answers: {name: Minh Khoa, relationship: Classmate, message: Thanks for everything}, photo_ids: [01K7QC1B2C3D4E5F6G7H8J9K0M]}
+                      note_count: 1
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
   /api/public-collect/get:
     get:
       operationId: getPublicCollect
@@ -1963,6 +2008,60 @@ components:
               items: {$ref: "#/components/schemas/NoteItem"}
             next_id: {type: string, description: "Opaque cursor for the next page; the empty string on the last page."}
             counts: {$ref: "#/components/schemas/NoteCounts"}
+    BookDataResponse:
+      type: object
+      required: [status, data]
+      properties:
+        status: {type: string, const: OK, description: Always `OK` on success.}
+        data:
+          type: object
+          description: The book as the renderer needs it.
+          required: [yearbook, profile, notes, note_count]
+          properties:
+            yearbook:
+              type: object
+              description: The yearbook's printed information.
+              required: [title, school_name, class_name, graduation_year, motto, language, page_size, template_id, cover_media_id]
+              properties:
+                title: {type: string, description: The book's title.}
+                school_name: {type: string, description: School name; empty when unset.}
+                class_name: {type: string, description: Class name; empty when unset.}
+                graduation_year: {type: [integer, "null"], description: Graduation year; null when unset.}
+                motto: {type: string, description: Motto; empty when unset.}
+                language: {type: string, enum: [en, vi], description: "Language of the book: `en` or `vi`."}
+                page_size: {type: string, enum: [A5, A4, Letter], description: "Page size: `A5`, `A4` or `Letter`."}
+                template_id: {type: [string, "null"], description: Template id; null when none was chosen (the renderer uses its default).}
+                cover_media_id: {type: [string, "null"], description: Public id of the cover photo; null when there is none.}
+            profile:
+              type: object
+              description: The owner's profile page. The birthday is not part of it.
+              required: [full_name, nickname, quote, hobbies, future_plans, photo_media_id]
+              properties:
+                full_name: {type: string, description: Full name.}
+                nickname: {type: string, description: Nickname; empty when unset.}
+                quote: {type: string, description: Favourite quote; empty when unset.}
+                hobbies: {type: string, description: Hobbies; empty when unset.}
+                future_plans: {type: string, description: Future plans; empty when unset.}
+                photo_media_id: {type: [string, "null"], description: Public id of the profile photo; null when there is none.}
+            notes:
+              type: array
+              description: The approved notes in book order, at most 300.
+              maxItems: 300
+              items:
+                type: object
+                required: [id, answers, photo_ids]
+                properties:
+                  id: {type: string, description: "The note's public id, a ULID."}
+                  answers:
+                    type: object
+                    description: The friend's answers as stored, field id to text (docs/note-fields.md). Plain text; never render it as HTML.
+                    additionalProperties: {type: string}
+                  photo_ids:
+                    type: array
+                    description: Public ids of the note's photos in order, at most 3; empty when it has none. Content is read with `GET /api/media/get-content?id=&variant=print`.
+                    maxItems: 3
+                    items: {type: string}
+            note_count: {type: integer, minimum: 0, maximum: 300, description: Number of notes in `notes`.}
     NoteUpdateStatusRequest:
       type: object
       additionalProperties: false

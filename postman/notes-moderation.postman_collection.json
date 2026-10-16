@@ -2,7 +2,7 @@
   "info": {
     "name": "SMemories - notes moderation",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Notes moderation (T-013): `/api/note/get-list`, `batch-update-status`, `reorder` and `batch-delete` on the v2 contract. Uses the three fixed accounts of notes.postman_collection.json (A and B verified, C never verified): run that collection's Setup once and `make verify-newman-users`, or run this one's Setup and the same make target. Run in order from the postman/ directory (`newman run notes-moderation.postman_collection.json --working-dir .`), because one note uploads fixtures/media/photo-gps.jpg. Edge cases reuses the yearbook and notes of the Full flow and ends by deleting the yearbook. A run makes 5 public submissions (limit 100 per IP per hour) and about 10 moderation writes (limit 120 per user per minute); `make reset-limits` clears the limits. Start the API with SMEM_ENV=dev."
+    "description": "Notes moderation (T-013): `/api/note/get-list`, `batch-update-status`, `reorder` and `batch-delete` on the v2 contract, and the book data read of T-056 (`/api/book-data/get`: steps 18a and the Book data requests of Edge cases). Uses the three fixed accounts of notes.postman_collection.json (A and B verified, C never verified): run that collection's Setup once and `make verify-newman-users`, or run this one's Setup and the same make target. Run in order from the postman/ directory (`newman run notes-moderation.postman_collection.json --working-dir .`), because one note uploads fixtures/media/photo-gps.jpg. Edge cases reuses the yearbook and notes of the Full flow and ends by deleting the yearbook. A run makes 5 public submissions (limit 100 per IP per hour) and about 10 moderation writes (limit 120 per user per minute); `make reset-limits` clears the limits. Start the API with SMEM_ENV=dev."
   },
   "item": [
     {
@@ -1037,6 +1037,60 @@
           ]
         },
         {
+          "name": "18a. Book data: A gets the approved notes N2, N1 in book order; N3 (hidden), N4 and N5 (pending) are left out",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/book-data/get?yearbook_id={{bookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "book-data",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json(), d = b.data, v = n => pm.collectionVariables.get(n);",
+                  "pm.test('envelope', () => pm.expect(b.status).to.eql('OK'));",
+                  "pm.test('approved notes in book order', () => pm.expect(d.notes.map(n => n.id)).to.eql([v('n2'), v('n1')]));",
+                  "pm.test('note_count', () => pm.expect(d.note_count).to.eql(2));",
+                  "pm.test('hidden and pending notes are not in the book', () => { const ids = d.notes.map(n => n.id); [v('n3'), v('n4'), v('n5')].forEach(x => pm.expect(ids).to.not.include(x)); });",
+                  "pm.test('photo ids by note', () => pm.expect(d.notes.map(n => n.photo_ids)).to.eql([[v('photoId')], []]));",
+                  "pm.test('answers as stored', () => pm.expect(d.notes[0].answers.name).to.eql('N2'));",
+                  "pm.test('shape', () => { pm.expect(Object.keys(d).sort()).to.eql(['note_count', 'notes', 'profile', 'yearbook']); pm.expect(Object.keys(d.notes[0]).sort()).to.eql(['answers', 'id', 'photo_ids']); });",
+                  "pm.test('yearbook and profile', () => { pm.expect(d.yearbook.title).to.eql('Newman moderation'); pm.expect(d.yearbook.language).to.eql('en'); pm.expect(d.yearbook.page_size).to.eql('A5'); pm.expect(d.profile).to.have.property('full_name'); });",
+                  "pm.test('nothing internal in the body', () => { const t = pm.response.text(); ['object_key', 'thumb_key', 'print_key', 'sha256', 'owner_id', 'token', 'birthday', pm.collectionVariables.get('emailA')].forEach(x => pm.expect(t).to.not.include(x)); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "19. Paging: limit 1, first page",
           "request": {
             "method": "GET",
@@ -1640,6 +1694,51 @@
           ]
         },
         {
+          "name": "Book data without a session - 401",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/book-data/get?yearbook_id={{bookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "book-data",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 401', () => pm.response.to.have.status(401));",
+                  "pm.test('ERROR_UNAUTHORIZED', () => pm.expect(pm.response.json().status).to.eql('ERROR_UNAUTHORIZED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Update status without a session - 401",
           "request": {
             "method": "POST",
@@ -2035,6 +2134,51 @@
             "body": {
               "mode": "raw",
               "raw": "{\"yearbook_id\":\"{{bookIdC}}\",\"ids\":[\"{{n1}}\"],\"status\":\"hidden\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 403', () => pm.response.to.have.status(403));",
+                  "pm.test('ERROR_EMAIL_NOT_VERIFIED', () => pm.expect(pm.response.json().status).to.eql('ERROR_EMAIL_NOT_VERIFIED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Book data, unverified owner - 403 ERROR_EMAIL_NOT_VERIFIED",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenC}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/book-data/get?yearbook_id={{bookIdC}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "book-data",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookIdC}}"
+                }
+              ]
             }
           },
           "event": [
@@ -3348,6 +3492,225 @@
           ]
         },
         {
+          "name": "Book data: B asks for A's book - 404 ERROR_NOT_FOUND",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/book-data/get?yearbook_id={{bookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "book-data",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Book data: yearbook that does not exist - 404 ERROR_NOT_FOUND",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/book-data/get?yearbook_id=00000000000000000000000000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "book-data",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "00000000000000000000000000"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Book data: missing yearbook_id - 400 ERROR_PARAM",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/book-data/get",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "book-data",
+                "get"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Book data: lower-case yearbook_id - 400 ERROR_PARAM",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/book-data/get?yearbook_id=01arz3ndektsv4rrffq69g5fav",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "book-data",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "01arz3ndektsv4rrffq69g5fav"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Book data: malformed yearbook_id - 400 ERROR_PARAM",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/book-data/get?yearbook_id=abc",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "book-data",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "abc"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Clean up: A deletes the yearbook - 200",
           "request": {
             "method": "POST",
@@ -3416,6 +3779,51 @@
                 "api",
                 "note",
                 "get-list"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "The deleted yearbook has no book data - 404",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/book-data/get?yearbook_id={{bookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "book-data",
+                "get"
               ],
               "query": [
                 {

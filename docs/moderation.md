@@ -31,3 +31,18 @@ code: `internal/notes/moderation*.go`; Postman: `postman/notes-moderation.postma
 
 The approved list reads `idx_yearbook_id_status_sort_order` (keyset on `sort_order`); the other lists filter on the same index and sort by `created_at, id` in
 memory (at most a few hundred notes per book, so no new index). Photos and link labels are read with one query each for the whole page.
+
+## Book data (T-056)
+
+`GET /api/book-data/get?yearbook_id=` (package `internal/bookdata`) hands the browser renderer the whole book in one owner-only response: the yearbook, the owner's
+profile and the **approved** notes in book order (`sort_order`, then id: the order of `note/get-list?status=approved`), each with its answers and photo ids.
+
+- **Access.** Same rules as the note list: session, verified email, canonical upper-case ULID (`ERROR_PARAM`), another user's or a missing book is `ERROR_NOT_FOUND`.
+- **Left out.** Pending and hidden notes, storage keys, hashes, emails, the birthday, link labels and every internal id. Photos are public ids, read with
+  `media/get-content?id=&variant=print`.
+- **Queries.** Yearbook and profile (2, plus 1 for the cover/profile photo ids), the approved notes (1) and their photo links (1, skipped when there are no notes);
+  the count does not depend on the number of notes (`TestQueryCountAndCap`).
+- **Bound.** At most 300 notes, the reorder cap. The 300-note limit is per link and a book can have up to five active links, so a book with more approved
+  notes is cut after the 300th and `note_count` is the number returned. With the built-in templates' fields at their maximum length (name 60, relationship 60,
+  message 2000 characters, ASCII) and 3 photos per note the answer is about 690 KB (`TestMaximalBookIsUnderOneMiB`). Text that needs 2 or more bytes per
+  character, or a template that asks for all nine fields, can pass 1 MiB: the renderer must not assume it.
