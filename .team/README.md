@@ -12,15 +12,14 @@
 |---|---:|---|
 | BACKLOG | 16 | T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-058, T-059, T-060, T-061 |
 | TODO | 4 | T-056, T-072, T-079, T-082 |
-| MERGED | 2 | T-017, T-080 |
-| DONE | 54 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-018, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-073, T-074, T-075, T-076, T-077, T-078, T-081, T-083 |
+| DONE | 56 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-073, T-074, T-075, T-076, T-077, T-078, T-080, T-081, T-083 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-017 ([E04] Web: notes link management and moderation inbox); T-080 ([E04] Public submit: show 'link full' instead of a connection reset)
+**Awaiting your review (MERGED):** nothing
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?)
 
-_Board last written 2026-10-16 04:11Z_
+_Board last written 2026-10-16 08:13Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -401,7 +400,7 @@ Small CI-file change (go-integration timeout-minutes 15 -> 40) plus 'make test-i
 - **Asked:** 2026-10-16 03:30Z
 - **Blocks:** T-081
 - **Recommendation:** approve
-- **Answer:** _(pending)_
+- **Answer:** approved by owner via team approve T-081 (merged 5cfe240, accepted)
 
 <!-- questions:end -->
 
@@ -966,7 +965,7 @@ Owner-created private collection links (create, list, revoke) and the public loo
 - **Branch:** task/t-013-e04-notes-moderation-api-approve-hide-re
 - **PR:** https://github.com/danyaa666/smemories/pull/60
 - **Updated:** 2026-10-16 02:43Z by human
-- **Comments-seen:** 10
+- **Comments-seen:** 11
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/03-notes-moderation-api-approve-hide-reorder.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1113,7 +1112,7 @@ Dashboard of the user's yearbooks; create/edit form for book information and the
 - 2026-10-09 01:42Z · leader · accepted by owner (chat, 2026-10-09: 'team accept T-016, T-046, T-047, T-051')
 
 ### T-017 — [E04] Web: notes link management and moderation inbox
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
@@ -1124,8 +1123,8 @@ Dashboard of the user's yearbooks; create/edit form for book information and the
 - **Assignee:** —
 - **Branch:** task/t-017-e04-web-notes-link-management-and-modera
 - **PR:** https://github.com/danyaa666/smemories/pull/61
-- **Updated:** 2026-10-16 04:11Z by leader
-- **Comments-seen:** 11
+- **Updated:** 2026-10-16 04:16Z by human
+- **Comments-seen:** 12
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/04-web-notes-link-management-and-moderation.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1191,6 +1190,7 @@ Create/copy/revoke the collection link, set a deadline, see submissions grouped 
   - Spot-checks: real mouse drag -> ONE POST /note/reorder, DOM and API order agree, announcement text OK; link creation works at 320.
   NON-BLOCKING: mobile tab bar has no pending badge (known accepted); T-084 was cancelled so nothing further tracked.
 - 2026-10-16 04:11Z · leader · merged 445a11c (PR #61). Review: web-only, token only in component state (tests assert no storage/URL), delete has a 6 s Undo and flushes on leave, no retry on 4xx, focus handling covered by tests, 320/360/375/1280 checked in real Chrome after 2 reworks; CI green, QA_PASS on the same head. Known differences: no pending badge on the mobile tab bar (as in the design); whole card at 320px is 248-302px. For owner to check: /yearbooks/<id>/notes and /note-links in the app at phone and desktop width; the new Vietnamese strings under inbox.* and links.* (see the PR description).
+- 2026-10-16 04:16Z · human · accepted by owner
 
 ### T-018 — [E04] Web: public anonymous notes form
 - **Status:** DONE
@@ -1205,7 +1205,7 @@ Create/copy/revoke the collection link, set a deadline, see submissions grouped 
 - **Branch:** task/t-018-e04-web-public-anonymous-notes-form
 - **PR:** https://github.com/danyaa666/smemories/pull/59
 - **Updated:** 2026-10-16 02:43Z by human
-- **Comments-seen:** 11
+- **Comments-seen:** 12
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/05-web-public-anonymous-notes-form.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -3399,7 +3399,7 @@ T-077 QA: a ratelimit retry-after test failed once on the CI runner (689 ms vs a
 #### Comments
 
 ### T-080 — [E04] Public submit: show 'link full' instead of a connection reset
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -3410,8 +3410,8 @@ T-077 QA: a ratelimit retry-after test failed once on the CI runner (689 ms vs a
 - **Assignee:** —
 - **Branch:** task/t-080-e04-public-submit-show-link-full-instead
 - **PR:** 63
-- **Updated:** 2026-10-16 04:11Z by leader
-- **Comments-seen:** 4
+- **Updated:** 2026-10-16 04:16Z by human
+- **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/08-full-link-reset.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -3432,6 +3432,7 @@ T-068 answers a full public link on the raw writer without reading the body; a f
   - Browser (Chrome, EN 1280 and VI 375): /c/<full token>, filled name+message+8 MiB photo, Send -> POST submit-note 409, page shows 'This link is full / This link has reached its limit. Ask QA Tester to open a new link.' (VI: 'Liên kết này đã đầy'). No network error.
   ABUSE ANGLE (non-blocking, leader to be aware): drain is bounded in bytes (32 MiB cap) and time (10 s idle, 16 KiB/s min rate after 15 s, 120 s total, so a slow client burns <=~2 MiB per 120 s) and writes nothing. New exposure vs before: a valid full-link token holder now occupies a slot (up to 8 per IP, 48 global) for up to 120 s per request instead of getting an instant 409, and a fast client can push 32 MiB per request; the per-IP bucket 'public_all' (600 requests / 15 min) bounds that to about 19 GiB / 15 min per IP, and 8 concurrent trickling requests per IP can hold 8 of 48 slots indefinitely. This is the same capability a token holder already has on an open link with an invalid body (which is spooled to disk), so no new class of risk; acceptable per spec, a lower per-IP concurrency or a cheaper drain bound for full links could be a later tuning.
 - 2026-10-16 04:11Z · leader · merged d8e9d7c (PR #63). Review: a valid token on a full link drains the body to io.Discard under the existing pace/size limits (10 s idle, 16 KiB/s minimum, 120 s total, 32 MiB), nothing on disk, unknown token path unchanged; CI green, QA_PASS on the same head. Abuse note: a full-link token holder can now hold one of the 8 per-IP slots up to 120 s (same exposure as an invalid body on an open link); revisit with the edge rate limits in T-031. For owner to check: open a full link in the browser and see 'This link is full'.
+- 2026-10-16 04:16Z · human · accepted by owner
 
 ### T-081 — [E02] Username: unique public handle with default and weekly change (API)
 - **Status:** DONE
@@ -3446,7 +3447,7 @@ T-068 answers a full public link on the raw writer without reading the body; a f
 - **Branch:** task/t-081-e02-username-unique-public-handle-with-d
 - **PR:** https://github.com/danyaa666/smemories/pull/62
 - **Updated:** 2026-10-16 03:59Z by human
-- **Comments-seen:** 4
+- **Comments-seen:** 7
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/13-username-api.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
