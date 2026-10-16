@@ -21,3 +21,13 @@ vietnamese subsets, woff2, served from this folder). Licence texts: `OFL-Baloo2.
 
 Both are used for English and Vietnamese books alike, so a Vietnamese name in an English book does not fall back letter by letter.
 Fredoka and Gaegu stay in this folder for the first designs; nothing loads them unless a template names them.
+
+## Be Vietnam Pro (T-060)
+
+The `navy-classic` template (canvas temp2) sets its small capital labels in Jost, which has 56 of the 148 Vietnamese letters. Its
+lookalike with full Vietnamese coverage is Be Vietnam Pro (geometric sans, a little wider than Jost). Cormorant Garamond, the other
+family of the canvas, already covers all of it. Same source and method as above.
+
+| Family               | Replaces | Source                                                                | Files                                                 | Vietnamese letters (every letter with its tone marks, both cases) | Licence                         |
+| -------------------- | -------- | --------------------------------------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------------------- | ------------------------------- |
+| Be Vietnam Pro (500) | Jost     | fonts.google.com/specimen/Be+Vietnam+Pro, Vietnam Pro Project Authors | `BeVietnamPro-500-{latin,latin-ext,vietnamese}.woff2` | all 146 (fontTools: 12 vowels x 6 tones x 2 cases, plus đ Đ)      | OFL 1.1, `OFL-BeVietnamPro.txt` |

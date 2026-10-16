@@ -1,0 +1,11 @@
+{
+  "id": "navy-classic",
+  "renderer": "html",
+  "name": {"en": "Navy Classic", "vi": "Xanh navy cổ điển"},
+  "page_sizes": ["A5", "A4", "Letter"],
+  "note_fields": [
+    {"id": "name", "required": true},
+    {"id": "relationship"},
+    {"id": "message", "required": true}
+  ]
+}

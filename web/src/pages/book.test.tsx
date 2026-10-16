@@ -390,3 +390,160 @@ describe("memory-book template", () => {
     });
   });
 });
+
+describe("navy-classic template", () => {
+  const friend = (i: number, over: Record<string, string> = {}) =>
+    note(i, {
+      answers: {
+        name: `Nguyễn Thị Hồng Ánh ${i}`,
+        relationship: "Bạn cùng lớp",
+        message: `Giữ liên lạc nhé ${i}`,
+        ...over,
+      },
+      photo_ids: [PHOTO(i)],
+    });
+  const navy = (notes: BookData["notes"], language: "en" | "vi" = "en") => {
+    const data = bookData(notes);
+    data.yearbook.template_id = "navy-classic";
+    data.yearbook.language = language;
+    data.yearbook.cover_media_id = PHOTO(90);
+    data.profile = {
+      ...data.profile,
+      quote: "Hãy sống",
+      hobbies: "Đọc sách",
+      future_plans: "Thiết kế",
+      photo_media_id: PHOTO(91),
+    };
+    return data;
+  };
+
+  it.each([
+    [0, 3, 0],
+    [1, 4, 1],
+    [4, 4, 1],
+    [5, 5, 2],
+    [9, 6, 3],
+  ])("a book with %i notes has %i pages: %i notes pages of four", async (n, pages, notePages) => {
+    serve(navy(Array.from({ length: n }, (_, i) => friend(i + 1))));
+    open();
+    await waitFor(() => expect(sheets()).toHaveLength(pages));
+    expect(sheets("notes")).toHaveLength(notePages);
+    expect(document.querySelectorAll(".nc-note")).toHaveLength(n);
+    expect(document.querySelectorAll(".nc-page")).toHaveLength(pages);
+  });
+
+  it("binds the cover, the profile (oval photo), every note and the back, in the book's language", async () => {
+    serve(navy([friend(1)], "vi"));
+    open();
+    await waitFor(() => expect(sheets()).toHaveLength(4));
+    const page = (label: string) => sheets(label)[0] as HTMLElement;
+    const cover = page("cover").textContent ?? "";
+    for (const s of ["THPT Chu Văn An", "Khóa", "2026", "Lớp 12A1", "Học, học nữa, học mãi"])
+      expect(cover).toContain(s);
+    const profile = page("profile");
+    for (const s of ["Giới thiệu về mình", "Đọc sách", "Thiết kế", "Hãy sống", "Nguyễn Thị Hồng"])
+      expect(profile.textContent).toContain(s);
+    expect(profile.querySelector("img.nc-oval")).not.toBeNull();
+    const notes = page("notes").textContent ?? "";
+    for (const s of [
+      "Lưu bút",
+      "Để lại đôi lời",
+      "Nguyễn Thị Hồng Ánh 1",
+      "Bạn cùng lớp",
+      "Giữ liên lạc nhé 1",
+    ])
+      expect(notes).toContain(s);
+    expect(notes).toContain("Tạm biệt, khóa 2026");
+    expect(page("back").textContent).toContain("Cảm ơn bạn đã là một phần của cuốn lưu bút này.");
+  });
+
+  it("prints English labels for an English book although the app is in Vietnamese", async () => {
+    serve(navy([friend(1)], "en"));
+    open();
+    await waitFor(() => expect(sheets()).toHaveLength(4));
+    expect(sheets("cover")[0]!.textContent).toContain("Class of");
+    expect(sheets("profile")[0]!.textContent).toContain("All about me");
+    expect(sheets("notes")[0]!.textContent).toContain("Autographs");
+    expect(sheets("notes")[0]!.textContent).toContain("Farewell, Class of 2026");
+  });
+
+  it("shows an empty oval when the owner has no photo, and leaves out what is empty", async () => {
+    const data = navy([friend(1, { relationship: "" })]);
+    data.profile.photo_media_id = null;
+    data.profile.hobbies = "";
+    data.yearbook.graduation_year = null;
+    data.yearbook.motto = "";
+    serve(data);
+    open();
+    await waitFor(() => expect(sheets()).toHaveLength(4));
+    const profile = sheets("profile")[0]!;
+    expect(profile.querySelector("div.nc-oval")).not.toBeNull();
+    expect(profile.querySelector("img")).toBeNull();
+    expect(profile.textContent).not.toContain("Hobbies");
+    expect(sheets("cover")[0]!.querySelector(".nc-year")).toBeNull();
+    expect(sheets("cover")[0]!.querySelector(".nc-motto")).toBeNull();
+    expect(sheets("notes")[0]!.textContent).toContain("Farewell");
+    expect(sheets("notes")[0]!.querySelectorAll(".nc-sign-line")).toHaveLength(0);
+  });
+
+  it("loads only the photo this design shows (the owner's portrait), not the cover or the friends' photos", async () => {
+    serve(navy([friend(1), friend(2)]));
+    open();
+    await waitFor(() => expect(sheets()).toHaveLength(4));
+    expect(requested).toHaveLength(1);
+    expect(requested[0]).toContain(PHOTO(91));
+    expect(document.querySelectorAll("img")).toHaveLength(1);
+  });
+
+  it("draws user text as text, never as HTML", async () => {
+    const evil = "<img src=x onerror=alert(1)><b>đậm</b> & 😄";
+    serve(navy([friend(1, { name: evil, message: evil, relationship: evil })]));
+    open();
+    await waitFor(() => expect(sheets()).toHaveLength(4));
+    expect(document.querySelector("img[src='x']")).toBeNull();
+    expect(document.querySelector(".nc-page b")).toBeNull();
+    expect(sheets("notes")[0]!.textContent).toContain("<img src=x onerror=alert(1)>");
+  });
+
+  describe("which notes were shrunk or cut", () => {
+    // jsdom has no layout: a box needs 1/8 px of height per character and font px, and has 100 px.
+    beforeEach(() => {
+      vi.spyOn(HTMLElement.prototype, "scrollHeight", "get").mockImplementation(function (
+        this: HTMLElement,
+      ) {
+        return ((this.textContent ?? "").length * (parseFloat(this.style.fontSize) || 20)) / 8;
+      });
+      vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(100);
+    });
+    afterEach(() => vi.restoreAllMocks());
+
+    it("lists a note of 2000 characters as cut, a longer note as smaller, each with a link to the inbox", async () => {
+      const long = note(1, { answers: { name: "Linh", message: "x".repeat(2000) } });
+      const medium = note(2, { answers: { name: "Hoa", message: "y".repeat(50) } });
+      const short = note(3, { answers: { name: "Minh", message: "ok" } });
+      serve(navy([long, medium, short]));
+      open();
+      const summary = await screen.findByText("Notes in a smaller size or cut off: 2");
+      const box = summary.closest("details")!;
+      expect(box).toHaveAttribute("open");
+      const items = [...box.querySelectorAll("li")];
+      expect(items).toHaveLength(2); // Minh fits as designed
+      // A5: the floor is 50 % of 19 design px = 9.5 px = 4.9 pt
+      expect(items[0]!.textContent).toContain("Linh, 5 pt, and still cut off");
+      expect(items[1]!.textContent).toContain("Hoa, ");
+      expect(items[1]!.textContent).not.toContain("cut off");
+      const links = [...box.querySelectorAll("a")].map((a) => a.getAttribute("href"));
+      expect(links).toEqual([
+        `/yearbooks/${BOOK}/notes?note=${long.id}`,
+        `/yearbooks/${BOOK}/notes?note=${medium.id}`,
+      ]);
+    });
+
+    it("says nothing when every note fits", async () => {
+      serve(navy([note(1, { answers: { name: "Minh", message: "ok" } })]));
+      open();
+      await waitFor(() => expect(sheets()).toHaveLength(4));
+      expect(screen.queryByText(/Notes in a smaller size/)).not.toBeInTheDocument();
+    });
+  });
+});

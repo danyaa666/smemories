@@ -37,13 +37,13 @@ function memoryNotes(notes, longNote, cutOff) {
 }
 
 /** `notes` approved notes; the first 28 carry one photo each, the cover and the profile one more: 30 distinct photos. */
-export function makeBook({ notes = 84, size = "A5", truncatedOf = null, template = null, longNote = -1, stress = false, cutOff = false } = {}) {
+export function makeBook({ notes = 84, size = "A5", truncatedOf = null, template = null, longNote = -1, stress = false, cutOff = false, profileMax = false, portrait = true } = {}) {
   const list = template === "memory-book" ? memoryNotes(notes, longNote, cutOff) : Array.from({ length: notes }, (_, i) => ({
     id: ulid("N", i + 1),
     answers: {
       name: NAMES[i % NAMES.length],
       relationship: "Bạn cùng lớp",
-      message: cutOff && i < 2 ? CUT_OFF[i] : i === 3 ? MESSAGES[0].repeat(14) : MESSAGES[i % MESSAGES.length], // note 4: a long one that must shrink to fit
+      message: cutOff && i < 2 ? CUT_OFF[i] : i === 3 ? MESSAGES[0].repeat(14) : i === longNote ? LONG_2000 : MESSAGES[i % MESSAGES.length], // note 4: a long one that must shrink to fit
       ...(i % 5 === 0 ? { best_memory: "Buổi diễn văn nghệ cuối năm, cả lớp hát vang 🎤" } : {}),
     },
     photo_ids: i < 28 ? [photoId(i + 3)] : [],
@@ -88,5 +88,12 @@ export function makeBook({ notes = 84, size = "A5", truncatedOf = null, template
     book.yearbook.motto = cut(prose, 150);
     book.profile = { ...book.profile, full_name: cut(name, 60), nickname: cut(name, 50), hobbies: cut(prose, 300), future_plans: cut(prose, 300), quote: cut(prose, 500) };
   }
+  if (profileMax) {
+    // The validated maximum of every owner field (internal/yearbook/validate.go), each starting with a marker word the PDF check looks for.
+    const fill = (marker, n) => [...`${marker} ${"Chúc bạn thật nhiều sức khỏe, thành công và hạnh phúc nhé. ".repeat(12)}`].slice(0, n).join("");
+    Object.assign(book.yearbook, { title: fill("Tmark", 120), school_name: fill("Smark", 120), class_name: fill("Cmark", 120), motto: fill("Mmark", 200) });
+    Object.assign(book.profile, { full_name: fill("Zname", 100), nickname: fill("Knick", 50), hobbies: fill("Hmark", 300), future_plans: fill("Pmark", 300), quote: fill("Qmark", 500) });
+  }
+  if (!portrait) book.profile.photo_media_id = null;
   return book;
 }
