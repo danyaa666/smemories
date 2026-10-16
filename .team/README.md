@@ -12,17 +12,17 @@
 |---|---:|---|
 | BACKLOG | 11 | T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050 |
 | TODO | 2 | T-032, T-085 |
-| READY_FOR_QA | 1 | T-061 |
-| QA_FAIL | 1 | T-060 |
+| IN_PROGRESS | 1 | T-060 |
+| QA_PASS | 1 | T-061 |
 | MERGED | 3 | T-059, T-072, T-079 |
 | DONE | 59 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-073, T-074, T-075, T-076, T-077, T-078, T-080, T-081, T-082, T-083 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
 **Awaiting your review (MERGED):** T-059 ([E05] HTML template memory-book (design temp1)); T-072 ([E10] Quality sweep: mnd, forbidigo, pointer parameters, pool defaults, remove the transition switch); T-079 ([E01] Make the timing-sensitive integration tests tolerant of a starved CI runner)
 
-**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?)
+**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-032 (Approve merge of T-061 (template picker, print guide, public print-feedback counter, PR #71)?)
 
-_Board last written 2026-10-16 19:16Z_
+_Board last written 2026-10-16 23:16Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -404,6 +404,13 @@ Small CI-file change (go-integration timeout-minutes 15 -> 40) plus 'make test-i
 - **Blocks:** T-081
 - **Recommendation:** approve
 - **Answer:** approved by owner via team approve T-081 (merged 5cfe240, accepted)
+
+### Q-032 — Approve merge of T-061 (template picker, print guide, public print-feedback counter, PR #71)?
+- **Status:** OPEN
+- **Asked:** 2026-10-16 23:16Z
+- **Blocks:** T-061
+- **Recommendation:** approve
+- **Answer:** _(pending)_
 
 <!-- questions:end -->
 
@@ -2762,7 +2769,7 @@ Pastel Memory Book canvas as an HTML template, EN and VI, four page kinds.
 - 2026-10-16 18:24Z · leader · merged 402d685 (PR #68). Review: web template + manifest + print-check; the cut-off defect (text running out of the card in print) fixed at the cause with contain:size and 6 new print-check tests that fail without the fix; QA re-verified the printed PDFs at A5/A4/Letter (identical positions for normal notes, fidelity pictures within 1.5 mm); CI green, QA_PASS on the same head. For owner to check: set a book's template by SQL (no API sets template_id until T-061), open /yearbooks/<id>/book, print to PDF; sample PDFs in docs/templates/memory-book-*.pdf; the Vietnamese strings in the PR description (print screen shrunk-note list etc). Open (pre-existing, not from this PR): inbox lists extra answers in MySQL JSON key order; the thank-you card quotes how_we_met instead of the message.
 
 ### T-060 — [E05] HTML template navy-classic (design temp2)
-- **Status:** QA_FAIL
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
@@ -2770,10 +2777,10 @@ Pastel Memory Book canvas as an HTML template, EN and VI, four page kinds.
 - **Risk:** low
 - **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** dev
 - **Branch:** task/t-060-e05-html-template-navy-classic-design-te
 - **PR:** https://github.com/danyaa666/smemories/pull/70
-- **Updated:** 2026-10-16 19:10Z by qa
+- **Updated:** 2026-10-16 23:02Z by dev
 - **Comments-seen:** 4
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/11-html-template-navy-classic.md`
@@ -2813,7 +2820,7 @@ Navy and gold canvas as the second HTML template.
 - 2026-10-16 19:11Z · leader · Leader guidance for the rework (QA_FAIL, one major; everything else passed): the real PDF LOSES owner text that the screen shows. On the profile page the favourite-quote text and the signature (owner name + sign line) are missing at A5, A4 and Letter when the profile fields are long but valid: hobbies 300, future_plans 300, quote 500 characters, no photo => neither the quote marker nor the name in the PDF; 100/100/200 prints fine; 300/300/100 loses the name at Letter only. Silent loss of the owner's own text is worse than clipping. Fix at the cause in print (compare with how T-059 memory-book lays out the profile and with the contain:size lesson; the profile boxes must be height-bounded AND the shrink-to-fit must run for every profile field, or the layout must give the quote and the signature a reserved area that long fields cannot push out), at A5/A4/Letter. Then extend make print-check with PROFILE cases at the validated maximum lengths (hobbies 300, future_plans 300, quote 500, motto/name at their maximum, with and without the portrait): assert via pdftotext -bbox that the quote, the name and the sign line are present and inside the page and their boxes. IMPORTANT: run the same profile cases against the T-059 memory-book template and the T-058 basic template; if either loses text too, fix it in this PR (same cause, small) and say so. Also decide cheaply: the public form still offers 'Add photo' although navy-classic never prints friends' photos; leave it as is, we will drive it from the template manifest later (do not change the form here). Strings bookPages.navy.* accepted. CI green on the new head, READY_FOR_QA.
 
 ### T-061 — [E05] Web: template picker and print screen with device guidance
-- **Status:** READY_FOR_QA
+- **Status:** QA_PASS
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -2821,11 +2828,11 @@ Navy and gold canvas as the second HTML template.
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** leader
 - **Branch:** task/t-061-e05-web-template-picker-and-print-screen
 - **PR:** https://github.com/danyaa666/smemories/pull/71
-- **Updated:** 2026-10-16 19:16Z by dev
-- **Comments-seen:** 2
+- **Updated:** 2026-10-16 23:16Z by qa
+- **Comments-seen:** 4
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/12-template-picker-and-print-screen.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2836,6 +2843,25 @@ Pick a template for the page size, print with per-browser guidance, anonymous wo
 #### Comments
 - 2026-10-16 18:24Z · leader · unblocked: T-058 and T-059 merged. AC1 and AC3 were rewritten to the v2 routes (GET /api/template/get-list, template_id via POST /api/yearbook/update, public print-feedback counter). Risk high: owner approval before merge. T-060 (navy-classic) is in progress; the picker works with one template and lists the second when it lands.
 - 2026-10-16 19:16Z · dev · PR #71, head c7a8fd1, CI green (go, go-integration, security, web). Whole task in one PR: GET /api/template/get-list, template_id on yearbook create/update (ERROR_INVALID_TEMPLATE), POST /api/print-feedback/create (table print_feedback_tab, goose migration 20261017100000), picker + per-UA guide + feedback on /yearbooks/:id/book, openapi/schema.d.ts, postman/templates.postman_collection.json (newman green), docs. Real Chromium at 320/375/1280 checked; make print-check 19/19 (run with PRINT_CHECK_PORT=5683 because :5199 is taken). Not tested on real Safari/Android/iOS devices (OWNER-TESTS). Vietnamese strings are listed in the PR. Two existing integration tests adjusted (db username migration, notes delete registry).
+- 2026-10-16 23:16Z · qa · QA_PASS on PR #71 head c7a8fd1 (CI green: go, go-integration, security, web). Own API + private DB (all migrations, goose up/down/up of 20261017100000 clean) + own Redis db 9 + real Google Chrome via Playwright on my own Vite.
+  EVIDENCE
+  AC1: get-list A5 = classic,memory-book,modern; A4 same; Letter = memory-book only; no param = all; A3 / a5 / "A5 " / %00 = 400 ERROR_PARAM; no session 401; POST 405. yearbook/update: unknown, "", Memory-Book, " memory-book", >32 chars = 400 ERROR_INVALID_TEMPLATE; 123 / array = 400 ERROR_PARAM; classic on a Letter book 400; memory-book saved (get shows it); null clears (idempotent); size change with an unsupported template 400; another user's book 404; no session 401; foreign Origin + cookie 403. Newman templates 48 req / 122 assertions, green twice back to back.
+  AC2: Chrome at 320/375/1280: no horizontal scroll, picker lists Plain layout + Memory Book only (A5, A4, Letter), preview image loads. Choice via mouse and keyboard (ArrowUp/Down), focus stays on the radio, focus ring visible, saved status announced, preview changes (pages 5 -> 9), persists after reload, slow save (1.5 s) the radio follows at once, a 400 shows the error banner, list 500 shows "templates could not be loaded" and the guide still works. Real Chrome page.pdf of memory-book: 9 pages, A5 420x594.96 pt, no picker/guide text in the PDF. Shrunk/cut note list ("Linh, 5.5 pt, Open in the inbox") still shown. Guide per UA checked (en and vi): Chrome Mac, Edge Win, Safari Mac, Firefox Win -> own guides; Android Chrome and Samsung Internet -> Android Chrome guide; iOS Safari and iOS Chrome -> iPhone guide; Firefox Android -> generic. Steps are accurate (Save as PDF, paper size, margins none, background graphics / Print backgrounds, headers off; iOS pinch-to-PDF + Save to Files). Vietnamese renders. No googleapis/gstatic requests; console clean (only favicon.ico 404, pre-existing).
+  AC3: Feedback: one POST per click, thanks shown, buttons removed (no second send), focus moves to heading / thanks; afterprint opens the question; 429 shows "Too many attempts" with one POST per click (no auto retry). Body is exactly {verdict,browser_family}. API: unknown field / user_agent field 400, verdict maybe/YES/""/null 400, number 400, family netscape / 1000 chars (413) / SQL text 400, missing fields 400, array/invalid json/trailing garbage 400, >1 KiB 413 (also 1 MB with Expect), text/plain and form 415, GET/PUT 405. Per-IP limit exact: 30 accepted then 429 + Retry-After (3579), XFF ignored without TRUST_PROXY; invalid bodies do not consume the limit. Concurrency: 1200 parallel requests (80 threads, 12 family x verdict combos, distinct IPs) -> every counter exactly 100, sum 1200, 12 rows, no lost update. Table has only browser_family, verdict, hits, created_at, updated_at (no IP, UA, user, book); the only route is POST (GET 405, response data {}), no read path.
+  AC4 / gate: gofmt+vet+golangci-lint 0 issues; go build; go test -race ./... all ok; go test -race -tags integration ./... all ok (INTEG exit 0); web lint, typecheck, lint:i18n, check:api, vitest 332/332, build ok; print-check 19/19 (PRINT_CHECK_PORT=5684). Newman: notes 74 req/141 assertions ok, notes-moderation 80/164 ok, media 75/144 ok, templates ok x2. auth (20 assertions: google routes, not configured), platform (1: needs DB down) and yearbooks (crashes: collection calls removed /v1 routes) fail IDENTICALLY on a develop build (checked on develop at :18063), so pre-existing/environmental, not T-061.
+  Two edited integration tests: legitimate. user_username: loops MigrateDown until the username columns are gone (the old test assumed username was the newest migration), assertions unchanged. notes delete: print_feedback_tab is listed as a global table (no book/user), must still exist, other tables still checked.
+  NON-BLOCKING OBSERVATIONS (leader/owner decide)
+  1. print-feedback origin check is auth.Guard: it only rejects a foreign/missing Origin when a session cookie is sent (cookie + wrong/no Origin = 403 ERROR_CSRF_ORIGIN_MISMATCH; no cookie + any/no Origin = 200). Same as register and other public routes and as the spec "like the other public endpoints"; a script can fake Origin anyway, so the 30/h/IP limit is the real guard.
+  2. Limiter fails open (disclosed in PR; same policy as other public endpoints): with Redis down (my own throwaway valkey stopped) 50 requests from one IP all 200, so counters can be inflated during an outage; ERROR "ratelimit: limiter failed policy open" logged. Use limiters.Closed only if the owner wants it closed.
+  3. get-list returns preview /template-previews/classic.jpg and modern.jpg for go templates; those files do not exist (404). The picker hides go templates, so no user impact; only a future consumer would hit it.
+  4. A page-size change refused because of the chosen template answers the generic ERROR_INVALID_TEMPLATE "template is not valid"; the web has no size-change UI here so unaffected.
+  5. Malformed yearbook ids answer 404 (not ERROR_PARAM) and a lower-case ULID is accepted: pre-existing behaviour of yearbook/get too, not changed by this PR.
+  6. Postman has no 413 case for the feedback body (verified by hand); Android guide step 4 says "the question below" before the question is open (it opens with the "I printed" link).
+  7. updated_at (ms) per counter row shows the time of the latest answer for that family/verdict; not personal.
+  8. iPad in desktop mode is recognised only through maxTouchPoints > 1 (Playwright's touch emulation reports 1, so I saw "Safari on a Mac"; unit tests cover >1). Samsung Internet gets the Chrome-on-Android guide. Not tested on real Safari/iOS/Android devices (OWNER-TESTS).
+  9. Vietnamese strings are listed in the PR description for the owner (title "Cai dat in cho thiet bi cua ban", steps etc.). Possible wording check: Chrome's Vietnamese UI may call "Destination" something other than "May in".
+  Cleaned up: my API, Vite, private DB smem_test_qa061, Redis db 9 keys, throwaway valkey container; no .team files in the PR.
+- 2026-10-16 23:16Z · leader · Leader review OK on c7a8fd1: counter table holds only (browser_family, verdict, hits) with one upsert (exactly 1200 hits under 1200 concurrent writes), no read route, strict body + enum validation, 30/h per IP then 429, template_id validated against the registry in the Service, ERROR_INVALID_TEMPLATE; web-only picker/guide reuse T-058/T-059. The two non-blocking QA findings are accepted by policy: the Origin check is auth.Guard like every public route (403 only with a session cookie) and the rate limiter fails open with an ERROR log (docs/redis.md: only sessions and OTP attempts fail closed; the counter is non-critical). CI green, QA_PASS on the same head. Waiting for owner approval (Risk high). Owner to check after merge: run make migrate (new table print_feedback_tab), /yearbooks/<id>/book (picker, print guide, feedback question), and the Vietnamese strings in the PR description.
 
 ### T-062 — [E01] CI: get the newest Go patch straight from go.dev (no manifest lag)
 - **Status:** DONE
