@@ -91,15 +91,15 @@ type fakePhotos struct {
 	discarded     []media.Media
 }
 
-func (f *fakePhotos) UploadContributorFrom(_ context.Context, _ uint64, load func() ([]byte, error)) (media.Media, error) {
+func (f *fakePhotos) UploadContributorFrom(_ context.Context, _ uint64, load func() ([]byte, error)) (*media.Media, error) {
 	f.calls++
 	if f.calls == f.failAt {
-		return media.Media{}, f.err
+		return nil, f.err
 	}
 	if _, err := load(); err != nil {
-		return media.Media{}, err
+		return nil, err
 	}
-	return media.Media{RowID: int64(f.calls)}, nil
+	return &media.Media{RowID: int64(f.calls)}, nil
 }
 
 func (f *fakePhotos) Discard(ms ...media.Media) error {

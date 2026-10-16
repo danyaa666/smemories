@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-sql-driver/mysql"
 
+	"github.com/danyaa666/smemories/internal/apperr"
 	"github.com/danyaa666/smemories/internal/config"
 )
 
@@ -27,11 +28,11 @@ const (
 // includes the DSN, which carries the password.
 func Normalize(dsn string) (*mysql.Config, error) {
 	if dsn == "" { // ParseDSN("") succeeds and would silently dial 127.0.0.1:3306
-		return nil, errors.New("DSN is empty: want user:pass@tcp(host:port)/dbname")
+		return nil, apperr.New(apperr.Internal, "DSN is empty: want user:pass@tcp(host:port)/dbname")
 	}
 	mc, err := mysql.ParseDSN(dsn)
 	if err != nil {
-		return nil, errors.New("DSN is not valid: want user:pass@tcp(host:port)/dbname")
+		return nil, apperr.New(apperr.Internal, "DSN is not valid: want user:pass@tcp(host:port)/dbname")
 	}
 	mc.ParseTime = true
 	mc.Loc = time.UTC
@@ -44,7 +45,7 @@ func Normalize(dsn string) (*mysql.Config, error) {
 func New(mc *mysql.Config, cfg config.Config) (*sql.DB, error) {
 	connector, err := mysql.NewConnector(mc)
 	if err != nil {
-		return nil, fmt.Errorf("mysql connector: %w", err)
+		return nil, apperr.Wrap(apperr.Internal, err, "mysql connector")
 	}
 	d := sql.OpenDB(connector)
 	d.SetMaxOpenConns(cfg.DBMaxOpen)
@@ -59,7 +60,7 @@ func New(mc *mysql.Config, cfg config.Config) (*sql.DB, error) {
 func Open(ctx context.Context, cfg config.Config, logger *slog.Logger) (*sql.DB, error) {
 	mc, err := Normalize(cfg.DBDSN)
 	if err != nil {
-		return nil, fmt.Errorf("SMEM_DB_DSN: %w", err)
+		return nil, apperr.Wrap(apperr.Internal, err, "SMEM_DB_DSN")
 	}
 	d, err := New(mc, cfg)
 	if err != nil {
@@ -89,12 +90,12 @@ func waitReady(ctx context.Context, addr, user string, ping func(context.Context
 			return nil
 		}
 		if permanent(err) {
-			return fmt.Errorf("database at %s refused user %q (check the credentials and database name in SMEM_DB_DSN): %w", addr, user, err)
+			return apperr.Wrap(apperr.Internal, err, fmt.Sprintf("database at %s refused user %q (check the credentials and database name in SMEM_DB_DSN)", addr, user))
 		}
 		logger.Warn("database not ready, retrying", "addr", addr, "error", err)
 		select {
 		case <-ctx.Done():
-			return fmt.Errorf("database at %s not reachable after %s: %w", addr, FirstPingWait, err)
+			return apperr.Wrap(apperr.Internal, err, fmt.Sprintf("database at %s not reachable after %s", addr, FirstPingWait))
 		case <-time.After(pingEvery):
 		}
 	}

@@ -5,6 +5,7 @@ package httpx
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -116,8 +117,14 @@ const genericMessage = "internal server error"
 // Fail answers err with the v2 error envelope and the HTTP status of its apperr code
 // (unknown errors are ERROR_INTERNAL 500). Internal, Unavailable and BadGateway are logged
 // at ERROR with the request id and the full wrapped error and reach the client only as a
-// generic message; other codes send the apperr message and log nothing.
+// generic message; other codes send the apperr message and log nothing. An error that wraps context.Canceled
+// (the client went away) is answered once, here, as ERROR_CLIENT_CLOSED 499 with a debug line.
 func Fail(w http.ResponseWriter, r *http.Request, err error) {
+	if errors.Is(err, context.Canceled) {
+		LoggerFrom(r.Context()).LogAttrs(r.Context(), slog.LevelDebug, "client gone",
+			slog.String("request_id", RequestIDFrom(r.Context())), slog.Any("error", err))
+		err = apperr.New(apperr.ClientClosed, "client closed the request")
+	}
 	code := apperr.CodeOf(err)
 	msg := apperr.Message(err)
 	switch code {

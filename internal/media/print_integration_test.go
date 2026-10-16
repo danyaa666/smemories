@@ -78,7 +78,7 @@ func TestContributorUploadStoresPrintVersion(t *testing.T) {
 	if _, err := e.st.Get(context.Background(), m.PrintKey); err != nil || !strings.HasSuffix(m.PrintKey, "-print.jpg") {
 		t.Fatalf("print object %q: %v", m.PrintKey, err)
 	}
-	if err := e.svc.Discard(m); err != nil || e.st.count(yearbookPrefix(book)) != 0 {
+	if err := e.svc.Discard(*m); err != nil || e.st.count(yearbookPrefix(book)) != 0 {
 		t.Fatalf("discard: %v, %d objects left", err, e.st.count(yearbookPrefix(book)))
 	}
 }

@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/danyaa666/smemories/internal/apperr"
 	"github.com/danyaa666/smemories/internal/metrics"
 )
 
@@ -85,7 +86,7 @@ func (s *statusWriter) Write(b []byte) (int, error) {
 func (s *statusWriter) Unwrap() http.ResponseWriter { return s.ResponseWriter }
 
 // AccessLog writes one JSON line per request. It logs the matched route pattern (e.g.
-// "GET /v1/x/{token}", "-" when nothing matched), never the raw path, query string,
+// "GET /api/x/{token}", "-" when nothing matched), never the raw path, query string,
 // headers or body, so tokens and credentials never reach the log.
 // It must wrap Recover so that a recovered panic is logged as a 500.
 func AccessLog(logger *slog.Logger, next http.Handler) http.Handler {
@@ -165,14 +166,14 @@ func Recover(logger *slog.Logger, next http.Handler) http.Handler {
 			if sw, ok := w.(*statusWriter); ok && sw.status != 0 {
 				return // response already started, nothing more we can send
 			}
-			WriteError(w, r, http.StatusInternalServerError, "internal_error", "internal server error")
+			WriteError(w, r, http.StatusInternalServerError, apperr.Internal.Name, "internal server error")
 		}()
 		next.ServeHTTP(w, r)
 	})
 }
 
 // BodyLimit caps every request body at max bytes. Reads past the cap fail with
-// *http.MaxBytesError; report it with WriteBodyError (413 payload_too_large).
+// *http.MaxBytesError; report it with WriteBodyError (413 ERROR_TOO_LARGE).
 func BodyLimit(max int64, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		raw := r.Body

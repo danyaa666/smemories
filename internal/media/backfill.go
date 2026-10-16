@@ -11,6 +11,8 @@ import (
 )
 
 // BackfillStats is what one Backfill run did.
+//
+// BackfillStats is passed by value on purpose: a few counters returned once.
 type BackfillStats struct {
 	Created int // print objects written (dry run: that would be written)
 	Skipped int // photos deleted or filled by a parallel run meanwhile
@@ -37,7 +39,7 @@ func (s *Service) Backfill(ctx context.Context, batch, maxConsecutive int, dryRu
 		}
 		after = rows[len(rows)-1].RowID
 		for _, m := range rows {
-			ok, err := s.backfillOne(ctx, m, dryRun, logger)
+			ok, err := s.backfillOne(ctx, &m, dryRun, logger)
 			switch {
 			case err != nil && ctx.Err() != nil:
 				return st, ctx.Err()
@@ -65,7 +67,7 @@ func (s *Service) Backfill(ctx context.Context, batch, maxConsecutive int, dryRu
 // backfillOne writes the print object of m; false when the photo was deleted or filled by a parallel run meanwhile.
 // Failures of the object store are returned as CodeStorage errors. A photo deleted between the write and the row update
 // would leave the new object behind until its yearbook is deleted, so the object is removed again.
-func (s *Service) backfillOne(ctx context.Context, m Media, dryRun bool, logger *slog.Logger) (bool, error) {
+func (s *Service) backfillOne(ctx context.Context, m *Media, dryRun bool, logger *slog.Logger) (bool, error) {
 	display, err := s.st.Get(ctx, m.ObjectKey)
 	if errors.Is(err, storage.ErrNotFound) {
 		return false, err

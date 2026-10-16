@@ -8,7 +8,7 @@ import (
 // VerifyEmail checks the 6-digit code typed by the signed-in user and marks their email verified.
 // An already verified user is a no-op. Attempts are limited to 20 per hour per user on top of the
 // 5 wrong guesses a single code allows.
-func (s *Service) VerifyEmail(ctx context.Context, u User, code string) error {
+func (s *Service) VerifyEmail(ctx context.Context, u *User, code string) error {
 	if u.EmailVerified {
 		return nil
 	}
@@ -29,7 +29,7 @@ func (s *Service) VerifyEmail(ctx context.Context, u User, code string) error {
 
 // ResendVerification emails a new code (3 per hour per user; the old code dies). alreadyVerified
 // is true when there is nothing to send.
-func (s *Service) ResendVerification(ctx context.Context, u User) (alreadyVerified bool, err error) {
+func (s *Service) ResendVerification(ctx context.Context, u *User) (alreadyVerified bool, err error) {
 	if u.EmailVerified {
 		return true, nil
 	}

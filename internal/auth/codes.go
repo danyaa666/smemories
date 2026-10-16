@@ -128,9 +128,12 @@ func (c *Codes) mac(purpose string, uid uint64, code string) string {
 	return hex.EncodeToString(m.Sum(nil))
 }
 
+// codeSpace is the number of 6-digit codes.
+const codeSpace = 1_000_000
+
 // newCode draws 6 decimal digits uniformly (crypto/rand.Int rejects out-of-range draws), leading zeros kept.
 func newCode() (string, error) {
-	n, err := rand.Int(rand.Reader, big.NewInt(1_000_000))
+	n, err := rand.Int(rand.Reader, big.NewInt(codeSpace))
 	if err != nil {
 		return "", err
 	}

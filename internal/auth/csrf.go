@@ -14,8 +14,8 @@ const CookieName = "smem_session"
 
 // Guard protects every state-changing request (POST, PUT, PATCH, DELETE):
 //   - one that carries the session cookie must come from an allowed origin (Origin, or
-//     Referer when Origin is absent), else 403 csrf_origin_mismatch;
-//   - one with a body must be application/json, else 415 unsupported_media_type.
+//     Referer when Origin is absent), else 403 ERROR_CSRF_ORIGIN_MISMATCH;
+//   - one with a body must be application/json, else 415 ERROR_UNSUPPORTED_MEDIA_TYPE.
 //
 // allowed holds lower-case origins such as "https://app.example.com" (config
 // SMEM_ALLOWED_ORIGINS). Wrap every mutating route with it.
@@ -37,11 +37,11 @@ func guard(allowed []string, bodyType string, next http.Handler) http.Handler {
 		switch r.Method {
 		case http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete:
 			if _, err := r.Cookie(CookieName); err == nil && !set[requestOrigin(r)] {
-				httpx.WriteError(w, r, http.StatusForbidden, "csrf_origin_mismatch", "origin not allowed")
+				httpx.WriteError(w, r, http.StatusForbidden, "ERROR_CSRF_ORIGIN_MISMATCH", "origin not allowed")
 				return
 			}
 			if r.ContentLength != 0 && !hasMediaType(r.Header.Get("Content-Type"), bodyType) {
-				httpx.WriteError(w, r, http.StatusUnsupportedMediaType, "unsupported_media_type", "Content-Type must be "+bodyType)
+				httpx.WriteError(w, r, http.StatusUnsupportedMediaType, "ERROR_UNSUPPORTED_MEDIA_TYPE", "Content-Type must be "+bodyType)
 				return
 			}
 		}

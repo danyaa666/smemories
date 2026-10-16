@@ -22,7 +22,7 @@ type Dep struct {
 const ReadyTimeout = time.Second
 
 // Ready registers GET /readyz: 200 {"status":"ready"} while p and every dep answer within ReadyTimeout,
-// otherwise 503 not_ready. The driver error is logged, never put in the body.
+// otherwise 503 ERROR_NOT_READY. The driver error is logged, never put in the body.
 func Ready(p Pinger, logger *slog.Logger, deps ...Dep) func(*http.ServeMux) {
 	deps = append([]Dep{{"database", p.PingContext}}, deps...)
 	return func(mux *http.ServeMux) {
@@ -32,7 +32,7 @@ func Ready(p Pinger, logger *slog.Logger, deps ...Dep) func(*http.ServeMux) {
 			for _, d := range deps {
 				if err := d.Ping(ctx); err != nil {
 					logger.Warn("readyz: "+d.Name+" ping failed", "request_id", RequestIDFrom(r.Context()), "error", err)
-					WriteError(w, r, http.StatusServiceUnavailable, "not_ready", "dependency not ready")
+					WriteError(w, r, http.StatusServiceUnavailable, "ERROR_NOT_READY", "dependency not ready")
 					return
 				}
 			}

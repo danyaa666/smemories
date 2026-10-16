@@ -24,6 +24,7 @@ func TestPredefinedCodes(t *testing.T) {
 		{TooLarge, "ERROR_TOO_LARGE", 413},
 		{Unavailable, "ERROR_UNAVAILABLE", 503},
 		{BadGateway, "ERROR_BAD_GATEWAY", 502},
+		{ClientClosed, "ERROR_CLIENT_CLOSED", 499},
 	} {
 		if c.code.Name != c.name || c.code.HTTP != c.http {
 			t.Errorf("%s = %+v, want HTTP %d", c.name, c.code, c.http)

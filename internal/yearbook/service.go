@@ -30,10 +30,10 @@ type ChildPurger interface {
 
 // bookStore is what the Service needs from the store; a fake stands in for it in the unit tests.
 type bookStore interface {
-	create(ctx context.Context, ownerID uint64, y Yearbook) error
-	get(ctx context.Context, ownerID uint64, publicID string) (Yearbook, error)
+	create(ctx context.Context, ownerID uint64, y *Yearbook) error
+	get(ctx context.Context, ownerID uint64, publicID string) (*Yearbook, error)
 	list(ctx context.Context, ownerID uint64, c *cursor, limit int) ([]Yearbook, *cursor, error)
-	modify(ctx context.Context, ownerID uint64, publicID string, nowMs int64, change func(*Yearbook) error) (Yearbook, error)
+	modify(ctx context.Context, ownerID uint64, publicID string, nowMs int64, change func(*Yearbook) error) (*Yearbook, error)
 	remove(ctx context.Context, ownerID uint64, y *Yearbook, children []ChildPurger) error
 }
 
@@ -60,9 +60,9 @@ func NewService(store *Store, tokens Tokens, purger Purger, now func() time.Time
 // book has no media yet, so a cover is refused. A user owns at most maxBooksOwned books (ErrLimitReached).
 func (s *Service) Create(ctx context.Context, ownerID uint64, displayName string, in *BookInput) (*Yearbook, error) {
 	now := s.now().UTC()
-	y := Yearbook{ID: ulid.New(now), PageSize: defaultPageSize, CreatedAt: now.UnixMilli(), UpdatedAt: now.UnixMilli(),
+	y := &Yearbook{ID: ulid.New(now), PageSize: defaultPageSize, CreatedAt: now.UnixMilli(), UpdatedAt: now.UnixMilli(),
 		Profile: Profile{ID: ulid.New(now), IsOwner: true, FullName: displayName}}
-	if err := in.applyTo(&y); err != nil {
+	if err := in.applyTo(y); err != nil {
 		return nil, err
 	}
 	switch {
@@ -76,16 +76,12 @@ func (s *Service) Create(ctx context.Context, ownerID uint64, displayName string
 	if err := s.store.create(ctx, ownerID, y); err != nil {
 		return nil, err
 	}
-	return &y, nil
+	return y, nil
 }
 
 // Get returns the owner's book; a missing book and someone else's are both ErrNotFound.
 func (s *Service) Get(ctx context.Context, ownerID uint64, publicID string) (*Yearbook, error) {
-	y, err := s.store.get(ctx, ownerID, publicID)
-	if err != nil {
-		return nil, err
-	}
-	return &y, nil
+	return s.store.get(ctx, ownerID, publicID)
 }
 
 // List returns one page of the owner's books, newest updated_at first, and the token of the next page ("" on the last).
@@ -109,23 +105,15 @@ func (s *Service) List(ctx context.Context, ownerID uint64, limit int, nextID st
 
 // Update changes the fields present in in on the owner's book and bumps updated_at.
 func (s *Service) Update(ctx context.Context, ownerID uint64, publicID string, in *BookInput) (*Yearbook, error) {
-	y, err := s.store.modify(ctx, ownerID, publicID, s.now().UnixMilli(), in.applyTo)
-	if err != nil {
-		return nil, err
-	}
-	return &y, nil
+	return s.store.modify(ctx, ownerID, publicID, s.now().UnixMilli(), in.applyTo)
 }
 
 // UpdateProfile replaces the owner's profile information (an absent optional field is cleared) and bumps updated_at.
 func (s *Service) UpdateProfile(ctx context.Context, ownerID uint64, publicID string, in *ProfileInput) (*Yearbook, error) {
 	now := s.now()
-	y, err := s.store.modify(ctx, ownerID, publicID, now.UnixMilli(), func(y *Yearbook) error {
+	return s.store.modify(ctx, ownerID, publicID, now.UnixMilli(), func(y *Yearbook) error {
 		return in.applyTo(&y.Profile, now)
 	})
-	if err != nil {
-		return nil, err
-	}
-	return &y, nil
 }
 
 // Delete removes the owner's book with everything that belongs to it. The stored files go first (not transactional):
@@ -141,5 +129,5 @@ func (s *Service) Delete(ctx context.Context, ownerID uint64, publicID string) e
 			return apperr.Wrap(CodeStorage, err, "object storage failed")
 		}
 	}
-	return s.store.remove(ctx, ownerID, &y, s.children)
+	return s.store.remove(ctx, ownerID, y, s.children)
 }

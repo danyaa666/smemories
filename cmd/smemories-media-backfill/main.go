@@ -19,10 +19,15 @@ import (
 	"github.com/danyaa666/smemories/internal/storage"
 )
 
+const (
+	defaultBatch    = 100
+	defaultMaxFails = 20
+)
+
 func main() {
 	dryRun := flag.Bool("dry-run", false, "count the photos without a print object, write nothing")
-	batch := flag.Int("batch", 100, "photos read from the database at a time")
-	maxFails := flag.Int("max-consecutive-failures", 20, "stop after this many object-store errors in a row")
+	batch := flag.Int("batch", defaultBatch, "photos read from the database at a time")
+	maxFails := flag.Int("max-consecutive-failures", defaultMaxFails, "stop after this many object-store errors in a row")
 	flag.Parse()
 	if *batch < 1 || *batch > 10000 || *maxFails < 1 {
 		fmt.Fprintln(os.Stderr, "usage: smemories-media-backfill [--dry-run] [--batch 1..10000] [--max-consecutive-failures N>=1]")

@@ -2,7 +2,7 @@
 openapi: 3.1.0
 info: {title: fixture, version: "1"}
 paths:
-  /v1/legacy:        # not under /api/: never linted
+  /legacy:        # not under /api/: never linted
     get: {}
   /api/book/create:
     post:

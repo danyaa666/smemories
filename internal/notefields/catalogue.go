@@ -18,6 +18,8 @@ type Text struct {
 }
 
 // Field describes one catalogue entry. Hint is the placeholder text of the form input.
+//
+// Field is passed by value on purpose: a catalogue entry, immutable.
 type Field struct {
 	ID        string
 	Kind      Kind

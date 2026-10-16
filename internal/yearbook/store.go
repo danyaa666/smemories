@@ -76,15 +76,15 @@ type querier interface {
 
 type scanner interface{ Scan(...any) error }
 
-func scanBook(sc scanner) (Yearbook, error) {
-	var y Yearbook
+func scanBook(sc scanner) (*Yearbook, error) {
+	y := new(Yearbook)
 	var grad sql.Null[int]
 	var tmpl sql.NullString
 	var cover sql.Null[uint64]
 	err := sc.Scan(&y.internalID, &y.ID, &y.Title, &y.SchoolName, &y.ClassName, &grad, &y.Motto, &y.Language, &y.PageSize, &tmpl, &cover,
 		&y.CreatedAt, &y.UpdatedAt)
 	if err != nil {
-		return Yearbook{}, err
+		return nil, err
 	}
 	if grad.Valid {
 		y.GraduationYear = &grad.V
@@ -200,7 +200,7 @@ func fill(ctx context.Context, q querier, books []Yearbook, lock bool) ([]Yearbo
 
 // create inserts the book and its owner profile atomically. The owner's user row is locked
 // first so two concurrent creates cannot both slip under the 20-book limit.
-func (s *Store) create(ctx context.Context, ownerID uint64, y Yearbook) error {
+func (s *Store) create(ctx context.Context, ownerID uint64, y *Yearbook) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -234,7 +234,7 @@ func (s *Store) create(ctx context.Context, ownerID uint64, y Yearbook) error {
 	return tx.Commit()
 }
 
-func insertProfile(ctx context.Context, tx *sql.Tx, bookID int64, y Yearbook) error {
+func insertProfile(ctx context.Context, tx *sql.Tx, bookID int64, y *Yearbook) error {
 	p := y.Profile
 	_, err := tx.ExecContext(ctx,
 		`INSERT INTO profile_tab (public_id, yearbook_id, is_owner, full_name, nickname, birthday, quote, hobbies, future_plans, created_at, updated_at)
@@ -243,22 +243,22 @@ func insertProfile(ctx context.Context, tx *sql.Tx, bookID int64, y Yearbook) er
 	return err
 }
 
-func (s *Store) get(ctx context.Context, ownerID uint64, publicID string) (Yearbook, error) {
+func (s *Store) get(ctx context.Context, ownerID uint64, publicID string) (*Yearbook, error) {
 	y, err := scanBook(s.db.QueryRowContext(ctx, `SELECT `+bookCols+` FROM yearbook_tab WHERE owner_id = ? AND public_id = ?`, ownerID, publicID))
 	if errors.Is(err, sql.ErrNoRows) {
-		return Yearbook{}, ErrNotFound
+		return nil, ErrNotFound
 	}
 	if err != nil {
-		return Yearbook{}, err
+		return nil, err
 	}
-	books, err := fill(ctx, s.db, []Yearbook{y}, false)
+	books, err := fill(ctx, s.db, []Yearbook{*y}, false)
 	if err != nil {
-		return Yearbook{}, err
+		return nil, err
 	}
 	if len(books) == 0 { // deleted between the book query and the profile query
-		return Yearbook{}, ErrNotFound
+		return nil, ErrNotFound
 	}
-	return books[0], nil
+	return &books[0], nil
 }
 
 // cursor is the position after the last book of a page: books are ordered by (updated_at, public_id) descending.
@@ -288,7 +288,7 @@ func (s *Store) list(ctx context.Context, ownerID uint64, c *cursor, limit int) 
 		if err != nil {
 			return nil, nil, err
 		}
-		out = append(out, y)
+		out = append(out, *y)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, nil, err
@@ -309,47 +309,47 @@ func (s *Store) list(ctx context.Context, ownerID uint64, c *cursor, limit int) 
 // Lock order: yearbook_tab row (FOR UPDATE) first, then profile_tab, then media rows (share lock). Service.Delete and
 // ClearMediaRefs use the same order, so concurrent edits, deletes and photo deletes wait for each other instead of
 // deadlocking.
-func (s *Store) modify(ctx context.Context, ownerID uint64, publicID string, nowMs int64, change func(*Yearbook) error) (Yearbook, error) {
+func (s *Store) modify(ctx context.Context, ownerID uint64, publicID string, nowMs int64, change func(*Yearbook) error) (*Yearbook, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		return Yearbook{}, err
+		return nil, err
 	}
 	defer func() { _ = tx.Rollback() }()
 	y, err := scanBook(tx.QueryRowContext(ctx, `SELECT `+bookCols+` FROM yearbook_tab WHERE owner_id = ? AND public_id = ? FOR UPDATE`, ownerID, publicID))
 	if errors.Is(err, sql.ErrNoRows) {
-		return Yearbook{}, ErrNotFound
+		return nil, ErrNotFound
 	}
 	if err != nil {
-		return Yearbook{}, err
+		return nil, err
 	}
-	books, err := fill(ctx, tx, []Yearbook{y}, true)
+	books, err := fill(ctx, tx, []Yearbook{*y}, true)
 	if err != nil {
-		return Yearbook{}, err
+		return nil, err
 	}
-	y = books[0]
-	if err := change(&y); err != nil {
-		return Yearbook{}, err
+	y = &books[0]
+	if err := change(y); err != nil {
+		return nil, err
 	}
 	y.UpdatedAt = nowMs
 	// A media id must belong to this very book; anything else (also another user's) is invalid_media.
 	cover, err := mediaRow(ctx, tx, y.internalID, y.CoverMediaID)
 	if err != nil {
-		return Yearbook{}, err
+		return nil, err
 	}
 	photo, err := mediaRow(ctx, tx, y.internalID, y.Profile.PhotoMediaID)
 	if err != nil {
-		return Yearbook{}, err
+		return nil, err
 	}
 	if _, err := tx.ExecContext(ctx,
 		`UPDATE yearbook_tab SET title=?, school_name=?, class_name=?, graduation_year=?, motto=?, language=?, page_size=?, cover_media_id=?, updated_at=? WHERE id = ?`,
 		y.Title, y.SchoolName, y.ClassName, y.GraduationYear, y.Motto, y.Language, y.PageSize, cover, y.UpdatedAt, y.internalID); err != nil {
-		return Yearbook{}, err
+		return nil, err
 	}
 	p := y.Profile
 	if _, err := tx.ExecContext(ctx,
 		`UPDATE profile_tab SET full_name=?, nickname=?, birthday=?, quote=?, hobbies=?, future_plans=?, photo_media_id=?, updated_at=? WHERE yearbook_id = ? AND is_owner = 1`,
 		p.FullName, p.Nickname, p.Birthday, p.Quote, p.Hobbies, p.FuturePlans, photo, y.UpdatedAt, y.internalID); err != nil {
-		return Yearbook{}, err
+		return nil, err
 	}
 	return y, tx.Commit()
 }

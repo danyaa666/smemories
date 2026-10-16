@@ -12,9 +12,6 @@ import (
 	"github.com/danyaa666/smemories/internal/httpx"
 )
 
-// codeClientClosed is nginx's 499: the client went away, nobody reads the answer.
-var codeClientClosed = apperr.NewCode("ERROR_CLIENT_CLOSED", 499)
-
 // Handler serves /api/yearbook/*: it decodes, checks the shape, calls the Service and writes the answer.
 type Handler struct {
 	svc            *Service
@@ -54,7 +51,7 @@ type (
 )
 
 // caller is the signed-in user; RequireUser has always stored it by now.
-func caller(r *http.Request) auth.User {
+func caller(r *http.Request) *auth.User {
 	u, _ := auth.UserFrom(r.Context())
 	return u
 }
@@ -69,7 +66,7 @@ func required(w http.ResponseWriter, r *http.Request, id, name string) bool {
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	var in BookInput
-	if !httpx.DecodeJSON(w, r, &in, true) {
+	if !httpx.DecodeJSON(w, r, &in) {
 		return
 	}
 	u := caller(r)
@@ -97,7 +94,7 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	var in updateInput
-	if httpx.DecodeJSON(w, r, &in, true) && required(w, r, in.ID, "id") {
+	if httpx.DecodeJSON(w, r, &in) && required(w, r, in.ID, "id") {
 		y, err := h.svc.Update(r.Context(), caller(r).InternalID, in.ID, &in.BookInput)
 		respond(w, r, y, err)
 	}
@@ -105,7 +102,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) updateProfile(w http.ResponseWriter, r *http.Request) {
 	var in profileUpdateInput
-	if httpx.DecodeJSON(w, r, &in, true) && required(w, r, in.YearbookID, "yearbook_id") {
+	if httpx.DecodeJSON(w, r, &in) && required(w, r, in.YearbookID, "yearbook_id") {
 		y, err := h.svc.UpdateProfile(r.Context(), caller(r).InternalID, in.YearbookID, &in.ProfileInput)
 		respond(w, r, y, err)
 	}
@@ -114,7 +111,7 @@ func (h *Handler) updateProfile(w http.ResponseWriter, r *http.Request) {
 // delete removes the book's stored files first: if the object store fails, nothing is deleted and the caller can retry.
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 	var in deleteInput
-	if httpx.DecodeJSON(w, r, &in, true) && required(w, r, in.ID, "id") {
+	if httpx.DecodeJSON(w, r, &in) && required(w, r, in.ID, "id") {
 		respond(w, r, nil, h.svc.Delete(r.Context(), caller(r).InternalID, in.ID))
 	}
 }
@@ -128,16 +125,11 @@ func respond(w http.ResponseWriter, r *http.Request, data any, err error) {
 	httpx.OK(w, r, data)
 }
 
-// fail answers err. A request whose client went away gets 499 and a debug line, a storage failure is logged (Fail logs
-// only the codes that are our fault), the rest is httpx.Fail.
+// fail answers err. A storage failure is logged (Fail logs only the codes that are our fault), the rest, a gone client
+// included, is httpx.Fail.
 func fail(w http.ResponseWriter, r *http.Request, err error) {
-	log := httpx.LoggerFrom(r.Context())
-	switch {
-	case errors.Is(err, context.Canceled):
-		log.Debug("yearbook: client gone", "request_id", httpx.RequestIDFrom(r.Context()), "error", err)
-		err = apperr.New(codeClientClosed, "client closed the request")
-	case apperr.Is(err, CodeStorage):
-		log.Error("yearbook: storage failed", "request_id", httpx.RequestIDFrom(r.Context()), "error", err)
+	if apperr.Is(err, CodeStorage) && !errors.Is(err, context.Canceled) {
+		httpx.LoggerFrom(r.Context()).Error("yearbook: storage failed", "request_id", httpx.RequestIDFrom(r.Context()), "error", err)
 	}
 	httpx.Fail(w, r, err)
 }

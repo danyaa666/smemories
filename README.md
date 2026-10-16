@@ -110,7 +110,7 @@ Run the API locally:
 make up migrate               # creates .env, starts MySQL + MinIO, applies migrations
 make run                      # make loads .env for you
 curl -i localhost:8080/healthz   # {"status":"ok"}
-curl -i localhost:8080/readyz    # {"status":"ready"}; 503 not_ready while MySQL or Redis is down
+curl -i localhost:8080/readyz    # {"status":"ready"}; 503 ERROR_NOT_READY while MySQL or Redis is down
 ```
 
 Several checkouts on one machine: `make up` names the compose project after the checkout directory
@@ -126,7 +126,7 @@ the compose file uses a frozen Bitnami build; it is for local development only.
 Configuration is read from environment variables (see `.env.example`): `SMEM_HTTP_ADDR` (default `:8080`),
 `SMEM_ENV` (`dev|test|prod`, default `dev`), `SMEM_LOG_LEVEL` (`debug|info|warn|error`, default `info`),
 `SMEM_DB_DSN` (`user:pass@tcp(host:port)/db`; required, in every `SMEM_ENV`, for the API binary, which exits with a clear message when it is empty), and the pool settings
-`SMEM_DB_MAX_OPEN` (20), `SMEM_DB_MAX_IDLE` (5), `SMEM_DB_CONN_MAX_LIFETIME` (5m).
+`SMEM_DB_MAX_OPEN` (20), `SMEM_DB_MAX_IDLE` (default: the value of `SMEM_DB_MAX_OPEN`), `SMEM_DB_CONN_MAX_LIFETIME` (5m).
 Request deadline: `SMEM_HTTP_REQUEST_TIMEOUT` (30s, minimum 1s) cancels the context of every request unless a route sets its own.
 Redis (`docs/redis.md`): `SMEM_REDIS_URL` (`redis://[:password@]host:port/db`; required in every `SMEM_ENV`, copy it from `.env.example` into an older `.env`), `SMEM_REDIS_PASSWORD`, `SMEM_REDIS_DIAL_TIMEOUT` (2s), `SMEM_REDIS_READ_TIMEOUT` and `SMEM_REDIS_WRITE_TIMEOUT` (1s), `SMEM_REDIS_POOL_SIZE` (10).
 Auth (see `.env.example`): `SMEM_ALLOWED_ORIGINS` (comma-separated browser origins allowed to send cookie-carrying

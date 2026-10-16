@@ -175,27 +175,14 @@ func (e *env) do(u user, method, path, body string) resp {
 	return resp{rec, e.t}
 }
 
-// code is the error code of a response body in the v2 spelling ("" when the body is no error): the v2 envelope's status, or
-// the code of a legacy {"error":{"code"}} body (the /v1 endpoints that have not moved yet) mapped the way the contract maps it.
+// code is the error code of a response body ("" when the body is no error): the v2 envelope's status.
 func (r resp) code() string {
-	var b struct {
-		Status string
-		Error  struct{ Code string }
-	}
+	var b struct{ Status string }
 	_ = json.Unmarshal(r.Body.Bytes(), &b)
-	switch {
-	case strings.HasPrefix(b.Status, "ERROR_"):
+	if strings.HasPrefix(b.Status, "ERROR_") {
 		return b.Status
-	case b.Error.Code == "":
-		return ""
-	case b.Error.Code == "invalid_body" || b.Error.Code == "unknown_field":
-		return "ERROR_PARAM"
-	case b.Error.Code == "payload_too_large":
-		return "ERROR_TOO_LARGE"
-	case b.Error.Code == "unauthenticated":
-		return "ERROR_UNAUTHORIZED"
 	}
-	return "ERROR_" + strings.ToUpper(b.Error.Code)
+	return ""
 }
 
 // status asserts the HTTP status and, when code is not empty, the error code (v2 spelling). A v2 success must say status "OK".
@@ -676,7 +663,7 @@ func TestCSRFGuard(t *testing.T) {
 	}
 }
 
-// The v1 routes are gone: they answer the router's 404 (the old envelope, they are not under /api), whatever the method.
+// The v1 routes are gone: they answer the router's v2 404 or 405, whatever the method.
 func TestV1NotesRoutesAreGone(t *testing.T) {
 	e := newEnv(t)
 	alice := e.register("alice@example.com", "Alice", true)
@@ -690,9 +677,8 @@ func TestV1NotesRoutesAreGone(t *testing.T) {
 		if rec.Code != 404 && rec.Code != 405 {
 			t.Errorf("%s %s: %d, want 404 or 405", c[0], c[1], rec.Code)
 		}
-		var b map[string]map[string]string
-		if err := json.Unmarshal(rec.Body.Bytes(), &b); err != nil || b["error"]["code"] == "" {
-			t.Errorf("%s %s: not the legacy envelope: %s", c[0], c[1], rec.Body.String())
+		if code := rec.code(); code != "ERROR_NOT_FOUND" && code != "ERROR_METHOD_NOT_ALLOWED" {
+			t.Errorf("%s %s: code %q, want the v2 routing error: %s", c[0], c[1], code, rec.Body.String())
 		}
 	}
 	// the new routes accept their own method only

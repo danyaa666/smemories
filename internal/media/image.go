@@ -30,6 +30,8 @@ const (
 )
 
 // processed is the normalised result of an upload: metadata-free display, print and thumbnail encodings.
+//
+// processed is passed by value on purpose: the result of one pure function, a small immutable value.
 type processed struct {
 	display, print, thumb []byte
 	contentType           string // of display: image/jpeg, or image/png when the image has transparency

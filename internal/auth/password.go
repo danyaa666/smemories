@@ -5,12 +5,13 @@ import (
 	"crypto/rand"
 	"crypto/subtle"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	"golang.org/x/crypto/argon2"
+
+	"github.com/danyaa666/smemories/internal/apperr"
 )
 
 const (
@@ -24,6 +25,8 @@ const (
 )
 
 // HashParams are the argon2id cost parameters (config: SMEM_AUTH_ARGON_*).
+//
+// HashParams is passed by value on purpose: start-up settings, read once.
 type HashParams struct {
 	MemoryKiB   uint32
 	Time        uint32
@@ -83,20 +86,20 @@ func (h *Hasher) Verify(ctx context.Context, password, phc string) (bool, error)
 	)
 	parts := strings.Split(phc, "$") // "", "argon2id", "v=19", "m=..,t=..,p=..", salt, key
 	if len(parts) != 6 || parts[1] != "argon2id" {
-		return false, errors.New("auth: stored hash is not argon2id PHC")
+		return false, apperr.New(apperr.Internal, "auth: stored hash is not argon2id PHC")
 	}
 	if _, err := fmt.Sscanf(parts[2], "v=%d", &version); err != nil || version != argon2.Version {
-		return false, errors.New("auth: unsupported argon2 version")
+		return false, apperr.New(apperr.Internal, "auth: unsupported argon2 version")
 	}
 	if _, err := fmt.Sscanf(parts[3], "m=%d,t=%d,p=%d", &p.MemoryKiB, &p.Time, &p.Parallelism); err != nil ||
 		p.MemoryKiB == 0 || p.MemoryKiB > maxStoredMemoryKiB || p.Time == 0 || p.Time > maxStoredTime || p.Parallelism == 0 {
-		return false, errors.New("auth: bad argon2 parameters")
+		return false, apperr.New(apperr.Internal, "auth: bad argon2 parameters")
 	}
 	enc := base64.RawStdEncoding
 	salt, err1 := enc.DecodeString(parts[4])
 	want, err2 := enc.DecodeString(parts[5])
 	if err1 != nil || err2 != nil || len(salt) == 0 || len(want) == 0 || len(want) > maxStoredKeyLen {
-		return false, errors.New("auth: bad argon2 encoding")
+		return false, apperr.New(apperr.Internal, "auth: bad argon2 encoding")
 	}
 	if err := h.acquire(ctx); err != nil {
 		return false, err

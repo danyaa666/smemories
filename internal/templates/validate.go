@@ -17,6 +17,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/danyaa666/smemories/internal/apperr"
 	"github.com/danyaa666/smemories/internal/notefields"
 	"github.com/danyaa666/smemories/internal/pdf/fonts"
 )
@@ -35,9 +36,10 @@ const (
 	maxPerPage    = 20
 	eps           = 1e-6
 	maxLabelLen   = 40
-	ptMM          = 25.4 / 72 // one point in millimetres
-	maxRotate     = 45.0      // degrees
-	maxStaticLen  = 500       // characters per language of a static text
+	mmPerInch     = 25.4
+	ptMM          = mmPerInch / 72 // one point in millimetres
+	maxRotate     = 45.0           // degrees
+	maxStaticLen  = 500            // characters per language of a static text
 
 	// Limits of a background asset: file size, total per template, and the effective resolution on the
 	// reference page. The aspect ratio must match the reference page within ratioTol.
@@ -82,7 +84,7 @@ type validator struct {
 }
 
 func (v *validator) errf(where string, format string, args ...any) {
-	v.errs = append(v.errs, fmt.Errorf("template %q%s: %s", v.t.ID, where, fmt.Sprintf(format, args...)))
+	v.errs = append(v.errs, apperr.New(apperr.Internal, fmt.Sprintf("template %q%s: %s", v.t.ID, where, fmt.Sprintf(format, args...))))
 }
 
 func (v *validator) template() {
@@ -364,7 +366,7 @@ func (v *validator) background(where string, e *Element) {
 		v.errf(where, "asset %q is %d x %d px: its aspect ratio must match the %g x %g mm reference page within 1 %%", e.Asset, cfg.Width, cfg.Height, rw, rh)
 		return
 	}
-	if dpi := float64(cfg.Width) / (rw / 25.4); dpi < minAssetDPI-dpiTol || dpi > maxAssetDPI+dpiTol {
+	if dpi := float64(cfg.Width) / (rw / mmPerInch); dpi < minAssetDPI-dpiTol || dpi > maxAssetDPI+dpiTol {
 		v.errf(where, "asset %q is %d x %d px: %.0f DPI on the reference page, it must be %d..%d", e.Asset, cfg.Width, cfg.Height, dpi, minAssetDPI, maxAssetDPI)
 	}
 }

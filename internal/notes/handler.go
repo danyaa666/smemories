@@ -17,9 +17,6 @@ import (
 const (
 	defaultUploadsPerIP = 8
 	defaultUploadConns  = 48
-
-	// clientClosed is nginx's 499: the client went away, nobody reads the answer.
-	clientClosed = 499
 )
 
 // Handler serves the owner endpoints for collection links and the public lookup and submission. It decodes, validates the
@@ -102,7 +99,7 @@ type idInput struct {
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	u, _ := auth.UserFrom(r.Context())
 	var in createInput
-	if !httpx.DecodeJSON(w, r, &in, true) {
+	if !httpx.DecodeJSON(w, r, &in) {
 		return
 	}
 	c, err := h.svc.CreateCollection(r.Context(), u.InternalID, u.EmailVerified, &CreateInput{YearbookID: in.YearbookID, Label: in.Label, DeadlineAt: in.DeadlineAt})
@@ -130,7 +127,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) revoke(w http.ResponseWriter, r *http.Request) {
 	u, _ := auth.UserFrom(r.Context())
 	var in idInput
-	if !httpx.DecodeJSON(w, r, &in, true) {
+	if !httpx.DecodeJSON(w, r, &in) {
 		return
 	}
 	if err := h.svc.RevokeCollection(r.Context(), u.InternalID, in.ID); err != nil {
@@ -170,7 +167,7 @@ func (h *Handler) lookup(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) fail(w http.ResponseWriter, r *http.Request, err error) {
 	if r.Context().Err() != nil { // nobody reads the answer and nothing is wrong on our side
 		h.logger.Debug("notes: client gone", "request_id", httpx.RequestIDFrom(r.Context()), "error", err)
-		httpx.WriteError(w, r, clientClosed, "client_closed", "client closed the request")
+		httpx.Fail(w, r, apperr.New(apperr.ClientClosed, "client closed the request"))
 		return
 	}
 	var ra *RetryAfterError

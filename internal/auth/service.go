@@ -41,6 +41,8 @@ type Session struct {
 }
 
 // Limits are the rate limits from config.
+//
+// Limits is passed by value on purpose: start-up settings, read once.
 type Limits struct {
 	RegisterPerHour   int // per IP
 	LoginFailsPerPair int // per IP + email, per 15 min
@@ -124,42 +126,42 @@ func hashToken(token string) []byte {
 }
 
 // Register validates the input (locale is "en" or "vi"), creates the account and signs it in.
-func (s *Service) Register(ctx context.Context, ip, userAgent, email, password, displayName, locale string) (User, Session, error) {
+func (s *Service) Register(ctx context.Context, ip, userAgent, email, password, displayName, locale string) (*User, *Session, error) {
 	if locale != "en" && locale != "vi" {
-		return User{}, Session{}, errInvalidLocale
+		return nil, nil, errInvalidLocale
 	}
 	email = normalizeEmail(email)
 	if !validEmail(email) {
-		return User{}, Session{}, errInvalidEmail
+		return nil, nil, errInvalidEmail
 	}
 	password = normalizePassword(password)
 	if !validPassword(password, email) {
-		return User{}, Session{}, errWeakPassword
+		return nil, nil, errWeakPassword
 	}
 	name, ok := cleanDisplayName(displayName)
 	if !ok {
-		return User{}, Session{}, errInvalidDisplayName
+		return nil, nil, errInvalidDisplayName
 	}
 	// Only inputs that would cost a hash count against the per-IP limit. Fails open: a registration is not a guess.
 	if ok, retry, _ := s.register.Take(ctx, ip); !ok {
-		return User{}, Session{}, RateLimitedError{retry}
+		return nil, nil, RateLimitedError{retry}
 	}
 	phc, err := s.hasher.Hash(ctx, password)
 	if err != nil {
-		return User{}, Session{}, err
+		return nil, nil, err
 	}
 	now := s.now().UTC()
-	u := User{ID: ulid.New(now), Email: email, DisplayName: name, Locale: locale, CreatedAt: now.UnixMilli()}
+	u := &User{ID: ulid.New(now), Email: email, DisplayName: name, Locale: locale, CreatedAt: now.UnixMilli()}
 	sess, row, err := s.newSession(now, userAgent)
 	if err != nil {
-		return User{}, Session{}, err
+		return nil, nil, err
 	}
-	err = s.store.createUser(ctx, &u, phc, func(id uint64) error {
+	err = s.store.createUser(ctx, u, phc, func(id uint64) error {
 		row.userID = id
 		return s.sessions.Create(ctx, row)
 	})
 	if err != nil {
-		return User{}, Session{}, err
+		return nil, nil, err
 	}
 	// The account exists now; a mail failure must not undo that, the user can resend.
 	if err := s.sendCode(ctx, u, purposeVerify); err != nil {
@@ -168,19 +170,19 @@ func (s *Service) Register(ctx context.Context, ip, userAgent, email, password, 
 	return s.expose(u), sess, nil
 }
 
-func (s *Service) newSession(now time.Time, userAgent string) (Session, session, error) {
+func (s *Service) newSession(now time.Time, userAgent string) (*Session, session, error) {
 	token, hash, err := newToken()
 	if err != nil {
-		return Session{}, session{}, err
+		return nil, session{}, err
 	}
 	exp := now.Add(SessionTTL)
-	return Session{Token: token, Expires: exp}, session{tokenHash: hash, now: now, expires: exp, userAgent: userAgent}, nil
+	return &Session{Token: token, Expires: exp}, session{tokenHash: hash, now: now, expires: exp, userAgent: userAgent}, nil
 }
 
 // Login checks the credentials and issues a new session. Wrong password, unknown email and
 // an account without a password all give ErrInvalidCredentials after the same hashing work.
 // oldToken (the cookie the browser sent, if any) is revoked so a session is never reused.
-func (s *Service) Login(ctx context.Context, ip, userAgent, email, password, oldToken string) (User, Session, error) {
+func (s *Service) Login(ctx context.Context, ip, userAgent, email, password, oldToken string) (*User, *Session, error) {
 	email = normalizeEmail(email)
 	emailKey := email
 	if len(emailKey) > maxEmailLen {
@@ -192,37 +194,37 @@ func (s *Service) Login(ctx context.Context, ip, userAgent, email, password, old
 	// limiter_unavailable when Redis is down): they are the lockouts that stop password guessing.
 	ok, retry, err := s.loginPair.Take(ctx, pairKey)
 	if err != nil {
-		return User{}, Session{}, err
+		return nil, nil, err
 	}
 	if !ok {
-		return User{}, Session{}, RateLimitedError{retry}
+		return nil, nil, RateLimitedError{retry}
 	}
 	ok, retry, err = s.loginIP.Take(ctx, ip)
 	if err != nil || !ok {
 		_ = s.loginPair.Refund(ctx, pairKey)
 		if err != nil {
-			return User{}, Session{}, err
+			return nil, nil, err
 		}
-		return User{}, Session{}, RateLimitedError{retry}
+		return nil, nil, RateLimitedError{retry}
 	}
 	refund := func() { _ = s.loginPair.Refund(ctx, pairKey); _ = s.loginIP.Refund(ctx, ip) }
 
 	password = normalizePassword(password)
 	if n := utf8.RuneCountInString(password); n == 0 || n > maxPasswordLen { // never hash oversize input
-		return User{}, Session{}, ErrInvalidCredentials
+		return nil, nil, ErrInvalidCredentials
 	}
 	u, phc, err := s.store.userByEmail(ctx, email)
 	switch {
 	case errors.Is(err, errNotFound) || (err == nil && phc == ""):
 		_, err = s.hasher.Verify(ctx, password, s.dummyHash)
 		if err == nil {
-			return User{}, Session{}, ErrInvalidCredentials
+			return nil, nil, ErrInvalidCredentials
 		}
 	case err == nil:
 		var ok bool
 		if ok, err = s.hasher.Verify(ctx, password, phc); err == nil {
 			if !ok {
-				return User{}, Session{}, ErrInvalidCredentials
+				return nil, nil, ErrInvalidCredentials
 			}
 			refund()
 			return s.issue(ctx, u, userAgent, oldToken)
@@ -231,18 +233,18 @@ func (s *Service) Login(ctx context.Context, ip, userAgent, email, password, old
 	if errors.Is(err, ErrBusy) || errors.Is(err, context.Canceled) {
 		refund()
 	}
-	return User{}, Session{}, err
+	return nil, nil, err
 }
 
-func (s *Service) issue(ctx context.Context, u User, userAgent, oldToken string) (User, Session, error) {
+func (s *Service) issue(ctx context.Context, u *User, userAgent, oldToken string) (*User, *Session, error) {
 	now := s.now().UTC()
 	sess, row, err := s.newSession(now, userAgent)
 	if err != nil {
-		return User{}, Session{}, err
+		return nil, nil, err
 	}
 	row.userID = u.InternalID
 	if err := s.sessions.Create(ctx, row); err != nil { // also sweeps the user's expired sessions
-		return User{}, Session{}, err
+		return nil, nil, err
 	}
 	if oldToken != "" {
 		_ = s.sessions.Delete(ctx, hashToken(oldToken)) // best effort
@@ -253,38 +255,38 @@ func (s *Service) issue(ctx context.Context, u User, userAgent, oldToken string)
 // Authenticate resolves a session cookie value to its user. When more than half the TTL
 // has elapsed the expiry is pushed out and refreshed is non-nil (the caller re-sends the cookie).
 // A session store failure is a *SessionStoreError, never "anonymous".
-func (s *Service) Authenticate(ctx context.Context, token string) (u User, refreshed *Session, err error) {
+func (s *Service) Authenticate(ctx context.Context, token string) (u *User, refreshed *Session, err error) {
 	if token == "" {
-		return User{}, nil, ErrUnauthenticated
+		return nil, nil, ErrUnauthenticated
 	}
 	hash := hashToken(token)
 	now := s.now().UTC()
 	uid, lastSeen, err := s.sessions.Lookup(ctx, hash)
 	if errors.Is(err, errNotFound) {
-		return User{}, nil, ErrUnauthenticated
+		return nil, nil, ErrUnauthenticated
 	}
 	if err != nil {
-		return User{}, nil, err
+		return nil, nil, err
 	}
 	// Redis drops the key at its expiry; the check on the time we stored also makes the rule the same under a test clock.
 	exp := lastSeen.Add(SessionTTL)
 	if !exp.After(now) {
-		return User{}, nil, ErrUnauthenticated
+		return nil, nil, ErrUnauthenticated
 	}
 	u, err = s.store.userByID(ctx, uid)
 	if errors.Is(err, errNotFound) {
-		return User{}, nil, ErrUnauthenticated
+		return nil, nil, ErrUnauthenticated
 	}
 	if err != nil {
-		return User{}, nil, err
+		return nil, nil, err
 	}
 	if exp.Sub(now) < SessionTTL/2 {
 		alive, err := s.sessions.Extend(ctx, hash, uid, now, SessionTTL)
 		if err != nil {
-			return User{}, nil, err
+			return nil, nil, err
 		}
 		if !alive { // logged out (or reset) while we were looking
-			return User{}, nil, ErrUnauthenticated
+			return nil, nil, ErrUnauthenticated
 		}
 		refreshed = &Session{Token: token, Expires: now.Add(SessionTTL)}
 	}

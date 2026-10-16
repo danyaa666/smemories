@@ -369,6 +369,7 @@ func TestRegisterBadBodies(t *testing.T) {
 		"wrong type":     `{"email":1,"password":"x","display_name":"y"}`,
 		"trailing data":  `{"email":"a@example.com"} {"x":1}`,
 		"truncated json": `{"email":"a@exam`,
+		"unknown field":  `{"email":"a@example.com","password":"x","display_name":"y","admin":true}`, // auth bodies are strict since T-072
 	} {
 		rec := e.do(req{method: "POST", path: "/api/auth/register", body: b})
 		if rec.Code != 400 || errCode(t, rec) != "ERROR_PARAM" {
@@ -836,7 +837,7 @@ func TestSecretsNeverLogged(t *testing.T) {
 	}
 }
 
-// T-071 AC4: the v1 auth routes are gone (status only: the legacy body is removed with the switch in T-072).
+// T-071 AC4: the v1 auth routes are gone, and the 404 is the v2 envelope like every other error.
 func TestV1AuthRoutesAreGone(t *testing.T) {
 	e := newEnv(t, opts{google: oidctest.New(t)})
 	sess := sessionCookie(t, e.register(testMail, testPW, "Alice"))
@@ -846,8 +847,8 @@ func TestV1AuthRoutesAreGone(t *testing.T) {
 		{method: "POST", path: "/v1/auth/verify-email/resend"}, {method: "GET", path: "/v1/auth/google/start"},
 		{method: "GET", path: "/v1/auth/google/callback"}, {method: "GET", path: "/v1/me", cookie: sess.Value},
 	} {
-		if rec := e.do(c); rec.Code != 404 {
-			t.Errorf("%s %s: %d, want 404", c.method, c.path, rec.Code)
+		if rec := e.do(c); rec.Code != 404 || !strings.Contains(rec.Body.String(), `"status":"ERROR_NOT_FOUND"`) {
+			t.Errorf("%s %s: %d %s, want 404 ERROR_NOT_FOUND", c.method, c.path, rec.Code, rec.Body)
 		}
 	}
 }

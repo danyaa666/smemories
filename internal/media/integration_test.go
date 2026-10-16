@@ -4,7 +4,6 @@ package media
 
 import (
 	"bytes"
-	"cmp"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -265,17 +264,10 @@ func (r resp) status(want int, code string) resp {
 		r.t.Fatalf("status %d, want %d (%s)", r.Code, want, r.Body)
 	}
 	if code != "" {
-		// v2 bodies carry {"status":"ERROR_..."}, the routes still under /v1 {"error":{"code"}}.
-		var env struct {
-			Status string
-			Error  struct{ Code string }
-		}
-		got := ""
-		if err := json.Unmarshal(r.Body.Bytes(), &env); err == nil {
-			got = cmp.Or(env.Status, env.Error.Code)
-		}
-		if got != code {
-			r.t.Fatalf("code %q, want %q: %s", got, code, r.Body)
+		var env struct{ Status string }
+		_ = json.Unmarshal(r.Body.Bytes(), &env)
+		if env.Status != code {
+			r.t.Fatalf("code %q, want %q: %s", env.Status, code, r.Body)
 		}
 	}
 	return r
@@ -474,9 +466,9 @@ func TestContentErrorsAreEnvelopesAndNotCached(t *testing.T) {
 	cond.Header.Set("If-None-Match", head.Header().Get("ETag"))
 	e.send(u, cond).status(304, "")
 	// The old routes are gone.
-	e.json(u, "GET", "/v1/media/"+id+"/content", "").status(404, "")
-	e.json(u, "DELETE", "/v1/media/"+id, "").status(404, "")
-	e.json(u, "GET", "/v1/yearbooks/"+book+"/media", "").status(404, "")
+	e.json(u, "GET", "/v1/media/"+id+"/content", "").status(404, "ERROR_NOT_FOUND")
+	e.json(u, "DELETE", "/v1/media/"+id, "").status(404, "ERROR_NOT_FOUND")
+	e.json(u, "GET", "/v1/yearbooks/"+book+"/media", "").status(404, "ERROR_NOT_FOUND")
 	// Deleting needs a body with an id and the origin check.
 	e.json(u, "POST", "/api/media/delete", `{}`).status(400, "ERROR_PARAM")
 	e.json(u, "POST", "/api/media/delete", `{"id":"x","extra":1}`).status(400, "ERROR_PARAM")
@@ -798,7 +790,7 @@ func TestContributorUploadBusyAndDiscard(t *testing.T) {
 	if e.count(`SELECT COUNT(*) FROM media_tab WHERE uploader_kind = 'contributor' AND yearbook_id = ?`, row) != 1 || e.st.count(yearbookPrefix(book)) != 3 {
 		t.Fatal("contributor photo not stored as such")
 	}
-	if err := e.svc.Discard(m); err != nil {
+	if err := e.svc.Discard(*m); err != nil {
 		t.Fatal(err)
 	}
 	if e.count(`SELECT COUNT(*) FROM media_tab`) != 0 || e.st.count(yearbookPrefix(book)) != 0 {

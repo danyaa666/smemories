@@ -49,7 +49,7 @@ export interface paths {
         put?: never;
         /**
          * Create an account and sign in
-         * @description Called by the sign-up form. Creates the account and signs the caller in (the session cookie is set) and sends the 6-digit verification code by email. The email is trimmed, lower-cased and normalised to NFC; a duplicate (case-insensitive, and NFC/NFD spellings are the same address) is `ERROR_EMAIL_TAKEN`. Password: 10-128 characters after NFKC normalisation and not equal to the email. Display name: 1-100 characters after trimming, no control or format characters. Rate limit: 5 per hour per IP, counted once the input is valid. A cookie-less request needs no Origin; one that carries a session cookie must come from an allowed Origin. The account gets a default `username` (`user-` plus the last 8 characters of its id; longer slices on a clash, never an error). Not idempotent: a repeated call is `ERROR_EMAIL_TAKEN`. Unknown body fields are ignored.
+         * @description Called by the sign-up form. Creates the account and signs the caller in (the session cookie is set) and sends the 6-digit verification code by email. The email is trimmed, lower-cased and normalised to NFC; a duplicate (case-insensitive, and NFC/NFD spellings are the same address) is `ERROR_EMAIL_TAKEN`. Password: 10-128 characters after NFKC normalisation and not equal to the email. Display name: 1-100 characters after trimming, no control or format characters. Rate limit: 5 per hour per IP, counted once the input is valid. A cookie-less request needs no Origin; one that carries a session cookie must come from an allowed Origin. The account gets a default `username` (`user-` plus the last 8 characters of its id; longer slices on a clash, never an error). Not idempotent: a repeated call is `ERROR_EMAIL_TAKEN`. An unknown body field is `ERROR_PARAM`.
          */
         post: operations["register"];
         delete?: never;
@@ -69,7 +69,7 @@ export interface paths {
         put?: never;
         /**
          * Sign in with email and password
-         * @description Called by the sign-in form. A wrong password, an unknown email and an account without a password (Google only) give the identical `ERROR_INVALID_CREDENTIALS` (same body, same work), so the answer never tells whether an address is registered. Every login issues a new session token; a session cookie sent with the request is revoked. Failures are limited to 10 per 15 minutes per IP and email and 100 per 15 minutes per IP (`ERROR_RATE_LIMITED`). The email is trimmed, lower-cased and NFC-normalised as at registration. Not idempotent (a new session each time). Unknown body fields are ignored.
+         * @description Called by the sign-in form. A wrong password, an unknown email and an account without a password (Google only) give the identical `ERROR_INVALID_CREDENTIALS` (same body, same work), so the answer never tells whether an address is registered. Every login issues a new session token; a session cookie sent with the request is revoked. Failures are limited to 10 per 15 minutes per IP and email and 100 per 15 minutes per IP (`ERROR_RATE_LIMITED`). The email is trimmed, lower-cased and NFC-normalised as at registration. Not idempotent (a new session each time). An unknown body field is `ERROR_PARAM`.
          */
         post: operations["login"];
         delete?: never;
@@ -1330,33 +1330,18 @@ export interface components {
                 id: string;
             };
         };
-        /** @description Error envelope of the infrastructure probes only (/readyz, and the 404/405 of unknown root paths). Business routes use ApiError. `code` is a stable snake_case name; `message` is English text meant for logs. */
-        Error: {
-            error: {
-                /**
-                 * @example not_found
-                 * @example method_not_allowed
-                 * @example internal_error
-                 * @example not_ready
-                 */
-                code: string;
-                message: string;
-                /** @description Same value as the X-Request-Id response header. */
-                request_id: string;
-            };
-        };
     };
     responses: {
-        /** @description No route matches this path. Error code `not_found`. */
+        /** @description No route matches this path. Error code `ERROR_NOT_FOUND`. */
         NotFound: {
             headers: {
                 [name: string]: unknown;
             };
             content: {
-                "application/json": components["schemas"]["Error"];
+                "application/json": components["schemas"]["ApiError"];
             };
         };
-        /** @description Wrong HTTP method for this path. Error code `method_not_allowed`. */
+        /** @description Wrong HTTP method for this path. Error code `ERROR_METHOD_NOT_ALLOWED`. */
         MethodNotAllowed: {
             headers: {
                 /** @description Methods this path accepts. */
@@ -1364,7 +1349,7 @@ export interface components {
                 [name: string]: unknown;
             };
             content: {
-                "application/json": components["schemas"]["Error"];
+                "application/json": components["schemas"]["ApiError"];
             };
         };
         /** @description `ERROR_PARAM` (malformed body or query, unknown field, wrong type, a missing required parameter) or one of the field-level codes listed in the operation's `x-error-codes`. */
@@ -1568,13 +1553,13 @@ export interface operations {
                 };
             };
             405: components["responses"]["MethodNotAllowed"];
-            /** @description The database or Redis did not answer in time. Error code `not_ready`; the body never carries driver error text (it is logged server-side). */
+            /** @description The database or Redis did not answer in time. Error code `ERROR_NOT_READY`; the body never carries driver error text (it is logged server-side). */
             503: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["ApiError"];
                 };
             };
         };

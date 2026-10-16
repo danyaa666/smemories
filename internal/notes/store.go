@@ -235,7 +235,7 @@ func (s *Store) insertNote(ctx context.Context, n *newNote) error {
 	if err != nil {
 		return err
 	}
-	for pos, mediaRow := range n.MediaRows {
+	for pos, mediaRow := range n.MediaRows { // not N+1: at most maxPhotos (3) rows per note, in this one transaction
 		if _, err := tx.ExecContext(ctx, `INSERT INTO note_photo_tab (note_id, media_id, sort_order, created_at, updated_at) VALUES (?,?,?,?,?)`,
 			noteID, mediaRow, pos, n.CreatedAt, n.CreatedAt); err != nil {
 			return err

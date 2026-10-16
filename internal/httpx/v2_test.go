@@ -68,7 +68,9 @@ func TestFailMapsEveryCode(t *testing.T) {
 		{apperr.New(apperr.BadGateway, "x"), 502, "ERROR_BAD_GATEWAY"},
 		{apperr.New(biz, "title must be 1-120 characters"), 400, "ERROR_INVALID_TITLE"},
 		{errors.New("plain"), 500, "ERROR_INTERNAL"},
-		{context.Canceled, 500, "ERROR_INTERNAL"},
+		{context.Canceled, 499, "ERROR_CLIENT_CLOSED"},
+		{apperr.Wrap(apperr.Internal, context.Canceled, "insert"), 499, "ERROR_CLIENT_CLOSED"},
+		{context.DeadlineExceeded, 500, "ERROR_INTERNAL"},
 	} {
 		rec := httptest.NewRecorder()
 		Fail(rec, httptest.NewRequest("GET", "/api/x", nil), c.err)
@@ -154,36 +156,21 @@ func TestParseLimit(t *testing.T) {
 	}
 }
 
-func TestV2CodeMapping(t *testing.T) {
-	for old, want := range map[string]string{
-		"internal_error": "ERROR_INTERNAL", "invalid_body": "ERROR_PARAM", "unknown_field": "ERROR_PARAM",
-		"not_found": "ERROR_NOT_FOUND", "method_not_allowed": "ERROR_METHOD_NOT_ALLOWED",
-		"payload_too_large": "ERROR_TOO_LARGE", "unauthenticated": "ERROR_UNAUTHORIZED",
-		"invalid_title": "ERROR_INVALID_TITLE", "rate_limited": "ERROR_RATE_LIMITED",
-	} {
-		if got := v2Code(old); got != want {
-			t.Errorf("v2Code(%q) = %q, want %q", old, got, want)
-		}
-	}
-}
-
-// TestPathSwitch: the same router answers /api/... with the v2 body and everything else with the old one.
-func TestPathSwitch(t *testing.T) {
+// TestErrorEnvelopes: every error the router, the middleware and DecodeJSON write is the v2 body, whatever the path.
+func TestErrorEnvelopes(t *testing.T) {
 	read := func(w http.ResponseWriter, r *http.Request) {
 		var v struct{}
-		if DecodeJSON(w, r, &v, true) {
+		if DecodeJSON(w, r, &v) {
 			OK(w, r, nil)
 		}
 	}
 	h, logs := newTestRouter(t, func(m *http.ServeMux) {
 		m.HandleFunc("GET /api/only-get", func(w http.ResponseWriter, r *http.Request) { OK(w, r, nil) })
 		m.HandleFunc("POST /api/read", read)
-		m.HandleFunc("POST /v1/read", read)
 		m.HandleFunc("GET /api/boom", func(http.ResponseWriter, *http.Request) { panic("kaboom") })
-		m.HandleFunc("GET /v1/boom", func(http.ResponseWriter, *http.Request) { panic("kaboom") })
 		m.Handle("GET /api/private", func() http.Handler {
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				WriteError(w, r, 401, "unauthenticated", "sign in required")
+				WriteError(w, r, 401, apperr.Unauthorized.Name, "sign in required")
 			})
 		}())
 	})
@@ -201,10 +188,6 @@ func TestPathSwitch(t *testing.T) {
 	if b := decodeV2(t, rec); rec.Code != 413 || b.Status != "ERROR_TOO_LARGE" {
 		t.Errorf("/api 413: %d %+v", rec.Code, b)
 	}
-	rec = do(h, "POST", "/v1/read", strings.NewReader(`{"a":"`+strings.Repeat("x", 2<<20)+`"}`), "Content-Type", "application/json")
-	if e := decodeError(t, rec); rec.Code != 413 || e.Code != "payload_too_large" {
-		t.Errorf("/v1 413: %d %+v", rec.Code, e)
-	}
 	rec = do(h, "POST", "/api/read", strings.NewReader(`{"a":1}`))
 	if b := decodeV2(t, rec); rec.Code != 400 || b.Status != "ERROR_PARAM" {
 		t.Errorf("unknown field under /api: %d %+v", rec.Code, b)
@@ -220,17 +203,9 @@ func TestPathSwitch(t *testing.T) {
 	if !strings.Contains(logs.String(), "kaboom") {
 		t.Error("the panic must still be logged")
 	}
-	rec = do(h, "GET", "/v1/boom", nil)
-	if e := decodeError(t, rec); rec.Code != 500 || e.Code != "internal_error" {
-		t.Errorf("/v1 panic: %d %+v", rec.Code, e)
-	}
-	rec = do(h, "GET", "/v1/nope", nil)
-	if e := decodeError(t, rec); rec.Code != 404 || e.Code != "not_found" {
-		t.Errorf("/v1 404: %d %+v", rec.Code, e)
-	}
 	rec = do(h, "GET", "/apix/nope", nil)
-	if e := decodeError(t, rec); rec.Code != 404 || e.Code != "not_found" {
-		t.Errorf("/apix is not under /api/: %d %+v", rec.Code, e)
+	if b := decodeV2(t, rec); rec.Code != 404 || b.Status != "ERROR_NOT_FOUND" {
+		t.Errorf("outside /api/: %d %+v", rec.Code, b)
 	}
 }
 

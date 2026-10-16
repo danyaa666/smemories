@@ -15,6 +15,8 @@ import (
 )
 
 // HandlerConfig carries the HTTP-level settings.
+//
+// HandlerConfig is passed by value on purpose: start-up settings, read once.
 type HandlerConfig struct {
 	AllowedOrigins []string // for Guard
 	SecureCookie   bool     // false only when SMEM_ENV=dev (plain http://localhost)
@@ -56,8 +58,8 @@ func (h *Handler) Routes(mux *http.ServeMux) {
 type ctxKey struct{}
 
 // UserFrom returns the signed-in user stored by RequireUser.
-func UserFrom(ctx context.Context) (User, bool) {
-	u, ok := ctx.Value(ctxKey{}).(User)
+func UserFrom(ctx context.Context) (*User, bool) {
+	u, ok := ctx.Value(ctxKey{}).(*User)
 	return u, ok
 }
 
@@ -72,7 +74,7 @@ func (h *Handler) RequireUser(next http.Handler) http.Handler {
 			return
 		}
 		if refreshed != nil {
-			h.setCookie(w, *refreshed)
+			h.setCookie(w, refreshed)
 		}
 		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), ctxKey{}, u)))
 	})
@@ -204,11 +206,8 @@ func (h *Handler) respond(w http.ResponseWriter, r *http.Request, data any, err 
 // decode reads exactly one JSON object from the body; on failure it writes the error
 // response itself (413 ERROR_TOO_LARGE or 400 ERROR_PARAM).
 func decode(w http.ResponseWriter, r *http.Request, v any) bool {
-	return httpx.DecodeJSON(w, r, v, false)
+	return httpx.DecodeJSON(w, r, v)
 }
-
-// codeClientClosed is nginx's 499: the client went away, nobody reads the answer.
-var codeClientClosed = apperr.NewCode("ERROR_CLIENT_CLOSED", 499)
 
 // fail maps an error to the v2 envelope. Rate limits and the Redis-backed stores that fail closed get their code and a
 // Retry-After; unexpected errors are logged by httpx.Fail (never with credentials) and answer ERROR_INTERNAL.
@@ -236,9 +235,6 @@ func (h *Handler) fail(w http.ResponseWriter, r *http.Request, err error) {
 		err = apperr.New(CodeCodeStoreUnavailable, "code store unavailable, retry shortly")
 	case errors.Is(err, ErrBusy):
 		w.Header().Set("Retry-After", retryBusy)
-	case errors.Is(err, context.Canceled):
-		h.logger.Debug("auth: client gone", "request_id", rid, "error", err)
-		err = apperr.New(codeClientClosed, "client closed the request")
 	}
 	httpx.Fail(w, r, err)
 }
@@ -257,7 +253,7 @@ func cookieToken(r *http.Request) string {
 	return c.Value
 }
 
-func (h *Handler) setCookie(w http.ResponseWriter, s Session) {
+func (h *Handler) setCookie(w http.ResponseWriter, s *Session) {
 	h.cookie(w, s.Token, int(SessionTTL/time.Second), s.Expires)
 }
 

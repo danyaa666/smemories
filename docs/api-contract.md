@@ -34,6 +34,7 @@ Error:
 ## 3. Error codes
 
 - Global, never documented per endpoint: `ERROR_INTERNAL` (500), `ERROR_UNAUTHORIZED` (401), `ERROR_PARAM` (400, malformed body or query; unknown field; wrong type).
+- `ERROR_CLIENT_CLOSED` (499, nginx's code): the client went away (`context.Canceled`) before the answer; nobody reads it, so it is only seen in access logs and metrics. `httpx.Fail` answers it once for every handler, it is never documented per endpoint and the web never shows it.
 - Everything else is **business-specific** and listed per endpoint: `ERROR_NOT_FOUND`, `ERROR_FORBIDDEN`, `ERROR_RATE_LIMITED`, `ERROR_LIMIT_REACHED`, and field-level codes such as `ERROR_INVALID_TITLE` (the web shows a message under the field).
 - Mapping from the old codes: `snake_case` becomes `ERROR_` + upper case (`invalid_title` -> `ERROR_INVALID_TITLE`, `internal_error` -> `ERROR_INTERNAL`, `invalid_body` / `unknown_field` -> `ERROR_PARAM`).
 - Server code builds errors with `internal/apperr` (see `docs/go-conventions.md`); one mapper turns them into status + envelope.

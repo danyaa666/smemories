@@ -57,7 +57,7 @@ func TestReservedUsername(t *testing.T) {
 }
 
 func TestDefaultUsername(t *testing.T) {
-	const id = "01K7Q8W3ZR5N2M4X6V8B0C1D2E"
+	const id = "01K7Q8W3ZR5N2M4X6V8B0C1D2E" // the id of the api/openapi.yaml examples, whose username is user-8b0c1d2e
 	want := []string{"user-8b0c1d2e", "user-6v8b0c1d2e", "user-2m4x6v8b0c1d2e", strings.ToLower(id)}
 	for i, w := range want {
 		got := defaultUsername(id, i)
@@ -84,7 +84,7 @@ func TestExposeNextChangeAt(t *testing.T) {
 		{now.UnixMilli() - cd + 1, false},
 		{now.UnixMilli(), false},
 	} {
-		u := s.expose(User{UsernameChangedAt: c.changedAt})
+		u := s.expose(&User{UsernameChangedAt: c.changedAt})
 		if (u.UsernameNextChangeAt == nil) != c.wantNil {
 			t.Errorf("changedAt %d: next %v, wantNil %v", c.changedAt, u.UsernameNextChangeAt, c.wantNil)
 		}

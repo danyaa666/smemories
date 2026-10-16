@@ -28,6 +28,11 @@ import (
 	"github.com/danyaa666/smemories/internal/yearbook"
 )
 
+const (
+	bytesPerMiB      = 1 << 20
+	redisPingTimeout = 5 * time.Second
+)
+
 func main() {
 	cfg, err := config.Load(os.Getenv)
 	if err != nil {
@@ -36,7 +41,7 @@ func main() {
 	}
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: cfg.LogLevel}))
 	if cfg.MemoryLimitMiB > 0 {
-		debug.SetMemoryLimit(int64(cfg.MemoryLimitMiB) << 20) // soft: the collector works harder near it, nothing is refused
+		debug.SetMemoryLimit(int64(cfg.MemoryLimitMiB) * bytesPerMiB) // soft: the collector works harder near it, nothing is refused
 		logger.Info("memory limit set", "mib", cfg.MemoryLimitMiB)
 	}
 
@@ -55,6 +60,7 @@ func main() {
 		os.Exit(1)
 	}
 	defer func() { _ = d.Close() }()
+	logger.Info("database pool", "max_open", cfg.DBMaxOpen, "max_idle", cfg.DBMaxIdle, "conn_max_lifetime", cfg.DBConnMaxLifetime.String())
 
 	redis.UseLogger(logger) // go-redis' own lines go through slog, not raw stderr
 	rc, err := redis.New(cfg)
@@ -63,7 +69,7 @@ func main() {
 		os.Exit(1)
 	}
 	defer func() { _ = rc.Close() }()
-	pctx, pcancel := context.WithTimeout(ctx, 5*time.Second)
+	pctx, pcancel := context.WithTimeout(ctx, redisPingTimeout)
 	err = rc.Ping(pctx)
 	pcancel()
 	if err != nil {

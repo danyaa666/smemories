@@ -12,9 +12,14 @@ import (
 	"github.com/danyaa666/smemories/internal/mailer"
 )
 
-const mailTimeout = 10 * time.Second
+const (
+	mailTimeout       = 10 * time.Second
+	backgroundTimeout = 3 * mailTimeout // a detached job may make several mailer calls
+)
 
 // Mail is what the service needs to send the verification and reset code emails.
+//
+// Mail is passed by value on purpose: two dependencies bundled for the constructor, read once.
 type Mail struct {
 	Mailer mailer.Mailer
 	Logger *slog.Logger
@@ -48,7 +53,7 @@ func renderEmail(locale, purpose, name, code string, minutes int) (subject, text
 // sendCode issues a new one-time code for u (the previous one of that purpose dies) and emails
 // it. The code only ever lives in Redis (as an HMAC) and in the email; errors returned here
 // never contain it.
-func (s *Service) sendCode(ctx context.Context, u User, purpose string) error {
+func (s *Service) sendCode(ctx context.Context, u *User, purpose string) error {
 	code, err := s.codes.Issue(ctx, purpose, u.InternalID, s.now().UTC())
 	if err != nil {
 		return err
@@ -74,7 +79,7 @@ func (s *Service) background(f func(context.Context)) {
 	s.bg.Add(1)
 	go func() {
 		defer s.bg.Done()
-		ctx, cancel := context.WithTimeout(context.Background(), 3*mailTimeout)
+		ctx, cancel := context.WithTimeout(context.Background(), backgroundTimeout)
 		defer cancel()
 		f(ctx)
 	}()

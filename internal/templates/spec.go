@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"slices"
 
+	"github.com/danyaa666/smemories/internal/apperr"
 	"github.com/danyaa666/smemories/internal/notefields"
 )
 
@@ -119,7 +120,7 @@ func (t *Template) Family(role string) string {
 // Asset returns the bytes of a background asset the template declares (path as written in the spec).
 func (t *Template) Asset(path string) ([]byte, error) {
 	if t.assets == nil {
-		return nil, fmt.Errorf("template %q has no assets", t.ID)
+		return nil, apperr.New(apperr.Internal, fmt.Sprintf("template %q has no assets", t.ID))
 	}
 	return fs.ReadFile(t.assets, path)
 }

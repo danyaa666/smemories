@@ -22,7 +22,7 @@ An invalid value stops the API with a message naming the variable; the password 
 startup (5 s) and exits if it is unreachable, then logs `redis connected` with `host:port` only. Commands are not retried
 (`MaxRetries` is off): with 1 s timeouts a dead Redis would otherwise cost seconds per request.
 
-`GET /readyz` answers 503 `not_ready` when MySQL **or** Redis does not answer within 1 s, or when Redis refuses a write
+`GET /readyz` answers 503 `ERROR_NOT_READY` when MySQL **or** Redis does not answer within 1 s, or when Redis refuses a write
 (readiness SETs `smem:<env>:probe:ready` with a 10 s expiry, so a full Redis with `noeviction` is not ready); the cause is
 logged, never put in the body. `GET /healthz` does not look at either. go-redis' own log lines go through slog
 (`redis client: ...`, WARN) instead of raw stderr, and a failing `rediss://` connection names TLS in the startup error.

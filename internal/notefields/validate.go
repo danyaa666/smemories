@@ -1,10 +1,10 @@
 package notefields
 
 import (
-	"errors"
 	"fmt"
 	"sort"
 
+	"github.com/danyaa666/smemories/internal/apperr"
 	"github.com/danyaa666/smemories/internal/textx"
 )
 
@@ -16,9 +16,9 @@ const (
 )
 
 var (
-	ErrUnknownField = errors.New("unknown field")
-	ErrMissing      = errors.New("missing answer")
-	ErrInvalid      = errors.New("invalid answer")
+	ErrUnknownField = apperr.New(apperr.Internal, "unknown field")
+	ErrMissing      = apperr.New(apperr.Internal, "missing answer")
+	ErrInvalid      = apperr.New(apperr.Internal, "invalid answer")
 )
 
 // FieldError names the field that failed and why. errors.Is matches ErrUnknownField, ErrMissing
@@ -48,7 +48,7 @@ func resolve(refs []FieldRef) ([]Field, error) {
 			return nil, &FieldError{r.ID, CodeUnknownField}
 		}
 		if seen[r.ID] {
-			return nil, fmt.Errorf("notefields: field %q listed twice", r.ID)
+			return nil, apperr.New(apperr.Internal, fmt.Sprintf("notefields: field %q listed twice", r.ID))
 		}
 		seen[r.ID] = true
 		out = append(out, f)
