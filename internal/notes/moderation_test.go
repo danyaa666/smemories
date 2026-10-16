@@ -25,13 +25,15 @@ func TestCheckIDs(t *testing.T) {
 		want       apperr.Code
 		ok         bool
 	}{
-		{"one", []string{id("a")}, maxBatchIDs, false, apperr.Code{}, true},
+		{"one", []string{id("A")}, maxBatchIDs, false, apperr.Code{}, true},
 		{"100", many(100), maxBatchIDs, false, apperr.Code{}, true},
 		{"101", many(101), maxBatchIDs, false, CodeTooManyIDs, false},
 		{"empty", nil, maxBatchIDs, false, apperr.Param, false},
 		{"empty allowed", nil, maxReorderIDs, true, apperr.Code{}, true},
-		{"duplicate", []string{id("a"), id("a")}, maxBatchIDs, false, apperr.Param, false},
+		{"duplicate", []string{id("A"), id("A")}, maxBatchIDs, false, apperr.Param, false},
 		{"short", []string{"abc"}, maxBatchIDs, false, apperr.Param, false},
+		{"lower case", []string{strings.ToLower(id("A"))}, maxBatchIDs, false, apperr.Param, false},
+		{"same note twice in two cases", []string{id("A"), strings.ToLower(id("A"))}, maxBatchIDs, false, apperr.Param, false},
 		{"300 reorder", many(300), maxReorderIDs, true, apperr.Code{}, true},
 		{"301 reorder", many(301), maxReorderIDs, true, CodeTooManyIDs, false},
 	} {
@@ -76,5 +78,17 @@ func TestPageTokens(t *testing.T) {
 	}
 	if sealPos(tk, scope, "", nil) != "" {
 		t.Error("the last page has no token")
+	}
+}
+
+func TestIsPublicID(t *testing.T) {
+	ok := "01HZX3K9QJ5V7M2N8P4R6T0WYZ"
+	if !isPublicID(ok) {
+		t.Fatal("canonical id rejected")
+	}
+	for _, bad := range []string{"", strings.ToLower(ok), ok[:25], ok + "A", "I" + ok[1:], "L" + ok[1:], "O" + ok[1:], "U" + ok[1:], ok[:25] + "-", ok[:25] + "é"} {
+		if isPublicID(bad) {
+			t.Fatalf("%q accepted", bad)
+		}
 	}
 }

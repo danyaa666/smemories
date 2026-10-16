@@ -239,8 +239,11 @@ func lockNotes(ctx context.Context, tx *sql.Tx, book uint64, ids []string) (map[
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	if len(out) != len(ids) {
-		return nil, ErrNotFound
+	// The collation is case-insensitive: a row can match under a spelling the map lacks. Never hand callers a hole.
+	for _, id := range ids {
+		if out[id] == nil {
+			return nil, ErrNotFound
+		}
 	}
 	return out, nil
 }

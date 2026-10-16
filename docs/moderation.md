@@ -23,7 +23,7 @@ code: `internal/notes/moderation*.go`; Postman: `postman/notes-moderation.postma
   the database changed and the same call is retried. Then one transaction deletes the photo links, the `media_tab` rows (clearing a cover or profile photo that
   points at one, through the same `RefClearer` path as `media/delete`) and the notes. Repeating a delete that already succeeded is `ERROR_NOT_FOUND`.
 - **Access.** Verified email required (`ERROR_EMAIL_NOT_VERIFIED`); another user's book or note is `ERROR_NOT_FOUND`, never 403. Writes are limited to 120 per user
-  per minute (`ERROR_RATE_LIMITED`); reads are not counted. Ids in a batch must be note ULIDs and must not repeat.
+  per minute (`ERROR_RATE_LIMITED`); reads are not counted. Ids (and `yearbook_id`) must be canonical upper-case ULIDs, else `ERROR_PARAM` (the id columns compare case-insensitively, so another spelling would match the row); ids in a batch must not repeat.
 - **The 300-note cap** of a link still counts hidden and pending notes (`TestHiddenNotesCountTowardTheCap`).
 - **Cursor.** `next_id` is sealed with the scope `note/get-list:<yearbook>:<status>`; a token of another list, yearbook or user is `ERROR_PARAM`.
 
