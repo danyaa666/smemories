@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 import { ApiError } from "../api/client";
@@ -50,6 +50,13 @@ export function NoteLinks() {
   const [day, setDay] = useState("");
   const [shown, setShown] = useState<Shown>();
   const [copied, setCopied] = useState(false);
+  const shareTitle = useRef<HTMLHeadingElement>(null);
+  const labelInput = useRef<HTMLInputElement>(null);
+  const shownToken = shown?.token;
+  // the new link block appears above the form: move focus to its heading so it is announced, not left on the cleared button
+  useEffect(() => {
+    if (shownToken) shareTitle.current?.focus();
+  }, [shownToken]);
   const [revoking, setRevoking] = useState<NoteCollection>();
   const [now] = useState(Date.now); // when the page opened: enough to tell open links from closed ones
 
@@ -116,7 +123,9 @@ export function NoteLinks() {
 
       {shown && (
         <section className="links-share" aria-labelledby="links-share-title">
-          <h2 id="links-share-title">{t("links.created")}</h2>
+          <h2 id="links-share-title" ref={shareTitle} tabIndex={-1}>
+            {t("links.created")}
+          </h2>
           <p>{t("links.once")}</p>
           <TextField
             label={shown.label ? t("links.linkNamed", { label: shown.label }) : t("links.link")}
@@ -130,7 +139,13 @@ export function NoteLinks() {
           <span role="status" className="links-copied">
             {copied ? t("links.copied") : ""}
           </span>
-          <Button variant="ghost" onClick={() => setShown(undefined)}>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setShown(undefined);
+              labelInput.current?.focus(); // the block with the focus is about to go away
+            }}
+          >
             {t("links.done")}
           </Button>
         </section>
@@ -145,6 +160,7 @@ export function NoteLinks() {
           maxLength={LABEL_MAX}
           counter
           error={labelError}
+          ref={labelInput}
           onChange={(e) => setLabel(e.target.value)}
         />
         <TextField

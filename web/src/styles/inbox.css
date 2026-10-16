@@ -140,6 +140,13 @@
   gap: var(--space-3);
 }
 
+/* A status label stays on one line and never shrinks; the name and meta line give way instead. */
+.inbox-card-head .badge,
+.links-row .badge {
+  flex: none;
+  white-space: nowrap;
+}
+
 .inbox-check {
   flex: none;
   width: 24px;
@@ -322,6 +329,11 @@
 
 .links-share .btn {
   margin-right: var(--space-2);
+}
+
+.links-row strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .links-row {

@@ -130,12 +130,31 @@ export function NoteCard({ note, lang, selected, onSelect, onStatus, onDelete, o
   const menuId = useId();
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLLIElement>(null);
+  const more = useRef<HTMLButtonElement>(null);
+  const back = useRef(false);
+  // A menu item unmounts with the menu, which would drop focus on <body>: after any item, return it to the ••• button
+  // once the card has rendered (also after a move, which re-renders the card in its new place, and for the confirm
+  // dialog, which remembers the focused element and gives focus back to it).
+  useEffect(() => {
+    if (!back.current) return;
+    back.current = false;
+    more.current?.focus();
+  });
+  const choose = (action: () => void) => () => {
+    back.current = true;
+    setOpen(false);
+    action();
+  };
   useEffect(() => {
     if (!open) return;
     const away = (e: MouseEvent) => {
       if (!root.current?.contains(e.target as Node)) setOpen(false);
     };
-    const esc = (e: globalThis.KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    const esc = (e: globalThis.KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      back.current = true;
+      setOpen(false);
+    };
     document.addEventListener("mousedown", away);
     document.addEventListener("keydown", esc);
     return () => {
@@ -225,6 +244,7 @@ export function NoteCard({ note, lang, selected, onSelect, onStatus, onDelete, o
         )}
         <div className="inbox-more">
           <Button
+            ref={more}
             variant="ghost"
             aria-haspopup="true"
             aria-expanded={open}
@@ -242,10 +262,7 @@ export function NoteCard({ note, lang, selected, onSelect, onStatus, onDelete, o
                     <button
                       type="button"
                       disabled={order.position === 1}
-                      onClick={() => {
-                        setOpen(false);
-                        order.onMove(order.position - 2);
-                      }}
+                      onClick={choose(() => order.onMove(order.position - 2))}
                     >
                       {t("inbox.moveUp")}
                     </button>
@@ -254,10 +271,7 @@ export function NoteCard({ note, lang, selected, onSelect, onStatus, onDelete, o
                     <button
                       type="button"
                       disabled={order.position === order.total}
-                      onClick={() => {
-                        setOpen(false);
-                        order.onMove(order.position);
-                      }}
+                      onClick={choose(() => order.onMove(order.position))}
                     >
                       {t("inbox.moveDown")}
                     </button>
@@ -265,14 +279,7 @@ export function NoteCard({ note, lang, selected, onSelect, onStatus, onDelete, o
                 </>
               )}
               <li>
-                <button
-                  type="button"
-                  className="danger"
-                  onClick={() => {
-                    setOpen(false);
-                    onDelete();
-                  }}
-                >
+                <button type="button" className="danger" onClick={choose(onDelete)}>
                   {t("inbox.delete")}
                 </button>
               </li>

@@ -102,6 +102,8 @@ function Inbox({ bookId }: { bookId: string }) {
   const [pending, setPending] = useState<NoteItem[]>([]);
   const toastTimer = useRef<number>(undefined);
   const delTimer = useRef<number>(undefined);
+  const toastBox = useRef<HTMLDivElement>(null);
+  const focusUndo = useRef(false);
   const inflight = useRef(new Set<string>()); // ids whose batch-delete request is on its way
 
   const key = ["notes", bookId, filter] as const;
@@ -120,6 +122,13 @@ function Inbox({ bookId }: { bookId: string }) {
   const countsQuery = useNoteCounts(bookId);
   const serverCounts = countsQuery.data ?? lastCounts;
   const counts = serverCounts && shiftCounts(serverCounts, pending, null);
+
+  // the deleted card (and the menu or dialog that started it) is gone: focus goes to Undo, the next logical control
+  useEffect(() => {
+    if (!focusUndo.current || pending.length === 0) return;
+    focusUndo.current = false;
+    toastBox.current?.querySelector<HTMLElement>(".toast-action")?.focus();
+  }, [pending]);
 
   // the list is the freshest source of the counts: share it with the tabs, the header and the sidebar badge
   useEffect(() => {
@@ -191,6 +200,7 @@ function Inbox({ bookId }: { bookId: string }) {
   // ── delete with a client-side Undo ──
   // The Undo toast is shown for as long as `pending` is not empty, whatever other toast comes and goes meanwhile.
   function startDelete(ids: string[]) {
+    focusUndo.current = true;
     const all = [...pending, ...items.filter((n) => ids.includes(n.id))];
     setPending(all);
     setSel((s) => s.filter((x) => !ids.includes(x)));
@@ -472,7 +482,7 @@ function Inbox({ bookId }: { bookId: string }) {
         {announce}
       </div>
       {(pending.length > 0 || toast) && (
-        <div className="inbox-toast">
+        <div ref={toastBox} className="inbox-toast">
           {toast && <Toast message={toast.message} />}
           {pending.length > 0 && (
             <Toast

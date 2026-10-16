@@ -587,3 +587,51 @@ describe("book order", () => {
     expect(screen.queryByRole("button", { name: /Drag to reorder/ })).not.toBeInTheDocument();
   });
 });
+
+describe("keyboard focus", () => {
+  const three = () => [note(1, "approved"), note(2, "approved"), note(3, "approved")];
+  const names = () =>
+    screen
+      .getAllByRole("listitem")
+      .filter((li) => li.hasAttribute("data-note-id"))
+      .map((li) => li.querySelector("strong")!.textContent);
+  const more = (c: HTMLElement, name: string) =>
+    within(c).getByRole("button", { name: `More actions for ${name}'s note` });
+
+  it("returns to the ••• button after a move from the menu", async () => {
+    fake(three());
+    await open();
+    await userEvent.click(await screen.findByRole("button", { name: /Approved 3/ }));
+    const c = await card("Friend 2");
+    await userEvent.click(more(c, "Friend 2"));
+    await userEvent.click(screen.getByRole("button", { name: "Move down" }));
+    expect(names()).toEqual(["Friend 1", "Friend 3", "Friend 2"]);
+    expect(more(await card("Friend 2"), "Friend 2")).toHaveFocus();
+  });
+
+  it.each(["cancel", "escape"])(
+    "returns to the ••• button when the delete confirm is left with %s",
+    async (how) => {
+      fake([note(1, "approved")]);
+      await open();
+      const c = await card("Friend 1");
+      await userEvent.click(more(c, "Friend 1"));
+      await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+      const dialog = await screen.findByRole("dialog");
+      if (how === "cancel")
+        await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+      else await userEvent.keyboard("{Escape}");
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+      expect(more(c, "Friend 1")).toHaveFocus();
+    },
+  );
+
+  it("moves to Undo when the deleted card is gone", async () => {
+    fake([note(1, "pending")]);
+    await open();
+    const c = await card("Friend 1");
+    await userEvent.click(more(c, "Friend 1"));
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    expect(await screen.findByRole("button", { name: "Undo" })).toHaveFocus();
+  });
+});

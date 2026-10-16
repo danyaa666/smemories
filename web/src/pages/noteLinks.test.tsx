@@ -82,6 +82,15 @@ describe("note links", () => {
     expect(document.body.innerHTML).not.toContain(TOKEN);
   });
 
+  it("moves focus to the new link and back to the form when it is closed", async () => {
+    serve([]);
+    open();
+    await userEvent.click(await screen.findByRole("button", { name: "Create link" }));
+    expect(await screen.findByRole("heading", { name: "Your link is ready" })).toHaveFocus();
+    await userEvent.click(screen.getByRole("button", { name: "Done" }));
+    expect(screen.getByLabelText(/Name/)).toHaveFocus();
+  });
+
   it("copies the link", async () => {
     serve([]);
     open();
