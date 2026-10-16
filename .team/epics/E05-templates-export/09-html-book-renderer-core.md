@@ -30,3 +30,6 @@ Owner-only data stays behind the session; no user text is rendered as HTML; phot
 #### Test plan
 - Dev: unit and component tests, integration or Playwright where timing or layout matters; say what you could not check.
 - QA should probe: Vietnamese long names, emoji notes, 0 and 40 notes, missing photos, A5 A4 Letter, 375 px, Chrome and Edge print to PDF (page size, fonts, backgrounds), slow network.
+
+#### Added by the leader (2026-10-16, from T-056)
+The book-data response has `truncated` (true when the book has more approved notes than the 300-note cap returned) and `approved_total`. When `truncated` is true the preview and the print screen MUST show a visible warning ("X of Y notes are included") and must not silently print the shorter book; add a test for it.

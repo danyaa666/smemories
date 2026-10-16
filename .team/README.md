@@ -11,7 +11,8 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 16 | T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-058, T-059, T-060, T-061 |
-| TODO | 4 | T-056, T-072, T-079, T-082 |
+| TODO | 3 | T-072, T-079, T-082 |
+| CHANGES_REQUESTED | 1 | T-056 |
 | DONE | 56 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-073, T-074, T-075, T-076, T-077, T-078, T-080, T-081, T-083 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
@@ -19,7 +20,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?)
 
-_Board last written 2026-10-16 08:13Z_
+_Board last written 2026-10-16 08:34Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -2494,19 +2495,19 @@ Replace the numeric-id paging cursor with a signed opaque cursor and a shared he
 - 2026-10-09 13:15Z · leader · Absorbed by E10: T-069 (media API v2) and T-070 (yearbook API v2) return an opaque next_id from one shared helper; doing it twice on /v1 would be thrown away.
 
 ### T-056 — [E05] Book data endpoint for rendering (owner-only, approved notes)
-- **Status:** TODO
+- **Status:** CHANGES_REQUESTED
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
 - **Depends-on:** T-013
 - **Risk:** high
-- **Rework:** 0
-- **Owner-approved:** —
+- **Rework:** 1
+- **Owner-approved:** yes
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-16 04:11Z by leader
-- **Comments-seen:** 1
+- **Branch:** task/t-056-e05-book-data-endpoint-for-rendering-own
+- **PR:** https://github.com/danyaa666/smemories/pull/64
+- **Updated:** 2026-10-16 08:34Z by leader
+- **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/07-book-data-endpoint.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2516,6 +2517,10 @@ One owner-only request returns the yearbook, profile and approved notes with ans
 
 #### Comments
 - 2026-10-16 04:11Z · leader · unblocked: T-013 merged. Spec AC1 rewritten to the v2 route GET /api/book-data/get?yearbook_id= (ordering = T-013 approved order; ids canonical). Risk high: owner approval before merge.
+- 2026-10-16 08:18Z · human · owner approved merge
+- 2026-10-16 08:34Z · dev · PR #64 head a75ecee, CI green (go, go-integration, security, web). GET /api/book-data/get in new internal/bookdata; notes.ApprovedNotes (2 queries). Verify: leader decisions in PR body (cut at 300 notes since the cap is per link; 1 MiB holds for built-in 3-field templates, not for 9 fields or 2+ bytes/char text). Postman: added to notes-moderation collection, newman x2 green (80 req, 164 assertions). Risk high: owner approval before merge.
+- 2026-10-16 08:34Z · leader · Leader decisions on your two questions: (1) Silent truncation would print a book that quietly lacks notes, so do NOT cut silently. Keep the 300 cap as the hard maximum (the response bound), but add a boolean 'truncated' to data (always present): true when more approved notes exist than were returned; note_count stays the number returned; also return approved_total (the real approved count). Document it in openapi/schema/docs and add tests (299/300/301 approved notes: truncated false/false/true, approved_total right; the 301st is the last in order). T-058/T-061 will show a visible warning when truncated is true; I am adding that to their specs. (2) The 1 MiB bound for the built-in 3-field templates is accepted; state in docs/openapi that the response is gzip-compressed when the client accepts it IF the router already does it, otherwise just document the measured size (693 KB ASCII, 300 notes x 3 photos); do not add compression in this task. Everything else in your report is accepted (4 queries, Postman requests in the moderation collection, dbtest.Spy). Then CI green on the new head and READY_FOR_QA.
+- 2026-10-16 08:34Z · leader · small spec change from leader decision (truncated flag), see comment
 
 ### T-057 — [E05] Media print-size variant (1800 px) with backfill
 - **Status:** DONE
