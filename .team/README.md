@@ -10,9 +10,10 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 13 | T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-061, T-085 |
-| TODO | 2 | T-032, T-060 |
-| IN_PROGRESS | 1 | T-059 |
+| BACKLOG | 12 | T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-061 |
+| TODO | 2 | T-032, T-085 |
+| IN_PROGRESS | 1 | T-060 |
+| IN_QA | 1 | T-059 |
 | MERGED | 2 | T-072, T-079 |
 | DONE | 59 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-073, T-074, T-075, T-076, T-077, T-078, T-080, T-081, T-082, T-083 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
@@ -21,7 +22,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?)
 
-_Board last written 2026-10-16 18:13Z_
+_Board last written 2026-10-16 18:19Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -2632,7 +2633,7 @@ Fixed-size HTML pages, pagination, text fit, print CSS, readiness gate and a hea
 - 2026-10-16 11:13Z · human · accepted by owner
 
 ### T-059 — [E05] HTML template memory-book (design temp1)
-- **Status:** IN_PROGRESS
+- **Status:** IN_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
@@ -2640,11 +2641,11 @@ Fixed-size HTML pages, pagination, text fit, print CSS, readiness gate and a hea
 - **Risk:** low
 - **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** qa
 - **Branch:** task/t-059-e05-html-template-memory-book-design-tem
 - **PR:** https://github.com/danyaa666/smemories/pull/68
-- **Updated:** 2026-10-16 18:03Z by dev
-- **Comments-seen:** 4
+- **Updated:** 2026-10-16 18:17Z by qa
+- **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/10-html-template-memory-book.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2749,9 +2750,10 @@ Pastel Memory Book canvas as an HTML template, EN and VI, four page kinds.
   # skipped 0
   # todo 0
   # duration_ms 9847.317833 with a cut-off note (the 400-line message and a 2000-char single paragraph) asserting no text outside its card box in the PDF (e.g. pdftotext -bbox or the text positions vs the card rectangles) so this cannot regress; add the same case to the T-058 basic template if it is not already covered. Everything else is accepted as built (manifest, fonts, decisions 1-5). Non-blocking, leave them: inbox extra-answer order and the thank-you card quoting how_we_met (pre-existing). CI green on the new head, READY_FOR_QA.
+- 2026-10-16 18:16Z · dev · Rework 1: QA major (cut-off note ran out of its card in the PRINTED PDF) fixed at the cause. In print the size of the flex-sized text boxes .mb-lines and .mb-motto-text came from layout, and Chromium's print fragmentation let overflowing lines run out of them (overflow:hidden, contain:paint, overflow:clip, clip-path did not stop it; contain:size does: the box size is independent of its text, so the text is clipped at the box). memory.css: contain:size on both. Covered by 6 new make-print-check tests (memory-book and basic x A5/A4/Letter): fixture cutOff = 400-line message ('Dong\n' x 400) and 2000-char single paragraph; pdftotext -bbox asserts every word of both notes has its centre inside its text box in the PDF; verified the 3 memory-book tests FAIL without the fix (Dong at y 0.937 vs box bottom 0.928) and pass with it; basic already clipped and is now covered too. make print-check 19/19, web lint/test/build green, merged develop, CI green (go, go-integration, security, web) on head 68d7372. Verify: print-check cutoff tests; open the printed note 1 on A5 with the 400-line message.
 
 ### T-060 — [E05] HTML template navy-classic (design temp2)
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
@@ -2759,10 +2761,10 @@ Pastel Memory Book canvas as an HTML template, EN and VI, four page kinds.
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-060-e05-html-template-navy-classic-design-te
 - **PR:** —
-- **Updated:** 2026-10-16 09:50Z by leader
+- **Updated:** 2026-10-16 18:17Z by dev
 - **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/11-html-template-navy-classic.md`
@@ -3753,7 +3755,7 @@ Spec: .team/epics/E04-friends-notes/09-inbox-320px-polish.md (read it from the r
 - 2026-10-16 03:40Z · leader · created by mistake: the board does not let the leader override QA_FAIL, so the 320px fix goes through T-017 rework 2 instead
 
 ### T-085 — [E10] Lint exclusions anchored and a guard for auth.UserFrom
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -3764,12 +3766,13 @@ Spec: .team/epics/E04-friends-notes/09-inbox-320px-polish.md (read it from the r
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-16 13:19Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-16 18:19Z by leader
+- **Comments-seen:** 1
 
 Spec: .team/epics/E10-skills-alignment/12-lint-anchors-userfrom-guard.md (read it from the repo root). Two non-blocking findings of the T-072 QA.
 
 #### Comments
+- 2026-10-16 18:19Z · leader · promoted to keep the dev queue at 4; spec 12-lint-anchors-userfrom-guard.md
 
 <!-- tasks:end -->
 
