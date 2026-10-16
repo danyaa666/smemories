@@ -1,4 +1,4 @@
-// Sample PDFs of the memory-book template for the owner's review (docs/templates/, T-059): invented people, synthetic photos, each under 2 MB.
+// Sample PDFs of the designed templates (memory-book T-059, navy-classic T-060) for the owner's review (docs/templates/): invented people, synthetic photos, each under 2 MB.
 //   python3 make-fixtures.py sample /tmp/photos && PRINT_CHECK_PHOTOS=/tmp/photos node make-samples.mjs [OUT_DIR]
 // Same path as `make print-check`: the book screen in headless Chromium, page.pdf() with the page size from CSS and backgrounds on.
 import { statSync } from "node:fs";
@@ -9,16 +9,20 @@ import { open, ROOT, savePdf, serveBook, startServer } from "./lib.mjs";
 
 const out = path.resolve(process.argv[2] ?? path.join(ROOT, "docs/templates"));
 const SAMPLES = [
-  ["memory-book-a5-vi.pdf", "A5", "vi"],
-  ["memory-book-a4-en.pdf", "A4", "en"],
-  ["memory-book-letter-vi.pdf", "Letter", "vi"],
+  ["memory-book-a5-vi.pdf", "A5", "vi", "memory-book"],
+  ["memory-book-a4-en.pdf", "A4", "en", "memory-book"],
+  ["memory-book-letter-vi.pdf", "Letter", "vi", "memory-book"],
+  ["navy-classic-a5-vi.pdf", "A5", "vi", "navy-classic"],
+  ["navy-classic-a4-en.pdf", "A4", "en", "navy-classic"],
+  ["navy-classic-letter-vi.pdf", "Letter", "vi", "navy-classic"],
 ];
 const stop = await startServer();
 const browser = await chromium.launch();
 try {
-  for (const [file, size, language] of SAMPLES) {
+  for (const [file, size, language, template] of SAMPLES) {
+    if (process.argv[3] && process.argv[3] !== template) continue; // node make-samples.mjs OUT_DIR [template]
     const page = await browser.newPage();
-    const book = makeBook({ size, notes: 21, template: "memory-book", longNote: 4 }); // note 5 has the form's longest message (2000 characters)
+    const book = makeBook({ size, notes: 21, template, longNote: 4 }); // note 5 has the form's longest message (2000 characters)
     book.yearbook.language = language;
     await serveBook(page, book);
     await open(page);

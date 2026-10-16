@@ -43,7 +43,7 @@ export function makeBook({ notes = 84, size = "A5", truncatedOf = null, template
     answers: {
       name: NAMES[i % NAMES.length],
       relationship: "Bạn cùng lớp",
-      message: cutOff && i < 2 ? CUT_OFF[i] : i === 3 ? MESSAGES[0].repeat(14) : MESSAGES[i % MESSAGES.length], // note 4: a long one that must shrink to fit
+      message: cutOff && i < 2 ? CUT_OFF[i] : i === 3 ? MESSAGES[0].repeat(14) : i === longNote ? LONG_2000 : MESSAGES[i % MESSAGES.length], // note 4: a long one that must shrink to fit
       ...(i % 5 === 0 ? { best_memory: "Buổi diễn văn nghệ cuối năm, cả lớp hát vang 🎤" } : {}),
     },
     photo_ids: i < 28 ? [photoId(i + 3)] : [],

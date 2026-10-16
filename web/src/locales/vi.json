@@ -414,6 +414,14 @@
       "relationship": "Mối quan hệ",
       "message": "Lời nhắn"
     },
+    "navy": {
+      "classOf": "Khóa",
+      "profileEyebrow": "Vài điều về mình",
+      "autographsEyebrow": "Để lại đôi lời",
+      "autographs": "Lưu bút",
+      "farewell": "Tạm biệt",
+      "farewellYear": "Tạm biệt, khóa {{year}}"
+    },
     "memory": {
       "belongs": "cuốn lưu bút này là của",
       "owner": "{{name}}",

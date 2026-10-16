@@ -4,15 +4,18 @@ import { mediaUrl } from "../api/yearbooks";
 const CONCURRENCY = 6;
 
 /** Public ids of every photo the book shows, once each. */
-export function photoIds(d: {
-  yearbook: { cover_media_id: string | null };
-  profile: { photo_media_id: string | null };
-  notes: { photo_ids: string[] }[];
-}): string[] {
+export function photoIds(
+  d: {
+    yearbook: { cover_media_id: string | null };
+    profile: { photo_media_id: string | null };
+    notes: { photo_ids: string[] }[];
+  },
+  shown = { cover: true, notes: true },
+): string[] {
   const ids = [
-    d.yearbook.cover_media_id,
+    shown.cover ? d.yearbook.cover_media_id : null,
     d.profile.photo_media_id,
-    ...d.notes.flatMap((n) => n.photo_ids),
+    ...(shown.notes ? d.notes.flatMap((n) => n.photo_ids) : []),
   ];
   return [...new Set(ids.filter((x): x is string => !!x))];
 }

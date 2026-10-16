@@ -1,0 +1,320 @@
+/* Template navy-classic (templates/navy.tsx), drawn in the 816 px box of the sheet. Colours, sizes and positions are from design/canvas/temp2.html:
+   navy #1B2A4A, gold #C9A86A, dark gold #7A5C2B, cream #F7F3EA; Cormorant Garamond for the serif, Be Vietnam Pro (a Vietnamese-capable
+   lookalike of the canvas's Jost) for the small capitals. The pages are taller than the canvas on A4 and A5: the middle of a page takes the room. */
+.nc-page {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-weight: 500;
+  line-height: normal;
+}
+.nc-navy {
+  background: #1b2a4a;
+  color: #f7f3ea;
+}
+.nc-cream {
+  background: #f7f3ea;
+  color: #1b2a4a;
+}
+.nc-page .serif {
+  font-family: "Cormorant Garamond", Georgia, serif;
+}
+.nc-page .caps {
+  font-family: "Be Vietnam Pro", sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.28em;
+  font-weight: 500;
+}
+.nc-frame {
+  position: absolute;
+  border: 1px solid #c9a86a;
+}
+
+/* Every text that shrinks to fit is a box whose size does not come from its text. In the PRINTED page a text taller than a box whose size comes
+   from the flex layout runs out of it (overflow:hidden, contain:paint and clip-path do not stop it, T-059 QA); contain:size does. One-line
+   boxes have a height of their own (their line height), so contain:size costs them nothing. */
+.nc-page .bk-fit {
+  contain: size;
+}
+.nc-line {
+  width: 100%;
+  white-space: nowrap;
+}
+
+.nc-head {
+  position: absolute;
+  left: 56px;
+  right: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+.nc-eyebrow {
+  font-size: 12px;
+  color: #7a5c2b;
+}
+.nc-title {
+  font-size: 68px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* Cover and back */
+.nc-cover-top {
+  position: absolute;
+  left: 80px;
+  right: 80px;
+  top: 150px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  text-align: center;
+}
+.nc-school {
+  height: 28px;
+  line-height: 28px;
+  letter-spacing: 0.36em !important;
+}
+.nc-class-of {
+  margin-top: 18px;
+  font-size: 64px;
+  font-style: italic;
+  line-height: 1;
+}
+.nc-year {
+  font-size: 230px;
+  font-weight: 600;
+  line-height: 0.82;
+  letter-spacing: -0.01em;
+  color: #c9a86a;
+}
+.nc-sub {
+  height: 26px;
+  line-height: 26px;
+}
+.nc-title-only {
+  height: 84px;
+  line-height: 84px;
+  font-style: italic;
+}
+.nc-cover-foot {
+  position: absolute;
+  left: 80px;
+  right: 80px;
+  bottom: 92px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+.nc-motto {
+  height: 36px;
+  line-height: 36px;
+  font-size: 24px;
+  font-style: italic;
+}
+.nc-gold-caps {
+  height: 20px;
+  line-height: 20px;
+  color: #c9a86a;
+}
+.nc-gold-caps.nc-dark {
+  color: #7a5c2b;
+}
+.nc-back {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  padding: 0 80px;
+  text-align: center;
+}
+.nc-back .nc-title-only {
+  height: 64px;
+  line-height: 64px;
+}
+.nc-thanks {
+  max-width: 520px;
+  font-size: 26px;
+  font-style: italic;
+  line-height: 1.4;
+}
+
+/* Profile: the welcome letter */
+.nc-letter {
+  position: absolute;
+  left: 72px;
+  right: 72px;
+  top: 270px;
+  bottom: 96px;
+  display: flex;
+  gap: 48px;
+}
+.nc-letter-text {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  flex-direction: column;
+  gap: 18px;
+}
+.nc-para {
+  display: flex;
+  flex: 0 1 auto;
+  min-height: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+.nc-para-label {
+  flex: none;
+  height: 20px;
+  font-size: 12px;
+  line-height: 20px;
+  color: #7a5c2b;
+}
+.nc-para-text {
+  flex: 1 1 0;
+  min-height: 0;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.nc-italic {
+  font-style: italic;
+}
+.nc-sign {
+  display: flex;
+  flex: none;
+  margin-top: auto; /* the sign-off of the letter sits at its foot */
+  flex-direction: column;
+  gap: 2px;
+}
+.nc-signature {
+  height: 56px;
+  line-height: 56px;
+  font-size: 40px;
+  font-style: italic;
+  color: #7a5c2b;
+}
+.nc-sign-line {
+  height: 20px;
+  line-height: 20px;
+}
+.nc-letter-photo {
+  display: flex;
+  flex: none;
+  width: 220px;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+/* The oval: the photo covers it whatever its shape (object-fit: cover from the shared Photo), a thin gold ring around it. */
+.nc-page .nc-oval {
+  flex: none;
+  width: 200px;
+  height: 260px;
+  border-radius: 50%;
+  outline: 1px solid #c9a86a;
+  outline-offset: 8px;
+  background: #dcd6c9;
+}
+.nc-caption {
+  margin-top: 8px;
+  font-size: 17px;
+  font-style: italic;
+  text-align: center;
+}
+.nc-footer {
+  position: absolute;
+  left: 56px;
+  right: 56px;
+  bottom: 36px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #c9a86a;
+  font-size: 11px;
+  line-height: 16px;
+  color: #1b2a4a;
+}
+.nc-footer-class {
+  flex: none;
+  white-space: nowrap;
+}
+.nc-footer-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Notes: the autographs page, four friends in two columns */
+.nc-grid {
+  position: absolute;
+  left: 80px;
+  right: 80px;
+  top: 250px;
+  bottom: 230px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 24px 48px;
+}
+.nc-note {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+}
+/* The message on ruled lines like the canvas's; the rules follow the font size (1lh). */
+.nc-msg {
+  flex: 1 1 0;
+  min-height: 0;
+  font-size: 19px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0 calc(1lh - 1px),
+    rgba(27, 42, 74, 0.22) calc(1lh - 1px) 1lh
+  );
+}
+.nc-note-sign {
+  height: 58px;
+  padding-top: 6px;
+}
+.nc-note-sign .nc-signature {
+  height: 36px;
+  line-height: 36px;
+  font-size: 28px;
+}
+.nc-note-sign .nc-sign-line {
+  letter-spacing: 0.12em;
+  height: 16px;
+  line-height: 16px;
+  color: #1b2a4a;
+}
+.nc-farewell {
+  position: absolute;
+  left: 80px;
+  right: 80px;
+  bottom: 84px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+.nc-farewell-text {
+  font-size: 38px;
+  font-style: italic;
+  line-height: 1.2;
+}
