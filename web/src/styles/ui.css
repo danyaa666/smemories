@@ -205,7 +205,8 @@
   color: var(--color-error);
 }
 
-.banner-offline {
+.banner-offline,
+.banner-warning {
   background: var(--color-warning-bg);
   color: var(--color-warning-fg);
 }
