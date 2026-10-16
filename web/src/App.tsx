@@ -14,6 +14,8 @@ import { VerifyEmail } from "./pages/VerifyEmail";
 import { Home } from "./pages/Home";
 import { NoteForm } from "./pages/NoteForm";
 import { NotFound } from "./pages/NotFound";
+import { NoteLinks } from "./pages/NoteLinks";
+import { NotesInbox } from "./pages/NotesInbox";
 import { YearbookEdit } from "./pages/YearbookEdit";
 import { YearbookNew } from "./pages/YearbookNew";
 import { Yearbooks } from "./pages/Yearbooks";
@@ -50,6 +52,8 @@ export function App() {
           <Route path="/yearbooks" element={<Yearbooks />} />
           <Route path="/yearbooks/new" element={<YearbookNew />} />
           <Route path="/yearbooks/:id" element={<YearbookEdit />} />
+          <Route path="/yearbooks/:id/notes" element={<NotesInbox />} />
+          <Route path="/yearbooks/:id/note-links" element={<NoteLinks />} />
         </Route>
       </Route>
     </Routes>

@@ -1,0 +1,351 @@
+/* Notes inbox and note links (T-017). Values come from tokens.css. */
+.inbox-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.inbox-summary,
+.inbox-hint {
+  margin: 0 0 var(--space-4);
+  color: var(--color-ink-2);
+  font-size: var(--text-small);
+}
+
+.inbox-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-bottom: var(--space-4);
+  padding: var(--space-1);
+  border-radius: var(--radius-md);
+  background: var(--color-paper-deep);
+}
+
+.inbox-tabs button {
+  flex: 1 1 auto;
+  min-height: var(--tap-min);
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-ink);
+  font: inherit;
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+}
+
+.inbox-tabs button[aria-pressed="true"] {
+  background: var(--color-surface);
+  box-shadow: var(--shadow-1);
+  font-weight: var(--weight-semibold);
+}
+
+.inbox-count {
+  color: var(--color-ink-2);
+}
+
+.inbox-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.inbox-selectall {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--tap-min);
+}
+
+.inbox-bulk {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-teal-soft);
+  box-shadow: var(--shadow-1);
+}
+
+.inbox-bulk strong {
+  margin-right: auto;
+}
+
+.inbox-list,
+.order-list,
+.inbox-photos,
+.inbox-menu,
+.links-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.inbox-list,
+.order-list,
+.links-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.inbox-card {
+  position: relative;
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-1);
+}
+
+.inbox-card.is-selected {
+  box-shadow:
+    0 0 0 2px var(--color-teal),
+    var(--shadow-1);
+}
+
+.inbox-card.is-dragging,
+.order-row.is-dragging {
+  opacity: 0.4;
+}
+
+.inbox-card.drop-above,
+.order-row.drop-above {
+  box-shadow:
+    0 -4px 0 0 var(--color-primary),
+    var(--shadow-1);
+}
+
+.inbox-card.drop-below,
+.order-row.drop-below {
+  box-shadow:
+    0 4px 0 0 var(--color-primary),
+    var(--shadow-1);
+}
+
+.inbox-card-head {
+  display: flex;
+  flex-wrap: wrap; /* under ~360 px the badge drops to its own line instead of squeezing the name */
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+/* A status label stays on one line and never shrinks; the name and meta line give way instead. */
+.inbox-card-head .badge,
+.links-row .badge {
+  flex: none;
+  white-space: nowrap;
+}
+
+.inbox-check {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin: 10px; /* a 44 px target around the box */
+  accent-color: var(--color-teal);
+}
+
+.inbox-card-who {
+  display: flex;
+  flex: 1 1 10em;
+  flex-direction: column;
+  min-width: 10em;
+}
+
+.inbox-card-who small,
+.inbox-pos {
+  color: var(--color-ink-2);
+  font-size: var(--text-small);
+}
+
+.inbox-grip {
+  flex: none;
+  min-width: var(--tap-min);
+  min-height: var(--tap-min);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-ink-2);
+  font-size: var(--text-h3);
+  cursor: grab;
+  touch-action: none; /* the finger drags the note instead of scrolling the page */
+  user-select: none;
+}
+
+.inbox-grip:active {
+  cursor: grabbing;
+}
+
+.inbox-msg {
+  margin: var(--space-3) 0;
+  white-space: pre-line;
+}
+
+.inbox-extra {
+  margin: 0 0 var(--space-3);
+}
+
+.inbox-extra dt {
+  color: var(--color-ink-2);
+  font-size: var(--text-small);
+  font-weight: var(--weight-semibold);
+}
+
+.inbox-extra dd {
+  margin: 0 0 var(--space-2);
+  white-space: pre-line;
+}
+
+.inbox-photos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.inbox-photos img {
+  display: block;
+  width: 88px;
+  height: 66px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+}
+
+.inbox-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.inbox-more {
+  position: relative;
+  margin-left: auto;
+}
+
+.inbox-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 10;
+  min-width: 11rem;
+  padding: var(--space-1);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-3);
+}
+
+.inbox-menu button {
+  width: 100%;
+  min-height: var(--tap-min);
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.inbox-menu button:hover:not(:disabled) {
+  background: var(--color-paper-deep);
+}
+
+.inbox-menu button:disabled {
+  color: var(--color-ink-3);
+  cursor: not-allowed;
+}
+
+.inbox-menu button.danger {
+  color: var(--color-error);
+}
+
+.order-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-1);
+}
+
+.order-row-text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.order-row-text small {
+  overflow: hidden;
+  color: var(--color-ink-2);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inbox-toast {
+  position: fixed;
+  right: var(--gutter);
+  bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
+  left: var(--gutter);
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+@media (max-width: 959px) {
+  .inbox-toast {
+    bottom: calc(72px + var(--space-3) + env(safe-area-inset-bottom)); /* above the tab bar */
+  }
+}
+
+/* ── Note links ───────────────────────────────── */
+.links-share,
+.links-form {
+  margin-bottom: var(--space-6);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-1);
+}
+
+.links-share {
+  border: 2px solid var(--color-teal);
+}
+
+.links-share .btn {
+  margin-right: var(--space-2);
+}
+
+.links-row strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.links-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.links-list .card small {
+  display: block;
+  margin-bottom: var(--space-2);
+  color: var(--color-ink-2);
+}

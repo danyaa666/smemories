@@ -4,6 +4,7 @@ import { Link, NavLink, Outlet, useMatch } from "react-router-dom";
 import { getYearbook } from "../api/yearbooks";
 import { errorText } from "../auth/errors";
 import { useMe } from "../auth/useMe";
+import { useNoteCounts } from "./useNoteCounts";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
@@ -23,7 +24,7 @@ export type NavItem = {
 
 /**
  * One entry per screen that exists. An item whose route does not exist yet is simply not listed:
- * T-017 adds "Notes from friends" (with its pending count) and the print task adds "Preview and print" here.
+ * The print task adds "Preview and print" here.
  */
 export const NAV_ITEMS: NavItem[] = [
   { key: "books", to: () => "/yearbooks", label: "nav.yearbooks", tab: "nav.tabBooks" },
@@ -33,6 +34,18 @@ export const NAV_ITEMS: NavItem[] = [
     label: "nav.profile",
     tab: "nav.tabProfile",
   },
+  {
+    key: "notes",
+    to: (id) => (id ? `/yearbooks/${id}/notes` : null),
+    label: "nav.notes",
+    tab: "nav.tabNotes",
+  },
+  {
+    key: "links",
+    to: (id) => (id ? `/yearbooks/${id}/note-links` : null),
+    label: "nav.links",
+    tab: "nav.tabLinks",
+  },
 ];
 
 /** The signed-in shell: a 256 px sidebar from 960 px up, a bottom tab bar below. Only one of them is in the page. */
@@ -41,16 +54,19 @@ export function YearbookLayout({ items = NAV_ITEMS }: { items?: NavItem[] }) {
   const wide = useMediaQuery("(min-width: 960px)");
   const { data: user } = useMe();
   const out = useSignOut();
-  const matched = useMatch("/yearbooks/:id")?.params.id;
+  const matched = useMatch("/yearbooks/:id/*")?.params.id;
   const bookId = matched && matched !== "new" ? matched : undefined;
   const book = useQuery({
     queryKey: ["yearbook", bookId],
     queryFn: () => getYearbook(bookId ?? ""),
     enabled: bookId !== undefined,
   });
+  const pending = useNoteCounts(bookId).data?.pending;
   const links = items.flatMap((i) => {
     const to = i.to(bookId);
-    return to === null ? [] : [{ ...i, to }];
+    return to === null
+      ? []
+      : [{ ...i, to, badge: i.key === "notes" && pending !== undefined ? pending : i.badge }];
   });
 
   // `username` arrives with T-081/T-082; until the API sends it the email local part is shown.
