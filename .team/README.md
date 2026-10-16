@@ -12,7 +12,7 @@
 |---|---:|---|
 | BACKLOG | 13 | T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-061, T-085 |
 | TODO | 2 | T-032, T-060 |
-| IN_PROGRESS | 1 | T-079 |
+| READY_FOR_QA | 1 | T-079 |
 | QA_FAIL | 1 | T-059 |
 | MERGED | 1 | T-072 |
 | DONE | 59 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-073, T-074, T-075, T-076, T-077, T-078, T-080, T-081, T-082, T-083 |
@@ -22,7 +22,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?)
 
-_Board last written 2026-10-16 14:03Z_
+_Board last written 2026-10-16 14:21Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -3544,7 +3544,7 @@ T-065 QA found: a book delete racing a read gives 500 'yearbook without its owne
 - 2026-10-12 04:00Z · human · accepted by owner
 
 ### T-079 — [E01] Make the timing-sensitive integration tests tolerant of a starved CI runner
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -3552,11 +3552,11 @@ T-065 QA found: a book delete racing a read gives 500 'yearbook without its owne
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-079-e01-make-the-timing-sensitive-integratio
-- **PR:** —
-- **Updated:** 2026-10-16 13:45Z by dev
-- **Comments-seen:** 0
+- **PR:** 69
+- **Updated:** 2026-10-16 14:20Z by dev
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/14-timing-sensitive-integration-tests.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -3565,6 +3565,7 @@ T-065 QA found: a book delete racing a read gives 500 'yearbook without its owne
 T-077 QA: a ratelimit retry-after test failed once on the CI runner (689 ms vs about 850 ms) and the media test binary now peaks at 1.9 GB; make timing assertions deterministic and cap media test parallelism.
 
 #### Comments
+- 2026-10-16 14:20Z · dev · PR #69. ratelimit retry-after now on fake clock (exact 850ms); media busy test uses channel not 2s wall clock; redis ping best-of-20; session TTL test polls; media TestMain caps -parallel at 4 (peak 1.53->1.24 GB, wall 54->57s on 11 cores, no change on 4-core CI). Load runs: ratelimit/redis/auth Session -count=20 and media -count=5 pass with 12 busy loops. Scan findings left are listed in the PR. make test-integration green locally; CI pending.
 
 ### T-080 — [E04] Public submit: show 'link full' instead of a connection reset
 - **Status:** DONE
