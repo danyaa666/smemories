@@ -12,10 +12,10 @@ The HTML renderer in the browser (D-24) needs the whole book in one owner-only r
 - Out (do not do): extending the Go renderer (T-010, T-038 stay as fallback), the free-layout editor (E09), new page kinds (D-17).
 
 #### Acceptance criteria
-- [ ] AC1 — `GET /v1/yearbooks/{id}/book` (session) answers `200 {"yearbook":{title,school_name,class_name,graduation_year,motto,language,page_size,template_id,cover_media_id},"profile":{full_name,nickname,quote,hobbies,future_plans,photo_media_id},"notes":[{id,answers,photo_ids}],"note_count"}`; only notes with status `approved`, in `sort_order` then creation order; hidden and pending notes never appear. Another user's or a missing yearbook is `404 not_found`.
+- [ ] AC1 — `GET /api/book-data/get?yearbook_id=` (session; namespace `book-data` per `docs/api-contract.md` section 8) answers the v2 envelope `{status, data}` with `data = {yearbook:{title,school_name,class_name,graduation_year,motto,language,page_size,template_id,cover_media_id}, profile:{full_name,nickname,quote,hobbies,future_plans,photo_media_id}, notes:[{id,answers,photo_ids}], note_count}`; ids are the public ULIDs; only notes with status `approved`, ordered by `sort_order` then creation order (the same order T-013 `note/get-list?status=approved` shows); hidden and pending notes never appear. Another user's, a missing or a malformed (non-canonical) `yearbook_id` follows the T-013 rule: ownership gives `ERROR_NOT_FOUND`, a malformed id gives `ERROR_PARAM`. Times are Unix ms.
 - [ ] AC2 — Bounded: at most 300 notes (the collection cap) and 3 photos each; one query for notes and one for photo links (no N+1, shown by a query-count test); response size stays under 1 MiB for 300 notes with maximal answers.
-- [ ] AC3 — No storage keys, hashes, emails or internal ids in the response; media are referenced by public id and fetched through `GET /v1/media/{id}/content`.
-- [ ] AC4 — `api/openapi.yaml`, `web/src/api/schema.d.ts` and the Postman collection are updated (owner, other user, pending and hidden notes excluded, ordering); the collection runs twice.
+- [ ] AC3 — No storage keys, hashes, emails or internal ids in the response; media are referenced by public id and fetched through `GET /api/media/get-content?id=&variant=print`.
+- [ ] AC4 — `api/openapi.yaml`, `web/src/api/schema.d.ts` and the Postman collection are updated (owner, other user, pending and hidden notes excluded, ordering, malformed id); the collection runs twice.
 
 #### Design
 See ADR `docs/adr/0003-html-print-export.md` and the prototype `web/src/spike/print/` for the measured approach; follow the conventions of the existing web code (typed API client, React-escaped rendering, i18n key parity, 375 px layout).

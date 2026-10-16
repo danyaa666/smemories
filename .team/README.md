@@ -10,19 +10,17 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 17 | T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-056, T-058, T-059, T-060, T-061 |
-| TODO | 3 | T-072, T-079, T-082 |
-| IN_PROGRESS | 1 | T-017 |
-| READY_FOR_QA | 1 | T-080 |
-| MERGED | 1 | T-081 |
-| DONE | 53 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-018, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-073, T-074, T-075, T-076, T-077, T-078, T-083 |
+| BACKLOG | 16 | T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-032, T-050, T-058, T-059, T-060, T-061 |
+| TODO | 4 | T-056, T-072, T-079, T-082 |
+| MERGED | 2 | T-017, T-080 |
+| DONE | 54 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-018, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-057, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-073, T-074, T-075, T-076, T-077, T-078, T-081, T-083 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-081 ([E02] Username: unique public handle with default and weekly change (API))
+**Awaiting your review (MERGED):** T-017 ([E04] Web: notes link management and moderation inbox); T-080 ([E04] Public submit: show 'link full' instead of a connection reset)
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?)
 
-_Board last written 2026-10-16 03:53Z_
+_Board last written 2026-10-16 04:11Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -1115,7 +1113,7 @@ Dashboard of the user's yearbooks; create/edit form for book information and the
 - 2026-10-09 01:42Z · leader · accepted by owner (chat, 2026-10-09: 'team accept T-016, T-046, T-047, T-051')
 
 ### T-017 — [E04] Web: notes link management and moderation inbox
-- **Status:** IN_PROGRESS
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
@@ -1123,11 +1121,11 @@ Dashboard of the user's yearbooks; create/edit form for book information and the
 - **Risk:** low
 - **Rework:** 2
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-017-e04-web-notes-link-management-and-modera
 - **PR:** https://github.com/danyaa666/smemories/pull/61
-- **Updated:** 2026-10-16 03:44Z by dev
-- **Comments-seen:** 8
+- **Updated:** 2026-10-16 04:11Z by leader
+- **Comments-seen:** 11
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/04-web-notes-link-management-and-moderation.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1183,6 +1181,16 @@ Create/copy/revoke the collection link, set a deadline, see submissions grouped 
   NON-BLOCKING: after pressing Enter on 'Hoàn tác' (button unmounts) focus goes to <body>; minor, could go to the restored card's ••• button. Mobile tab bar has no pending badge: accepted known difference.
 - 2026-10-16 03:40Z · leader · Leader decision (rework budget): the 320px name break is below the 375px design baseline (and no 320px phone is realistic for this audience), so it does not block. Everything else QA checked passed in real Chrome (badge on one line at 320/375/1280 in VI and EN, focus, drag, Undo, link creation, CI green, MERGEABLE). Moving it on to my review; the 320px card head and the focus after Undo are tracked in T-084 (P3).
 - 2026-10-16 03:40Z · leader · CORRECTION to my previous comment: the board does not allow the leader to override QA_FAIL, so this goes back to dev as rework 2 (the last). It is a small, cheap fix, so do exactly this and nothing else: 1) 320px: let .inbox-card-head wrap and give .inbox-card-who a minimum width (about 10em), so the badge drops to its own line under ~360px; a name must not break mid-word and a one-line card should be about 160px tall or less at 320px. Check 320, 360, 375, 1280 in a real browser (screenshots in the PR description; headless Chrome is fine), VI and EN, longest labels, a 60-char name with emoji. 2) Focus after pressing Enter on Undo: land on the neighbouring card's ••• button, or the list heading when the list is empty (one test). Then CI green, READY_FOR_QA. QA will re-check only these two at 320/375/1280.
+- 2026-10-16 03:57Z · dev · Rework 2 head 2968f7c, CI green (go, go-integration, security, web). 1) 320px: .inbox-card-head wraps, .inbox-card-who min-width 10em; real Chrome (Playwright, own Vite :5190, API mocked), VI+EN, 60-char emoji name: 320/360/375/1280 no split letter-words, badge 1 line, no h-scroll; head 124-154px at 320 (was 264; 178-196 for the 60-char name), whole card with message+actions 248-302 at 320 (cannot be <=160: it holds a 44px action row); numbers in PR. 2) Undo via Enter: focus goes to the restored card's ••• button (else first card, else h1); test 'returns to the restored card's ••• button after Undo' fails on old code; also verified in browser. Lint/typecheck/i18n/api/vitest 235/build green.
+- 2026-10-16 04:00Z · qa · Re-QA rework 2, head 2968f7c (PR #61): CI green (go, go-integration, security, web), MERGEABLE/CLEAN. Real Chrome (playwright-core, channel chrome) on own Vite :5174 + API :8081, private DB smem_test_qa017c (dropped), redis db 14; my processes stopped. web lint, typecheck, lint:i18n, check:api, vitest (235), build all green.
+  EVIDENCE
+  - 320px head (VI and EN, 10 seeded cards incl. 3-word names and a 1000-char message): no word split across lines (Range-rect check on every word in every .inbox-card-head: 0 splits at 320/360/375/1280); no horizontal scroll; head height at 320 = 124-154px (was 264); 360/375 = 102px; 1280 = 48px. At 320 name sits on its own full-width row under checkbox+avatar, meta wraps by word, badge on one line under it (screenshots viewed). Whole card at 320 is 272-638px incl. message; accepted per leader (44px action row).
+  - Badges one line everywhere (VI and EN, notes and note-links, 320/375/1280), 60-char emoji link name wraps, pill stays 1 line; no overflowing elements.
+  - Undo focus (keyboard): Enter on Hoan tac (approved delete via confirm, and pending delete via menu) -> restored card's ... button. Mouse Undo restores card, counts unchanged. Not exercised in browser: fallbacks (first card / h1) - jsdom test only.
+  - Focus regressions still pass: Esc/menu item/dialog Esc/Cancel -> ... button; confirm Xoa -> Hoan tac; link create -> H2 'ready' at 320; Xong -> Name input.
+  - Spot-checks: real mouse drag -> ONE POST /note/reorder, DOM and API order agree, announcement text OK; link creation works at 320.
+  NON-BLOCKING: mobile tab bar has no pending badge (known accepted); T-084 was cancelled so nothing further tracked.
+- 2026-10-16 04:11Z · leader · merged 445a11c (PR #61). Review: web-only, token only in component state (tests assert no storage/URL), delete has a 6 s Undo and flushes on leave, no retry on 4xx, focus handling covered by tests, 320/360/375/1280 checked in real Chrome after 2 reworks; CI green, QA_PASS on the same head. Known differences: no pending badge on the mobile tab bar (as in the design); whole card at 320px is 248-302px. For owner to check: /yearbooks/<id>/notes and /note-links in the app at phone and desktop width; the new Vietnamese strings under inbox.* and links.* (see the PR description).
 
 ### T-018 — [E04] Web: public anonymous notes form
 - **Status:** DONE
@@ -2486,7 +2494,7 @@ Replace the numeric-id paging cursor with a signed opaque cursor and a shared he
 - 2026-10-09 13:15Z · leader · Absorbed by E10: T-069 (media API v2) and T-070 (yearbook API v2) return an opaque next_id from one shared helper; doing it twice on /v1 would be thrown away.
 
 ### T-056 — [E05] Book data endpoint for rendering (owner-only, approved notes)
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -2497,8 +2505,8 @@ Replace the numeric-id paging cursor with a signed opaque cursor and a shared he
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-16 04:11Z by leader
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/07-book-data-endpoint.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2507,6 +2515,7 @@ Replace the numeric-id paging cursor with a signed opaque cursor and a shared he
 One owner-only request returns the yearbook, profile and approved notes with answers and photo ids for the HTML renderer (D-24). Replaces T-014.
 
 #### Comments
+- 2026-10-16 04:11Z · leader · unblocked: T-013 merged. Spec AC1 rewritten to the v2 route GET /api/book-data/get?yearbook_id= (ordering = T-013 approved order; ids canonical). Risk high: owner approval before merge.
 
 ### T-057 — [E05] Media print-size variant (1800 px) with backfill
 - **Status:** DONE
@@ -3390,7 +3399,7 @@ T-077 QA: a ratelimit retry-after test failed once on the CI runner (689 ms vs a
 #### Comments
 
 ### T-080 — [E04] Public submit: show 'link full' instead of a connection reset
-- **Status:** READY_FOR_QA
+- **Status:** MERGED
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -3401,8 +3410,8 @@ T-077 QA: a ratelimit retry-after test failed once on the CI runner (689 ms vs a
 - **Assignee:** —
 - **Branch:** task/t-080-e04-public-submit-show-link-full-instead
 - **PR:** 63
-- **Updated:** 2026-10-16 03:44Z by dev
-- **Comments-seen:** 2
+- **Updated:** 2026-10-16 04:11Z by leader
+- **Comments-seen:** 4
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E04-friends-notes/08-full-link-reset.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -3413,9 +3422,19 @@ T-068 answers a full public link on the raw writer without reading the body; a f
 #### Comments
 - 2026-10-15 14:06Z · leader · unblocked, small P3
 - 2026-10-16 03:44Z · dev · Head ac0a0b1, PR #63, CI green. Option chosen: drain the body to io.Discard (existing pace + 32 MiB cap) then 409 on the raw writer; drain failure gives 408/413. Unknown/revoked token path untouched. Web already shows the full screen on 409 (no change). Tests: TestFullLinkIsAnsweredAfterDrainingTheBody (20 MiB real socket, honeypot 409), TestFullLinkDrainKeepsThePaceAndSizeLimits (stall 408, 40 MiB 413); old 0-bytes-read full-link test replaced, unknown-token test unchanged. docs/media.md updated.
+- 2026-10-16 04:10Z · qa · QA head ac0a0b1 (PR #63): CI green (go, go-integration, security, web), MERGEABLE/CLEAN. Files: internal/notes/submit.go, its integration test, docs/media.md only (no .team files). Own API :8082 built from the PR worktree, private DB smem_test_qa080 (dropped), redis db 13, own spool dir, Vite :5175 + real Chrome; my processes stopped, symlink and files removed.
+  GATE: go build, go vet, gofmt, golangci-lint ./internal/notes (0 issues), go test -race ./... all ok, go test -race -tags integration ./internal/notes ./api ok (incl. TestFullLinkIsAnsweredAfterDrainingTheBody, TestFullLinkDrainKeepsThePaceAndSizeLimits, TestUnknownTokenIsAnsweredWithoutReadingTheBody). No endpoint/contract change, Postman n/a.
+  EVIDENCE (full link = 300 notes inserted by SQL, valid token)
+  - AC1 20 MiB multipart (curl, Expect disabled like a browser): HTTP 409 {status ERROR_COLLECTION_FULL ...}, sent=20971846 B, 14 ms, clean response not a reset; spool dir empty (0 entries) after and during all probes; honeypot field on full link: 409, nothing stored.
+  - AC2 unknown token + 20 MiB: 404 at once, raw socket got through only ~1 MiB of kernel buffer (server read 0), curl sent=816559; unchanged path.
+  - AC3 stalled uploader (1 KiB then idle): 408 at 10.0 s. Trickle 2 KiB/s: 408 at 15.0 s (rate rule). Paced 20 KiB/s (above min rate): dropped by the 120.0 s total cap after 2.4 MiB. Real 33 MiB body on the full link: 413 (ERROR_TOO_LARGE) at the 32 MiB cap. Declared Content-Length 40 MiB but only 1 KiB sent: 408 after 10 s (Go MaxBytesReader does not check the header; same as every upload before this change; a real >32 MiB body gets 413).
+  - 10 concurrent stalled conns from one IP: 8 held then 408 at 10.3 s, #9 and #10 got 503 ERROR_BUSY at once (per-IP slot limit works on the drain path too).
+  - Browser (Chrome, EN 1280 and VI 375): /c/<full token>, filled name+message+8 MiB photo, Send -> POST submit-note 409, page shows 'This link is full / This link has reached its limit. Ask QA Tester to open a new link.' (VI: 'Liên kết này đã đầy'). No network error.
+  ABUSE ANGLE (non-blocking, leader to be aware): drain is bounded in bytes (32 MiB cap) and time (10 s idle, 16 KiB/s min rate after 15 s, 120 s total, so a slow client burns <=~2 MiB per 120 s) and writes nothing. New exposure vs before: a valid full-link token holder now occupies a slot (up to 8 per IP, 48 global) for up to 120 s per request instead of getting an instant 409, and a fast client can push 32 MiB per request; the per-IP bucket 'public_all' (600 requests / 15 min) bounds that to about 19 GiB / 15 min per IP, and 8 concurrent trickling requests per IP can hold 8 of 48 slots indefinitely. This is the same capability a token holder already has on an open link with an invalid body (which is spooled to disk), so no new class of risk; acceptable per spec, a lower per-IP concurrency or a cheaper drain bound for full links could be a later tuning.
+- 2026-10-16 04:11Z · leader · merged d8e9d7c (PR #63). Review: a valid token on a full link drains the body to io.Discard under the existing pace/size limits (10 s idle, 16 KiB/s minimum, 120 s total, 32 MiB), nothing on disk, unknown token path unchanged; CI green, QA_PASS on the same head. Abuse note: a full-link token holder can now hold one of the 8 per-IP slots up to 120 s (same exposure as an invalid body on an open link); revisit with the edge rate limits in T-031. For owner to check: open a full link in the browser and see 'This link is full'.
 
 ### T-081 — [E02] Username: unique public handle with default and weekly change (API)
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
@@ -3426,7 +3445,7 @@ T-068 answers a full public link on the raw writer without reading the body; a f
 - **Assignee:** —
 - **Branch:** task/t-081-e02-username-unique-public-handle-with-d
 - **PR:** https://github.com/danyaa666/smemories/pull/62
-- **Updated:** 2026-10-16 03:53Z by leader
+- **Updated:** 2026-10-16 03:59Z by human
 - **Comments-seen:** 4
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/13-username-api.md`
@@ -3444,6 +3463,7 @@ Owner decision D-28: every user gets a unique public username (default user-xxxx
 - 2026-10-16 03:30Z · leader · Leader review OK on 04354f8: migration is safe on a populated table (backfill, deterministic clash fix, unique key last, down restores), username assigned at email and Google signup, 7-day cooldown is one conditional UPDATE (4 parallel sessions -> one 200), TAKEN races give exactly one winner, fail-closed behaviour with Redis down, get-me carries username via the single auth.User. CI green on the head, QA_PASS. Non-blocking nits moved to T-072 (errors.New in store.go, openapi example). Deploy note for T-022/T-023: run migrations as the one-off task BEFORE starting the new API version (user_tab.username has no default, so an old API instance cannot insert users after the migration). Waiting for owner approval (Risk high).
 - 2026-10-16 03:53Z · human · owner approved merge
 - 2026-10-16 03:53Z · leader · merged 5cfe240 (PR #62). Review: migration safe on a populated table (backfill, deterministic clash fix, unique key last, down restores), cooldown is one conditional UPDATE, TAKEN races give one winner, fail-closed with Redis down, get-me via single auth.User; CI green, QA_PASS on the same head, owner approved. For owner to check: migrate your dev DB (make migrate), then sign in and look at get-me: username user-xxxxxxxx; try update-username. Deploy: run migrations before starting the new API version.
+- 2026-10-16 03:59Z · human · accepted by owner
 
 ### T-082 — [E02] Web: show and change the username on the account page
 - **Status:** TODO
@@ -3574,3 +3594,4 @@ Spec: .team/epics/E04-friends-notes/09-inbox-320px-polish.md (read it from the r
 - 2026-10-16 — T-013 (notes moderation API, PR #60) merged c780423 after rework 1 (lower-case ids gave 500; now canonical-ULID validation, ERROR_PARAM). T-017 promoted to TODO. T-018 is in its last rework (retry on 4xx).
 - 2026-10-16 — T-018 (public anonymous notes form, PR #59) merged 2aae76e after 2 reworks (route /c/:token, no-referrer + hashed draft key, no retry on 4xx). Owner to review the note.* Vietnamese strings. T-017 (moderation inbox) is next for dev.
 - 2026-10-16 — T-081 (username API, PR #62, owner-approved) merged 5cfe240; T-082 (web username) promoted to TODO. T-013/T-018 accepted. T-017 in rework 2 (320px card head). T-080 (full-link drain, PR #63) waits for QA. Owner: after pulling, run make migrate and restart the API (old binaries cannot create users once user_tab.username exists).
+- 2026-10-16 — T-017 (moderation inbox, PR #61) merged 445a11c after 2 reworks (badge wrap, focus, 320px head); T-080 (full-link drain, PR #63) merged d8e9d7c. T-081 accepted. T-056 (book data endpoint, high risk, route GET /api/book-data/get) promoted to TODO; the printing path T-058..T-061 follows it.
