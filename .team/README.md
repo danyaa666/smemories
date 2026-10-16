@@ -12,17 +12,16 @@
 |---|---:|---|
 | BACKLOG | 13 | T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-061, T-085 |
 | TODO | 2 | T-032, T-060 |
-| READY_FOR_QA | 1 | T-079 |
-| QA_FAIL | 1 | T-059 |
-| MERGED | 1 | T-072 |
+| IN_PROGRESS | 1 | T-059 |
+| MERGED | 2 | T-072, T-079 |
 | DONE | 59 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-073, T-074, T-075, T-076, T-077, T-078, T-080, T-081, T-082, T-083 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-072 ([E10] Quality sweep: mnd, forbidigo, pointer parameters, pool defaults, remove the transition switch)
+**Awaiting your review (MERGED):** T-072 ([E10] Quality sweep: mnd, forbidigo, pointer parameters, pool defaults, remove the transition switch); T-079 ([E01] Make the timing-sensitive integration tests tolerant of a starved CI runner)
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?)
 
-_Board last written 2026-10-16 14:21Z_
+_Board last written 2026-10-16 18:13Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -2633,7 +2632,7 @@ Fixed-size HTML pages, pagination, text fit, print CSS, readiness gate and a hea
 - 2026-10-16 11:13Z · human · accepted by owner
 
 ### T-059 — [E05] HTML template memory-book (design temp1)
-- **Status:** QA_FAIL
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
@@ -2641,10 +2640,10 @@ Fixed-size HTML pages, pagination, text fit, print CSS, readiness gate and a hea
 - **Risk:** low
 - **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** dev
 - **Branch:** task/t-059-e05-html-template-memory-book-design-tem
 - **PR:** https://github.com/danyaa666/smemories/pull/68
-- **Updated:** 2026-10-16 14:02Z by qa
+- **Updated:** 2026-10-16 18:03Z by dev
 - **Comments-seen:** 4
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/10-html-template-memory-book.md`
@@ -3544,7 +3543,7 @@ T-065 QA found: a book delete racing a read gives 500 'yearbook without its owne
 - 2026-10-12 04:00Z · human · accepted by owner
 
 ### T-079 — [E01] Make the timing-sensitive integration tests tolerant of a starved CI runner
-- **Status:** READY_FOR_QA
+- **Status:** MERGED
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -3555,8 +3554,8 @@ T-065 QA found: a book delete racing a read gives 500 'yearbook without its owne
 - **Assignee:** —
 - **Branch:** task/t-079-e01-make-the-timing-sensitive-integratio
 - **PR:** 69
-- **Updated:** 2026-10-16 14:20Z by dev
-- **Comments-seen:** 1
+- **Updated:** 2026-10-16 18:13Z by leader
+- **Comments-seen:** 3
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/14-timing-sensitive-integration-tests.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -3566,6 +3565,14 @@ T-077 QA: a ratelimit retry-after test failed once on the CI runner (689 ms vs a
 
 #### Comments
 - 2026-10-16 14:20Z · dev · PR #69. ratelimit retry-after now on fake clock (exact 850ms); media busy test uses channel not 2s wall clock; redis ping best-of-20; session TTL test polls; media TestMain caps -parallel at 4 (peak 1.53->1.24 GB, wall 54->57s on 11 cores, no change on 4-core CI). Load runs: ratelimit/redis/auth Session -count=20 and media -count=5 pass with 12 busy loops. Scan findings left are listed in the PR. make test-integration green locally; CI pending.
+- 2026-10-16 18:13Z · qa · PR #69 head 6f4d8da. CI green (go, go-integration, security, web). Evidence:
+  1 Diff is 5 *_test.go files only (auth, media x2 incl new main_test.go, ratelimit, redis); no product code, no .team files.
+  2 Mutation (scratch worktree, each reverted): retry-after +100ms -> FAIL 'retry=950ms want exactly 850ms'; retry=window -> FAIL (1s); window never slides (-5ms) -> FAIL 'oldest hit left the window'; no PEXPIRE on session -> FAIL after 15s poll 'expired session still found'; media slot wait never ends -> FAIL at the 1 min guard; ErrBusy replaced by nil -> FAIL 'err <nil>, want ErrBusy'; ping +30ms -> FAIL 'best of 20 took 31ms, want <20ms'. All rewritten tests still catch the bug they guard. New 1ms-before-expiry assertion in the ratelimit test makes it stronger than before.
+  3 Stability: 8 busy loops (stopped by PID), SMEM_TEST_REDIS_URL=.../9, -race -tags integration -count=20 each of ratelimit RetryAfter, redis Ping, auth SessionLookup, media BusyAndDiscard: all ok.
+  4 make lint build test exit 0; go test -race -count=1 -tags integration ./... exit 0 (all packages ok, media 71s, total 3m06 on 11 cores).
+  5 main_test.go: probe test in scratch copy: no flag -> test.parallel=4; -parallel 2 -> 2; -parallel 11 -> 11 (caller wins). TestMain is per package so only internal/media is affected.
+  Non-blocking: (a) on a machine with GOMAXPROCS<4 the cap of 4 is above the default (probe with GOMAXPROCS=2 gave 4); harmless, only a ceiling by intent but it is not a pure 'cap'. (b) peak-memory claim (1.53->1.24 GB) not re-measured by QA. (c) 62 smem_test_* MySQL databases exist in the dev server, not from my runs' cleanup failures as far as I can tell (all my runs passed/cleaned); not touched.
+- 2026-10-16 18:13Z · leader · merged 3429df4 (PR #69). Review: tests only (5 _test.go files), fake clock instead of wall clock where possible, channel waits with hang guards; QA mutated the product code 7 ways and every rewritten test failed, stable at -race -count=20 under load; CI green on the same head. Open: remaining timing-sensitive tests are listed in the PR description (notes submit, untagged db/httpx/password) - not worth a task until one flakes in CI. For owner to check: nothing visible.
 
 ### T-080 — [E04] Public submit: show 'link full' instead of a connection reset
 - **Status:** DONE
@@ -3799,3 +3806,4 @@ Spec: .team/epics/E10-skills-alignment/12-lint-anchors-userfrom-guard.md (read i
 - 2026-10-16 — T-082 (web username on the account page, PR #65) merged de0eb3c. Dev on T-058 (HTML renderer); T-072 next.
 - 2026-10-16 — T-058 (HTML book renderer core, PR #66) merged b219943. T-059 and T-060 (templates) promoted to TODO; T-061 (print screen, high risk) follows T-059. T-056/T-082 accepted. T-072 (quality sweep) in progress.
 - 2026-10-16 — T-072 (quality sweep, PR #67) merged 715b960: transition switch removed, forbidigo/mnd on, strict auth bodies. T-058 accepted. T-085 (P3) added for two QA nits (lint regex anchors, UserFrom guard). Dev on T-059.
+- 2026-10-17 — T-079 (flaky-test tolerance, PR #69) merged 3429df4. T-072 merged earlier, awaiting owner accept. T-059 in rework 1 (print clipping of cut-off notes). Heartbeat recurring (ce6d77f6).
