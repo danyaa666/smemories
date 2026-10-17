@@ -18,6 +18,12 @@ type Dep struct {
 	Ping func(ctx context.Context) error
 }
 
+// Draining is a Dep that fails once ctx is cancelled (the shutdown signal), so /readyz answers 503 for the whole drain
+// and the load balancer takes the task out of rotation before the listener closes.
+func Draining(ctx context.Context) Dep {
+	return Dep{"shutdown", func(context.Context) error { return ctx.Err() }}
+}
+
 // ReadyTimeout bounds all the pings behind one /readyz request together.
 const ReadyTimeout = time.Second
 

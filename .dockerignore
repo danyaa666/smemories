@@ -1,0 +1,8 @@
+# Allow-list: the build context is exactly what `go build` needs, so no .git, .env, .team, web/node_modules,
+# docs or tests can reach a layer by accident. (_test.go files are copied but never compiled into a binary.)
+*
+!go.mod
+!go.sum
+!cmd/
+!internal/
+!migrations/

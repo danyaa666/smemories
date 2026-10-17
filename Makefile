@@ -12,7 +12,7 @@ COMPOSE_PROJECT_NAME := $(shell if docker ps -a --filter label=com.docker.compos
 endif
 export COMPOSE_PROJECT_NAME
 
-.PHONY: build test lint run web-install web-build web-test web-lint print-check up down migrate migrate-down test-integration reset-limits
+.PHONY: image image-smoke build test lint run web-install web-build web-test web-lint print-check up down migrate migrate-down test-integration reset-limits
 
 build:
 	go build -o bin/smemories-api ./cmd/smemories-api
@@ -90,3 +90,12 @@ verify-newman-users:
 # Dev only: forgets every rate-limiter window (keys smem:<SMEM_ENV>:rl:*) in the compose Redis, so Newman can be re-run from one address.
 reset-limits:
 	docker compose exec -T redis sh -c "valkey-cli --scan --pattern 'smem:$(or $(SMEM_ENV),dev):rl:*' | xargs -r -n 100 valkey-cli DEL"
+
+# Production image (T-022, docs/container.md). Needs only Docker. IMAGE names the tag; VERSION and COMMIT end up in the OCI labels and in the log line "starting".
+IMAGE ?= smemories:local
+image:
+	docker build --provenance=false --sbom=false --build-arg VERSION=$$(git describe --tags --always --dirty) --build-arg COMMIT=$$(git rev-parse HEAD) -t $(IMAGE) .
+
+# Starts its own private MySQL, Valkey and MinIO (never the `make up` stack) and checks the image; see the header of the script.
+image-smoke: image
+	scripts/image-smoke.sh $(IMAGE)

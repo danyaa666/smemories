@@ -138,6 +138,17 @@ jobs:
           exit 1
       - run: make test-integration
 
+  # T-022: builds the production image (no push) and runs scripts/image-smoke.sh against it (private MySQL, Valkey and MinIO
+  # containers it starts itself). Trivy and the SBOM follow in the next slice. Not a required check until the owner adds it.
+  image:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: make image-smoke
+
   web:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
