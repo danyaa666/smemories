@@ -17,9 +17,9 @@
 
 **Awaiting your review (MERGED):** T-089 ([E06] Image scan (Trivy + SBOM) and secret hygiene (T-022 slice 4)); T-090 ([E06] Migrate docs fixes, half-applied migration guidance and image-smoke robustness)
 
-**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-032 (Approve merge of T-061 (template picker, print guide, public print-feedback counter, PR #71)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-035 (Approve merge of T-022 slice 1 (production Dockerfile, graceful shutdown, image smoke test, PR #74)?); Q-036 (Approve merge of T-086 slice (a): production config contract and S3 default credential chain (PR #78, adds the AWS SDK config module)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-038 (Approve merge of T-088: smemories-migrate advisory lock and API schema-version check (PR #80)?); Q-039 (Approve merge of T-089: image scan (Trivy + SBOM), secret hygiene and config hardening (PR #81)?); Q-040 (Approve merge of T-021: Amazon SES mailer behind a provider-neutral interface (PR #82)?)
+**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-032 (Approve merge of T-061 (template picker, print guide, public print-feedback counter, PR #71)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-035 (Approve merge of T-022 slice 1 (production Dockerfile, graceful shutdown, image smoke test, PR #74)?); Q-036 (Approve merge of T-086 slice (a): production config contract and S3 default credential chain (PR #78, adds the AWS SDK config module)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-038 (Approve merge of T-088: smemories-migrate advisory lock and API schema-version check (PR #80)?); Q-039 (Approve merge of T-089: image scan (Trivy + SBOM), secret hygiene and config hardening (PR #81)?); Q-040 (Approve merge of T-021: Amazon SES mailer behind a provider-neutral interface (PR #82)?); Q-041 (Phase 1 is code-complete. What should the team do next?)
 
-_Board last written 2026-10-17 16:46Z_
+_Board last written 2026-10-17 16:47Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -470,6 +470,15 @@ Context: Amazon SES (D-29) needs a verified domain to send from, with DKIM/SPF/D
 - **Blocks:** T-021
 - **Recommendation:** approve
 - **Answer:** _(pending)_
+
+### Q-041 — Phase 1 is code-complete. What should the team do next?
+- **Status:** OPEN
+- **Asked:** 2026-10-17 16:47Z
+- **Blocks:** —
+- **Recommendation:** A: open the go-live phase now, then M1b
+- **Answer:** _(pending)_
+
+Status: the personal-yearbook journey is built end to end (sign-up with codes, username, yearbooks with profile and photos, friend links and public form, moderation inbox with reorder/delete, two print templates, template picker and print guide, PDF through the browser) and guarded by an end-to-end CI test. The go-live code work is done and tested against stubs: production image (read-only, graceful shutdown, Trivy/SBOM), production config contract, migration lock and schema check, SES mailer behind a provider interface. Left that needs nothing from you: two tiny P3 leftovers (T-029 MinIO image swap, T-091 smoke-test polish). Options: A) Go-live phase now (D-31): you give the domain, DNS access, AWS account/region and billing OK; I run T-023 infra, live SES, T-050 (remove the dev code), T-031/T-024/T-025, first deploy; real users and real feedback come first. B) M1b guided customisation (D-19 stage 1): per-book colours, fonts, page order and visibility with a PDF preview, built before launch. C) M3 class yearbook (many contributors, roles, invites): the biggest feature, wanted only after go-live (D-11 says go-live before M3). D) Polish only: fix the small known items (public form hides 'Add photo' for navy-classic, feedback double-click guard, 320px inbox card, accessibility nits) and wait. Recommendation: A, then M1b. Everything else about the plan stays as in the roadmap; tell me if you want a different order.
 
 <!-- questions:end -->
 
