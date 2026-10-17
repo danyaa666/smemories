@@ -12,7 +12,7 @@ sequenceDiagram
     participant M as Mailer
     W->>A: POST /api/auth/register
     A->>R: issue: DEL + HSET {h: HMAC, a: 0, x: expiry}, PEXPIRE
-    A->>M: email with the 6-digit code (en or vi)
+    A-)M: email with the 6-digit code (en or vi), in the background
     W->>A: POST /api/auth/verify-email {code} (session)
     A->>R: one Lua script: live? expired? attempts < 5? HMAC equal (constant time)?
     alt wrong
@@ -30,6 +30,11 @@ address format, the 20 attempts per hour per IP, the password rules (`ERROR_WEAK
 confirm a code), then the code. Unknown address, wrong code and no live code all answer `400 ERROR_INVALID_CODE`; for an unknown address
 the API runs the same Redis script on a key that never exists, so the work is the same. Success: new password stored, all sessions
 of the user deleted, the code consumed.
+
+## Sending
+
+Registration and forgot-password send in the background (retried twice while the provider is unavailable, then logged once and counted); `resend-verification` sends on the
+request and answers `503 ERROR_MAIL_UNAVAILABLE` or `400 ERROR_EMAIL_UNDELIVERABLE` when the provider fails. Each mail has a text and an HTML part. Details: [email.md](email.md).
 
 ## Storage
 

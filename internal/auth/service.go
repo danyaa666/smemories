@@ -163,10 +163,9 @@ func (s *Service) Register(ctx context.Context, ip, userAgent, email, password, 
 	if err != nil {
 		return nil, nil, err
 	}
-	// The account exists now; a mail failure must not undo that, the user can resend.
-	if err := s.sendCode(ctx, u, purposeVerify); err != nil {
-		s.mail.Logger.Error("auth: verification email not sent", "user_id", u.ID, "error", err)
-	}
+	// The account exists now; the email goes out in the background (the request never waits for the mail provider) and a
+	// failure must not undo the account: the user can resend.
+	s.sendCodeLater(ctx, u, purposeVerify, "auth: verification email")
 	return s.expose(u), sess, nil
 }
 

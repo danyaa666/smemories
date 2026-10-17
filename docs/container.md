@@ -46,6 +46,6 @@ on Fargate, the default); the target group's deregistration delay should be at l
   register, login, yearbook create, photo upload); SIGTERM during a slow request (readyz 503 while draining, the request completes, exit 0).
 - Section 3 of the script also proves that a prod start refuses plaintext database and Redis (the script sets `SMEM_DB_ALLOW_INSECURE` and `SMEM_REDIS_ALLOW_INSECURE`
   for its private network only), http origins, a missing memory limit, a public metrics address and a missing bucket.
-- The API part runs with `SMEM_ENV=test`: the only mailer is the log mailer, which refuses `prod`, so the API cannot serve in production
-  before the email provider (T-021) lands.
+- The API part runs with `SMEM_ENV=test` and the log mailer, which refuses `prod`; production uses Amazon SES (`SMEM_MAIL_PROVIDER=ses`, [email.md](email.md)),
+  which the smoke test cannot reach, so SES is covered by the stub tests in `internal/mailer`.
 - CI job `image` runs `make image-smoke`. The unit test for the drain is `TestServeDrainsReadyzThenFinishesInFlight` in `internal/httpx`.

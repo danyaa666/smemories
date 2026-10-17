@@ -47,6 +47,11 @@ func RequestIDFrom(ctx context.Context) string {
 	return id
 }
 
+// WithRequestID returns ctx carrying id as the request id, for work detached from the request that should still log under it.
+func WithRequestID(ctx context.Context, id string) context.Context {
+	return context.WithValue(ctx, requestIDKey, id)
+}
+
 // RequestID reuses a client X-Request-Id only if it is 8-64 chars of [A-Za-z0-9-]
 // (anything else could forge or inject log lines) and otherwise generates one.
 // The id is echoed in the response header and stored in the request context.

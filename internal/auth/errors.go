@@ -23,6 +23,9 @@ var (
 	CodeUsernameTaken         = apperr.NewCode("ERROR_USERNAME_TAKEN", 409)
 	CodeUsernameChangeTooSoon = apperr.NewCode("ERROR_USERNAME_CHANGE_TOO_SOON", 429)
 	CodeBusy                  = apperr.NewCode("ERROR_BUSY", 503)
+	// The mail provider (T-021): resend-verification is the one endpoint that sends on the request path and says so.
+	CodeMailUnavailable    = apperr.NewCode("ERROR_MAIL_UNAVAILABLE", 503)
+	CodeEmailUndeliverable = apperr.NewCode("ERROR_EMAIL_UNDELIVERABLE", 400)
 	// The Redis-backed stores fail closed: 503 with their own name, so the client can tell which one is down.
 	CodeLimiterUnavailable      = apperr.NewCode("ERROR_LIMITER_UNAVAILABLE", 503)
 	CodeSessionStoreUnavailable = apperr.NewCode("ERROR_SESSION_STORE_UNAVAILABLE", 503)

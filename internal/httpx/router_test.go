@@ -2,6 +2,7 @@ package httpx
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"log/slog"
@@ -221,4 +222,13 @@ func btoi(b bool) int {
 		return 1
 	}
 	return 0
+}
+
+func TestWithRequestID(t *testing.T) {
+	if got := RequestIDFrom(WithRequestID(context.Background(), "abc-12345678")); got != "abc-12345678" {
+		t.Fatalf("got %q", got)
+	}
+	if RequestIDFrom(context.Background()) != "" {
+		t.Fatal("a plain context has no request id")
+	}
 }
