@@ -8,6 +8,8 @@ import { retryOnce } from "../api/notes";
 import { errorText } from "../auth/errors";
 import { BookPages, pageCount } from "../book/BookPages";
 import { useFitReport } from "../book/fit";
+import { PrintGuide } from "../book/PrintGuide";
+import { TemplatePicker } from "../book/TemplatePicker";
 import { noteFits, ownFits } from "../book/fitReport";
 import { getTemplate } from "../book/templates";
 import { photoIds, useFontsLoaded, usePhotoPreload } from "../book/ready";
@@ -89,7 +91,7 @@ function BookScreen({ data, bookId }: { data: BookData; bookId: string }) {
   const photos = usePhotoPreload(
     useMemo(() => photoIds(data, getTemplate(data.yearbook.template_id).photos), [data]),
   );
-  const key = `${data.yearbook.title}|${data.note_count}|${size}`;
+  const key = `${data.yearbook.title}|${data.note_count}|${size}|${data.yearbook.template_id ?? ""}`; // another template has other fonts
   const fonts = useFontsLoaded(key);
   const { states, Provider } = useFitReport();
   const { ref, scale } = useStageScale(size);
@@ -135,6 +137,7 @@ function BookScreen({ data, bookId }: { data: BookData; bookId: string }) {
         <p>
           {data.yearbook.title} · {size}
         </p>
+        <TemplatePicker bookId={bookId} size={size} current={data.yearbook.template_id} />
         {data.truncated && (
           <Banner variant="warning">
             {t("print.truncated", { shown: data.note_count, total: data.approved_total })}
@@ -181,15 +184,7 @@ function BookScreen({ data, bookId }: { data: BookData; bookId: string }) {
         <Button variant="primary" disabled={!ready} onClick={() => window.print()}>
           {t("print.print")}
         </Button>
-        <details>
-          <summary>{t("print.helpTitle")}</summary>
-          <ol>
-            <li>{t("print.help1")}</li>
-            <li>{t("print.help2", { size })}</li>
-            <li>{t("print.help3")}</li>
-            <li>{t("print.help4")}</li>
-          </ol>
-        </details>
+        <PrintGuide size={size} />
       </div>
       <div ref={ref} className="bk-stage" style={stageStyle}>
         <Provider>

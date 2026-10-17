@@ -24,9 +24,14 @@ func TestMigrateUserUsername(t *testing.T) {
 	if !hasUsername() {
 		t.Fatal("the test database lacks the username columns")
 	}
-	if err := db.MigrateDown(ctx, d); err != nil { // the newest migration is the username one
-		t.Fatalf("down: %v", err)
+	downToUsername := func() { // newer migrations (T-061 print_feedback_tab, ...) go down first, then the username one
+		for i := 0; i < 10 && hasUsername(); i++ {
+			if err := db.MigrateDown(ctx, d); err != nil {
+				t.Fatalf("down: %v", err)
+			}
+		}
 	}
+	downToUsername()
 	if hasUsername() || dump(t, ctx, d, `SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND INDEX_NAME = 'uq_user_tab_username'`)[0] != "0" {
 		t.Fatal("down left the columns or the key behind")
 	}
@@ -65,9 +70,7 @@ func TestMigrateUserUsername(t *testing.T) {
 		t.Error("a duplicate username (other case) was accepted")
 	}
 
-	if err := db.MigrateDown(ctx, d); err != nil {
-		t.Fatalf("down again: %v", err)
-	}
+	downToUsername()
 	if hasUsername() {
 		t.Fatal("down again left the columns")
 	}

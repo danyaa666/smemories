@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/danyaa666/smemories/internal/apperr"
+	"github.com/danyaa666/smemories/internal/templates"
 	"github.com/danyaa666/smemories/internal/textx"
 )
 
@@ -40,6 +41,9 @@ func invalid(field string) error {
 	return apperr.New(apperr.NewCode("ERROR_INVALID_"+strings.ToUpper(field), apperr.Param.HTTP), field+" is not valid")
 }
 
+// maxTemplateID is the size of the template_id column.
+const maxTemplateID = 32
+
 // optional distinguishes an absent JSON field (Set false) from an explicit null (Set true,
 // Val nil), so PATCH can clear graduation_year.
 type optional[T any] struct {
@@ -59,7 +63,7 @@ func (o *optional[T]) UnmarshalJSON(b []byte) error {
 
 // BookInput holds the fields of yearbook/create and yearbook/update: every field is
 // optional here; create then insists on title and language. A JSON null counts as absent
-// except for graduation_year, where it clears the value.
+// except for graduation_year, cover_media_id and template_id, where it clears the value.
 type BookInput struct {
 	Title          *string          `json:"title"`
 	SchoolName     *string          `json:"school_name"`
@@ -69,6 +73,7 @@ type BookInput struct {
 	Language       *string          `json:"language"`
 	PageSize       *string          `json:"page_size"`
 	CoverMediaID   optional[string] `json:"cover_media_id"`
+	TemplateID     optional[string] `json:"template_id"`
 }
 
 // text cleans *in (when present) with the shared rules and stores it in dst.
@@ -125,6 +130,32 @@ func (in BookInput) applyTo(y *Yearbook) error {
 			return invalid("page_size")
 		}
 		y.PageSize = *in.PageSize
+	}
+	return in.applyTemplate(y)
+}
+
+// applyTemplate sets or clears the template and checks the result against the registry: the template must exist and
+// support the book's page size (the size after this change). A page-size change on a book whose chosen template does not
+// support the new size is refused too, so a book never ends with a template it cannot print on. A template id the
+// registry no longer knows is only refused when the owner picks it, not when the book changes size.
+func (in BookInput) applyTemplate(y *Yearbook) error {
+	if in.TemplateID.Set {
+		id := in.TemplateID.Val
+		if id == nil {
+			y.TemplateID = nil
+			return nil
+		}
+		t, ok := templates.Get(*id)
+		if len(*id) > maxTemplateID || !ok || !t.Supports(y.PageSize) {
+			return invalid("template")
+		}
+		y.TemplateID = id
+		return nil
+	}
+	if in.PageSize != nil && y.TemplateID != nil {
+		if t, ok := templates.Get(*y.TemplateID); ok && !t.Supports(y.PageSize) {
+			return invalid("template")
+		}
 	}
 	return nil
 }

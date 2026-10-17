@@ -86,7 +86,10 @@ func TestDeleteBookLeavesNoRows(t *testing.T) {
 // account is T-025, which moves these two into the registry. A rename or a new user table fails tabTables until it is listed here.
 var userTables = []string{"user_identity_tab", "user_tab"}
 
-// tabTables lists the *_tab tables of the test database except userTables, which must all exist.
+// globalTables belong to no book and no user (anonymous counters, T-061), so a book delete must leave them alone too.
+var globalTables = []string{"print_feedback_tab"}
+
+// tabTables lists the *_tab tables of the test database except userTables and globalTables, which must all exist.
 func (e *env) tabTables() []string {
 	e.t.Helper()
 	rows, err := e.db.Query(`SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME LIKE '%\_tab' ORDER BY TABLE_NAME`)
@@ -100,11 +103,11 @@ func (e *env) tabTables() []string {
 		if err := rows.Scan(&n); err != nil {
 			e.t.Fatal(err)
 		}
-		if !slices.Contains(userTables, n) {
+		if !slices.Contains(userTables, n) && !slices.Contains(globalTables, n) {
 			out = append(out, n)
 		}
 	}
-	for _, n := range userTables {
+	for _, n := range append(slices.Clone(userTables), globalTables...) {
 		if e.count(`SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '`+n+`'`) != 1 {
 			e.t.Fatalf("user table %s is missing: update userTables", n)
 		}

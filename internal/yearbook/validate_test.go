@@ -2,6 +2,7 @@ package yearbook
 
 import (
 	"encoding/json"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -131,6 +132,50 @@ func TestProfileValidation(t *testing.T) {
 		var p Profile
 		if got := code(tc.in.applyTo(&p, now)); got != tc.want {
 			t.Errorf("%s: %q, want %q", tc.name, got, tc.want)
+		}
+	}
+}
+
+// deref is the id as a slice, so nil and a value compare with slices.Equal.
+func deref(s *string) []string {
+	if s == nil {
+		return nil
+	}
+	return []string{*s}
+}
+
+// T-061: template_id is validated against the registry and the book's page size (the size after the same change).
+func TestBookTemplate(t *testing.T) {
+	str := func(s string) *string { return &s }
+	tests := []struct {
+		name string
+		book Yearbook
+		js   string
+		want string // error code, "" for success
+		tmpl *string
+	}{
+		{"known template", Yearbook{PageSize: "A5"}, `{"template_id":"memory-book"}`, "", str("memory-book")},
+		{"unknown template", Yearbook{PageSize: "A5"}, `{"template_id":"nope"}`, "ERROR_INVALID_TEMPLATE", nil},
+		{"empty id", Yearbook{PageSize: "A5"}, `{"template_id":""}`, "ERROR_INVALID_TEMPLATE", nil},
+		{"id over the column size", Yearbook{PageSize: "A5"}, `{"template_id":"` + strings.Repeat("a", maxTemplateID+1) + `"}`, "ERROR_INVALID_TEMPLATE", nil},
+		{"template without the book's size", Yearbook{PageSize: "Letter"}, `{"template_id":"classic"}`, "ERROR_INVALID_TEMPLATE", nil},
+		{"size and template together", Yearbook{PageSize: "A5"}, `{"template_id":"memory-book","page_size":"Letter"}`, "", str("memory-book")},
+		{"null clears", Yearbook{PageSize: "A5", TemplateID: str("memory-book")}, `{"template_id":null}`, "", nil},
+		{"absent keeps", Yearbook{PageSize: "A5", TemplateID: str("memory-book")}, `{"title":"x"}`, "", str("memory-book")},
+		{"size change the template cannot print", Yearbook{PageSize: "A5", TemplateID: str("classic")}, `{"page_size":"Letter"}`, "ERROR_INVALID_TEMPLATE", nil},
+		{"size change the template can print", Yearbook{PageSize: "A5", TemplateID: str("classic")}, `{"page_size":"A4"}`, "", str("classic")},
+		{"size change and clear together", Yearbook{PageSize: "A5", TemplateID: str("classic")}, `{"page_size":"Letter","template_id":null}`, "", nil},
+		{"size change on a template the registry dropped", Yearbook{PageSize: "A5", TemplateID: str("old-gone")}, `{"page_size":"A4"}`, "", str("old-gone")},
+	}
+	for _, tc := range tests {
+		y := tc.book
+		err := parseBook(t, tc.js).applyTo(&y)
+		if got := code(err); got != tc.want {
+			t.Errorf("%s: %q, want %q", tc.name, got, tc.want)
+			continue
+		}
+		if tc.want == "" && !slices.Equal(deref(y.TemplateID), deref(tc.tmpl)) {
+			t.Errorf("%s: template %v, want %v", tc.name, y.TemplateID, tc.tmpl)
 		}
 	}
 }
