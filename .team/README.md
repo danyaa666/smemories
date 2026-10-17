@@ -10,18 +10,18 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 10 | T-021, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-086 |
-| TODO | 1 | T-020 |
-| CHANGES_REQUESTED | 1 | T-022 |
-| MERGED | 7 | T-032, T-059, T-060, T-061, T-072, T-079, T-085 |
-| DONE | 59 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-073, T-074, T-075, T-076, T-077, T-078, T-080, T-081, T-082, T-083 |
+| BACKLOG | 9 | T-021, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050 |
+| TODO | 1 | T-086 |
+| IN_PROGRESS | 1 | T-020 |
+| MERGED | 2 | T-022, T-061 |
+| DONE | 65 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-032 ([E01] db.Open: treat MySQL 1044 as permanent; README warning about bare docker compose); T-059 ([E05] HTML template memory-book (design temp1)); T-060 ([E05] HTML template navy-classic (design temp2)); T-061 ([E05] Web: template picker and print screen with device guidance); T-072 ([E10] Quality sweep: mnd, forbidigo, pointer parameters, pool defaults, remove the transition switch); T-079 ([E01] Make the timing-sensitive integration tests tolerant of a starved CI runner); T-085 ([E10] Lint exclusions anchored and a guard for auth.UserFrom)
+**Awaiting your review (MERGED):** T-022 ([E06] Dockerfile, production config and migrations as a one-off task); T-061 ([E05] Web: template picker and print screen with device guidance)
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-032 (Approve merge of T-061 (template picker, print guide, public print-feedback counter, PR #71)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-035 (Approve merge of T-022 slice 1 (production Dockerfile, graceful shutdown, image smoke test, PR #74)?)
 
-_Board last written 2026-10-17 07:02Z_
+_Board last written 2026-10-17 07:48Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -1339,7 +1339,7 @@ Choose a template (thumbnails from sample renders), trigger export, show progres
 - 2026-10-09 01:42Z · leader · Superseded by D-24 (2026-10-09): export is browser print of HTML templates (T-056..T-061). The Go renderer (T-010, T-038) stays as the fallback and is not extended.
 
 ### T-020 — [E01] End-to-end smoke test of the M1 journey in CI (Playwright)
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P1
 - **Type:** infra
 - **Milestone:** M1
@@ -1347,10 +1347,10 @@ Choose a template (thumbnails from sample renders), trigger export, show progres
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-020-e01-end-to-end-smoke-test-of-the-m1-jour
 - **PR:** —
-- **Updated:** 2026-10-17 07:02Z by leader
+- **Updated:** 2026-10-17 07:12Z by dev
 - **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/10-end-to-end-smoke-test-of-the-m1-journey-in.md`
@@ -1386,7 +1386,7 @@ Replace LogMailer with a real provider (SES is the natural fit on AWS) including
 #### Comments
 
 ### T-022 — [E06] Dockerfile, production config and migrations as a one-off task
-- **Status:** CHANGES_REQUESTED
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** infra
 - **Milestone:** M2
@@ -1397,8 +1397,8 @@ Replace LogMailer with a real provider (SES is the natural fit on AWS) including
 - **Assignee:** —
 - **Branch:** task/t-022-e06-dockerfile-production-config-and-mig
 - **PR:** https://github.com/danyaa666/smemories/pull/74
-- **Updated:** 2026-10-17 07:02Z by leader
-- **Comments-seen:** 7
+- **Updated:** 2026-10-17 07:48Z by leader
+- **Comments-seen:** 12
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E06-go-live/02-dockerfile-production-config-and-migrations.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1434,6 +1434,16 @@ Multi-stage Dockerfile (distroless or alpine, non-root), production config valid
 - 2026-10-17 01:02Z · leader · Leader review OK on 9a4112d (slice 1): Dockerfile pins both bases by digest, cross-compiles static trimpath binaries, distroless nonroot, labels, CMD (not ENTRYPOINT) so ECS can override the command; QA proved byte-identical builds, read-only/uid 65532/cap-drop ALL run, clear one-shot error on an unwritable spool, SIGTERM during a 12 s upload completes with exit 0 and /readyz 503 at once, smoke test fails on 6 deliberate breaks, planted .env/*.pem/.team absent from the image; 45-49 MiB; CI green on the head incl. go-integration and image. Non-blocking nits moved into T-086 (floating dockerfile syntax tag, MinIO tag pin, WARN per probe while draining, uploads longer than the drain window are cut: document). Waiting for owner approval (Risk high). After merge: nothing to migrate; AC1's 'valid prod start' waits for T-021's real mailer.
 - 2026-10-17 07:01Z · human · owner approved merge
 - 2026-10-17 07:02Z · leader · PR #74 now CONFLICTS with develop (T-061 merged). Owner approved the slice (team approve T-022) so nothing else changes: merge origin/develop into the branch (no force-push), resolve keeping both sides (likely Makefile, .github/workflows/ci.yml, docs, cmd/smemories-api/main.go or internal/config), re-run the gates, make image-smoke and print-check, CI green on the new head, READY_FOR_QA; QA will re-test the merged state.
+- 2026-10-17 07:23Z · dev · Merged origin/develop (T-061) into the branch, head 3188c23, no force-push. Single conflict: cmd/smemories-api/main.go (kept both: version import + templateapi import; router now has Draining(ctx) and templateH/feedbackH routes). Nothing else changed vs the approved 9a4112d. Re-run on the merged tree: make lint build test ok (web 347 tests), make test-integration (go test -race -tags integration ./...) ok, make image-smoke passed, make print-check 49/49 pass (needed PRINT_CHECK_PORT=5287 locally because :5199 is held by a process that is not mine), CI all green on 3188c23 incl. image. Test: make image-smoke; mergeable CLEAN.
+- 2026-10-17 07:48Z · qa · QA_PASS re-verify of merged head 3188c23 (PR #74; develop merged in, no force-push). CI on the head: go, go-integration (7m43s), image (1m46s), security, web all pass. Risk high, owner already approved.
+  EVIDENCE (own containers/network qa22b*, all removed; owner stack untouched):
+  1. Diff scope: git diff origin/develop...HEAD = 18 files, all T-022 (Dockerfile, .dockerignore, Makefile, ci.yml, dependabot, docs/ci+container, config, httpx ready/server, notes/spool, version, image-smoke.sh); nothing under .team/. main.go hunk read: adds version import + 'starting' log, notesH.CheckSpool, httpx.Draining(ctx) in Ready(), Serve(ctx,srv,ln,ShutdownDelay,ShutdownTimeout-ShutdownDelay); templateH and feedbackH each defined once (l.148-149) and each registered once in NewRouterWith (templateH.Routes, feedbackH.Routes); nothing lost or duplicated.
+  2. make image builds; make image-smoke passed 5 of 6 runs (see observation 1). Deliberate break (copy of the script with 'docker stop mysql' right after the services are up) -> 'SMOKE FAIL: smemories-migrate up failed', no leftover smem-smoke containers/networks.
+  3. Shutdown (container, read-only, uid 65532, SHUTDOWN_DELAY=2s): slow login (3000 B at 500 B/s) in flight, SIGTERM at 1.5 s -> /readyz 503 on every probe during drain while /healthz stays 200, slow request completed (HTTP 401 after 6.1 s), exit code 0, 'shutdown complete' logged once.
+  4. In the container: smemories-migrate up applied the schema incl. 20261017100000_print_feedback_tab.sql (shown 'applied' by status; 0/25 flaky status checks in isolation). GET /api/template/get-list: 200 with the template list when signed in, 401 ERROR_UNAUTHORIZED anonymous. POST /api/print-feedback/create: {verdict:yes,browser_family:chromium_desktop}, {no,safari_ios}, {yes,firefox} -> 200 and 3 rows in print_feedback_tab (hits=1 each); verdict 'maybe', unknown family, unknown field -> 400 ERROR_PARAM.
+  5. make lint build test ok (web 347 tests); go test -race -tags integration ./... exit 0.
+  NON-BLOCKING: (1) image-smoke.sh failed once in 6 runs, on the first run right after 'make image' with 'SMOKE FAIL: migrate status shows nothing applied' (later 5 runs pass; status itself passed 25/25 in isolation, so not reproduced). Probable cause: 'smemories-migrate status | grep -q' under pipefail, or a MySQL still settling after the ping loop; worth a retry or a captured-output grep (capture to a variable, then grep) in T-086 to keep the CI image job from flaking. (2) The earlier 9a4112d observations (floating dockerfile frontend tag, legacy minio tag, noisy readyz WARN during drain) are unchanged and tracked for T-086. (3) print-feedback accepted a request from a foreign Origin (200, cookie-less public endpoint); it is T-061 behaviour, not part of this merge.
+- 2026-10-17 07:48Z · leader · merged 764afe1 (PR #74), slice 1 of the production image. Review: digest-pinned multi-stage Dockerfile (distroless nonroot, 45-49 MiB, reproducible), CMD so ECS can override for migrate/backfill, read-only rootfs + uid 65532 + cap-drop ALL, graceful shutdown (SMEM_SHUTDOWN_TIMEOUT/DELAY, /readyz 503 while draining), spool-writable start-up check, make image / image-smoke, CI image job; QA proved the merged state in a container (migrate applies print_feedback_tab, template/print-feedback endpoints, SIGTERM drain, smoke fails on breaks); CI green; owner approved. Remaining requirements moved to T-086. For owner to check: make image && make image-smoke (needs Docker, ~25 s); docs/container.md. Open: image licence label is NOASSERTION until Q-034 is answered; the first smoke run once failed on 'migrate status shows nothing applied' (not reproduced; T-086 will capture the output before grepping); print-feedback/create accepts a foreign Origin (public, cookie-less endpoint: intended).
 
 ### T-023 — [E06] AWS infrastructure as code and deploy pipeline
 - **Status:** BACKLOG
@@ -1662,7 +1672,7 @@ Items from the T-006 review that only matter at scale or in production: (1) the 
 - 2026-10-07 07:07Z · leader · From the T-006 review: also require at least one visible character in a display name (a name made only of U+200D passes today), preferably through one shared helper that T-008 and later text fields reuse.
 
 ### T-032 — [E01] db.Open: treat MySQL 1044 as permanent; README warning about bare docker compose
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -1673,8 +1683,8 @@ Items from the T-006 review that only matter at scale or in production: (1) the 
 - **Assignee:** —
 - **Branch:** task/t-032-e01-db-open-treat-mysql-1044-as-permanen
 - **PR:** 72
-- **Updated:** 2026-10-16 23:42Z by leader
-- **Comments-seen:** 4
+- **Updated:** 2026-10-17 07:02Z by human
+- **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/08-db-open-treat-mysql-1044-as-permanent-readme.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1687,6 +1697,7 @@ db.Open: treat MySQL 1044 as permanent; README warning about bare docker compose
 - 2026-10-16 23:27Z · dev · 1044 added to permanent() + test case; README compose warning. go test ./... and make lint green. Head 164f192.
 - 2026-10-16 23:39Z · qa · Head 164f192, CI green (go, go-integration, security, web). Evidence: (1) permanent() now includes 1044; test TestWaitReadyFailsFastOnPermanentErrors covers 1044/1045/1049 (one attempt, <1s, error names addr+user). (2) Live check vs smemories-mysql (scratch test, removed): unknown DB nosuchdb_zz -> 1044 fails in 4ms with 'refused user smemories (check credentials...)' ; wrong password -> 1045 in 7ms; port 1 refused -> still retries full 10s then 'not reachable after 10s'; 1040 transient retried (existing test TestWaitReadyRetriesTransientErrors). No password in any error. (3) README warning correct: docker-compose.yml has 'name: smemories', Makefile overrides COMPOSE_PROJECT_NAME per checkout, so bare compose/down -v targets old smemories project; wording accurate. (4) make lint build test OK; go test -race -tags integration ./internal/db/... OK. Non-blocking: none.
 - 2026-10-16 23:42Z · leader · merged ea20f0f (PR #72). Review: 3 files; MySQL 1044 joins 1045/1049 as a permanent error in db.Open (fail fast, test covers all three), README tells readers to use make up/down instead of a bare docker compose; CI green, QA_PASS on the same head. For owner to check: nothing visible.
+- 2026-10-17 07:02Z · human · accepted by owner
 
 ### T-033 — [E01] CI: do not cancel in-progress runs on develop and main
 - **Status:** DONE
@@ -2694,7 +2705,7 @@ Fixed-size HTML pages, pagination, text fit, print CSS, readiness gate and a hea
 - 2026-10-16 11:13Z · human · accepted by owner
 
 ### T-059 — [E05] HTML template memory-book (design temp1)
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
@@ -2705,8 +2716,8 @@ Fixed-size HTML pages, pagination, text fit, print CSS, readiness gate and a hea
 - **Assignee:** —
 - **Branch:** task/t-059-e05-html-template-memory-book-design-tem
 - **PR:** https://github.com/danyaa666/smemories/pull/68
-- **Updated:** 2026-10-16 18:24Z by leader
-- **Comments-seen:** 7
+- **Updated:** 2026-10-17 07:02Z by human
+- **Comments-seen:** 8
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/10-html-template-memory-book.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2821,9 +2832,10 @@ Pastel Memory Book canvas as an HTML template, EN and VI, four page kinds.
   5. make print-check: 19/19 pass (incl. the 6 new cut-off tests). web: lint, typecheck, lint:i18n, check:api ok; vitest 18 files / 290 tests pass; build ok.
   Non-blocking (unchanged): inbox extra-answer order and thank-you card quoting how_we_met (pre-existing). Branch is behind develop only by T-079 test changes (no conflict expected). Cleaned up: my API/Vite stopped, private DB dropped, Redis db 13 flushed; :5173 untouched.
 - 2026-10-16 18:24Z · leader · merged 402d685 (PR #68). Review: web template + manifest + print-check; the cut-off defect (text running out of the card in print) fixed at the cause with contain:size and 6 new print-check tests that fail without the fix; QA re-verified the printed PDFs at A5/A4/Letter (identical positions for normal notes, fidelity pictures within 1.5 mm); CI green, QA_PASS on the same head. For owner to check: set a book's template by SQL (no API sets template_id until T-061), open /yearbooks/<id>/book, print to PDF; sample PDFs in docs/templates/memory-book-*.pdf; the Vietnamese strings in the PR description (print screen shrunk-note list etc). Open (pre-existing, not from this PR): inbox lists extra answers in MySQL JSON key order; the thank-you card quotes how_we_met instead of the message.
+- 2026-10-17 07:02Z · human · accepted by owner
 
 ### T-060 — [E05] HTML template navy-classic (design temp2)
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
@@ -2834,8 +2846,8 @@ Pastel Memory Book canvas as an HTML template, EN and VI, four page kinds.
 - **Assignee:** —
 - **Branch:** task/t-060-e05-html-template-navy-classic-design-te
 - **PR:** https://github.com/danyaa666/smemories/pull/70
-- **Updated:** 2026-10-16 23:35Z by leader
-- **Comments-seen:** 7
+- **Updated:** 2026-10-17 07:02Z by human
+- **Comments-seen:** 8
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/11-html-template-navy-classic.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2885,6 +2897,7 @@ Navy and gold canvas as the second HTML template.
   NON-BLOCKING: names of about 80-100 characters at the 9 pt floor are clipped at the end (reported on the print screen); the cover shrink to ~3 pt for max-length title/school/motto noted earlier is unchanged.
   Cleanup: my API/Vite stopped, DB smem_test_qa060b dropped, Redis db 12 flushed, my 58 yearbooks and their media deleted via API; worktree clean.
 - 2026-10-16 23:35Z · leader · merged 8f1f885 (PR #70). Review: web template navy-classic + manifest; the profile text loss in print fixed at the cause (px paragraph heights), 18 new profile-at-maximum print-check cases (49/49); QA reproduced the old failure, verified ~20 profile cases at A5/A4/Letter (worst font 10.9 pt at Letter), short profiles print byte-identical to before, memory-book and basic unaffected; CI green on the same head. Known: a name of ~80-100 characters hits the 9 pt floor and is cut inside its box (counted on the print screen); the public form still offers 'Add photo' for navy-classic although friends' photos are not printed. For owner to check: after T-061 lands, pick navy-classic and print; samples docs/templates/navy-classic-*; Vietnamese strings bookPages.navy.* (Khóa, Vài điều về mình, Để lại đôi lời, Lưu bút, Tạm biệt, Tạm biệt khóa {{year}}).
+- 2026-10-17 07:02Z · human · accepted by owner
 
 ### T-061 — [E05] Web: template picker and print screen with device guidance
 - **Status:** MERGED
@@ -3432,7 +3445,7 @@ Moves auth to /api/auth/* and /api/user/get-me, Google callback path, last domai
 - 2026-10-16 01:37Z · human · accepted by owner
 
 ### T-072 — [E10] Quality sweep: mnd, forbidigo, pointer parameters, pool defaults, remove the transition switch
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P2
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -3443,8 +3456,8 @@ Moves auth to /api/auth/* and /api/user/get-me, Google callback path, last domai
 - **Assignee:** —
 - **Branch:** task/t-072-e10-quality-sweep-mnd-forbidigo-pointer-
 - **PR:** https://github.com/danyaa666/smemories/pull/67
-- **Updated:** 2026-10-16 13:18Z by leader
-- **Comments-seen:** 4
+- **Updated:** 2026-10-17 07:02Z by human
+- **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E10-skills-alignment/10-sweep.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -3469,6 +3482,7 @@ Turns the remaining skill rules into lint (mnd, forbidigo), fixes what they find
   (9) CURSOR: develop API next_id token for yearbook/get-list?limit=1 works on this head (returns Book 2) and a token minted by this head works on develop: cursorKeyLabel unchanged, existing tokens still valid.
   Non-blocking: AC wording in PR lists counts per linter as required. Docs (go-conventions deviations, README, api-contract section 3 for ERROR_CLIENT_CLOSED) updated. Rerun note: leader sees dev's main .env pool value 5 only matters for the running dev API.
 - 2026-10-16 13:18Z · leader · merged 715b960 (PR #67). Review: mechanical sweep, transition switch and old-envelope code gone, ClientClosed defined once in apperr, forbidigo/mnd on with a small allowlist, strict auth bodies proven against every web flow in real Chromium + Newman x6 collections, cursors compatible both ways; CI green, QA_PASS on the same head. For owner to check: your local .env still sets SMEM_DB_MAX_IDLE=5 (remove the line to get the new default, equal to MAX_OPEN); nothing else visible. Follow-up task for the two non-blocking findings.
+- 2026-10-17 07:02Z · human · accepted by owner
 
 ### T-073 — [E10] Observability: request metrics middleware and /metrics endpoint
 - **Status:** DONE
@@ -3687,7 +3701,7 @@ T-065 QA found: a book delete racing a read gives 500 'yearbook without its owne
 - 2026-10-12 04:00Z · human · accepted by owner
 
 ### T-079 — [E01] Make the timing-sensitive integration tests tolerant of a starved CI runner
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -3698,8 +3712,8 @@ T-065 QA found: a book delete racing a read gives 500 'yearbook without its owne
 - **Assignee:** —
 - **Branch:** task/t-079-e01-make-the-timing-sensitive-integratio
 - **PR:** 69
-- **Updated:** 2026-10-16 18:13Z by leader
-- **Comments-seen:** 3
+- **Updated:** 2026-10-17 07:02Z by human
+- **Comments-seen:** 4
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/14-timing-sensitive-integration-tests.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -3717,6 +3731,7 @@ T-077 QA: a ratelimit retry-after test failed once on the CI runner (689 ms vs a
   5 main_test.go: probe test in scratch copy: no flag -> test.parallel=4; -parallel 2 -> 2; -parallel 11 -> 11 (caller wins). TestMain is per package so only internal/media is affected.
   Non-blocking: (a) on a machine with GOMAXPROCS<4 the cap of 4 is above the default (probe with GOMAXPROCS=2 gave 4); harmless, only a ceiling by intent but it is not a pure 'cap'. (b) peak-memory claim (1.53->1.24 GB) not re-measured by QA. (c) 62 smem_test_* MySQL databases exist in the dev server, not from my runs' cleanup failures as far as I can tell (all my runs passed/cleaned); not touched.
 - 2026-10-16 18:13Z · leader · merged 3429df4 (PR #69). Review: tests only (5 _test.go files), fake clock instead of wall clock where possible, channel waits with hang guards; QA mutated the product code 7 ways and every rewritten test failed, stable at -race -count=20 under load; CI green on the same head. Open: remaining timing-sensitive tests are listed in the PR description (notes submit, untagged db/httpx/password) - not worth a task until one flakes in CI. For owner to check: nothing visible.
+- 2026-10-17 07:02Z · human · accepted by owner
 
 ### T-080 — [E04] Public submit: show 'link full' instead of a connection reset
 - **Status:** DONE
@@ -3897,7 +3912,7 @@ Spec: .team/epics/E04-friends-notes/09-inbox-320px-polish.md (read it from the r
 - 2026-10-16 03:40Z · leader · created by mistake: the board does not let the leader override QA_FAIL, so the 320px fix goes through T-017 rework 2 instead
 
 ### T-085 — [E10] Lint exclusions anchored and a guard for auth.UserFrom
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -3908,8 +3923,8 @@ Spec: .team/epics/E04-friends-notes/09-inbox-320px-polish.md (read it from the r
 - **Assignee:** —
 - **Branch:** task/t-085-e10-lint-exclusions-anchored-and-a-guard
 - **PR:** 73
-- **Updated:** 2026-10-16 23:48Z by leader
-- **Comments-seen:** 4
+- **Updated:** 2026-10-17 07:02Z by human
+- **Comments-seen:** 5
 
 Spec: .team/epics/E10-skills-alignment/12-lint-anchors-userfrom-guard.md (read it from the repo root). Two non-blocking findings of the T-072 QA.
 
@@ -3918,9 +3933,10 @@ Spec: .team/epics/E10-skills-alignment/12-lint-anchors-userfrom-guard.md (read i
 - 2026-10-16 23:34Z · dev · Lint regexes anchored (scratch internal/latest flagged); auth.MustUser used by all user handlers; per-package 401 tests; lint, unit and integration green. Head 99f32a1.
 - 2026-10-16 23:47Z · qa · Head 99f32a1, CI green (go, go-integration, security, web). Evidence: AC1: scratch copy with fmt.Errorf + magic number in internal/latest and internal/zz -> golangci-lint flags forbidigo AND mnd in both; scratch pkg under internal/db/dbtest/ stays exempt; regexes name only dbtest|redistest|storagetest|oidctest; 0 new nolint in diff. AC2: grep UserFrom/WithUser/MustUser: UserFrom only inside auth (MustUser, RequireUser path); every handler in auth(4), notes(7), yearbook(6), media(4), bookdata(1) uses MustUser; WithUser used only by RequireUser + tests; yearbook caller() and media owner() removed. Mutation: replaced the guard by UserFrom in one handler per package (yearbook delete, media delete, notes list, bookdata get, auth me) -> each must_user_test.go failed (3 assertions, 2 nil-deref panics); restored. AC3: make lint build test OK; go test -race -tags integration ./... all ok. Behaviour sweep (own API on :18085 develop vs :18086 PR head, private DBs, Redis db 9/10): 85 requests over all authed routes (401 unauth x22, 400 bad JSON/empty body x24, 200 happy paths, 404 other owner x12) -> output identical after normalising ids/request_id/random username. Newman against PR head (private DB/Redis): yearbooks x2 98 req 0 fail; notes x2 0 fail; notes-moderation x2 0 fail; media x2 0 fail; auth x2 20 assertion failures = OIDC/Google only (same 20 on develop; no SMEM_GOOGLE_* configured; covered by Go oidctest in integration); platform 1 failure = 503 not-ready case needs DB down (env). No templates Newman collection exists; templates covered by go tests. Non-blocking: in auth verifyEmail and updateUsername the guard runs after body decode (order kept from before, so behaviour behind RequireUser unchanged); on a route mounted without RequireUser a bad body would answer 400 before 401. Cleanup done: my APIs stopped, private DBs dropped, Redis 9/10 flushed.
 - 2026-10-16 23:48Z · leader · merged e15e5e0 (PR #73). Review: forbidigo/mnd exclusions now name only dbtest, redistest, storagetest, oidctest (scratch internal/latest and internal/zz flagged); auth.MustUser guard used by every user handler in auth, notes, yearbook, media, bookdata; QA mutated one handler per package and each must_user_test failed, and 85 authed requests gave identical output before/after; CI green, QA_PASS on the same head. For owner to check: nothing visible. Note: verifyEmail and updateUsername run the guard after body decode (as before); harmless behind RequireUser.
+- 2026-10-17 07:02Z · human · accepted by owner
 
 ### T-086 — [E06] Production config contract, S3 credential chain, migrate lock and image scan (T-022 slice 2)
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** infra
 - **Milestone:** M2
@@ -3931,12 +3947,13 @@ Spec: .team/epics/E10-skills-alignment/12-lint-anchors-userfrom-guard.md (read i
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-17 00:46Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-17 07:48Z by leader
+- **Comments-seen:** 1
 
 Spec: .team/epics/E06-go-live/07-production-config-contract-s3-chain-migrate-lock-image-scan.md (read it from the repo root). Second half of T-022: requirements 4, 5, 6, 7 (scan), 9 of the T-022 spec.
 
 #### Comments
+- 2026-10-17 07:48Z · leader · unblocked: T-022 merged. Full spec in the file; read the added items at the bottom (including the smoke-test robustness item). Risk high: owner approval before merge. The real prod start still waits for T-021 (Q-033).
 
 <!-- tasks:end -->
 
@@ -3980,3 +3997,4 @@ Spec: .team/epics/E06-go-live/07-production-config-contract-s3-chain-migrate-loc
 - 2026-10-17 — T-032 (db 1044 permanent error + README compose warning, PR #72) merged ea20f0f. T-020 (end-to-end Playwright journey in CI) got its full spec and new dependencies (T-017, T-018, T-061); it starts when T-061 merges.
 - 2026-10-17 — T-085 (lint anchors + auth.MustUser guard, PR #73) merged e15e5e0. Nothing is left in dev/QA; T-061 waits for the owner's approval (Q-032); T-020 starts after it.
 - 2026-10-17 — T-061 (template picker, print guide, public print-feedback counter, PR #71) merged fb4c83d, owner-approved. T-022 slice 1 (PR #74) is owner-approved but conflicts with develop: dev merges develop. T-020 (end-to-end Playwright journey) promoted to TODO. Open owner questions: Q-033 (email provider and domain), Q-034 (licence).
+- 2026-10-17 — T-022 slice 1 (production image, graceful shutdown, image smoke test, CI image job; PR #74, owner-approved) merged 764afe1. T-086 (prod config contract, S3 credential chain, migrate lock, Trivy) promoted to TODO. Six tasks accepted by the owner (T-032, T-059, T-060, T-072, T-079, T-085). T-020 (e2e) in progress (PR #75).

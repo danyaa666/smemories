@@ -13,6 +13,18 @@ const (
 	spoolMaxAge = submitRouteTimeout + time.Minute
 )
 
+// CheckSpool creates and removes one file in the spool directory, so a read-only root filesystem without the
+// writable mount fails at start-up with a clear message instead of on the first public upload (T-022).
+func (h *Handler) CheckSpool() error {
+	f, err := os.CreateTemp(h.tmpDir, spoolPrefix+"check-*")
+	if err != nil {
+		return err
+	}
+	name := f.Name()
+	_ = f.Close()
+	return os.Remove(name)
+}
+
 // SweepSpool deletes orphaned upload spool files (a crash, kill or cut-off drain skips the handler's cleanup) and
 // returns how many it removed. Call it once at start-up, before the listener accepts traffic. Only regular files
 // directly in the spool directory whose name starts with smem-upload- and whose age exceeds spoolMaxAge are

@@ -60,6 +60,9 @@ type Config struct {
 	RedisWriteTimeout time.Duration // SMEM_REDIS_WRITE_TIMEOUT, default 1s
 	RedisPoolSize     int           // SMEM_REDIS_POOL_SIZE, default 10
 
+	ShutdownTimeout time.Duration // SMEM_SHUTDOWN_TIMEOUT, default 25s: after SIGTERM the delay below plus the drain of in-flight requests; keep it below the task stop timeout (30s on Fargate)
+	ShutdownDelay   time.Duration // SMEM_SHUTDOWN_DELAY, default 5s in prod and 0 elsewhere: /readyz answers 503 this long before the listener closes, so the load balancer drains first
+
 	OTPKey      []byte // SMEM_OTP_KEY: HMAC key of the email codes, at least 32 bytes; required unless Env is dev or test (a fixed development key is used there). Never log it.
 	DevFixedOTP string // DEV-SHORTCUT(otp) SMEM_DEV_FIXED_OTP: 6 digits accepted as every email code; only with SMEM_ENV=dev or test, otherwise the API refuses to start (docs/dev-shortcuts.md)
 }
@@ -256,10 +259,33 @@ func load(getenv func(string) string, forAPI bool) (Config, error) {
 	if err := cfg.loadRedis(getenv, get); err != nil {
 		return Config{}, err
 	}
+	if err := cfg.loadShutdown(get); err != nil {
+		return Config{}, err
+	}
 	if err := cfg.loadOTP(getenv); err != nil {
 		return Config{}, err
 	}
 	return cfg, nil
+}
+
+// loadShutdown reads the graceful-shutdown timings (T-022).
+func (cfg *Config) loadShutdown(get func(key, def string) string) error {
+	rawT := get("SMEM_SHUTDOWN_TIMEOUT", "25s")
+	t, err := time.ParseDuration(rawT)
+	if err != nil || t < time.Second || t > 120*time.Second {
+		return fmt.Errorf("SMEM_SHUTDOWN_TIMEOUT=%q: want a duration between 1s and 120s such as 25s", rawT)
+	}
+	defDelay := "0s"
+	if cfg.Env == "prod" {
+		defDelay = "5s"
+	}
+	rawD := get("SMEM_SHUTDOWN_DELAY", defDelay)
+	d, err := time.ParseDuration(rawD)
+	if err != nil || d < 0 || d >= t {
+		return fmt.Errorf("SMEM_SHUTDOWN_DELAY=%q: want a duration of at least 0 and below SMEM_SHUTDOWN_TIMEOUT (%s)", rawD, rawT)
+	}
+	cfg.ShutdownTimeout, cfg.ShutdownDelay = t, d
+	return nil
 }
 
 // loadOTP reads the email-code settings (T-048).
