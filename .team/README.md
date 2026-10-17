@@ -21,7 +21,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-032 (Approve merge of T-061 (template picker, print guide, public print-feedback counter, PR #71)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-035 (Approve merge of T-022 slice 1 (production Dockerfile, graceful shutdown, image smoke test, PR #74)?); Q-036 (Approve merge of T-086 slice (a): production config contract and S3 default credential chain (PR #78, adds the AWS SDK config module)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?)
 
-_Board last written 2026-10-17 12:52Z_
+_Board last written 2026-10-17 12:54Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -1405,7 +1405,7 @@ One Playwright test drives the full M1 journey on the compose stack in CI: regis
 - **Branch:** —
 - **PR:** —
 - **Updated:** 2026-10-17 12:52Z by leader
-- **Comments-seen:** 1
+- **Comments-seen:** 2
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E06-go-live/01-transactional-email-provider-and-domain-setup.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1415,6 +1415,7 @@ Replace LogMailer with a real provider (SES is the natural fit on AWS) including
 
 #### Comments
 - 2026-10-17 12:52Z · leader · Full spec written 2026-10-17 after the owner chose Amazon SES (D-29): SESv2 mailer built and tested against a local stub (no AWS account or domain needed), error mapping, background sends, HTML+text bodies en/vi, config contract, runbook docs/email.md. Risk high: owner approval before merge. Domain/DNS/sandbox exit are owner steps (Q-037).
+- 2026-10-17 12:54Z · leader · Owner request (2026-10-17): build an interface and implement one for SES; others may come later. Added as requirement 9 and AC8 of the spec: application code depends only on mailer.Mailer and provider-neutral types/errors; SES is one implementation; one mailer.New switch on SMEM_MAIL_PROVIDER; provider settings under SMEM_<PROVIDER>_*; a shared conformance test (mailertest.Run) run by SES and the log mailer; no second provider now.
 
 ### T-022 — [E06] Dockerfile, production config and migrations as a one-off task
 - **Status:** DONE
