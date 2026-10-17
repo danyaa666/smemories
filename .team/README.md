@@ -11,7 +11,7 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 9 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-090 |
-| IN_PROGRESS | 1 | T-021 |
+| READY_FOR_QA | 1 | T-021 |
 | QA_PASS | 2 | T-088, T-089 |
 | DONE | 70 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
@@ -20,7 +20,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-032 (Approve merge of T-061 (template picker, print guide, public print-feedback counter, PR #71)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-035 (Approve merge of T-022 slice 1 (production Dockerfile, graceful shutdown, image smoke test, PR #74)?); Q-036 (Approve merge of T-086 slice (a): production config contract and S3 default credential chain (PR #78, adds the AWS SDK config module)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-038 (Approve merge of T-088: smemories-migrate advisory lock and API schema-version check (PR #80)?); Q-039 (Approve merge of T-089: image scan (Trivy + SBOM), secret hygiene and config hardening (PR #81)?)
 
-_Board last written 2026-10-17 13:56Z_
+_Board last written 2026-10-17 14:01Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -1406,7 +1406,7 @@ One Playwright test drives the full M1 journey on the compose stack in CI: regis
 - 2026-10-17 12:46Z · human · accepted by owner
 
 ### T-021 — [E06] Transactional email provider and domain setup
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** infra
 - **Milestone:** M2
@@ -1414,11 +1414,11 @@ One Playwright test drives the full M1 journey on the compose stack in CI: regis
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-021-e06-transactional-email-provider-and-dom
-- **PR:** —
-- **Updated:** 2026-10-17 13:40Z by dev
-- **Comments-seen:** 2
+- **PR:** https://github.com/danyaa666/smemories/pull/82
+- **Updated:** 2026-10-17 14:00Z by dev
+- **Comments-seen:** 4
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E06-go-live/01-transactional-email-provider-and-domain-setup.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1429,6 +1429,8 @@ Replace LogMailer with a real provider (SES is the natural fit on AWS) including
 #### Comments
 - 2026-10-17 12:52Z · leader · Full spec written 2026-10-17 after the owner chose Amazon SES (D-29): SESv2 mailer built and tested against a local stub (no AWS account or domain needed), error mapping, background sends, HTML+text bodies en/vi, config contract, runbook docs/email.md. Risk high: owner approval before merge. Domain/DNS/sandbox exit are owner steps (Q-037).
 - 2026-10-17 12:54Z · leader · Owner request (2026-10-17): build an interface and implement one for SES; others may come later. Added as requirement 9 and AC8 of the spec: application code depends only on mailer.Mailer and provider-neutral types/errors; SES is one implementation; one mailer.New switch on SMEM_MAIL_PROVIDER; provider settings under SMEM_<PROVIDER>_*; a shared conformance test (mailertest.Run) run by SES and the log mailer; no second provider now.
+- 2026-10-17 14:00Z · dev · PR #82 head ef4157d. One PR, all of AC1-AC8 in code (nothing deferred): provider-neutral seam (mailer.New switch, ses.go only file with SES names, mailertest.Run run by SES-on-stub and log mailer, seam guard test), SES on SESv2 stub, config/prod contract + production-config rows, background register/forgot with 2 retries + smem_mail_send_failures_total{class}, resend 503 ERROR_MAIL_UNAVAILABLE / 400 ERROR_EMAIL_UNDELIVERABLE (try refunded on outage), en/vi text+HTML with golden files, openapi/schema.d.ts/Postman/web texts, docs/email.md runbook. Green locally: go vet, golangci-lint, go test -race ./..., -tags integration ./..., web lint/typecheck/i18n/check:api/vitest 348, make image-smoke (private tag), image 52 MiB (<60). Not done/unverifiable: real SES send; newman not run; e2e job not run locally. Open points for leader/owner (details in PR): (1) AWS docs say suppressed addresses are accepted-and-dropped, not rejected: runbook asks owner to test suppressionlist@simulator in sandbox; (2) AccountSuspended/SendingPaused -> ErrRejected per spec shows students 'undeliverable'; (3) metric is smem_mail_send_failures_total; (4) smithy-go moved to a direct dependency; (5) Vietnamese strings listed in the PR description. Owner approval needed before merge (risk high).
+- 2026-10-17 14:00Z · dev · PR #82 ef4157d: seam + SES (stub-tested) + auth wiring + content + docs + web. QA: probe stub throttling/5xx/blackhole, register latency with slow provider, forgot-password anti-enumeration, logs for address/code, prod start refusals, image size; real SES send unverified.
 
 ### T-022 — [E06] Dockerfile, production config and migrations as a one-off task
 - **Status:** DONE
