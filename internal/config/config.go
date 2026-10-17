@@ -53,6 +53,12 @@ type Config struct {
 	S3SecretKey        string // SMEM_S3_SECRET_KEY: never log
 	S3PathStyle        bool   // SMEM_S3_PATH_STYLE: true for MinIO
 
+	// Production contract (prod.go, docs/production-config.md). The three opt-outs are read in every environment but only matter in prod.
+	DBTLSCAFile              string // SMEM_DB_TLS_CA_FILE: PEM bundle (the RDS CA) the database certificate is verified against; makes the DSN need no tls= parameter
+	DBAllowInsecure          bool   // SMEM_DB_ALLOW_INSECURE: prod may use a DSN without TLS (the image smoke test on a private network only)
+	RedisAllowInsecure       bool   // SMEM_REDIS_ALLOW_INSECURE: prod may use redis:// without TLS or credentials (same)
+	MetricsAllowAnyInterface bool   // SMEM_METRICS_ALLOW_ANY_INTERFACE: prod may bind SMEM_METRICS_ADDR to all interfaces (task network only, never behind the ALB)
+
 	RedisURL          string        // SMEM_REDIS_URL: redis[s]://[:password@]host:port/db; required in every environment. Never log it.
 	RedisPassword     string        // SMEM_REDIS_PASSWORD: used when the URL carries none. Never log it.
 	RedisDialTimeout  time.Duration // SMEM_REDIS_DIAL_TIMEOUT, default 2s
@@ -250,8 +256,14 @@ func load(getenv func(string) string, forAPI bool) (Config, error) {
 		cfg.S3Bucket = "smemories-dev" // the bucket `make up` creates
 	}
 	cfg.S3AccessKey, cfg.S3SecretKey = getenv("SMEM_S3_ACCESS_KEY"), getenv("SMEM_S3_SECRET_KEY")
+	if (cfg.S3AccessKey == "") != (cfg.S3SecretKey == "") { // one half would silently fall back to the credential chain or fail at the first upload
+		return Config{}, fmt.Errorf("SMEM_S3_ACCESS_KEY and SMEM_S3_SECRET_KEY go together: set both (static keys, MinIO) or neither (task role)")
+	}
 	if cfg.S3PathStyle, err = strconv.ParseBool(get("SMEM_S3_PATH_STYLE", "false")); err != nil {
 		return Config{}, fmt.Errorf("SMEM_S3_PATH_STYLE=%q: want true or false", getenv("SMEM_S3_PATH_STYLE"))
+	}
+	if err := cfg.loadProd(getenv); err != nil {
+		return Config{}, err
 	}
 	if !forAPI {
 		return cfg, nil
@@ -264,6 +276,9 @@ func load(getenv func(string) string, forAPI bool) (Config, error) {
 	}
 	if err := cfg.loadOTP(getenv); err != nil {
 		return Config{}, err
+	}
+	if cfg.Env == "prod" && cfg.MemoryLimitMiB == 0 {
+		return Config{}, fmt.Errorf("SMEM_MEMORY_LIMIT_MIB is required in prod (about 80%% of the task memory, e.g. 1638 for 2 GiB; see docs/container.md)")
 	}
 	return cfg, nil
 }
@@ -332,6 +347,14 @@ func (cfg *Config) loadRedis(getenv func(string) string, get func(key, def strin
 	if db := strings.TrimPrefix(u.Path, "/"); db != "" {
 		if n, err := strconv.Atoi(db); err != nil || n < 0 || n > 15 {
 			return bad
+		}
+	}
+	if cfg.Env == "prod" && !cfg.RedisAllowInsecure {
+		if u.Scheme != "rediss" {
+			return fmt.Errorf("SMEM_REDIS_URL: prod needs a rediss:// (TLS) URL")
+		}
+		if _, hasPw := u.User.Password(); !hasPw && cfg.RedisPassword == "" {
+			return fmt.Errorf("SMEM_REDIS_URL: prod needs credentials, in the URL (rediss://:token@host:6379/0) or in SMEM_REDIS_PASSWORD")
 		}
 	}
 	for _, t := range []struct {

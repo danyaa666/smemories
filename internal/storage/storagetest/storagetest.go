@@ -22,7 +22,7 @@ func env(key, def string) string {
 // never collide; each test removes what it wrote.
 func New(t testing.TB) *storage.S3 {
 	t.Helper()
-	s := storage.NewS3(storage.S3Config{
+	s, err := storage.NewS3(storage.S3Config{
 		Endpoint:  env("SMEM_TEST_S3_ENDPOINT", "http://127.0.0.1:9000"),
 		Region:    "us-east-1",
 		Bucket:    env("SMEM_TEST_S3_BUCKET", "smemories-dev"),
@@ -30,6 +30,9 @@ func New(t testing.TB) *storage.S3 {
 		SecretKey: env("SMEM_TEST_S3_SECRET_KEY", "smem_minio_dev_pw"),
 		PathStyle: true,
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := s.EnsureBucket(ctx); err != nil {

@@ -3,10 +3,14 @@ package db
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"database/sql"
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
+	"os"
 	"time"
 
 	"github.com/go-sql-driver/mysql"
@@ -41,6 +45,22 @@ func Normalize(dsn string) (*mysql.Config, error) {
 	return mc, nil
 }
 
+// UseCAFile makes mc verify the server certificate against the PEM bundle in path (the RDS CA, which the system roots of a
+// distroless image do not contain) instead of the system roots. The error never includes the DSN.
+func UseCAFile(mc *mysql.Config, path string) error {
+	pem, err := os.ReadFile(path) //nolint:gosec // G304: the operator-set SMEM_DB_TLS_CA_FILE is the point
+	if err != nil {
+		return apperr.Wrap(apperr.Internal, err, "SMEM_DB_TLS_CA_FILE: cannot read the file")
+	}
+	pool := x509.NewCertPool()
+	if !pool.AppendCertsFromPEM(pem) {
+		return apperr.New(apperr.Internal, "SMEM_DB_TLS_CA_FILE: no PEM certificate found in the file")
+	}
+	host, _, _ := net.SplitHostPort(mc.Addr)
+	mc.TLSConfig, mc.TLS = "", &tls.Config{RootCAs: pool, ServerName: host, MinVersion: tls.VersionTLS12}
+	return nil
+}
+
 // New returns a pool for mc with the pool limits from cfg. It does not connect.
 func New(mc *mysql.Config, cfg config.Config) (*sql.DB, error) {
 	connector, err := mysql.NewConnector(mc)
@@ -61,6 +81,11 @@ func Open(ctx context.Context, cfg config.Config, logger *slog.Logger) (*sql.DB,
 	mc, err := Normalize(cfg.DBDSN)
 	if err != nil {
 		return nil, apperr.Wrap(apperr.Internal, err, "SMEM_DB_DSN")
+	}
+	if cfg.DBTLSCAFile != "" {
+		if err := UseCAFile(mc, cfg.DBTLSCAFile); err != nil {
+			return nil, err
+		}
 	}
 	d, err := New(mc, cfg)
 	if err != nil {

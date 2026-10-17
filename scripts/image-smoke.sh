@@ -87,6 +87,8 @@ ok "private MySQL, Valkey and MinIO are up"
 DSN="smemories:$DB_PW@tcp($RUN-mysql:3306)/smemories"
 umask 077
 # Settings of the one-off tasks (database and object store only) and of the API; plain env, like the Fargate task definition.
+# The *_ALLOW_INSECURE opt-outs exist only because MySQL and Valkey here sit on a private docker network without TLS; production sets
+# neither (docs/production-config.md), and section 3 proves that prod refuses without them.
 cat >"$TMP/task.env" <<EOF
 SMEM_DB_DSN=$DSN
 SMEM_S3_ENDPOINT=http://$RUN-minio:9000
@@ -94,6 +96,7 @@ SMEM_S3_BUCKET=$BUCKET
 SMEM_S3_ACCESS_KEY=$S3_USER
 SMEM_S3_SECRET_KEY=$S3_PW
 SMEM_S3_PATH_STYLE=true
+SMEM_DB_ALLOW_INSECURE=true
 EOF
 cat >"$TMP/api.env" <<EOF
 $(cat "$TMP/task.env")
@@ -118,7 +121,7 @@ run --rm "${HARDEN[@]}" --env-file "$TMP/task.env" -e SMEM_ENV=prod "$IMAGE" sme
 ok "smemories-media-backfill --dry-run"
 
 # --- 3. the API refuses an unsafe prod configuration ----------------------------------------------------------------
-PROD_API=(-e SMEM_ENV=prod -e SMEM_REDIS_URL=redis://127.0.0.1:6379/0 -e SMEM_ALLOWED_ORIGINS=$ORIGIN -e SMEM_PUBLIC_BASE_URL=$ORIGIN)
+PROD_API=(-e SMEM_ENV=prod -e SMEM_REDIS_URL=redis://127.0.0.1:6379/0 -e SMEM_REDIS_ALLOW_INSECURE=true -e SMEM_MEMORY_LIMIT_MIB=1536 -e SMEM_ALLOWED_ORIGINS=$ORIGIN -e SMEM_PUBLIC_BASE_URL=$ORIGIN)
 refuse() { # refuse <variable that must be named> <docker run args...>
   local var="$1" out code=0
   shift
@@ -131,6 +134,15 @@ refuse SMEM_DEV_FIXED_OTP -e SMEM_OTP_KEY="$OTP_KEY" -e SMEM_DEV_FIXED_OTP=12312
 refuse SMEM_OTP_KEY
 refuse SMEM_OTP_KEY -e SMEM_OTP_KEY=too-short
 ok "prod start refuses the dev shortcut and a missing or short SMEM_OTP_KEY"
+# The rest of the production contract (docs/production-config.md); the loader tests cover every row, these prove the binary in the image enforces it.
+refuse SMEM_DB_DSN -e SMEM_OTP_KEY="$OTP_KEY" -e SMEM_DB_ALLOW_INSECURE=false
+refuse SMEM_REDIS_URL -e SMEM_OTP_KEY="$OTP_KEY" -e SMEM_REDIS_ALLOW_INSECURE=false
+refuse SMEM_ALLOWED_ORIGINS -e SMEM_OTP_KEY="$OTP_KEY" -e SMEM_ALLOWED_ORIGINS=http://smoke.example.com
+refuse SMEM_PUBLIC_BASE_URL -e SMEM_OTP_KEY="$OTP_KEY" -e SMEM_PUBLIC_BASE_URL=http://smoke.example.com
+refuse SMEM_MEMORY_LIMIT_MIB -e SMEM_OTP_KEY="$OTP_KEY" -e SMEM_MEMORY_LIMIT_MIB=
+refuse SMEM_METRICS_ADDR -e SMEM_OTP_KEY="$OTP_KEY" -e SMEM_METRICS_ADDR=0.0.0.0:9090
+refuse SMEM_S3_BUCKET -e SMEM_OTP_KEY="$OTP_KEY" -e SMEM_S3_BUCKET=
+ok "prod start refuses plaintext database and Redis, http origins, a missing memory limit, a public metrics address and a missing bucket"
 
 # --- 4. read-only root without the writable spool ----------------------------------------------------------------
 code=0
