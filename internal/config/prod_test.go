@@ -1,6 +1,7 @@
 package config
 
 import (
+	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -54,6 +55,8 @@ func TestProdContractValid(t *testing.T) {
 		"explicit DB opt-out":              with("SMEM_DB_DSN", "app:p@tcp(db:3306)/d", "SMEM_DB_ALLOW_INSECURE", "true"),
 		"redis password in its own var":    with("SMEM_REDIS_URL", "rediss://cache.internal:6379/0", "SMEM_REDIS_PASSWORD", secRedis),
 		"redis opt-out":                    with("SMEM_REDIS_URL", "redis://cache:6379/0", "SMEM_REDIS_ALLOW_INSECURE", "true"),
+		"https custom S3 endpoint":         with("SMEM_S3_ENDPOINT", "https://s3.internal.example.com"),
+		"http S3 endpoint, opted":          with("SMEM_S3_ENDPOINT", "http://minio:9000", "SMEM_S3_ALLOW_INSECURE", "true"),
 		"static S3 keys (MinIO-like)":      with("SMEM_S3_ACCESS_KEY", "k", "SMEM_S3_SECRET_KEY", secS3),
 		"metrics on loopback":              with("SMEM_METRICS_ADDR", "127.0.0.1:9090"),
 		"metrics on localhost":             with("SMEM_METRICS_ADDR", "localhost:9090"),
@@ -95,6 +98,14 @@ func TestProdContractRefusals(t *testing.T) {
 		{"one http origin in a list", with("SMEM_ALLOWED_ORIGINS", "https://app.example.com,http://localhost:5173"), "SMEM_ALLOWED_ORIGINS"},
 		{"no base URL", with("SMEM_PUBLIC_BASE_URL", ""), "SMEM_PUBLIC_BASE_URL"},
 		{"http base URL", with("SMEM_PUBLIC_BASE_URL", "http://app.example.com"), "SMEM_PUBLIC_BASE_URL"},
+		{"http S3 endpoint", with("SMEM_S3_ENDPOINT", "http://minio:9000"), "SMEM_S3_ENDPOINT"},
+		{"S3 endpoint with credentials", with("SMEM_S3_ENDPOINT", "https://k:"+secS3+"@s3.example.com"), "SMEM_S3_ENDPOINT"},
+		{"http S3 endpoint with credentials", with("SMEM_S3_ENDPOINT", "http://k:"+secS3+"@minio:9000"), "SMEM_S3_ENDPOINT"},
+		{"bad S3 opt-out value", with("SMEM_S3_ALLOW_INSECURE", "sure"), "SMEM_S3_ALLOW_INSECURE"},
+		{"origin with credentials", with("SMEM_ALLOWED_ORIGINS", "https://u:"+secS3+"@app.example.com"), "SMEM_ALLOWED_ORIGINS"},
+		{"http origin with credentials", with("SMEM_ALLOWED_ORIGINS", "http://u:"+secS3+"@app.example.com"), "SMEM_ALLOWED_ORIGINS"},
+		{"base URL with credentials", with("SMEM_PUBLIC_BASE_URL", "https://u:"+secS3+"@app.example.com"), "SMEM_PUBLIC_BASE_URL"},
+		{"http base URL with credentials", with("SMEM_PUBLIC_BASE_URL", "http://u:"+secS3+"@app.example.com"), "SMEM_PUBLIC_BASE_URL"},
 		{"no bucket", with("SMEM_S3_BUCKET", ""), "SMEM_S3_BUCKET"},
 		{"access key without secret", with("SMEM_S3_ACCESS_KEY", "k"), "SMEM_S3_ACCESS_KEY"},
 		{"secret without access key", with("SMEM_S3_SECRET_KEY", secS3), "SMEM_S3_SECRET_KEY"},
@@ -123,6 +134,63 @@ func TestProdContractRefusals(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// A URL with credentials is refused outside prod too, and the message never repeats the password.
+func TestURLCredentialsRefusedEverywhereAndRedacted(t *testing.T) {
+	for _, k := range []string{"SMEM_ALLOWED_ORIGINS", "SMEM_PUBLIC_BASE_URL", "SMEM_S3_ENDPOINT"} {
+		m := with("SMEM_ENV", "dev", "SMEM_DB_DSN", "app:p@tcp(db:3306)/d", "SMEM_REDIS_URL", "redis://127.0.0.1:6379/0", k, "http://u:"+secS3+"@localhost:5173")
+		_, err := Load(exact(m))
+		if err == nil || !strings.Contains(err.Error(), k) || strings.Contains(err.Error(), secS3) {
+			t.Errorf("%s: want a refusal naming it without the password, got %v", k, err)
+		}
+	}
+	for in, want := range map[string]string{
+		"https://app.example.com":        "https://app.example.com",
+		"https://u:pw@app.example.com/x": "https://***@app.example.com/x",
+		"u:pw@app.example.com":           "***",
+		"http://u:p w@host":              "***",
+		"not a url":                      "not a url",
+	} {
+		if got := redactURL(in); got != want {
+			t.Errorf("redactURL(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+// Every binary logs the opt-outs and the static-key override at start-up, in prod only, without a value.
+func TestLogWarnings(t *testing.T) {
+	var buf strings.Builder
+	l := slog.New(slog.NewJSONHandler(&buf, nil))
+	cfg, err := Load(exact(with("SMEM_DB_ALLOW_INSECURE", "true", "SMEM_REDIS_ALLOW_INSECURE", "true", "SMEM_S3_ENDPOINT", "http://minio:9000", "SMEM_S3_ALLOW_INSECURE", "true",
+		"SMEM_S3_ACCESS_KEY", "k", "SMEM_S3_SECRET_KEY", secS3, "SMEM_METRICS_ADDR", "0.0.0.0:9090", "SMEM_METRICS_ALLOW_ANY_INTERFACE", "true")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.LogWarnings(l)
+	for _, v := range []string{"SMEM_DB_ALLOW_INSECURE", "SMEM_REDIS_ALLOW_INSECURE", "SMEM_S3_ALLOW_INSECURE", "SMEM_METRICS_ALLOW_ANY_INTERFACE", "SMEM_S3_ACCESS_KEY"} {
+		if !strings.Contains(buf.String(), v) {
+			t.Errorf("no WARN naming %s: %s", v, buf.String())
+		}
+	}
+	if strings.Contains(buf.String(), secS3) || strings.Contains(buf.String(), `"level":"INFO"`) {
+		t.Errorf("unexpected content: %s", buf.String())
+	}
+	buf.Reset()
+	cfg.Env = "dev"
+	cfg.LogWarnings(l)
+	if buf.Len() != 0 {
+		t.Errorf("warned outside prod: %s", buf.String())
+	}
+	buf.Reset()
+	clean, err := Load(exact(prodBase()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	clean.LogWarnings(l)
+	if buf.Len() != 0 {
+		t.Errorf("clean prod config warned: %s", buf.String())
 	}
 }
 

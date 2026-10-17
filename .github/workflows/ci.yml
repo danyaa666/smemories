@@ -242,16 +242,36 @@ jobs:
           path: tools/e2e/out
           retention-days: 3 # the trace holds the throwaway link token and cookies (docs/e2e.md)
 
-  # T-022: builds the production image (no push) and runs scripts/image-smoke.sh against it (private MySQL, Valkey and MinIO
-  # containers it starts itself). Trivy and the SBOM follow in the next slice. Not a required check until the owner adds it.
+  # T-022 / T-089: builds the production image (no push), runs scripts/image-smoke.sh against it (private MySQL, Valkey and MinIO
+  # containers it starts itself), then the secret-hygiene check, the Trivy scan (pinned image, fails on a fixable HIGH/CRITICAL
+  # vulnerability) and the SBOM artifact. Not a required check until the owner adds it.
   image:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - run: make image-smoke
+      - run: make image-hygiene
+      # The vulnerability database is cached per day (Trivy re-downloads it when it is older than its own 24 h limit).
+      - id: day
+        run: echo "day=$(date -u +%F)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/smem-trivy
+          key: trivy-db-${{ steps.day.outputs.day }}
+          restore-keys: trivy-db-
+      - run: make image-scan
+      - run: make image-scan-selftest
+      - name: SBOM (CycloneDX)
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: image-sbom
+          path: build/sbom/sbom.cdx.json
+          if-no-files-found: ignore
+          retention-days: 30
 
   web:
     runs-on: ubuntu-24.04

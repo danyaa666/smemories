@@ -19,7 +19,7 @@ IMAGE="${1:-smemories:local}"
 RUN="smem-smoke-$(od -An -N4 -tx1 /dev/urandom | tr -d ' \n')"
 MYSQL_IMG='mysql:8.4@sha256:6ea90827b1100f8f2ae306a539f86d2c264a26ed435a2a9f75551dd5c3aeb242'
 VALKEY_IMG='valkey/valkey:8@sha256:640c5e62cea04b6d6f2084232651d0cc70362d31f4f805e7be94dbed6855e8f2'
-MINIO_IMG='bitnamilegacy/minio:2025.4.22-debian-12-r2'
+MINIO_IMG='bitnamilegacy/minio:2025.4.22-debian-12-r2@sha256:50cec18ac4184af4671a78aedd5554942c8ae105d51a465fa82037949046da01'
 MAX_MB=60
 BUCKET=smemories-smoke
 ORIGIN=https://smoke.example.com
@@ -97,6 +97,7 @@ SMEM_S3_ACCESS_KEY=$S3_USER
 SMEM_S3_SECRET_KEY=$S3_PW
 SMEM_S3_PATH_STYLE=true
 SMEM_DB_ALLOW_INSECURE=true
+SMEM_S3_ALLOW_INSECURE=true
 EOF
 cat >"$TMP/api.env" <<EOF
 $(cat "$TMP/task.env")
@@ -115,10 +116,25 @@ HARDEN=(--read-only --user 65532 --cap-drop ALL --security-opt no-new-privileges
 # --- 2. one-off tasks from the same image ---------------------------------------------------------------------------
 run --rm "${HARDEN[@]}" --env-file "$TMP/task.env" -e SMEM_ENV=prod "$IMAGE" smemories-migrate up >"$TMP/migrate.log" 2>&1 || { cat "$TMP/migrate.log" >&2; fail "smemories-migrate up failed"; }
 run --rm "${HARDEN[@]}" --env-file "$TMP/task.env" -e SMEM_ENV=prod "$IMAGE" smemories-migrate up >/dev/null 2>&1 || fail "a second migrate up is not idempotent"
-run --rm "${HARDEN[@]}" --env-file "$TMP/task.env" -e SMEM_ENV=prod "$IMAGE" smemories-migrate status 2>&1 | grep -q ' applied ' || fail "migrate status shows nothing applied"
+# The status output goes to a file first and is checked a few times (one unexplained first-run failure was seen in the T-022 QA): print it on failure.
+status_ok=no
+for i in 1 2 3 4 5; do
+  run --rm "${HARDEN[@]}" --env-file "$TMP/task.env" -e SMEM_ENV=prod "$IMAGE" smemories-migrate status >"$TMP/status.log" 2>&1 || true
+  if grep -q ' applied ' "$TMP/status.log"; then status_ok=yes; break; fi
+  sleep 2
+done
+[ "$status_ok" = yes ] || { echo "--- last 'smemories-migrate status' output ---" >&2; cat "$TMP/status.log" >&2; fail "migrate status shows nothing applied after 5 tries"; }
 ok "smemories-migrate up (twice) and status"
-run --rm "${HARDEN[@]}" --env-file "$TMP/task.env" -e SMEM_ENV=prod "$IMAGE" smemories-media-backfill --dry-run >/dev/null 2>&1 || fail "smemories-media-backfill --dry-run failed"
+run --rm "${HARDEN[@]}" --env-file "$TMP/task.env" -e SMEM_ENV=prod "$IMAGE" smemories-media-backfill --dry-run >"$TMP/backfill.log" 2>&1 || { cat "$TMP/backfill.log" >&2; fail "smemories-media-backfill --dry-run failed"; }
 ok "smemories-media-backfill --dry-run"
+# The prod safety opt-outs and the static S3 keys are logged loudly by the one-off tasks too, never with a value (T-089).
+for f in migrate backfill; do
+  for v in SMEM_DB_ALLOW_INSECURE SMEM_S3_ALLOW_INSECURE SMEM_S3_ACCESS_KEY; do
+    grep -q "$v" "$TMP/$f.log" || fail "smemories-$f did not log a WARN naming $v"
+  done
+  if grep -q "$DB_PW\|$S3_PW" "$TMP/$f.log"; then fail "smemories-$f logged a secret"; fi
+done
+ok "the one-off tasks log the opt-out and static-key WARNs without a secret"
 
 # --- 3. the API refuses an unsafe prod configuration ----------------------------------------------------------------
 PROD_API=(-e SMEM_ENV=prod -e SMEM_REDIS_URL=redis://127.0.0.1:6379/0 -e SMEM_REDIS_ALLOW_INSECURE=true -e SMEM_MEMORY_LIMIT_MIB=1536 -e SMEM_ALLOWED_ORIGINS=$ORIGIN -e SMEM_PUBLIC_BASE_URL=$ORIGIN)
@@ -128,7 +144,7 @@ refuse() { # refuse <variable that must be named> <docker run args...>
   out="$(run --rm "${HARDEN[@]}" --env-file "$TMP/task.env" "${PROD_API[@]}" "$@" "$IMAGE" 2>&1)" || code=$?
   [ "$code" -ne 0 ] || fail "the API started although $var is wrong"
   echo "$out" | grep -q "$var" || fail "the refusal does not name $var: $out"
-  if echo "$out" | grep -q "$OTP_KEY\|$DB_PW\|$S3_PW\|123123"; then fail "the refusal echoes a secret"; fi
+  if echo "$out" | grep -q "$OTP_KEY\|$DB_PW\|$S3_PW\|123123\|hunter2pw"; then fail "the refusal echoes a secret"; fi
 }
 refuse SMEM_DEV_FIXED_OTP -e SMEM_OTP_KEY="$OTP_KEY" -e SMEM_DEV_FIXED_OTP=123123
 refuse SMEM_OTP_KEY
@@ -142,7 +158,9 @@ refuse SMEM_PUBLIC_BASE_URL -e SMEM_OTP_KEY="$OTP_KEY" -e SMEM_PUBLIC_BASE_URL=h
 refuse SMEM_MEMORY_LIMIT_MIB -e SMEM_OTP_KEY="$OTP_KEY" -e SMEM_MEMORY_LIMIT_MIB=
 refuse SMEM_METRICS_ADDR -e SMEM_OTP_KEY="$OTP_KEY" -e SMEM_METRICS_ADDR=0.0.0.0:9090
 refuse SMEM_S3_BUCKET -e SMEM_OTP_KEY="$OTP_KEY" -e SMEM_S3_BUCKET=
-ok "prod start refuses plaintext database and Redis, http origins, a missing memory limit, a public metrics address and a missing bucket"
+refuse SMEM_S3_ENDPOINT -e SMEM_OTP_KEY="$OTP_KEY" -e SMEM_S3_ALLOW_INSECURE=false
+refuse SMEM_PUBLIC_BASE_URL -e SMEM_OTP_KEY="$OTP_KEY" -e SMEM_PUBLIC_BASE_URL=https://user:hunter2pw@smoke.example.com
+ok "prod start refuses plaintext database, Redis and object store, http origins, a base URL with credentials, a missing memory limit, a public metrics address and a missing bucket"
 
 # --- 4. read-only root without the writable spool ----------------------------------------------------------------
 code=0

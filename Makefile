@@ -12,7 +12,7 @@ COMPOSE_PROJECT_NAME := $(shell if docker ps -a --filter label=com.docker.compos
 endif
 export COMPOSE_PROJECT_NAME
 
-.PHONY: image image-smoke build test lint run web-install web-build web-test web-lint print-check up down migrate migrate-down test-integration reset-limits
+.PHONY: image image-smoke image-scan image-scan-selftest image-hygiene build test lint run web-install web-build web-test web-lint print-check up down migrate migrate-down test-integration reset-limits
 
 build:
 	go build -o bin/smemories-api ./cmd/smemories-api
@@ -110,3 +110,16 @@ image:
 # Starts its own private MySQL, Valkey and MinIO (never the `make up` stack) and checks the image; see the header of the script.
 image-smoke: image
 	scripts/image-smoke.sh $(IMAGE)
+
+# Trivy (pinned image) fails on a fixable HIGH or CRITICAL vulnerability and writes build/sbom/sbom.cdx.json (T-089, docs/container.md).
+image-scan: image
+	scripts/image-scan.sh $(IMAGE)
+
+# Proves the scan gate: a deliberately old base image (alpine 3.12) must be rejected.
+image-scan-selftest:
+	scripts/image-scan.sh --self-test
+
+# No .env, key file, AWS key id or dev OTP value in the filesystem or layers; the self-test plants a .env and expects the check to fail.
+image-hygiene: image
+	scripts/image-hygiene.sh $(IMAGE)
+	scripts/image-hygiene.sh --self-test $(IMAGE)

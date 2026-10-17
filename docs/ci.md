@@ -16,7 +16,7 @@ Require exactly these four status checks; the names are the job names and are st
 | `web` | In `web/`: `npm ci`, `lint`, `lint:i18n`, `typecheck`, `test`, `build`, `check:api` | `make web-lint web-test web-build` |
 | `security` | `govulncheck ./...` (blocking); `npm audit --audit-level=high --omit=dev` (reported, not blocking: see the comment in the workflow) | `go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...` and `cd web && npm audit --audit-level=high --omit=dev` |
 
-A fifth job, `image` (T-022: builds the production image and runs `make image-smoke`, see [container.md](container.md)), is not a required
+A fifth job, `image` (T-022, T-089: builds the production image, runs `make image-smoke`, `make image-hygiene`, the Trivy scan `make image-scan` and its self-test, and uploads the SBOM as the artifact `image-sbom`, see [container.md](container.md)), is not a required
 check yet; the owner decides when to add it.
 
 Recommended settings for both branches: require a pull request, require the four checks above and an up-to-date

@@ -89,3 +89,18 @@ func TestReadyFailsWhenAnyDepIsDown(t *testing.T) {
 		}
 	}
 }
+
+func TestReadyDrainWarnIsLoggedOnce(t *testing.T) {
+	var logs bytes.Buffer
+	ctx, cancel := context.WithCancel(context.Background())
+	h, _ := newTestRouter(t, Ready(fakePinger(func(context.Context) error { return nil }), slog.New(slog.NewJSONHandler(&logs, nil)), Draining(ctx)))
+	cancel()
+	for i := 0; i < 3; i++ {
+		if rec := do(h, "GET", "/readyz", nil); rec.Code != 503 {
+			t.Fatalf("probe %d: got %d, want 503 while draining", i, rec.Code)
+		}
+	}
+	if n := strings.Count(logs.String(), "readyz: shutdown ping failed"); n != 1 {
+		t.Fatalf("drain WARN logged %d times, want 1: %q", n, logs.String())
+	}
+}
