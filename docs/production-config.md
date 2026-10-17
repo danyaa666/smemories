@@ -5,9 +5,9 @@ Every `SMEM_*` variable the API (`smemories-api`), the migration task (`smemorie
 a variable that has no row below, and `TestProdContractRefusals` (table-driven) starts it with each missing or unsafe value and checks that the refusal
 names the variable and echoes no secret. Image and run flags: [container.md](container.md).
 
-**The first real prod start waits for T-021.** The only mailer is the log mailer, which refuses `SMEM_ENV=prod` on purpose (`mailer.NewLog`), so the API
-binary cannot serve in production until the email provider lands. The contract below is complete and tested at the loader; the image smoke test runs the
-full API with `SMEM_ENV=test` and checks the prod refusals and the one-off tasks with `SMEM_ENV=prod`.
+**Email in prod.** The log mailer refuses `SMEM_ENV=prod` on purpose (`mailer.NewLog`); production sends through Amazon SES (T-021, [email.md](email.md)), so
+`SMEM_MAIL_PROVIDER=ses` and `SMEM_MAIL_FROM` are required. The image smoke test runs the full API with `SMEM_ENV=test` and checks the prod refusals and the
+one-off tasks with `SMEM_ENV=prod`.
 
 ## Which command reads what
 
@@ -70,6 +70,14 @@ task definition, `SM` = Secrets Manager injected as an environment variable, `SS
 | `SMEM_S3_PATH_STYLE` | no | `false` | no | not set | api, backfill | `true` for MinIO only. |
 | `SMEM_S3_ACCESS_KEY` | **no: leave it unset** | empty | **yes** | not set | api, backfill | Empty means the [default credential chain](#s3-credentials-and-timeouts) (the ECS task role). Set it only together with `SMEM_S3_SECRET_KEY`. |
 | `SMEM_S3_SECRET_KEY` | **no: leave it unset** | empty | **yes** | not set | api, backfill | Same: both or neither, otherwise the loader refuses. |
+
+### Email (Amazon SES)
+
+| Variable | Required in prod | Default | Secret | AWS source | Commands | Prod rule |
+|---|---|---|---|---|---|---|
+| `SMEM_MAIL_PROVIDER` | yes, must be `ses` | `log` (prints the codes; dev and test only) | no | env | api | `log` or `ses`; prod refuses everything but `ses`. Runbook and provider checklist: [email.md](email.md). |
+| `SMEM_MAIL_FROM` | yes | none | no | env | api | `SMemories <no-reply@mail.example.com>` or a bare address, on the verified sending subdomain; prod refuses a malformed address and an `example.*`, `.test`, `.invalid`, `localhost` domain. Needed in every environment when the provider is `ses`. |
+| `SMEM_SES_CONFIGURATION_SET` | no (recommended) | empty | no | env | api | name of the SES configuration set that carries the reputation metrics. Region and credentials come from the AWS default chain (`AWS_REGION`, the ECS task role): no key variable exists. |
 
 ### Secrets and sign-in
 

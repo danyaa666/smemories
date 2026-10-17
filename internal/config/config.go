@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"net/mail"
 	"net/url"
 	"os"
 	"strconv"
@@ -69,7 +70,11 @@ type Config struct {
 	ShutdownTimeout time.Duration // SMEM_SHUTDOWN_TIMEOUT, default 25s: after SIGTERM the delay below plus the drain of in-flight requests; keep it below the task stop timeout (30s on Fargate)
 	ShutdownDelay   time.Duration // SMEM_SHUTDOWN_DELAY, default 5s in prod and 0 elsewhere: /readyz answers 503 this long before the listener closes, so the load balancer drains first
 
-	OTPKey      []byte // SMEM_OTP_KEY: HMAC key of the email codes, at least 32 bytes; required unless Env is dev or test (a fixed development key is used there). Never log it.
+	OTPKey              []byte // SMEM_OTP_KEY: HMAC key of the email codes, at least 32 bytes; required unless Env is dev or test (a fixed development key is used there). Never log it.
+	MailProvider        string // SMEM_MAIL_PROVIDER: log (default; dev and test only) or ses; mailer.New validates the name
+	MailFrom            string // SMEM_MAIL_FROM: "SMemories <no-reply@mail.example.com>"; required with ses and in prod
+	SESConfigurationSet string // SMEM_SES_CONFIGURATION_SET: optional SES configuration set (reputation metrics)
+
 	DevFixedOTP string // DEV-SHORTCUT(otp) SMEM_DEV_FIXED_OTP: 6 digits accepted as every email code; only with SMEM_ENV=dev or test, otherwise the API refuses to start (docs/dev-shortcuts.md)
 }
 
@@ -280,7 +285,47 @@ func load(getenv func(string) string, forAPI bool) (Config, error) {
 	if cfg.Env == "prod" && cfg.MemoryLimitMiB == 0 {
 		return Config{}, fmt.Errorf("SMEM_MEMORY_LIMIT_MIB is required in prod (about 80%% of the task memory, e.g. 1638 for 2 GiB; see docs/container.md)")
 	}
+	if err := cfg.loadMail(getenv); err != nil {
+		return Config{}, err
+	}
 	return cfg, nil
+}
+
+// loadMail reads the mail settings (T-021). The provider name itself is validated by mailer.New; prod accepts only ses.
+func (cfg *Config) loadMail(getenv func(string) string) error {
+	cfg.MailProvider = getenv("SMEM_MAIL_PROVIDER")
+	cfg.MailFrom = getenv("SMEM_MAIL_FROM")
+	cfg.SESConfigurationSet = getenv("SMEM_SES_CONFIGURATION_SET")
+	if cfg.Env == "prod" && cfg.MailProvider != "ses" {
+		return fmt.Errorf("SMEM_MAIL_PROVIDER=%q: prod needs ses (the log mailer prints codes)", cfg.MailProvider)
+	}
+	if cfg.MailProvider == "ses" || cfg.Env == "prod" {
+		if err := checkMailFrom(cfg.MailFrom, cfg.Env == "prod"); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// exampleDomains are never a real sender: documentation names and reserved TLDs.
+var exampleDomains = []string{"example.com", "example.org", "example.net", ".example", ".test", ".invalid", ".localhost", "localhost"}
+
+// checkMailFrom wants "Name <user@domain>" or "user@domain"; in prod the domain must not be an example or reserved one.
+// The message never repeats the value beyond the variable name.
+func checkMailFrom(from string, prod bool) error {
+	a, err := mail.ParseAddress(from)
+	if from == "" || err != nil {
+		return fmt.Errorf("SMEM_MAIL_FROM is required with SMEM_MAIL_PROVIDER=ses and must be an address such as \"SMemories <no-reply@mail.example.com>\"")
+	}
+	domain := strings.ToLower(a.Address[strings.LastIndex(a.Address, "@")+1:])
+	if prod {
+		for _, d := range exampleDomains {
+			if domain == strings.TrimPrefix(d, ".") || strings.HasSuffix(domain, "."+strings.TrimPrefix(d, ".")) {
+				return fmt.Errorf("SMEM_MAIL_FROM: prod needs an address on your verified sending domain, not an example or reserved one")
+			}
+		}
+	}
+	return nil
 }
 
 // loadShutdown reads the graceful-shutdown timings (T-022).
