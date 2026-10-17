@@ -1,7 +1,7 @@
 # Container image
 
 The production image (T-022): [`Dockerfile`](../Dockerfile), allow-list [`.dockerignore`](../.dockerignore). The web app is not in it
-(static build, S3 + CloudFront). The production configuration contract, Trivy and the SBOM follow in later slices of T-022.
+(static build, S3 + CloudFront). The production configuration contract is [production-config.md](production-config.md) (T-086); the migration lock, Trivy and the SBOM follow in later slices.
 
 ## What is in it
 
@@ -44,6 +44,8 @@ on Fargate, the default); the target group's deregistration delay should be at l
   `smemories-migrate up` twice and `status`, `smemories-media-backfill --dry-run`; the prod refusals (dev OTP shortcut, missing or short
   `SMEM_OTP_KEY`, no secret echoed); a read-only root without the spool; the API under `--read-only --user 65532 --cap-drop ALL` (health,
   register, login, yearbook create, photo upload); SIGTERM during a slow request (readyz 503 while draining, the request completes, exit 0).
+- Section 3 of the script also proves that a prod start refuses plaintext database and Redis (the script sets `SMEM_DB_ALLOW_INSECURE` and `SMEM_REDIS_ALLOW_INSECURE`
+  for its private network only), http origins, a missing memory limit, a public metrics address and a missing bucket.
 - The API part runs with `SMEM_ENV=test`: the only mailer is the log mailer, which refuses `prod`, so the API cannot serve in production
   before the email provider (T-021) lands.
 - CI job `image` runs `make image-smoke`. The unit test for the drain is `TestServeDrainsReadyzThenFinishesInFlight` in `internal/httpx`.

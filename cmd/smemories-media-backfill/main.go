@@ -52,9 +52,14 @@ func main() {
 		os.Exit(1)
 	}
 	defer func() { _ = d.Close() }()
-	svc := media.NewService(media.NewStore(d), storage.NewS3(storage.S3Config{
+	store, err := storage.NewS3(storage.S3Config{
 		Endpoint: cfg.S3Endpoint, Region: cfg.S3Region, Bucket: cfg.S3Bucket,
-		AccessKey: cfg.S3AccessKey, SecretKey: cfg.S3SecretKey, PathStyle: cfg.S3PathStyle}), 1,
+		AccessKey: cfg.S3AccessKey, SecretKey: cfg.S3SecretKey, PathStyle: cfg.S3PathStyle})
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "storage error:", err)
+		os.Exit(1)
+	}
+	svc := media.NewService(media.NewStore(d), store, 1,
 		ratelimit.NewFactory(nil, logger, nil), nil) // Backfill never uploads, so the upload limiter (and Redis) is never touched
 
 	st, err := svc.Backfill(ctx, *batch, *maxFails, *dryRun, logger)

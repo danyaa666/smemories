@@ -9,13 +9,23 @@ import (
 	"time"
 )
 
-// env serves m; SMEM_REDIS_URL defaults to a valid URL unless the case sets it (even to "").
+// prodTestDefaults are what env adds for SMEM_ENV=prod, so the tests of one setting need not repeat the whole production contract
+// (that is prod_test.go's job, which does not use env): the plaintext opt-outs of a local network and a memory limit.
+var prodTestDefaults = map[string]string{"SMEM_DB_ALLOW_INSECURE": "true", "SMEM_REDIS_ALLOW_INSECURE": "true", "SMEM_MEMORY_LIMIT_MIB": "1536"}
+
+// env serves m; SMEM_REDIS_URL defaults to a valid URL unless the case sets it (even to ""), and prod gets prodTestDefaults.
 func env(m map[string]string) func(string) string {
 	return func(k string) string {
-		if v, ok := m[k]; ok || k != "SMEM_REDIS_URL" {
+		if v, ok := m[k]; ok {
 			return v
 		}
-		return "redis://127.0.0.1:6379/0"
+		if k == "SMEM_REDIS_URL" {
+			return "redis://127.0.0.1:6379/0"
+		}
+		if m["SMEM_ENV"] == "prod" {
+			return prodTestDefaults[k]
+		}
+		return ""
 	}
 }
 
@@ -106,7 +116,7 @@ func TestLoadAuthDefaults(t *testing.T) {
 }
 
 func TestLoadAllowedOrigins(t *testing.T) {
-	cfg, err := Load(env(map[string]string{"SMEM_DB_DSN": dsn, "SMEM_ENV": "prod", "SMEM_PUBLIC_BASE_URL": "https://app.example.com", "SMEM_ALLOWED_ORIGINS": " https://App.Example.com , http://localhost:5173 ", "SMEM_TRUST_PROXY": "true", "SMEM_S3_BUCKET": "b", "SMEM_OTP_KEY": strings.Repeat("k", 32)}))
+	cfg, err := Load(env(map[string]string{"SMEM_DB_DSN": dsn, "SMEM_ENV": "prod", "SMEM_PUBLIC_BASE_URL": "https://app.example.com", "SMEM_ALLOWED_ORIGINS": " https://App.Example.com , https://www.example.com ", "SMEM_TRUST_PROXY": "true", "SMEM_S3_BUCKET": "b", "SMEM_OTP_KEY": strings.Repeat("k", 32)}))
 	if err != nil {
 		t.Fatal(err)
 	}

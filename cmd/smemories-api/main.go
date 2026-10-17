@@ -44,6 +44,13 @@ func main() {
 	}
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: cfg.LogLevel}))
 	logger.Info("starting", "version", version.Version, "commit", version.Commit)
+	if cfg.Env == "prod" { // the production contract's explicit opt-outs (docs/production-config.md); never expected on AWS
+		for name, on := range map[string]bool{"SMEM_DB_ALLOW_INSECURE": cfg.DBAllowInsecure, "SMEM_REDIS_ALLOW_INSECURE": cfg.RedisAllowInsecure, "SMEM_METRICS_ALLOW_ANY_INTERFACE": cfg.MetricsAllowAnyInterface} {
+			if on {
+				logger.Warn("production safety opt-out is on", "variable", name)
+			}
+		}
+	}
 	if cfg.MemoryLimitMiB > 0 {
 		debug.SetMemoryLimit(int64(cfg.MemoryLimitMiB) * bytesPerMiB) // soft: the collector works harder near it, nothing is refused
 		logger.Info("memory limit set", "mib", cfg.MemoryLimitMiB)
@@ -130,10 +137,15 @@ func main() {
 		}
 	}
 
-	mediaSvc := media.NewService(media.NewStore(d), storage.NewS3(storage.S3Config{
+	store, err := storage.NewS3(storage.S3Config{
 		Endpoint: cfg.S3Endpoint, Region: cfg.S3Region, Bucket: cfg.S3Bucket,
 		AccessKey: cfg.S3AccessKey, SecretKey: cfg.S3SecretKey, PathStyle: cfg.S3PathStyle,
-	}), cfg.MediaMaxConcurrent, limiters, nil)
+	})
+	if err != nil {
+		logger.Error("storage setup failed", "error", err)
+		os.Exit(1)
+	}
+	mediaSvc := media.NewService(media.NewStore(d), store, cfg.MediaMaxConcurrent, limiters, nil)
 	cursors := httpx.NewCursors(cfg.OTPKey)
 	mt.Gauge("media_processing_slots_in_use", "Images being processed now.", func() float64 { return float64(mediaSvc.SlotsInUse()) })
 	mt.Gauge("media_processing_slots", "Images that can be processed at once (SMEM_MEDIA_MAX_CONCURRENT).", func() float64 { return float64(mediaSvc.Slots()) })
