@@ -26,12 +26,29 @@ make up              # MySQL, Valkey, MinIO (once)
 make e2e             # about 20 s of set-up, then the journey in about 10 s
 ```
 
+`make e2e` creates and uses its own database `smem_test_e2e` (`make e2e E2E_DB=smem_e2e_mine` for another), never the `smemories` dev database.
+
 Needs Go, Node 22, Docker for the stack, and poppler (`pdfinfo`, `pdffonts`, `pdftotext`, `pdfimages`; `brew install poppler`),
 like `make print-check`. `scripts/e2e.sh` builds and starts the API on `127.0.0.1:18080` and the built web app on `127.0.0.1:14173`
 (`E2E_API_PORT`, `E2E_WEB_PORT`), so a dev server on :5173 and an API on :8080 keep running, and stops only what it started.
 The API runs with `SMEM_ENV=test` (Redis keys `smem:test:*`, which `make e2e` resets because registration is limited to 5 per hour per
 address). The run creates its own data (unique email `e2e-<run>@example.com`, unique title) and deletes its yearbooks, notes and photos at
 the end, also after a failure; the account itself stays (there is no endpoint to delete it). It can be re-run at once.
+
+## Guards (T-087)
+
+The journey writes real data, so it refuses to start unless the target is a throwaway local one. The checks live in `tools/e2e/guard.mjs`;
+`scripts/e2e.sh` runs them before it builds or starts anything (exit 2 and a message) and `playwright.config.mjs` runs them again for a
+direct `npx playwright test`:
+
+- `E2E_BASE_URL` must have the host `localhost`, `127.0.0.1` or `::1`. Override on purpose with `E2E_ALLOW_REMOTE=1` (this check only).
+- `SMEM_DB_DSN` must name a database starting with `smem_e2e` or `smem_test` (CI uses `smem_e2e`). There is no override.
+
+`cd tools/e2e && npm run guard-test` proves both refusals (it runs in `make e2e` and in the `e2e` job).
+
+**Registration is limited to 5 per hour per address.** Run directly (`scripts/e2e.sh`, not `make e2e`, which resets the limits) after five
+runs, step 1 fails with `registration is rate limited ...`: run `make reset-limits SMEM_ENV=test`, or point `SMEM_REDIS_URL` at a fresh
+Redis db, and run again.
 
 `tools/e2e/out/` (git-ignored) has the API log, the web log and, after a failure, the Playwright trace and screenshot:
 `cd tools/e2e && npx playwright show-trace out/results/*/trace.zip`.
@@ -40,9 +57,11 @@ the end, also after a failure; the account itself stays (there is no endpoint to
 
 The `e2e` job in `.github/workflows/ci.yml` starts MySQL, MinIO and Valkey like `go-integration`, then runs `scripts/e2e.sh`. The
 error starts with `STEP FAILED: <n. title>`, then Playwright's own message and code frame. On failure the artifact `e2e-failure`
-(7 days) holds the trace (open it with `npx playwright show-trace`, or at trace.playwright.dev), the screenshot and `api.log`.
-The trace contains the link token of the run: it belongs to a throwaway database that is gone with the job, and it is never
-printed to the job log (every error leaving a step is scrubbed of it).
+(kept for 3 days) holds the trace (open it with `npx playwright show-trace`, or at trace.playwright.dev), the screenshot and `api.log`.
+The trace contains the link token and the cookies of the run (Playwright cannot strip them from a trace): they belong to a throwaway
+database that is gone with the job, the artifact expires after 3 days, and the token is never printed to the job log (every error
+leaving a step is scrubbed of it). The job has a 10 minute limit (the journey itself 240 s) and caches the Chromium download per
+Playwright version.
 
 ## Changing the journey when a screen changes
 

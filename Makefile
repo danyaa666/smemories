@@ -61,10 +61,13 @@ print-check: web/node_modules
 # End-to-end test of the M1 journey (T-020, docs/e2e.md): Playwright against a locally started API and the built web app, on the
 # stack from `make up`. Needs poppler like print-check. The API runs with SMEM_ENV=test, so only the Redis keys smem:test:* are reset.
 .PHONY: e2e
+# The journey writes to a database of its own (E2E_DB, created here; the guard in scripts/e2e.sh refuses any name but smem_e2e* / smem_test*).
+E2E_DB ?= smem_test_e2e
 e2e: web/node_modules
-	cd tools/e2e && npm ci && npx playwright install chromium
+	cd tools/e2e && npm ci && npx playwright install chromium && npm run guard-test
+	docker compose exec -T mysql sh -c 'mysql -uroot -p"$$MYSQL_ROOT_PASSWORD" -e "CREATE DATABASE IF NOT EXISTS \`$(E2E_DB)\` CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci"'
 	@$(MAKE) --no-print-directory reset-limits SMEM_ENV=test
-	scripts/e2e.sh
+	SMEM_DB_DSN="$$(printf '%s' "$$SMEM_DB_DSN" | sed -E 's|/[^/?]*(\?.*)?$$|/$(E2E_DB)\1|')" scripts/e2e.sh
 
 # Starts MySQL 8.4, Valkey and MinIO and returns once all are healthy and the bucket exists.
 up:
