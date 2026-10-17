@@ -10,17 +10,17 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 11 | T-021, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-088, T-089 |
-| QA_PASS | 1 | T-086 |
-| MERGED | 4 | T-020, T-022, T-061, T-087 |
-| DONE | 65 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085 |
+| BACKLOG | 9 | T-021, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050 |
+| TODO | 2 | T-088, T-089 |
+| MERGED | 1 | T-086 |
+| DONE | 69 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-087 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-020 ([E01] End-to-end smoke test of the M1 journey in CI (Playwright)); T-022 ([E06] Dockerfile, production config and migrations as a one-off task); T-061 ([E05] Web: template picker and print screen with device guidance); T-087 ([E01] E2E hardening: refuse non-local targets, tighter CI limits, clearer errors)
+**Awaiting your review (MERGED):** T-086 ([E06] Production config contract, S3 credential chain, migrate lock and image scan (T-022 slice 2))
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-032 (Approve merge of T-061 (template picker, print guide, public print-feedback counter, PR #71)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-035 (Approve merge of T-022 slice 1 (production Dockerfile, graceful shutdown, image smoke test, PR #74)?); Q-036 (Approve merge of T-086 slice (a): production config contract and S3 default credential chain (PR #78, adds the AWS SDK config module)?)
 
-_Board last written 2026-10-17 09:28Z_
+_Board last written 2026-10-17 12:46Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -1346,7 +1346,7 @@ Choose a template (thumbnails from sample renders), trigger export, show progres
 - 2026-10-09 01:42Z · leader · Superseded by D-24 (2026-10-09): export is browser print of HTML templates (T-056..T-061). The Go renderer (T-010, T-038) stays as the fallback and is not extended.
 
 ### T-020 — [E01] End-to-end smoke test of the M1 journey in CI (Playwright)
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** infra
 - **Milestone:** M1
@@ -1357,7 +1357,7 @@ Choose a template (thumbnails from sample renders), trigger export, show progres
 - **Assignee:** —
 - **Branch:** task/t-020-e01-end-to-end-smoke-test-of-the-m1-jour
 - **PR:** https://github.com/danyaa666/smemories/pull/75
-- **Updated:** 2026-10-17 08:46Z by leader
+- **Updated:** 2026-10-17 12:46Z by human
 - **Comments-seen:** 4
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/10-end-to-end-smoke-test-of-the-m1-journey-in.md`
@@ -1378,6 +1378,7 @@ One Playwright test drives the full M1 journey on the compose stack in CI: regis
   AC6: docs/e2e.md + README row + docs/ci.md present and match behaviour. web lint (eslint+prettier) and tsc clean.
   Non-blocking observations: (1) scripts/e2e.sh run directly (not via make) fails at step 1 with a vague 'element(s) not found' after 5 registrations/hour from the same Redis (rate limit; make e2e resets it, CI has fresh Valkey) - maybe say so in docs/e2e.md or fail fast. (2) No guard against a non-local E2E_BASE_URL / SMEM_DB_DSN: the spec and script run against whatever they are given (script always uses 127.0.0.1, but 'make e2e' uses .env DSN = the dev DB, creating test accounts there). Suggest a loopback check in the spec and DSN note in docs. (3) Job timeout-minutes is 20, so the 5 min budget is only enforced by the Playwright 240 s limit; consider timeout-minutes 10. (4) The e2e-failure trace contains the link token, session cookies and password of a throwaway DB; the repo is public so any logged-in GitHub user can download it for 7 days - harmless today (runner and DB are gone) but worth knowing. (5) Playwright browsers are not cached in CI (install each run, job still ~2 min).
 - 2026-10-17 08:46Z · leader · merged dbec4ce (PR #75). Review: one Playwright journey (register -> book -> template -> link -> anonymous note -> approve/reorder -> A5 PDF checks -> revoke/sign-out) in its own CI job; 10 consecutive green runs, a forced failure uploads the e2e-failure artifact with no link token; QA mutated the product 5 ways and each failed at the matching step, stable under 24 busy loops; only the e2e job sets the dev OTP shortcut (SMEM_ENV=test); new dev dependency @playwright/test 1.64.0 (tools/e2e only) approved. For owner to check: docs/e2e.md; decide whether to add the e2e job to the required checks in branch protection (D-14 lists go, go-integration, web, security; image and e2e are not required yet). Known deviation from the spec: memory-book prints one friend per page, so 3+n pages. Follow-up T-087 for the hardening nits.
+- 2026-10-17 12:46Z · human · accepted by owner
 
 ### T-021 — [E06] Transactional email provider and domain setup
 - **Status:** BACKLOG
@@ -1403,7 +1404,7 @@ Replace LogMailer with a real provider (SES is the natural fit on AWS) including
 #### Comments
 
 ### T-022 — [E06] Dockerfile, production config and migrations as a one-off task
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P2
 - **Type:** infra
 - **Milestone:** M2
@@ -1414,7 +1415,7 @@ Replace LogMailer with a real provider (SES is the natural fit on AWS) including
 - **Assignee:** —
 - **Branch:** task/t-022-e06-dockerfile-production-config-and-mig
 - **PR:** https://github.com/danyaa666/smemories/pull/74
-- **Updated:** 2026-10-17 07:48Z by leader
+- **Updated:** 2026-10-17 12:46Z by human
 - **Comments-seen:** 12
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E06-go-live/02-dockerfile-production-config-and-migrations.md`
@@ -1461,6 +1462,7 @@ Multi-stage Dockerfile (distroless or alpine, non-root), production config valid
   5. make lint build test ok (web 347 tests); go test -race -tags integration ./... exit 0.
   NON-BLOCKING: (1) image-smoke.sh failed once in 6 runs, on the first run right after 'make image' with 'SMOKE FAIL: migrate status shows nothing applied' (later 5 runs pass; status itself passed 25/25 in isolation, so not reproduced). Probable cause: 'smemories-migrate status | grep -q' under pipefail, or a MySQL still settling after the ping loop; worth a retry or a captured-output grep (capture to a variable, then grep) in T-086 to keep the CI image job from flaking. (2) The earlier 9a4112d observations (floating dockerfile frontend tag, legacy minio tag, noisy readyz WARN during drain) are unchanged and tracked for T-086. (3) print-feedback accepted a request from a foreign Origin (200, cookie-less public endpoint); it is T-061 behaviour, not part of this merge.
 - 2026-10-17 07:48Z · leader · merged 764afe1 (PR #74), slice 1 of the production image. Review: digest-pinned multi-stage Dockerfile (distroless nonroot, 45-49 MiB, reproducible), CMD so ECS can override for migrate/backfill, read-only rootfs + uid 65532 + cap-drop ALL, graceful shutdown (SMEM_SHUTDOWN_TIMEOUT/DELAY, /readyz 503 while draining), spool-writable start-up check, make image / image-smoke, CI image job; QA proved the merged state in a container (migrate applies print_feedback_tab, template/print-feedback endpoints, SIGTERM drain, smoke fails on breaks); CI green; owner approved. Remaining requirements moved to T-086. For owner to check: make image && make image-smoke (needs Docker, ~25 s); docs/container.md. Open: image licence label is NOASSERTION until Q-034 is answered; the first smoke run once failed on 'migrate status shows nothing applied' (not reproduced; T-086 will capture the output before grepping); print-feedback/create accepts a foreign Origin (public, cookie-less endpoint: intended).
+- 2026-10-17 12:46Z · human · accepted by owner
 
 ### T-023 — [E06] AWS infrastructure as code and deploy pipeline
 - **Status:** BACKLOG
@@ -2917,7 +2919,7 @@ Navy and gold canvas as the second HTML template.
 - 2026-10-17 07:02Z · human · accepted by owner
 
 ### T-061 — [E05] Web: template picker and print screen with device guidance
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -2928,7 +2930,7 @@ Navy and gold canvas as the second HTML template.
 - **Assignee:** —
 - **Branch:** task/t-061-e05-web-template-picker-and-print-screen
 - **PR:** https://github.com/danyaa666/smemories/pull/71
-- **Updated:** 2026-10-17 07:02Z by leader
+- **Updated:** 2026-10-17 12:46Z by human
 - **Comments-seen:** 10
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/12-template-picker-and-print-screen.md`
@@ -2970,6 +2972,7 @@ Pick a template for the page size, print with per-browser guidance, anonymous wo
 - 2026-10-17 00:41Z · leader · Leader: re-QA passed on the merged head 557f8c4 (35 files, all T-061; 4 resolved conflicts read and correct; picker lists memory-book and navy-classic, both print; counters exact; CI green). My review verdict above stands for this head. Still waiting for owner approval (Q-032, Risk high). Minor open item (not blocking): an instant 0 ms double-click on a feedback button can send 2 POSTs (isPending goes stale for a tick); a ref guard in web/src/book/PrintGuide.tsx would close it - fold into the next web task.
 - 2026-10-17 07:01Z · human · owner approved merge
 - 2026-10-17 07:02Z · leader · merged fb4c83d (PR #71). Review: template list per page size (memory-book, navy-classic), template_id validated in the Service (ERROR_INVALID_TEMPLATE), public print-feedback counter (one upsert, 30/h per IP, counts only, no read route), per-device print guide; re-QA'd on the merged head 557f8c4 after the develop merge; CI green; owner approved. For owner to check: run make migrate (new table print_feedback_tab), then /yearbooks/<id>/book: pick a template, read the print guide for your browser, print to PDF, answer the feedback question; Vietnamese strings in the PR description (print.*, bookPages.*, template picker). Open: instant double-click on a feedback button can send 2 POSTs (ref guard in PrintGuide.tsx).
+- 2026-10-17 12:46Z · human · accepted by owner
 
 ### T-062 — [E01] CI: get the newest Go patch straight from go.dev (no manifest lag)
 - **Status:** DONE
@@ -3953,19 +3956,19 @@ Spec: .team/epics/E10-skills-alignment/12-lint-anchors-userfrom-guard.md (read i
 - 2026-10-17 07:02Z · human · accepted by owner
 
 ### T-086 — [E06] Production config contract, S3 credential chain, migrate lock and image scan (T-022 slice 2)
-- **Status:** QA_PASS
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** infra
 - **Milestone:** M2
 - **Depends-on:** T-022
 - **Risk:** high
 - **Rework:** 0
-- **Owner-approved:** —
-- **Assignee:** leader
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-086-e06-production-config-contract-s3-creden
 - **PR:** 78
-- **Updated:** 2026-10-17 09:21Z by qa
-- **Comments-seen:** 6
+- **Updated:** 2026-10-17 12:46Z by leader
+- **Comments-seen:** 8
 
 Spec: .team/epics/E06-go-live/07-production-config-contract-s3-chain-migrate-lock-image-scan.md (read it from the repo root). Second half of T-022: requirements 4, 5, 6, 7 (scan), 9 of the T-022 spec.
 
@@ -3993,9 +3996,11 @@ Spec: .team/epics/E06-go-live/07-production-config-contract-s3-chain-migrate-loc
   N5 (note) image-smoke refuse() checks only that the variable name appears in the output; the loader table test is the strict one.
   Risk high: owner approval before merge. Not verified by design: migrate lock, schema-version check, Trivy/SBOM, secret hygiene, image pins (T-088/T-089).
 - 2026-10-17 09:21Z · leader · Leader review OK on 5c9c514 (+ QA test-only commit 9e53864), slice (a): contract in internal/config/prod.go refuses ~45 missing/unsafe values by name without echoing secrets, 7 rules each proven by a failing test when disabled, all 49 SMEM_* variables documented with a test that fails on a planted variable, S3 default chain works for env, ECS-style container credentials and static MinIO keys with exactly 3 attempts (refused port 3.7 s, silent server capped at 60 s), the four escape hatches default off and cannot silence the dev-OTP guard or the log-mailer refusal, new modules are AWS SDK only (Apache-2.0, tidy+verify clean), image 48 MiB; CI green. QA's three non-blocking findings (opt-out WARN only in the API; URL userinfo echoed in two errors; http:// S3 endpoint and silent static-key override accepted in prod) are added to T-089's spec so they ship before go-live. Waiting for owner approval (Risk high). Nothing to migrate.
+- 2026-10-17 12:46Z · human · owner approved merge
+- 2026-10-17 12:46Z · leader · merged 3dbde98 (PR #78), slice (a) of T-022: production config contract (internal/config/prod.go, ~45 refusals by variable name, no secret echoed), docs/production-config.md (49 variables, test fails on an undocumented one), S3 default credential chain with timeouts and 3 attempts, four default-off escape hatches, AWS SDK config module (L-13); QA_PASS on the same head plus its test-only commit, CI green, owner approved. For owner to check: docs/production-config.md; make image-smoke. Open (moved to T-089): opt-out WARN only in the API, URL userinfo echoed in two errors, http:// S3 endpoint and static-key override accepted in prod. The real prod start still waits for T-021 (Q-033).
 
 ### T-087 — [E01] E2E hardening: refuse non-local targets, tighter CI limits, clearer errors
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -4006,7 +4011,7 @@ Spec: .team/epics/E06-go-live/07-production-config-contract-s3-chain-migrate-loc
 - **Assignee:** —
 - **Branch:** task/t-087-e01-e2e-hardening-refuse-non-local-targe
 - **PR:** https://github.com/danyaa666/smemories/pull/79
-- **Updated:** 2026-10-17 09:28Z by leader
+- **Updated:** 2026-10-17 12:46Z by human
 - **Comments-seen:** 4
 
 Spec: .team/epics/E01-foundation/11-e2e-hardening.md (read it from the repo root). Five non-blocking findings from the T-020 QA.
@@ -4021,9 +4026,10 @@ Spec: .team/epics/E01-foundation/11-e2e-hardening.md (read it from the repo root
   AC4: docs/e2e.md matches behaviour (guards, override, rate-limit message, 3-day retention, smem_test_e2e).
   Non-blocking: (a) guard bypass: dbName() takes text after the LAST '/', so DSN '.../smemories?x=/smem_e2e' passes (needs a deliberately crafted DSN; fix: cut at '?' first, then take after last '/'). (b) the same rule falsely refuses a legit DSN with a slash in params (loc=Europe/Berlin): fails closed. (c) guard.test has no localhost.evil.com case (mutating the allowlist to add it is not caught). (d) cache HIT path not observed (only a cold run on this head); install after restore is idempotent.
 - 2026-10-17 09:28Z · leader · merged ca0c169 (PR #79). Review: tools/e2e/guard.mjs refuses non-local base URLs and databases not named smem_e2e*/smem_test* before anything is created (script and playwright config), rate-limited register gives a make reset-limits message, CI timeout 10 min, Chromium cached (actions/cache pinned by SHA), artifact retention 3 days; QA: guard mutation-tested, 5/5 local green runs, CI green. For owner to check: make e2e now uses its own database smem_test_e2e. Open (QA, not blocking): dbName() reads after the last '/', so a DSN like .../smemories?x=/smem_e2e slips past the guard (cut at '?' first) and loc=Europe/Berlin is wrongly refused; no localhost.evil.com test case; the cache-hit path is unseen. Fix them with the next change that touches tools/e2e.
+- 2026-10-17 12:46Z · human · accepted by owner
 
 ### T-088 — [E06] smemories-migrate lock, API schema-version check and deploy order (T-022 slice 3)
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** infra
 - **Milestone:** M2
@@ -4034,15 +4040,16 @@ Spec: .team/epics/E01-foundation/11-e2e-hardening.md (read it from the repo root
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-17 08:49Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-17 12:46Z by leader
+- **Comments-seen:** 1
 
 Spec: .team/epics/E06-go-live/08-migrate-lock-schema-check.md (read it from the repo root).
 
 #### Comments
+- 2026-10-17 12:46Z · leader · unblocked: T-086 merged (config contract + S3 chain).
 
 ### T-089 — [E06] Image scan (Trivy + SBOM) and secret hygiene (T-022 slice 4)
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** infra
 - **Milestone:** M2
@@ -4053,12 +4060,13 @@ Spec: .team/epics/E06-go-live/08-migrate-lock-schema-check.md (read it from the 
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-17 08:49Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-17 12:46Z by leader
+- **Comments-seen:** 1
 
 Spec: .team/epics/E06-go-live/09-image-scan-secret-hygiene.md (read it from the repo root).
 
 #### Comments
+- 2026-10-17 12:46Z · leader · unblocked: T-086 merged. Read the items added at the bottom of the spec (N1-N3 from the T-086 QA, plus the T-022 QA robustness items).
 
 <!-- tasks:end -->
 
@@ -4105,3 +4113,4 @@ Spec: .team/epics/E06-go-live/09-image-scan-secret-hygiene.md (read it from the 
 - 2026-10-17 — T-022 slice 1 (production image, graceful shutdown, image smoke test, CI image job; PR #74, owner-approved) merged 764afe1. T-086 (prod config contract, S3 credential chain, migrate lock, Trivy) promoted to TODO. Six tasks accepted by the owner (T-032, T-059, T-060, T-072, T-079, T-085). T-020 (e2e) in progress (PR #75).
 - 2026-10-17 — T-020 (end-to-end Playwright journey in CI, PR #75) merged dbec4ce: 10 green runs, forced failure uploads the artifact. T-022 merged earlier; T-086 (prod config, slice 2) in progress. T-087 (P3) added for the T-020 QA nits. Owner: decide whether e2e (and image) become required checks.
 - 2026-10-17 — T-087 (e2e hardening, PR #79) merged ca0c169. T-086 slice (a) QA_PASS awaiting owner approval (Q-036). T-088 and T-089 follow T-086. Open owner items: Q-033 email provider and domain, Q-034 licence, accept T-020/T-022/T-061.
+- 2026-10-17 — T-086 (production config contract + S3 default credential chain, PR #78, owner-approved) merged 314fa5a. Owner accepted T-020, T-022, T-061, T-087. T-088 (migrate lock + schema check) and T-089 (image scan + secret hygiene + QA nits) are TODO. Q-033 (email provider/domain) and Q-034 (licence) still open.
