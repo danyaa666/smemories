@@ -10,18 +10,17 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 9 | T-021, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050 |
-| TODO | 1 | T-086 |
-| IN_PROGRESS | 1 | T-020 |
-| MERGED | 2 | T-022, T-061 |
+| BACKLOG | 10 | T-021, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-087 |
+| IN_PROGRESS | 1 | T-086 |
+| MERGED | 3 | T-020, T-022, T-061 |
 | DONE | 65 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-022 ([E06] Dockerfile, production config and migrations as a one-off task); T-061 ([E05] Web: template picker and print screen with device guidance)
+**Awaiting your review (MERGED):** T-020 ([E01] End-to-end smoke test of the M1 journey in CI (Playwright)); T-022 ([E06] Dockerfile, production config and migrations as a one-off task); T-061 ([E05] Web: template picker and print screen with device guidance)
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-032 (Approve merge of T-061 (template picker, print guide, public print-feedback counter, PR #71)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-035 (Approve merge of T-022 slice 1 (production Dockerfile, graceful shutdown, image smoke test, PR #74)?)
 
-_Board last written 2026-10-17 07:48Z_
+_Board last written 2026-10-17 08:46Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -1339,7 +1338,7 @@ Choose a template (thumbnails from sample renders), trigger export, show progres
 - 2026-10-09 01:42Z · leader · Superseded by D-24 (2026-10-09): export is browser print of HTML templates (T-056..T-061). The Go renderer (T-010, T-038) stays as the fallback and is not extended.
 
 ### T-020 — [E01] End-to-end smoke test of the M1 journey in CI (Playwright)
-- **Status:** IN_PROGRESS
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** infra
 - **Milestone:** M1
@@ -1347,11 +1346,11 @@ Choose a template (thumbnails from sample renders), trigger export, show progres
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-020-e01-end-to-end-smoke-test-of-the-m1-jour
-- **PR:** —
-- **Updated:** 2026-10-17 07:12Z by dev
-- **Comments-seen:** 1
+- **PR:** https://github.com/danyaa666/smemories/pull/75
+- **Updated:** 2026-10-17 08:46Z by leader
+- **Comments-seen:** 4
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/10-end-to-end-smoke-test-of-the-m1-journey-in.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1361,6 +1360,16 @@ One Playwright test drives the full M1 journey on the compose stack in CI: regis
 
 #### Comments
 - 2026-10-17 07:02Z · leader · unblocked: T-017, T-018 and T-061 are merged. Read the full spec (written 2026-10-17). The picker lists memory-book and navy-classic; template_id is saved with POST /api/yearbook/update. Use SMEM_ENV=test with the registered dev shortcut only in the e2e CI job.
+- 2026-10-17 08:35Z · dev · PR #75, head 18713a7 (develop incl. T-022 merged in, MERGEABLE CLEAN, CI all green). All 6 ACs met. Test: make up, make e2e (needs poppler); docs/e2e.md. AC3 evidence: 10 consecutive green e2e runs on this head (links in the PR body), job 1m37s-2m15s; earlier 10 on the pre-merge head too. Forced failure on a throwaway PR (closed): fails at 'STEP FAILED: 8 ...', artifact e2e-failure uploaded, no token in the log. Mutations (local): approve broken -> step 6, book-data drops a note -> step 8, A5 150mm -> step 8. Deviation: spec says pages 3+ceil(n/4) but step 3 picks memory-book (1 friend/page), so it asserts 3+n=6 (NOTES_PER_PAGE) and also the screen's data-book-ready. New npm dep: @playwright/test 1.64.0 (same release as tools/print-check's playwright) in tools/e2e only. Not done / for you: add e2e to branch protection (docs/ci.md); the throwaway account row stays in the DB (no delete-account endpoint).
+- 2026-10-17 08:45Z · qa · QA_PASS T-020, PR #75, head 18713a7 (CI 7/7 green). Evidence (all produced by me, own DB smem_test_qa020, Redis db 11, API :18081/:18082, web :14174/:14175; dev server/API/containers untouched; DB dropped and db 11 flushed at the end).
+  AC1: scripts/e2e.sh (what 'make e2e' runs after npm ci + browser install) -> journey green 3x back to back on one DB (6-7 s each, unique e2e-<run> emails). After 3 runs: yearbook/note/note_photo/media/profile/collection tables = 0 rows, user_tab = 3 (accounts stay by design); no new objects in the smemories-dev bucket (find -mmin). Did NOT run 'make e2e' itself (it would use .env DSN = owner's dev DB and clear smem:test:rl:* in Redis db 0).
+  AC2/CI: ci.yml e2e job: checkout/setup-go/setup-node/upload-artifact pinned by SHA, mysql/minio/valkey identical digests/tags to go-integration, npm cache on both lockfiles, artifact on if: failure() only. 10 jobs listed in the PR body verified via API: all success, head 18713a7, attempts 1..10, 1m37s-2m16s. Forced-failure run 39016073475 (closed PR #76/#77): job log 'STEP FAILED: 8. ... A5 is 420 x 595 pt, got 425.04,594.96', artifact e2e-failure (5 MB) downloaded and inspected: api.log, web.log, migrate.log, trace.zip, 2 PNG, error-context.md; no link token, cookie, secret or password in logs/error-context/api.log.
+  AC3: no waitForTimeout/sleep/wall-clock in tools/e2e (Date.now only seeds the unique run id; the only setTimeout in print-check lib.mjs is in startServer, not used by e2e). Under load: 8 busy loops 2x green (7.1 s, 7.2 s; 17 s total), then 24 busy loops (11 cores) 2x green (8.7 s, 7.1 s). Busy loops stopped by PID.
+  AC4 mutations (scratch copy, product broken, test must fail at the right step): (a) approve -> hidden: fails 'STEP FAILED: 6. the inbox ...' (inbox-card count 1 expected, got 0); (b) book-data drops last note: 'STEP FAILED: 8 ...' data-book-ready Expected 6 Received 5; (c) SIZES.A5 -> A4: step 8 'A5 is 420 x 595 pt, got 594.96,841.92'; (d) submit-note returns ok without inserting: step 6 ('1 waiting for you · 0 in your book' not visible); (e) memory template strips diacritics from message: step 8 'the PDF contains "Chúc bạn luôn khỏe ..."'. All messages actionable. Assertions reuse print-check inspect/savePdf/text/words.
+  AC5: grep SMEM_DEV_FIXED_OTP .github -> only e2e job (line 228 env + a comment); nothing in Dockerfile/docker/; API log shows env=test + 'dev fixed otp active'; docs/dev-shortcuts.md has the 'Used by' row and Remove row mentions scripts/e2e.sh + the job. Token scrub: forced failure inside step 5 (toHaveURL prints the page URL): console and error-context.md show /c/<token>, 0 raw tokens.
+  AC6: docs/e2e.md + README row + docs/ci.md present and match behaviour. web lint (eslint+prettier) and tsc clean.
+  Non-blocking observations: (1) scripts/e2e.sh run directly (not via make) fails at step 1 with a vague 'element(s) not found' after 5 registrations/hour from the same Redis (rate limit; make e2e resets it, CI has fresh Valkey) - maybe say so in docs/e2e.md or fail fast. (2) No guard against a non-local E2E_BASE_URL / SMEM_DB_DSN: the spec and script run against whatever they are given (script always uses 127.0.0.1, but 'make e2e' uses .env DSN = the dev DB, creating test accounts there). Suggest a loopback check in the spec and DSN note in docs. (3) Job timeout-minutes is 20, so the 5 min budget is only enforced by the Playwright 240 s limit; consider timeout-minutes 10. (4) The e2e-failure trace contains the link token, session cookies and password of a throwaway DB; the repo is public so any logged-in GitHub user can download it for 7 days - harmless today (runner and DB are gone) but worth knowing. (5) Playwright browsers are not cached in CI (install each run, job still ~2 min).
+- 2026-10-17 08:46Z · leader · merged dbec4ce (PR #75). Review: one Playwright journey (register -> book -> template -> link -> anonymous note -> approve/reorder -> A5 PDF checks -> revoke/sign-out) in its own CI job; 10 consecutive green runs, a forced failure uploads the e2e-failure artifact with no link token; QA mutated the product 5 ways and each failed at the matching step, stable under 24 busy loops; only the e2e job sets the dev OTP shortcut (SMEM_ENV=test); new dev dependency @playwright/test 1.64.0 (tools/e2e only) approved. For owner to check: docs/e2e.md; decide whether to add the e2e job to the required checks in branch protection (D-14 lists go, go-integration, web, security; image and e2e are not required yet). Known deviation from the spec: memory-book prints one friend per page, so 3+n pages. Follow-up T-087 for the hardening nits.
 
 ### T-021 — [E06] Transactional email provider and domain setup
 - **Status:** BACKLOG
@@ -3936,7 +3945,7 @@ Spec: .team/epics/E10-skills-alignment/12-lint-anchors-userfrom-guard.md (read i
 - 2026-10-17 07:02Z · human · accepted by owner
 
 ### T-086 — [E06] Production config contract, S3 credential chain, migrate lock and image scan (T-022 slice 2)
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** infra
 - **Milestone:** M2
@@ -3944,16 +3953,35 @@ Spec: .team/epics/E10-skills-alignment/12-lint-anchors-userfrom-guard.md (read i
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-086-e06-production-config-contract-s3-creden
 - **PR:** —
-- **Updated:** 2026-10-17 07:48Z by leader
+- **Updated:** 2026-10-17 08:40Z by dev
 - **Comments-seen:** 1
 
 Spec: .team/epics/E06-go-live/07-production-config-contract-s3-chain-migrate-lock-image-scan.md (read it from the repo root). Second half of T-022: requirements 4, 5, 6, 7 (scan), 9 of the T-022 spec.
 
 #### Comments
 - 2026-10-17 07:48Z · leader · unblocked: T-022 merged. Full spec in the file; read the added items at the bottom (including the smoke-test robustness item). Risk high: owner approval before merge. The real prod start still waits for T-021 (Q-033).
+
+### T-087 — [E01] E2E hardening: refuse non-local targets, tighter CI limits, clearer errors
+- **Status:** BACKLOG
+- **Priority:** P3
+- **Type:** tech-debt
+- **Milestone:** M1
+- **Depends-on:** T-020
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-17 08:46Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E01-foundation/11-e2e-hardening.md (read it from the repo root). Five non-blocking findings from the T-020 QA.
+
+#### Comments
 
 <!-- tasks:end -->
 
@@ -3998,3 +4026,4 @@ Spec: .team/epics/E06-go-live/07-production-config-contract-s3-chain-migrate-loc
 - 2026-10-17 — T-085 (lint anchors + auth.MustUser guard, PR #73) merged e15e5e0. Nothing is left in dev/QA; T-061 waits for the owner's approval (Q-032); T-020 starts after it.
 - 2026-10-17 — T-061 (template picker, print guide, public print-feedback counter, PR #71) merged fb4c83d, owner-approved. T-022 slice 1 (PR #74) is owner-approved but conflicts with develop: dev merges develop. T-020 (end-to-end Playwright journey) promoted to TODO. Open owner questions: Q-033 (email provider and domain), Q-034 (licence).
 - 2026-10-17 — T-022 slice 1 (production image, graceful shutdown, image smoke test, CI image job; PR #74, owner-approved) merged 764afe1. T-086 (prod config contract, S3 credential chain, migrate lock, Trivy) promoted to TODO. Six tasks accepted by the owner (T-032, T-059, T-060, T-072, T-079, T-085). T-020 (e2e) in progress (PR #75).
+- 2026-10-17 — T-020 (end-to-end Playwright journey in CI, PR #75) merged dbec4ce: 10 green runs, forced failure uploads the artifact. T-022 merged earlier; T-086 (prod config, slice 2) in progress. T-087 (P3) added for the T-020 QA nits. Owner: decide whether e2e (and image) become required checks.
