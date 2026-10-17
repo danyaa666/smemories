@@ -46,6 +46,7 @@ branch, no force pushes, no deletions. Do not require the `ci` workflow name; on
   runner. Tests create and drop their own `smem_test_*` databases.
 - Valkey 8 (Redis protocol, `docs/redis.md`) is also a `docker run`, with the digest-pinned image and the flags of `docker-compose.yml` (AOF, `noeviction`); keep the digest in both files in step. `SMEM_TEST_REDIS_URL` in the job `env` points the tests at it; each test uses its own key prefix and cleans up. The `go` job needs no Redis.
 - MinIO is started the same way (fake credentials, `SMEM_TEST_S3_*` in the job `env`); the storage tests create the bucket on first use and delete the objects they write.
+- `e2e` (T-020, [e2e.md](e2e.md)): the M1 journey in Chromium against the built web app and the real API on the same three services (MinIO also gets its bucket). It is the only job that sets `SMEM_DEV_FIXED_OTP` (the API runs with `SMEM_ENV=test`). Not a required check until it has run green ten times in a row; on failure it uploads the Playwright trace, a screenshot and the API log (`e2e-failure`). Local: `make up`, `make e2e`.
 - Dependabot ([`.github/dependabot.yml`](../.github/dependabot.yml)) opens one grouped weekly pull request per ecosystem
   (`gomod`, `npm` in `/web`, `github-actions`) against `develop`.
 - Making `npm audit` blocking: delete `continue-on-error: true` in the `security` job once the dependency tree is clean.
