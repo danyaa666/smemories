@@ -11,17 +11,16 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 11 | T-021, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-088, T-089 |
-| IN_PROGRESS | 1 | T-087 |
 | QA_PASS | 1 | T-086 |
-| MERGED | 3 | T-020, T-022, T-061 |
+| MERGED | 4 | T-020, T-022, T-061, T-087 |
 | DONE | 65 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-020 ([E01] End-to-end smoke test of the M1 journey in CI (Playwright)); T-022 ([E06] Dockerfile, production config and migrations as a one-off task); T-061 ([E05] Web: template picker and print screen with device guidance)
+**Awaiting your review (MERGED):** T-020 ([E01] End-to-end smoke test of the M1 journey in CI (Playwright)); T-022 ([E06] Dockerfile, production config and migrations as a one-off task); T-061 ([E05] Web: template picker and print screen with device guidance); T-087 ([E01] E2E hardening: refuse non-local targets, tighter CI limits, clearer errors)
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-032 (Approve merge of T-061 (template picker, print guide, public print-feedback counter, PR #71)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-035 (Approve merge of T-022 slice 1 (production Dockerfile, graceful shutdown, image smoke test, PR #74)?); Q-036 (Approve merge of T-086 slice (a): production config contract and S3 default credential chain (PR #78, adds the AWS SDK config module)?)
 
-_Board last written 2026-10-17 09:21Z_
+_Board last written 2026-10-17 09:28Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -3996,7 +3995,7 @@ Spec: .team/epics/E06-go-live/07-production-config-contract-s3-chain-migrate-loc
 - 2026-10-17 09:21Z · leader · Leader review OK on 5c9c514 (+ QA test-only commit 9e53864), slice (a): contract in internal/config/prod.go refuses ~45 missing/unsafe values by name without echoing secrets, 7 rules each proven by a failing test when disabled, all 49 SMEM_* variables documented with a test that fails on a planted variable, S3 default chain works for env, ECS-style container credentials and static MinIO keys with exactly 3 attempts (refused port 3.7 s, silent server capped at 60 s), the four escape hatches default off and cannot silence the dev-OTP guard or the log-mailer refusal, new modules are AWS SDK only (Apache-2.0, tidy+verify clean), image 48 MiB; CI green. QA's three non-blocking findings (opt-out WARN only in the API; URL userinfo echoed in two errors; http:// S3 endpoint and silent static-key override accepted in prod) are added to T-089's spec so they ship before go-live. Waiting for owner approval (Risk high). Nothing to migrate.
 
 ### T-087 — [E01] E2E hardening: refuse non-local targets, tighter CI limits, clearer errors
-- **Status:** IN_PROGRESS
+- **Status:** MERGED
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -4004,16 +4003,24 @@ Spec: .team/epics/E06-go-live/07-production-config-contract-s3-chain-migrate-loc
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-087-e01-e2e-hardening-refuse-non-local-targe
-- **PR:** —
-- **Updated:** 2026-10-17 09:10Z by dev
-- **Comments-seen:** 1
+- **PR:** https://github.com/danyaa666/smemories/pull/79
+- **Updated:** 2026-10-17 09:28Z by leader
+- **Comments-seen:** 4
 
 Spec: .team/epics/E01-foundation/11-e2e-hardening.md (read it from the repo root). Five non-blocking findings from the T-020 QA.
 
 #### Comments
 - 2026-10-17 09:10Z · leader · promoted: dev is idle while T-086 is in QA; spec 11-e2e-hardening.md
+- 2026-10-17 09:24Z · dev · PR #79: guard.mjs (URL+DB name, run by e2e.sh and playwright config, guard-test), 429 message at step 1, make e2e now uses own DB smem_test_e2e (CI smem_e2e), CI timeout 10, Chromium cache, retention 3 d, docs. Evidence in PR; all 6 CI jobs green. Not run: make e2e itself (its reset-limits clears Redis db 0). Cache hit only shows on the 2nd CI run.
+- 2026-10-17 09:28Z · qa · QA_PASS T-087, PR #79 head a6c1412. Own DB smem_test_qa087 (dropped), Redis db 9 (flushed), ports 18180/14273, no dev stack touched.
+  AC1: node tools/e2e/guard.mjs exits 2 with a clear message for https://example.com, 192.168.1.10, localhost.evil.com, localhost@evil.com, localhost:1@evil.com (host=evil.com), DSN .../smemories, empty db name. smem_e2e_x and smem_testing pass (prefix match, as specced). E2E_ALLOW_REMOTE=1 + example.com passes the URL check; with DSN smemories it still refuses. scripts/e2e.sh with bad DSN or bad URL exits 2 before port check, mktemp, out dir, build or start (no out dir created, process count unchanged). playwright.config.mjs also refuses (npx playwright test --list, both cases). guard-test: 3/3 pass; mutating a scratch copy (override ignoring flag, host check always true, DB check off, regex anchor removed, override widened to DB) makes it fail every time.
+  AC2: ran scripts/e2e.sh 7x on one Redis db: runs 1-5 green, run 6 and 7 fail at step 1 with 'registration is rate limited (5 per hour per address): run make reset-limits SMEM_ENV=test ..., or point SMEM_REDIS_URL at a fresh Redis db'.
+  AC3/AC5: local green runs 5/5 (1 test, ~6s, journey unchanged: only the 429 wait added in step 1). make -n e2e in the worktree: guard-test, CREATE DATABASE smem_test_e2e, reset-limits SMEM_ENV=test, DSN sed rewrite (/[^/?]*(\?.*)?$ -> smem_test_e2e, params kept), scripts/e2e.sh; plain make e2e not run on purpose. CI: job timeout 10, retention-days 3, actions/cache pinned to 55cc834 = tag v6.1.0 (verified via API), all other external actions pinned by SHA (grep), cache key playwright-OS-hash(package-lock.json) with exact @playwright/test 1.64.0 pinned, so version-keyed; playwright install still runs after restore (safe on hit or miss); SMEM_DEV_FIXED_OTP set only in the e2e job (grep: ci.yml:228 only). CI on this head: 6 checks (e2e, go, go-integration, image, security, web) all pass, not 7 as stated; e2e steps incl. cache and guard-test green, artifact step skipped.
+  AC4: docs/e2e.md matches behaviour (guards, override, rate-limit message, 3-day retention, smem_test_e2e).
+  Non-blocking: (a) guard bypass: dbName() takes text after the LAST '/', so DSN '.../smemories?x=/smem_e2e' passes (needs a deliberately crafted DSN; fix: cut at '?' first, then take after last '/'). (b) the same rule falsely refuses a legit DSN with a slash in params (loc=Europe/Berlin): fails closed. (c) guard.test has no localhost.evil.com case (mutating the allowlist to add it is not caught). (d) cache HIT path not observed (only a cold run on this head); install after restore is idempotent.
+- 2026-10-17 09:28Z · leader · merged ca0c169 (PR #79). Review: tools/e2e/guard.mjs refuses non-local base URLs and databases not named smem_e2e*/smem_test* before anything is created (script and playwright config), rate-limited register gives a make reset-limits message, CI timeout 10 min, Chromium cached (actions/cache pinned by SHA), artifact retention 3 days; QA: guard mutation-tested, 5/5 local green runs, CI green. For owner to check: make e2e now uses its own database smem_test_e2e. Open (QA, not blocking): dbName() reads after the last '/', so a DSN like .../smemories?x=/smem_e2e slips past the guard (cut at '?' first) and loc=Europe/Berlin is wrongly refused; no localhost.evil.com test case; the cache-hit path is unseen. Fix them with the next change that touches tools/e2e.
 
 ### T-088 — [E06] smemories-migrate lock, API schema-version check and deploy order (T-022 slice 3)
 - **Status:** BACKLOG
@@ -4097,3 +4104,4 @@ Spec: .team/epics/E06-go-live/09-image-scan-secret-hygiene.md (read it from the 
 - 2026-10-17 — T-061 (template picker, print guide, public print-feedback counter, PR #71) merged fb4c83d, owner-approved. T-022 slice 1 (PR #74) is owner-approved but conflicts with develop: dev merges develop. T-020 (end-to-end Playwright journey) promoted to TODO. Open owner questions: Q-033 (email provider and domain), Q-034 (licence).
 - 2026-10-17 — T-022 slice 1 (production image, graceful shutdown, image smoke test, CI image job; PR #74, owner-approved) merged 764afe1. T-086 (prod config contract, S3 credential chain, migrate lock, Trivy) promoted to TODO. Six tasks accepted by the owner (T-032, T-059, T-060, T-072, T-079, T-085). T-020 (e2e) in progress (PR #75).
 - 2026-10-17 — T-020 (end-to-end Playwright journey in CI, PR #75) merged dbec4ce: 10 green runs, forced failure uploads the artifact. T-022 merged earlier; T-086 (prod config, slice 2) in progress. T-087 (P3) added for the T-020 QA nits. Owner: decide whether e2e (and image) become required checks.
+- 2026-10-17 — T-087 (e2e hardening, PR #79) merged ca0c169. T-086 slice (a) QA_PASS awaiting owner approval (Q-036). T-088 and T-089 follow T-086. Open owner items: Q-033 email provider and domain, Q-034 licence, accept T-020/T-022/T-061.
