@@ -11,16 +11,15 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 9 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-090 |
-| READY_FOR_QA | 1 | T-021 |
-| QA_PASS | 2 | T-088, T-089 |
+| QA_PASS | 3 | T-021, T-088, T-089 |
 | DONE | 70 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
 **Awaiting your review (MERGED):** nothing
 
-**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-032 (Approve merge of T-061 (template picker, print guide, public print-feedback counter, PR #71)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-035 (Approve merge of T-022 slice 1 (production Dockerfile, graceful shutdown, image smoke test, PR #74)?); Q-036 (Approve merge of T-086 slice (a): production config contract and S3 default credential chain (PR #78, adds the AWS SDK config module)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-038 (Approve merge of T-088: smemories-migrate advisory lock and API schema-version check (PR #80)?); Q-039 (Approve merge of T-089: image scan (Trivy + SBOM), secret hygiene and config hardening (PR #81)?)
+**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-032 (Approve merge of T-061 (template picker, print guide, public print-feedback counter, PR #71)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-035 (Approve merge of T-022 slice 1 (production Dockerfile, graceful shutdown, image smoke test, PR #74)?); Q-036 (Approve merge of T-086 slice (a): production config contract and S3 default credential chain (PR #78, adds the AWS SDK config module)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-038 (Approve merge of T-088: smemories-migrate advisory lock and API schema-version check (PR #80)?); Q-039 (Approve merge of T-089: image scan (Trivy + SBOM), secret hygiene and config hardening (PR #81)?); Q-040 (Approve merge of T-021: Amazon SES mailer behind a provider-neutral interface (PR #82)?)
 
-_Board last written 2026-10-17 14:01Z_
+_Board last written 2026-10-17 14:28Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -462,6 +461,13 @@ Context: Amazon SES (D-29) needs a verified domain to send from, with DKIM/SPF/D
 - **Status:** OPEN
 - **Asked:** 2026-10-17 13:56Z
 - **Blocks:** T-089
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+### Q-040 — Approve merge of T-021: Amazon SES mailer behind a provider-neutral interface (PR #82)?
+- **Status:** OPEN
+- **Asked:** 2026-10-17 14:28Z
+- **Blocks:** T-021
 - **Recommendation:** approve
 - **Answer:** _(pending)_
 
@@ -1406,7 +1412,7 @@ One Playwright test drives the full M1 journey on the compose stack in CI: regis
 - 2026-10-17 12:46Z · human · accepted by owner
 
 ### T-021 — [E06] Transactional email provider and domain setup
-- **Status:** READY_FOR_QA
+- **Status:** QA_PASS
 - **Priority:** P2
 - **Type:** infra
 - **Milestone:** M2
@@ -1414,11 +1420,11 @@ One Playwright test drives the full M1 journey on the compose stack in CI: regis
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** leader
 - **Branch:** task/t-021-e06-transactional-email-provider-and-dom
 - **PR:** https://github.com/danyaa666/smemories/pull/82
-- **Updated:** 2026-10-17 14:00Z by dev
-- **Comments-seen:** 4
+- **Updated:** 2026-10-17 14:28Z by qa
+- **Comments-seen:** 6
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E06-go-live/01-transactional-email-provider-and-domain-setup.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1431,6 +1437,30 @@ Replace LogMailer with a real provider (SES is the natural fit on AWS) including
 - 2026-10-17 12:54Z · leader · Owner request (2026-10-17): build an interface and implement one for SES; others may come later. Added as requirement 9 and AC8 of the spec: application code depends only on mailer.Mailer and provider-neutral types/errors; SES is one implementation; one mailer.New switch on SMEM_MAIL_PROVIDER; provider settings under SMEM_<PROVIDER>_*; a shared conformance test (mailertest.Run) run by SES and the log mailer; no second provider now.
 - 2026-10-17 14:00Z · dev · PR #82 head ef4157d. One PR, all of AC1-AC8 in code (nothing deferred): provider-neutral seam (mailer.New switch, ses.go only file with SES names, mailertest.Run run by SES-on-stub and log mailer, seam guard test), SES on SESv2 stub, config/prod contract + production-config rows, background register/forgot with 2 retries + smem_mail_send_failures_total{class}, resend 503 ERROR_MAIL_UNAVAILABLE / 400 ERROR_EMAIL_UNDELIVERABLE (try refunded on outage), en/vi text+HTML with golden files, openapi/schema.d.ts/Postman/web texts, docs/email.md runbook. Green locally: go vet, golangci-lint, go test -race ./..., -tags integration ./..., web lint/typecheck/i18n/check:api/vitest 348, make image-smoke (private tag), image 52 MiB (<60). Not done/unverifiable: real SES send; newman not run; e2e job not run locally. Open points for leader/owner (details in PR): (1) AWS docs say suppressed addresses are accepted-and-dropped, not rejected: runbook asks owner to test suppressionlist@simulator in sandbox; (2) AccountSuspended/SendingPaused -> ErrRejected per spec shows students 'undeliverable'; (3) metric is smem_mail_send_failures_total; (4) smithy-go moved to a direct dependency; (5) Vietnamese strings listed in the PR description. Owner approval needed before merge (risk high).
 - 2026-10-17 14:00Z · dev · PR #82 ef4157d: seam + SES (stub-tested) + auth wiring + content + docs + web. QA: probe stub throttling/5xx/blackhole, register latency with slow provider, forgot-password anti-enumeration, logs for address/code, prod start refusals, image size; real SES send unverified.
+- 2026-10-17 14:28Z · qa · QA_PASS T-021, PR #82 head ef4157d. CI 6/6 green on the head (image job failed once on `migrate status | grep -q` in image-smoke, passed on rerun and locally: see obs 9). Real SES send NOT verified (no AWS account); everything below ran against my own SESv2 stub (private MySQL 8.4 with the compose flags, Valkey, MinIO, private image tag, ports 13306/16379/19000/18080-18082; owner stack untouched; all removed).
+  
+  EVIDENCE (AC -> how -> result)
+  AC1 SES shape/signing/mapping: real API binary with AWS_ENDPOINT_URL_SESV2 -> own stub (not the dev stub). Request: POST /v2/email/outbound-emails, FromEmailAddress "SMemories <no-reply@...>", Destination.ToAddresses, Content.Simple Subject/Text/Html (UTF-8), ConfigurationSetName; SigV4 AWS4-HMAC-SHA256 Credential=<env key>/<date>/eu-west-1/ses/aws4_request. Map via resend-verification: 429 TooManyRequests, 503, 500, 400 LimitExceeded -> 503 ERROR_MAIL_UNAVAILABLE + Retry-After 30 (3 attempts at the stub, ~2-3 s); MessageRejected/AccountSuspended/SendingPaused -> 400 ERROR_EMAIL_UNDELIVERABLE (1 attempt); BadRequest/NotFound/AccessDenied -> 500 class other. Hung endpoint cut at 10.0 s (503), blackholed 192.0.2.1 cut at 10.0 s, connection refused 503 in 3.9 s. 429 body mentions no address in logs (reason = class + SES code only).
+  AC2: 5 s sleeping stub: register 24 ms, forgot-password 2 ms; resend blocks 5 s (by design, max 10 s). Forgot-password x30 each (known, unknown, known+stub rejecting): byte-identical body {"status":"OK","data":{}} and identical header sets; mean 1.38 / 1.18 / 1.38 ms (unknown ~0.2 ms faster, noise over a network). Background 503: register in 30 ms, then 9 stub hits (3 Sends x 3 SDK attempts, waits 2 s and 5 s), exactly one ERROR "verification email not sent" (request_id, user_id, class), smem_mail_send_failures_total{class="unavailable"} 1.
+  AC3: real binary SMEM_ENV=prod: provider log / empty / sendgrid, From empty / malformed / example.com / .invalid / localhost / two addresses -> refused naming SMEM_MAIL_PROVIDER or SMEM_MAIL_FROM; missing AWS_REGION refused ("no AWS region"); SMEM_DEV_FIXED_OTP refused; valid prod env starts and listens. Config tests + production-config doc test pass.
+  AC4: golden en/vi x verify/reset pass; Chrome at 320 and 1280: no horizontal overflow, 1 h1, lang set, 1.1-1.4 KB, no network request, code readable. Display name <script> is escaped. Logs at debug level during all runs: grep for every code in the saved .eml files, the 8 test addresses, AKIA key id, secret key, From address, Signature=: 0 hits. Fixed OTP: prod refuses to start; mails carry the real random code.
+  AC5: docs/email.md reviewed (obs 6-8); dev-shortcuts.md untouched.
+  AC6: openapi/schema.d.ts/Postman/web strings present. Chrome (Playwright on real Chrome) en and vi at 320/375/1280, stub 503 and reject: correct text, no overflow, button stays enabled. Newman auth Full flow + Edge cases (incl. Mail 1-3): 89 requests 191 assertions 0 failed, twice (the Google folder fails only because SMEM_GOOGLE_* is not configured in my instance). The mailFailure=unavailable|rejected variants of Mail 2 I checked by curl, not by Newman.
+  AC7: make lint build test exit 0; go test -race -tags integration ./... all ok (on MySQL with the compose flags; my first run on a stock MySQL failed only TestUTF8MB4RoundTrip on time_zone, my environment); make image-smoke passes, image filesystem 52 MiB; mailer/auth/config/metrics -race -count=5 stable; CI 6/6 incl. image and e2e.
+  AC8: grep: sesv2/AWS imports only in ses.go (+tests); SES error names only ses.go/ses_test.go; SMEM_MAIL_PROVIDER read by internal/config loader, mailer.New switches on it. mailertest.Run run by SES-on-stub and log mailer. Throwaway bad mailers (ignores deadline, leaks recipient in logs, generic error for throttling, drops HTML, sends on cancelled ctx) each FAIL the suite with a clear message (scratch file removed, nothing committed). Load: 500 concurrent registrations then 500 forgot-passwords against an always-503 stub: HTTP all 200, max 362 ms; goroutines peak ~550, back to baseline once retries end (about 12 s), 3 more storms stable (52-53), idle pool drops to 31; heap 150 MB peak (mostly argon2 registers), no growth.
+  
+  OBSERVATIONS (non-blocking; 1 and 2 recommended before the first real deploy, fold into T-090)
+  1. [major-ish] svc.Wait() in main.go is not bounded by SMEM_SHUTDOWN_TIMEOUT. Repro: stub in hang mode, register, SIGTERM at once: process exits after 36.4 s (3 sends x 10 s + 2 s + 5 s waits) > Fargate stop timeout 30 s (SIGKILL) and > the documented 25 s budget; with a 503 stub 7.2 s. Before this PR the wait was at most one 10 s send. Fix: cancel the background ctx or bound Wait by the remaining shutdown budget; or document. Not in docs/container.md or email.md.
+  2. [classification] MessageRejected is also what SES answers for an unverified sender identity and for any non-verified recipient while the account is still in the sandbox. That is a platform misconfiguration but becomes class "rejected": the student gets "address cannot receive mail" and email.md says alarm only on unavailable/other and "rejected only in bulk". Day-one sandbox = every sign-up silently rejected, no alarm. Suggest alarming on rejected too (or ratio) in T-024 and logging the reason distinctly. Also as the leader planned: AccountSuspended/SendingPaused currently -> ErrRejected -> 400 ERROR_EMAIL_UNDELIVERABLE (confirmed by running it), 1 attempt, class rejected: to move to ErrUnavailable in T-090.
+  3. Retry multiplication: 3 delivers x 3 SDK attempts = 9 SES calls per failed background mail, against an SES that is throttling (sandbox is 1 msg/s). In spec terms fine, but it deepens throttling.
+  4. resend-verification refunds the try on ErrUnavailable and has no other cap: 6 consecutive resends under a 503 stub all went through (each 2-3.5 s, 3 SES calls each), the 3/h limit applied again once the stub recovered. An authenticated user can hammer SES while it is throttling. Consider a per-IP cap or refund only once per window.
+  5. No global bound on in-flight background mails (goroutine per register/forgot, each up to 90 s); bounded in practice only by the rate limiters (code comment says so). Metric series are created on first failure (no zero series per class), fine for rate() alarms.
+  6. Retried background mail re-sends the same code; if the student presses "send a new code" meanwhile, the late retry delivers a dead code (the new one invalidated the old). Rare, only during provider trouble.
+  7. email.md AWS facts: DKIM CNAME, MAIL FROM MX/SPF, DMARC p=none start, suppression list accepted-and-dropped caveat with the simulator test, 5%/0.1% review and 10%/0.5% pause thresholds are correct. Check/flag: (a) while in the sandbox SES authorises SendEmail against recipient identities too, so the IAM statement with only the sender identity may need the verified test recipients' identity ARNs during the sandbox phase (verify at the step-8 sandbox test); (b) configuration set TlsPolicy=REQUIRE makes SES bounce mail to a recipient server without STARTTLS: OPTIONAL is safer for a school-mail audience; (c) put-account-details is named without its flags.
+  8. Seam: adding a provider is plausible from the checklist, but it would also touch internal/config (Config struct and loadMail compare to "ses" in the prod rule), mailer.Config (a SES field) and cmd/smemories-api/main.go (builds mailer.SESConfig); the checklist step 2 says "nothing else reads the provider name", which is not literally true. Spec mention of SMEM_AWS_REGION is not implemented (only AWS_REGION), harmless.
+  9. CI image job flake: scripts/image-smoke.sh does `smemories-migrate status | grep -q ' applied '` under pipefail; grep -q can close the pipe early and fail the pipeline. Failed once on the head (migrate up passed twice before), passed on rerun and locally. Fold into T-090 AC5.
+  10. Vietnamese strings for the owner (not judged): subjects "Mã xác minh SMemories của bạn", "Mã đặt lại mật khẩu SMemories của bạn"; body "Chào {name}," / "Chào mừng bạn đến với SMemories! Mã xác minh của bạn là:" / "Hãy nhập mã này vào ứng dụng để xác nhận địa chỉ email. Mã có hiệu lực trong 30 phút. Không chia sẻ mã này với bất kỳ ai." / "Nếu bạn không tạo tài khoản này, hãy bỏ qua email này."; reset: "Có người đã yêu cầu đặt lại mật khẩu cho tài khoản SMemories của bạn. Mã đặt lại của bạn là:" / "...chọn mật khẩu mới. Mã có hiệu lực trong 15 phút..." / "Sau đó bạn sẽ cần đăng nhập lại trên tất cả thiết bị. Nếu không phải bạn, hãy bỏ qua email này: mật khẩu của bạn không thay đổi."; web: "Hiện chúng tôi chưa gửi được email. Vui lòng thử lại sau vài phút." and "Chúng tôi không gửi được email tới địa chỉ này. Vui lòng kiểm tra lại địa chỉ email của bạn." Validity (30 verify, 15 reset) is the real TTL, checked in live mails. Diacritics render correctly in Chrome and in the saved .eml (quoted-printable UTF-8).
+- 2026-10-17 14:28Z · leader · Leader review OK on ef4157d: mailer.Mailer stays the only seam (ses.go is the only file with SES names, enforced by a test; mailertest.Run fails 5 deliberately bad mailers), SES mailer with the T-086 timeouts and at most 3 attempts, register and forgot-password never wait on the provider (5 s stub), forgot-password byte-identical for known/unknown/rejected addresses, no address/code/secret in logs, goroutines flat under 500 failing background mails, prod refuses a non-SES provider or bad SMEM_MAIL_FROM, en/vi text+HTML golden files; CI green on the head. QA's three go-live findings (shutdown wait unbounded, sandbox/unverified-sender MessageRejected classed as rejected, uncapped refunded resend tries) plus the AccountSuspended mapping and the SES suppression-list behaviour are tracked in T-090 items 8-12 and must ship before the first real deploy. Waiting for owner approval (Risk high). After merge: the real SES send stays unverified until the owner has an AWS account, a verified domain and the sandbox exit (docs/email.md; Q-037).
 
 ### T-022 — [E06] Dockerfile, production config and migrations as a one-off task
 - **Status:** DONE
@@ -4122,7 +4152,7 @@ Spec: .team/epics/E06-go-live/09-image-scan-secret-hygiene.md (read it from the 
 
 ### T-090 — [E06] Migrate docs fixes, half-applied migration guidance and image-smoke robustness
 - **Status:** BACKLOG
-- **Priority:** P3
+- **Priority:** P2
 - **Type:** tech-debt
 - **Milestone:** M2
 - **Depends-on:** T-089
@@ -4132,7 +4162,7 @@ Spec: .team/epics/E06-go-live/09-image-scan-secret-hygiene.md (read it from the 
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-17 13:39Z by leader
+- **Updated:** 2026-10-17 14:28Z by leader
 - **Comments-seen:** 0
 
 Spec: .team/epics/E06-go-live/10-migrate-docs-and-smoke-robustness.md (read it from the repo root). Five non-blocking findings of the T-088 QA.
