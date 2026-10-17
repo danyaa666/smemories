@@ -11,17 +11,17 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 11 | T-021, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-088, T-089 |
-| TODO | 1 | T-087 |
-| IN_QA | 1 | T-086 |
+| IN_PROGRESS | 1 | T-087 |
+| QA_PASS | 1 | T-086 |
 | MERGED | 3 | T-020, T-022, T-061 |
 | DONE | 65 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
 **Awaiting your review (MERGED):** T-020 ([E01] End-to-end smoke test of the M1 journey in CI (Playwright)); T-022 ([E06] Dockerfile, production config and migrations as a one-off task); T-061 ([E05] Web: template picker and print screen with device guidance)
 
-**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-032 (Approve merge of T-061 (template picker, print guide, public print-feedback counter, PR #71)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-035 (Approve merge of T-022 slice 1 (production Dockerfile, graceful shutdown, image smoke test, PR #74)?)
+**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-032 (Approve merge of T-061 (template picker, print guide, public print-feedback counter, PR #71)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-035 (Approve merge of T-022 slice 1 (production Dockerfile, graceful shutdown, image smoke test, PR #74)?); Q-036 (Approve merge of T-086 slice (a): production config contract and S3 default credential chain (PR #78, adds the AWS SDK config module)?)
 
-_Board last written 2026-10-17 09:10Z_
+_Board last written 2026-10-17 09:21Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -433,6 +433,13 @@ Context: github.com/danyaa666/smemories is public (D-09) but has no LICENSE file
 - **Status:** OPEN
 - **Asked:** 2026-10-17 01:02Z
 - **Blocks:** T-022
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+### Q-036 — Approve merge of T-086 slice (a): production config contract and S3 default credential chain (PR #78, adds the AWS SDK config module)?
+- **Status:** OPEN
+- **Asked:** 2026-10-17 09:21Z
+- **Blocks:** T-086
 - **Recommendation:** approve
 - **Answer:** _(pending)_
 
@@ -3947,7 +3954,7 @@ Spec: .team/epics/E10-skills-alignment/12-lint-anchors-userfrom-guard.md (read i
 - 2026-10-17 07:02Z · human · accepted by owner
 
 ### T-086 — [E06] Production config contract, S3 credential chain, migrate lock and image scan (T-022 slice 2)
-- **Status:** IN_QA
+- **Status:** QA_PASS
 - **Priority:** P2
 - **Type:** infra
 - **Milestone:** M2
@@ -3955,11 +3962,11 @@ Spec: .team/epics/E10-skills-alignment/12-lint-anchors-userfrom-guard.md (read i
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** leader
 - **Branch:** task/t-086-e06-production-config-contract-s3-creden
 - **PR:** 78
-- **Updated:** 2026-10-17 09:10Z by qa
-- **Comments-seen:** 4
+- **Updated:** 2026-10-17 09:21Z by qa
+- **Comments-seen:** 6
 
 Spec: .team/epics/E06-go-live/07-production-config-contract-s3-chain-migrate-lock-image-scan.md (read it from the repo root). Second half of T-022: requirements 4, 5, 6, 7 (scan), 9 of the T-022 spec.
 
@@ -3968,9 +3975,28 @@ Spec: .team/epics/E06-go-live/07-production-config-contract-s3-chain-migrate-loc
 - 2026-10-17 08:49Z · dev · Slice (a) PR #78 head 5c9c514. Claims AC3, AC4, AC-A, AC8 (T-022 numbering). REMAINING: AC5 (migrate lock + API schema-version check + deploy order/expand-contract docs), AC6 Trivy/SBOM/make image-scan, AC7 secret-hygiene check, AC-B, and the QA-added items (Dockerfile syntax digest, MinIO digest, readyz drain WARN once, upload-vs-drain doc note, smoke migrate-status robustness). DEPENDENCY FLAG: added github.com/aws/aws-sdk-go-v2/config (+ imds/sso/ssooidc/sts/signin indirect), the only way to get the AWS default credential chain the spec requires; decide if not wanted. New opt-out vars (default off, in docs/production-config.md): SMEM_DB_ALLOW_INSECURE, SMEM_REDIS_ALLOW_INSECURE, SMEM_METRICS_ALLOW_ANY_INTERFACE, SMEM_DB_TLS_CA_FILE.
 - 2026-10-17 08:49Z · dev · Slice (a) only, PR #78. QA: go test ./internal/config ./internal/storage ./internal/db; make image-smoke; try the prod loader with each var removed/unsafe per docs/production-config.md. Slices (b) migrate lock and (c) scan follow on this task.
 - 2026-10-17 08:49Z · leader · Leader: PR #78 is slice (a) only and T-086 ends with it. The remaining requirements moved into two new tasks with their own specs: T-088 (migrate lock + API schema-version check + deploy order docs) and T-089 (Trivy + SBOM + image-scan + secret hygiene + the QA robustness items). Dependency decision: github.com/aws/aws-sdk-go-v2/config (+ credential modules) approved, recorded as L-13 (same vendor and major version as the S3 client, needed for the default credential chain). QA: verify AC3, AC4, AC-A, AC8 only.
+- 2026-10-17 09:21Z · qa · QA_PASS slice (a), PR #78 head 5c9c514 (+ my test-only commit 9e53864 on the branch). Scope: AC3, AC4, AC-A, AC8 only. CI on 5c9c514: e2e, go, go-integration, image, security, web all pass.
+  EVIDENCE
+  - AC-A/AC3 refusals: built smemories-api/migrate/backfill, ran with SMEM_ENV=prod from a clean env, one value changed at a time, seeded secret markers and grepped output. Refused naming the variable: origins http (also mixed list), origins unset, PUBLIC_BASE_URL http/unset, DSN no tls / tls=false / skip-verify / preferred / garbage / unset, redis://, rediss without credentials, redis unset, OTP key 29 and 30 bytes and unset, Google on without/with short cookie key, bucket unset, only one of S3 access/secret key, DEV_FIXED_OTP (also with SMEM_ENV empty), metrics 0.0.0.0, :9090, [::], 8.8.8.8, hostname, [::ffff:0.0.0.0], 100.64.x, fe80 zone, memory limit unset or 10, bad bool for the escape hatches, missing CA file, CA dir, non-PEM CA file, SMEM_ENV=production. Accepted (correct): rediss+password in URL or SMEM_REDIS_PASSWORD, loopback/localhost/10.x metrics, SMEM_TRUST_PROXY=true. Valid baseline reaches "mailer setup failed": the log mailer still refuses prod, also with all three escape hatches on. Migrate and backfill apply the DB TLS, S3 pair and bucket rules too (doc says so).
+  - No secret echoed in any refusal (markers for DB password, redis password, OTP key, OIDC key, Google secret, S3 keys never appeared). Only exception, pre-existing wording not touched by this PR: a SMEM_PUBLIC_BASE_URL containing user:pass@ is echoed (see N2).
+  - Escape hatches: SMEM_DB_ALLOW_INSECURE, SMEM_REDIS_ALLOW_INSECURE, SMEM_METRICS_ALLOW_ANY_INTERFACE default false, parsed strictly (yes -> refused), each honoured only for its own rule; SMEM_DEV_FIXED_OTP with all three on is still refused, mailer refusal unchanged. The API logs WARN "production safety opt-out is on" with the variable name (before any other refusal). SMEM_DB_TLS_CA_FILE: real verification proven against my private MySQL 8.4 (CA file given: handshake rejected on IP SAN; tls=true: rejected on self-signed cert; skip-verify refused); tlsca_test covers the positive path.
+  - Mutation check: disabling in turn the origin scheme, DSN tls, privateHost, rediss, redis credentials, memory limit and S3 pair checks each makes `go test ./internal/config` fail (TestProdContractRefusals is real).
+  - AC3 doc: 49 SMEM_ variables in internal/config = 49 rows in docs/production-config.md (comm both directions empty). Planted getenv("SMEM_QA_PLANTED") in a scratch edit: TestEveryVariableIsDocumented fails naming it (reverted). Defaults and rules in the table checked against the code. Only other SMEM_ reads outside config are SMEM_TEST_* in test helpers.
+  - AC4: env credentials (AWS_ACCESS_KEY_ID) sign requests via the empty-key chain; static keys still sign (MinIO integration tests pass); ECS-style container credentials endpoint (AWS_CONTAINER_CREDENTIALS_FULL_URI + auth token) signs with the role key and session token (my TestQAContainerCredentialsEndpoint); a 503 server gets exactly 3 requests (TestQADefaultsRetries503ExactlyThreeTimes). Timings with shipped defaults: refused port 3.7 s total for 3 attempts (old ~25 s); a server that accepts and never answers 48 s (3 x 15 s header timeout + backoff, capped by the 60 s operation timeout; the old client had no header limit). No credential in error text.
+  - Deps: go mod tidy leaves go.mod/go.sum unchanged, go mod verify "all modules verified". New modules are only aws-sdk-go-v2 config, feature/ec2/imds, service/sso, ssooidc, sts, signin (Apache-2.0) plus patch bumps of aws-sdk-go-v2, smithy-go, credentials and internal modules; nothing else new. govulncheck: CI security job passes; locally (go1.26.1) only stdlib issues fixed in a newer Go and x/crypto, none in the AWS modules. Image 48 MiB (limit 60).
+  - AC8 + smoke: `make image-smoke` (own tag, private containers) passes end to end, including "prod start refuses the dev shortcut and a missing or short SMEM_OTP_KEY" and the new refusals (plaintext DB and Redis, http origins, missing memory limit, public metrics address, missing bucket); read-only root, upload, SIGTERM drain, exit 0 all ok.
+  - Mechanical: go build, go vet (+ integration tag), gofmt, golangci-lint 0 issues; go test -race ./... green; go test -race -tags integration ./... green on a private MySQL/Valkey/MinIO (ports 43306/46379 db13/49000; one db test needed the compose sql_mode and time zone, my setup, fixed). Web not re-run (no web change, CI web green). Private containers, network, image removed; owner stack untouched.
+  NON-BLOCKING OBSERVATIONS
+  N1 (minor) Only smemories-api logs the opt-out WARN. smemories-migrate and smemories-media-backfill honour SMEM_DB_ALLOW_INSECURE=true with no log line, so a mistaken task definition is silent there. Suggest logging it in both (T-088 touches migrate anyway).
+  N2 (minor, pre-existing wording) config errors for SMEM_PUBLIC_BASE_URL and SMEM_ALLOWED_ORIGINS echo the value with %q, which prints user:pass@ if an operator puts credentials in the URL. Suggest not echoing when u.User != nil.
+  N3 (minor) Not in the T-022 list: prod accepts an http:// SMEM_S3_ENDPOINT and static S3 keys silently; a static key wins over the task role. A stray key in the task definition would override the role with no log line.
+  N4 (note) SMEM_TRUST_PROXY policy is documentation only (loader allows true or false in prod), as the spec words it.
+  N5 (note) image-smoke refuse() checks only that the variable name appears in the output; the loader table test is the strict one.
+  Risk high: owner approval before merge. Not verified by design: migrate lock, schema-version check, Trivy/SBOM, secret hygiene, image pins (T-088/T-089).
+- 2026-10-17 09:21Z · leader · Leader review OK on 5c9c514 (+ QA test-only commit 9e53864), slice (a): contract in internal/config/prod.go refuses ~45 missing/unsafe values by name without echoing secrets, 7 rules each proven by a failing test when disabled, all 49 SMEM_* variables documented with a test that fails on a planted variable, S3 default chain works for env, ECS-style container credentials and static MinIO keys with exactly 3 attempts (refused port 3.7 s, silent server capped at 60 s), the four escape hatches default off and cannot silence the dev-OTP guard or the log-mailer refusal, new modules are AWS SDK only (Apache-2.0, tidy+verify clean), image 48 MiB; CI green. QA's three non-blocking findings (opt-out WARN only in the API; URL userinfo echoed in two errors; http:// S3 endpoint and silent static-key override accepted in prod) are added to T-089's spec so they ship before go-live. Waiting for owner approval (Risk high). Nothing to migrate.
 
 ### T-087 — [E01] E2E hardening: refuse non-local targets, tighter CI limits, clearer errors
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -3978,10 +4004,10 @@ Spec: .team/epics/E06-go-live/07-production-config-contract-s3-chain-migrate-loc
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-087-e01-e2e-hardening-refuse-non-local-targe
 - **PR:** —
-- **Updated:** 2026-10-17 09:10Z by leader
+- **Updated:** 2026-10-17 09:10Z by dev
 - **Comments-seen:** 1
 
 Spec: .team/epics/E01-foundation/11-e2e-hardening.md (read it from the repo root). Five non-blocking findings from the T-020 QA.
