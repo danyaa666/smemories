@@ -45,13 +45,7 @@ func main() {
 	}
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: cfg.LogLevel}))
 	logger.Info("starting", "version", version.Version, "commit", version.Commit)
-	if cfg.Env == "prod" { // the production contract's explicit opt-outs (docs/production-config.md); never expected on AWS
-		for name, on := range map[string]bool{"SMEM_DB_ALLOW_INSECURE": cfg.DBAllowInsecure, "SMEM_REDIS_ALLOW_INSECURE": cfg.RedisAllowInsecure, "SMEM_METRICS_ALLOW_ANY_INTERFACE": cfg.MetricsAllowAnyInterface} {
-			if on {
-				logger.Warn("production safety opt-out is on", "variable", name)
-			}
-		}
-	}
+	cfg.LogWarnings(logger)
 	if cfg.MemoryLimitMiB > 0 {
 		debug.SetMemoryLimit(int64(cfg.MemoryLimitMiB) * bytesPerMiB) // soft: the collector works harder near it, nothing is refused
 		logger.Info("memory limit set", "mib", cfg.MemoryLimitMiB)

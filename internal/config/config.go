@@ -56,6 +56,7 @@ type Config struct {
 
 	// Production contract (prod.go, docs/production-config.md). The three opt-outs are read in every environment but only matter in prod.
 	DBTLSCAFile              string // SMEM_DB_TLS_CA_FILE: PEM bundle (the RDS CA) the database certificate is verified against; makes the DSN need no tls= parameter
+	S3AllowInsecure          bool   // SMEM_S3_ALLOW_INSECURE: prod may use an http:// SMEM_S3_ENDPOINT (the image smoke test on a private network only)
 	DBAllowInsecure          bool   // SMEM_DB_ALLOW_INSECURE: prod may use a DSN without TLS (the image smoke test on a private network only)
 	RedisAllowInsecure       bool   // SMEM_REDIS_ALLOW_INSECURE: prod may use redis:// without TLS or credentials (same)
 	MetricsAllowAnyInterface bool   // SMEM_METRICS_ALLOW_ANY_INTERFACE: prod may bind SMEM_METRICS_ADDR to all interfaces (task network only, never behind the ALB)
@@ -168,7 +169,7 @@ func load(getenv func(string) string, forAPI bool) (Config, error) {
 		}
 		u, err := url.Parse(o)
 		if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.Path != "" || u.RawQuery != "" || u.User != nil {
-			return Config{}, fmt.Errorf("SMEM_ALLOWED_ORIGINS: %q is not an origin such as https://example.com", o)
+			return Config{}, fmt.Errorf("SMEM_ALLOWED_ORIGINS: %q is not an origin such as https://example.com (no credentials, path or query)", redactURL(o))
 		}
 		cfg.AllowedOrigins = append(cfg.AllowedOrigins, strings.ToLower(u.Scheme+"://"+u.Host))
 	}
@@ -183,7 +184,7 @@ func load(getenv func(string) string, forAPI bool) (Config, error) {
 		return Config{}, fmt.Errorf("SMEM_PUBLIC_BASE_URL is required in prod (e.g. https://app.example.com)")
 	}
 	if u, err := url.Parse(base); base != "" && (err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.RawQuery != "" || u.Fragment != "" || u.User != nil) {
-		return Config{}, fmt.Errorf("SMEM_PUBLIC_BASE_URL=%q: want a URL such as https://app.example.com", base)
+		return Config{}, fmt.Errorf("SMEM_PUBLIC_BASE_URL=%q: want a URL such as https://app.example.com (no credentials, query or fragment)", redactURL(base))
 	}
 	cfg.PublicBaseURL = strings.TrimRight(base, "/")
 	if cfg.TrustProxy, err = strconv.ParseBool(get("SMEM_TRUST_PROXY", "false")); err != nil {
@@ -248,8 +249,8 @@ func load(getenv func(string) string, forAPI bool) (Config, error) {
 	}
 	cfg.S3Endpoint = getenv("SMEM_S3_ENDPOINT")
 	if cfg.S3Endpoint != "" {
-		if u, err := url.Parse(cfg.S3Endpoint); err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
-			return Config{}, fmt.Errorf("SMEM_S3_ENDPOINT=%q: want a URL such as http://127.0.0.1:9000", cfg.S3Endpoint)
+		if u, err := url.Parse(cfg.S3Endpoint); err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.User != nil {
+			return Config{}, fmt.Errorf("SMEM_S3_ENDPOINT=%q: want a URL such as http://127.0.0.1:9000 (no credentials)", redactURL(cfg.S3Endpoint))
 		}
 	}
 	cfg.S3Region = get("SMEM_S3_REGION", "us-east-1")

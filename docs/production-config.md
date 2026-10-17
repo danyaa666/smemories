@@ -34,8 +34,8 @@ task definition, `SM` = Secrets Manager injected as an environment variable, `SS
 | `SMEM_SHUTDOWN_TIMEOUT` | no | `25s` | no | env | api | 1s to 120s; keep below the 30 s Fargate stop timeout ([container.md](container.md)). |
 | `SMEM_SHUTDOWN_DELAY` | no | `5s` in prod, `0s` elsewhere | no | env | api | at least 0 and below `SMEM_SHUTDOWN_TIMEOUT`. |
 | `SMEM_UPLOAD_TMP_DIR` | yes in the image (a writable mount, e.g. `/spool`) | OS temp dir | no | env | api | must be an existing directory; the API stops at start when it is not writable. |
-| `SMEM_ALLOWED_ORIGINS` | yes | none in prod (`http://localhost:5173` elsewhere) | no | env | api | comma-separated origins, every one **https**. |
-| `SMEM_PUBLIC_BASE_URL` | yes | none in prod (`http://localhost:5173` elsewhere) | no | env | api | **https** URL of the web app (links in emails, OAuth redirect). |
+| `SMEM_ALLOWED_ORIGINS` | yes | none in prod (`http://localhost:5173` elsewhere) | no | env | api | comma-separated origins, every one **https**, no `user:pass@` (refused in every environment, never echoed). |
+| `SMEM_PUBLIC_BASE_URL` | yes | none in prod (`http://localhost:5173` elsewhere) | no | env | api | **https** URL of the web app (links in emails, OAuth redirect); no `user:pass@` (refused in every environment, never echoed). |
 
 ### Database (MySQL / RDS)
 
@@ -43,7 +43,7 @@ task definition, `SM` = Secrets Manager injected as an environment variable, `SS
 |---|---|---|---|---|---|---|
 | `SMEM_DB_DSN` | yes | none | **yes** (carries the password) | SM | api, migrate, backfill | `user:pass@tcp(host:3306)/db`; must require **verified TLS**: `?tls=true` (system roots), or `SMEM_DB_TLS_CA_FILE`, or the opt-out below. `tls=false`, `preferred` and `skip-verify` are refused. |
 | `SMEM_DB_TLS_CA_FILE` | no | none | no | env (path) | api, migrate, backfill | PEM bundle the server certificate is verified against (the RDS CA bundle, which the distroless system roots do not contain). Replaces `tls=` in the DSN. |
-| `SMEM_DB_ALLOW_INSECURE` | no, **never on AWS** | `false` | no | not set | api, migrate, backfill | `true` lets prod use a DSN without TLS. For the image smoke test on a private docker network only. The API logs `production safety opt-out is on`. |
+| `SMEM_DB_ALLOW_INSECURE` | no, **never on AWS** | `false` | no | not set | api, migrate, backfill | `true` lets prod use a DSN without TLS. For the image smoke test on a private docker network only. All three binaries (api, migrate, backfill) log `production safety opt-out is on` at start. |
 | `SMEM_DB_MAX_OPEN` | no | `20` | no | env | api, migrate, backfill | integer >= 1. |
 | `SMEM_DB_MAX_IDLE` | no | `SMEM_DB_MAX_OPEN` | no | env | api, migrate, backfill | integer >= 0. |
 | `SMEM_DB_CONN_MAX_LIFETIME` | no | `5m` | no | env | api, migrate, backfill | non-negative duration. |
@@ -66,9 +66,10 @@ task definition, `SM` = Secrets Manager injected as an environment variable, `SS
 |---|---|---|---|---|---|---|
 | `SMEM_S3_BUCKET` | yes | `smemories-dev` outside prod | no | env | api, backfill | must be set. |
 | `SMEM_S3_REGION` | no (the task has `AWS_REGION`; set it anyway) | `us-east-1` | no | env | api, backfill | |
-| `SMEM_S3_ENDPOINT` | no | empty (AWS S3) | no | not set | api, backfill | for MinIO only; URL. |
+| `SMEM_S3_ENDPOINT` | no | empty (AWS S3) | no | not set | api, backfill | for MinIO only; URL without credentials. In prod it must be `https://` unless `SMEM_S3_ALLOW_INSECURE` is set; leave it unset for AWS S3. |
+| `SMEM_S3_ALLOW_INSECURE` | no, **never on AWS** | `false` | no | not set | api, backfill | `true` lets prod use an `http://` `SMEM_S3_ENDPOINT` (image smoke test on a private docker network only). Logged at start as `production safety opt-out is on`. |
 | `SMEM_S3_PATH_STYLE` | no | `false` | no | not set | api, backfill | `true` for MinIO only. |
-| `SMEM_S3_ACCESS_KEY` | **no: leave it unset** | empty | **yes** | not set | api, backfill | Empty means the [default credential chain](#s3-credentials-and-timeouts) (the ECS task role). Set it only together with `SMEM_S3_SECRET_KEY`. |
+| `SMEM_S3_ACCESS_KEY` | **no: leave it unset** | empty | **yes** | not set | api, backfill | Empty means the [default credential chain](#s3-credentials-and-timeouts) (the ECS task role). Set it only together with `SMEM_S3_SECRET_KEY`. Static keys are **allowed** in prod but override the task role, so every binary logs a WARN naming `SMEM_S3_ACCESS_KEY` at start (decision: warn, not refuse, so the smoke test and a break-glass run still work). |
 | `SMEM_S3_SECRET_KEY` | **no: leave it unset** | empty | **yes** | not set | api, backfill | Same: both or neither, otherwise the loader refuses. |
 
 ### Email (Amazon SES)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"sync/atomic"
 	"time"
 )
 
@@ -18,10 +19,13 @@ type Dep struct {
 	Ping func(ctx context.Context) error
 }
 
+// drainDep is the Name of the Draining dep; its failure is logged once, not per probe (a load balancer probes every few seconds).
+const drainDep = "shutdown"
+
 // Draining is a Dep that fails once ctx is cancelled (the shutdown signal), so /readyz answers 503 for the whole drain
 // and the load balancer takes the task out of rotation before the listener closes.
 func Draining(ctx context.Context) Dep {
-	return Dep{"shutdown", func(context.Context) error { return ctx.Err() }}
+	return Dep{drainDep, func(context.Context) error { return ctx.Err() }}
 }
 
 // ReadyTimeout bounds all the pings behind one /readyz request together.
@@ -31,13 +35,16 @@ const ReadyTimeout = time.Second
 // otherwise 503 ERROR_NOT_READY. The driver error is logged, never put in the body.
 func Ready(p Pinger, logger *slog.Logger, deps ...Dep) func(*http.ServeMux) {
 	deps = append([]Dep{{"database", p.PingContext}}, deps...)
+	var drainLogged atomic.Bool
 	return func(mux *http.ServeMux) {
 		mux.HandleFunc("GET /readyz", func(w http.ResponseWriter, r *http.Request) {
 			ctx, cancel := context.WithTimeout(r.Context(), ReadyTimeout)
 			defer cancel()
 			for _, d := range deps {
 				if err := d.Ping(ctx); err != nil {
-					logger.Warn("readyz: "+d.Name+" ping failed", "request_id", RequestIDFrom(r.Context()), "error", err)
+					if d.Name != drainDep || drainLogged.CompareAndSwap(false, true) {
+						logger.Warn("readyz: "+d.Name+" ping failed", "request_id", RequestIDFrom(r.Context()), "error", err)
+					}
 					WriteError(w, r, http.StatusServiceUnavailable, "ERROR_NOT_READY", "dependency not ready")
 					return
 				}

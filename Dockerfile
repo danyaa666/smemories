@@ -1,6 +1,6 @@
-# syntax=docker/dockerfile:1.7
+# syntax=docker/dockerfile:1.7@sha256:a57df69d0ea827fb7266491f2813635de6f17269be881f696fbfdf2d83dda33e
 # SMemories API image (T-022, docs/container.md): the three binaries on a distroless non-root base.
-# Both bases are pinned by digest; Dependabot's docker ecosystem keeps them current (.github/dependabot.yml).
+# The # syntax= frontend and both bases are pinned by digest (the frontend is bumped by hand, Dependabot does not read that line); Dependabot's docker ecosystem keeps them current (.github/dependabot.yml).
 # The Go patch must be the newest of the go.mod minor (board L-10, govulncheck reports older stdlib patches).
 
 # golang:1.26-bookworm (1.26.9 when pinned), multi-arch index. Cross-compiles on the build host: no QEMU.
@@ -33,7 +33,7 @@ LABEL org.opencontainers.image.title="smemories" \
       org.opencontainers.image.source="https://github.com/danyaa666/smemories" \
       org.opencontainers.image.revision="$COMMIT" \
       org.opencontainers.image.version="$VERSION" \
-      org.opencontainers.image.licenses="NOASSERTION"
+      org.opencontainers.image.licenses="LicenseRef-All-Rights-Reserved"
 COPY --from=build /out/ /usr/local/bin/
 USER 65532:65532
 EXPOSE 8080
