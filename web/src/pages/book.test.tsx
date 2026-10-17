@@ -412,7 +412,12 @@ const CLASSIC = {
   renderer: "go",
 };
 const FUTURE = { ...MEMORY, id: "future-book", name: { en: "Future", vi: "Tương lai" } }; // html, but this build cannot draw it
-const NAVY = { ...MEMORY, id: "navy-classic", name: { en: "Navy Classic", vi: "Navy cổ điển" }, preview: "/template-previews/navy-classic.jpg" };
+const NAVY = {
+  ...MEMORY,
+  id: "navy-classic",
+  name: { en: "Navy Classic", vi: "Navy cổ điển" },
+  preview: "/template-previews/navy-classic.jpg",
+};
 const templates =
   (...items: object[]) =>
   () =>
