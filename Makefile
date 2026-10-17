@@ -85,7 +85,7 @@ migrate:
 	go run ./cmd/smemories-migrate up
 
 migrate-down:
-	go run ./cmd/smemories-migrate down
+	go run ./cmd/smemories-migrate down --allow-down
 
 # Needs `make up` first.
 # -timeout 30m (T-077): Go's default is 10m per package, and internal/media took 763-858 s on a loaded machine before its tests ran in parallel;

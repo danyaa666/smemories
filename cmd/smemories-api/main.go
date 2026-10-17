@@ -32,8 +32,9 @@ import (
 )
 
 const (
-	bytesPerMiB      = 1 << 20
-	redisPingTimeout = 5 * time.Second
+	bytesPerMiB        = 1 << 20
+	redisPingTimeout   = 5 * time.Second
+	schemaCheckTimeout = 10 * time.Second
 )
 
 func main() {
@@ -65,6 +66,13 @@ func main() {
 		os.Exit(1)
 	}
 	defer func() { _ = d.Close() }()
+	cctx, ccancel := context.WithTimeout(ctx, schemaCheckTimeout)
+	err = db.CheckSchema(cctx, d) // never migrates: the one-off smemories-migrate task runs before the API rolls (docs/deploy.md)
+	ccancel()
+	if err != nil {
+		logger.Error("database schema does not match this build", "error", err)
+		os.Exit(1)
+	}
 	logger.Info("database pool", "max_open", cfg.DBMaxOpen, "max_idle", cfg.DBMaxIdle, "conn_max_lifetime", cfg.DBConnMaxLifetime.String())
 
 	redis.UseLogger(logger) // go-redis' own lines go through slog, not raw stderr

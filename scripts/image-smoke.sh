@@ -4,7 +4,8 @@
 # Starts a private MySQL, Valkey and MinIO on a private docker network (nothing is published on the host except the API
 # port on 127.0.0.1, and nothing of the developer's compose stack is touched), then checks the image:
 #   1. static: non-root user, labels, no shell, only the three binaries, size under 60 MB
-#   2. smemories-migrate up/status and smemories-media-backfill --dry-run from the same image
+#   2. the API refuses an un-migrated database; two concurrent smemories-migrate up are safe; down is refused in prod; status, version
+#      and smemories-media-backfill --dry-run from the same image
 #   3. the API refuses to start in prod with the dev OTP shortcut set and with SMEM_OTP_KEY missing
 #   4. a read-only root filesystem without the writable spool mount fails at start-up with a clear message
 #   5. the API with --read-only --user 65532 --cap-drop ALL: healthz, readyz, register, yearbook create, photo upload
@@ -113,21 +114,48 @@ EOF
 # The hardening every task runs with (docs/container.md).
 HARDEN=(--read-only --user 65532 --cap-drop ALL --security-opt no-new-privileges --network "$RUN")
 
-# --- 2. one-off tasks from the same image ---------------------------------------------------------------------------
-run --rm "${HARDEN[@]}" --env-file "$TMP/task.env" -e SMEM_ENV=prod "$IMAGE" smemories-migrate up >"$TMP/migrate.log" 2>&1 || { cat "$TMP/migrate.log" >&2; fail "smemories-migrate up failed"; }
-run --rm "${HARDEN[@]}" --env-file "$TMP/task.env" -e SMEM_ENV=prod "$IMAGE" smemories-migrate up >/dev/null 2>&1 || fail "a second migrate up is not idempotent"
+# --- 2. the API refuses an un-migrated database; two concurrent migrate tasks are safe -------------------------------------
+# The API never migrates on start (docs/deploy.md): against the still empty database it must stop and say which versions differ.
+code=0
+out="$(run --rm "${HARDEN[@]}" --tmpfs /spool:rw,noexec,nosuid,size=64m,uid=65532,mode=0700 --env-file "$TMP/api.env" -e SMEM_ENV=test "$IMAGE" 2>&1)" || code=$?
+[ "$code" -ne 0 ] || fail "the API started against an un-migrated database"
+echo "$out" | grep -q 'this build expects' || fail "the schema refusal does not name the versions: $out"
+echo "$out" | grep -q 'smemories-migrate up' || fail "the schema refusal does not say how to fix it: $out"
+if echo "$out" | grep -q "$OTP_KEY\|$DB_PW\|$S3_PW"; then fail "the schema refusal echoes a secret"; fi
+ok "the API refuses to start against an un-migrated database (and names both versions)"
+
+# Two migrate tasks started together (a double RunTask): both succeed, every migration is applied once in total.
+MIGRATE=(run --rm "${HARDEN[@]}" --env-file "$TMP/task.env" -e SMEM_ENV=prod "$IMAGE" smemories-migrate)
+"${MIGRATE[@]}" up >"$TMP/migrate1.log" 2>&1 & M1=$!
+"${MIGRATE[@]}" up >"$TMP/migrate2.log" 2>&1 & M2=$!
+wait "$M1" || { cat "$TMP/migrate1.log" >&2; fail "concurrent smemories-migrate up (1) failed"; }
+wait "$M2" || { cat "$TMP/migrate2.log" >&2; fail "concurrent smemories-migrate up (2) failed"; }
 # The status output goes to a file first and is checked a few times (one unexplained first-run failure was seen in the T-022 QA): print it on failure.
-status_ok=no
+TOTAL=0
 for i in 1 2 3 4 5; do
-  run --rm "${HARDEN[@]}" --env-file "$TMP/task.env" -e SMEM_ENV=prod "$IMAGE" smemories-migrate status >"$TMP/status.log" 2>&1 || true
-  if grep -q ' applied ' "$TMP/status.log"; then status_ok=yes; break; fi
+  "${MIGRATE[@]}" status >"$TMP/status.txt" 2>&1 || true
+  TOTAL="$(grep -c ' applied ' "$TMP/status.txt" || true)"
+  [ "$TOTAL" -gt 0 ] && break
   sleep 2
 done
-[ "$status_ok" = yes ] || { echo "--- last 'smemories-migrate status' output ---" >&2; cat "$TMP/status.log" >&2; fail "migrate status shows nothing applied after 5 tries"; }
-ok "smemories-migrate up (twice) and status"
+[ "$TOTAL" -gt 0 ] || { echo "--- last 'smemories-migrate status' output ---" >&2; cat "$TMP/status.txt" >&2; fail "migrate status shows nothing applied after 5 tries"; }
+APPLIED="$(cat "$TMP/migrate1.log" "$TMP/migrate2.log" | grep -c 'migration applied' || true)"
+[ "$TOTAL" -gt 0 ] && [ "$TOTAL" = "$APPLIED" ] || fail "two concurrent migrate tasks applied $APPLIED migrations for a schema of $TOTAL"
+"${MIGRATE[@]}" up >/dev/null 2>&1 || fail "a later migrate up is not idempotent"
+[ "$("${MIGRATE[@]}" version 2>/dev/null)" -gt 0 ] || fail "smemories-migrate version printed no version"
+ok "two concurrent smemories-migrate up applied each of the $TOTAL migrations once; up again, status and version work"
+for args in "down --allow-down" "down" "up --allow-down"; do
+  code=0
+  # shellcheck disable=SC2086
+  run --rm "${HARDEN[@]}" --env-file "$TMP/task.env" -e SMEM_ENV=prod "$IMAGE" smemories-migrate $args >/dev/null 2>&1 || code=$?
+  case "$args:$code" in "down --allow-down:4") ;; "down:2" | "up --allow-down:2") ;; *) fail "smemories-migrate $args in prod exited $code" ;; esac
+done
+[ "$("${MIGRATE[@]}" status 2>&1 | grep -c ' applied ')" = "$TOTAL" ] || fail "a refused down changed the schema"
+ok "down and --allow-down are refused in prod and nothing was rolled back"
 run --rm "${HARDEN[@]}" --env-file "$TMP/task.env" -e SMEM_ENV=prod "$IMAGE" smemories-media-backfill --dry-run >"$TMP/backfill.log" 2>&1 || { cat "$TMP/backfill.log" >&2; fail "smemories-media-backfill --dry-run failed"; }
 ok "smemories-media-backfill --dry-run"
 # The prod safety opt-outs and the static S3 keys are logged loudly by the one-off tasks too, never with a value (T-089).
+cp "$TMP/migrate1.log" "$TMP/migrate.log"   # the first concurrent migrate task's log
 for f in migrate backfill; do
   for v in SMEM_DB_ALLOW_INSECURE SMEM_S3_ALLOW_INSECURE SMEM_S3_ACCESS_KEY; do
     grep -q "$v" "$TMP/$f.log" || fail "smemories-$f did not log a WARN naming $v"

@@ -12,7 +12,7 @@ full API with `SMEM_ENV=test` and checks the prod refusals and the one-off tasks
 ## Which command reads what
 
 - **api**: everything.
-- **migrate** (`up`, `down`, `status`): the database variables only. **backfill**: the database and object-store variables. Both load with `config.LoadMigrate`, which
+- **migrate** (`up`, `status`, `version`, `down --allow-down`; deploy order, lock and exit codes in [deploy.md](deploy.md)): the database variables only. **backfill**: the database and object-store variables. Both load with `config.LoadMigrate`, which
   skips the API-only requirements (Redis, email codes, origins, base URL, memory limit) but still validates any variable that is set, so do not put API-only variables
   in their task definitions. The prod TLS rules for the database, the bucket rule and the S3 key pair apply to them as well.
 

@@ -10,18 +10,18 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 8 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050 |
-| TODO | 2 | T-021, T-089 |
-| IN_PROGRESS | 1 | T-088 |
-| MERGED | 1 | T-086 |
-| DONE | 69 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-087 |
+| BACKLOG | 9 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-090 |
+| QA_PASS | 1 | T-021 |
+| CHANGES_REQUESTED | 1 | T-089 |
+| MERGED | 1 | T-088 |
+| DONE | 70 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-086 ([E06] Production config contract, S3 credential chain, migrate lock and image scan (T-022 slice 2))
+**Awaiting your review (MERGED):** T-088 ([E06] smemories-migrate lock, API schema-version check and deploy order (T-022 slice 3))
 
-**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-032 (Approve merge of T-061 (template picker, print guide, public print-feedback counter, PR #71)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-035 (Approve merge of T-022 slice 1 (production Dockerfile, graceful shutdown, image smoke test, PR #74)?); Q-036 (Approve merge of T-086 slice (a): production config contract and S3 default credential chain (PR #78, adds the AWS SDK config module)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?)
+**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-032 (Approve merge of T-061 (template picker, print guide, public print-feedback counter, PR #71)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-035 (Approve merge of T-022 slice 1 (production Dockerfile, graceful shutdown, image smoke test, PR #74)?); Q-036 (Approve merge of T-086 slice (a): production config contract and S3 default credential chain (PR #78, adds the AWS SDK config module)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-038 (Approve merge of T-088: smemories-migrate advisory lock and API schema-version check (PR #80)?); Q-039 (Approve merge of T-089: image scan (Trivy + SBOM), secret hygiene and config hardening (PR #81)?); Q-040 (Approve merge of T-021: Amazon SES mailer behind a provider-neutral interface (PR #82)?)
 
-_Board last written 2026-10-17 12:54Z_
+_Board last written 2026-10-17 15:09Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -451,6 +451,27 @@ Context: github.com/danyaa666/smemories is public (D-09) but has no LICENSE file
 - **Answer:** _(pending)_
 
 Context: Amazon SES (D-29) needs a verified domain to send from, with DKIM/SPF/DMARC records, and the AWS deployment (T-023) needs the public hostname and an HTTPS certificate. Needed from you: (1) the domain name (do you own one yet, which? or shall I list cheap registrar options when you want to buy one), (2) who can edit its DNS records (you, a registrar panel, or Route 53 in the AWS account), (3) the AWS account/region you want (default recommendation: ap-southeast-1 Singapore for Vietnam users, or us-east-1; your call), (4) that you will file the one-time SES request to leave the sandbox when T-021 is ready (about a day). None of this blocks the code: T-021 builds the SES mailer against a local stub first.
+
+### Q-038 — Approve merge of T-088: smemories-migrate advisory lock and API schema-version check (PR #80)?
+- **Status:** OPEN
+- **Asked:** 2026-10-17 13:39Z
+- **Blocks:** T-088
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+### Q-039 — Approve merge of T-089: image scan (Trivy + SBOM), secret hygiene and config hardening (PR #81)?
+- **Status:** OPEN
+- **Asked:** 2026-10-17 13:56Z
+- **Blocks:** T-089
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+### Q-040 — Approve merge of T-021: Amazon SES mailer behind a provider-neutral interface (PR #82)?
+- **Status:** OPEN
+- **Asked:** 2026-10-17 14:28Z
+- **Blocks:** T-021
+- **Recommendation:** approve
+- **Answer:** _(pending)_
 
 <!-- questions:end -->
 
@@ -1370,7 +1391,7 @@ Choose a template (thumbnails from sample renders), trigger export, show progres
 - **Branch:** task/t-020-e01-end-to-end-smoke-test-of-the-m1-jour
 - **PR:** https://github.com/danyaa666/smemories/pull/75
 - **Updated:** 2026-10-17 12:46Z by human
-- **Comments-seen:** 4
+- **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/10-end-to-end-smoke-test-of-the-m1-journey-in.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1393,7 +1414,7 @@ One Playwright test drives the full M1 journey on the compose stack in CI: regis
 - 2026-10-17 12:46Z · human · accepted by owner
 
 ### T-021 — [E06] Transactional email provider and domain setup
-- **Status:** TODO
+- **Status:** QA_PASS
 - **Priority:** P2
 - **Type:** infra
 - **Milestone:** M2
@@ -1401,11 +1422,11 @@ One Playwright test drives the full M1 journey on the compose stack in CI: regis
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-17 12:52Z by leader
-- **Comments-seen:** 2
+- **Assignee:** leader
+- **Branch:** task/t-021-e06-transactional-email-provider-and-dom
+- **PR:** https://github.com/danyaa666/smemories/pull/82
+- **Updated:** 2026-10-17 14:28Z by qa
+- **Comments-seen:** 6
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E06-go-live/01-transactional-email-provider-and-domain-setup.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1416,6 +1437,32 @@ Replace LogMailer with a real provider (SES is the natural fit on AWS) including
 #### Comments
 - 2026-10-17 12:52Z · leader · Full spec written 2026-10-17 after the owner chose Amazon SES (D-29): SESv2 mailer built and tested against a local stub (no AWS account or domain needed), error mapping, background sends, HTML+text bodies en/vi, config contract, runbook docs/email.md. Risk high: owner approval before merge. Domain/DNS/sandbox exit are owner steps (Q-037).
 - 2026-10-17 12:54Z · leader · Owner request (2026-10-17): build an interface and implement one for SES; others may come later. Added as requirement 9 and AC8 of the spec: application code depends only on mailer.Mailer and provider-neutral types/errors; SES is one implementation; one mailer.New switch on SMEM_MAIL_PROVIDER; provider settings under SMEM_<PROVIDER>_*; a shared conformance test (mailertest.Run) run by SES and the log mailer; no second provider now.
+- 2026-10-17 14:00Z · dev · PR #82 head ef4157d. One PR, all of AC1-AC8 in code (nothing deferred): provider-neutral seam (mailer.New switch, ses.go only file with SES names, mailertest.Run run by SES-on-stub and log mailer, seam guard test), SES on SESv2 stub, config/prod contract + production-config rows, background register/forgot with 2 retries + smem_mail_send_failures_total{class}, resend 503 ERROR_MAIL_UNAVAILABLE / 400 ERROR_EMAIL_UNDELIVERABLE (try refunded on outage), en/vi text+HTML with golden files, openapi/schema.d.ts/Postman/web texts, docs/email.md runbook. Green locally: go vet, golangci-lint, go test -race ./..., -tags integration ./..., web lint/typecheck/i18n/check:api/vitest 348, make image-smoke (private tag), image 52 MiB (<60). Not done/unverifiable: real SES send; newman not run; e2e job not run locally. Open points for leader/owner (details in PR): (1) AWS docs say suppressed addresses are accepted-and-dropped, not rejected: runbook asks owner to test suppressionlist@simulator in sandbox; (2) AccountSuspended/SendingPaused -> ErrRejected per spec shows students 'undeliverable'; (3) metric is smem_mail_send_failures_total; (4) smithy-go moved to a direct dependency; (5) Vietnamese strings listed in the PR description. Owner approval needed before merge (risk high).
+- 2026-10-17 14:00Z · dev · PR #82 ef4157d: seam + SES (stub-tested) + auth wiring + content + docs + web. QA: probe stub throttling/5xx/blackhole, register latency with slow provider, forgot-password anti-enumeration, logs for address/code, prod start refusals, image size; real SES send unverified.
+- 2026-10-17 14:28Z · qa · QA_PASS T-021, PR #82 head ef4157d. CI 6/6 green on the head (image job failed once on `migrate status | grep -q` in image-smoke, passed on rerun and locally: see obs 9). Real SES send NOT verified (no AWS account); everything below ran against my own SESv2 stub (private MySQL 8.4 with the compose flags, Valkey, MinIO, private image tag, ports 13306/16379/19000/18080-18082; owner stack untouched; all removed).
+  
+  EVIDENCE (AC -> how -> result)
+  AC1 SES shape/signing/mapping: real API binary with AWS_ENDPOINT_URL_SESV2 -> own stub (not the dev stub). Request: POST /v2/email/outbound-emails, FromEmailAddress "SMemories <no-reply@...>", Destination.ToAddresses, Content.Simple Subject/Text/Html (UTF-8), ConfigurationSetName; SigV4 AWS4-HMAC-SHA256 Credential=<env key>/<date>/eu-west-1/ses/aws4_request. Map via resend-verification: 429 TooManyRequests, 503, 500, 400 LimitExceeded -> 503 ERROR_MAIL_UNAVAILABLE + Retry-After 30 (3 attempts at the stub, ~2-3 s); MessageRejected/AccountSuspended/SendingPaused -> 400 ERROR_EMAIL_UNDELIVERABLE (1 attempt); BadRequest/NotFound/AccessDenied -> 500 class other. Hung endpoint cut at 10.0 s (503), blackholed 192.0.2.1 cut at 10.0 s, connection refused 503 in 3.9 s. 429 body mentions no address in logs (reason = class + SES code only).
+  AC2: 5 s sleeping stub: register 24 ms, forgot-password 2 ms; resend blocks 5 s (by design, max 10 s). Forgot-password x30 each (known, unknown, known+stub rejecting): byte-identical body {"status":"OK","data":{}} and identical header sets; mean 1.38 / 1.18 / 1.38 ms (unknown ~0.2 ms faster, noise over a network). Background 503: register in 30 ms, then 9 stub hits (3 Sends x 3 SDK attempts, waits 2 s and 5 s), exactly one ERROR "verification email not sent" (request_id, user_id, class), smem_mail_send_failures_total{class="unavailable"} 1.
+  AC3: real binary SMEM_ENV=prod: provider log / empty / sendgrid, From empty / malformed / example.com / .invalid / localhost / two addresses -> refused naming SMEM_MAIL_PROVIDER or SMEM_MAIL_FROM; missing AWS_REGION refused ("no AWS region"); SMEM_DEV_FIXED_OTP refused; valid prod env starts and listens. Config tests + production-config doc test pass.
+  AC4: golden en/vi x verify/reset pass; Chrome at 320 and 1280: no horizontal overflow, 1 h1, lang set, 1.1-1.4 KB, no network request, code readable. Display name <script> is escaped. Logs at debug level during all runs: grep for every code in the saved .eml files, the 8 test addresses, AKIA key id, secret key, From address, Signature=: 0 hits. Fixed OTP: prod refuses to start; mails carry the real random code.
+  AC5: docs/email.md reviewed (obs 6-8); dev-shortcuts.md untouched.
+  AC6: openapi/schema.d.ts/Postman/web strings present. Chrome (Playwright on real Chrome) en and vi at 320/375/1280, stub 503 and reject: correct text, no overflow, button stays enabled. Newman auth Full flow + Edge cases (incl. Mail 1-3): 89 requests 191 assertions 0 failed, twice (the Google folder fails only because SMEM_GOOGLE_* is not configured in my instance). The mailFailure=unavailable|rejected variants of Mail 2 I checked by curl, not by Newman.
+  AC7: make lint build test exit 0; go test -race -tags integration ./... all ok (on MySQL with the compose flags; my first run on a stock MySQL failed only TestUTF8MB4RoundTrip on time_zone, my environment); make image-smoke passes, image filesystem 52 MiB; mailer/auth/config/metrics -race -count=5 stable; CI 6/6 incl. image and e2e.
+  AC8: grep: sesv2/AWS imports only in ses.go (+tests); SES error names only ses.go/ses_test.go; SMEM_MAIL_PROVIDER read by internal/config loader, mailer.New switches on it. mailertest.Run run by SES-on-stub and log mailer. Throwaway bad mailers (ignores deadline, leaks recipient in logs, generic error for throttling, drops HTML, sends on cancelled ctx) each FAIL the suite with a clear message (scratch file removed, nothing committed). Load: 500 concurrent registrations then 500 forgot-passwords against an always-503 stub: HTTP all 200, max 362 ms; goroutines peak ~550, back to baseline once retries end (about 12 s), 3 more storms stable (52-53), idle pool drops to 31; heap 150 MB peak (mostly argon2 registers), no growth.
+  
+  OBSERVATIONS (non-blocking; 1 and 2 recommended before the first real deploy, fold into T-090)
+  1. [major-ish] svc.Wait() in main.go is not bounded by SMEM_SHUTDOWN_TIMEOUT. Repro: stub in hang mode, register, SIGTERM at once: process exits after 36.4 s (3 sends x 10 s + 2 s + 5 s waits) > Fargate stop timeout 30 s (SIGKILL) and > the documented 25 s budget; with a 503 stub 7.2 s. Before this PR the wait was at most one 10 s send. Fix: cancel the background ctx or bound Wait by the remaining shutdown budget; or document. Not in docs/container.md or email.md.
+  2. [classification] MessageRejected is also what SES answers for an unverified sender identity and for any non-verified recipient while the account is still in the sandbox. That is a platform misconfiguration but becomes class "rejected": the student gets "address cannot receive mail" and email.md says alarm only on unavailable/other and "rejected only in bulk". Day-one sandbox = every sign-up silently rejected, no alarm. Suggest alarming on rejected too (or ratio) in T-024 and logging the reason distinctly. Also as the leader planned: AccountSuspended/SendingPaused currently -> ErrRejected -> 400 ERROR_EMAIL_UNDELIVERABLE (confirmed by running it), 1 attempt, class rejected: to move to ErrUnavailable in T-090.
+  3. Retry multiplication: 3 delivers x 3 SDK attempts = 9 SES calls per failed background mail, against an SES that is throttling (sandbox is 1 msg/s). In spec terms fine, but it deepens throttling.
+  4. resend-verification refunds the try on ErrUnavailable and has no other cap: 6 consecutive resends under a 503 stub all went through (each 2-3.5 s, 3 SES calls each), the 3/h limit applied again once the stub recovered. An authenticated user can hammer SES while it is throttling. Consider a per-IP cap or refund only once per window.
+  5. No global bound on in-flight background mails (goroutine per register/forgot, each up to 90 s); bounded in practice only by the rate limiters (code comment says so). Metric series are created on first failure (no zero series per class), fine for rate() alarms.
+  6. Retried background mail re-sends the same code; if the student presses "send a new code" meanwhile, the late retry delivers a dead code (the new one invalidated the old). Rare, only during provider trouble.
+  7. email.md AWS facts: DKIM CNAME, MAIL FROM MX/SPF, DMARC p=none start, suppression list accepted-and-dropped caveat with the simulator test, 5%/0.1% review and 10%/0.5% pause thresholds are correct. Check/flag: (a) while in the sandbox SES authorises SendEmail against recipient identities too, so the IAM statement with only the sender identity may need the verified test recipients' identity ARNs during the sandbox phase (verify at the step-8 sandbox test); (b) configuration set TlsPolicy=REQUIRE makes SES bounce mail to a recipient server without STARTTLS: OPTIONAL is safer for a school-mail audience; (c) put-account-details is named without its flags.
+  8. Seam: adding a provider is plausible from the checklist, but it would also touch internal/config (Config struct and loadMail compare to "ses" in the prod rule), mailer.Config (a SES field) and cmd/smemories-api/main.go (builds mailer.SESConfig); the checklist step 2 says "nothing else reads the provider name", which is not literally true. Spec mention of SMEM_AWS_REGION is not implemented (only AWS_REGION), harmless.
+  9. CI image job flake: scripts/image-smoke.sh does `smemories-migrate status | grep -q ' applied '` under pipefail; grep -q can close the pipe early and fail the pipeline. Failed once on the head (migrate up passed twice before), passed on rerun and locally. Fold into T-090 AC5.
+  10. Vietnamese strings for the owner (not judged): subjects "Mã xác minh SMemories của bạn", "Mã đặt lại mật khẩu SMemories của bạn"; body "Chào {name}," / "Chào mừng bạn đến với SMemories! Mã xác minh của bạn là:" / "Hãy nhập mã này vào ứng dụng để xác nhận địa chỉ email. Mã có hiệu lực trong 30 phút. Không chia sẻ mã này với bất kỳ ai." / "Nếu bạn không tạo tài khoản này, hãy bỏ qua email này."; reset: "Có người đã yêu cầu đặt lại mật khẩu cho tài khoản SMemories của bạn. Mã đặt lại của bạn là:" / "...chọn mật khẩu mới. Mã có hiệu lực trong 15 phút..." / "Sau đó bạn sẽ cần đăng nhập lại trên tất cả thiết bị. Nếu không phải bạn, hãy bỏ qua email này: mật khẩu của bạn không thay đổi."; web: "Hiện chúng tôi chưa gửi được email. Vui lòng thử lại sau vài phút." and "Chúng tôi không gửi được email tới địa chỉ này. Vui lòng kiểm tra lại địa chỉ email của bạn." Validity (30 verify, 15 reset) is the real TTL, checked in live mails. Diacritics render correctly in Chrome and in the saved .eml (quoted-printable UTF-8).
+- 2026-10-17 14:28Z · leader · Leader review OK on ef4157d: mailer.Mailer stays the only seam (ses.go is the only file with SES names, enforced by a test; mailertest.Run fails 5 deliberately bad mailers), SES mailer with the T-086 timeouts and at most 3 attempts, register and forgot-password never wait on the provider (5 s stub), forgot-password byte-identical for known/unknown/rejected addresses, no address/code/secret in logs, goroutines flat under 500 failing background mails, prod refuses a non-SES provider or bad SMEM_MAIL_FROM, en/vi text+HTML golden files; CI green on the head. QA's three go-live findings (shutdown wait unbounded, sandbox/unverified-sender MessageRejected classed as rejected, uncapped refunded resend tries) plus the AccountSuspended mapping and the SES suppression-list behaviour are tracked in T-090 items 8-12 and must ship before the first real deploy. Waiting for owner approval (Risk high). After merge: the real SES send stays unverified until the owner has an AWS account, a verified domain and the sandbox exit (docs/email.md; Q-037).
 
 ### T-022 — [E06] Dockerfile, production config and migrations as a one-off task
 - **Status:** DONE
@@ -1430,7 +1477,7 @@ Replace LogMailer with a real provider (SES is the natural fit on AWS) including
 - **Branch:** task/t-022-e06-dockerfile-production-config-and-mig
 - **PR:** https://github.com/danyaa666/smemories/pull/74
 - **Updated:** 2026-10-17 12:46Z by human
-- **Comments-seen:** 12
+- **Comments-seen:** 13
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E06-go-live/02-dockerfile-production-config-and-migrations.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2945,7 +2992,7 @@ Navy and gold canvas as the second HTML template.
 - **Branch:** task/t-061-e05-web-template-picker-and-print-screen
 - **PR:** https://github.com/danyaa666/smemories/pull/71
 - **Updated:** 2026-10-17 12:46Z by human
-- **Comments-seen:** 10
+- **Comments-seen:** 11
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/12-template-picker-and-print-screen.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -3970,7 +4017,7 @@ Spec: .team/epics/E10-skills-alignment/12-lint-anchors-userfrom-guard.md (read i
 - 2026-10-17 07:02Z · human · accepted by owner
 
 ### T-086 — [E06] Production config contract, S3 credential chain, migrate lock and image scan (T-022 slice 2)
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P2
 - **Type:** infra
 - **Milestone:** M2
@@ -3981,8 +4028,8 @@ Spec: .team/epics/E10-skills-alignment/12-lint-anchors-userfrom-guard.md (read i
 - **Assignee:** —
 - **Branch:** task/t-086-e06-production-config-contract-s3-creden
 - **PR:** 78
-- **Updated:** 2026-10-17 12:46Z by leader
-- **Comments-seen:** 8
+- **Updated:** 2026-10-17 13:07Z by human
+- **Comments-seen:** 9
 
 Spec: .team/epics/E06-go-live/07-production-config-contract-s3-chain-migrate-lock-image-scan.md (read it from the repo root). Second half of T-022: requirements 4, 5, 6, 7 (scan), 9 of the T-022 spec.
 
@@ -4012,6 +4059,7 @@ Spec: .team/epics/E06-go-live/07-production-config-contract-s3-chain-migrate-loc
 - 2026-10-17 09:21Z · leader · Leader review OK on 5c9c514 (+ QA test-only commit 9e53864), slice (a): contract in internal/config/prod.go refuses ~45 missing/unsafe values by name without echoing secrets, 7 rules each proven by a failing test when disabled, all 49 SMEM_* variables documented with a test that fails on a planted variable, S3 default chain works for env, ECS-style container credentials and static MinIO keys with exactly 3 attempts (refused port 3.7 s, silent server capped at 60 s), the four escape hatches default off and cannot silence the dev-OTP guard or the log-mailer refusal, new modules are AWS SDK only (Apache-2.0, tidy+verify clean), image 48 MiB; CI green. QA's three non-blocking findings (opt-out WARN only in the API; URL userinfo echoed in two errors; http:// S3 endpoint and silent static-key override accepted in prod) are added to T-089's spec so they ship before go-live. Waiting for owner approval (Risk high). Nothing to migrate.
 - 2026-10-17 12:46Z · human · owner approved merge
 - 2026-10-17 12:46Z · leader · merged 3dbde98 (PR #78), slice (a) of T-022: production config contract (internal/config/prod.go, ~45 refusals by variable name, no secret echoed), docs/production-config.md (49 variables, test fails on an undocumented one), S3 default credential chain with timeouts and 3 attempts, four default-off escape hatches, AWS SDK config module (L-13); QA_PASS on the same head plus its test-only commit, CI green, owner approved. For owner to check: docs/production-config.md; make image-smoke. Open (moved to T-089): opt-out WARN only in the API, URL userinfo echoed in two errors, http:// S3 endpoint and static-key override accepted in prod. The real prod start still waits for T-021 (Q-033).
+- 2026-10-17 13:07Z · human · accepted by owner
 
 ### T-087 — [E01] E2E hardening: refuse non-local targets, tighter CI limits, clearer errors
 - **Status:** DONE
@@ -4026,7 +4074,7 @@ Spec: .team/epics/E06-go-live/07-production-config-contract-s3-chain-migrate-loc
 - **Branch:** task/t-087-e01-e2e-hardening-refuse-non-local-targe
 - **PR:** https://github.com/danyaa666/smemories/pull/79
 - **Updated:** 2026-10-17 12:46Z by human
-- **Comments-seen:** 4
+- **Comments-seen:** 5
 
 Spec: .team/epics/E01-foundation/11-e2e-hardening.md (read it from the repo root). Five non-blocking findings from the T-020 QA.
 
@@ -4043,44 +4091,89 @@ Spec: .team/epics/E01-foundation/11-e2e-hardening.md (read it from the repo root
 - 2026-10-17 12:46Z · human · accepted by owner
 
 ### T-088 — [E06] smemories-migrate lock, API schema-version check and deploy order (T-022 slice 3)
-- **Status:** IN_PROGRESS
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** infra
 - **Milestone:** M2
 - **Depends-on:** T-086
 - **Risk:** high
 - **Rework:** 0
-- **Owner-approved:** —
-- **Assignee:** dev
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-088-e06-smemories-migrate-lock-api-schema-ve
-- **PR:** —
-- **Updated:** 2026-10-17 12:47Z by dev
-- **Comments-seen:** 1
+- **PR:** https://github.com/danyaa666/smemories/pull/80
+- **Updated:** 2026-10-17 15:09Z by leader
+- **Comments-seen:** 6
 
 Spec: .team/epics/E06-go-live/08-migrate-lock-schema-check.md (read it from the repo root).
 
 #### Comments
 - 2026-10-17 12:46Z · leader · unblocked: T-086 merged (config contract + S3 chain).
+- 2026-10-17 13:07Z · dev · PR #80 head ca0401c, CI green (go, go-integration, e2e, image, security, web). Advisory lock via goose SessionLocker on GET_LOCK (internal/db/migrate.go), db.CheckSchema at API start (behind or >3 unknown migrations ahead -> exit 1, names both versions), migrate: up/status/version/down --allow-down (down and flag refused in prod, exit 4; lock timeout exit 3), docs/deploy.md (order, expand/contract, checklist, exit codes). Verify: TestMigrateUpConcurrentAppliesOnce (fails without the lock), TestCheckSchema, make image-smoke (un-migrated DB refusal, 2 concurrent migrates, down refused). Decisions to confirm: MaxSchemaAhead=3 constant; make migrate-down now needs --allow-down. T-089 not claimed: usage gate said SLEEP (stale cache).
+- 2026-10-17 13:38Z · qa · QA_PASS T-088, PR #80 head ca0401c (CI green: go, go-integration, e2e, image, security, web). Own MySQL 8.4 + Valkey containers on private names/ports, removed afterwards.
+  EVIDENCE (AC -> how -> result)
+  AC1 concurrency: 2 and 5 concurrent `smemories-migrate up` on an empty DB, and on half-migrated DBs (5 and 7 migrations pending, made with real `down --allow-down` steps): each time exactly one process logged all `migration applied` lines, the rest 0, all exit 0, goose_db_version 20 rows/20 distinct, no 'already exists', no deadlock. Mutation (lock disabled in a scratch copy): TestMigrateUpConcurrentAppliesOnce fails with 'Table app_meta already exists', so the test has teeth. Lock name = smemories_migrate_<sha256(DATABASE())[:16]> (34 chars); with the lock held on DB qa88e, `up` on another DB on the same server ran in 1s (not blocked). Lock is taken on a dedicated sql.Conn (goose initialize() p.db.Conn, held until cleanup), not a pool connection returned early (read goose v3.28 provider_run.go). Lock timeout: held GET_LOCK from another session, `up` waited 300s, then 'another smemories-migrate holds the migration lock', exit 3. SIGTERM while waiting: 'context canceled', exit 1, no stray session. SIGKILL of the holder: the server releases the lock with the connection (second process acquired it, see observation 1 for what it then found).
+  AC3 prod: SMEM_ENV=prod + valid prod task env: `down --allow-down` -> exit 4 'refused: down and --allow-down are never allowed with SMEM_ENV=prod; roll forward with a new migration', before any DB connection; `down` and `up --allow-down` -> exit 2 usage (refused too, nothing runs); version/status work in prod. dev/test: `down --allow-down` rolls back one step (5 real downs, DB went back to 20261012100000), bare `down` is exit 2. down code path unchanged vs develop (goose Provider.Down) apart from the lock. `version` prints 0 on empty / highest applied; status lines sensible.
+  AC2 CheckSchema (API, SMEM_ENV=test, my Valkey): nonexistent DB -> db error as before; empty DB -> exit 1 'database schema is at version 0, this build expects 20261017100000: 20 migrations pending; run smemories-migrate up first'; migrated -> starts, /readyz 200, TERM exit 0; last goose row deleted -> exit 1 names 20261016100000 vs 20261017100000; is_applied=0 row -> behind, refused; killed-mid-migration (dirty, no goose row) DB -> refused with 19 pending; ahead by 1, 2, 3 unknown versions -> starts; ahead by 4 -> exit 1 '...4 migrations ahead (at most 3 are compatible); deploy the newer image'. No DSN/password in any API log or message (grep). MySQL general log during start-up: exactly one `SELECT version_id FROM goose_db_version WHERE is_applied AND version_id > 0`, no write, no GET_LOCK. /readyz unchanged (ping only). Rolling deploy: old API vs a schema up to 3 migrations newer starts, confirmed.
+  AC4 docs/deploy.md read against behaviour: order, table of API behaviours, exit codes 0/1/2/3/4, expand/contract with the T-081 example (1364 error on old insert, confirmed same class: NOT NULL column without default), reviewer checklist, 'missing migrations' goose rule (confirmed: `up` with an out-of-order gap fails 'detected 1 missing (out-of-order) migration'). container.md / production-config.md / README consistent.
+  AC5: `make image-smoke` (private tag, see obs 5) all ok incl. 'API refuses un-migrated DB (names both versions)', 'two concurrent migrate up applied each of the 20 migrations once', 'down and --allow-down refused in prod and nothing rolled back'; image 49 MiB. `make lint` exit 0; `go build ./...`; `go test -race ./...` all ok; `go test -race -tags integration ./...` ok on my MySQL after matching the repo sql_mode (STRICT_ALL_TABLES; the one TestUTF8MB4RoundTrip failure was my plain MySQL's STRICT_TRANS_TABLES, not the PR). e2e untouched (no web/e2e files in the diff). No .team files in the PR.
+  DECISIONS
+  - MaxSchemaAhead as a constant: agree. A flag would only invite widening it; 3 is checked in tests and docs. Consequence to keep in mind (documented only indirectly): a release with 4+ migrations makes the previous API tasks unable to RESTART during the roll (crash, scale-out, health replacement) because the check runs at start-up.
+  - `make migrate-down` needing --allow-down: agree, Makefile passes it, dev default env is dev; prod still refuses.
+  NON-BLOCKING OBSERVATIONS (none violates an AC)
+  1. Kill mid-DDL leaves a half-applied migration that the next run cannot repair: SIGKILL of a task while an ALTER waits on a metadata lock (or at any point between a DDL statement and the goose version insert) -> MySQL keeps the dead session alive until the statement ends (lock released only then), then the next `up` re-runs the migration and exits 1 'Duplicate column name username' / 'Table users already exists'. It fails loudly, CheckSchema refuses the API, nothing is silently wrong; this is MySQL's non-transactional DDL. But docs/deploy.md says 'fix forward with a new migration', which does not help here (the version row was never written). Suggest a short runbook line: a failed or killed migration is repaired by hand (drop/undo the partial change, then rerun), and prefer IF NOT EXISTS / idempotent DDL for multi-statement migrations.
+  2. Ahead by 1-3 starts silently: no log line at all. A WARN 'database schema is N migration(s) ahead of this build' would help ops spot a stale image during a roll.
+  3. Message when a middle migration is missing (gap) reads 'database schema is at version X, this build expects X: 1 migrations pending' (same number twice) and `up` itself refuses with goose 'missing (out-of-order)'. Rare; wording could say which version is missing.
+  4. docs/deploy.md says `down` is 'refused with SMEM_ENV=prod (with or without the flag)' and exit 4 for 'down or --allow-down'; actually bare `down` and `up --allow-down` exit 2 (usage) in prod and only `down --allow-down` exits 4 (the smoke script asserts exactly this). Tweak the exit-code table wording.
+  5. scripts/image-smoke.sh runs the un-migrated API with `docker run` and no timeout: if the image lacks the check (or the tag is stale) the smoke hangs forever instead of failing (it hung 20 min for me because a concurrent build overwrote the shared smemories:local tag with an older image). Consider `timeout 60` or `docker run` with --stop-timeout and a deadline.
+- 2026-10-17 13:39Z · leader · Leader review OK on ca0401c: advisory lock per database (GET_LOCK with a database-specific name, wait up to 5 min, exit 3 on timeout), down/--allow-down refused in prod (exit 4 / exit 2 for the bare forms), db.CheckSchema is one read-only query at API start-up (refuses empty, behind, dirty or more than 3 unknown migrations ahead; names both versions; no DSN in the message; /readyz unchanged), docs/deploy.md has the deploy order, expand/contract and exit codes; QA proved 2 and 5 concurrent migrations apply each of the 20 migrations once, a held lock on one DB does not block another, the concurrency test fails without the lock; CI green on the head. I accept the two decisions: MaxSchemaAhead = 3 as a constant (note: a release with 4 or more migrations stops the previous API tasks from restarting mid-roll: keep releases to at most 3 migrations or split them) and make migrate-down needing --allow-down. QA's five non-blocking findings (half-applied migration after SIGKILL, silent ahead start, doubled version in the gap message, wrong exit code in deploy.md, image-smoke without timeout/shared tag) are tracked in T-090. Waiting for owner approval (Risk high).
+- 2026-10-17 15:08Z · human · owner approved merge
+- 2026-10-17 15:09Z · leader · merged 8d91020 (PR #80). Review: advisory lock per database, exit 3 on lock timeout, down/--allow-down refused in prod (exit 4/2), db.CheckSchema read-only at API start-up (refuses empty/behind/dirty/more than 3 ahead, names both versions), docs/deploy.md; QA proved concurrent migrations apply each migration once; CI green; owner approved. Accepted decisions: MaxSchemaAhead = 3 constant (a release with 4 or more migrations stops previous API tasks from restarting mid-roll: keep releases to at most 3 migrations), make migrate-down needs --allow-down. For owner to check: docs/deploy.md; make migrate still works; make migrate-down now needs --allow-down. Open items: T-090.
 
 ### T-089 — [E06] Image scan (Trivy + SBOM) and secret hygiene (T-022 slice 4)
-- **Status:** TODO
+- **Status:** CHANGES_REQUESTED
 - **Priority:** P2
 - **Type:** infra
 - **Milestone:** M2
 - **Depends-on:** T-086
 - **Risk:** high
-- **Rework:** 0
-- **Owner-approved:** —
+- **Rework:** 1
+- **Owner-approved:** yes
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-17 12:46Z by leader
-- **Comments-seen:** 1
+- **Branch:** task/t-089-e06-image-scan-trivy-sbom-and-secret-hyg
+- **PR:** 81
+- **Updated:** 2026-10-17 15:09Z by leader
+- **Comments-seen:** 5
 
 Spec: .team/epics/E06-go-live/09-image-scan-secret-hygiene.md (read it from the repo root).
 
 #### Comments
 - 2026-10-17 12:46Z · leader · unblocked: T-086 merged. Read the items added at the bottom of the spec (N1-N3 from the T-086 QA, plus the T-022 QA robustness items).
+- 2026-10-17 13:23Z · dev · PR #81 head 4977a34, CI green (go, go-integration, image, e2e, web, security). Trivy 0.76.0 pinned by digest (make image-scan; selftest vs alpine 3.12 also in CI), SBOM artifact image-sbom, make image-hygiene (+planted .env selftest), N1 LogWarnings in all 3 binaries, N2 redactURL + userinfo refused, N3 https S3 endpoint in prod (new SMEM_S3_ALLOW_INSECURE) + static-key WARN (decision: warn, not refuse), D-30 label, syntax/MinIO digest pins, readyz drain WARN once, drain note, smoke status retry. All spec items done. T-088 (#80) overlaps cmd/smemories-migrate/main.go, container.md, production-config.md, image-smoke.sh: merge develop after it lands. Verify: make image-scan-selftest, make image-hygiene.
+- 2026-10-17 13:23Z · leader · Leader: confirmed - a static SMEM_S3_ACCESS_KEY in prod logs a WARN (not a refusal) so non-AWS S3-compatible stores stay possible; the documented behaviour in docs/production-config.md stands. QA will test PR #81 after PR #80 (T-088); expect merge conflicts in cmd/smemories-migrate/main.go, docs/container.md, docs/production-config.md and scripts/image-smoke.sh, resolved by merging develop (no force-push).
+- 2026-10-17 13:56Z · qa · QA_PASS PR #81 head 4977a34 (CI all green incl. image; artifact image-sbom 9975 B present). EVIDENCE (my own runs, private tag smem-qa-t089:1, private MySQL :13389 / Valkey :16389, Trivy cache in scratch; all removed). AC1: make image-scan on real image: Trivy 0.76.0 pinned by tag+digest, run on docker save (no socket, no creds, --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1), 0 vulns debian+3 gobinaries, rc 0, DB cache dir reused (2nd run <1 s). SBOM: CycloneDX 1.7, 108 components, no AKIA/123123/secret strings. Bad images: make image-scan-selftest (alpine 3.12) rc 0 = scan rejected (CRITICAL 1); my scratch Dockerfile debian:bullseye-20220801-slim + real binary: Total 78 (HIGH 68, CRITICAL 10), script rc 1 (SBOM still written, CI uploads with if: always()); ubuntu:18.04 scratch passes (Trivy sees no fix without ESM; not a defect). AC2: make image-hygiene real image ok; self-test ok. Planted in scratch layers: /.env, /etc/x.pem, AKIA+16 chars in a text file, SMEM_DEV_FIXED_OTP=123123 in a file, ENV FOO=123123, LABEL with AKIA: each rc 1 (file contexts and docker history/config both scanned); match never printed. AC3: transcript above (bullseye + selftest). AC4/N1: api, migrate, backfill binaries with prod + SMEM_DB_ALLOW_INSECURE/S3_ALLOW_INSECURE/static S3 key: WARN names each variable in all three, no secret value in output (sentinel grep 0), dev env no opt-out WARN. N2: PUBLIC_BASE_URL (https and http), ALLOWED_ORIGINS (https/http), S3_ENDPOINT with user:sentpw@: refused, message shows https://***@x.example, no password; unparseable userinfo -> "***"; refused in dev too. N3: prod http S3 endpoint refused, with SMEM_S3_ALLOW_INSECURE=true starts + WARN, static key without endpoint starts + WARN SMEM_S3_ACCESS_KEY (leader-approved warn). D-30: docker inspect label org.opencontainers.image.licenses=LicenseRef-All-Rights-Reserved; no LICENSE file; no NOASSERTION left in repo (git grep). Pins: Dockerfile # syntax=...@sha256 and smoke MinIO @sha256 present. Drain WARN: real API SIGTERM with SMEM_SHUTDOWN_DELAY=6s, 8 /readyz probes all 503, exactly 1 WARN 'readyz: shutdown ping failed', exit 0; unit test added. Docs: production-config.md has SMEM_S3_ALLOW_INSECURE (TestEveryVariableIsDocumented passes), container.md has drain/upload note, startup warnings, scan/hygiene sections. Smoke: make image-smoke rc 0 (48 MiB, all checks incl. new WARN and refusal checks, status retry). make lint build test rc 0; go test -race -tags integration ./... all ok (first try db TestUTF8MB4RoundTrip failed only because my MySQL lacked --default-time-zone=+00:00; with the compose flags it is green). No .team files in PR. MERGE ORDER: #81 vs #80 (ca0401c) merges with 2 conflicts only, docs/container.md (intro line 4-8) and scripts/image-smoke.sh (migrate block ~l.117-164); Go files auto-merge and build. Merge either first; the second needs a develop merge by dev. NON-BLOCKING: (a) scripts/image-hygiene.sh FAILS OPEN when the image is missing/unreadable: 'scripts/image-hygiene.sh no-such-image:zz' prints errors but then 'ok' rc 0 (set -e is ignored inside check() called with ||; docker export|tar errors are also swallowed). Safe in CI/make (image target builds first) but a gate should fail closed: run docker image inspect first and check pipe status. (b) refusal for SMEM_PUBLIC_BASE_URL still echoes a query string (?token=...), only userinfo is redacted; outside spec. (c) SBOM metadata component name is '/in/image.tar' (cosmetic; pass --input-name or similar). (d) selftest depends on alpine 3.12 keeping >=1 fixable HIGH/CRITICAL; if the DB drops it the selftest fails loudly, fine. (e) my scratch temp dirs under /private/tmp/claude-501/qa89* could not be rm'd by sandbox policy (trivy cache, logs); harmless.
+- 2026-10-17 13:56Z · leader · Leader review OK on 4977a34: Trivy 0.76.0 pinned by digest and gating on fixable HIGH/CRITICAL (selftest on alpine:3.12 and QA's debian:bullseye image both fail it), valid CycloneDX SBOM as the image-sbom artifact, image-hygiene fails on a planted .env/*.pem/AKIA/123123 and scans docker history, the T-086 nits N1-N3 and the D-30 licence label done, readyz drain WARN once across 8 probes; CI green on the head. Merge order: PR #80 (T-088) first; #81 conflicts with it only in docs/container.md and scripts/image-smoke.sh, so after #80 merges dev merges develop into #81 (no force-push) and QA re-checks only that merge. Two non-blocking items (image-hygiene fails open on a missing image; a ?token= query is still echoed in a refusal) are added to T-090. Waiting for owner approval (Risk high).
+- 2026-10-17 15:08Z · human · owner approved merge
+- 2026-10-17 15:09Z · leader · PR #81 now CONFLICTS with develop (T-088 merged as 8d91020): docs/container.md and scripts/image-smoke.sh (QA saw only those two; the Go files auto-merge). The owner approved T-089 (team approve T-089), so nothing else changes: merge origin/develop into the branch (no force-push), resolve keeping both sides (T-088's smoke-test checks for the concurrent migrate / un-migrated API refusal / down refused in prod AND your retry/capture change to the migrate status check), re-run the gates (make lint build test, go test -race -tags integration ./..., make image-smoke with a PRIVATE image tag, make image-scan, make image-hygiene), CI green on the new head incl. image, push, READY_FOR_QA; QA will re-test the merged state.
+
+### T-090 — [E06] Migrate docs fixes, half-applied migration guidance and image-smoke robustness
+- **Status:** BACKLOG
+- **Priority:** P2
+- **Type:** tech-debt
+- **Milestone:** M2
+- **Depends-on:** T-089
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-17 14:28Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E06-go-live/10-migrate-docs-and-smoke-robustness.md (read it from the repo root). Five non-blocking findings of the T-088 QA.
+
+#### Comments
 
 <!-- tasks:end -->
 
@@ -4128,3 +4221,4 @@ Spec: .team/epics/E06-go-live/09-image-scan-secret-hygiene.md (read it from the 
 - 2026-10-17 — T-020 (end-to-end Playwright journey in CI, PR #75) merged dbec4ce: 10 green runs, forced failure uploads the artifact. T-022 merged earlier; T-086 (prod config, slice 2) in progress. T-087 (P3) added for the T-020 QA nits. Owner: decide whether e2e (and image) become required checks.
 - 2026-10-17 — T-087 (e2e hardening, PR #79) merged ca0c169. T-086 slice (a) QA_PASS awaiting owner approval (Q-036). T-088 and T-089 follow T-086. Open owner items: Q-033 email provider and domain, Q-034 licence, accept T-020/T-022/T-061.
 - 2026-10-17 — T-086 (production config contract + S3 default credential chain, PR #78, owner-approved) merged 314fa5a. Owner accepted T-020, T-022, T-061, T-087. T-088 (migrate lock + schema check) and T-089 (image scan + secret hygiene + QA nits) are TODO. Q-033 (email provider/domain) and Q-034 (licence) still open.
+- 2026-10-17 — T-088 (migrate advisory lock + API schema-version check, PR #80, owner-approved) merged 8d91020. T-089 (PR #81, owner-approved) conflicts with it in docs/container.md and scripts/image-smoke.sh: dev merges develop, QA re-checks the merge. T-021 (SES mailer, PR #82) QA_PASS awaiting owner approval (Q-040). Owner decisions: D-29 Amazon SES, D-30 unlicensed. Open: Q-037 domain/DNS/region. T-090 (P2) holds the go-live fixes from the T-021/T-088/T-089 QA runs.

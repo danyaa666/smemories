@@ -101,7 +101,7 @@ Prerequisites: Go 1.26 (the `go` directive in `go.mod`), `make`, Docker with Com
 | `make web-install` | `npm ci` in `web/` (Node 22, see `web/.nvmrc`); the other web targets do it on demand. Dev server: `cd web && npm run dev` (proxies `/api/*` to `localhost:8080`) |
 | `make run` | Runs the API from source (needs the stack below: `SMEM_DB_DSN` is required) |
 | `make up` / `make down` | Start (and wait for) / stop MySQL 8.4, Valkey 8 (Redis protocol) and MinIO; creates `.env` from `.env.example` first. Ports bind to `127.0.0.1`. `make up` also (re)applies the `smem_test_%` grants, so it works on older MySQL volumes |
-| `make migrate` / `make migrate-down` | Apply all migrations / roll back the last one |
+| `make migrate` / `make migrate-down` | Apply all migrations / roll back the last one (dev only; `down` needs `--allow-down` and is refused with `SMEM_ENV=prod`, see docs/deploy.md) |
 | `make test-integration` | Tests tagged `integration` against the local MySQL and Valkey (run `make up migrate` first; each test gets its own throwaway database) |
 | `make e2e` | The M1 journey in a real browser (Playwright) against a locally started API and the built web app, on the stack from `make up`; needs poppler. See [docs/e2e.md](docs/e2e.md) |
 
