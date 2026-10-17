@@ -70,7 +70,7 @@ func main() {
 	}
 	defer func() { _ = d.Close() }()
 	cctx, ccancel := context.WithTimeout(ctx, schemaCheckTimeout)
-	err = db.CheckSchema(cctx, d) // never migrates: the one-off smemories-migrate task runs before the API rolls (docs/deploy.md)
+	err = db.CheckSchemaLog(cctx, d, logger) // never migrates: the one-off smemories-migrate task runs before the API rolls (docs/deploy.md)
 	ccancel()
 	if err != nil {
 		logger.Error("database schema does not match this build", "error", err)

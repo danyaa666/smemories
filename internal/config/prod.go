@@ -88,24 +88,35 @@ func privateHost(addr string) bool {
 	return ip != nil && !ip.IsUnspecified() && (ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast())
 }
 
-// redactURL returns s with any user:pass@ replaced by ***@, so a refusal message never echoes a credential. A string that does not parse
-// but contains an @ is replaced entirely.
+// redactURL returns s with any user:pass@ replaced by ***@ and any query string or fragment replaced by ?*** / #***, so a refusal message
+// never echoes a credential or a token (?token=...). A string that does not parse but contains an @, ? or # is replaced entirely.
 func redactURL(s string) string {
 	u, err := url.Parse(s)
 	if err != nil {
-		if strings.Contains(s, "@") {
+		if strings.ContainsAny(s, "@?#") {
 			return "***"
 		}
 		return s
 	}
-	if u.User == nil {
-		if strings.Contains(u.Opaque, "@") { // user:pass@host parses as scheme "user" with an opaque rest
+	if u.User == nil && u.RawQuery == "" && u.Fragment == "" && !u.ForceQuery {
+		if strings.ContainsAny(u.Opaque, "@?#") { // user:pass@host parses as scheme "user" with an opaque rest
 			return "***"
 		}
 		return s
 	}
+	hadUser := u.User != nil
 	u.User = nil
-	return strings.Replace(u.String(), "://", "://***@", 1)
+	if u.RawQuery != "" || u.ForceQuery {
+		u.RawQuery, u.ForceQuery = "***", false
+	}
+	if u.Fragment != "" {
+		u.Fragment = "***"
+	}
+	out := u.String()
+	if hadUser {
+		out = strings.Replace(out, "://", "://***@", 1)
+	}
+	return out
 }
 
 // LogWarnings logs, loudly, every production safety opt-out that is on and the static S3 keys that override the task role. Every

@@ -439,7 +439,7 @@ func (cfg *Config) loadGoogle(getenv func(string) string, get func(key, def stri
 	cfg.GoogleIssuer = get("SMEM_GOOGLE_ISSUER", "https://accounts.google.com")
 	u, err := url.Parse(cfg.GoogleIssuer)
 	if err != nil || u.Host == "" || u.RawQuery != "" || u.Fragment != "" || u.User != nil || (u.Scheme != "https" && (u.Scheme != "http" || cfg.Env == "prod")) {
-		return fmt.Errorf("SMEM_GOOGLE_ISSUER=%q: want an https URL such as https://accounts.google.com", cfg.GoogleIssuer)
+		return fmt.Errorf("SMEM_GOOGLE_ISSUER=%q: want an https URL such as https://accounts.google.com", redactURL(cfg.GoogleIssuer))
 	}
 	return nil
 }

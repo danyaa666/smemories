@@ -159,12 +159,24 @@ func TestURLCredentialsRefusedEverywhereAndRedacted(t *testing.T) {
 			t.Errorf("%s: want a refusal naming it without the password, got %v", k, err)
 		}
 	}
+	for _, k := range []string{"SMEM_ALLOWED_ORIGINS", "SMEM_PUBLIC_BASE_URL"} { // both refuse a query; the message must not repeat it (T-090)
+		m := with("SMEM_ENV", "dev", "SMEM_DB_DSN", "app:p@tcp(db:3306)/d", "SMEM_REDIS_URL", "redis://127.0.0.1:6379/0", k, "http://localhost:5173?token="+secS3)
+		_, err := Load(exact(m))
+		if err == nil || !strings.Contains(err.Error(), k) || strings.Contains(err.Error(), secS3) {
+			t.Errorf("%s: want a refusal naming it without the query token, got %v", k, err)
+		}
+	}
 	for in, want := range map[string]string{
 		"https://app.example.com":        "https://app.example.com",
 		"https://u:pw@app.example.com/x": "https://***@app.example.com/x",
 		"u:pw@app.example.com":           "***",
 		"http://u:p w@host":              "***",
 		"not a url":                      "not a url",
+		// T-090: a query string or fragment can carry a token too.
+		"https://app.example.com/?token=abc123":     "https://app.example.com/?***",
+		"https://app.example.com?token=abc123#frag": "https://app.example.com?***#***",
+		"https://u:pw@app.example.com?t=abc":        "https://***@app.example.com?***",
+		"https://app.example.com/%zz?token=abc":     "***",
 	} {
 		if got := redactURL(in); got != want {
 			t.Errorf("redactURL(%q) = %q, want %q", in, got, want)

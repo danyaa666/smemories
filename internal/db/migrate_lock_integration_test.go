@@ -208,4 +208,55 @@ func TestCheckSchema(t *testing.T) {
 	})
 }
 
+// AC2 (T-090): a start 1 to MaxSchemaAhead migrations ahead logs exactly one WARN naming both versions; equal and refused starts log none.
+func TestCheckSchemaLogsAheadWarning(t *testing.T) {
+	ctx := context.Background()
+	d := dbtest.New(t)
+	build := versionOf(t, d)
+	var logs syncBuf
+	logger := slog.New(slog.NewJSONHandler(&logs, nil))
+	if err := db.CheckSchemaLog(ctx, d, logger); err != nil || logs.b.Len() != 0 {
+		t.Fatalf("equal schema: err=%v, log %q; want no error and no line", err, logs.b.String())
+	}
+	if _, err := d.ExecContext(ctx, "INSERT INTO goose_db_version (version_id, is_applied) VALUES (29990101000000, 1), (29990102000000, 1)"); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.CheckSchemaLog(ctx, d, logger); err != nil {
+		t.Fatal(err)
+	}
+	out := logs.b.String()
+	for _, w := range []string{`"level":"WARN"`, `"database_version":29990102000000`, `"build_version":` + itoa(build), `"migrations_ahead":2`} {
+		if !strings.Contains(out, w) {
+			t.Errorf("the WARN lacks %s: %q", w, out)
+		}
+	}
+	if strings.Count(out, "\n") != 1 {
+		t.Errorf("want exactly one line, got %q", out)
+	}
+}
+
+// AC1 (T-090): a migration that runs a second time because the first run was killed half way fails with the hint (errors 1050 and 1060).
+func TestMigrateUpHalfAppliedHint(t *testing.T) {
+	ctx := context.Background()
+	for _, tc := range []struct {
+		name    string
+		forget  string // delete the goose rows from this version on, so up re-runs those migrations over their own leftovers
+		wantErr string
+	}{
+		{"table already exists (1050)", "20261017100000", "Error 1050"},
+		{"duplicate column (1060)", "20261016100000", "Error 1060"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			d := dbtest.New(t)
+			if _, err := d.ExecContext(ctx, "DELETE FROM goose_db_version WHERE version_id >= "+tc.forget); err != nil {
+				t.Fatal(err)
+			}
+			err := db.MigrateUpLog(ctx, d, nil, time.Second)
+			if err == nil || !strings.Contains(err.Error(), tc.wantErr) || !strings.Contains(err.Error(), "half-applied") || !strings.Contains(err.Error(), "docs/deploy.md") {
+				t.Fatalf("want %s plus the half-applied hint, got %v", tc.wantErr, err)
+			}
+		})
+	}
+}
+
 func itoa(v int64) string { return strconv.FormatInt(v, 10) }
