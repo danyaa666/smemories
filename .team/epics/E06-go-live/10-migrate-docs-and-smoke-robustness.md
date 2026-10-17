@@ -18,3 +18,7 @@ Five small leftovers of the migration-lock work:
 - [ ] AC4 - `docs/deploy.md` exit codes match the code (a test or a script that runs `down` and `down --allow-down` in prod mode and checks 2 and 4).
 - [ ] AC5 - `make image-smoke` uses its own tag and a timeout on each wait, still passes in about 25-40 s, and two runs started at the same time do not interfere; CI `image` job green.
 - [ ] AC6 - `make lint build test`, `go test -race -tags integration ./...` and `make image-smoke` pass.
+
+#### Added from the T-089 QA (non-blocking)
+6. `scripts/image-hygiene.sh no-such-image` prints "ok" and exits 0 because it fails open when the image does not exist. A security gate must fail closed: exit non-zero with a clear message when the image cannot be inspected (CI is safe only because make builds the image first). Add a test for it.
+7. A base URL or origin with a query such as `?token=...` is still echoed in the refusal message. Redact query strings as well as userinfo in config error messages.

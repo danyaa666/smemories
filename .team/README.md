@@ -11,17 +11,16 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 9 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-090 |
-| TODO | 1 | T-021 |
-| READY_FOR_QA | 1 | T-089 |
-| QA_PASS | 1 | T-088 |
+| IN_PROGRESS | 1 | T-021 |
+| QA_PASS | 2 | T-088, T-089 |
 | DONE | 70 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
 **Awaiting your review (MERGED):** nothing
 
-**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-032 (Approve merge of T-061 (template picker, print guide, public print-feedback counter, PR #71)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-035 (Approve merge of T-022 slice 1 (production Dockerfile, graceful shutdown, image smoke test, PR #74)?); Q-036 (Approve merge of T-086 slice (a): production config contract and S3 default credential chain (PR #78, adds the AWS SDK config module)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-038 (Approve merge of T-088: smemories-migrate advisory lock and API schema-version check (PR #80)?)
+**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-032 (Approve merge of T-061 (template picker, print guide, public print-feedback counter, PR #71)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-035 (Approve merge of T-022 slice 1 (production Dockerfile, graceful shutdown, image smoke test, PR #74)?); Q-036 (Approve merge of T-086 slice (a): production config contract and S3 default credential chain (PR #78, adds the AWS SDK config module)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-038 (Approve merge of T-088: smemories-migrate advisory lock and API schema-version check (PR #80)?); Q-039 (Approve merge of T-089: image scan (Trivy + SBOM), secret hygiene and config hardening (PR #81)?)
 
-_Board last written 2026-10-17 13:39Z_
+_Board last written 2026-10-17 13:56Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -456,6 +455,13 @@ Context: Amazon SES (D-29) needs a verified domain to send from, with DKIM/SPF/D
 - **Status:** OPEN
 - **Asked:** 2026-10-17 13:39Z
 - **Blocks:** T-088
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+### Q-039 — Approve merge of T-089: image scan (Trivy + SBOM), secret hygiene and config hardening (PR #81)?
+- **Status:** OPEN
+- **Asked:** 2026-10-17 13:56Z
+- **Blocks:** T-089
 - **Recommendation:** approve
 - **Answer:** _(pending)_
 
@@ -1400,7 +1406,7 @@ One Playwright test drives the full M1 journey on the compose stack in CI: regis
 - 2026-10-17 12:46Z · human · accepted by owner
 
 ### T-021 — [E06] Transactional email provider and domain setup
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** infra
 - **Milestone:** M2
@@ -1408,10 +1414,10 @@ One Playwright test drives the full M1 journey on the compose stack in CI: regis
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-021-e06-transactional-email-provider-and-dom
 - **PR:** —
-- **Updated:** 2026-10-17 12:52Z by leader
+- **Updated:** 2026-10-17 13:40Z by dev
 - **Comments-seen:** 2
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E06-go-live/01-transactional-email-provider-and-domain-setup.md`
@@ -4089,7 +4095,7 @@ Spec: .team/epics/E06-go-live/08-migrate-lock-schema-check.md (read it from the 
 - 2026-10-17 13:39Z · leader · Leader review OK on ca0401c: advisory lock per database (GET_LOCK with a database-specific name, wait up to 5 min, exit 3 on timeout), down/--allow-down refused in prod (exit 4 / exit 2 for the bare forms), db.CheckSchema is one read-only query at API start-up (refuses empty, behind, dirty or more than 3 unknown migrations ahead; names both versions; no DSN in the message; /readyz unchanged), docs/deploy.md has the deploy order, expand/contract and exit codes; QA proved 2 and 5 concurrent migrations apply each of the 20 migrations once, a held lock on one DB does not block another, the concurrency test fails without the lock; CI green on the head. I accept the two decisions: MaxSchemaAhead = 3 as a constant (note: a release with 4 or more migrations stops the previous API tasks from restarting mid-roll: keep releases to at most 3 migrations or split them) and make migrate-down needing --allow-down. QA's five non-blocking findings (half-applied migration after SIGKILL, silent ahead start, doubled version in the gap message, wrong exit code in deploy.md, image-smoke without timeout/shared tag) are tracked in T-090. Waiting for owner approval (Risk high).
 
 ### T-089 — [E06] Image scan (Trivy + SBOM) and secret hygiene (T-022 slice 4)
-- **Status:** READY_FOR_QA
+- **Status:** QA_PASS
 - **Priority:** P2
 - **Type:** infra
 - **Milestone:** M2
@@ -4097,11 +4103,11 @@ Spec: .team/epics/E06-go-live/08-migrate-lock-schema-check.md (read it from the 
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** leader
 - **Branch:** task/t-089-e06-image-scan-trivy-sbom-and-secret-hyg
 - **PR:** 81
-- **Updated:** 2026-10-17 13:23Z by dev
-- **Comments-seen:** 3
+- **Updated:** 2026-10-17 13:56Z by qa
+- **Comments-seen:** 5
 
 Spec: .team/epics/E06-go-live/09-image-scan-secret-hygiene.md (read it from the repo root).
 
@@ -4109,6 +4115,8 @@ Spec: .team/epics/E06-go-live/09-image-scan-secret-hygiene.md (read it from the 
 - 2026-10-17 12:46Z · leader · unblocked: T-086 merged. Read the items added at the bottom of the spec (N1-N3 from the T-086 QA, plus the T-022 QA robustness items).
 - 2026-10-17 13:23Z · dev · PR #81 head 4977a34, CI green (go, go-integration, image, e2e, web, security). Trivy 0.76.0 pinned by digest (make image-scan; selftest vs alpine 3.12 also in CI), SBOM artifact image-sbom, make image-hygiene (+planted .env selftest), N1 LogWarnings in all 3 binaries, N2 redactURL + userinfo refused, N3 https S3 endpoint in prod (new SMEM_S3_ALLOW_INSECURE) + static-key WARN (decision: warn, not refuse), D-30 label, syntax/MinIO digest pins, readyz drain WARN once, drain note, smoke status retry. All spec items done. T-088 (#80) overlaps cmd/smemories-migrate/main.go, container.md, production-config.md, image-smoke.sh: merge develop after it lands. Verify: make image-scan-selftest, make image-hygiene.
 - 2026-10-17 13:23Z · leader · Leader: confirmed - a static SMEM_S3_ACCESS_KEY in prod logs a WARN (not a refusal) so non-AWS S3-compatible stores stay possible; the documented behaviour in docs/production-config.md stands. QA will test PR #81 after PR #80 (T-088); expect merge conflicts in cmd/smemories-migrate/main.go, docs/container.md, docs/production-config.md and scripts/image-smoke.sh, resolved by merging develop (no force-push).
+- 2026-10-17 13:56Z · qa · QA_PASS PR #81 head 4977a34 (CI all green incl. image; artifact image-sbom 9975 B present). EVIDENCE (my own runs, private tag smem-qa-t089:1, private MySQL :13389 / Valkey :16389, Trivy cache in scratch; all removed). AC1: make image-scan on real image: Trivy 0.76.0 pinned by tag+digest, run on docker save (no socket, no creds, --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1), 0 vulns debian+3 gobinaries, rc 0, DB cache dir reused (2nd run <1 s). SBOM: CycloneDX 1.7, 108 components, no AKIA/123123/secret strings. Bad images: make image-scan-selftest (alpine 3.12) rc 0 = scan rejected (CRITICAL 1); my scratch Dockerfile debian:bullseye-20220801-slim + real binary: Total 78 (HIGH 68, CRITICAL 10), script rc 1 (SBOM still written, CI uploads with if: always()); ubuntu:18.04 scratch passes (Trivy sees no fix without ESM; not a defect). AC2: make image-hygiene real image ok; self-test ok. Planted in scratch layers: /.env, /etc/x.pem, AKIA+16 chars in a text file, SMEM_DEV_FIXED_OTP=123123 in a file, ENV FOO=123123, LABEL with AKIA: each rc 1 (file contexts and docker history/config both scanned); match never printed. AC3: transcript above (bullseye + selftest). AC4/N1: api, migrate, backfill binaries with prod + SMEM_DB_ALLOW_INSECURE/S3_ALLOW_INSECURE/static S3 key: WARN names each variable in all three, no secret value in output (sentinel grep 0), dev env no opt-out WARN. N2: PUBLIC_BASE_URL (https and http), ALLOWED_ORIGINS (https/http), S3_ENDPOINT with user:sentpw@: refused, message shows https://***@x.example, no password; unparseable userinfo -> "***"; refused in dev too. N3: prod http S3 endpoint refused, with SMEM_S3_ALLOW_INSECURE=true starts + WARN, static key without endpoint starts + WARN SMEM_S3_ACCESS_KEY (leader-approved warn). D-30: docker inspect label org.opencontainers.image.licenses=LicenseRef-All-Rights-Reserved; no LICENSE file; no NOASSERTION left in repo (git grep). Pins: Dockerfile # syntax=...@sha256 and smoke MinIO @sha256 present. Drain WARN: real API SIGTERM with SMEM_SHUTDOWN_DELAY=6s, 8 /readyz probes all 503, exactly 1 WARN 'readyz: shutdown ping failed', exit 0; unit test added. Docs: production-config.md has SMEM_S3_ALLOW_INSECURE (TestEveryVariableIsDocumented passes), container.md has drain/upload note, startup warnings, scan/hygiene sections. Smoke: make image-smoke rc 0 (48 MiB, all checks incl. new WARN and refusal checks, status retry). make lint build test rc 0; go test -race -tags integration ./... all ok (first try db TestUTF8MB4RoundTrip failed only because my MySQL lacked --default-time-zone=+00:00; with the compose flags it is green). No .team files in PR. MERGE ORDER: #81 vs #80 (ca0401c) merges with 2 conflicts only, docs/container.md (intro line 4-8) and scripts/image-smoke.sh (migrate block ~l.117-164); Go files auto-merge and build. Merge either first; the second needs a develop merge by dev. NON-BLOCKING: (a) scripts/image-hygiene.sh FAILS OPEN when the image is missing/unreadable: 'scripts/image-hygiene.sh no-such-image:zz' prints errors but then 'ok' rc 0 (set -e is ignored inside check() called with ||; docker export|tar errors are also swallowed). Safe in CI/make (image target builds first) but a gate should fail closed: run docker image inspect first and check pipe status. (b) refusal for SMEM_PUBLIC_BASE_URL still echoes a query string (?token=...), only userinfo is redacted; outside spec. (c) SBOM metadata component name is '/in/image.tar' (cosmetic; pass --input-name or similar). (d) selftest depends on alpine 3.12 keeping >=1 fixable HIGH/CRITICAL; if the DB drops it the selftest fails loudly, fine. (e) my scratch temp dirs under /private/tmp/claude-501/qa89* could not be rm'd by sandbox policy (trivy cache, logs); harmless.
+- 2026-10-17 13:56Z · leader · Leader review OK on 4977a34: Trivy 0.76.0 pinned by digest and gating on fixable HIGH/CRITICAL (selftest on alpine:3.12 and QA's debian:bullseye image both fail it), valid CycloneDX SBOM as the image-sbom artifact, image-hygiene fails on a planted .env/*.pem/AKIA/123123 and scans docker history, the T-086 nits N1-N3 and the D-30 licence label done, readyz drain WARN once across 8 probes; CI green on the head. Merge order: PR #80 (T-088) first; #81 conflicts with it only in docs/container.md and scripts/image-smoke.sh, so after #80 merges dev merges develop into #81 (no force-push) and QA re-checks only that merge. Two non-blocking items (image-hygiene fails open on a missing image; a ?token= query is still echoed in a refusal) are added to T-090. Waiting for owner approval (Risk high).
 
 ### T-090 — [E06] Migrate docs fixes, half-applied migration guidance and image-smoke robustness
 - **Status:** BACKLOG
