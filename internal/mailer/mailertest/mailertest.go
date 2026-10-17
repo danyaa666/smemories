@@ -16,11 +16,12 @@ import (
 type Behaviour int
 
 const (
-	Healthy     Behaviour = iota // accepts the message
-	Throttled                    // "slow down" (HTTP 429 or the provider's equivalent)
-	ServerError                  // the provider is failing (5xx)
-	Refused                      // permanent refusal of this message (rejected address, sending paused)
-	Hang                         // accepts the connection and never answers
+	Healthy       Behaviour = iota // accepts the message
+	Throttled                      // "slow down" (HTTP 429 or the provider's equivalent)
+	ServerError                    // the provider is failing (5xx)
+	Refused                        // permanent refusal of this message because of its address (invalid or suppressed recipient)
+	Misconfigured                  // refusal because of our account or setup (suspended or paused account, sender or sandbox recipient not verified)
+	Hang                           // accepts the connection and never answers
 )
 
 // Fixture is one implementation under test, wired to its stub.
@@ -83,13 +84,16 @@ func Run(t *testing.T, newFixture func(t *testing.T) Fixture) {
 	})
 
 	failures := []struct {
-		name string
-		b    Behaviour
-		want error
+		name      string
+		b         Behaviour
+		want      error
+		wantClass string
 	}{
-		{"throttling is ErrUnavailable", Throttled, mailer.ErrUnavailable},
-		{"a 5xx is ErrUnavailable", ServerError, mailer.ErrUnavailable},
-		{"a refusal is ErrRejected", Refused, mailer.ErrRejected},
+		{"throttling is ErrUnavailable", Throttled, mailer.ErrUnavailable, mailer.ClassUnavailable},
+		{"a 5xx is ErrUnavailable", ServerError, mailer.ErrUnavailable, mailer.ClassUnavailable},
+		{"a refused address is ErrRejected", Refused, mailer.ErrRejected, mailer.ClassRejected},
+		// An account or setup problem is not the student's address: a loud 503 and its own class for the alarm, never ErrRejected.
+		{"an account or setup problem is ErrUnavailable with its own class", Misconfigured, mailer.ErrUnavailable, mailer.ClassConfig},
 	}
 	for _, c := range failures {
 		t.Run(c.name, func(t *testing.T) {
@@ -104,6 +108,9 @@ func Run(t *testing.T, newFixture func(t *testing.T) Fixture) {
 			}
 			if c.want == mailer.ErrRejected && errors.Is(err, mailer.ErrUnavailable) || c.want == mailer.ErrUnavailable && errors.Is(err, mailer.ErrRejected) {
 				t.Errorf("the error matches both classes: %v", err)
+			}
+			if got := mailer.Class(err); got != c.wantClass {
+				t.Errorf("Class = %q, want %q", got, c.wantClass)
 			}
 			noLeak(t, f, err)
 		})

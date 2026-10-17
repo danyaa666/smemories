@@ -150,13 +150,39 @@ func (s *Service) sendCodeLater(ctx context.Context, u *User, purpose, what stri
 func (s *Service) background(parent context.Context, f func(context.Context)) {
 	rid := httpx.RequestIDFrom(parent)
 	s.bg.Add(1)
+	s.bgActive.Add(1)
 	go func() {
 		defer s.bg.Done()
+		defer s.bgActive.Add(-1)
 		ctx, cancel := context.WithTimeout(httpx.WithRequestID(context.Background(), rid), backgroundTimeout)
 		defer cancel()
 		f(ctx)
 	}()
 }
 
-// Wait blocks until the emails sent in the background have been handed to the mailer.
+// Wait blocks until the emails sent in the background have been handed to the mailer. Tests use it; shutdown uses Drain, which is bounded.
 func (s *Service) Wait() { s.bg.Wait() }
+
+// Drain is Wait bounded by ctx (the rest of the shutdown budget, SMEM_SHUTDOWN_TIMEOUT): a hung provider would otherwise keep the process
+// alive for up to backgroundTimeout, past the platform's stop timeout, and the task would be killed. When ctx ends first, the emails still
+// unsent are dropped: each is counted as mailer.ClassShutdown and one ERROR line says how many. It returns how many were dropped. The
+// user of a dropped email asks again on the resend screen.
+func (s *Service) Drain(ctx context.Context) (dropped int) {
+	done := make(chan struct{})
+	go func() { s.bg.Wait(); close(done) }()
+	select {
+	case <-done:
+		return 0
+	case <-ctx.Done():
+	}
+	dropped = int(s.bgActive.Load())
+	if dropped > 0 {
+		s.mail.Logger.Error("emails dropped at shutdown", "class", mailer.ClassShutdown, "count", dropped)
+		if s.mail.OnFailure != nil {
+			for range dropped {
+				s.mail.OnFailure(mailer.ClassShutdown)
+			}
+		}
+	}
+	return dropped
+}

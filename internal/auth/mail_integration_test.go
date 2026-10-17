@@ -199,3 +199,66 @@ func TestMessagesCarryTextAndHTML(t *testing.T) {
 		t.Fatalf("message: %+v", m)
 	}
 }
+
+// T-090 item 12: the try given back during an outage is capped (5 an hour per user), so one user cannot keep hitting a throttling
+// provider: 5 refunded sends plus the 3 an hour, then the ordinary 429.
+func TestResendRefundIsCapped(t *testing.T) {
+	sm := &scriptMailer{}
+	e := newEnv(t, opts{mailer: sm})
+	want(t, e.register(testMail, testPW, "Alice"), 200, "")
+	c := sessionCookie(t, e.login(testMail, testPW, ""))
+	e.svc.Wait()
+
+	sm.script = []error{mailer.ErrUnavailable}
+	sm.mu.Lock()
+	sm.msgs = nil
+	sm.mu.Unlock()
+	var codes []int
+	for range 12 {
+		codes = append(codes, e.post("/api/auth/resend-verification", "", c.Value).Code)
+	}
+	wantCodes := []int{503, 503, 503, 503, 503, 503, 503, 503, 429, 429, 429, 429} // 5 refunded + 3 counted, then rate limited
+	for i := range wantCodes {
+		if codes[i] != wantCodes[i] {
+			t.Fatalf("statuses %v, want %v", codes, wantCodes)
+		}
+	}
+	if got := sm.sent(); got != resendRefundsHour+resendPerHour {
+		t.Errorf("%d sends reached the provider, want %d", got, resendRefundsHour+resendPerHour)
+	}
+}
+
+// T-090 item 10: Drain waits for the background emails only as long as its context allows, drops and counts what is left (class
+// shutdown) and returns at once when nothing is pending.
+func TestDrainIsBoundedAndCountsTheDropped(t *testing.T) {
+	var mu sync.Mutex
+	var failed []string
+	sm := &scriptMailer{delay: time.Minute, release: make(chan struct{})}
+	e := newEnv(t, opts{mailer: sm, onFailure: func(class string) { mu.Lock(); failed = append(failed, class); mu.Unlock() }})
+	want(t, e.register(testMail, testPW, "Alice"), 200, "")
+	want(t, e.register("second@example.com", testPW, "Bob"), 200, "")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+	start := time.Now()
+	dropped := e.svc.Drain(ctx)
+	if took := time.Since(start); took > 3*time.Second {
+		t.Fatalf("Drain took %s with a 200 ms budget", took)
+	}
+	mu.Lock()
+	got := append([]string(nil), failed...)
+	mu.Unlock()
+	if dropped != 2 || len(got) != 2 || got[0] != mailer.ClassShutdown || got[1] != mailer.ClassShutdown {
+		t.Fatalf("dropped %d, counted %v; want 2 dropped, both class %q", dropped, got, mailer.ClassShutdown)
+	}
+	logs := e.logs.String()
+	if strings.Count(logs, "emails dropped at shutdown") != 1 || !strings.Contains(logs, `"class":"shutdown"`) || strings.Contains(logs, testMail) {
+		t.Errorf("want one ERROR line with the class and no address:\n%s", logs)
+	}
+
+	close(sm.release) // the provider answers: nothing is pending, Drain returns 0 at once
+	e.svc.Wait()
+	if n := e.svc.Drain(context.Background()); n != 0 {
+		t.Errorf("Drain with nothing pending dropped %d", n)
+	}
+}

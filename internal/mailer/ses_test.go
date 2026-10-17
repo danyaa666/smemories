@@ -61,7 +61,9 @@ func (s *sesStub) handle(w http.ResponseWriter, r *http.Request) {
 	case mailertest.ServerError:
 		fail(http.StatusInternalServerError, "InternalServiceErrorException", "boom leak.check.student@school-mail.invalid")
 	case mailertest.Refused:
-		fail(http.StatusBadRequest, "MessageRejected", "Email address is not verified: leak.check.student@school-mail.invalid")
+		fail(http.StatusBadRequest, "MessageRejected", "Illegal address leak.check.student@school-mail.invalid")
+	case mailertest.Misconfigured:
+		fail(http.StatusBadRequest, "AccountSuspendedException", "Account suspended, mail for leak.check.student@school-mail.invalid")
 	case mailertest.Hang:
 		select {
 		case <-r.Context().Done():
@@ -200,18 +202,25 @@ func TestSESErrorMapping(t *testing.T) {
 		name         string
 		status       int
 		errType      string
+		message      string // the body text; empty = a neutral one
 		want         error
+		wantClass    string // "" = not checked
 		wantAttempts int
 	}{
-		{"429 throttling", 429, "TooManyRequestsException", mailer.ErrUnavailable, 3},
-		{"throttling as 400", 400, "ThrottlingException", mailer.ErrUnavailable, 3},
-		{"daily quota", 400, "LimitExceededException", mailer.ErrUnavailable, 3},
-		{"500", 500, "InternalServiceErrorException", mailer.ErrUnavailable, 3},
-		{"503 without a type", 503, "", mailer.ErrUnavailable, 3},
-		{"MessageRejected", 400, "MessageRejected", mailer.ErrRejected, 1},
-		{"AccountSuspendedException", 400, "AccountSuspendedException", mailer.ErrRejected, 1},
-		{"SendingPausedException", 400, "SendingPausedException", mailer.ErrRejected, 1},
-		{"unrelated 400 (a misconfiguration)", 400, "NotFoundException", nil, 1},
+		{"429 throttling", 429, "TooManyRequestsException", "", mailer.ErrUnavailable, mailer.ClassUnavailable, 3},
+		{"throttling as 400", 400, "ThrottlingException", "", mailer.ErrUnavailable, mailer.ClassUnavailable, 3},
+		{"daily quota", 400, "LimitExceededException", "", mailer.ErrUnavailable, mailer.ClassUnavailable, 3},
+		{"500", 500, "InternalServiceErrorException", "", mailer.ErrUnavailable, mailer.ClassUnavailable, 3},
+		{"503 without a type", 503, "", "", mailer.ErrUnavailable, mailer.ClassUnavailable, 3},
+		{"MessageRejected for the address", 400, "MessageRejected", "", mailer.ErrRejected, mailer.ClassRejected, 1},
+		{"MessageRejected with another text", 400, "MessageRejected", "Illegal address for student@school-mail.invalid", mailer.ErrRejected, mailer.ClassRejected, 1},
+		// T-090: the sandbox symptom on day one and the account problems are the operator's to fix: a loud 503 with class config.
+		{"MessageRejected: sender not verified", 400, "MessageRejected", "Email address is not verified. The following identities failed the check in region EU-WEST-1: no-reply@mail.smemories.io", mailer.ErrUnavailable, mailer.ClassConfig, 1},
+		{"MessageRejected: sandbox recipient", 400, "MessageRejected", "Email address is not verified. The following identities failed the check in region EU-WEST-1: student@school-mail.invalid", mailer.ErrUnavailable, mailer.ClassConfig, 1},
+		{"MessageRejected: identity", 400, "MessageRejected", "Identity arn:aws:ses:eu-west-1:1:identity/x is not verified", mailer.ErrUnavailable, mailer.ClassConfig, 1},
+		{"AccountSuspendedException", 400, "AccountSuspendedException", "", mailer.ErrUnavailable, mailer.ClassConfig, 1},
+		{"SendingPausedException", 400, "SendingPausedException", "", mailer.ErrUnavailable, mailer.ClassConfig, 1},
+		{"unrelated 400 (a misconfiguration)", 400, "NotFoundException", "", nil, mailer.ClassOther, 1},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			var mu sync.Mutex
@@ -224,7 +233,11 @@ func TestSESErrorMapping(t *testing.T) {
 					w.Header().Set("X-Amzn-Errortype", c.errType)
 				}
 				w.WriteHeader(c.status)
-				_, _ = io.WriteString(w, `{"message":"for student@school-mail.invalid"}`)
+				msg := c.message
+				if msg == "" {
+					msg = "for student@school-mail.invalid"
+				}
+				_ = json.NewEncoder(w).Encode(map[string]string{"message": msg})
 			}))
 			defer srv.Close()
 			cfg := sesCfg(&sesStub{srv: srv})
@@ -242,8 +255,17 @@ func TestSESErrorMapping(t *testing.T) {
 			if n != c.wantAttempts {
 				t.Errorf("%d attempts, want %d", n, c.wantAttempts)
 			}
+			if got := mailer.Class(err); got != c.wantClass {
+				t.Errorf("Class = %q, want %q", got, c.wantClass)
+			}
+			if c.wantClass == mailer.ClassConfig && !strings.Contains(logs.String(), `"level":"ERROR"`) {
+				t.Errorf("a config failure must be logged at ERROR: %s", logs.String())
+			}
+			if c.wantClass != mailer.ClassConfig && strings.Contains(logs.String(), `"level":"ERROR"`) {
+				t.Errorf("only a config failure is an ERROR: %s", logs.String())
+			}
 			for _, s := range []string{err.Error(), logs.String()} {
-				if strings.Contains(s, "student@school-mail.invalid") {
+				if strings.Contains(s, "student@school-mail.invalid") || strings.Contains(s, "no-reply@mail.smemories.io") {
 					t.Errorf("the recipient leaked: %s", s)
 				}
 			}

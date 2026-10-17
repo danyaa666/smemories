@@ -71,8 +71,10 @@ func TestMailSendFailuresAreExported(t *testing.T) {
 	m.MailSendFailed("unavailable")
 	m.MailSendFailed("unavailable")
 	m.MailSendFailed("rejected")
+	m.MailSendFailed("config")
+	m.MailSendFailed("shutdown")
 	out := scrape(t, m)
-	for _, want := range []string{`smem_mail_send_failures_total{class="unavailable"} 2`, `smem_mail_send_failures_total{class="rejected"} 1`} {
+	for _, want := range []string{`smem_mail_send_failures_total{class="unavailable"} 2`, `smem_mail_send_failures_total{class="rejected"} 1`, `smem_mail_send_failures_total{class="config"} 1`, `smem_mail_send_failures_total{class="shutdown"} 1`} {
 		if !strings.Contains(out, want) {
 			t.Errorf("scrape lacks %q", want)
 		}

@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"net/mail"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -130,7 +131,11 @@ func (s *SES) Send(ctx context.Context, m Message) error {
 		return nil
 	}
 	err = classifySES(ctx, err)
-	s.logger.Warn("mailer: send failed", "provider", ProviderSES, "class", Class(err), "reason", err.Error())
+	level := slog.LevelWarn
+	if Class(err) == ClassConfig { // only the operator can fix it, and every send fails until then
+		level = slog.LevelError
+	}
+	s.logger.Log(ctx, level, "mailer: send failed", "provider", ProviderSES, "class", Class(err), "reason", err.Error())
 	return err
 }
 
@@ -142,8 +147,23 @@ var throttleCodes = map[string]bool{
 	"TooManyRequestsException": true, "LimitExceededException": true, "ThrottlingException": true, "Throttling": true, "RequestLimitExceeded": true,
 }
 
-// classifySES maps an SDK error to ErrUnavailable (throttled, 5xx, timeout, network), ErrRejected (the message or the account is
-// refused) or errFailed. It is the only place that knows SES error names.
+// notVerifiedTexts are the parts of the MessageRejected text SES gives for an unverified sender identity and, while the account is in the
+// sandbox, for an unverified recipient: "Email address is not verified. The following identities failed the check in region ..." and
+// "Identity ... is not verified". The text is only matched, never logged (it holds the address).
+var notVerifiedTexts = []string{"is not verified", "are not verified"}
+
+func isNotVerified(msg string) bool {
+	for _, t := range notVerifiedTexts {
+		if strings.Contains(msg, t) {
+			return true
+		}
+	}
+	return false
+}
+
+// classifySES maps an SDK error to ErrUnavailable (throttled, 5xx, timeout, network; also, as ClassConfig, an account that is
+// suspended or paused and a sender or sandbox recipient that is not verified: the operator must act, so it is loud and counted, not a
+// per-address refusal), ErrRejected (this address is refused for good) or errFailed. It is the only place that knows SES error names.
 func classifySES(ctx context.Context, err error) error {
 	var (
 		mr  *types.MessageRejected
@@ -158,7 +178,12 @@ func classifySES(ctx context.Context, err error) error {
 		code = ae.ErrorCode()
 	}
 	switch {
-	case errors.As(err, &mr), errors.As(err, &sus), errors.As(err, &pau):
+	case errors.As(err, &sus), errors.As(err, &pau):
+		return classifyAs(ErrUnavailable, ClassConfig, code, err)
+	case errors.As(err, &mr):
+		if isNotVerified(aws.ToString(mr.Message)) {
+			return classifyAs(ErrUnavailable, ClassConfig, code+" not verified", err)
+		}
 		return classify(ErrRejected, code, err)
 	case errors.Is(ctx.Err(), context.Canceled):
 		return classify(errFailed, "canceled", err)

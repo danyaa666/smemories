@@ -28,9 +28,12 @@ type Mailer interface {
 
 // What a caller can tell apart; test with errors.Is. Anything else is an unexpected failure (a misconfiguration, bad credentials).
 var (
-	// ErrUnavailable: the provider could not take the message now (throttled, 5xx, timeout, network). Trying again later may work.
+	// ErrUnavailable: the provider could not take the message now (throttled, 5xx, timeout, network), or cannot until the operator acts
+	// (ClassConfig: account suspended or paused, sender identity not verified, sandbox). Trying again later may work; the caller shows
+	// the same 503 either way, and Class tells them apart for the metrics.
 	ErrUnavailable = apperr.New(apperr.Unavailable, "mail provider unavailable")
-	// ErrRejected: the provider refused this message for good (invalid or suppressed address, sending paused). Do not retry.
+	// ErrRejected: the provider refused this message for good because of the address (invalid or suppressed). Do not retry. A problem of
+	// our account or configuration is never ErrRejected: it is ErrUnavailable with ClassConfig.
 	ErrRejected = apperr.New(apperr.Param, "mail rejected by the provider")
 )
 
@@ -39,10 +42,19 @@ const (
 	ClassUnavailable = "unavailable"
 	ClassRejected    = "rejected"
 	ClassOther       = "other"
+	// ClassConfig: a failure only the operator can fix (account suspended or paused, sender identity not verified, a provider sandbox). The
+	// caller sees ErrUnavailable; the alarm on this class must page (docs/email.md, docs/observability.md).
+	ClassConfig = "config"
+	// ClassShutdown: an email still waiting to be sent when the process had to exit (auth.Service.Drain counts it; the provider is not involved).
+	ClassShutdown = "shutdown"
 )
 
 // Class names the failure class of err from Send.
 func Class(err error) string {
+	var se *sendError
+	if errors.As(err, &se) && se.class != "" {
+		return se.class
+	}
 	switch {
 	case errors.Is(err, ErrUnavailable):
 		return ClassUnavailable

@@ -104,6 +104,7 @@ Fail policy when Redis is unreachable (`ratelimit.Factory`): **open** lets the r
 | `forgot_email` | 3 | 1 h | hashed email | open |
 | `reset_tries` | 20 | 1 h | IP | closed |
 | `verify_resend` | 3 | 1 h | user id | open |
+| `verify_resend_refund` | 5 | 1 h | user id | open (caps the resend tries given back during a mail outage, T-090) |
 | `verify_tries` | 20 | 1 h | user id | closed |
 | `username_tries` | 20 failed changes (taken, invalid, reserved) | 1 h | user id | closed |
 | `google_start` | 30 | 15 min | IP | open |
