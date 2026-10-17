@@ -80,7 +80,11 @@ test("M1 journey: sign up, build a book, collect notes, print the PDF", async ({
     await owner.getByLabel("Your name").fill(OWNER.name);
     await owner.getByLabel("Email").fill(OWNER.email);
     await owner.getByLabel("Password", { exact: true }).fill(OWNER.password);
+    const registered = owner.waitForResponse((r) => r.url().includes("/api/auth/register") && r.request().method() === "POST");
     await owner.getByRole("button", { name: "Create account" }).click();
+    if ((await registered).status() === 429) {
+      throw new Error("registration is rate limited (5 per hour per address): run `make reset-limits SMEM_ENV=test` (make e2e does), or point SMEM_REDIS_URL at a fresh Redis db, then run again");
+    }
     await expect(owner.getByRole("heading", { name: "Verify your email" })).toBeVisible();
     await owner.getByLabel("6-digit code").fill(OTP); // the sixth digit submits
     await expect(owner.getByText("Your email address is verified.")).toBeVisible();

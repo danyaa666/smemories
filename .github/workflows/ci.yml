@@ -144,10 +144,10 @@ jobs:
   # journey is never printed. On failure the Playwright trace, a screenshot and the API log are uploaded.
   e2e:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 10 # the journey itself is limited to 240 s (tools/e2e/playwright.config.mjs)
     env:
       # Throwaway services on the runner, loopback only; obviously fake values, not secrets (same as go-integration).
-      SMEM_DB_DSN: root:ci-only-fake-root-pw@tcp(127.0.0.1:3306)/smemories
+      SMEM_DB_DSN: root:ci-only-fake-root-pw@tcp(127.0.0.1:3306)/smem_e2e
       SMEM_REDIS_URL: redis://127.0.0.1:6379/0
       SMEM_S3_ENDPOINT: http://127.0.0.1:9000
       SMEM_S3_REGION: us-east-1
@@ -179,7 +179,7 @@ jobs:
       - name: Start MySQL 8.4 (utf8mb4)
         run: |
           docker run -d --name mysql -p 127.0.0.1:3306:3306 \
-            -e MYSQL_ROOT_PASSWORD=ci-only-fake-root-pw -e MYSQL_DATABASE=smemories \
+            -e MYSQL_ROOT_PASSWORD=ci-only-fake-root-pw -e MYSQL_DATABASE=smem_e2e \
             mysql:8.4@sha256:6ea90827b1100f8f2ae306a539f86d2c264a26ed435a2a9f75551dd5c3aeb242 \
             --character-set-server=utf8mb4 --collation-server=utf8mb4_0900_ai_ci \
             --sql-mode=ONLY_FULL_GROUP_BY,STRICT_ALL_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION \
@@ -220,8 +220,15 @@ jobs:
         working-directory: web
       - run: npm ci
         working-directory: tools/e2e
+      # The browser download is cached per Playwright version (pinned in tools/e2e/package.json, so the lock file keys it).
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('tools/e2e/package-lock.json') }}
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
+        working-directory: tools/e2e
+      - run: npm run guard-test
         working-directory: tools/e2e
       - name: The journey
         env:
@@ -233,7 +240,7 @@ jobs:
         with:
           name: e2e-failure
           path: tools/e2e/out
-          retention-days: 7
+          retention-days: 3 # the trace holds the throwaway link token and cookies (docs/e2e.md)
 
   # T-022: builds the production image (no push) and runs scripts/image-smoke.sh against it (private MySQL, Valkey and MinIO
   # containers it starts itself). Trivy and the SBOM follow in the next slice. Not a required check until the owner adds it.

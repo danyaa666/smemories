@@ -19,6 +19,7 @@ ORIGIN="http://127.0.0.1:$WEB_PORT"
 for v in SMEM_DB_DSN SMEM_REDIS_URL SMEM_S3_BUCKET SMEM_S3_ACCESS_KEY SMEM_S3_SECRET_KEY; do
   [ -n "${!v:-}" ] || { echo "e2e: $v is not set (start the stack with 'make up' and run through 'make e2e')" >&2; exit 2; }
 done
+node tools/e2e/guard.mjs # refuses a non-local E2E_BASE_URL or a database that is not smem_e2e* / smem_test* before anything is touched (T-087)
 for p in "$API_PORT" "$WEB_PORT"; do
   if (: </dev/tcp/127.0.0.1/"$p") 2>/dev/null; then echo "e2e: port $p is in use; set E2E_API_PORT / E2E_WEB_PORT" >&2; exit 2; fi
 done

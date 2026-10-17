@@ -1,5 +1,8 @@
 // Playwright settings of the end-to-end journey (T-020). scripts/e2e.sh starts the API and the web server and sets E2E_BASE_URL and E2E_OUT.
 import { defineConfig } from "@playwright/test";
+import { assertSafeTarget } from "./guard.mjs";
+
+assertSafeTarget(); // local base URL and a throwaway database only (T-087)
 
 const out = process.env.E2E_OUT ?? "out";
 
