@@ -196,6 +196,75 @@
   border-radius: 4px;
 }
 
+/* Template picker, print guide and feedback (T-061): screen only, hidden in print with the rest of .bk-ui. */
+.bk-templates {
+  min-width: 0;
+  margin: 0 0 var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+.bk-templates legend {
+  padding: 0 var(--space-2);
+  font-weight: 600;
+}
+.bk-template-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+.bk-template {
+  display: flex;
+  flex: 1 1 140px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  max-width: 220px;
+  min-height: 44px;
+  padding: var(--space-3);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  cursor: pointer;
+}
+.bk-template-on {
+  border-color: var(--color-teal);
+  box-shadow: 0 0 0 1px var(--color-teal);
+}
+.bk-template img {
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--color-line);
+}
+.bk-template-name {
+  font-weight: 600;
+}
+.bk-template-help {
+  color: var(--color-ink-2);
+  font-size: 0.875rem;
+}
+.bk-guide {
+  margin-top: var(--space-4);
+}
+.bk-guide ol {
+  padding-left: var(--space-6);
+}
+.bk-guide li {
+  margin-bottom: var(--space-2);
+}
+.bk-feedback {
+  margin-top: var(--space-3);
+}
+.bk-feedback h3:focus,
+.bk-feedback p:focus {
+  outline: none;
+}
+.bk-feedback-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
 /* Print: only the pages, each exactly the size @page asks for. */
 @media print {
   .bk-ui,

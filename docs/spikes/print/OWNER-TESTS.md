@@ -10,8 +10,8 @@ on the computer `make up && make migrate`, `go run ./cmd/smemories-api` and `cd 
 `http://localhost:5173/yearbooks/<id>/book` ("Preview and print" in the menu).
 From a phone on the same Wi-Fi use `http://<computer-ip>:5173/...` (the API must be reachable through the same Vite proxy).
 
-The designed template `memory-book` (T-059) has no picker yet (T-061): until then a book uses it when its `template_id` is `memory-book` (the sample PDFs in `docs/templates/memory-book-*.pdf` show what to expect).
-The same holds for `navy-classic` (T-060; samples `docs/templates/navy-classic-*.pdf`, four friends per page: 3 plus one per 4 approved notes pages).
+The designed template `memory-book` (T-059) is chosen with the template picker above the print button (T-061; the sample PDFs in `docs/templates/memory-book-*.pdf` show what to expect). The print screen shows the guide for your device; after printing, answer "Does the PDF look right?" (an anonymous counter per device class, `print_feedback_tab`) in addition to filling the table below.
+The same holds for the second designed template `navy-classic` (T-060; samples `docs/templates/navy-classic-*.pdf`, four friends per page: 3 plus one per 4 approved notes pages); pick it in the same picker.
 In Firefox look at the dotted paper and the ruled lines of the pastel boxes: the dots are one picture (not a tiled gradient) so they should no longer be black; the ruled lines are still a repeating gradient, which is untested there.
 
 Press "Print or save as PDF" (it is enabled once the fonts and photos are loaded) and record, for each browser:

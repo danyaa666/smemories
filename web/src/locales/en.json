@@ -146,7 +146,8 @@
     "invalid_username": "Use 3 to 30 characters: letters, digits, dot, underscore or hyphen, starting and ending with a letter or digit.",
     "username_reserved": "This username is not available. Choose another one.",
     "username_taken": "This username is already taken. Choose another one.",
-    "username_change_too_soon": "You changed your username recently. You can change it again on {{date}}."
+    "username_change_too_soon": "You changed your username recently. You can change it again on {{date}}.",
+    "invalid_template": "That template is not available for this paper size. Pick another one."
   },
   "books": {
     "title": "My yearbooks",
@@ -461,17 +462,82 @@
     "ready": "Ready to print: {{pages}} pages.",
     "preparing": "Getting fonts and photos ready ({{done}} of {{total}} photos)...",
     "print": "Print or save as PDF",
-    "helpTitle": "When the print window opens",
-    "help1": "Destination: Save as PDF.",
-    "help2": "Paper size: {{size}}.",
-    "help3": "Margins: None. Scale: 100 %.",
-    "help4": "Turn headers and footers off and background graphics on.",
     "fitTitle": "Notes in a smaller size or cut off: {{count}}",
     "fitHelp": "Open a note in the inbox to hide it, or ask your friend to write a shorter one.",
     "fitSmaller": "{{name}}, {{pt}} pt",
     "fitCut": "{{name}}, {{pt}} pt, and still cut off",
     "fitNoName": "Note {{number}}",
     "fitOpen": "Open in the inbox",
-    "fitOpenFor": "Open the note of {{name}} in the inbox"
+    "fitOpenFor": "Open the note of {{name}} in the inbox",
+    "guide": {
+      "title": "Print settings for your device",
+      "device": "Detected: {{name}}.",
+      "cannotCheck": "A web page cannot see or change the print window, so these settings are yours to choose, and we cannot check them for you. If the PDF comes out on the wrong paper size, with white pages or without colours, print again with these steps.",
+      "printed": "I printed with these settings",
+      "chromium_desktop": {
+        "name": "Chrome or Edge on a computer",
+        "step1": "Press \"Print or save as PDF\" below (Ctrl+P or Cmd+P does the same).",
+        "step2": "Destination: Save as PDF.",
+        "step3": "Paper size: {{size}} (under More settings).",
+        "step4": "Margins: None. Scale: Default (100). Headers and footers: off.",
+        "step5": "Background graphics: on. Then press Save."
+      },
+      "safari_desktop": {
+        "name": "Safari on a Mac",
+        "step1": "Press \"Print or save as PDF\" below (or choose File > Print).",
+        "step2": "Paper Size: {{size}} (for Letter, choose US Letter).",
+        "step3": "Open the menu that says Safari in the print panel, tick Print backgrounds and leave Print headers and footers off.",
+        "step4": "Scale: 100 %. There is no margin setting: the pages already fill the sheet.",
+        "step5": "Click PDF at the lower left, then Save as PDF."
+      },
+      "firefox": {
+        "name": "Firefox on a computer",
+        "step1": "Press \"Print or save as PDF\" below (Ctrl+P or Cmd+P does the same).",
+        "step2": "Destination: Save to PDF.",
+        "step3": "Paper size: {{size}}. Margins: None. Scale: 100.",
+        "step4": "Under Options: tick Print backgrounds and leave headers and footers off.",
+        "step5": "Press Save."
+      },
+      "chrome_android": {
+        "name": "Chrome on Android",
+        "step1": "Press \"Print or save as PDF\" below, or open the menu (three dots) > Share > Print.",
+        "step2": "At the top, choose Save as PDF.",
+        "step3": "Tap the arrow to open more options. Paper size: {{size}}. Margins: None.",
+        "step4": "Look at the preview: the coloured pages must show. Android's print window does not always offer a background option; if the colours are missing, press \"No\" in the question below so that we know.",
+        "step5": "Tap the PDF button to save the file. For a long book a computer is more reliable."
+      },
+      "safari_ios": {
+        "name": "Safari on an iPhone or iPad",
+        "step1": "Tap Share (the square with an arrow), then Print. Or press \"Print or save as PDF\" below.",
+        "step2": "In the print preview, spread two fingers apart on the first page: the preview turns into a PDF.",
+        "step3": "Tap Share again, then Save to Files. iPhone and iPad choose the paper size themselves, so the PDF may not be {{size}}; the pages keep their proportions.",
+        "step4": "Check the PDF: every page is there and the colours show. For a book with many photos a computer is more reliable."
+      },
+      "other": {
+        "name": "another browser",
+        "step1": "Destination: Save as PDF.",
+        "step2": "Paper size: {{size}}.",
+        "step3": "Margins: None. Scale: 100 %.",
+        "step4": "Turn headers and footers off and background graphics on."
+      }
+    },
+    "feedback": {
+      "title": "Does the PDF look right?",
+      "hint": "Check the paper size, the pages and the colours.",
+      "yes": "Yes, it looks right",
+      "no": "No, something is wrong",
+      "thanksYes": "Thank you. We only count answers: nothing about you or your book is sent.",
+      "thanksNo": "Thank you, we have counted it. Please check the steps above once more: paper size, margins and background graphics. A computer gives the most reliable PDF."
+    },
+    "template": {
+      "title": "Template",
+      "plain": "Plain layout",
+      "plainHelp": "A simple layout without decoration.",
+      "saving": "Saving...",
+      "saved": "Template saved: {{name}}.",
+      "error": "The template could not be changed.",
+      "loadError": "The templates could not be loaded.",
+      "preview": "Preview of the cover of {{name}}"
+    }
   }
 }

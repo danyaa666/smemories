@@ -329,7 +329,7 @@ export interface paths {
         put?: never;
         /**
          * Partially update a yearbook
-         * @description Called by the signed-in owner (the edit screen, the cover picker). Only the fields present change; an absent field stays as it is, an empty string clears an optional text field and `graduation_year: null` or `cover_media_id: null` clear them. A JSON null on any other field counts as absent. A body with only `id` changes nothing but still bumps `updated_at`. `cover_media_id` must be a photo of this very book (`ERROR_INVALID_MEDIA`). Unknown fields and a missing `id` are `ERROR_PARAM`. Text fields are normalised to NFC and trimmed; control characters (Cc), format characters (Cf, except U+200D) and line/paragraph separators are rejected. A request with the session cookie must come from an allowed Origin. Idempotent: repeating it leaves the same book (apart from `updated_at`).
+         * @description Called by the signed-in owner (the edit screen, the cover picker). Only the fields present change; an absent field stays as it is, an empty string clears an optional text field and `graduation_year: null` or `cover_media_id: null` or `template_id: null` clear them. A JSON null on any other field counts as absent. A body with only `id` changes nothing but still bumps `updated_at`. `cover_media_id` must be a photo of this very book (`ERROR_INVALID_MEDIA`). Unknown fields and a missing `id` are `ERROR_PARAM`. Text fields are normalised to NFC and trimmed; control characters (Cc), format characters (Cf, except U+200D) and line/paragraph separators are rejected. A request with the session cookie must come from an allowed Origin. Idempotent: repeating it leaves the same book (apart from `updated_at`).
          */
         post: operations["updateYearbook"];
         delete?: never;
@@ -618,6 +618,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/template/get-list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the templates a book can use
+         * @description Called by the signed-in owner's print screen to fill the template picker. Returns the built-in templates ordered by id; with `page_size` only the ones that declare support for that size (a template that does not list a book's size must not be chosen for it). `renderer` says who draws the template: `html` is drawn by the web app (the preview and print screen), `go` is the older server-side PDF renderer, which the browser print screen does not use. `preview` is a path on the web app's own origin (an image of the cover); the file may be missing for a template that has none yet, so the client must cope with a failed load. The answer is not paginated (a handful of templates), so `next_id` is always the empty string. The choice is saved with `POST /api/yearbook/update` (`template_id`). An unknown `page_size` is `ERROR_PARAM`. Safe to repeat.
+         */
+        get: operations["listTemplates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/print-feedback/create": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Count one "Does the PDF look right?" answer
+         * @description Called by the print screen after the owner printed: one anonymous answer, yes or no, for the browser family the guide was chosen for. Public: no session is needed and none is read. The server only adds one to a counter per (`browser_family`, `verdict`); it stores no user, book, IP address or user agent. At most 30 answers per client IP per hour (`ERROR_RATE_LIMITED` with `Retry-After`; the limiter fails open if Redis is down). The body is strict: any other field, a value outside the enums or a body that is not a JSON object is `ERROR_PARAM`. A request that carries a session cookie must come from an allowed Origin. Not idempotent (each call counts once); the web sends it once per click and never retries a 4xx.
+         */
+        post: operations["createPrintFeedback"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/public-collect/get": {
         parameters: {
             query?: never;
@@ -823,7 +863,7 @@ export interface components {
              * @enum {string}
              */
             page_size: "A5" | "A4" | "Letter";
-            /** @description Template ULID; null until a template is chosen. */
+            /** @description Id of the chosen template (`GET /api/template/get-list`, for example `memory-book`); null until one is chosen, and then the built-in plain layout is used. */
             template_id: string | null;
             /** @description Photo ULID (a photo of this yearbook) used as the cover, or null. */
             cover_media_id: string | null;
@@ -883,6 +923,8 @@ export interface components {
              * @enum {string}
              */
             page_size: "A5" | "A4" | "Letter";
+            /** @description Optional. Id of a template from `GET /api/template/get-list` that supports `page_size`, else `ERROR_INVALID_TEMPLATE`; default null (the plain layout). */
+            template_id?: string | null;
         };
         YearbookUpdateRequest: {
             /** @description Required. ULID of the yearbook to change. */
@@ -909,6 +951,8 @@ export interface components {
             page_size?: "A5" | "A4" | "Letter";
             /** @description Optional. Photo ULID, which must be a photo of this yearbook (else `ERROR_INVALID_MEDIA`); null clears the cover; absent = unchanged. */
             cover_media_id?: string | null;
+            /** @description Optional. Id of a template from `GET /api/template/get-list` that supports the book's page size (after this change), else `ERROR_INVALID_TEMPLATE`; null clears it (the plain layout); absent = unchanged. */
+            template_id?: string | null;
         };
         YearbookUpdateProfileRequest: {
             /** @description Required. ULID of the yearbook whose profile is replaced. */
@@ -1247,6 +1291,53 @@ export interface components {
             yearbook_id: string;
             /** @description Required. 1 to 100 note ULIDs of that yearbook, no repeats. */
             ids: string[];
+        };
+        TemplateListResponse: {
+            /**
+             * @description Always `OK` on success.
+             * @constant
+             */
+            status: "OK";
+            /** @description The templates, in the shape of every list. */
+            data: {
+                /** @description The templates ordered by id; an empty array when none supports the requested size. */
+                items: components["schemas"]["Template"][];
+                /** @description Always the empty string: the list is not paginated. */
+                next_id: string;
+            };
+        };
+        /** @description A built-in template as the picker shows it. */
+        Template: {
+            /** @description Template id, the value of `template_id` of a yearbook (for example `memory-book`). */
+            id: string;
+            /** @description Display name by language. */
+            name: {
+                /** @description English name. */
+                en: string;
+                /** @description Vietnamese name. */
+                vi: string;
+            };
+            /** @description The paper sizes the template supports. */
+            page_sizes: ("A5" | "A4" | "Letter")[];
+            /**
+             * @description `html`: drawn by the web app (preview and print screen); `go`: the older server-side PDF renderer.
+             * @enum {string}
+             */
+            renderer: "html" | "go";
+            /** @description Path on the web app's origin of a cover image, for example `/template-previews/memory-book.jpg`; the file may be missing. */
+            preview: string;
+        };
+        PrintFeedbackCreateRequest: {
+            /**
+             * @description Required. `yes`: the PDF looks right; `no`: it does not.
+             * @enum {string}
+             */
+            verdict: "yes" | "no";
+            /**
+             * @description Required. The device class the print guide was chosen for: `chromium_desktop` Chrome or Edge on a computer, `safari_desktop`, `firefox`, `chrome_android`, `safari_ios` (every browser on an iPhone or iPad), `other` anything else.
+             * @enum {string}
+             */
+            browser_family: "chromium_desktop" | "safari_desktop" | "firefox" | "chrome_android" | "safari_ios" | "other";
         };
         PublicCollectGetResponse: {
             /**
@@ -2495,6 +2586,63 @@ export interface operations {
             404: components["responses"]["ApiNotFound"];
             500: components["responses"]["ApiInternal"];
             503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    listTemplates: {
+        parameters: {
+            query?: {
+                /** @description Optional. Only the templates that support this paper size; absent = all. */
+                page_size?: "A5" | "A4" | "Letter";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The templates. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateListResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    createPrintFeedback: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PrintFeedbackCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Counted. The data is empty. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmptyResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            403: components["responses"]["ApiForbidden"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            429: components["responses"]["ApiRateLimited"];
+            500: components["responses"]["ApiInternal"];
         };
     };
     getPublicCollect: {

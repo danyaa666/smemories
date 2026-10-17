@@ -146,7 +146,8 @@
     "invalid_username": "Dùng từ 3 đến 30 ký tự: chữ cái, chữ số, dấu chấm, dấu gạch dưới hoặc dấu gạch ngang, bắt đầu và kết thúc bằng chữ cái hoặc chữ số.",
     "username_reserved": "Tên người dùng này không dùng được. Hãy chọn tên khác.",
     "username_taken": "Tên người dùng này đã có người dùng. Hãy chọn tên khác.",
-    "username_change_too_soon": "Bạn vừa đổi tên người dùng. Bạn có thể đổi lại vào {{date}}."
+    "username_change_too_soon": "Bạn vừa đổi tên người dùng. Bạn có thể đổi lại vào {{date}}.",
+    "invalid_template": "Mẫu trình bày này không dùng được cho khổ giấy này. Hãy chọn mẫu khác."
   },
   "books": {
     "title": "Kỷ yếu của tôi",
@@ -461,17 +462,82 @@
     "ready": "Sẵn sàng để in: {{pages}} trang.",
     "preparing": "Đang chuẩn bị phông chữ và ảnh ({{done}}/{{total}} ảnh)...",
     "print": "In hoặc lưu thành PDF",
-    "helpTitle": "Khi cửa sổ in mở ra",
-    "help1": "Máy in: chọn \"Lưu dưới dạng PDF\".",
-    "help2": "Khổ giấy: {{size}}.",
-    "help3": "Lề: Không có. Tỷ lệ: 100 %.",
-    "help4": "Tắt \"Đầu trang và chân trang\", bật \"Đồ họa nền\".",
     "fitTitle": "Lời nhắn bị thu nhỏ chữ hoặc bị cắt bớt: {{count}}",
     "fitHelp": "Mở lời nhắn trong hộp thư để ẩn đi, hoặc nhờ bạn viết ngắn lại.",
     "fitSmaller": "{{name}}, {{pt}} pt",
     "fitCut": "{{name}}, {{pt}} pt, vẫn bị cắt bớt",
     "fitNoName": "Lời nhắn thứ {{number}}",
     "fitOpen": "Mở trong hộp thư",
-    "fitOpenFor": "Mở lời nhắn của {{name}} trong hộp thư"
+    "fitOpenFor": "Mở lời nhắn của {{name}} trong hộp thư",
+    "guide": {
+      "title": "Cài đặt in cho thiết bị của bạn",
+      "device": "Đã nhận ra: {{name}}.",
+      "cannotCheck": "Trang web không thể nhìn thấy hay thay đổi cửa sổ in, nên các cài đặt này do bạn tự chọn và chúng tôi không thể kiểm tra giúp. Nếu tệp PDF ra sai khổ giấy, có trang trắng hoặc mất màu, hãy in lại theo các bước này.",
+      "printed": "Tôi đã in theo các cài đặt này",
+      "chromium_desktop": {
+        "name": "Chrome hoặc Edge trên máy tính",
+        "step1": "Bấm \"In hoặc lưu thành PDF\" bên dưới (Ctrl+P hoặc Cmd+P cũng được).",
+        "step2": "Máy in: chọn \"Lưu dưới dạng PDF\".",
+        "step3": "Khổ giấy: {{size}} (trong mục \"Cài đặt khác\").",
+        "step4": "Lề: Không có. Tỷ lệ: Mặc định (100). Tắt \"Đầu trang và chân trang\".",
+        "step5": "Bật \"Đồ họa nền\". Sau đó bấm Lưu."
+      },
+      "safari_desktop": {
+        "name": "Safari trên máy Mac",
+        "step1": "Bấm \"In hoặc lưu thành PDF\" bên dưới (hoặc chọn Tệp > In).",
+        "step2": "Khổ giấy: {{size}} (với Letter, chọn US Letter).",
+        "step3": "Trong bảng in, mở danh sách có chữ Safari, tích chọn \"In nền\" (Print backgrounds) và để tắt phần in đầu trang, chân trang.",
+        "step4": "Tỷ lệ: 100 %. Không có mục chỉnh lề: các trang đã tràn kín tờ giấy.",
+        "step5": "Bấm PDF ở góc dưới bên trái, rồi chọn \"Lưu dưới dạng PDF\"."
+      },
+      "firefox": {
+        "name": "Firefox trên máy tính",
+        "step1": "Bấm \"In hoặc lưu thành PDF\" bên dưới (Ctrl+P hoặc Cmd+P cũng được).",
+        "step2": "Máy in: chọn \"Lưu thành PDF\" (Save to PDF).",
+        "step3": "Khổ giấy: {{size}}. Lề: Không có. Tỷ lệ: 100.",
+        "step4": "Trong mục \"Tùy chọn\": tích chọn \"In nền\" (Print backgrounds) và để tắt đầu trang, chân trang.",
+        "step5": "Bấm Lưu."
+      },
+      "chrome_android": {
+        "name": "Chrome trên Android",
+        "step1": "Bấm \"In hoặc lưu thành PDF\" bên dưới, hoặc mở menu (ba chấm) > Chia sẻ > In.",
+        "step2": "Ở phía trên, chọn \"Lưu dưới dạng PDF\".",
+        "step3": "Chạm vào mũi tên để mở thêm tùy chọn. Khổ giấy: {{size}}. Lề: Không có.",
+        "step4": "Xem bản xem trước: các trang phải có màu. Cửa sổ in của Android không phải lúc nào cũng có tùy chọn in nền; nếu mất màu, hãy bấm \"Không\" ở câu hỏi bên dưới để chúng tôi biết.",
+        "step5": "Chạm nút PDF để lưu tệp. Với cuốn sách dài, máy tính ổn định hơn."
+      },
+      "safari_ios": {
+        "name": "Safari trên iPhone hoặc iPad",
+        "step1": "Chạm vào Chia sẻ (hình vuông có mũi tên), rồi chọn In. Hoặc bấm \"In hoặc lưu thành PDF\" bên dưới.",
+        "step2": "Trong màn hình xem trước, đặt hai ngón tay lên trang đầu rồi kéo giãn ra: bản xem trước sẽ biến thành tệp PDF.",
+        "step3": "Chạm Chia sẻ lần nữa, rồi chọn \"Lưu vào Tệp\". iPhone và iPad tự chọn khổ giấy nên PDF có thể không phải {{size}}; các trang vẫn giữ đúng tỷ lệ.",
+        "step4": "Kiểm tra PDF: có đủ các trang và có màu. Với cuốn sách nhiều ảnh, máy tính ổn định hơn."
+      },
+      "other": {
+        "name": "trình duyệt khác",
+        "step1": "Máy in: chọn \"Lưu dưới dạng PDF\".",
+        "step2": "Khổ giấy: {{size}}.",
+        "step3": "Lề: Không có. Tỷ lệ: 100 %.",
+        "step4": "Tắt \"Đầu trang và chân trang\", bật \"Đồ họa nền\"."
+      }
+    },
+    "feedback": {
+      "title": "Tệp PDF trông có đúng không?",
+      "hint": "Hãy xem khổ giấy, các trang và màu sắc.",
+      "yes": "Có, trông đúng",
+      "no": "Không, có gì đó sai",
+      "thanksYes": "Cảm ơn bạn. Chúng tôi chỉ đếm câu trả lời: không gửi gì về bạn hay cuốn lưu bút của bạn.",
+      "thanksNo": "Cảm ơn bạn, chúng tôi đã ghi nhận. Hãy kiểm tra lại các bước ở trên: khổ giấy, lề và đồ họa nền. Máy tính cho tệp PDF ổn định nhất."
+    },
+    "template": {
+      "title": "Mẫu trình bày",
+      "plain": "Bố cục đơn giản",
+      "plainHelp": "Bố cục đơn giản, không trang trí.",
+      "saving": "Đang lưu...",
+      "saved": "Đã lưu mẫu: {{name}}.",
+      "error": "Không đổi được mẫu trình bày.",
+      "loadError": "Không tải được danh sách mẫu trình bày.",
+      "preview": "Ảnh xem trước bìa của mẫu {{name}}"
+    }
   }
 }

@@ -87,9 +87,10 @@ func mustLoadFS(files fs.FS, dir string, assets fs.FS) map[string]*Template {
 
 // Info is the public summary of a template.
 type Info struct {
-	ID       string
-	Name     map[string]string
-	Renderer string // RendererGo or RendererHTML
+	ID        string
+	Name      map[string]string
+	Renderer  string   // RendererGo or RendererHTML
+	PageSizes []string // as the manifest declares them
 }
 
 // List returns the built-in templates (Go and HTML) ordered by id.
@@ -98,7 +99,7 @@ func List() []Info { return listOf(registry) }
 func listOf(reg map[string]*Template) []Info {
 	out := make([]Info, 0, len(reg))
 	for _, t := range reg {
-		out = append(out, Info{ID: t.ID, Name: t.Name, Renderer: cmp.Or(t.Renderer, RendererGo)})
+		out = append(out, Info{ID: t.ID, Name: t.Name, Renderer: cmp.Or(t.Renderer, RendererGo), PageSizes: t.PageSizes})
 	}
 	slices.SortFunc(out, func(a, b Info) int { return strings.Compare(a.ID, b.ID) })
 	return out

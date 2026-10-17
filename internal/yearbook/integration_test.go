@@ -284,6 +284,36 @@ func TestPageSizeLetter(t *testing.T) {
 	}
 }
 
+// T-061: the template choice is saved by yearbook/update, read back, cleared with null, and refused when unknown or unsupported.
+func TestTemplateChoice(t *testing.T) {
+	e := newEnv(t)
+	alice := e.register("alice@example.com", "Alice")
+	id := e.create(alice, "Book")
+	if got := e.update(alice, id, `{"template_id":"memory-book"}`).status(200, "").book(); got["template_id"] != "memory-book" {
+		t.Fatalf("saved %v", got)
+	}
+	if g := e.get(alice, id).book(); g["template_id"] != "memory-book" {
+		t.Fatalf("read back %v", g)
+	}
+	e.update(alice, id, `{"template_id":"nope"}`).status(400, "ERROR_INVALID_TEMPLATE")
+	e.update(alice, id, `{"page_size":"Letter","template_id":"classic"}`).status(400, "ERROR_INVALID_TEMPLATE")
+	if g := e.get(alice, id).book(); g["template_id"] != "memory-book" || g["page_size"] != "A5" {
+		t.Fatalf("a refused update changed the book: %v", g)
+	}
+	e.update(alice, id, `{"template_id":"classic"}`).status(200, "")
+	e.update(alice, id, `{"page_size":"Letter"}`).status(400, "ERROR_INVALID_TEMPLATE") // classic has no Letter
+	if got := e.update(alice, id, `{"template_id":null}`).status(200, "").book(); got["template_id"] != nil {
+		t.Fatalf("cleared %v", got)
+	}
+	e.update(alice, id, `{"page_size":"Letter"}`).status(200, "")
+	// another owner's book is not found, whatever the template
+	bob := e.register("bob@example.com", "Bob")
+	e.update(bob, id, `{"template_id":"memory-book"}`).status(404, "ERROR_NOT_FOUND")
+	// create takes it too, checked against the same call's page size
+	e.do(alice, "POST", "/api/yearbook/create", `{"title":"T","language":"en","page_size":"Letter","template_id":"memory-book"}`).status(200, "")
+	e.do(alice, "POST", "/api/yearbook/create", `{"title":"T","language":"en","page_size":"Letter","template_id":"classic"}`).status(400, "ERROR_INVALID_TEMPLATE")
+}
+
 // AC4, AC5: create validation over HTTP, including mass assignment.
 func TestCreateValidation(t *testing.T) {
 	e := newEnv(t)

@@ -61,6 +61,12 @@ function serve(data: BookData | Response, calls: Record<string, (c: Call) => Res
   return mockApi({
     "GET /user/get-me": () => ok(user()),
     [`GET /book-data/get?yearbook_id=${BOOK}`]: () => (data instanceof Response ? data : ok(data)),
+    ...Object.fromEntries(
+      ["A5", "A4", "Letter"].map((s) => [
+        `GET /template/get-list?page_size=${s}`,
+        () => ok({ items: [], next_id: "" }),
+      ]),
+    ), // the picker's list; the tests of the picker bring their own
     ...calls,
   });
 }
@@ -388,6 +394,350 @@ describe("memory-book template", () => {
       open();
       expect(await screen.findByText(/Note 1, 5 pt, and still cut off/)).toBeInTheDocument();
     });
+  });
+});
+
+// T-061: the template picker, the print guide per device and the "does the PDF look right?" counter.
+const MEMORY = {
+  id: "memory-book",
+  name: { en: "Memory Book", vi: "Lưu bút" },
+  page_sizes: ["A5", "A4", "Letter"],
+  renderer: "html",
+  preview: "/template-previews/memory-book.jpg",
+};
+const CLASSIC = {
+  ...MEMORY,
+  id: "classic",
+  name: { en: "Classic", vi: "Cổ điển" },
+  renderer: "go",
+};
+const FUTURE = { ...MEMORY, id: "future-book", name: { en: "Future", vi: "Tương lai" } }; // html, but this build cannot draw it
+const NAVY = {
+  ...MEMORY,
+  id: "navy-classic",
+  name: { en: "Navy Classic", vi: "Navy cổ điển" },
+  preview: "/template-previews/navy-classic.jpg",
+};
+const templates =
+  (...items: object[]) =>
+  () =>
+    ok({ items, next_id: "" });
+const withTemplates = (...items: object[]) =>
+  Object.fromEntries(
+    ["A5", "A4", "Letter"].map((s) => [
+      `GET /template/get-list?page_size=${s}`,
+      templates(...items),
+    ]),
+  );
+const radios = () => screen.queryAllByRole("radio").map((r) => (r as HTMLInputElement).value);
+
+describe("template picker", () => {
+  it("asks for the templates of the book's page size and lists the ones the browser can draw, plus the plain layout", async () => {
+    const calls = serve(bookData([note(1)]), withTemplates(MEMORY, CLASSIC, FUTURE));
+    open();
+    expect(await screen.findByRole("group", { name: "Template" })).toBeInTheDocument();
+    expect(radios()).toEqual(["", "memory-book"]); // go renderer and unknown html template are not offered
+    expect(calls.some((c) => c.path === "/template/get-list?page_size=A5")).toBe(true);
+    expect(screen.getByRole("radio", { name: /Plain layout/ })).toBeChecked(); // a book without a template
+    expect(
+      screen.getByRole("img", { name: "Preview of the cover of Memory Book" }),
+    ).toHaveAttribute("src", "/template-previews/memory-book.jpg");
+  });
+
+  it("offers navy-classic next to memory-book", async () => {
+    serve(bookData([note(1)]), withTemplates(MEMORY, NAVY, CLASSIC));
+    open();
+    await screen.findByRole("group", { name: "Template" });
+    expect(radios()).toEqual(["", "memory-book", "navy-classic"]);
+  });
+
+  it("asks for the Letter list for a Letter book", async () => {
+    const data = bookData([note(1)]);
+    data.yearbook.page_size = "Letter";
+    const calls = serve(data, withTemplates(MEMORY));
+    open();
+    await screen.findByRole("group", { name: "Template" });
+    expect(calls.some((c) => c.path === "/template/get-list?page_size=Letter")).toBe(true);
+  });
+
+  it("marks the template of the book and names it in Vietnamese when the app is", async () => {
+    const data = bookData([note(1)]);
+    data.yearbook.template_id = "memory-book";
+    serve(data, withTemplates(MEMORY));
+    await act(() => i18n.changeLanguage("vi"));
+    try {
+      open();
+      const radio = await screen.findByRole("radio", { name: /Lưu bút/ });
+      expect(radio).toBeChecked();
+    } finally {
+      await act(() => i18n.changeLanguage("en"));
+    }
+  });
+
+  it("shows the plain layout as chosen when the book has a template this browser does not know", async () => {
+    const data = bookData([note(1)]);
+    data.yearbook.template_id = "classic";
+    serve(data, withTemplates(MEMORY, CLASSIC));
+    open();
+    expect(await screen.findByRole("radio", { name: /Plain layout/ })).toBeChecked();
+  });
+
+  it("is not shown when the server has nothing to offer, and the book still prints", async () => {
+    serve(bookData([note(1)]), withTemplates());
+    open();
+    await waitFor(() => expect(sheets()).toHaveLength(4));
+    await waitFor(() => expect(screen.queryByRole("group", { name: "Template" })).toBeNull());
+    expect(screen.getByRole("button", { name: "Print or save as PDF" })).toBeInTheDocument();
+  });
+
+  it("saves the choice, redraws the pages and does not fetch the book again", async () => {
+    let saved: unknown;
+    const calls = serve(bookData([note(1), note(2)]), {
+      ...withTemplates(MEMORY),
+      "POST /yearbook/update": (c) => {
+        saved = c.body;
+        return ok({ id: BOOK, template_id: "memory-book" });
+      },
+    });
+    open();
+    await waitFor(() => expect(sheets()).toHaveLength(4)); // plain layout: cover, profile, one notes page (4 notes fit), back
+    const memory = await screen.findByRole("radio", { name: /Memory Book/ });
+    await userEvent.click(memory);
+    expect(saved).toEqual({ id: BOOK, template_id: "memory-book" });
+    expect(await screen.findByText("Template saved: Memory Book.")).toBeInTheDocument();
+    expect(memory).toBeChecked();
+    expect(memory).toHaveFocus(); // the focus stays where the owner is
+    await waitFor(() => expect(sheets()).toHaveLength(5)); // memory-book: one note per page
+    expect(document.querySelectorAll(".mb-page").length).toBeGreaterThan(0);
+    expect(calls.filter((c) => c.path.startsWith("/book-data/get"))).toHaveLength(1);
+  });
+
+  it("clears the template when the plain layout is picked", async () => {
+    const data = bookData([note(1)]);
+    data.yearbook.template_id = "memory-book";
+    let saved: unknown;
+    serve(data, {
+      ...withTemplates(MEMORY),
+      "POST /yearbook/update": (c) => {
+        saved = c.body;
+        return ok({ id: BOOK, template_id: null });
+      },
+    });
+    open();
+    await userEvent.click(await screen.findByRole("radio", { name: /Plain layout/ }));
+    await waitFor(() => expect(saved).toEqual({ id: BOOK, template_id: null }));
+    await waitFor(() => expect(document.querySelectorAll(".mb-page")).toHaveLength(0));
+  });
+
+  it("shows the server's refusal once, keeps the old choice and does not retry a 4xx", async () => {
+    const calls = serve(bookData([note(1)]), {
+      ...withTemplates(MEMORY),
+      "POST /yearbook/update": () => err(400, "invalid_template"),
+    });
+    open();
+    await userEvent.click(await screen.findByRole("radio", { name: /Memory Book/ }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "That template is not available for this paper size.",
+    );
+    expect(calls.filter((c) => c.path === "/yearbook/update")).toHaveLength(1);
+    expect(screen.getByRole("radio", { name: /Plain layout/ })).toBeChecked();
+    expect(document.querySelectorAll(".mb-page")).toHaveLength(0);
+  });
+
+  it("says so when the list cannot be loaded, without retrying a 4xx, and the book still prints", async () => {
+    const calls = serve(bookData([note(1)]), {
+      "GET /template/get-list?page_size=A5": () => err(403, "forbidden"),
+    });
+    open();
+    expect(await screen.findByText("The templates could not be loaded.")).toBeInTheDocument();
+    expect(calls.filter((c) => c.path.startsWith("/template/get-list"))).toHaveLength(1);
+    await waitFor(() => expect(sheets()).toHaveLength(4));
+  });
+});
+
+describe("print guide", () => {
+  const ua = (userAgent: string) =>
+    vi.spyOn(Navigator.prototype, "userAgent", "get").mockReturnValue(userAgent);
+  const GUIDES: [string, string, string[]][] = [
+    [
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36 Edg/127.0.0.0",
+      "Chrome or Edge on a computer",
+      [
+        "Destination: Save as PDF.",
+        "Paper size: A5 (under More settings).",
+        "Margins: None. Scale: Default (100). Headers and footers: off.",
+        "Background graphics: on. Then press Save.",
+      ],
+    ],
+    [
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15",
+      "Safari on a Mac",
+      [
+        "Paper Size: A5 (for Letter, choose US Letter).",
+        "tick Print backgrounds",
+        "Click PDF at the lower left, then Save as PDF.",
+      ],
+    ],
+    [
+      "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0",
+      "Firefox on a computer",
+      [
+        "Destination: Save to PDF.",
+        "Paper size: A5. Margins: None. Scale: 100.",
+        "tick Print backgrounds",
+      ],
+    ],
+    [
+      "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Mobile Safari/537.36",
+      "Chrome on Android",
+      ["At the top, choose Save as PDF.", "Paper size: A5. Margins: None."],
+    ],
+    [
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1",
+      "Safari on an iPhone or iPad",
+      ["spread two fingers apart on the first page", "then Save to Files"],
+    ],
+    [
+      "Lynx/2.9.0",
+      "another browser",
+      [
+        "Destination: Save as PDF.",
+        "Paper size: A5.",
+        "Margins: None. Scale: 100 %.",
+        "Turn headers and footers off and background graphics on.",
+      ],
+    ],
+  ];
+
+  it.each(GUIDES)("%#: shows the exact steps for the browser", async (agent, name, steps) => {
+    ua(agent);
+    serve(bookData([note(1)]), withTemplates());
+    open();
+    const guide = await screen.findByRole("region", { name: "Print settings for your device" });
+    expect(guide).toHaveTextContent(`Detected: ${name}.`);
+    for (const s of steps) expect(guide.textContent).toContain(s);
+  });
+
+  it("names the paper size of the book in the steps", async () => {
+    ua(GUIDES[0]![0]);
+    const data = bookData([note(1)]);
+    data.yearbook.page_size = "A4";
+    serve(data, withTemplates());
+    open();
+    expect(await screen.findByText("Paper size: A4 (under More settings).")).toBeInTheDocument();
+  });
+
+  it("is in Vietnamese when the app is", async () => {
+    ua(GUIDES[0]![0]);
+    serve(bookData([note(1)]), withTemplates());
+    await act(() => i18n.changeLanguage("vi"));
+    try {
+      open();
+      const guide = await screen.findByRole("region", { name: "Cài đặt in cho thiết bị của bạn" });
+      expect(guide).toHaveTextContent("Khổ giấy: A5");
+      expect(guide).toHaveTextContent('Bật "Đồ họa nền"');
+    } finally {
+      await act(() => i18n.changeLanguage("en"));
+    }
+  });
+
+  it("says that the settings cannot be checked from the page", async () => {
+    serve(bookData([note(1)]), withTemplates());
+    open();
+    expect(await screen.findByText(/cannot see or change the print window/)).toBeVisible();
+  });
+});
+
+describe("print feedback", () => {
+  const CHROME =
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36";
+  const IPHONE =
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1";
+  const agent = (u: string) => vi.spyOn(Navigator.prototype, "userAgent", "get").mockReturnValue(u);
+  const post = (handler: (c: Call) => Response) => ({
+    ...withTemplates(),
+    "POST /print-feedback/create": handler,
+  });
+
+  it("asks nothing until the owner says they printed, then moves to the question", async () => {
+    agent(CHROME);
+    const calls = serve(
+      bookData([note(1)]),
+      post(() => ok()),
+    );
+    open();
+    expect(screen.queryByText("Does the PDF look right?")).toBeNull();
+    await userEvent.click(
+      await screen.findByRole("button", { name: "I printed with these settings" }),
+    );
+    expect(screen.getByRole("heading", { name: "Does the PDF look right?" })).toHaveFocus();
+    expect(calls.some((c) => c.path === "/print-feedback/create")).toBe(false);
+  });
+
+  it("opens the question by itself when printing ends, without taking the focus", async () => {
+    agent(CHROME);
+    serve(
+      bookData([note(1)]),
+      post(() => ok()),
+    );
+    open();
+    await screen.findByRole("button", { name: "I printed with these settings" });
+    act(() => void window.dispatchEvent(new Event("afterprint")));
+    const heading = await screen.findByRole("heading", { name: "Does the PDF look right?" });
+    expect(heading).not.toHaveFocus();
+    expect(screen.queryByRole("button", { name: "I printed with these settings" })).toBeNull();
+  });
+
+  it.each([
+    [
+      "Yes, it looks right",
+      "yes",
+      CHROME,
+      "chromium_desktop",
+      /nothing about you or your book is sent/,
+    ],
+    ["No, something is wrong", "no", IPHONE, "safari_ios", /check the steps above once more/],
+  ])(
+    "%s sends one anonymous answer: %s for %s",
+    async (button, verdict, userAgent, family, thanks) => {
+      agent(userAgent);
+      const calls = serve(
+        bookData([note(1)]),
+        post(() => ok()),
+      );
+      open();
+      await userEvent.click(
+        await screen.findByRole("button", { name: "I printed with these settings" }),
+      );
+      await userEvent.click(screen.getByRole("button", { name: button }));
+      const status = await screen.findByText(thanks);
+      expect(status).toHaveFocus();
+      const sent = calls.filter((c) => c.path === "/print-feedback/create");
+      expect(sent).toHaveLength(1);
+      expect(sent[0]!.body).toEqual({ verdict, browser_family: family }); // nothing else: no book, no user agent
+      expect(screen.queryByRole("button", { name: button })).toBeNull(); // answered once
+    },
+  );
+
+  it("keeps the buttons after a refusal, does not retry a 4xx, and lets the owner try again", async () => {
+    agent(CHROME);
+    let n = 0;
+    const calls = serve(
+      bookData([note(1)]),
+      post(() => (++n === 1 ? err(429, "rate_limited", { "Retry-After": "120" }) : ok())),
+    );
+    open();
+    await userEvent.click(
+      await screen.findByRole("button", { name: "I printed with these settings" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Yes, it looks right" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Too many attempts. Try again in 2 min.",
+    );
+    expect(calls.filter((c) => c.path === "/print-feedback/create")).toHaveLength(1);
+    await userEvent.click(screen.getByRole("button", { name: "Yes, it looks right" }));
+    expect(await screen.findByText(/nothing about you or your book is sent/)).toBeInTheDocument();
+    expect(calls.filter((c) => c.path === "/print-feedback/create")).toHaveLength(2);
   });
 });
 
