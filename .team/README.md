@@ -10,8 +10,8 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 10 | T-021, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-087 |
-| IN_PROGRESS | 1 | T-086 |
+| BACKLOG | 12 | T-021, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-087, T-088, T-089 |
+| READY_FOR_QA | 1 | T-086 |
 | MERGED | 3 | T-020, T-022, T-061 |
 | DONE | 65 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
@@ -20,7 +20,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-032 (Approve merge of T-061 (template picker, print guide, public print-feedback counter, PR #71)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-035 (Approve merge of T-022 slice 1 (production Dockerfile, graceful shutdown, image smoke test, PR #74)?)
 
-_Board last written 2026-10-17 08:46Z_
+_Board last written 2026-10-17 08:49Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -488,6 +488,7 @@ Leader decisions (low-risk, inside the approved stack):
 | L-10 | Go toolchain: `go.mod` keeps `go 1.26.0` as the minimum, but CI and production images build with the newest 1.26 patch release. | At exactly go1.26.0 `govulncheck` reports 11 reachable standard-library vulnerabilities; the current patch has none. Raising the `go` directive would force every dev machine to download a newer toolchain for no benefit, while the vulnerable code only matters in what we ship. The Dockerfile (T-022) must follow the same rule. |
 | L-11 | Persistence: plain `database/sql` with parameterised queries and hand-written SQL; `sqlc` (mentioned in L-01) is not adopted. | Auth and yearbooks already use plain SQL cleanly and there is no code generation step to maintain; revisit if the query surface grows. Migrations stay numbered and ordered: always take the next free number (goose rejects out-of-order versions). |
 | L-12 | **Site fonts are self-hosted** (`@fontsource` packages: Fraunces, Be Vietnam Pro, Patrick Hand; latin, latin-ext and vietnamese subsets), never loaded from Google Fonts. The look follows the owner's Claude Design phase 1 (`docs/design/notes/`, adopted 2026-10-15); tokens are ported unchanged. | Avoids sending visitors' IPs to a third party and keeps a strict CSP possible; the three families cover Vietnamese (the originals Caveat, Karla and Jost do not). |
+| L-13 | **`github.com/aws/aws-sdk-go-v2/config` (and its credential modules) added for the AWS default credential chain (T-086).** | Leader decision 2026-10-17: same vendor and major version as the S3 client already in use, maintained by AWS, needed so the task role works without static keys (T-022 requirement 5). govulncheck stays in CI. | Hand-rolling IMDS/ECS credential fetching | Replace if AWS ships the chain in the already-used module |
 | L-12 | **Designer templates are imported as pre-rendered decoration plus slots; the runtime stays pure Go.** | Leader decision 2026-10-08 within D-06/D-12. A dev-only Node/Playwright tool renders each canvas page to a background PNG with text and photo placeholders hidden and reads slot and label boxes from the page; the Go renderer draws the background, then localised static text and the user's text and photos (template format v2, T-038). No browser at run time. Costs about 1 MiB per page of embedded assets (budget 8 MiB per template). | Re-draw every design in JSON shapes by hand; render HTML in the server (headless browser); embed PDF pages as backgrounds (new dependency) | Assets pass 64 MiB in total, or a design needs live vector effects |
 
 ## 5. Engineering conventions
@@ -3945,7 +3946,7 @@ Spec: .team/epics/E10-skills-alignment/12-lint-anchors-userfrom-guard.md (read i
 - 2026-10-17 07:02Z · human · accepted by owner
 
 ### T-086 — [E06] Production config contract, S3 credential chain, migrate lock and image scan (T-022 slice 2)
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** infra
 - **Milestone:** M2
@@ -3953,16 +3954,19 @@ Spec: .team/epics/E10-skills-alignment/12-lint-anchors-userfrom-guard.md (read i
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-086-e06-production-config-contract-s3-creden
-- **PR:** —
-- **Updated:** 2026-10-17 08:40Z by dev
-- **Comments-seen:** 1
+- **PR:** 78
+- **Updated:** 2026-10-17 08:49Z by dev
+- **Comments-seen:** 4
 
 Spec: .team/epics/E06-go-live/07-production-config-contract-s3-chain-migrate-lock-image-scan.md (read it from the repo root). Second half of T-022: requirements 4, 5, 6, 7 (scan), 9 of the T-022 spec.
 
 #### Comments
 - 2026-10-17 07:48Z · leader · unblocked: T-022 merged. Full spec in the file; read the added items at the bottom (including the smoke-test robustness item). Risk high: owner approval before merge. The real prod start still waits for T-021 (Q-033).
+- 2026-10-17 08:49Z · dev · Slice (a) PR #78 head 5c9c514. Claims AC3, AC4, AC-A, AC8 (T-022 numbering). REMAINING: AC5 (migrate lock + API schema-version check + deploy order/expand-contract docs), AC6 Trivy/SBOM/make image-scan, AC7 secret-hygiene check, AC-B, and the QA-added items (Dockerfile syntax digest, MinIO digest, readyz drain WARN once, upload-vs-drain doc note, smoke migrate-status robustness). DEPENDENCY FLAG: added github.com/aws/aws-sdk-go-v2/config (+ imds/sso/ssooidc/sts/signin indirect), the only way to get the AWS default credential chain the spec requires; decide if not wanted. New opt-out vars (default off, in docs/production-config.md): SMEM_DB_ALLOW_INSECURE, SMEM_REDIS_ALLOW_INSECURE, SMEM_METRICS_ALLOW_ANY_INTERFACE, SMEM_DB_TLS_CA_FILE.
+- 2026-10-17 08:49Z · dev · Slice (a) only, PR #78. QA: go test ./internal/config ./internal/storage ./internal/db; make image-smoke; try the prod loader with each var removed/unsafe per docs/production-config.md. Slices (b) migrate lock and (c) scan follow on this task.
+- 2026-10-17 08:49Z · leader · Leader: PR #78 is slice (a) only and T-086 ends with it. The remaining requirements moved into two new tasks with their own specs: T-088 (migrate lock + API schema-version check + deploy order docs) and T-089 (Trivy + SBOM + image-scan + secret hygiene + the QA robustness items). Dependency decision: github.com/aws/aws-sdk-go-v2/config (+ credential modules) approved, recorded as L-13 (same vendor and major version as the S3 client, needed for the default credential chain). QA: verify AC3, AC4, AC-A, AC8 only.
 
 ### T-087 — [E01] E2E hardening: refuse non-local targets, tighter CI limits, clearer errors
 - **Status:** BACKLOG
@@ -3980,6 +3984,44 @@ Spec: .team/epics/E06-go-live/07-production-config-contract-s3-chain-migrate-loc
 - **Comments-seen:** 0
 
 Spec: .team/epics/E01-foundation/11-e2e-hardening.md (read it from the repo root). Five non-blocking findings from the T-020 QA.
+
+#### Comments
+
+### T-088 — [E06] smemories-migrate lock, API schema-version check and deploy order (T-022 slice 3)
+- **Status:** BACKLOG
+- **Priority:** P2
+- **Type:** infra
+- **Milestone:** M2
+- **Depends-on:** T-086
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-17 08:49Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E06-go-live/08-migrate-lock-schema-check.md (read it from the repo root).
+
+#### Comments
+
+### T-089 — [E06] Image scan (Trivy + SBOM) and secret hygiene (T-022 slice 4)
+- **Status:** BACKLOG
+- **Priority:** P2
+- **Type:** infra
+- **Milestone:** M2
+- **Depends-on:** T-086
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-17 08:49Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E06-go-live/09-image-scan-secret-hygiene.md (read it from the repo root).
 
 #### Comments
 
