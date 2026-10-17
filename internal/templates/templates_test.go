@@ -345,6 +345,26 @@ func TestMemoryBookManifest(t *testing.T) {
 	}
 }
 
+// The second html template (T-060): the navy and gold canvas; its form asks only what the autograph page prints.
+func TestNavyClassicManifest(t *testing.T) {
+	tt, ok := Get("navy-classic")
+	if !ok || !tt.IsHTML() || len(tt.Pages) != 0 {
+		t.Fatalf("navy-classic = %+v, %v", tt, ok)
+	}
+	for _, size := range []string{"A5", "A4", "Letter"} {
+		if !tt.Supports(size) {
+			t.Errorf("navy-classic does not support %s", size)
+		}
+	}
+	if tt.Name["en"] != "Navy Classic" || tt.Name["vi"] != "Xanh navy cổ điển" {
+		t.Errorf("names = %v", tt.Name)
+	}
+	want := []notefields.FieldRef{{ID: "name", Required: true}, {ID: "relationship"}, {ID: "message", Required: true}}
+	if got, ok := NoteFields("navy-classic"); !ok || !slices.Equal(got, want) {
+		t.Errorf("note fields = %v, %v", got, ok)
+	}
+}
+
 func TestHTMLManifestErrors(t *testing.T) {
 	tests := []struct{ name, json, want string }{
 		{"pages", `{"id":"p","renderer":"html","name":{"en":"P","vi":"P"},"page_sizes":["A5"],"pages":[{"kind":"cover","elements":[]}]}`, "an html template has no pages"},

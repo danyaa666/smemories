@@ -24,7 +24,10 @@ func (h *Handler) Routes(mux *http.ServeMux) {
 }
 
 func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
-	u, _ := auth.UserFrom(r.Context())
+	u, ok := auth.MustUser(w, r)
+	if !ok {
+		return
+	}
 	b, err := h.svc.Get(r.Context(), u.InternalID, u.EmailVerified, r.URL.Query().Get("yearbook_id"))
 	if err != nil {
 		httpx.Fail(w, r, err)

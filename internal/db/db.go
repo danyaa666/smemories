@@ -73,10 +73,11 @@ func Open(ctx context.Context, cfg config.Config, logger *slog.Logger) (*sql.DB,
 	return d, nil
 }
 
-// permanent reports MySQL errors that cannot fix themselves: 1045 access denied, 1049 unknown database.
+// permanent reports MySQL errors that cannot fix themselves: 1044 access denied to a database (what an unprivileged account gets for an unknown one),
+// 1045 access denied, 1049 unknown database.
 func permanent(err error) bool {
 	var me *mysql.MySQLError
-	return errors.As(err, &me) && (me.Number == 1045 || me.Number == 1049)
+	return errors.As(err, &me) && (me.Number == 1044 || me.Number == 1045 || me.Number == 1049)
 }
 
 func waitReady(ctx context.Context, addr, user string, ping func(context.Context) error, logger *slog.Logger) error {

@@ -415,6 +415,14 @@
       "relationship": "Relationship",
       "message": "Message"
     },
+    "navy": {
+      "classOf": "Class of",
+      "profileEyebrow": "A few words about me",
+      "autographsEyebrow": "Leave a few words",
+      "autographs": "Autographs",
+      "farewell": "Farewell",
+      "farewellYear": "Farewell, Class of {{year}}"
+    },
     "memory": {
       "belongs": "this book belongs to",
       "owner": "{{name}}’s",

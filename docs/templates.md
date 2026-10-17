@@ -86,6 +86,12 @@ The built-in html template is `memory-book` (T-059, the pastel Memory Book of de
 `best_memory` and `wish`; the page also prints `nickname`, `relationship` and `advice` when a note has them (older
 notes, or a later manifest that asks for them).
 
+The second one is `navy-classic` (T-060, the navy and gold canvas of design `temp2`; `web/src/book/templates/navy.tsx`):
+cover, profile (welcome-letter layout with an oval portrait), "Autographs" notes pages with four friends each (message on
+ruled lines, name as the signature) and a back page in the cover's frame. Its form asks `name` and `message` (required) and
+`relationship`. The design has no place for the cover photo or the friends' photos, so the book does not load them.
+Samples and the canvas-to-template pictures are in `docs/templates/navy-classic-*`.
+
 ## The picker and the print screen (T-061)
 
 - `GET /api/template/get-list?page_size=` (session, `internal/templateapi`) lists `templates.List()` (all) or

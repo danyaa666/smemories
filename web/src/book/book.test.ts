@@ -121,7 +121,7 @@ describe("which notes were shrunk or cut (fitReport)", () => {
 
 const font = (name: string) => readFileSync(join(process.cwd(), "src/book/fonts", name), "utf8"); // vitest runs in web/
 
-describe("memory-book fonts cover Vietnamese", () => {
+describe("template fonts cover Vietnamese", () => {
   // The files are subsets (latin, latin-ext, vietnamese); a letter is covered when some @font-face of the family declares its
   // code point in a unicode-range. (Glyph coverage of the files was checked with fontTools; the browser check is in tools/print-check.)
   const css = font("fonts.css");
@@ -133,7 +133,7 @@ describe("memory-book fonts cover Vietnamese", () => {
   const PANGRAM =
     "Tôi yêu những người bạn thân thiết: ưu ái, đằm thắm, nghĩ ngợi, quả ổi, ngũ cốc, ĐẶNG HUỲNH.";
   const ALL = "aàáảãạăằắẳẵặâầấẩẫậeèéẻẽẹêềếểễệiìíỉĩịoòóỏõọôồốổỗộơờớởỡợuùúủũụưừứửữựyỳýỷỹỵđ";
-  it.each(["Baloo 2", "Patrick Hand", "Nunito"])(
+  it.each(["Baloo 2", "Patrick Hand", "Nunito", "Be Vietnam Pro", "Cormorant Garamond"])(
     "%s declares every Vietnamese letter",
     (family) => {
       const r = ranges(family);
@@ -148,11 +148,12 @@ describe("memory-book fonts cover Vietnamese", () => {
       }
     },
   );
-  it("ships the licence texts and the README row for the two lookalikes", () => {
-    for (const f of ["OFL-Baloo2.txt", "OFL-PatrickHand.txt"])
+  it("ships the licence texts and the README row for the lookalikes", () => {
+    for (const f of ["OFL-Baloo2.txt", "OFL-PatrickHand.txt", "OFL-BeVietnamPro.txt"])
       expect(font(f)).toContain("SIL OPEN FONT LICENSE Version 1.1");
     const readme = font("README.md");
     expect(readme).toContain("Baloo 2");
     expect(readme).toContain("Patrick Hand");
+    expect(readme).toContain("Be Vietnam Pro");
   });
 });

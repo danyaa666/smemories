@@ -11,6 +11,7 @@ import { useFitReport } from "../book/fit";
 import { PrintGuide } from "../book/PrintGuide";
 import { TemplatePicker } from "../book/TemplatePicker";
 import { noteFits, ownFits } from "../book/fitReport";
+import { getTemplate } from "../book/templates";
 import { photoIds, useFontsLoaded, usePhotoPreload } from "../book/ready";
 import { SIZES, pageCss, pagePx } from "../book/sizes";
 import "../book/book.css";
@@ -87,7 +88,9 @@ function BookScreen({ data, bookId }: { data: BookData; bookId: string }) {
   const size = data.yearbook.page_size;
   const language = data.yearbook.language;
   const bookT = useMemo(() => i18n.getFixedT(language), [i18n, language]); // the book's own language, not the app's
-  const photos = usePhotoPreload(useMemo(() => photoIds(data), [data]));
+  const photos = usePhotoPreload(
+    useMemo(() => photoIds(data, getTemplate(data.yearbook.template_id).photos), [data]),
+  );
   const key = `${data.yearbook.title}|${data.note_count}|${size}|${data.yearbook.template_id ?? ""}`; // another template has other fonts
   const fonts = useFontsLoaded(key);
   const { states, Provider } = useFitReport();

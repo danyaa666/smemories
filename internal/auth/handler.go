@@ -63,6 +63,22 @@ func UserFrom(ctx context.Context) (*User, bool) {
 	return u, ok
 }
 
+// WithUser returns ctx carrying u for UserFrom; RequireUser uses it, and so can a test that calls a handler directly.
+func WithUser(ctx context.Context, u *User) context.Context {
+	return context.WithValue(ctx, ctxKey{}, u)
+}
+
+// MustUser is UserFrom for handlers: without a signed-in user (a route mounted without RequireUser) it answers
+// ERROR_UNAUTHORIZED and returns false, so a handler never runs with a nil user.
+func MustUser(w http.ResponseWriter, r *http.Request) (*User, bool) {
+	u, ok := UserFrom(r.Context())
+	if !ok || u == nil {
+		httpx.Fail(w, r, ErrUnauthenticated)
+		return nil, false
+	}
+	return u, true
+}
+
 // RequireUser answers 401 unauthenticated unless the request carries a live session;
 // otherwise it stores the user for UserFrom, slides the session expiry when due, and
 // calls next. Other packages wrap their protected routes with it.
@@ -76,7 +92,7 @@ func (h *Handler) RequireUser(next http.Handler) http.Handler {
 		if refreshed != nil {
 			h.setCookie(w, refreshed)
 		}
-		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), ctxKey{}, u)))
+		next.ServeHTTP(w, r.WithContext(WithUser(r.Context(), u)))
 	})
 }
 
@@ -139,7 +155,10 @@ func (h *Handler) verifyEmail(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &in) {
 		return
 	}
-	u, _ := UserFrom(r.Context())
+	u, ok := MustUser(w, r)
+	if !ok {
+		return
+	}
 	h.respond(w, r, nil, h.svc.VerifyEmail(r.Context(), u, in.Code))
 }
 
@@ -149,7 +168,10 @@ type resendResponse struct {
 }
 
 func (h *Handler) resendVerification(w http.ResponseWriter, r *http.Request) {
-	u, _ := UserFrom(r.Context())
+	u, ok := MustUser(w, r)
+	if !ok {
+		return
+	}
 	already, err := h.svc.ResendVerification(r.Context(), u)
 	h.respond(w, r, resendResponse{AlreadyVerified: already}, err)
 }
@@ -178,7 +200,10 @@ func (h *Handler) resetPassword(w http.ResponseWriter, r *http.Request) {
 
 // me answers with the user itself; a field added to User (like the username of T-081) shows up here with no other change.
 func (h *Handler) me(w http.ResponseWriter, r *http.Request) {
-	u, _ := UserFrom(r.Context())
+	u, ok := MustUser(w, r)
+	if !ok {
+		return
+	}
 	httpx.OK(w, r, u)
 }
 
@@ -189,7 +214,10 @@ func (h *Handler) updateUsername(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &in) {
 		return
 	}
-	u, _ := UserFrom(r.Context())
+	u, ok := MustUser(w, r)
+	if !ok {
+		return
+	}
 	nu, err := h.svc.UpdateUsername(r.Context(), u, in.Username)
 	h.respond(w, r, nu, err)
 }

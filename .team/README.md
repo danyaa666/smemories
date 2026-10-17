@@ -10,18 +10,18 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 11 | T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050 |
-| TODO | 3 | T-032, T-061, T-085 |
-| IN_PROGRESS | 1 | T-060 |
-| MERGED | 3 | T-059, T-072, T-079 |
+| BACKLOG | 10 | T-020, T-021, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050 |
+| TODO | 1 | T-022 |
+| CHANGES_REQUESTED | 1 | T-061 |
+| MERGED | 6 | T-032, T-059, T-060, T-072, T-079, T-085 |
 | DONE | 59 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-073, T-074, T-075, T-076, T-077, T-078, T-080, T-081, T-082, T-083 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-059 ([E05] HTML template memory-book (design temp1)); T-072 ([E10] Quality sweep: mnd, forbidigo, pointer parameters, pool defaults, remove the transition switch); T-079 ([E01] Make the timing-sensitive integration tests tolerant of a starved CI runner)
+**Awaiting your review (MERGED):** T-032 ([E01] db.Open: treat MySQL 1044 as permanent; README warning about bare docker compose); T-059 ([E05] HTML template memory-book (design temp1)); T-060 ([E05] HTML template navy-classic (design temp2)); T-072 ([E10] Quality sweep: mnd, forbidigo, pointer parameters, pool defaults, remove the transition switch); T-079 ([E01] Make the timing-sensitive integration tests tolerant of a starved CI runner); T-085 ([E10] Lint exclusions anchored and a guard for auth.UserFrom)
 
-**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?)
+**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-032 (Approve merge of T-061 (template picker, print guide, public print-feedback counter, PR #71)?)
 
-_Board last written 2026-10-16 18:24Z_
+_Board last written 2026-10-17 00:13Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -403,6 +403,13 @@ Small CI-file change (go-integration timeout-minutes 15 -> 40) plus 'make test-i
 - **Blocks:** T-081
 - **Recommendation:** approve
 - **Answer:** approved by owner via team approve T-081 (merged 5cfe240, accepted)
+
+### Q-032 — Approve merge of T-061 (template picker, print guide, public print-feedback counter, PR #71)?
+- **Status:** OPEN
+- **Asked:** 2026-10-16 23:16Z
+- **Blocks:** T-061
+- **Recommendation:** approve
+- **Answer:** _(pending)_
 
 <!-- questions:end -->
 
@@ -1311,14 +1318,14 @@ Choose a template (thumbnails from sample renders), trigger export, show progres
 - **Priority:** P1
 - **Type:** infra
 - **Milestone:** M1
-- **Depends-on:** T-017, T-018, T-019
+- **Depends-on:** T-017, T-018, T-061
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
+- **Updated:** 2026-10-16 23:43Z by leader
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/10-end-to-end-smoke-test-of-the-m1-journey-in.md`
@@ -1353,7 +1360,7 @@ Replace LogMailer with a real provider (SES is the natural fit on AWS) including
 #### Comments
 
 ### T-022 — [E06] Dockerfile, production config and migrations as a one-off task
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** infra
 - **Milestone:** M2
@@ -1364,8 +1371,8 @@ Replace LogMailer with a real provider (SES is the natural fit on AWS) including
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
-- **Comments-seen:** 1
+- **Updated:** 2026-10-17 00:13Z by leader
+- **Comments-seen:** 2
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E06-go-live/02-dockerfile-production-config-and-migrations.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1375,6 +1382,7 @@ Multi-stage Dockerfile (distroless or alpine, non-root), production config valid
 
 #### Comments
 - 2026-10-07 06:42Z · leader · Leader note from the T-004 review: go.mod says go 1.26.0, and govulncheck reports 11 reachable standard-library vulnerabilities at that exact patch. CI therefore builds with the newest 1.26 patch (board L-10). The Dockerfile must do the same: base image on the newest golang:1.26 patch, never an old pinned patch, and rebuild regularly (Dependabot's docker ecosystem should watch it).
+- 2026-10-17 00:13Z · leader · Full spec written 2026-10-17 (image, read-only rootfs, graceful shutdown, prod config contract, S3 default credential chain + timeouts, migrate one-off with lock + schema-version check, Trivy/SBOM/smoke job). No AWS account needed. Risk high: owner approval before merge. Read the leader notes below the spec as well.
 
 ### T-023 — [E06] AWS infrastructure as code and deploy pipeline
 - **Status:** BACKLOG
@@ -1603,7 +1611,7 @@ Items from the T-006 review that only matter at scale or in production: (1) the 
 - 2026-10-07 07:07Z · leader · From the T-006 review: also require at least one visible character in a display name (a name made only of U+200D passes today), preferably through one shared helper that T-008 and later text fields reuse.
 
 ### T-032 — [E01] db.Open: treat MySQL 1044 as permanent; README warning about bare docker compose
-- **Status:** TODO
+- **Status:** MERGED
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -1612,10 +1620,10 @@ Items from the T-006 review that only matter at scale or in production: (1) the 
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-16 09:43Z by leader
-- **Comments-seen:** 1
+- **Branch:** task/t-032-e01-db-open-treat-mysql-1044-as-permanen
+- **PR:** 72
+- **Updated:** 2026-10-16 23:42Z by leader
+- **Comments-seen:** 4
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/08-db-open-treat-mysql-1044-as-permanent-readme.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1625,6 +1633,9 @@ db.Open: treat MySQL 1044 as permanent; README warning about bare docker compose
 
 #### Comments
 - 2026-10-16 09:43Z · leader · promoted to keep the dev queue at 4; small P3.
+- 2026-10-16 23:27Z · dev · 1044 added to permanent() + test case; README compose warning. go test ./... and make lint green. Head 164f192.
+- 2026-10-16 23:39Z · qa · Head 164f192, CI green (go, go-integration, security, web). Evidence: (1) permanent() now includes 1044; test TestWaitReadyFailsFastOnPermanentErrors covers 1044/1045/1049 (one attempt, <1s, error names addr+user). (2) Live check vs smemories-mysql (scratch test, removed): unknown DB nosuchdb_zz -> 1044 fails in 4ms with 'refused user smemories (check credentials...)' ; wrong password -> 1045 in 7ms; port 1 refused -> still retries full 10s then 'not reachable after 10s'; 1040 transient retried (existing test TestWaitReadyRetriesTransientErrors). No password in any error. (3) README warning correct: docker-compose.yml has 'name: smemories', Makefile overrides COMPOSE_PROJECT_NAME per checkout, so bare compose/down -v targets old smemories project; wording accurate. (4) make lint build test OK; go test -race -tags integration ./internal/db/... OK. Non-blocking: none.
+- 2026-10-16 23:42Z · leader · merged ea20f0f (PR #72). Review: 3 files; MySQL 1044 joins 1045/1049 as a permanent error in db.Open (fail fast, test covers all three), README tells readers to use make up/down instead of a bare docker compose; CI green, QA_PASS on the same head. For owner to check: nothing visible.
 
 ### T-033 — [E01] CI: do not cancel in-progress runs on develop and main
 - **Status:** DONE
@@ -2761,19 +2772,19 @@ Pastel Memory Book canvas as an HTML template, EN and VI, four page kinds.
 - 2026-10-16 18:24Z · leader · merged 402d685 (PR #68). Review: web template + manifest + print-check; the cut-off defect (text running out of the card in print) fixed at the cause with contain:size and 6 new print-check tests that fail without the fix; QA re-verified the printed PDFs at A5/A4/Letter (identical positions for normal notes, fidelity pictures within 1.5 mm); CI green, QA_PASS on the same head. For owner to check: set a book's template by SQL (no API sets template_id until T-061), open /yearbooks/<id>/book, print to PDF; sample PDFs in docs/templates/memory-book-*.pdf; the Vietnamese strings in the PR description (print screen shrunk-note list etc). Open (pre-existing, not from this PR): inbox lists extra answers in MySQL JSON key order; the thank-you card quotes how_we_met instead of the message.
 
 ### T-060 — [E05] HTML template navy-classic (design temp2)
-- **Status:** IN_PROGRESS
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1
 - **Depends-on:** T-058, T-044
 - **Risk:** low
-- **Rework:** 0
+- **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-060-e05-html-template-navy-classic-design-te
-- **PR:** —
-- **Updated:** 2026-10-16 18:17Z by dev
-- **Comments-seen:** 1
+- **PR:** https://github.com/danyaa666/smemories/pull/70
+- **Updated:** 2026-10-16 23:35Z by leader
+- **Comments-seen:** 7
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/11-html-template-navy-classic.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2783,21 +2794,61 @@ Navy and gold canvas as the second HTML template.
 
 #### Comments
 - 2026-10-16 09:50Z · leader · unblocked: T-058 merged. Read the addendum at the bottom of the spec.
+- 2026-10-16 18:47Z · dev · PR #70, head d5eaf95 (T-059 merged, branch merged with develop), CI green (web job failed once on unrelated flaky codes.test.tsx toHaveFocus, rerun green). navy-classic: cover, profile (oval), Autographs 4/page, back; Be Vietnam Pro for Jost; make print-check 31/31 incl. cut-off tests at A5/A4/Letter (400-line + 2000-char, bbox centres inside box; verified they fail with overflow visible); real browser 320/375/1280 on own Vite+API+private DB (dropped, objects removed). Verify: Vietnamese table in PR, samples docs/templates/navy-classic-*.pdf. Design has no place for cover/friend photos (not fetched). Port 5199 was taken by someone else, use PRINT_CHECK_PORT.
+- 2026-10-16 19:10Z · qa · QA_FAIL on PR #70 head d5eaf95: one major print defect; everything else verified (evidence below).
+  
+  ISSUES
+  1. [MAJOR] Owner's own profile text is missing from the real PDF while the screen preview shows it. In the printed profile page the favourite-quote text AND the signature (owner name + sign line) are absent (only the heading FAVOURITE QUOTE prints), at A5, A4 and Letter. Valid input per the API (hobbies 300, future_plans 300, quote 500 chars).
+     Repro (own Vite+API+private DB, book template_id=navy-classic): update-profile with full_name "Tester Marker", hobbies = "Hobby words here " repeated to 300 chars, future_plans = "Future plan words " to 300, quote = "Quote marker text " to 500, no photo. Open /yearbooks/<id>/book (screen shows quote + name, "Texts on your own pages ... cut off" banner only counts), then Page.printToPDF (page.pdf preferCSSPageSize+printBackground, real Chrome) -> pdftotext -f 2 -l 2: "Quote marker"=0, "Tester Marker"=0 at A5/A4/Letter. Same with the longer name in my max-length book (full_name 100 chars). Matrix: hobbies/plans/quote 100/100/200 -> all present; 0/0/500 -> present; 300/300/100 -> quote present, name present at A5/A4 but name MISSING at Letter; 300/300/500 -> quote+name missing at all three sizes.
+     Expected: every text inside its box (shrunk/clipped inside the card, listed on the print screen), nothing lost. Actual: text silently gone from the PDF; emulateMedia(print) in the same browser shows the page correct (quote at y 620-886, name at 904 of 1056), so it is the real print layout of the profile page (web/src/book/templates/navy.css .nc-letter / .nc-letter-text flex column, .nc-para flexBasis estimate paraHeight(), .nc-sign margin-top:auto) that differs: this is the T-059 lesson (flex-sized text boxes in PRINT) not covered by the print-check, which tests the 400-line and 2000-char NOTES but not max-length profile fields. Please add a print-check case with maximum-length hobbies+future_plans+quote (and long full_name) at A5/A4/Letter that asserts the quote text and the name are in the PDF inside the page, and fix the profile layout (fixed-height boxes with overflow hidden, like the notes cards).
+  2. [minor, same area] In the same max-length book the cover title/school name/motto shrink to ~3 pt (unreadable) and the print screen only counts "texts on your own pages" (no list of which); acceptable per spec (addendum lists notes only), mention only.
+  
+  VERIFIED OK (evidence I produced)
+  - CI on d5eaf95: go, go-integration, security, web all pass. Dev says web failed once on flaky codes.test.tsx toHaveFocus and passed on rerun: I ran full vitest 304/304 once and src/pages (180 tests) twice, all green; could not reproduce.
+  - PR diff vs origin/develop: 30 files, 0 under .team/, only T-060 files (docs/templates, internal/templates, tools/print-check, web/src/book, locales, Book.tsx, book tests). mergeable.
+  - make print-check (PRINT_CHECK_PORT=5287): 31/31 pass. web: lint, typecheck, lint:i18n, check:api, vitest 304/304, build all OK. Go: go vet ./internal/templates, go test ./internal/templates, golangci-lint 0 issues, gofmt clean.
+  - Real Chrome (channel chrome) on my own stack (Vite :15173, API :18080, DB smem_test_qa060, Redis db 11): 320/375/1280 px no horizontal overflow, preview+print screen fine, no console errors except favicon 404.
+  - PDFs via page.pdf at A5/A4/Letter for books of 0, 1, 9, 84, 300 notes: sizes exact (420x594.96, 594.96x841.92, 612x792 pt); page counts 3/4/6/24/78 = 2 + ceil(n/4) + 1 (84 -> 24, 300 -> 78); all fonts embedded (CormorantGaramond, BeVietnamPro, AppleColorEmoji fallback for emoji); no blank pages; pdftotext finds all 84 and all 300 messages and names at every size; Vietnamese and emoji extractable; backgrounds printed; cover/profile(oval)/Autographs(4 per page)/back in cover frame as designed.
+  - Oval portrait: portrait and landscape source photos both fill the oval (cover fit); no profile photo prints the grey oval placeholder of the design.
+  - 3-photo note, 1-photo note, no-photo note: the design (canvas temp2, side-by-side docs/templates/navy-classic-fidelity-*.jpg) has no place for cover or friends' photos; Template.photos=false confirmed: navy book = 1 media request (profile photo) + 1 book-data, same data under memory-book = 6 media requests.
+  - Footer: canvas '[Page #]' replaced by the book title on the profile page (ellipsis when very long); notes pages use the design's farewell line. Judged against the canvas: OK.
+  - 400-line message and 2000-char paragraph (notes): text stays inside its card in the PDF at A5/A4/Letter (clipped at the card, last visible line cut), listed on the print screen as "Khoa, 5 pt, and still cut off" / "Linh, 5 pt, and still cut off" plus "Nguyen ... Thu, 6.5 pt"; each link opens /yearbooks/<id>/notes?note=<id> and the inbox scrolls to that note (clicked in browser).
+  - Text escaping: note with <b>, <script>alert(1)</script>, & and quotes prints literally on screen and in the PDF; form submit with <img onerror> stored and printed as text.
+  - Public form (/c/<token>, navy-classic manifest): labels Your name, Your relationship (optional), Your message; name and message required, relationship optional. Submitted "Phạm Thị Ánh Tuyết" via the real form, approved it, it printed. (Observation: the form still offers 'Add photo' although navy-classic never prints friends' photos; not in the spec.)
+  - T-059 regression: same book with template_id=memory-book rendered on the PR branch and on a clean origin/develop (19d6842) Vite: 12 pages each, pdftotext identical and pixel-identical at 50 dpi for A5, A4, Letter.
+  - Bare book (no year/school/motto/photo) prints cover, profile, back without errors.
+  
+  NEW VIETNAMESE STRINGS FOR THE OWNER (bookPages.navy.*, en -> vi): classOf "Class of" -> "Khóa"; profileEyebrow "A few words about me" -> "Vài điều về mình"; autographsEyebrow "Leave a few words" -> "Để lại đôi lời"; autographs "Autographs" -> "Lưu bút"; farewell "Farewell" -> "Tạm biệt"; farewellYear "Farewell, Class of {{year}}" -> "Tạm biệt, khóa {{year}}".
+  Cleanup done: my API/Vite processes stopped, private DB dropped, Redis db 11 flushed, my yearbooks deleted via API (media gone), worktree clean.
+- 2026-10-16 19:11Z · leader · Leader guidance for the rework (QA_FAIL, one major; everything else passed): the real PDF LOSES owner text that the screen shows. On the profile page the favourite-quote text and the signature (owner name + sign line) are missing at A5, A4 and Letter when the profile fields are long but valid: hobbies 300, future_plans 300, quote 500 characters, no photo => neither the quote marker nor the name in the PDF; 100/100/200 prints fine; 300/300/100 loses the name at Letter only. Silent loss of the owner's own text is worse than clipping. Fix at the cause in print (compare with how T-059 memory-book lays out the profile and with the contain:size lesson; the profile boxes must be height-bounded AND the shrink-to-fit must run for every profile field, or the layout must give the quote and the signature a reserved area that long fields cannot push out), at A5/A4/Letter. Then extend make print-check with PROFILE cases at the validated maximum lengths (hobbies 300, future_plans 300, quote 500, motto/name at their maximum, with and without the portrait): assert via pdftotext -bbox that the quote, the name and the sign line are present and inside the page and their boxes. IMPORTANT: run the same profile cases against the T-059 memory-book template and the T-058 basic template; if either loses text too, fix it in this PR (same cause, small) and say so. Also decide cheaply: the public form still offers 'Add photo' although navy-classic never prints friends' photos; leave it as is, we will drive it from the template manifest later (do not change the form here). Strings bookPages.navy.* accepted. CI green on the new head, READY_FOR_QA.
+- 2026-10-16 23:21Z · dev · Rework 1, head 252db76 (develop merged), CI green. Issue 1 fixed at the cause: the printed flex layout of the profile letter differed from the screen's (flex-shrink on flexBasis estimates), pushing the quote and the signature off the page. Para heights are now computed in px in navy.tsx (estimate, scaled down in proportion when they exceed the room above the signature) and fixed; font shrink still runs inside each box. Test: make print-check 49/49, new 18 cases 'profile fields at their maximum length' (hobbies 300, plans 300, quote 500, name 100, nickname 50, title/school/class 120, motto 200; with and without portrait; A5/A4/Letter) assert via pdftotext -bbox on page 2 that the 3 texts, the name and the sign line (nickname first) are present, on the page and inside their .bk-fit boxes; the 6 navy cases failed before the fix. Same cases on T-059 memory-book and T-058 basic: all 12 pass unchanged, no fix needed there. Issue 2 (minor): accepted. Public form untouched. web lint/typecheck/i18n/api/vitest 304/build OK.
+- 2026-10-16 23:35Z · qa · QA_PASS on PR #70 head 252db76 (rework 1). Issue 1 (profile text lost in print) is fixed; verified by me, not only through dev's tests.
+  EVIDENCE (own Vite :15174 + own API :18081 + private DB smem_test_qa060b at latest schema, Redis db 12; real Chrome Page.printToPDF preferCSSPageSize+printBackground, template_id set by SQL; pdftotext -bbox on the profile page)
+  - Reproduced the old failure on head d5eaf95 (own Vite on a git-archive of it): hobbies 300 / plans 300 / quote 500, no photo: quote end marker and name = 0 hits at A5, A4 and Letter. On 252db76 the same case: all three end markers + name present at A5/A4/Letter, 0 words outside the page, no word-bbox overlap, signature below the quote visible (viewed PNG).
+  - navy-classic matrix, each at A5/A4/Letter, each without and with portrait (180 PDFs): A 300/300/500; B 300/300/100 (the Letter-only loss); C everything at max (title 120, school 120, class 120, motto 200, name 100, nickname 50 + 300/300/500); D Vietnamese diacritics + emoji at max; E/F/G only quote / only hobbies / only plans at max; H name+title+motto max, no paragraphs; I short fields; J 290-500 chars without spaces; O 100/100/200; P 200/200/300; K/L/M name 30/45/60 chars. Result: every paragraph end marker present, 0 out-of-page words, 3 pages, no overlap with the signature.
+  - Regression vs the earlier passing head d5eaf95 (same cases, pixel compare of page 2 at 60 dpi, PR vs old): short fields, quote-only, hobbies-only, plans-only and 100/100/200 are byte-identical at all 3 sizes (nothing moved or got squashed). Only 300/300/500 and 200/200/300 differ (the old layout was the bug; old lost the text at Letter for 200/200/300).
+  - Font floor, DOM font-size in pt (A5/A4/Letter): worst case 300/300/500 paragraphs 12.8-13.5 / 12.4-13.5 / 10.9-12.4 pt (Letter worst 10.9 pt); 300/300/100 14.3-15.8 pt; Vietnamese+emoji max 12.4-14.6 pt; no-space strings 10.5-13.1 pt; short fields 16.5 pt unchanged. Legible everywhere.
+  - Signature (owner name on the profile page): 30 pt normal, 21.8 pt at 30 chars, 15 pt at 45, 11.3 pt at 60 chars, all complete. At 80-100 chars it hits the 9 pt floor and the end of the name is cut inside its box (e.g. 'Longname Person ... Lon'); the screen then says 'Texts on your own pages that are too long ... cut off in the printout: 1'. Not a regression (the name was lost entirely before) and consistent with the notes behaviour; non-blocking.
+  - memory-book and basic with the same maximum profiles (A, B, C, D, J; A5/A4/Letter; with/without portrait; 60 PDFs): all three end markers present, 0 out-of-page words, 3 pages. basic: name complete, 0 overlaps. memory-book: unchanged code (PR touches no memory-book/basic file); a 100-char name (cases C, D) is clipped there as before; the constant 4 bbox overlaps are the same in short and max cases (design decoration), page-image unchanged.
+  MECHANICAL: CI on 252db76 all green (go, go-integration, security, web). make print-check (PRINT_CHECK_PORT=5391): 49/49 pass. web in the worktree: lint+prettier, typecheck, lint:i18n, check:api, build all OK; vitest 18 files / 304 tests pass. PR diff has 0 files under .team/. Skipped as agreed: notes pages, 300-note books, photos flag, footer, escaping, public form (verified last round).
+  NON-BLOCKING: names of about 80-100 characters at the 9 pt floor are clipped at the end (reported on the print screen); the cover shrink to ~3 pt for max-length title/school/motto noted earlier is unchanged.
+  Cleanup: my API/Vite stopped, DB smem_test_qa060b dropped, Redis db 12 flushed, my 58 yearbooks and their media deleted via API; worktree clean.
+- 2026-10-16 23:35Z · leader · merged 8f1f885 (PR #70). Review: web template navy-classic + manifest; the profile text loss in print fixed at the cause (px paragraph heights), 18 new profile-at-maximum print-check cases (49/49); QA reproduced the old failure, verified ~20 profile cases at A5/A4/Letter (worst font 10.9 pt at Letter), short profiles print byte-identical to before, memory-book and basic unaffected; CI green on the same head. Known: a name of ~80-100 characters hits the 9 pt floor and is cut inside its box (counted on the print screen); the public form still offers 'Add photo' for navy-classic although friends' photos are not printed. For owner to check: after T-061 lands, pick navy-classic and print; samples docs/templates/navy-classic-*; Vietnamese strings bookPages.navy.* (Khóa, Vài điều về mình, Để lại đôi lời, Lưu bút, Tạm biệt, Tạm biệt khóa {{year}}).
 
 ### T-061 — [E05] Web: template picker and print screen with device guidance
-- **Status:** TODO
+- **Status:** CHANGES_REQUESTED
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
 - **Depends-on:** T-058, T-059
 - **Risk:** high
-- **Rework:** 0
+- **Rework:** 1
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-16 18:24Z by leader
-- **Comments-seen:** 1
+- **Branch:** task/t-061-e05-web-template-picker-and-print-screen
+- **PR:** https://github.com/danyaa666/smemories/pull/71
+- **Updated:** 2026-10-17 00:13Z by leader
+- **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/12-template-picker-and-print-screen.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2807,6 +2858,27 @@ Pick a template for the page size, print with per-browser guidance, anonymous wo
 
 #### Comments
 - 2026-10-16 18:24Z · leader · unblocked: T-058 and T-059 merged. AC1 and AC3 were rewritten to the v2 routes (GET /api/template/get-list, template_id via POST /api/yearbook/update, public print-feedback counter). Risk high: owner approval before merge. T-060 (navy-classic) is in progress; the picker works with one template and lists the second when it lands.
+- 2026-10-16 19:16Z · dev · PR #71, head c7a8fd1, CI green (go, go-integration, security, web). Whole task in one PR: GET /api/template/get-list, template_id on yearbook create/update (ERROR_INVALID_TEMPLATE), POST /api/print-feedback/create (table print_feedback_tab, goose migration 20261017100000), picker + per-UA guide + feedback on /yearbooks/:id/book, openapi/schema.d.ts, postman/templates.postman_collection.json (newman green), docs. Real Chromium at 320/375/1280 checked; make print-check 19/19 (run with PRINT_CHECK_PORT=5683 because :5199 is taken). Not tested on real Safari/Android/iOS devices (OWNER-TESTS). Vietnamese strings are listed in the PR. Two existing integration tests adjusted (db username migration, notes delete registry).
+- 2026-10-16 23:16Z · qa · QA_PASS on PR #71 head c7a8fd1 (CI green: go, go-integration, security, web). Own API + private DB (all migrations, goose up/down/up of 20261017100000 clean) + own Redis db 9 + real Google Chrome via Playwright on my own Vite.
+  EVIDENCE
+  AC1: get-list A5 = classic,memory-book,modern; A4 same; Letter = memory-book only; no param = all; A3 / a5 / "A5 " / %00 = 400 ERROR_PARAM; no session 401; POST 405. yearbook/update: unknown, "", Memory-Book, " memory-book", >32 chars = 400 ERROR_INVALID_TEMPLATE; 123 / array = 400 ERROR_PARAM; classic on a Letter book 400; memory-book saved (get shows it); null clears (idempotent); size change with an unsupported template 400; another user's book 404; no session 401; foreign Origin + cookie 403. Newman templates 48 req / 122 assertions, green twice back to back.
+  AC2: Chrome at 320/375/1280: no horizontal scroll, picker lists Plain layout + Memory Book only (A5, A4, Letter), preview image loads. Choice via mouse and keyboard (ArrowUp/Down), focus stays on the radio, focus ring visible, saved status announced, preview changes (pages 5 -> 9), persists after reload, slow save (1.5 s) the radio follows at once, a 400 shows the error banner, list 500 shows "templates could not be loaded" and the guide still works. Real Chrome page.pdf of memory-book: 9 pages, A5 420x594.96 pt, no picker/guide text in the PDF. Shrunk/cut note list ("Linh, 5.5 pt, Open in the inbox") still shown. Guide per UA checked (en and vi): Chrome Mac, Edge Win, Safari Mac, Firefox Win -> own guides; Android Chrome and Samsung Internet -> Android Chrome guide; iOS Safari and iOS Chrome -> iPhone guide; Firefox Android -> generic. Steps are accurate (Save as PDF, paper size, margins none, background graphics / Print backgrounds, headers off; iOS pinch-to-PDF + Save to Files). Vietnamese renders. No googleapis/gstatic requests; console clean (only favicon.ico 404, pre-existing).
+  AC3: Feedback: one POST per click, thanks shown, buttons removed (no second send), focus moves to heading / thanks; afterprint opens the question; 429 shows "Too many attempts" with one POST per click (no auto retry). Body is exactly {verdict,browser_family}. API: unknown field / user_agent field 400, verdict maybe/YES/""/null 400, number 400, family netscape / 1000 chars (413) / SQL text 400, missing fields 400, array/invalid json/trailing garbage 400, >1 KiB 413 (also 1 MB with Expect), text/plain and form 415, GET/PUT 405. Per-IP limit exact: 30 accepted then 429 + Retry-After (3579), XFF ignored without TRUST_PROXY; invalid bodies do not consume the limit. Concurrency: 1200 parallel requests (80 threads, 12 family x verdict combos, distinct IPs) -> every counter exactly 100, sum 1200, 12 rows, no lost update. Table has only browser_family, verdict, hits, created_at, updated_at (no IP, UA, user, book); the only route is POST (GET 405, response data {}), no read path.
+  AC4 / gate: gofmt+vet+golangci-lint 0 issues; go build; go test -race ./... all ok; go test -race -tags integration ./... all ok (INTEG exit 0); web lint, typecheck, lint:i18n, check:api, vitest 332/332, build ok; print-check 19/19 (PRINT_CHECK_PORT=5684). Newman: notes 74 req/141 assertions ok, notes-moderation 80/164 ok, media 75/144 ok, templates ok x2. auth (20 assertions: google routes, not configured), platform (1: needs DB down) and yearbooks (crashes: collection calls removed /v1 routes) fail IDENTICALLY on a develop build (checked on develop at :18063), so pre-existing/environmental, not T-061.
+  Two edited integration tests: legitimate. user_username: loops MigrateDown until the username columns are gone (the old test assumed username was the newest migration), assertions unchanged. notes delete: print_feedback_tab is listed as a global table (no book/user), must still exist, other tables still checked.
+  NON-BLOCKING OBSERVATIONS (leader/owner decide)
+  1. print-feedback origin check is auth.Guard: it only rejects a foreign/missing Origin when a session cookie is sent (cookie + wrong/no Origin = 403 ERROR_CSRF_ORIGIN_MISMATCH; no cookie + any/no Origin = 200). Same as register and other public routes and as the spec "like the other public endpoints"; a script can fake Origin anyway, so the 30/h/IP limit is the real guard.
+  2. Limiter fails open (disclosed in PR; same policy as other public endpoints): with Redis down (my own throwaway valkey stopped) 50 requests from one IP all 200, so counters can be inflated during an outage; ERROR "ratelimit: limiter failed policy open" logged. Use limiters.Closed only if the owner wants it closed.
+  3. get-list returns preview /template-previews/classic.jpg and modern.jpg for go templates; those files do not exist (404). The picker hides go templates, so no user impact; only a future consumer would hit it.
+  4. A page-size change refused because of the chosen template answers the generic ERROR_INVALID_TEMPLATE "template is not valid"; the web has no size-change UI here so unaffected.
+  5. Malformed yearbook ids answer 404 (not ERROR_PARAM) and a lower-case ULID is accepted: pre-existing behaviour of yearbook/get too, not changed by this PR.
+  6. Postman has no 413 case for the feedback body (verified by hand); Android guide step 4 says "the question below" before the question is open (it opens with the "I printed" link).
+  7. updated_at (ms) per counter row shows the time of the latest answer for that family/verdict; not personal.
+  8. iPad in desktop mode is recognised only through maxTouchPoints > 1 (Playwright's touch emulation reports 1, so I saw "Safari on a Mac"; unit tests cover >1). Samsung Internet gets the Chrome-on-Android guide. Not tested on real Safari/iOS/Android devices (OWNER-TESTS).
+  9. Vietnamese strings are listed in the PR description for the owner (title "Cai dat in cho thiet bi cua ban", steps etc.). Possible wording check: Chrome's Vietnamese UI may call "Destination" something other than "May in".
+  Cleaned up: my API, Vite, private DB smem_test_qa061, Redis db 9 keys, throwaway valkey container; no .team files in the PR.
+- 2026-10-16 23:16Z · leader · Leader review OK on c7a8fd1: counter table holds only (browser_family, verdict, hits) with one upsert (exactly 1200 hits under 1200 concurrent writes), no read route, strict body + enum validation, 30/h per IP then 429, template_id validated against the registry in the Service, ERROR_INVALID_TEMPLATE; web-only picker/guide reuse T-058/T-059. The two non-blocking QA findings are accepted by policy: the Origin check is auth.Guard like every public route (403 only with a session cookie) and the rate limiter fails open with an ERROR log (docs/redis.md: only sessions and OTP attempts fail closed; the counter is non-critical). CI green, QA_PASS on the same head. Waiting for owner approval (Risk high). Owner to check after merge: run make migrate (new table print_feedback_tab), /yearbooks/<id>/book (picker, print guide, feedback question), and the Vietnamese strings in the PR description.
+- 2026-10-17 00:13Z · leader · PR #71 now CONFLICTS with develop (T-060, T-085 and T-032 merged after QA). Merge develop into the branch, keep both sides, and note that T-085 added auth.MustUser (every handler that reads the signed-in user must use it instead of auth.UserFrom: the new templateapi and printfeedback handlers, and any yearbook update path you touched) plus must_user_test.go per package; re-run the full gates and print-check; the picker must now also list navy-classic (T-060 merged: its manifest and component are on develop). Then READY_FOR_QA; QA will re-test the merged state.
 
 ### T-062 — [E01] CI: get the newest Go patch straight from go.dev (no manifest lag)
 - **Status:** DONE
@@ -3764,7 +3836,7 @@ Spec: .team/epics/E04-friends-notes/09-inbox-320px-polish.md (read it from the r
 - 2026-10-16 03:40Z · leader · created by mistake: the board does not let the leader override QA_FAIL, so the 320px fix goes through T-017 rework 2 instead
 
 ### T-085 — [E10] Lint exclusions anchored and a guard for auth.UserFrom
-- **Status:** TODO
+- **Status:** MERGED
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -3773,15 +3845,18 @@ Spec: .team/epics/E04-friends-notes/09-inbox-320px-polish.md (read it from the r
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-16 18:19Z by leader
-- **Comments-seen:** 1
+- **Branch:** task/t-085-e10-lint-exclusions-anchored-and-a-guard
+- **PR:** 73
+- **Updated:** 2026-10-16 23:48Z by leader
+- **Comments-seen:** 4
 
 Spec: .team/epics/E10-skills-alignment/12-lint-anchors-userfrom-guard.md (read it from the repo root). Two non-blocking findings of the T-072 QA.
 
 #### Comments
 - 2026-10-16 18:19Z · leader · promoted to keep the dev queue at 4; spec 12-lint-anchors-userfrom-guard.md
+- 2026-10-16 23:34Z · dev · Lint regexes anchored (scratch internal/latest flagged); auth.MustUser used by all user handlers; per-package 401 tests; lint, unit and integration green. Head 99f32a1.
+- 2026-10-16 23:47Z · qa · Head 99f32a1, CI green (go, go-integration, security, web). Evidence: AC1: scratch copy with fmt.Errorf + magic number in internal/latest and internal/zz -> golangci-lint flags forbidigo AND mnd in both; scratch pkg under internal/db/dbtest/ stays exempt; regexes name only dbtest|redistest|storagetest|oidctest; 0 new nolint in diff. AC2: grep UserFrom/WithUser/MustUser: UserFrom only inside auth (MustUser, RequireUser path); every handler in auth(4), notes(7), yearbook(6), media(4), bookdata(1) uses MustUser; WithUser used only by RequireUser + tests; yearbook caller() and media owner() removed. Mutation: replaced the guard by UserFrom in one handler per package (yearbook delete, media delete, notes list, bookdata get, auth me) -> each must_user_test.go failed (3 assertions, 2 nil-deref panics); restored. AC3: make lint build test OK; go test -race -tags integration ./... all ok. Behaviour sweep (own API on :18085 develop vs :18086 PR head, private DBs, Redis db 9/10): 85 requests over all authed routes (401 unauth x22, 400 bad JSON/empty body x24, 200 happy paths, 404 other owner x12) -> output identical after normalising ids/request_id/random username. Newman against PR head (private DB/Redis): yearbooks x2 98 req 0 fail; notes x2 0 fail; notes-moderation x2 0 fail; media x2 0 fail; auth x2 20 assertion failures = OIDC/Google only (same 20 on develop; no SMEM_GOOGLE_* configured; covered by Go oidctest in integration); platform 1 failure = 503 not-ready case needs DB down (env). No templates Newman collection exists; templates covered by go tests. Non-blocking: in auth verifyEmail and updateUsername the guard runs after body decode (order kept from before, so behaviour behind RequireUser unchanged); on a route mounted without RequireUser a bad body would answer 400 before 401. Cleanup done: my APIs stopped, private DBs dropped, Redis 9/10 flushed.
+- 2026-10-16 23:48Z · leader · merged e15e5e0 (PR #73). Review: forbidigo/mnd exclusions now name only dbtest, redistest, storagetest, oidctest (scratch internal/latest and internal/zz flagged); auth.MustUser guard used by every user handler in auth, notes, yearbook, media, bookdata; QA mutated one handler per package and each must_user_test failed, and 85 authed requests gave identical output before/after; CI green, QA_PASS on the same head. For owner to check: nothing visible. Note: verifyEmail and updateUsername run the guard after body decode (as before); harmless behind RequireUser.
 
 <!-- tasks:end -->
 
@@ -3820,3 +3895,7 @@ Spec: .team/epics/E10-skills-alignment/12-lint-anchors-userfrom-guard.md (read i
 - 2026-10-16 — T-072 (quality sweep, PR #67) merged 715b960: transition switch removed, forbidigo/mnd on, strict auth bodies. T-058 accepted. T-085 (P3) added for two QA nits (lint regex anchors, UserFrom guard). Dev on T-059.
 - 2026-10-17 — T-079 (flaky-test tolerance, PR #69) merged 3429df4. T-072 merged earlier, awaiting owner accept. T-059 in rework 1 (print clipping of cut-off notes). Heartbeat recurring (ce6d77f6).
 - 2026-10-17 — T-059 (memory-book template, PR #68) merged 402d685 after rework 1 (cut-off notes ran out of the card in print; fixed with contain:size + print-check cases). T-079 merged. T-061 (picker + print screen, high risk) promoted to TODO. Awaiting owner accept: T-072, T-079, T-059.
+- 2026-10-17 — T-060 QA_FAIL: navy-classic profile page lost the quote and signature in print with long valid fields; rework 1. Open item for later: the public form offers 'Add photo' even when the template (navy-classic) never prints friends' photos; drive it from the template manifest.
+- 2026-10-17 — T-060 (navy-classic template, PR #70) merged 8f1f885 after rework 1 (profile quote and signature lost in print; fixed, 18 profile-at-maximum print-check cases). T-061 QA_PASS, awaiting owner approval (Q-032). T-032 and T-085 in QA. Owner to accept: T-059, T-060, T-072, T-079.
+- 2026-10-17 — T-032 (db 1044 permanent error + README compose warning, PR #72) merged ea20f0f. T-020 (end-to-end Playwright journey in CI) got its full spec and new dependencies (T-017, T-018, T-061); it starts when T-061 merges.
+- 2026-10-17 — T-085 (lint anchors + auth.MustUser guard, PR #73) merged e15e5e0. Nothing is left in dev/QA; T-061 waits for the owner's approval (Q-032); T-020 starts after it.
