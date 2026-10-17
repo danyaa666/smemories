@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"slices"
 	"time"
 
 	"github.com/go-sql-driver/mysql"
@@ -91,6 +92,7 @@ func MigrateUpLog(ctx context.Context, d *sql.DB, logger *slog.Logger, wait time
 		return err
 	}
 	res, err := p.Up(ctx)
+	err = halfAppliedHint(err)
 	if logger != nil {
 		for _, r := range res {
 			logger.Info("migration applied", "version", r.Source.Version, "file", r.Source.Path, "duration", r.Duration.String())
@@ -98,6 +100,20 @@ func MigrateUpLog(ctx context.Context, d *sql.DB, logger *slog.Logger, wait time
 		if err == nil && len(res) == 0 {
 			logger.Info("schema is up to date")
 		}
+	}
+	return err
+}
+
+// MySQL errors a statement of an already (half) applied migration raises when it runs a second time: duplicate column, table already
+// exists, duplicate key name, can't drop (does not exist).
+var halfAppliedErrors = map[uint16]bool{1060: true, 1050: true, 1061: true, 1091: true}
+
+// halfAppliedHint adds the way out to a migration failure that looks like the leftover of a killed run: MySQL commits DDL implicitly, so
+// a process killed in the middle of a migration leaves its first statements applied and the version not recorded (docs/deploy.md).
+func halfAppliedHint(err error) error {
+	var me *mysql.MySQLError
+	if errors.As(err, &me) && halfAppliedErrors[me.Number] {
+		return apperr.Wrap(apperr.Internal, err, "this migration may be half-applied by an earlier killed run: see \"A half-applied migration\" in docs/deploy.md")
 	}
 	return err
 }
@@ -144,52 +160,87 @@ func MigrateStatus(ctx context.Context, d *sql.DB, w io.Writer) error {
 // CheckSchema is the API's start-up guard: it never migrates and writes nothing. It refuses when a migration this build embeds is not
 // applied (the database is behind) or when more than MaxSchemaAhead applied migrations are unknown to it (wrong image, or a rollback of
 // several releases). The error names both versions: the highest applied and the one this build expects.
-func CheckSchema(ctx context.Context, d *sql.DB) error {
+func CheckSchema(ctx context.Context, d *sql.DB) error { return CheckSchemaLog(ctx, d, nil) }
+
+// CheckSchemaLog is CheckSchema that also logs one WARN (logger may be nil) when the database is 1 to MaxSchemaAhead migrations ahead:
+// the normal state while an old release runs against the next schema, so it is said once, at start-up.
+func CheckSchemaLog(ctx context.Context, d *sql.DB, logger *slog.Logger) error {
 	p, err := provider(d, 0)
 	if err != nil {
 		return err
 	}
 	known := map[int64]bool{}
-	var want int64
 	for _, s := range p.ListSources() {
 		known[s.Version] = true
-		want = max(want, s.Version)
 	}
 	rows, err := d.QueryContext(ctx, "SELECT version_id FROM goose_db_version WHERE is_applied AND version_id > 0")
 	if err != nil {
 		var me *mysql.MySQLError
 		if errors.As(err, &me) && me.Number == 1146 { // no goose_db_version table: never migrated
-			return schemaBehind(0, want, len(known))
+			_, err = compareSchema(known, nil)
+			return err
 		}
 		return apperr.Wrap(apperr.Internal, err, "read the schema version")
 	}
 	defer func() { _ = rows.Close() }()
-	var have int64
-	missing, ahead := len(known), 0
+	var applied []int64
 	for rows.Next() {
 		var v int64
 		if err := rows.Scan(&v); err != nil {
 			return apperr.Wrap(apperr.Internal, err, "read the schema version")
 		}
-		have = max(have, v)
-		if known[v] {
-			missing--
-		} else {
-			ahead++
-		}
+		applied = append(applied, v)
 	}
 	if err := rows.Err(); err != nil {
 		return apperr.Wrap(apperr.Internal, err, "read the schema version")
 	}
-	if missing > 0 {
-		return schemaBehind(have, want, missing)
+	ahead, err := compareSchema(known, applied)
+	if err == nil && ahead > 0 && logger != nil {
+		logger.Warn("database schema is ahead of this build (normal during a rolling deploy)", "database_version", slices.Max(applied), "build_version", maxVersion(known), "migrations_ahead", ahead)
 	}
-	if ahead > MaxSchemaAhead {
-		return apperr.New(apperr.Unavailable, fmt.Sprintf("database schema is at version %d, this build expects %d: %d migrations ahead (at most %d are compatible); deploy the newer image", have, want, ahead, MaxSchemaAhead))
-	}
-	return nil
+	return err
 }
 
-func schemaBehind(have, want int64, missing int) error {
-	return apperr.New(apperr.Unavailable, fmt.Sprintf("database schema is at version %d, this build expects %d: %d migrations pending; run smemories-migrate up first", have, want, missing))
+func maxVersion(known map[int64]bool) (m int64) {
+	for v := range known {
+		m = max(m, v)
+	}
+	return m
+}
+
+// compareSchema is the decision of CheckSchema on plain data: known are the embedded versions, applied the recorded ones. It returns how
+// many applied migrations this build does not know, or the refusal.
+func compareSchema(known map[int64]bool, applied []int64) (ahead int, err error) {
+	want, have := maxVersion(known), int64(0)
+	seen := map[int64]bool{}
+	for _, v := range applied {
+		have = max(have, v)
+		seen[v] = true
+		if !known[v] {
+			ahead++
+		}
+	}
+	var missing []int64 // embedded but not applied, ascending
+	for v := range known {
+		if !seen[v] {
+			missing = append(missing, v)
+		}
+	}
+	slices.Sort(missing)
+	if len(missing) > 0 {
+		if missing[0] < have { // a gap in the middle: name the first missing version and the next applied one after it
+			next := have
+			for _, v := range applied {
+				if v > missing[0] {
+					next = min(next, v)
+				}
+			}
+			return 0, apperr.New(apperr.Unavailable, fmt.Sprintf("database schema is missing migration %d (the next applied one is %d, highest %d, this build expects %d): %d migrations not applied; run smemories-migrate up first, and see docs/deploy.md if it fails", missing[0], next, have, want, len(missing)))
+		}
+		return 0, apperr.New(apperr.Unavailable, fmt.Sprintf("database schema is at version %d, this build expects %d: %d migrations pending; run smemories-migrate up first", have, want, len(missing)))
+	}
+	if ahead > MaxSchemaAhead {
+		return ahead, apperr.New(apperr.Unavailable, fmt.Sprintf("database schema is at version %d, this build expects %d: %d migrations ahead (at most %d are compatible); deploy the newer image", have, want, ahead, MaxSchemaAhead))
+	}
+	return ahead, nil
 }

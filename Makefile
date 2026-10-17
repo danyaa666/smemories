@@ -108,8 +108,11 @@ image:
 	docker build --provenance=false --sbom=false --build-arg VERSION=$$(git describe --tags --always --dirty) --build-arg COMMIT=$$(git rev-parse HEAD) -t $(IMAGE) .
 
 # Starts its own private MySQL, Valkey and MinIO (never the `make up` stack) and checks the image; see the header of the script.
-image-smoke: image
-	scripts/image-smoke.sh $(IMAGE)
+# The image gets a tag of its own for this run (smemories:smoke-<pid>-<time>, removed at the end), because the shared smemories:local was once
+# overwritten by another process in the middle of a run (T-090). To test an existing tag, call scripts/image-smoke.sh <tag> yourself.
+image-smoke:
+	@tag="smemories:smoke-$$$$-$$(date +%s)"; trap 'docker rmi "$$tag" >/dev/null 2>&1 || true' EXIT; \
+	$(MAKE) --no-print-directory image IMAGE="$$tag" && scripts/image-smoke.sh "$$tag"
 
 # Trivy (pinned image) fails on a fixable HIGH or CRITICAL vulnerability and writes build/sbom/sbom.cdx.json (T-089, docs/container.md).
 image-scan: image

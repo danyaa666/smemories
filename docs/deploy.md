@@ -17,7 +17,8 @@ The API **never migrates on start**. At start-up it only reads `goose_db_version
 |---|---|
 | a migration this build embeds is not applied (behind, or never migrated) | refuses to start, exit 1: `database schema is at version X, this build expects Y: N migrations pending; run smemories-migrate up first` |
 | equal | starts |
-| up to `db.MaxSchemaAhead` (3) applied migrations this build does not know | starts: this is the previous release running against the next schema, which is allowed (rule below) |
+| up to `db.MaxSchemaAhead` (3) applied migrations this build does not know | starts and logs **one** WARN at start-up (`database_version`, `build_version`, `migrations_ahead`): this is the previous release running against the next schema, which is allowed (rule below) |
+| a gap: a migration this build embeds is not applied although a later one is | refuses to start, exit 1: `database schema is missing migration X (the next applied one is Y, ...)`; see the runbook below |
 | more than 3 unknown migrations | refuses to start: `... N migrations ahead (at most 3 are compatible); deploy the newer image` |
 
 The check runs once, at start-up. `/readyz` does not repeat it (database and Redis ping only), so a migration that lands while the API runs does not
@@ -36,12 +37,52 @@ harmless (it keeps failing until the schema is there) but noisy; keep the order.
 **Lock.** `up` and `down` take the MySQL advisory lock (`GET_LOCK`, name derived from the database name) on the connection that runs the migrations. A second
 task started at the same time waits (up to 5 minutes), then finds nothing left to apply and exits 0; the lock is released when the session ends, so a killed task
 never leaves it stuck. A task that cannot get the lock in 5 minutes exits 3. Each migration runs in its own statement group; MySQL commits DDL implicitly, so a failed
-migration can leave a half-applied table: fix forward with a new migration, never edit an applied one.
+migration can leave a half-applied table (runbook below). Never edit an applied migration; a bug in one is fixed by a new migration.
 
-**Exit codes.** `0` success (including nothing to do) · `1` configuration, connection or migration failure · `2` usage error (unknown command or flag) ·
-`3` the lock was still held after 5 minutes · `4` `down` or `--allow-down` with `SMEM_ENV=prod`.
+**Exit codes.**
+
+| Code | Meaning |
+|---|---|
+| `0` | success (including nothing to do) |
+| `1` | configuration, connection or migration failure |
+| `2` | usage error: unknown command or flag, a bare `down` (it needs `--allow-down`), `up --allow-down`; in prod too, a bare `down` is a usage error, not a refusal |
+| `3` | the lock was still held after 5 minutes |
+| `4` | **only** `down --allow-down` with `SMEM_ENV=prod` (refused before any connection) |
+
+`cmd/smemories-migrate/main_test.go` runs the command in prod mode and checks 2 for `down` and 4 for `down --allow-down`; `make image-smoke` checks the same on the image.
 
 The pool needs two connections (one holds the lock); the command raises `SMEM_DB_MAX_OPEN` to 2 if it is lower.
+
+## A half-applied migration (runbook)
+
+MySQL commits every DDL statement at once and cannot roll it back. A migration with several statements, killed in the middle (SIGKILL, an
+OOM kill, a task stopped by ECS, a lost connection), keeps the statements that already ran and never records its version in
+`goose_db_version`. The next `smemories-migrate up` runs the migration from its first statement and stops at the first one that already
+took effect, with MySQL error 1060 (`Duplicate column name`), 1050 (`Table ... already exists`), 1061 (`Duplicate key name`) or 1091
+(`Can't DROP ...; check that column/key exists`). `up` then prints the hint `this migration may be half-applied ...` and exits 1; **do not
+roll the API**, it is still correct against the previous schema.
+
+1. **Find the migration.** `smemories-migrate version` prints the highest applied version; `smemories-migrate status` lists every embedded
+   migration, and the first one shown as `pending` is the dirty one (its file is in `migrations/`). The `up` log names no `migration applied`
+   line for it.
+2. **See how far it got.** Read its `-- +goose Up` block and compare each statement with the live schema (`SHOW CREATE TABLE ...`,
+   `SHOW INDEX FROM ...`, `information_schema.columns`). The statements before the failing one ran; the failing one and the rest did not.
+3. **Repair by hand, as the application user**: either undo the applied statements (`DROP TABLE`, `DROP COLUMN`, `DROP INDEX`)
+   and run `up` again, or run the missing statements yourself and record the version
+   (`INSERT INTO goose_db_version (version_id, is_applied) VALUES (<version>, 1)`). Undoing is the safer one when the table has no data yet;
+   finishing is the only one when it holds data or the rest of the migration is a backfill. Take a snapshot first (RDS) for a table with data.
+4. **Check**: `smemories-migrate up` prints `schema is up to date`, `status` shows no `pending`, then roll the API.
+5. **Write down what happened** and make the next migration safer (below).
+
+MySQL 8.4 has no `ADD COLUMN IF NOT EXISTS`, `ADD INDEX IF NOT EXISTS` or `DROP COLUMN IF EXISTS`; only `CREATE TABLE IF NOT EXISTS` and
+`DROP TABLE IF EXISTS`. So: write a table creation with `IF NOT EXISTS`; give a migration **one** `ALTER TABLE` with all its changes
+(MySQL 8 DDL is atomic per statement, so a kill leaves one `ALTER` either done or not done, and a half-applied state needs two or more
+statements); put a second DDL statement into its own migration file, so a kill between them leaves a cleanly recorded version instead.
+Never mix a backfill and the DDL it depends on in one file.
+
+A gap error (`missing migration X (the next applied one is Y)`) means a version was recorded as applied while an older one was not (a
+migration merged with a timestamp older than one already deployed, or a hand-edited `goose_db_version`). Apply the missing one by hand as in
+step 3 and record it, or re-time the file to a version later than the newest applied one before it ships.
 
 ## Expand then contract
 
@@ -70,3 +111,4 @@ and never put an expand and its contract in the same release.
 - [ ] A backfill in the same migration must be bounded and idempotent; a long one belongs in `smemories-media-backfill`-style task, not in a migration.
 - [ ] The file name is a timestamp version later than every existing one (goose refuses an older version added after a newer one was applied: "missing migrations").
 - [ ] An integration test runs the migration on a database that already has rows.
+- [ ] Safe to run twice after a kill? `CREATE TABLE IF NOT EXISTS`; one `ALTER TABLE` with all changes of a table (all or nothing); a second DDL statement in its own file; see "A half-applied migration".
