@@ -26,3 +26,12 @@ updates:
     groups:
       github-actions:
         patterns: ["*"]
+  # The Dockerfile pins both base images by digest; this keeps the tag and digest current (new Go patch, new distroless build).
+  - package-ecosystem: docker
+    directory: /
+    target-branch: develop
+    schedule:
+      interval: weekly
+    groups:
+      docker-images:
+        patterns: ["*"]

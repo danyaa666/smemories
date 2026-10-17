@@ -25,6 +25,7 @@ import (
 	"github.com/danyaa666/smemories/internal/ratelimit"
 	"github.com/danyaa666/smemories/internal/redis"
 	"github.com/danyaa666/smemories/internal/storage"
+	"github.com/danyaa666/smemories/internal/version"
 	"github.com/danyaa666/smemories/internal/yearbook"
 )
 
@@ -40,6 +41,7 @@ func main() {
 		os.Exit(1)
 	}
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: cfg.LogLevel}))
+	logger.Info("starting", "version", version.Version, "commit", version.Commit)
 	if cfg.MemoryLimitMiB > 0 {
 		debug.SetMemoryLimit(int64(cfg.MemoryLimitMiB) * bytesPerMiB) // soft: the collector works harder near it, nothing is refused
 		logger.Info("memory limit set", "mib", cfg.MemoryLimitMiB)
@@ -145,9 +147,13 @@ func main() {
 	notesH.SetUploadLimits(cfg.PublicUploadConns, cfg.PublicUploadsPerIP, cfg.UploadTmpDir)
 	mt.Gauge("public_uploads_in_progress", "Public note submissions in progress.", func() float64 { return float64(notesH.UploadsInProgress()) })
 	mt.Gauge("public_uploads_max", "Public note submissions allowed at once (SMEM_PUBLIC_UPLOAD_MAX_CONNS).", func() float64 { return float64(cfg.PublicUploadConns) })
+	if err := notesH.CheckSpool(); err != nil {
+		logger.Error("upload spool is not writable: mount a writable volume (tmpfs) and point SMEM_UPLOAD_TMP_DIR at it", "dir", cfg.UploadTmpDir, "error", err)
+		os.Exit(1)
+	}
 	notesH.SweepSpool() // files a crash or kill left behind; before the listener accepts traffic
 
-	srv := httpx.NewServer(cfg.HTTPAddr, httpx.NewRouterWith(logger, httpx.RouterConfig{RequestTimeout: cfg.RequestTimeout, TrustProxy: cfg.TrustProxy, Metrics: mt}, httpx.Ready(d, logger, httpx.Dep{Name: "redis", Ping: rc.Ready}), authH.Routes, bookH.Routes, mediaH.Routes, notesH.Routes, bookDataH.Routes))
+	srv := httpx.NewServer(cfg.HTTPAddr, httpx.NewRouterWith(logger, httpx.RouterConfig{RequestTimeout: cfg.RequestTimeout, TrustProxy: cfg.TrustProxy, Metrics: mt}, httpx.Ready(d, logger, httpx.Draining(ctx), httpx.Dep{Name: "redis", Ping: rc.Ready}), authH.Routes, bookH.Routes, mediaH.Routes, notesH.Routes, bookDataH.Routes))
 	if cfg.MetricsAddr != "" { // internal listener only; the public mux never serves /metrics
 		mln, err := net.Listen("tcp", cfg.MetricsAddr)
 		if err != nil {
@@ -158,12 +164,12 @@ func main() {
 		mux := http.NewServeMux()
 		mux.Handle("GET /metrics", mt.Handler())
 		go func() {
-			if err := httpx.Serve(ctx, httpx.NewServer(cfg.MetricsAddr, mux), mln, httpx.DrainTimeout); err != nil {
+			if err := httpx.Serve(ctx, httpx.NewServer(cfg.MetricsAddr, mux), mln, 0, httpx.DrainTimeout); err != nil {
 				logger.Error("metrics server stopped", "error", err)
 			}
 		}()
 	}
-	if err := httpx.Serve(ctx, srv, ln, httpx.DrainTimeout); err != nil {
+	if err := httpx.Serve(ctx, srv, ln, cfg.ShutdownDelay, cfg.ShutdownTimeout-cfg.ShutdownDelay); err != nil {
 		logger.Error("server stopped", "error", err)
 		os.Exit(1)
 	}

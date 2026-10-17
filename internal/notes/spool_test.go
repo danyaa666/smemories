@@ -61,3 +61,26 @@ func TestSweepSpoolMissingDir(t *testing.T) {
 		t.Fatalf("removed %d", n)
 	}
 }
+
+func TestCheckSpool(t *testing.T) {
+	dir := t.TempDir()
+	h := &Handler{tmpDir: dir}
+	if err := h.CheckSpool(); err != nil {
+		t.Fatal(err)
+	}
+	if ents, _ := os.ReadDir(dir); len(ents) != 0 {
+		t.Fatalf("check left %d files behind", len(ents))
+	}
+	if err := (&Handler{tmpDir: filepath.Join(dir, "nope")}).CheckSpool(); err == nil {
+		t.Fatal("a missing directory must fail")
+	}
+	if os.Geteuid() != 0 {
+		if err := os.Chmod(dir, 0o500); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })
+		if err := h.CheckSpool(); err == nil {
+			t.Fatal("a read-only directory must fail")
+		}
+	}
+}

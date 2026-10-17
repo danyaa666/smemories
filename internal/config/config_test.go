@@ -404,3 +404,34 @@ func TestLoadMetricsAddr(t *testing.T) {
 		}
 	}
 }
+
+func TestLoadShutdown(t *testing.T) {
+	load := func(m map[string]string) (Config, error) {
+		m["SMEM_DB_DSN"] = dsn
+		return Load(env(m))
+	}
+	cfg, err := load(map[string]string{})
+	if err != nil || cfg.ShutdownTimeout != 25*time.Second || cfg.ShutdownDelay != 0 {
+		t.Fatalf("dev defaults: %+v %v", cfg, err)
+	}
+	prod := map[string]string{"SMEM_ENV": "prod", "SMEM_ALLOWED_ORIGINS": "https://a.example.com", "SMEM_PUBLIC_BASE_URL": "https://a.example.com", "SMEM_S3_BUCKET": "b", "SMEM_OTP_KEY": strings.Repeat("k", 32)}
+	if cfg, err = load(maps.Clone(prod)); err != nil || cfg.ShutdownDelay != 5*time.Second {
+		t.Fatalf("prod default delay: %+v %v", cfg, err)
+	}
+	cfg, err = load(map[string]string{"SMEM_SHUTDOWN_TIMEOUT": "20s", "SMEM_SHUTDOWN_DELAY": "3s"})
+	if err != nil || cfg.ShutdownTimeout != 20*time.Second || cfg.ShutdownDelay != 3*time.Second {
+		t.Fatalf("explicit: %+v %v", cfg, err)
+	}
+	for _, c := range []struct{ key, val string }{
+		{"SMEM_SHUTDOWN_TIMEOUT", "25"}, {"SMEM_SHUTDOWN_TIMEOUT", "0s"}, {"SMEM_SHUTDOWN_TIMEOUT", "10m"},
+		{"SMEM_SHUTDOWN_DELAY", "-1s"}, {"SMEM_SHUTDOWN_DELAY", "25s"}, {"SMEM_SHUTDOWN_DELAY", "soon"},
+	} {
+		if _, err := load(map[string]string{c.key: c.val}); err == nil || !strings.Contains(err.Error(), c.key) {
+			t.Errorf("%s=%q: want an error naming the variable, got %v", c.key, c.val, err)
+		}
+	}
+	// The one-off tasks do not read the shutdown settings.
+	if _, err := LoadMigrate(env(map[string]string{"SMEM_DB_DSN": dsn, "SMEM_SHUTDOWN_TIMEOUT": "junk"})); err != nil {
+		t.Errorf("LoadMigrate must ignore SMEM_SHUTDOWN_TIMEOUT: %v", err)
+	}
+}
