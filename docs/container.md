@@ -1,7 +1,7 @@
 # Container image
 
 The production image (T-022): [`Dockerfile`](../Dockerfile), allow-list [`.dockerignore`](../.dockerignore). The web app is not in it
-(static build, S3 + CloudFront). The production configuration contract is [production-config.md](production-config.md) (T-086); the migration lock, Trivy and the SBOM follow in later slices.
+(static build, S3 + CloudFront). The production configuration contract is [production-config.md](production-config.md) (T-086); the migration lock, the schema check and the deploy order are in [deploy.md](deploy.md) (T-088); Trivy and the SBOM follow in a later slice.
 
 ## What is in it
 
@@ -14,7 +14,7 @@ The production image (T-022): [`Dockerfile`](../Dockerfile), allow-list [`.docke
 - OCI labels `source`, `revision`, `version`, `licenses` (`NOASSERTION`: the repository has no LICENSE file yet). `make image` sets version and
   revision from git.
 - The default command is the API. The one-off tasks override the **command** (ECS `RunTask` can override the command but not the entrypoint):
-  `smemories-migrate up` (or `status`), `smemories-media-backfill --dry-run`.
+  `smemories-migrate up` (or `status`, `version`), `smemories-media-backfill --dry-run`. Run the migrate task **before** rolling the API ([deploy.md](deploy.md)).
 
 ## Running it
 
@@ -41,7 +41,7 @@ on Fargate, the default); the target group's deregistration delay should be at l
 
 - `make image` builds `smemories:local`; `make image-smoke` builds and runs [`scripts/image-smoke.sh`](../scripts/image-smoke.sh), which starts
   its own private MySQL, Valkey and MinIO (never the `make up` stack) and checks: user, labels, no shell, file list, size under 60 MB;
-  `smemories-migrate up` twice and `status`, `smemories-media-backfill --dry-run`; the prod refusals (dev OTP shortcut, missing or short
+  the API refusing an un-migrated database, two concurrent `smemories-migrate up`, `status`, `version`, `down` refused in prod, `smemories-media-backfill --dry-run`; the prod refusals (dev OTP shortcut, missing or short
   `SMEM_OTP_KEY`, no secret echoed); a read-only root without the spool; the API under `--read-only --user 65532 --cap-drop ALL` (health,
   register, login, yearbook create, photo upload); SIGTERM during a slow request (readyz 503 while draining, the request completes, exit 0).
 - Section 3 of the script also proves that a prod start refuses plaintext database and Redis (the script sets `SMEM_DB_ALLOW_INSECURE` and `SMEM_REDIS_ALLOW_INSECURE`

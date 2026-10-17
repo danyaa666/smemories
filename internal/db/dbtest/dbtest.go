@@ -23,6 +23,16 @@ const DefaultDSN = "smemories:smem_dev_pw@tcp(127.0.0.1:3306)/smemories"
 // (docker/mysql/init-test-grants.sh grants that). An unreachable server fails the test.
 func New(t testing.TB) *sql.DB {
 	t.Helper()
+	d := NewEmpty(t)
+	if err := db.MigrateUp(context.Background(), d); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+	return d
+}
+
+// NewEmpty is New without the migrations: a fresh, empty smem_test_<random> database (no goose table either).
+func NewEmpty(t testing.TB) *sql.DB {
+	t.Helper()
 	dsn := os.Getenv("SMEM_TEST_DB_DSN")
 	if dsn == "" {
 		dsn = DefaultDSN
@@ -66,9 +76,6 @@ func New(t testing.TB) *sql.DB {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = d.Close() })
-	if err := db.MigrateUp(ctx, d); err != nil {
-		t.Fatalf("migrate: %v", err)
-	}
 	return d
 }
 
