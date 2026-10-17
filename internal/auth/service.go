@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"sync"
+	"sync/atomic"
 	"time"
 	"unicode/utf8"
 
@@ -27,6 +28,7 @@ const (
 	registerWindow = time.Hour
 
 	resendPerHour      = 3  // per user
+	resendRefundsHour  = 5  // per user: resend tries given back while the mail provider is down
 	verifyTriesPerHour = 20 // per user
 	forgotPerIPHour    = 5
 	forgotPerEmailHour = 3
@@ -64,8 +66,10 @@ type Service struct {
 
 	mail          Mail
 	bg            sync.WaitGroup // emails being sent in the background
+	bgActive      atomic.Int64   // how many of them are still unfinished (Drain counts what it has to drop)
 	codes         *Codes
 	resend        ratelimit.Limiter
+	resendRefunds ratelimit.Limiter // per user: how many outage-refunded resend tries an hour (verify.go)
 	verifyTries   ratelimit.Limiter // per user
 	forgotIP      ratelimit.Limiter
 	forgotEmail   ratelimit.Limiter
@@ -94,11 +98,13 @@ func NewService(store *Store, sessions *Sessions, hasher *Hasher, limits Limits,
 		loginPair: limiters.Closed("login_pair", limits.LoginFailsPerPair, loginWindow),
 		loginIP:   limiters.Closed("login_ip", limits.LoginFailsPerIP, loginWindow),
 
-		resend:      limiters.Open("verify_resend", resendPerHour, time.Hour),
-		verifyTries: limiters.Closed("verify_tries", verifyTriesPerHour, time.Hour),
-		forgotIP:    limiters.Open("forgot_ip", forgotPerIPHour, time.Hour),
-		forgotEmail: limiters.Open("forgot_email", forgotPerEmailHour, time.Hour),
-		resetIP:     limiters.Closed("reset_tries", resetTriesPerHour, time.Hour),
+		resend: limiters.Open("verify_resend", resendPerHour, time.Hour),
+		// Open like resend: it only caps how long a user can keep hitting a provider that is down.
+		resendRefunds: limiters.Open("verify_resend_refund", resendRefundsHour, time.Hour),
+		verifyTries:   limiters.Closed("verify_tries", verifyTriesPerHour, time.Hour),
+		forgotIP:      limiters.Open("forgot_ip", forgotPerIPHour, time.Hour),
+		forgotEmail:   limiters.Open("forgot_email", forgotPerEmailHour, time.Hour),
+		resetIP:       limiters.Closed("reset_tries", resetTriesPerHour, time.Hour),
 		// Closed: the limit stops probing which names exist (T-081).
 		usernameFails: limiters.Closed("username_tries", usernameTriesPerHr, time.Hour),
 	}, nil

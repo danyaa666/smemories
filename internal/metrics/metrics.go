@@ -44,7 +44,7 @@ func New() *Metrics {
 			Namespace: namespace, Subsystem: "ratelimit", Name: "rejected_total", Help: "Requests refused by a rate limiter, by limiter name.",
 		}, []string{"limiter"}),
 		mailFailed: prometheus.NewCounterVec(prometheus.CounterOpts{
-			Namespace: namespace, Name: "mail_send_failures_total", Help: "Emails that could not be sent after the retries, by class (unavailable, rejected, other).",
+			Namespace: namespace, Name: "mail_send_failures_total", Help: "Emails that could not be sent after the retries, by class (unavailable, rejected, config, shutdown, other).",
 		}, []string{"class"}),
 	}
 	m.reg.MustRegister(collectors.NewGoCollector(), collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),

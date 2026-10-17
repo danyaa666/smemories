@@ -41,8 +41,12 @@ func (s *Service) ResendVerification(ctx context.Context, u *User) (alreadyVerif
 		return false, RateLimitedError{retry}
 	}
 	err = s.sendCode(ctx, u, purposeVerify)
-	if errors.Is(err, mailer.ErrUnavailable) { // an outage is not the user's doing: do not spend one of their 3 tries
-		_ = s.resend.Refund(ctx, u.ID)
+	if errors.Is(err, mailer.ErrUnavailable) {
+		// An outage is not the user's doing: give the try back, but only resendRefundsHour times an hour. Without a cap an outage (or a
+		// throttled provider) would let one user hit it without limit; with it they get at most 5 + 3 sends an hour (T-090).
+		if ok, _, _ := s.resendRefunds.Take(ctx, u.ID); ok {
+			_ = s.resend.Refund(ctx, u.ID)
+		}
 	}
 	return false, err
 }

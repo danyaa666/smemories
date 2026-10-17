@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime/debug"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -61,6 +62,8 @@ func main() {
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	var shutdownAt atomic.Int64 // Unix ns of the signal: the shutdown budget is counted from it
+	context.AfterFunc(ctx, func() { shutdownAt.Store(time.Now().UnixNano()) })
 	defer stop()
 
 	d, err := db.Open(ctx, cfg, logger)
@@ -194,6 +197,14 @@ func main() {
 		logger.Error("server stopped", "error", err)
 		os.Exit(1)
 	}
-	svc.Wait() // let reset emails already accepted go out
+	// Let the emails already accepted go out, but only within what is left of SMEM_SHUTDOWN_TIMEOUT counted from the signal (a hung
+	// provider must not keep the process past the platform's stop timeout); whatever is left is dropped and counted (class shutdown).
+	signalled := time.Now() // (the AfterFunc goroutine may not have run yet, then the budget starts now)
+	if ns := shutdownAt.Load(); ns != 0 {
+		signalled = time.Unix(0, ns)
+	}
+	dctx, dcancel := context.WithDeadline(context.Background(), signalled.Add(cfg.ShutdownTimeout))
+	svc.Drain(dctx)
+	dcancel()
 	logger.Info("shutdown complete")
 }

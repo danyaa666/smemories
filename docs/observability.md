@@ -19,7 +19,7 @@ Every label comes from a small fixed set: `route` is the mux pattern (`GET /api/
 | `smem_http_request_duration_seconds` | histogram | method, route, code_class | request duration; `_count` is the request count; includes timeouts (503) and recovered panics (500) |
 | `smem_http_requests_in_flight` | gauge | | requests being served |
 | `smem_ratelimit_rejected_total` | counter | limiter | hits refused by a rate limiter (limiter failures are not counted, they are logged) |
-| `smem_mail_send_failures_total` | counter | class | emails given up on after the retries (`unavailable`, `rejected`, `other`); background sends only ([email.md](email.md)) |
+| `smem_mail_send_failures_total` | counter | class | emails given up on after the retries (`unavailable`, `rejected`, `config`, `shutdown`, `other`); background sends only; `config` is an account or setup problem only the operator can fix and must page, `shutdown` counts emails dropped when the process had to exit ([email.md](email.md)) |
 | `smem_media_processing_slots_in_use` / `smem_media_processing_slots` | gauge | | images being processed / `SMEM_MEDIA_MAX_CONCURRENT` |
 | `smem_public_uploads_in_progress` / `smem_public_uploads_max` | gauge | | public note submissions in progress / `SMEM_PUBLIC_UPLOAD_MAX_CONNS` |
 | `go_sql_*` (`db_name="smemories"`) | gauge/counter | db_name | `sql.DBStats`: open, in-use and idle connections, wait count and duration |

@@ -37,6 +37,11 @@ so the load balancer notices, (3) stops accepting and lets in-flight requests, p
 and exits 0. (2) and (3) together are bounded by `SMEM_SHUTDOWN_TIMEOUT` (default 25s, 1s to 120s). Keep it below the task's stop timeout (30s
 on Fargate, the default); the target group's deregistration delay should be at least `SMEM_SHUTDOWN_DELAY` plus the health check interval.
 
+After the drain the API waits for the emails still being sent in the background (a code email has up to 2 retries, so one can take a minute and a half), but only for what is left of
+`SMEM_SHUTDOWN_TIMEOUT` counted from the signal, not longer (T-090): a hung mail provider used to keep the process about 36 s after SIGTERM, past Fargate's 30 s stop timeout, so the task
+was SIGKILLed. What is still unsent when the budget ends is dropped: one ERROR line `emails dropped at shutdown` (`count`) and `smem_mail_send_failures_total{class="shutdown"}` per
+email; the student asks again on the resend screen. So the exit is never later than `SMEM_SHUTDOWN_TIMEOUT` plus the process teardown.
+
 A public upload that is still arriving when the drain window ends (`SMEM_SHUTDOWN_TIMEOUT`, 25 s, below Fargate's 30 s stop timeout) is cut on a
 deploy. This is accepted: uploads are bounded to 120 s by the T-080 pace limits, deploys are rare, and the browser form keeps the answers so the
 user presses Send again. `/readyz` logs one WARN (`readyz: shutdown ping failed`) when the drain starts, not one per load balancer probe.
