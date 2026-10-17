@@ -13,12 +13,11 @@
 | BACKLOG | 8 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050 |
 | TODO | 1 | T-090 |
 | IN_PROGRESS | 1 | T-089 |
-| QA_PASS | 1 | T-021 |
-| MERGED | 1 | T-088 |
+| MERGED | 2 | T-021, T-088 |
 | DONE | 70 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-088 ([E06] smemories-migrate lock, API schema-version check and deploy order (T-022 slice 3))
+**Awaiting your review (MERGED):** T-021 ([E06] Transactional email provider and domain setup); T-088 ([E06] smemories-migrate lock, API schema-version check and deploy order (T-022 slice 3))
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-032 (Approve merge of T-061 (template picker, print guide, public print-feedback counter, PR #71)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-035 (Approve merge of T-022 slice 1 (production Dockerfile, graceful shutdown, image smoke test, PR #74)?); Q-036 (Approve merge of T-086 slice (a): production config contract and S3 default credential chain (PR #78, adds the AWS SDK config module)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-038 (Approve merge of T-088: smemories-migrate advisory lock and API schema-version check (PR #80)?); Q-039 (Approve merge of T-089: image scan (Trivy + SBOM), secret hygiene and config hardening (PR #81)?); Q-040 (Approve merge of T-021: Amazon SES mailer behind a provider-neutral interface (PR #82)?)
 
@@ -1416,7 +1415,7 @@ One Playwright test drives the full M1 journey on the compose stack in CI: regis
 - 2026-10-17 12:46Z · human · accepted by owner
 
 ### T-021 — [E06] Transactional email provider and domain setup
-- **Status:** QA_PASS
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** infra
 - **Milestone:** M2
@@ -1424,11 +1423,11 @@ One Playwright test drives the full M1 journey on the compose stack in CI: regis
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** yes
-- **Assignee:** leader
+- **Assignee:** —
 - **Branch:** task/t-021-e06-transactional-email-provider-and-dom
 - **PR:** https://github.com/danyaa666/smemories/pull/82
-- **Updated:** 2026-10-17 14:28Z by qa
-- **Comments-seen:** 7
+- **Updated:** 2026-10-17 15:12Z by leader
+- **Comments-seen:** 9
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E06-go-live/01-transactional-email-provider-and-domain-setup.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1467,6 +1466,7 @@ Replace LogMailer with a real provider (SES is the natural fit on AWS) including
 - 2026-10-17 14:28Z · leader · Leader review OK on ef4157d: mailer.Mailer stays the only seam (ses.go is the only file with SES names, enforced by a test; mailertest.Run fails 5 deliberately bad mailers), SES mailer with the T-086 timeouts and at most 3 attempts, register and forgot-password never wait on the provider (5 s stub), forgot-password byte-identical for known/unknown/rejected addresses, no address/code/secret in logs, goroutines flat under 500 failing background mails, prod refuses a non-SES provider or bad SMEM_MAIL_FROM, en/vi text+HTML golden files; CI green on the head. QA's three go-live findings (shutdown wait unbounded, sandbox/unverified-sender MessageRejected classed as rejected, uncapped refunded resend tries) plus the AccountSuspended mapping and the SES suppression-list behaviour are tracked in T-090 items 8-12 and must ship before the first real deploy. Waiting for owner approval (Risk high). After merge: the real SES send stays unverified until the owner has an AWS account, a verified domain and the sandbox exit (docs/email.md; Q-037).
 - 2026-10-17 15:11Z · leader · Owner direction (D-31): a real SES send is verified last, in the go-live phase; the code, stub tests and runbook are all that is needed now.
 - 2026-10-17 15:12Z · human · owner approved merge
+- 2026-10-17 15:12Z · leader · merged ce35645 (PR #82), owner-approved. Review: provider-neutral seam (mailer.Mailer + mailer.New switch + mailertest.Run conformance suite; SES names only in ses.go, enforced by a test), SESv2 mailer with the T-086 timeouts and at most 3 attempts, background sends with 2 retries and smem_mail_send_failures_total{class}, resend-verification 503 ERROR_MAIL_UNAVAILABLE / 400 ERROR_EMAIL_UNDELIVERABLE, forgot-password byte-identical for every address, en/vi text+HTML golden files, prod refuses a non-SES provider or a bad SMEM_MAIL_FROM, docs/email.md runbook; QA verified everything against the SESv2 stub, CI green. NOT verified: a real SES send (D-31: tested last, in the go-live phase). For owner to check: docs/email.md; the Vietnamese email bodies and the two new web error strings (PR description). Go-live fixes found by QA are T-090 items 8-12 (shutdown wait bound, sandbox/unverified-sender classification, resend refund cap, AccountSuspended mapping, suppression-list behaviour).
 
 ### T-022 — [E06] Dockerfile, production config and migrations as a one-off task
 - **Status:** DONE
@@ -4232,3 +4232,4 @@ Spec: .team/epics/E06-go-live/10-migrate-docs-and-smoke-robustness.md (read it f
 - 2026-10-17 — T-087 (e2e hardening, PR #79) merged ca0c169. T-086 slice (a) QA_PASS awaiting owner approval (Q-036). T-088 and T-089 follow T-086. Open owner items: Q-033 email provider and domain, Q-034 licence, accept T-020/T-022/T-061.
 - 2026-10-17 — T-086 (production config contract + S3 default credential chain, PR #78, owner-approved) merged 314fa5a. Owner accepted T-020, T-022, T-061, T-087. T-088 (migrate lock + schema check) and T-089 (image scan + secret hygiene + QA nits) are TODO. Q-033 (email provider/domain) and Q-034 (licence) still open.
 - 2026-10-17 — T-088 (migrate advisory lock + API schema-version check, PR #80, owner-approved) merged 8d91020. T-089 (PR #81, owner-approved) conflicts with it in docs/container.md and scripts/image-smoke.sh: dev merges develop, QA re-checks the merge. T-021 (SES mailer, PR #82) QA_PASS awaiting owner approval (Q-040). Owner decisions: D-29 Amazon SES, D-30 unlicensed. Open: Q-037 domain/DNS/region. T-090 (P2) holds the go-live fixes from the T-021/T-088/T-089 QA runs.
+- 2026-10-17 — T-021 (SES mailer behind a provider-neutral interface, PR #82, owner-approved) merged ce35645; real SES send deferred to the go-live phase. Decision D-31: everything that needs a domain or AWS credentials (T-023, T-024, T-025, T-031, T-050, live SES, deploy) waits for the go-live phase (E06 PRD). T-088 merged 8d91020. T-089 awaiting a develop merge by dev, then QA. T-090 (P2) TODO.
