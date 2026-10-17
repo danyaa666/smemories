@@ -10,17 +10,18 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 9 | T-021, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050 |
-| TODO | 2 | T-088, T-089 |
+| BACKLOG | 8 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050 |
+| TODO | 2 | T-021, T-089 |
+| IN_PROGRESS | 1 | T-088 |
 | MERGED | 1 | T-086 |
 | DONE | 69 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-087 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
 **Awaiting your review (MERGED):** T-086 ([E06] Production config contract, S3 credential chain, migrate lock and image scan (T-022 slice 2))
 
-**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-032 (Approve merge of T-061 (template picker, print guide, public print-feedback counter, PR #71)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-035 (Approve merge of T-022 slice 1 (production Dockerfile, graceful shutdown, image smoke test, PR #74)?); Q-036 (Approve merge of T-086 slice (a): production config contract and S3 default credential chain (PR #78, adds the AWS SDK config module)?)
+**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-032 (Approve merge of T-061 (template picker, print guide, public print-feedback counter, PR #71)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-035 (Approve merge of T-022 slice 1 (production Dockerfile, graceful shutdown, image smoke test, PR #74)?); Q-036 (Approve merge of T-086 slice (a): production config contract and S3 default credential chain (PR #78, adds the AWS SDK config module)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?)
 
-_Board last written 2026-10-17 12:46Z_
+_Board last written 2026-10-17 12:52Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -415,7 +416,7 @@ Small CI-file change (go-integration timeout-minutes 15 -> 40) plus 'make test-i
 - **Asked:** 2026-10-17 00:46Z
 - **Blocks:** T-021
 - **Recommendation:** A: Amazon SES, sending from a subdomain such as mail.<your-domain>
-- **Answer:** _(pending)_
+- **Answer:** Owner (chat 2026-10-17): yes, Amazon SES.
 
 Context: the API can only log codes today (LogMailer); production needs a real mailer (T-021), and the API will not start in prod without one (found by T-022). Options: A) Amazon SES - same AWS account (D-08), about 0.10 USD per 1000 emails, DKIM/SPF/DMARC through Route 53 or any DNS, bounces/complaints via SNS; new accounts start in the 'sandbox' and need a one-time request to send to unverified addresses (about a day). B) Resend - simplest API and best developer experience, free up to 3000 emails/month then 20 USD/month, no AWS dependency, DNS records needed. C) Postmark - strongest transactional deliverability, about 15 USD/month for 10000 emails, DNS records needed. Needed from you whichever you pick: the domain you will send from (do you own one yet? which?) and who can edit its DNS. Recommendation: A, because it adds no new vendor or bill, uses the same IAM role as the rest of the app, and the volume (6-digit codes) is tiny. Blocked meanwhile: T-021 (and with it the first real deploy T-023 and T-050).
 
@@ -424,7 +425,7 @@ Context: the API can only log codes today (LogMailer); production needs a real m
 - **Asked:** 2026-10-17 00:46Z
 - **Blocks:** —
 - **Recommendation:** A: keep it unlicensed (all rights reserved) for now
-- **Answer:** _(pending)_
+- **Answer:** Owner (chat 2026-10-17): A - keep the repository unlicensed (all rights reserved) for now.
 
 Context: github.com/danyaa666/smemories is public (D-09) but has no LICENSE file, which legally means nobody may reuse the code. The container image label shows NOASSERTION (T-022). Options: A) none, all rights reserved (current) - safest while the business model is open; B) MIT - permissive, anyone can reuse and sell it; C) Apache-2.0 - permissive with a patent grant; D) AGPL-3.0 - copyleft, a hosted copy must publish its changes. Third-party font licences (OFL) are already tracked in THIRD_PARTY_NOTICES.md. Recommendation: A until you decide whether you want others to run or fork SMemories. Not blocking anything.
 
@@ -441,6 +442,15 @@ Context: github.com/danyaa666/smemories is public (D-09) but has no LICENSE file
 - **Blocks:** T-086
 - **Recommendation:** approve
 - **Answer:** _(pending)_
+
+### Q-037 — Which domain will SMemories send email from and be served on, and who can edit its DNS?
+- **Status:** OPEN
+- **Asked:** 2026-10-17 12:52Z
+- **Blocks:** T-021,T-023
+- **Recommendation:** Use a domain you already own (or buy one) and a subdomain mail.<domain> for email
+- **Answer:** _(pending)_
+
+Context: Amazon SES (D-29) needs a verified domain to send from, with DKIM/SPF/DMARC records, and the AWS deployment (T-023) needs the public hostname and an HTTPS certificate. Needed from you: (1) the domain name (do you own one yet, which? or shall I list cheap registrar options when you want to buy one), (2) who can edit its DNS records (you, a registrar panel, or Route 53 in the AWS account), (3) the AWS account/region you want (default recommendation: ap-southeast-1 Singapore for Vietnam users, or us-east-1; your call), (4) that you will file the one-time SES request to leave the sandbox when T-021 is ready (about a day). None of this blocks the code: T-021 builds the SES mailer against a local stub first.
 
 <!-- questions:end -->
 
@@ -478,6 +488,8 @@ Owner decisions (2026-10-06, `/team-init` interview). "Rejected" lists the optio
 | D-26 | **Database follows the `be-rldb` skill: `_tab` tables, `BIGINT UNSIGNED AUTO_INCREMENT` ids, `created_at`/`updated_at` as BIGINT Unix ms on every table, no foreign keys, no ENUM, indexed reference columns, goose Up/Down; new migrations are timestamp-named.** | Owner answer 2026-10-09 ("align fully before launch"). Integrity moves into Go: the parent's service deletes children in one transaction through small purger interfaces, proven by a zero-rows test per domain. Joins are replaced by one `IN` query per relation. **Interpretation to confirm:** the skill describes soft deletes (`deleted_at BIGINT`) for features that use them; no feature does, and user-requested deletion stays a hard delete for privacy, so no table gets `deleted_at` now. A birthday stays `DATE`. Existing migration files `0001`..`0009` are not renamed. Standard: `docs/db-conventions.md`. Supersedes the timestamp part of L-05. Tasks T-064..T-067 (high risk, owner approves each). | Keep the schema and record the deviations; soft-delete every table | A feature needs undelete or an audit trail (then a decision record for that table) |
 | D-27 | **`.agents/skills/be-*` are the team's backend standard; three layers (handler -> service -> store) inside each domain package; typed errors in `internal/apperr`; deviations only as listed in `docs/go-conventions.md`.** | Owner answer 2026-10-09 ("3 layers inside each domain package"). Not adopted because the stack differs: GORM (L-11 stands), gin (L-01 stands), proto/gRPC, the private `go-common` library (replaced by `internal/apperr` and `internal/httpx`), `idgen` (ULID), ClickHouse, Elasticsearch, Kafka. D-23 keeps sessions fail-closed although be-architect prefers a DB fallback for caches. Lint (`mnd`, `forbidigo`) makes the rules mechanical in T-072; metrics (T-073) wait for Q-018. Audit: `.team/epics/E10-skills-alignment/AUDIT.md`. Dev and QA read the skills from the main checkout (`.agents/skills/`). | Move to `internal/controller|modules|adapter` (large import churn, conflicts with queued tasks) | The domain packages grow past about 500 lines per layer file, or a second binary needs the services |
 | D-28 | **Usernames: a unique, public handle (not a login name). Default `user-` + the last 8 characters of the `public_id`, assigned at registration and backfilled for existing users; stored lower case, 3-30 characters `a-z 0-9 . _ -`, reserved words blocked; the user can change it once every 7 days (the first change from the default is immediate); failed attempts rate-limited; a deleted user's name is freed.** Owner chose "public handle only" and "default `user-xxxx`, change once per 7 days" on 2026-10-15 (login by username and unlimited renames were declined). Tasks T-081 (API) and T-082 (web), after the E10 auth task T-071. | A handle is needed to identify people in class books and notes without exposing internal ids; keeping login on email avoids rewriting auth, and the weekly limit prevents impersonation by rapid renames. |
+| D-29 | **Transactional email goes through Amazon SES (SESv2 API), sent from a verified subdomain.** | Owner answer in chat 2026-10-17 (Q-033, leader recommended it): same AWS account as D-08, about 0.10 USD per 1000 emails, DKIM/SPF/DMARC records, bounce and complaint feedback through SNS. A new SES account starts in the sandbox: leaving it is a one-time request the owner files. Volume is tiny (6-digit codes). The sending domain is still to be given by the owner (Q-037). | Resend; Postmark | Volume or deliverability outgrow SES, or the owner prefers another vendor |
+| D-30 | **The repository stays unlicensed (all rights reserved) for now.** | Owner answer in chat 2026-10-17 (Q-034, option A, as recommended). The repo is public (D-09) but no LICENSE file is added; third-party licences stay in THIRD_PARTY_NOTICES.md. The container image label says `LicenseRef-All-Rights-Reserved` instead of NOASSERTION (T-089). | MIT; Apache-2.0; AGPL-3.0 | The owner decides to let others run or fork SMemories |
 
 Leader decisions (low-risk, inside the approved stack):
 
@@ -1381,7 +1393,7 @@ One Playwright test drives the full M1 journey on the compose stack in CI: regis
 - 2026-10-17 12:46Z · human · accepted by owner
 
 ### T-021 — [E06] Transactional email provider and domain setup
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** infra
 - **Milestone:** M2
@@ -1392,8 +1404,8 @@ One Playwright test drives the full M1 journey on the compose stack in CI: regis
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-17 12:52Z by leader
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E06-go-live/01-transactional-email-provider-and-domain-setup.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1402,6 +1414,7 @@ One Playwright test drives the full M1 journey on the compose stack in CI: regis
 Replace LogMailer with a real provider (SES is the natural fit on AWS) including SPF/DKIM/DMARC runbook and bounce/complaint handling.
 
 #### Comments
+- 2026-10-17 12:52Z · leader · Full spec written 2026-10-17 after the owner chose Amazon SES (D-29): SESv2 mailer built and tested against a local stub (no AWS account or domain needed), error mapping, background sends, HTML+text bodies en/vi, config contract, runbook docs/email.md. Risk high: owner approval before merge. Domain/DNS/sandbox exit are owner steps (Q-037).
 
 ### T-022 — [E06] Dockerfile, production config and migrations as a one-off task
 - **Status:** DONE
@@ -4029,7 +4042,7 @@ Spec: .team/epics/E01-foundation/11-e2e-hardening.md (read it from the repo root
 - 2026-10-17 12:46Z · human · accepted by owner
 
 ### T-088 — [E06] smemories-migrate lock, API schema-version check and deploy order (T-022 slice 3)
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** infra
 - **Milestone:** M2
@@ -4037,10 +4050,10 @@ Spec: .team/epics/E01-foundation/11-e2e-hardening.md (read it from the repo root
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-088-e06-smemories-migrate-lock-api-schema-ve
 - **PR:** —
-- **Updated:** 2026-10-17 12:46Z by leader
+- **Updated:** 2026-10-17 12:47Z by dev
 - **Comments-seen:** 1
 
 Spec: .team/epics/E06-go-live/08-migrate-lock-schema-check.md (read it from the repo root).

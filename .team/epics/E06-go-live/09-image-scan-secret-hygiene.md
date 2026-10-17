@@ -17,3 +17,5 @@ Trivy scan (pinned version, DB cached) in the CI `image` job failing on fixable 
 - N1: the opt-out WARN (SMEM_DB_ALLOW_INSECURE and the other escape hatches) is logged by the API only; `smemories-migrate` and `smemories-media-backfill` honour them silently. Log it loudly in all three binaries at start-up.
 - N2: the errors for SMEM_PUBLIC_BASE_URL and SMEM_ALLOWED_ORIGINS echo the offending URL even when it contains `user:pass@`. Never echo a URL userinfo (redact to `***`), and refuse a base URL or origin that carries userinfo.
 - N3: prod accepts an `http://` SMEM_S3_ENDPOINT, and a static SMEM_S3_ACCESS_KEY silently overrides the task role. In prod: require https for a custom S3 endpoint (AWS S3 needs none) and log a WARN naming the override when static keys are set (or refuse them in prod unless an escape hatch is set; document the choice).
+
+- Licence label (decision D-30, owner answer 2026-10-17: the repo stays unlicensed): set the image label `org.opencontainers.image.licenses` to `LicenseRef-All-Rights-Reserved` instead of `NOASSERTION`, in the Dockerfile and wherever docs/container.md quotes it. Do NOT add a LICENSE file.
