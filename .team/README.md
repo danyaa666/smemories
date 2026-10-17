@@ -10,18 +10,18 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 9 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-090 |
-| QA_PASS | 1 | T-021 |
-| CHANGES_REQUESTED | 1 | T-089 |
-| MERGED | 1 | T-088 |
+| BACKLOG | 8 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050 |
+| TODO | 1 | T-090 |
+| IN_PROGRESS | 1 | T-089 |
+| MERGED | 2 | T-021, T-088 |
 | DONE | 70 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-088 ([E06] smemories-migrate lock, API schema-version check and deploy order (T-022 slice 3))
+**Awaiting your review (MERGED):** T-021 ([E06] Transactional email provider and domain setup); T-088 ([E06] smemories-migrate lock, API schema-version check and deploy order (T-022 slice 3))
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-032 (Approve merge of T-061 (template picker, print guide, public print-feedback counter, PR #71)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-035 (Approve merge of T-022 slice 1 (production Dockerfile, graceful shutdown, image smoke test, PR #74)?); Q-036 (Approve merge of T-086 slice (a): production config contract and S3 default credential chain (PR #78, adds the AWS SDK config module)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-038 (Approve merge of T-088: smemories-migrate advisory lock and API schema-version check (PR #80)?); Q-039 (Approve merge of T-089: image scan (Trivy + SBOM), secret hygiene and config hardening (PR #81)?); Q-040 (Approve merge of T-021: Amazon SES mailer behind a provider-neutral interface (PR #82)?)
 
-_Board last written 2026-10-17 15:09Z_
+_Board last written 2026-10-17 15:12Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -448,7 +448,7 @@ Context: github.com/danyaa666/smemories is public (D-09) but has no LICENSE file
 - **Asked:** 2026-10-17 12:52Z
 - **Blocks:** T-021,T-023
 - **Recommendation:** Use a domain you already own (or buy one) and a subdomain mail.<domain> for email
-- **Answer:** _(pending)_
+- **Answer:** Owner (chat 2026-10-17): leave everything that needs a domain or AWS credentials to the end: test it last, when the first phase is complete and ready to go live. Domain, DNS access and AWS region will be given then.
 
 Context: Amazon SES (D-29) needs a verified domain to send from, with DKIM/SPF/DMARC records, and the AWS deployment (T-023) needs the public hostname and an HTTPS certificate. Needed from you: (1) the domain name (do you own one yet, which? or shall I list cheap registrar options when you want to buy one), (2) who can edit its DNS records (you, a registrar panel, or Route 53 in the AWS account), (3) the AWS account/region you want (default recommendation: ap-southeast-1 Singapore for Vietnam users, or us-east-1; your call), (4) that you will file the one-time SES request to leave the sandbox when T-021 is ready (about a day). None of this blocks the code: T-021 builds the SES mailer against a local stub first.
 
@@ -511,6 +511,7 @@ Owner decisions (2026-10-06, `/team-init` interview). "Rejected" lists the optio
 | D-28 | **Usernames: a unique, public handle (not a login name). Default `user-` + the last 8 characters of the `public_id`, assigned at registration and backfilled for existing users; stored lower case, 3-30 characters `a-z 0-9 . _ -`, reserved words blocked; the user can change it once every 7 days (the first change from the default is immediate); failed attempts rate-limited; a deleted user's name is freed.** Owner chose "public handle only" and "default `user-xxxx`, change once per 7 days" on 2026-10-15 (login by username and unlimited renames were declined). Tasks T-081 (API) and T-082 (web), after the E10 auth task T-071. | A handle is needed to identify people in class books and notes without exposing internal ids; keeping login on email avoids rewriting auth, and the weekly limit prevents impersonation by rapid renames. |
 | D-29 | **Transactional email goes through Amazon SES (SESv2 API), sent from a verified subdomain.** | Owner answer in chat 2026-10-17 (Q-033, leader recommended it): same AWS account as D-08, about 0.10 USD per 1000 emails, DKIM/SPF/DMARC records, bounce and complaint feedback through SNS. A new SES account starts in the sandbox: leaving it is a one-time request the owner files. Volume is tiny (6-digit codes). The sending domain is still to be given by the owner (Q-037). | Resend; Postmark | Volume or deliverability outgrow SES, or the owner prefers another vendor |
 | D-30 | **The repository stays unlicensed (all rights reserved) for now.** | Owner answer in chat 2026-10-17 (Q-034, option A, as recommended). The repo is public (D-09) but no LICENSE file is added; third-party licences stay in THIRD_PARTY_NOTICES.md. The container image label says `LicenseRef-All-Rights-Reserved` instead of NOASSERTION (T-089). | MIT; Apache-2.0; AGPL-3.0 | The owner decides to let others run or fork SMemories |
+| D-31 | **Anything that needs a real domain or AWS credentials is built and tested against local stubs first and verified live only in a final go-live phase, after the first phase (M1 plus the go-live code work) is complete.** | Owner instruction in chat 2026-10-17 (answer to Q-037). Dev and QA keep working without an AWS account or a domain. Deferred to the go-live phase: T-023 (AWS infrastructure and deploy pipeline), T-024 (observability on AWS), T-025 (backups and restore drill on AWS), T-031 (auth hardening that needs the infrastructure), the live verification of T-021 (real SES: domain identity, DNS records, sandbox exit), T-050 (removing the dev shortcut, which e2e and local development still use until then), the domain, the AWS region and the first deploy. The order of the phase is in the E06 PRD ("Live verification phase"). | Doing T-023 now with a throwaway account | Phase 1 is code-complete and the owner gives the domain, the AWS account and the region |
 
 Leader decisions (low-risk, inside the approved stack):
 
@@ -1414,19 +1415,19 @@ One Playwright test drives the full M1 journey on the compose stack in CI: regis
 - 2026-10-17 12:46Z · human · accepted by owner
 
 ### T-021 — [E06] Transactional email provider and domain setup
-- **Status:** QA_PASS
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** infra
 - **Milestone:** M2
 - **Depends-on:** T-007
 - **Risk:** high
 - **Rework:** 0
-- **Owner-approved:** —
-- **Assignee:** leader
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-021-e06-transactional-email-provider-and-dom
 - **PR:** https://github.com/danyaa666/smemories/pull/82
-- **Updated:** 2026-10-17 14:28Z by qa
-- **Comments-seen:** 6
+- **Updated:** 2026-10-17 15:12Z by leader
+- **Comments-seen:** 9
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E06-go-live/01-transactional-email-provider-and-domain-setup.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1463,6 +1464,9 @@ Replace LogMailer with a real provider (SES is the natural fit on AWS) including
   9. CI image job flake: scripts/image-smoke.sh does `smemories-migrate status | grep -q ' applied '` under pipefail; grep -q can close the pipe early and fail the pipeline. Failed once on the head (migrate up passed twice before), passed on rerun and locally. Fold into T-090 AC5.
   10. Vietnamese strings for the owner (not judged): subjects "Mã xác minh SMemories của bạn", "Mã đặt lại mật khẩu SMemories của bạn"; body "Chào {name}," / "Chào mừng bạn đến với SMemories! Mã xác minh của bạn là:" / "Hãy nhập mã này vào ứng dụng để xác nhận địa chỉ email. Mã có hiệu lực trong 30 phút. Không chia sẻ mã này với bất kỳ ai." / "Nếu bạn không tạo tài khoản này, hãy bỏ qua email này."; reset: "Có người đã yêu cầu đặt lại mật khẩu cho tài khoản SMemories của bạn. Mã đặt lại của bạn là:" / "...chọn mật khẩu mới. Mã có hiệu lực trong 15 phút..." / "Sau đó bạn sẽ cần đăng nhập lại trên tất cả thiết bị. Nếu không phải bạn, hãy bỏ qua email này: mật khẩu của bạn không thay đổi."; web: "Hiện chúng tôi chưa gửi được email. Vui lòng thử lại sau vài phút." and "Chúng tôi không gửi được email tới địa chỉ này. Vui lòng kiểm tra lại địa chỉ email của bạn." Validity (30 verify, 15 reset) is the real TTL, checked in live mails. Diacritics render correctly in Chrome and in the saved .eml (quoted-printable UTF-8).
 - 2026-10-17 14:28Z · leader · Leader review OK on ef4157d: mailer.Mailer stays the only seam (ses.go is the only file with SES names, enforced by a test; mailertest.Run fails 5 deliberately bad mailers), SES mailer with the T-086 timeouts and at most 3 attempts, register and forgot-password never wait on the provider (5 s stub), forgot-password byte-identical for known/unknown/rejected addresses, no address/code/secret in logs, goroutines flat under 500 failing background mails, prod refuses a non-SES provider or bad SMEM_MAIL_FROM, en/vi text+HTML golden files; CI green on the head. QA's three go-live findings (shutdown wait unbounded, sandbox/unverified-sender MessageRejected classed as rejected, uncapped refunded resend tries) plus the AccountSuspended mapping and the SES suppression-list behaviour are tracked in T-090 items 8-12 and must ship before the first real deploy. Waiting for owner approval (Risk high). After merge: the real SES send stays unverified until the owner has an AWS account, a verified domain and the sandbox exit (docs/email.md; Q-037).
+- 2026-10-17 15:11Z · leader · Owner direction (D-31): a real SES send is verified last, in the go-live phase; the code, stub tests and runbook are all that is needed now.
+- 2026-10-17 15:12Z · human · owner approved merge
+- 2026-10-17 15:12Z · leader · merged ce35645 (PR #82), owner-approved. Review: provider-neutral seam (mailer.Mailer + mailer.New switch + mailertest.Run conformance suite; SES names only in ses.go, enforced by a test), SESv2 mailer with the T-086 timeouts and at most 3 attempts, background sends with 2 retries and smem_mail_send_failures_total{class}, resend-verification 503 ERROR_MAIL_UNAVAILABLE / 400 ERROR_EMAIL_UNDELIVERABLE, forgot-password byte-identical for every address, en/vi text+HTML golden files, prod refuses a non-SES provider or a bad SMEM_MAIL_FROM, docs/email.md runbook; QA verified everything against the SESv2 stub, CI green. NOT verified: a real SES send (D-31: tested last, in the go-live phase). For owner to check: docs/email.md; the Vietnamese email bodies and the two new web error strings (PR description). Go-live fixes found by QA are T-090 items 8-12 (shutdown wait bound, sandbox/unverified-sender classification, resend refund cap, AccountSuspended mapping, suppression-list behaviour).
 
 ### T-022 — [E06] Dockerfile, production config and migrations as a one-off task
 - **Status:** DONE
@@ -1538,7 +1542,7 @@ Multi-stage Dockerfile (distroless or alpine, non-root), production config valid
 - **Branch:** —
 - **PR:** —
 - **Updated:** 2026-10-09 02:28Z by leader
-- **Comments-seen:** 0
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E06-go-live/03-aws-infrastructure-as-code-and-deploy.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1547,6 +1551,7 @@ Multi-stage Dockerfile (distroless or alpine, non-root), production config valid
 Fargate service, RDS MySQL (private subnets, encrypted, backups), S3 (private, encrypted, lifecycle), CloudFront with /api origin and prefix strip, ACM cert, secrets in Secrets Manager, deploy workflow with OIDC to AWS (no long-lived keys).
 
 #### Comments
+- 2026-10-17 15:11Z · leader · DEFERRED by the owner (decision D-31, 2026-10-17): this needs a real domain or AWS credentials, or is a go-live gate. Do not start it until the leader opens the go-live phase (E06 PRD, 'Live verification phase'). Stays BACKLOG.
 
 ### T-024 — [E06] Observability: metrics, alarms, uptime check, log retention
 - **Status:** BACKLOG
@@ -1561,7 +1566,7 @@ Fargate service, RDS MySQL (private subnets, encrypted, backups), S3 (private, e
 - **Branch:** —
 - **PR:** —
 - **Updated:** 2026-10-09 02:28Z by leader
-- **Comments-seen:** 0
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E06-go-live/04-observability-metrics-alarms-uptime-check.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1570,6 +1575,7 @@ Fargate service, RDS MySQL (private subnets, encrypted, backups), S3 (private, e
 RED metrics and DB/pool/export-queue gauges, CloudWatch alarms (5xx rate, p95 latency, export failures, RDS CPU/storage), external uptime check on /readyz, log retention and PII-free log review.
 
 #### Comments
+- 2026-10-17 15:11Z · leader · DEFERRED by the owner (decision D-31, 2026-10-17): this needs a real domain or AWS credentials, or is a go-live gate. Do not start it until the leader opens the go-live phase (E06 PRD, 'Live verification phase'). Stays BACKLOG.
 
 ### T-025 — [E06] Backups, restore drill, and user data export/deletion
 - **Status:** BACKLOG
@@ -1584,7 +1590,7 @@ RED metrics and DB/pool/export-queue gauges, CloudWatch alarms (5xx rate, p95 la
 - **Branch:** —
 - **PR:** —
 - **Updated:** 2026-10-09 02:28Z by leader
-- **Comments-seen:** 0
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E06-go-live/05-backups-restore-drill-and-user-data-export.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1593,6 +1599,7 @@ RED metrics and DB/pool/export-queue gauges, CloudWatch alarms (5xx rate, p95 la
 Automated RDS and S3 backups with a documented and tested restore drill; user-initiated export and deletion of account and yearbooks including media and contributor submissions; retention policy written down (owner decision on retention periods).
 
 #### Comments
+- 2026-10-17 15:11Z · leader · DEFERRED by the owner (decision D-31, 2026-10-17): this needs a real domain or AWS credentials, or is a go-live gate. Do not start it until the leader opens the go-live phase (E06 PRD, 'Live verification phase'). Stays BACKLOG.
 
 ### T-026 — [E07] Class yearbook: classes, memberships, roles and invites
 - **Status:** BACKLOG
@@ -1740,7 +1747,7 @@ T-002 follow-ups: isolate compose stacks, fail fast on auth errors, test-DB gran
 - **Branch:** —
 - **PR:** —
 - **Updated:** 2026-10-09 02:28Z by leader
-- **Comments-seen:** 1
+- **Comments-seen:** 2
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E02-auth/05-auth-hardening-for-go-live-edge-rate-limits.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1750,6 +1757,7 @@ Items from the T-006 review that only matter at scale or in production: (1) the 
 
 #### Comments
 - 2026-10-07 07:07Z · leader · From the T-006 review: also require at least one visible character in a display name (a name made only of U+200D passes today), preferably through one shared helper that T-008 and later text fields reuse.
+- 2026-10-17 15:11Z · leader · DEFERRED by the owner (decision D-31, 2026-10-17): this needs a real domain or AWS credentials, or is a go-live gate. Do not start it until the leader opens the go-live phase (E06 PRD, 'Live verification phase'). Stays BACKLOG.
 
 ### T-032 — [E01] db.Open: treat MySQL 1044 as permanent; README warning about bare docker compose
 - **Status:** DONE
@@ -2440,7 +2448,7 @@ Code input screens (paste, auto-submit, resend cooldown) replacing the link page
 - **Branch:** —
 - **PR:** —
 - **Updated:** 2026-10-09 02:28Z by leader
-- **Comments-seen:** 0
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E06-go-live/06-remove-dev-shortcuts-before-production.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2449,6 +2457,7 @@ Code input screens (paste, auto-submit, resend cooldown) replacing the link page
 Go-live gate: delete the dev fixed OTP and every DEV-SHORTCUT, fail CI and the deploy pipeline if one returns.
 
 #### Comments
+- 2026-10-17 15:11Z · leader · DEFERRED by the owner (decision D-31, 2026-10-17): this needs a real domain or AWS credentials, or is a go-live gate. Do not start it until the leader opens the go-live phase (E06 PRD, 'Live verification phase'). Stays BACKLOG.
 
 ### T-051 — [E01] Redis foundation: local stack (Valkey), client, config, readiness, CI
 - **Status:** DONE
@@ -4131,7 +4140,7 @@ Spec: .team/epics/E06-go-live/08-migrate-lock-schema-check.md (read it from the 
 - 2026-10-17 15:09Z · leader · merged 8d91020 (PR #80). Review: advisory lock per database, exit 3 on lock timeout, down/--allow-down refused in prod (exit 4/2), db.CheckSchema read-only at API start-up (refuses empty/behind/dirty/more than 3 ahead, names both versions), docs/deploy.md; QA proved concurrent migrations apply each migration once; CI green; owner approved. Accepted decisions: MaxSchemaAhead = 3 constant (a release with 4 or more migrations stops previous API tasks from restarting mid-roll: keep releases to at most 3 migrations), make migrate-down needs --allow-down. For owner to check: docs/deploy.md; make migrate still works; make migrate-down now needs --allow-down. Open items: T-090.
 
 ### T-089 — [E06] Image scan (Trivy + SBOM) and secret hygiene (T-022 slice 4)
-- **Status:** CHANGES_REQUESTED
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** infra
 - **Milestone:** M2
@@ -4139,10 +4148,10 @@ Spec: .team/epics/E06-go-live/08-migrate-lock-schema-check.md (read it from the 
 - **Risk:** high
 - **Rework:** 1
 - **Owner-approved:** yes
-- **Assignee:** —
+- **Assignee:** dev
 - **Branch:** task/t-089-e06-image-scan-trivy-sbom-and-secret-hyg
 - **PR:** 81
-- **Updated:** 2026-10-17 15:09Z by leader
+- **Updated:** 2026-10-17 15:10Z by dev
 - **Comments-seen:** 5
 
 Spec: .team/epics/E06-go-live/09-image-scan-secret-hygiene.md (read it from the repo root).
@@ -4157,7 +4166,7 @@ Spec: .team/epics/E06-go-live/09-image-scan-secret-hygiene.md (read it from the 
 - 2026-10-17 15:09Z · leader · PR #81 now CONFLICTS with develop (T-088 merged as 8d91020): docs/container.md and scripts/image-smoke.sh (QA saw only those two; the Go files auto-merge). The owner approved T-089 (team approve T-089), so nothing else changes: merge origin/develop into the branch (no force-push), resolve keeping both sides (T-088's smoke-test checks for the concurrent migrate / un-migrated API refusal / down refused in prod AND your retry/capture change to the migrate status check), re-run the gates (make lint build test, go test -race -tags integration ./..., make image-smoke with a PRIVATE image tag, make image-scan, make image-hygiene), CI green on the new head incl. image, push, READY_FOR_QA; QA will re-test the merged state.
 
 ### T-090 — [E06] Migrate docs fixes, half-applied migration guidance and image-smoke robustness
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** tech-debt
 - **Milestone:** M2
@@ -4168,12 +4177,13 @@ Spec: .team/epics/E06-go-live/09-image-scan-secret-hygiene.md (read it from the 
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-17 14:28Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-17 15:11Z by leader
+- **Comments-seen:** 1
 
 Spec: .team/epics/E06-go-live/10-migrate-docs-and-smoke-robustness.md (read it from the repo root). Five non-blocking findings of the T-088 QA.
 
 #### Comments
+- 2026-10-17 15:11Z · leader · promoted: go-live code fixes that need no domain or AWS (spec 10-migrate-docs-and-smoke-robustness.md, items 1-12). Starts after T-089 merges (it shares scripts/image-smoke.sh and docs); read all items.
 
 <!-- tasks:end -->
 
@@ -4222,3 +4232,4 @@ Spec: .team/epics/E06-go-live/10-migrate-docs-and-smoke-robustness.md (read it f
 - 2026-10-17 — T-087 (e2e hardening, PR #79) merged ca0c169. T-086 slice (a) QA_PASS awaiting owner approval (Q-036). T-088 and T-089 follow T-086. Open owner items: Q-033 email provider and domain, Q-034 licence, accept T-020/T-022/T-061.
 - 2026-10-17 — T-086 (production config contract + S3 default credential chain, PR #78, owner-approved) merged 314fa5a. Owner accepted T-020, T-022, T-061, T-087. T-088 (migrate lock + schema check) and T-089 (image scan + secret hygiene + QA nits) are TODO. Q-033 (email provider/domain) and Q-034 (licence) still open.
 - 2026-10-17 — T-088 (migrate advisory lock + API schema-version check, PR #80, owner-approved) merged 8d91020. T-089 (PR #81, owner-approved) conflicts with it in docs/container.md and scripts/image-smoke.sh: dev merges develop, QA re-checks the merge. T-021 (SES mailer, PR #82) QA_PASS awaiting owner approval (Q-040). Owner decisions: D-29 Amazon SES, D-30 unlicensed. Open: Q-037 domain/DNS/region. T-090 (P2) holds the go-live fixes from the T-021/T-088/T-089 QA runs.
+- 2026-10-17 — T-021 (SES mailer behind a provider-neutral interface, PR #82, owner-approved) merged ce35645; real SES send deferred to the go-live phase. Decision D-31: everything that needs a domain or AWS credentials (T-023, T-024, T-025, T-031, T-050, live SES, deploy) waits for the go-live phase (E06 PRD). T-088 merged 8d91020. T-089 awaiting a develop merge by dev, then QA. T-090 (P2) TODO.

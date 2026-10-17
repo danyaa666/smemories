@@ -10,8 +10,9 @@ import (
 )
 
 // prodTestDefaults are what env adds for SMEM_ENV=prod, so the tests of one setting need not repeat the whole production contract
-// (that is prod_test.go's job, which does not use env): the plaintext opt-outs of a local network and a memory limit.
-var prodTestDefaults = map[string]string{"SMEM_DB_ALLOW_INSECURE": "true", "SMEM_REDIS_ALLOW_INSECURE": "true", "SMEM_MEMORY_LIMIT_MIB": "1536"}
+// (that is prod_test.go's job, which does not use env): the plaintext opt-outs of a local network, a memory limit and the SES mailer.
+var prodTestDefaults = map[string]string{"SMEM_DB_ALLOW_INSECURE": "true", "SMEM_REDIS_ALLOW_INSECURE": "true", "SMEM_MEMORY_LIMIT_MIB": "1536",
+	"SMEM_MAIL_PROVIDER": "ses", "SMEM_MAIL_FROM": "SMemories <no-reply@mail.smemories.io>"}
 
 // env serves m; SMEM_REDIS_URL defaults to a valid URL unless the case sets it (even to ""), and prod gets prodTestDefaults.
 func env(m map[string]string) func(string) string {

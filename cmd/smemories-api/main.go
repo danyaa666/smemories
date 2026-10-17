@@ -51,7 +51,10 @@ func main() {
 		logger.Info("memory limit set", "mib", cfg.MemoryLimitMiB)
 	}
 
-	mail, err := mailer.NewLog(cfg.Env, os.Stdout) // ponytail: the only mailer; a real provider is chosen here in M2
+	mail, err := mailer.New(mailer.Config{
+		Provider: cfg.MailProvider, From: cfg.MailFrom, Env: cfg.Env, LogOut: os.Stdout,
+		SES: mailer.SESConfig{ConfigurationSet: cfg.SESConfigurationSet},
+	}, logger)
 	if err != nil {
 		logger.Error("mailer setup failed", "error", err)
 		os.Exit(1)
@@ -120,7 +123,7 @@ func main() {
 	}
 	svc, err := auth.NewService(auth.NewStore(d), sessions, hasher, auth.Limits{
 		RegisterPerHour: cfg.RegisterPerHour, LoginFailsPerPair: cfg.LoginFailsPerPair, LoginFailsPerIP: cfg.LoginFailsPerIP,
-	}, auth.Mail{Mailer: mail, Logger: logger}, codes, limiters, nil)
+	}, auth.Mail{Mailer: mail, Logger: logger, OnFailure: mt.MailSendFailed}, codes, limiters, nil)
 	if err != nil {
 		logger.Error("auth setup failed", "error", err)
 		os.Exit(1)

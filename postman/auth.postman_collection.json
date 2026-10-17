@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "SMemories - auth",
-    "description": "Email + password auth core (T-006): register, login, logout, /api/user/get-me, plus (T-007, T-048) verification code resend/verify, forgot/reset password. Run against an API started with SMEM_ENV=dev (the session cookie is not Secure there, so Newman's cookie jar sends it over http). Step 1 registers with locale vi (T-045: the stored locale is returned; the default en and the vi verification email are covered by the Go integration tests). Register is limited to 5 per hour per IP and each run makes 3 counted attempts (the register, the duplicate and, for the username steps, a second account), so a second run within the hour gets 429: run `make reset-limits` (the limiters live in Redis) or set SMEM_RATE_REGISTER_PER_HOUR higher. Forgot-password is limited to 5 per hour per IP and each run makes 2 counted calls, so a third run within the hour gets 429 (run `make reset-limits` to reset). Email one-time codes (T-048): the full flow uses the dev-only fixed code 123123 (`SMEM_DEV_FIXED_OTP`, default in `.env.example`; the API must run with it and SMEM_ENV=dev, otherwise the verify and reset steps fail). Wrong, malformed, locked (5 wrong attempts) and weak-password cases run here too. Code expiry (15 and 30 minutes), the real random codes, parallel guesses and the 503 when Redis is down are covered by the Go integration tests. Limits per run: 3 of 3 resends, about 10 of 20 verify attempts, 4 of 20 reset attempts per IP; two back-to-back runs fit. Google sign-in (T-011): the last folder needs the API started with the SMEM_GOOGLE_* variables (README, 'Google sign-in setup'); requests there do not follow redirects. Username (T-081, steps 37-55 of the full flow): default name, no-op, invalid/reserved/taken, the 7-day cooldown with Retry-After; the 20 failed attempts per hour limit and the 7-day clock edges run in the Go integration tests (they need a test clock).",
+    "description": "Email + password auth core (T-006): register, login, logout, /api/user/get-me, plus (T-007, T-048) verification code resend/verify, forgot/reset password. Run against an API started with SMEM_ENV=dev (the session cookie is not Secure there, so Newman's cookie jar sends it over http). Step 1 registers with locale vi (T-045: the stored locale is returned; the default en and the vi verification email are covered by the Go integration tests). Register is limited to 5 per hour per IP and each run makes 3 counted attempts (the register, the duplicate and, for the username steps, a second account), so a second run within the hour gets 429: run `make reset-limits` (the limiters live in Redis) or set SMEM_RATE_REGISTER_PER_HOUR higher. Forgot-password is limited to 5 per hour per IP and each run makes 2 counted calls, so a third run within the hour gets 429 (run `make reset-limits` to reset). Email one-time codes (T-048): the full flow uses the dev-only fixed code 123123 (`SMEM_DEV_FIXED_OTP`, default in `.env.example`; the API must run with it and SMEM_ENV=dev, otherwise the verify and reset steps fail). Wrong, malformed, locked (5 wrong attempts) and weak-password cases run here too. Code expiry (15 and 30 minutes), the real random codes, parallel guesses and the 503 when Redis is down are covered by the Go integration tests. Limits per run: 3 of 3 resends, about 10 of 20 verify attempts, 4 of 20 reset attempts per IP; two back-to-back runs fit. Google sign-in (T-011): the last folder needs the API started with the SMEM_GOOGLE_* variables (README, 'Google sign-in setup'); requests there do not follow redirects. Username (T-081, steps 37-55 of the full flow): default name, no-op, invalid/reserved/taken, the 7-day cooldown with Retry-After; the 20 failed attempts per hour limit and the 7-day clock edges run in the Go integration tests (they need a test clock). Mail provider (T-021): the last three edge requests resend a code for the second account; they expect 200 with the log mailer and the 503 ERROR_MAIL_UNAVAILABLE / 400 ERROR_EMAIL_UNDELIVERABLE answers when the collection variable mailFailure is `unavailable` or `rejected` (set it only against an API whose provider really fails; the Go integration tests and the SES stub tests cover both with no setup).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -39,6 +39,10 @@
     },
     {
       "key": "email2",
+      "value": ""
+    },
+    {
+      "key": "mailFailure",
       "value": ""
     }
   ],
@@ -3482,6 +3486,131 @@
                 "exec": [
                   "pm.test(\"status 400\", () => pm.response.to.have.status(400));",
                   "pm.test(\"error code ERROR_INVALID_CODE\", () => pm.expect(pm.response.json().status).to.eql(\"ERROR_INVALID_CODE\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mail 1. Login as the second (still unverified) account",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"{{email2}}\", \"password\": \"{{password}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mail 2. Resend verification - 200, or the mail-failure answer when the run sets mailFailure",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/resend-verification",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "resend-verification"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// T-021: with the log mailer (the default) the send works. Against an API whose mail provider is down or refuses the address",
+                  "// (the Go tests do this with a stub; by hand: run with --env-var mailFailure=unavailable|rejected) the answers below are the contract.",
+                  "const mode = pm.collectionVariables.get(\"mailFailure\") || \"\";",
+                  "if (mode === \"unavailable\") {",
+                  "  pm.test(\"status 503\", () => pm.response.to.have.status(503));",
+                  "  pm.test(\"error code ERROR_MAIL_UNAVAILABLE\", () => pm.expect(pm.response.json().status).to.eql(\"ERROR_MAIL_UNAVAILABLE\"));",
+                  "  pm.test(\"Retry-After is a positive number of seconds\", () => pm.expect(Number(pm.response.headers.get(\"Retry-After\"))).to.be.above(0));",
+                  "} else if (mode === \"rejected\") {",
+                  "  pm.test(\"status 400\", () => pm.response.to.have.status(400));",
+                  "  pm.test(\"error code ERROR_EMAIL_UNDELIVERABLE\", () => pm.expect(pm.response.json().status).to.eql(\"ERROR_EMAIL_UNDELIVERABLE\"));",
+                  "  pm.test(\"no Retry-After: retrying does not help\", () => pm.expect(pm.response.headers.has(\"Retry-After\")).to.eql(false));",
+                  "} else {",
+                  "  pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "  pm.test(\"sent: already_verified is false\", () => pm.expect(pm.response.json()).to.eql({status: \"OK\", data: {already_verified: false}}));",
+                  "}",
+                  "pm.test(\"the answer never contains the address\", () => pm.expect(pm.response.text()).to.not.include(pm.collectionVariables.get(\"email2\")));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mail 3. Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "logout"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
                 ]
               }
             }

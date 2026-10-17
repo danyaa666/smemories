@@ -136,6 +136,8 @@
     "code_expired": "This code has expired. Send a new code.",
     "code_locked": "Too many wrong attempts on this code. Send a new code.",
     "code_store_unavailable": "We cannot check codes right now. Please try again in a moment.",
+    "mail_unavailable": "We cannot send email right now. Please try again in a few minutes.",
+    "email_undeliverable": "We could not deliver email to this address. Please check that it is correct.",
     "session_store_unavailable": "We cannot reach the sign-in service right now. Please try again in a moment.",
     "request_timeout": "The connection stalled. Your note is still here: press Send to try again.",
     "email_not_verified": "Verify your email address first, then try again.",

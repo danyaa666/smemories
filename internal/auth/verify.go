@@ -2,7 +2,10 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"time"
+
+	"github.com/danyaa666/smemories/internal/mailer"
 )
 
 // VerifyEmail checks the 6-digit code typed by the signed-in user and marks their email verified.
@@ -37,7 +40,11 @@ func (s *Service) ResendVerification(ctx context.Context, u *User) (alreadyVerif
 	if ok, retry, _ := s.resend.Take(ctx, u.ID); !ok {
 		return false, RateLimitedError{retry}
 	}
-	return false, s.sendCode(ctx, u, purposeVerify)
+	err = s.sendCode(ctx, u, purposeVerify)
+	if errors.Is(err, mailer.ErrUnavailable) { // an outage is not the user's doing: do not spend one of their 3 tries
+		_ = s.resend.Refund(ctx, u.ID)
+	}
+	return false, err
 }
 
 func (s *Store) markEmailVerified(ctx context.Context, userID uint64, now time.Time) error {

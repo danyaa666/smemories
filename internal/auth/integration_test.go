@@ -23,6 +23,7 @@ import (
 	"github.com/danyaa666/smemories/internal/auth/oidctest"
 	"github.com/danyaa666/smemories/internal/db/dbtest"
 	"github.com/danyaa666/smemories/internal/httpx"
+	"github.com/danyaa666/smemories/internal/mailer"
 	"github.com/danyaa666/smemories/internal/ratelimit"
 	"github.com/danyaa666/smemories/internal/redis"
 	"github.com/danyaa666/smemories/internal/redis/redistest"
@@ -70,6 +71,8 @@ type opts struct {
 	hashMemKiB uint32
 	google     *oidctest.Provider // enables Google sign-in against this fake
 	fixedOTP   string             // SMEM_DEV_FIXED_OTP; "" = off
+	mailer     mailer.Mailer      // replaces the recording mailer (the env's mail field then stays empty)
+	onFailure  func(class string) // Mail.OnFailure
 }
 
 // testOTPKey is the HMAC key of the codes in tests.
@@ -104,7 +107,11 @@ func newEnv(t *testing.T, o opts) *env {
 	if err != nil {
 		t.Fatal(err)
 	}
-	svc, err := NewService(NewStore(d), sess, hasher, o.limits, Mail{Mailer: rm, Logger: logger}, codes, ratelimit.NewFactory(rc, logger, clock.now), clock.now)
+	var sender mailer.Mailer = rm
+	if o.mailer != nil {
+		sender = o.mailer
+	}
+	svc, err := NewService(NewStore(d), sess, hasher, o.limits, Mail{Mailer: sender, Logger: logger, OnFailure: o.onFailure}, codes, ratelimit.NewFactory(rc, logger, clock.now), clock.now)
 	if err != nil {
 		t.Fatal(err)
 	}

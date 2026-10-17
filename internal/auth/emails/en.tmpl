@@ -1,22 +1,10 @@
 {{define "en.verify.subject"}}Your SMemories verification code{{end}}
-{{define "en.verify.text"}}Hi {{.Name}},
-
-Welcome to SMemories! Your verification code is:
-
-{{.Code}}
-
-Type it in the app to confirm your email address. It is valid for {{.Minutes}} minutes. Do not share this code with anyone.
-
-If you did not create an account, you can ignore this email.
-{{end}}
+{{define "en.verify.hello"}}Hi {{.Name}},{{end}}
+{{define "en.verify.intro"}}Welcome to SMemories! Your verification code is:{{end}}
+{{define "en.verify.how"}}Type it in the app to confirm your email address. It is valid for {{.Minutes}} minutes. Do not share this code with anyone.{{end}}
+{{define "en.verify.ignore"}}If you did not create an account, you can ignore this email.{{end}}
 {{define "en.reset.subject"}}Your SMemories password reset code{{end}}
-{{define "en.reset.text"}}Hi {{.Name}},
-
-Someone asked to reset the password of your SMemories account. Your reset code is:
-
-{{.Code}}
-
-Type it in the app to choose a new password. It is valid for {{.Minutes}} minutes. Do not share this code with anyone.
-
-Signing in again will be needed on all your devices afterwards. If this was not you, ignore this email: your password stays as it is.
-{{end}}
+{{define "en.reset.hello"}}Hi {{.Name}},{{end}}
+{{define "en.reset.intro"}}Someone asked to reset the password of your SMemories account. Your reset code is:{{end}}
+{{define "en.reset.how"}}Type it in the app to choose a new password. It is valid for {{.Minutes}} minutes. Do not share this code with anyone.{{end}}
+{{define "en.reset.ignore"}}Signing in again will be needed on all your devices afterwards. If this was not you, ignore this email: your password stays as it is.{{end}}

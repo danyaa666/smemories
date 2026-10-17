@@ -52,3 +52,14 @@ Specs live next to this file; **status lives only on the board** (`L list`), nev
 | T-024 Observability: metrics, alarms, uptime check, log retention | `04-observability-metrics-alarms-uptime-check.md` | T-023 |
 | T-025 Backups, restore drill, and user data export/deletion | `05-backups-restore-drill-and-user-data-export.md` | T-023 |
 | T-050 Remove dev-only shortcuts before production (delete the fixed OTP) | `06-remove-dev-shortcuts-before-production.md` | T-048, T-022 |
+
+
+## Live verification phase (decision D-31, owner 2026-10-17)
+Everything in this epic that needs a real domain or AWS credentials is **deferred to the end**: it is built and tested against local stubs now (the SES mailer against an SESv2 stub, the image against Docker, the config contract against a loader), and verified live only when the first phase (M1 + the go-live code work) is complete and the owner says go. Do not start T-023, T-024, T-025, T-031 or T-050 before then. The phase, in order:
+1. **Owner inputs (Q-037):** domain name, who edits its DNS, AWS account and region, billing agreed (cost estimate from the leader, D-08/D-10).
+2. **T-023** infrastructure as code and the deploy pipeline (OpenTofu, GitHub OIDC): `plan` reviewed by the owner before `apply`.
+3. **T-021 live:** SES domain identity, DKIM/SPF/MAIL FROM/DMARC records, configuration set, account-level suppression list, sandbox exit request (owner files it, about a day), send tests incl. `suppressionlist@simulator.amazonses.com` and a bounce; fix whatever the stub hid.
+4. **T-050** remove the dev shortcut (fixed code) and make the e2e job work without it (read the code from the log mailer output or a test-only mailer), plus the pipeline check.
+5. **T-031 / T-024 / T-025:** edge rate limits and shared limiter, metrics and alarms, backups and a restore drill, data export and deletion.
+6. **First deploy** (migrate task first, then the API), smoke test against the live URL, owner acceptance.
+Open code tasks that are NOT blocked by this and continue now: T-090 (go-live fixes found by QA), T-029, T-021 review/merge.
