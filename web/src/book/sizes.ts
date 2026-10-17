@@ -1,7 +1,7 @@
 // Page sizes in millimetres. A template is drawn in a box DESIGN_W px wide (the canvas designs are US Letter at 96 dpi);
 // its height follows the page ratio, and the box is scaled to the paper with CSS zoom (ADR 0003: zoom keeps the PDF vector).
 export const SIZES = {
-  A5: { w: 148, h: 210 },
+  A5: { w: 150, h: 210 },
   A4: { w: 210, h: 297 },
   Letter: { w: 215.9, h: 279.4 },
 } as const;
