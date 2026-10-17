@@ -1,0 +1,12 @@
+{
+  "name": "e2e",
+  "private": true,
+  "type": "module",
+  "description": "End-to-end test of the M1 journey (T-020): Playwright drives the real web build against the real API, MySQL, Valkey and MinIO. Run it with `make e2e` (docs/e2e.md). Not part of the app or web/package.json.",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.0"
+  }
+}

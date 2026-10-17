@@ -58,6 +58,14 @@ web-lint: web/node_modules
 print-check: web/node_modules
 	cd tools/print-check && npm ci && npx playwright install chromium && npm test
 
+# End-to-end test of the M1 journey (T-020, docs/e2e.md): Playwright against a locally started API and the built web app, on the
+# stack from `make up`. Needs poppler like print-check. The API runs with SMEM_ENV=test, so only the Redis keys smem:test:* are reset.
+.PHONY: e2e
+e2e: web/node_modules
+	cd tools/e2e && npm ci && npx playwright install chromium
+	@$(MAKE) --no-print-directory reset-limits SMEM_ENV=test
+	scripts/e2e.sh
+
 # Starts MySQL 8.4, Valkey and MinIO and returns once all are healthy and the bucket exists.
 up:
 	@test -f .env || { cp .env.example .env; echo "created .env from .env.example"; }

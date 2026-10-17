@@ -138,6 +138,103 @@ jobs:
           exit 1
       - run: make test-integration
 
+  # T-020: the M1 journey in a real browser (Playwright, Chromium) against the built web app, the real API and the same
+  # MySQL, MinIO and Valkey as go-integration (docs/e2e.md). This is the ONLY job that sets SMEM_DEV_FIXED_OTP: the API runs
+  # with SMEM_ENV=test, the one environment besides dev where the registered DEV-SHORTCUT(otp) is allowed. The link token of the
+  # journey is never printed. On failure the Playwright trace, a screenshot and the API log are uploaded.
+  e2e:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      # Throwaway services on the runner, loopback only; obviously fake values, not secrets (same as go-integration).
+      SMEM_DB_DSN: root:ci-only-fake-root-pw@tcp(127.0.0.1:3306)/smemories
+      SMEM_REDIS_URL: redis://127.0.0.1:6379/0
+      SMEM_S3_ENDPOINT: http://127.0.0.1:9000
+      SMEM_S3_REGION: us-east-1
+      SMEM_S3_BUCKET: smemories-e2e
+      SMEM_S3_ACCESS_KEY: ci-only-minio
+      SMEM_S3_SECRET_KEY: ci-only-fake-minio-pw
+      SMEM_S3_PATH_STYLE: "true"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: gover
+        run: echo "minor=$(awk '$1=="go"{split($2,v,".");print v[1]"."v[2]}' go.mod)" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ steps.gover.outputs.minor }}
+          check-latest: true
+          cache: true
+      - uses: ./.github/actions/go-newest-patch
+        with:
+          minor: ${{ steps.gover.outputs.minor }}
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: web/.nvmrc
+          cache: npm
+          cache-dependency-path: |
+            web/package-lock.json
+            tools/e2e/package-lock.json
+      - name: Start MySQL 8.4 (utf8mb4)
+        run: |
+          docker run -d --name mysql -p 127.0.0.1:3306:3306 \
+            -e MYSQL_ROOT_PASSWORD=ci-only-fake-root-pw -e MYSQL_DATABASE=smemories \
+            mysql:8.4@sha256:6ea90827b1100f8f2ae306a539f86d2c264a26ed435a2a9f75551dd5c3aeb242 \
+            --character-set-server=utf8mb4 --collation-server=utf8mb4_0900_ai_ci \
+            --sql-mode=ONLY_FULL_GROUP_BY,STRICT_ALL_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION \
+            --default-time-zone=+00:00
+          for i in $(seq 1 60); do
+            docker exec mysql mysqladmin ping -h 127.0.0.1 -uroot -pci-only-fake-root-pw --silent && exit 0
+            sleep 2
+          done
+          docker logs mysql
+          exit 1
+      - name: Start MinIO (S3) and create the bucket
+        run: |
+          docker run -d --name minio -p 127.0.0.1:9000:9000 \
+            -e MINIO_ROOT_USER=ci-only-minio -e MINIO_ROOT_PASSWORD=ci-only-fake-minio-pw \
+            bitnamilegacy/minio:2025.4.22-debian-12-r2
+          for i in $(seq 1 60); do
+            curl -fsS http://127.0.0.1:9000/minio/health/ready && break
+            [ "$i" -lt 60 ] || { docker logs minio; exit 1; }
+            sleep 2
+          done
+          docker exec minio sh -c "mc alias set local http://127.0.0.1:9000 ci-only-minio ci-only-fake-minio-pw && mc mb --ignore-existing local/smemories-e2e"
+      - name: Start Valkey 8 (Redis protocol)
+        run: |
+          docker run -d --name valkey -p 127.0.0.1:6379:6379 \
+            valkey/valkey:8@sha256:640c5e62cea04b6d6f2084232651d0cc70362d31f4f805e7be94dbed6855e8f2 \
+            valkey-server --appendonly yes --appendfsync everysec --save "" \
+            --maxmemory 256mb --maxmemory-policy noeviction --protected-mode no
+          for i in $(seq 1 30); do
+            docker exec valkey valkey-cli ping | grep -qx PONG && exit 0
+            sleep 1
+          done
+          docker logs valkey
+          exit 1
+      # poppler (pdfinfo, pdffonts, pdftotext, pdfimages) reads the printed PDF, like tools/print-check.
+      - name: Install poppler
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends poppler-utils
+      - run: npm ci
+        working-directory: web
+      - run: npm ci
+        working-directory: tools/e2e
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+        working-directory: tools/e2e
+      - name: The journey
+        env:
+          SMEM_DEV_FIXED_OTP: "123123" # DEV-SHORTCUT(otp): the only CI job that sets it; the API below runs with SMEM_ENV=test
+        run: scripts/e2e.sh
+      - name: Playwright trace, screenshot and API log
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-failure
+          path: tools/e2e/out
+          retention-days: 7
+
   web:
     runs-on: ubuntu-24.04
     timeout-minutes: 15

@@ -22,6 +22,7 @@ coverage.txt
 node_modules/
 /web/dist/
 /web/coverage/
+/tools/e2e/out/
 *.tsbuildinfo
 
 # Local dev data
