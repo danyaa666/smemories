@@ -11,17 +11,16 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 11 | T-020, T-021, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-086 |
-| READY_FOR_QA | 1 | T-022 |
-| QA_PASS | 1 | T-061 |
+| QA_PASS | 2 | T-022, T-061 |
 | MERGED | 6 | T-032, T-059, T-060, T-072, T-079, T-085 |
 | DONE | 59 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-073, T-074, T-075, T-076, T-077, T-078, T-080, T-081, T-082, T-083 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
 **Awaiting your review (MERGED):** T-032 ([E01] db.Open: treat MySQL 1044 as permanent; README warning about bare docker compose); T-059 ([E05] HTML template memory-book (design temp1)); T-060 ([E05] HTML template navy-classic (design temp2)); T-072 ([E10] Quality sweep: mnd, forbidigo, pointer parameters, pool defaults, remove the transition switch); T-079 ([E01] Make the timing-sensitive integration tests tolerant of a starved CI runner); T-085 ([E10] Lint exclusions anchored and a guard for auth.UserFrom)
 
-**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-032 (Approve merge of T-061 (template picker, print guide, public print-feedback counter, PR #71)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?)
+**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-032 (Approve merge of T-061 (template picker, print guide, public print-feedback counter, PR #71)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-035 (Approve merge of T-022 slice 1 (production Dockerfile, graceful shutdown, image smoke test, PR #74)?)
 
-_Board last written 2026-10-17 00:46Z_
+_Board last written 2026-10-17 01:02Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -428,6 +427,13 @@ Context: the API can only log codes today (LogMailer); production needs a real m
 - **Answer:** _(pending)_
 
 Context: github.com/danyaa666/smemories is public (D-09) but has no LICENSE file, which legally means nobody may reuse the code. The container image label shows NOASSERTION (T-022). Options: A) none, all rights reserved (current) - safest while the business model is open; B) MIT - permissive, anyone can reuse and sell it; C) Apache-2.0 - permissive with a patent grant; D) AGPL-3.0 - copyleft, a hosted copy must publish its changes. Third-party font licences (OFL) are already tracked in THIRD_PARTY_NOTICES.md. Recommendation: A until you decide whether you want others to run or fork SMemories. Not blocking anything.
+
+### Q-035 — Approve merge of T-022 slice 1 (production Dockerfile, graceful shutdown, image smoke test, PR #74)?
+- **Status:** OPEN
+- **Asked:** 2026-10-17 01:02Z
+- **Blocks:** T-022
+- **Recommendation:** approve
+- **Answer:** _(pending)_
 
 <!-- questions:end -->
 
@@ -1378,7 +1384,7 @@ Replace LogMailer with a real provider (SES is the natural fit on AWS) including
 #### Comments
 
 ### T-022 — [E06] Dockerfile, production config and migrations as a one-off task
-- **Status:** READY_FOR_QA
+- **Status:** QA_PASS
 - **Priority:** P2
 - **Type:** infra
 - **Milestone:** M2
@@ -1386,11 +1392,11 @@ Replace LogMailer with a real provider (SES is the natural fit on AWS) including
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** leader
 - **Branch:** task/t-022-e06-dockerfile-production-config-and-mig
 - **PR:** https://github.com/danyaa666/smemories/pull/74
-- **Updated:** 2026-10-17 00:45Z by dev
-- **Comments-seen:** 5
+- **Updated:** 2026-10-17 01:02Z by qa
+- **Comments-seen:** 7
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E06-go-live/02-dockerfile-production-config-and-migrations.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1404,6 +1410,26 @@ Multi-stage Dockerfile (distroless or alpine, non-root), production config valid
 - 2026-10-17 00:45Z · dev · Slice 1 of 2 is PR #74 (head 9a4112d): Dockerfile (golang:1.26.9 + distroless static nonroot, both digest-pinned, user 65532, 3 binaries, OCI labels, 45 MiB arm64 / 49 MiB amd64), allow-list .dockerignore, SMEM_SHUTDOWN_TIMEOUT/SMEM_SHUTDOWN_DELAY + /readyz 503 during drain, start-up spool-writable check, scripts/image-smoke.sh (own private MySQL/Valkey/MinIO, owner stack untouched), make image / image-smoke, CI job image (green on the PR, not a required check), Dependabot docker ecosystem, docs/container.md. ACs MET by slice 1: AC2, AC8; AC1 met except 'starts with a valid prod config' (see 1); AC6 partly (build + smoke in CI; Trivy and SBOM missing). REMAINING for slice 2: AC3 (req 4 prod config contract + docs/production-config.md + doc/config sync test), AC4 (req 5 S3 default credential chain and timeouts), AC5 (req 6 migrate lock, schema-version check at API start, deploy order doc), AC6 rest (Trivy pinned + SBOM artifact, make image-scan), AC7 (req 9 secret hygiene check). Findings for the leader: (1) The API cannot start with SMEM_ENV=prod at all until T-021: mailer.NewLog refuses prod and no other mailer exists, so the smoke test runs the API with SMEM_ENV=test and migrate plus the prod refusals with SMEM_ENV=prod; AC1 'valid prod config' can only be fully proven after T-021 (or the leader accepts the config-level proof). (2) Image uses CMD, not ENTRYPOINT, deliberately: ECS RunTask can override the command but not the entrypoint, so T-023 can run migrate/backfill from the same task definition. (3) org.opencontainers.image.licenses is NOASSERTION: the repo has no LICENSE file; owner decision. (4) The spec asked for the smoke against compose services; it uses its own private containers instead (as instructed), same pinned images. (5) go-integration was still running when I stopped; go, image, web, security were green. Please decide whether this slice is merged on its own.
 - 2026-10-17 00:45Z · dev · Slice 1 only (PR #74): req 1, 2, 3 + smoke test of 8 + CI job image. Test: make image-smoke (23 s, needs Docker + python3), go test -race ./internal/httpx ./internal/config ./internal/notes. Remaining ACs listed in the comment: AC3, AC4, AC5, AC6 (Trivy/SBOM), AC7. Task needs a slice-2 dev round after this merges.
 - 2026-10-17 00:46Z · leader · Leader decisions on slice 1 (PR #74): (1) merge slice 1 on its own: yes. The remaining requirements/ACs (4 prod config contract, 5 S3 credential chain + timeouts, 6 migrate lock + schema-version check, 7 Trivy/SBOM/image-scan, 9 secret hygiene) are tracked as T-086, so T-022 ends with this PR. (2) CMD instead of ENTRYPOINT: accepted (ECS RunTask can override the command only). (3) Licence label NOASSERTION: left as is until the owner answers Q-034. (4) Smoke test with its own MySQL/Valkey/MinIO: accepted. (5) The prod-start blocker (log mailer refuses prod) is real and tracked: T-021 needs the owner's email-provider decision (Q-033); T-086's spec says how to test the prod contract meanwhile.
+- 2026-10-17 01:02Z · qa · QA_PASS for slice 1 only (PR #74, head 9a4112d, CI all green incl. go-integration 7m38s and image 1m37s; mergeable CLEAN). Scope: req 1, 2, 3, smoke of 8; AC1 (except 'valid prod config', waits for T-021), AC2, AC8. Reqs 4-7, 9 / AC3-7 = T-086, not judged. Risk high: owner approval still needed before merge.
+  
+  EVIDENCE (all run by me, own containers/network qa22*, owner stack smemories-* untouched, all removed afterwards):
+  - AC1 image: `make image-smoke` passes (24 s). Base images pinned by digest; both digests equal the current tags (buildx imagetools inspect). Builder = go1.26.9 (go.mod says 1.26.0; newest patch, per L-10); `go version -m` of the shipped binary: go1.26.9, CGO_ENABLED=0, -trimpath, static, stripped. Two --no-cache builds give a byte-identical binary (sha256 083a613a...). `docker export | tar -t`: 3 binaries in /usr/local/bin + distroless base only (certs, tzdata, passwd, os-release, dpkg status, licences); no .git/.env/tests/.team/node_modules/shell/package manager. User 65532:65532, CMD (no ENTRYPOINT), OCI labels source/revision/version/licenses(NOASSERTION)/title set. Size: filesystem 45 MiB arm64, 49.3 MiB amd64 (Fargate default arch), compressed 16-18 MB; both < 60 MB. docker history: only ARG VERSION/COMMIT, no secrets.
+  - .dockerignore: planted .env, .env.local, server.pem, .team/, .git/, web/node_modules/, internal/.env, cmd/key.pem with a distinctive value, rebuilt: none of them in the image fs, none of the value in binaries or `docker history`.
+  - AC1 run: `--read-only --user 65532 --cap-drop ALL --security-opt no-new-privileges` + documented tmpfs: healthz/readyz 200, register, login, yearbook create, photo upload OK. Without the tmpfs: exit 1 + 'config error: SMEM_UPLOAD_TMP_DIR="/spool": want an existing directory'; tmpfs root-owned: exit 1 + 'upload spool is not writable: mount a writable volume (tmpfs)...' ; unset dir on read-only root: same clear error. One-shot exit, no crash loop. `smemories-migrate up/status` and `smemories-media-backfill --dry-run` run from the same image by command override with SMEM_ENV=prod, read-only, uid 65532.
+  - AC2 shutdown: (a) public multipart upload of 400 KB trickled over 12 s, SIGTERM at 3 s, SHUTDOWN_DELAY=3s: /readyz 503 from t+0.1 s, /healthz stays 200 during the delay, listener closes at t+3.4 s, the upload still completes 200 (body with note id), 'shutdown complete' logged, exit 0. (b) slow login request: covered by the smoke (completes, exit 0). (c) upload that outlasts SMEM_SHUTDOWN_TIMEOUT=6s: cut at exactly 6 s, exit 1, 'server stopped: context deadline exceeded' logged (bounded, no hang). (d) goroutines/fds: 9 uploads (4 concurrent) + 5 aborted-client uploads, then 20 s idle: go_goroutines 15->21, fds 11->20, after 12 more uploads 23/20: no growth with load (idle pools). Config validation: timeout abc/0s/121s, delay >= timeout, delay -1s all refused with the variable named. Defaults judged OK: 25 s timeout < 30 s Fargate; prod delay 5 s (0 elsewhere), drain = timeout - delay = 20 s.
+  - AC8: prod + SMEM_DEV_FIXED_OTP=123123 refuses (message names the variable, no value echoed); missing/short SMEM_OTP_KEY refused; unknown env refused. prod without mailer fails with 'no real mailer' (known blocker T-021).
+  - Smoke really fails (mutations on a copy of the script / images): extra /app/.env in image -> 'files that must not be in the image'; USER 0 -> 'image user is not 65532'; SIGKILL instead of SIGTERM -> '/readyz did not answer 503'; REDIS_URL removed -> fails; bad DB DSN on the API -> '/healthz never answered 200'; MySQL stopped after startup -> 'smemories-migrate up failed'. (Removing SMEM_OTP_KEY from the API env does not fail the smoke because the API runs with SMEM_ENV=test, which has a dev key; the prod refusal for it is tested separately.)
+  - CI/Dependabot: ci.yml image job uses the same SHA-pinned checkout as other jobs, persist-credentials false, 20 min timeout, runs make image-smoke, green; required checks on develop are still go, go-integration, web, security (image not required). dependabot.yml parses; docker ecosystem on / targeting develop, weekly, grouped.
+  - Mechanical: go test -race ./internal/httpx ./internal/config ./internal/notes ok; make lint build test ok (0 issues, web 304 tests); go test -race -tags integration ./... ok (all packages).
+  
+  NON-BLOCKING OBSERVATIONS (no AC violated):
+  1. Dockerfile line 1 `# syntax=docker/dockerfile:1.7` pulls a floating frontend image (tag, not digest); everything else is digest-pinned. Pin it or note it for T-086. Also the smoke's MinIO image `bitnamilegacy/minio:2025.4.22-debian-12-r2` is tag-pinned only (legacy, unmaintained repo) and mysql/valkey/minio in the smoke are not watched by Dependabot.
+  2. Public uploads may legitimately run 120 s + 60 s processing; a deploy during a long upload is cut after 20 s of drain (prod defaults). Inherent to the 30 s Fargate stop; worth a line in the runbook.
+  3. During the drain every /readyz probe logs a WARN 'readyz: shutdown ping failed ... context canceled' plus the request line; noisy but harmless. SMEM_SHUTDOWN_TIMEOUT up to 120 s is accepted although Fargate kills at 30 s unless stopTimeout is raised (docs/container.md mentions it).
+  4. On a missing spool the API logs 'listening' before it fails the spool check (cosmetic); error shows dir:"" when SMEM_UPLOAD_TMP_DIR is unset.
+  5. .dockerignore allows .env/*.pem inside cmd/ internal/ migrations/ into the builder stage; they cannot reach the final stage (only /out is copied), verified. The secret-hygiene grep check is T-086 (req 9).
+  6. Docker Desktop `docker images` reports 66 MB for the image (unpacked disk usage incl. base metadata); the 45/49 MiB filesystem figure is what the smoke and spec use.
+- 2026-10-17 01:02Z · leader · Leader review OK on 9a4112d (slice 1): Dockerfile pins both bases by digest, cross-compiles static trimpath binaries, distroless nonroot, labels, CMD (not ENTRYPOINT) so ECS can override the command; QA proved byte-identical builds, read-only/uid 65532/cap-drop ALL run, clear one-shot error on an unwritable spool, SIGTERM during a 12 s upload completes with exit 0 and /readyz 503 at once, smoke test fails on 6 deliberate breaks, planted .env/*.pem/.team absent from the image; 45-49 MiB; CI green on the head incl. go-integration and image. Non-blocking nits moved into T-086 (floating dockerfile syntax tag, MinIO tag pin, WARN per probe while draining, uploads longer than the drain window are cut: document). Waiting for owner approval (Risk high). After merge: nothing to migrate; AC1's 'valid prod start' waits for T-021's real mailer.
 
 ### T-023 — [E06] AWS infrastructure as code and deploy pipeline
 - **Status:** BACKLOG

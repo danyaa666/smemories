@@ -32,3 +32,8 @@ The same as T-022 (AWS resources, the web image, DNS, autoscaling) and the real 
 
 #### Test plan
 As in T-022. QA should also start the built image with each required variable removed one at a time, with a weak key, with `http://` origins and with the dev OTP set, and run two migrate tasks at once.
+
+#### Added from the T-022 slice 1 QA (non-blocking, fold into this task)
+- Pin the Dockerfile `# syntax=docker/dockerfile:1.7` frontend by digest (or drop the line) and pin the smoke test MinIO image by digest, like every other image.
+- /readyz logs a WARN per probe while draining: log it once at the start of the drain (a load balancer probes every few seconds).
+- A public upload that outlasts the production drain window (SMEM_SHUTDOWN_TIMEOUT 25 s, the Fargate stop timeout is 30 s) is cut on deploy: document it in docs/container.md as accepted (uploads are bounded to 120 s by T-080 pace limits; the browser form keeps the answers and the user presses Send again).
