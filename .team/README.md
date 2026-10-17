@@ -10,17 +10,16 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 8 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050 |
-| TODO | 1 | T-090 |
-| MERGED | 1 | T-089 |
+| BACKLOG | 9 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091 |
+| MERGED | 2 | T-089, T-090 |
 | DONE | 72 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-089 ([E06] Image scan (Trivy + SBOM) and secret hygiene (T-022 slice 4))
+**Awaiting your review (MERGED):** T-089 ([E06] Image scan (Trivy + SBOM) and secret hygiene (T-022 slice 4)); T-090 ([E06] Migrate docs fixes, half-applied migration guidance and image-smoke robustness)
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-032 (Approve merge of T-061 (template picker, print guide, public print-feedback counter, PR #71)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-035 (Approve merge of T-022 slice 1 (production Dockerfile, graceful shutdown, image smoke test, PR #74)?); Q-036 (Approve merge of T-086 slice (a): production config contract and S3 default credential chain (PR #78, adds the AWS SDK config module)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-038 (Approve merge of T-088: smemories-migrate advisory lock and API schema-version check (PR #80)?); Q-039 (Approve merge of T-089: image scan (Trivy + SBOM), secret hygiene and config hardening (PR #81)?); Q-040 (Approve merge of T-021: Amazon SES mailer behind a provider-neutral interface (PR #82)?)
 
-_Board last written 2026-10-17 15:41Z_
+_Board last written 2026-10-17 16:46Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4171,7 +4170,7 @@ Spec: .team/epics/E06-go-live/09-image-scan-secret-hygiene.md (read it from the 
 - 2026-10-17 15:41Z · leader · Correction: the squash-merge commit of PR #81 is b328d1f (the sha in the MERGED note was read before the local pull).
 
 ### T-090 — [E06] Migrate docs fixes, half-applied migration guidance and image-smoke robustness
-- **Status:** TODO
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** tech-debt
 - **Milestone:** M2
@@ -4180,15 +4179,41 @@ Spec: .team/epics/E06-go-live/09-image-scan-secret-hygiene.md (read it from the 
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-17 15:11Z by leader
-- **Comments-seen:** 1
+- **Branch:** task/t-090-e06-migrate-docs-fixes-half-applied-migr
+- **PR:** https://github.com/danyaa666/smemories/pull/83 + https://github.com/danyaa666/smemories/pull/84
+- **Updated:** 2026-10-17 16:46Z by leader
+- **Comments-seen:** 5
 
 Spec: .team/epics/E06-go-live/10-migrate-docs-and-smoke-robustness.md (read it from the repo root). Five non-blocking findings of the T-088 QA.
 
 #### Comments
 - 2026-10-17 15:11Z · leader · promoted: go-live code fixes that need no domain or AWS (spec 10-migrate-docs-and-smoke-robustness.md, items 1-12). Starts after T-089 merges (it shares scripts/image-smoke.sh and docs); read all items.
+- 2026-10-17 16:15Z · dev · Two PRs, both CI green on their final head. PR A #83 (head ec6e1ba, branch task/t-090-e06-migrate-docs-fixes-half-applied-migr) = items 1-7: runbook + hint (TestMigrateUpHalfAppliedHint 1050/1060), one ahead WARN (TestCheckSchemaLogsAheadWarning), gap message (TestCompareSchema), exit-code table + TestExitCodesInProd, image-smoke private tag smemories:smoke-<pid>-<time> + bounded waits (3 runs, 2 concurrent, forced timeouts verified; macOS bash 3.2 safe), image-hygiene fail-closed + self-test case, redactURL masks query/fragment. PR B #84 (head fba8bd7, branch task/t-090-b-mailer-classification) = items 8, 10, 11, 12: new class config (account suspended/paused, 'is not verified') -> ErrUnavailable 503 + ERROR log + metric label; mailertest.Run gained Misconfigured + class asserts; auth.Service.Drain bounded by the remaining SMEM_SHUTDOWN_TIMEOUT (real binary with a hung provider stub: exit 0 after 6.0 s with a 6 s budget, 'emails dropped at shutdown count=1', class=shutdown); verify_resend_refund limiter (5/h, TestResendRefundIsCapped); docs/email.md, observability.md, container.md, redis.md updated. REMAINING: item 9 (suppressionlist simulator result) needs an SES account (D-31); docs/email.md says so in place. Note: the foreground resend path is still not counted in the metric (documented 'background sends only'); the SES ERROR log covers it.
+- 2026-10-17 16:15Z · dev · Items 1-7 in PR #83 (head ec6e1ba), items 8,10,11,12 in PR #84 (head fba8bd7); item 9 remains (needs SES account). See comment. Verify: make lint build test, go test -race -tags integration ./..., make image-smoke + image-hygiene on #83; mailertest.Run Misconfigured, TestDrainIsBoundedAndCountsTheDropped, TestResendRefundIsCapped on #84.
+- 2026-10-17 16:45Z · qa · QA_PASS for BOTH PRs (A #83 head ec6e1ba, B #84 head fba8bd7); item 9 intentionally open (needs SES account, D-31). CI green on both heads. Own private stack (qa090-* MySQL/Valkey/MinIO, ports 33090/63790/19090, Redis dbs 11-13, own SES stub), owner stack untouched, all removed.
+  PR A (items 1-7): [1] real smemories-migrate up after deleting goose rows: 1060 -> 'this migration may be half-applied ... see docs/deploy.md' exit 1; 1050 same; 1061/1091 via unit test; runbook + reviewer checklist line present. [2] API on schema equal: 0 WARN; 1 ahead: exactly 1 WARN (database_version, build_version, migrations_ahead) even with a /readyz call; 3 ahead: 1; 4 ahead: refused, no WARN. [3] real DB with a middle row deleted: 'missing migration 20261012100200 (the next applied one is 20261012120000, highest ...)' two different versions. [4] SMEM_ENV=prod: down -> exit 2, down --allow-down -> exit 4, up --allow-down -> 2, bogus -> 2; docs table matches. [5] 2 concurrent make image-smoke: tags smoke-82852-.. / smoke-82853-.., both exit 0 in 43/44 s, no containers/tags left; SMOKE_TASK_TIMEOUT=1 fails closed rc 1 and cleans up. [6] scripts/image-hygiene.sh no-such-image -> 'cannot inspect image', exit 1; make image-hygiene ok + self-test incl. new fail-closed case. [7] SMEM_PUBLIC_BASE_URL / SMEM_ALLOWED_ORIGINS / SMEM_GOOGLE_ISSUER with ?token=SECRET#fragSECRET: message shows ?***#***, SECRET never echoed (dev and prod). make lint build test: ok; go test -race -tags integration ./...: ok (all packages); make image-scan ok; make image-hygiene ok.
+  PR B (items 8,10,11,12), real API binary + own SESv2 stub (AWS_ENDPOINT_URL): MessageRejected 'Email address is not verified' (sender, sandbox recipient) and 'Identity ... is not verified', AccountSuspended, SendingPaused -> class config, resend-verification 503 ERROR_MAIL_UNAVAILABLE, ERROR 'mailer: send failed class=config' (no address in log), smem_mail_send_failures_total{class=config} +1 per background email; plain MessageRejected 'Illegal address' -> 400 ERROR_EMAIL_UNDELIVERABLE, WARN class=rejected, metric rejected; throttle -> 503 class unavailable. Shutdown with a hung provider (3 pending emails): SMEM_SHUTDOWN_TIMEOUT=6s exits after 6.0 s, 25s (default) after 25.0 s (< Fargate 30 s), ERROR 'emails dropped at shutdown class=shutdown count=3'. Resend during throttling: 8 consecutive 503 (5 refunded + 3 counted), then 429 ERROR_RATE_LIMITED, 0 provider calls; single transient failure then 3 OK resends (refund works), 4th 429. forgot-password existing vs unknown address: identical status/body/headers for ok, refused, unverified, throttle (the first run hit the per-IP 5/h limit identically for both). Seam: AWS/SES names only in internal/mailer/ses.go (+tests). Mutant (config class mapped back to ErrRejected) makes mailertest.Run fail ('an account or setup problem...'). make lint build test ok; go test -race -tags integration ./... ok; make image-smoke IMAGE=private tag ok (40 s); Newman auth (Full flow + Edge cases) 191/191 assertions twice back to back (Google folder needs a Google issuer, not run; reruns beyond 2-3 per hour need make reset-limits because of the per-IP forgot limit, pre-existing).
+  Non-blocking observations: (a) image-smoke.sh: when SMOKE_TIMEOUT expires (tested with 8) the script exits 143 but prints no 'SMOKE FAIL: the whole run took longer' line, and the timer subshell of the in-flight bounded() call (sleep 600 for docker pull, sleep 120 for a task) is left orphaned and keeps the stdout pipe open, so 'make image-smoke | tail' hung until I killed it by PID; only on the 900 s overall-timeout path, normal and per-task-timeout paths are clean. Suggest cleanup kills the bounded timer and the message goes to stderr first. (b) 'database schema is missing migration X ... 1 migrations not applied' grammar. (c) A config failure is retried by the background path (3 provider calls, 3 ERROR lines per email, 1 metric count) like an outage; harmless but noisy, could skip retry for ClassConfig. (d) Request-path resend failure not in smem_mail_send_failures_total: acceptable (the same day-one failure is counted via the background register/forgot sends and logged ERROR class=config), but T-024 should also alarm on the ERROR log line. (e) smem_mail_send_failures_total{class=shutdown} is incremented in a process that is exiting, so Prometheus will rarely scrape it; the ERROR log line is the real signal. (f) 'is not verified' is matched on free text: only the message of MessageRejected, never the address, but re-check against a real SES sandbox in the go-live phase. (g) Side effect of my image-scan/hygiene make runs: the local tag smemories:local was rebuilt from the PR A tree.
+- 2026-10-17 16:46Z · leader · merged as two squash commits: PR A #83 -> 39a66f9 (items 1-7: half-applied migration runbook + 1060/1050/1061/1091 hint, one-time ahead WARN, gap message, exit-code table + test, image-smoke private tag + bounded waits, image-hygiene fail-closed, query-string redaction) and PR B #84 -> 39ea415 (items 8, 10, 11, 12: mailer class config for sandbox/unverified sender and suspended/paused accounts => loud 503 + metric label, bounded shutdown wait Service.Drain, separate cap on refunded resend tries). QA_PASS on both heads, CI green, seam intact (SES names only in ses.go; mailertest.Run has the Misconfigured behaviour). Item 9 (record the suppressionlist@simulator.amazonses.com result) stays open for the go-live phase (D-31). For owner to check: nothing visible; docs/deploy.md and docs/email.md. Open non-blocking (QA): SMOKE_TIMEOUT path exits 143 with no FAIL message and leaves an orphaned sleep (make image-smoke | tail can hang); config-class failures are retried 3 times in the background; resend request-path failures are not counted in the metric (T-024 should alarm on the ERROR log line too); class=shutdown is counted in an exiting process; grammar '1 migrations'.
+
+### T-091 — [E06] Image-smoke timeout path, config-class retry and message grammar (T-090 QA leftovers)
+- **Status:** BACKLOG
+- **Priority:** P3
+- **Type:** tech-debt
+- **Milestone:** M2
+- **Depends-on:** —
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-17 16:46Z by leader
+- **Comments-seen:** 0
+
+Small leftovers from the T-090 QA: (1) scripts/image-smoke.sh: when SMOKE_TIMEOUT fires it exits 143 with no FAIL message and leaves an orphaned sleep holding the pipe open (make image-smoke | tail hangs): print a FAIL line naming the step, kill the child by PID and exit 1. (2) Mail failures of class config are retried 3 times in the background: do not retry them (a misconfiguration will not fix itself in seconds). (3) The message '1 migrations' should read '1 migration'. (4) Add to the T-024 notes: alarm on the ERROR log line for request-path resend failures too, since the metric counts background sends only. Acceptance: each item has a test or a visible check; make lint build test, integration tests and make image-smoke stay green.
+
+#### Comments
 
 <!-- tasks:end -->
 
@@ -4239,3 +4264,4 @@ Spec: .team/epics/E06-go-live/10-migrate-docs-and-smoke-robustness.md (read it f
 - 2026-10-17 — T-088 (migrate advisory lock + API schema-version check, PR #80, owner-approved) merged 8d91020. T-089 (PR #81, owner-approved) conflicts with it in docs/container.md and scripts/image-smoke.sh: dev merges develop, QA re-checks the merge. T-021 (SES mailer, PR #82) QA_PASS awaiting owner approval (Q-040). Owner decisions: D-29 Amazon SES, D-30 unlicensed. Open: Q-037 domain/DNS/region. T-090 (P2) holds the go-live fixes from the T-021/T-088/T-089 QA runs.
 - 2026-10-17 — T-021 (SES mailer behind a provider-neutral interface, PR #82, owner-approved) merged ce35645; real SES send deferred to the go-live phase. Decision D-31: everything that needs a domain or AWS credentials (T-023, T-024, T-025, T-031, T-050, live SES, deploy) waits for the go-live phase (E06 PRD). T-088 merged 8d91020. T-089 awaiting a develop merge by dev, then QA. T-090 (P2) TODO.
 - 2026-10-17 — T-089 (image scan, SBOM, secret hygiene, config hardening, PR #81, owner-approved) merged b328d1f. T-088 and T-021 accepted by the owner. First-phase code work left: T-090 (go-live fixes, P2) and T-029.
+- 2026-10-17 — T-090 merged in two PRs (#83 39a66f9, #84 39ea415): migrate/smoke/hygiene fixes and the SES go-live fixes (loud sandbox/unverified-sender errors, bounded shutdown drain, resend refund cap). Item 9 waits for the go-live phase. T-089 accepted? pending. First-phase code work left: T-029 (MinIO image) and the small T-091 leftovers.
