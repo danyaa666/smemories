@@ -52,12 +52,15 @@ const norm = (s) => s.normalize("NFC").replace(/\s+/g, " ").trim().toLocaleLower
 
 /** Deletes what the run created (the account itself stays: there is no endpoint for that). Never fails the test. */
 async function cleanUp() {
+  if (!BASE) return;
   const api = await request.newContext({ baseURL: BASE, extraHTTPHeaders: { Origin: BASE } });
   try {
     const login = await api.post("/api/auth/login", { data: { email: OWNER.email, password: OWNER.password } });
-    if (!login.ok()) return;
+    if (!login.ok()) return; // the run failed before the account existed
     const list = await (await api.get("/api/yearbook/get-list")).json();
     for (const y of list.data?.items ?? []) await api.post("/api/yearbook/delete", { data: { id: y.id } });
+  } catch (e) {
+    console.warn(`clean-up failed (the run's data stays in the test database): ${e.message}`);
   } finally {
     await api.dispose();
   }
