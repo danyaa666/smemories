@@ -10,8 +10,9 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 12 | T-021, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-087, T-088, T-089 |
-| READY_FOR_QA | 1 | T-086 |
+| BACKLOG | 11 | T-021, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-088, T-089 |
+| TODO | 1 | T-087 |
+| IN_QA | 1 | T-086 |
 | MERGED | 3 | T-020, T-022, T-061 |
 | DONE | 65 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
@@ -20,7 +21,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-032 (Approve merge of T-061 (template picker, print guide, public print-feedback counter, PR #71)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-035 (Approve merge of T-022 slice 1 (production Dockerfile, graceful shutdown, image smoke test, PR #74)?)
 
-_Board last written 2026-10-17 08:49Z_
+_Board last written 2026-10-17 09:10Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -3946,7 +3947,7 @@ Spec: .team/epics/E10-skills-alignment/12-lint-anchors-userfrom-guard.md (read i
 - 2026-10-17 07:02Z · human · accepted by owner
 
 ### T-086 — [E06] Production config contract, S3 credential chain, migrate lock and image scan (T-022 slice 2)
-- **Status:** READY_FOR_QA
+- **Status:** IN_QA
 - **Priority:** P2
 - **Type:** infra
 - **Milestone:** M2
@@ -3954,10 +3955,10 @@ Spec: .team/epics/E10-skills-alignment/12-lint-anchors-userfrom-guard.md (read i
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** qa
 - **Branch:** task/t-086-e06-production-config-contract-s3-creden
 - **PR:** 78
-- **Updated:** 2026-10-17 08:49Z by dev
+- **Updated:** 2026-10-17 09:10Z by qa
 - **Comments-seen:** 4
 
 Spec: .team/epics/E06-go-live/07-production-config-contract-s3-chain-migrate-lock-image-scan.md (read it from the repo root). Second half of T-022: requirements 4, 5, 6, 7 (scan), 9 of the T-022 spec.
@@ -3969,7 +3970,7 @@ Spec: .team/epics/E06-go-live/07-production-config-contract-s3-chain-migrate-loc
 - 2026-10-17 08:49Z · leader · Leader: PR #78 is slice (a) only and T-086 ends with it. The remaining requirements moved into two new tasks with their own specs: T-088 (migrate lock + API schema-version check + deploy order docs) and T-089 (Trivy + SBOM + image-scan + secret hygiene + the QA robustness items). Dependency decision: github.com/aws/aws-sdk-go-v2/config (+ credential modules) approved, recorded as L-13 (same vendor and major version as the S3 client, needed for the default credential chain). QA: verify AC3, AC4, AC-A, AC8 only.
 
 ### T-087 — [E01] E2E hardening: refuse non-local targets, tighter CI limits, clearer errors
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -3980,12 +3981,13 @@ Spec: .team/epics/E06-go-live/07-production-config-contract-s3-chain-migrate-loc
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-17 08:46Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-17 09:10Z by leader
+- **Comments-seen:** 1
 
 Spec: .team/epics/E01-foundation/11-e2e-hardening.md (read it from the repo root). Five non-blocking findings from the T-020 QA.
 
 #### Comments
+- 2026-10-17 09:10Z · leader · promoted: dev is idle while T-086 is in QA; spec 11-e2e-hardening.md
 
 ### T-088 — [E06] smemories-migrate lock, API schema-version check and deploy order (T-022 slice 3)
 - **Status:** BACKLOG
