@@ -29,11 +29,7 @@ func (s *Service) ForgotPassword(ctx context.Context, ip, email string) error {
 	if err != nil {
 		return err
 	}
-	s.background(func(ctx context.Context) {
-		if err := s.sendCode(ctx, u, purposeReset); err != nil {
-			s.mail.Logger.Error("auth: reset email not sent", "user_id", u.ID, "error", err)
-		}
-	})
+	s.sendCodeLater(ctx, u, purposeReset, "auth: reset email")
 	return nil
 }
 

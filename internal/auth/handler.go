@@ -10,6 +10,7 @@ import (
 
 	"github.com/danyaa666/smemories/internal/apperr"
 	"github.com/danyaa666/smemories/internal/httpx"
+	"github.com/danyaa666/smemories/internal/mailer"
 	"github.com/danyaa666/smemories/internal/ratelimit"
 	"github.com/danyaa666/smemories/internal/redis"
 )
@@ -263,6 +264,11 @@ func (h *Handler) fail(w http.ResponseWriter, r *http.Request, err error) {
 		err = apperr.New(CodeCodeStoreUnavailable, "code store unavailable, retry shortly")
 	case errors.Is(err, ErrBusy):
 		w.Header().Set("Retry-After", retryBusy)
+	case errors.Is(err, mailer.ErrUnavailable): // the provider is throttling or down: try again in a little while
+		w.Header().Set("Retry-After", retryMail)
+		err = apperr.New(CodeMailUnavailable, "the email service is busy, retry shortly")
+	case errors.Is(err, mailer.ErrRejected): // the address is the caller's own, so saying so leaks nothing
+		err = apperr.New(CodeEmailUndeliverable, "the email address cannot receive mail")
 	}
 	httpx.Fail(w, r, err)
 }
@@ -271,6 +277,7 @@ func (h *Handler) fail(w http.ResponseWriter, r *http.Request, err error) {
 const (
 	retryStore = "5"
 	retryBusy  = "2"
+	retryMail  = "30"
 )
 
 func cookieToken(r *http.Request) string {

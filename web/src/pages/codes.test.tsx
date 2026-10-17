@@ -244,6 +244,27 @@ describe("resend the verification code", () => {
     expect(await codeInput()).toHaveValue("");
   });
 
+  it("tells the student when the email service is down or the address cannot receive mail (T-021)", async () => {
+    let n = 0;
+    mockApi({
+      "GET /user/get-me": unverified,
+      "POST /auth/resend-verification": () =>
+        n++ === 0
+          ? err(503, "mail_unavailable", { "Retry-After": "30" })
+          : err(400, "email_undeliverable"),
+    });
+    renderApp("/verify-email");
+    await userEvent.click(await screen.findByRole("button", { name: "Send a new code" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("We cannot send email right now.");
+    // a refused send starts no cooldown
+    await userEvent.click(screen.getByRole("button", { name: "Send a new code" }));
+    await waitFor(() =>
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "could not deliver email to this address",
+      ),
+    );
+  });
+
   it("says so when the address was already verified", async () => {
     let verified = false;
     mockApi({

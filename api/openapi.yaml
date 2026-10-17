@@ -249,12 +249,16 @@ paths:
       summary: Send a new verification code to the signed-in user
       description: >-
         Called by the "send a new code" button. At most 3 per hour per user (`ERROR_RATE_LIMITED` with `Retry-After`). The new code replaces the previous one, which stops
-        working. A user whose address is already verified gets `already_verified: true` and nothing is sent. A mailer failure is `ERROR_INTERNAL` and is logged without the code.
+        working. A user whose address is already verified gets `already_verified: true` and nothing is sent. This is the one endpoint that waits for the mail provider
+        (at most 10 seconds): a provider that is throttling or down is `ERROR_MAIL_UNAVAILABLE` (503 with `Retry-After`; the try is not counted), and an address the
+        provider refuses is `ERROR_EMAIL_UNDELIVERABLE` (400, the address is the caller's own). Registration and forgot-password send in the background and never wait.
         Takes no body. A request with the session cookie must come from an allowed Origin.
       x-auth: required
       x-error-codes:
         - {code: ERROR_RATE_LIMITED, description: "More than 3 sends per hour for this user; wait for `Retry-After` seconds."}
         - {code: ERROR_CODE_STORE_UNAVAILABLE, description: "Redis, which holds the email codes, did not answer; nothing was sent. Retry after `Retry-After`."}
+        - {code: ERROR_MAIL_UNAVAILABLE, description: "The mail provider is throttling, failing or timed out; nothing was sent and the try is not counted. Retry after `Retry-After`."}
+        - {code: ERROR_EMAIL_UNDELIVERABLE, description: "The mail provider refused the address (invalid, on its suppression list, or sending is paused); retrying does not help."}
         - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
         - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
         - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
@@ -269,6 +273,7 @@ paths:
               examples:
                 sent:
                   value: {status: OK, data: {already_verified: false}}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
         "401": {$ref: "#/components/responses/ApiUnauthorized"}
         "403": {$ref: "#/components/responses/ApiForbidden"}
         "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
@@ -1694,7 +1699,8 @@ components:
     ApiAuthUnavailable:
       description: >-
         A Redis-backed store or the hashing pool could not serve the request, so it failed closed and nothing was accepted: `ERROR_BUSY`, `ERROR_LIMITER_UNAVAILABLE`,
-        `ERROR_CODE_STORE_UNAVAILABLE` or `ERROR_SESSION_STORE_UNAVAILABLE`. Retry after `Retry-After`.
+        `ERROR_CODE_STORE_UNAVAILABLE` or `ERROR_SESSION_STORE_UNAVAILABLE`; or, on resend-verification only, the mail provider could not take the message
+        (`ERROR_MAIL_UNAVAILABLE`). Retry after `Retry-After`.
       headers:
         Retry-After:
           description: Seconds to wait before retrying.

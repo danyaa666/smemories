@@ -64,3 +64,17 @@ func TestStatusClass(t *testing.T) {
 		}
 	}
 }
+
+// T-021: the failed-email counter is exported with the class label.
+func TestMailSendFailuresAreExported(t *testing.T) {
+	m := New()
+	m.MailSendFailed("unavailable")
+	m.MailSendFailed("unavailable")
+	m.MailSendFailed("rejected")
+	out := scrape(t, m)
+	for _, want := range []string{`smem_mail_send_failures_total{class="unavailable"} 2`, `smem_mail_send_failures_total{class="rejected"} 1`} {
+		if !strings.Contains(out, want) {
+			t.Errorf("scrape lacks %q", want)
+		}
+	}
+}

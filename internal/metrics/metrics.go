@@ -25,6 +25,7 @@ type Metrics struct {
 	duration    *prometheus.HistogramVec
 	inFlight    prometheus.Gauge
 	rateLimited *prometheus.CounterVec
+	mailFailed  *prometheus.CounterVec
 }
 
 // New returns a registry with the Go runtime and process collectors and the HTTP and rate-limit instruments.
@@ -42,9 +43,12 @@ func New() *Metrics {
 		rateLimited: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Namespace: namespace, Subsystem: "ratelimit", Name: "rejected_total", Help: "Requests refused by a rate limiter, by limiter name.",
 		}, []string{"limiter"}),
+		mailFailed: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Namespace: namespace, Name: "mail_send_failures_total", Help: "Emails that could not be sent after the retries, by class (unavailable, rejected, other).",
+		}, []string{"class"}),
 	}
 	m.reg.MustRegister(collectors.NewGoCollector(), collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
-		m.duration, m.inFlight, m.rateLimited)
+		m.duration, m.inFlight, m.rateLimited, m.mailFailed)
 	return m
 }
 
@@ -67,6 +71,9 @@ func (m *Metrics) ObserveRequest(method, route string, status int, d time.Durati
 
 // RateLimited counts one rejection by the limiter called name (a constant chosen in code).
 func (m *Metrics) RateLimited(name string) { m.rateLimited.WithLabelValues(name).Inc() }
+
+// MailSendFailed counts one email given up on; class is one of mailer.ClassUnavailable, ClassRejected, ClassOther.
+func (m *Metrics) MailSendFailed(class string) { m.mailFailed.WithLabelValues(class).Inc() }
 
 // Gauge exports fn as a gauge read at scrape time.
 func (m *Metrics) Gauge(name, help string, fn func() float64) {

@@ -27,6 +27,8 @@ func prodBase() map[string]string {
 		"SMEM_PUBLIC_BASE_URL":  "https://app.example.com",
 		"SMEM_OTP_KEY":          secOTP,
 		"SMEM_S3_BUCKET":        "smemories-prod",
+		"SMEM_MAIL_PROVIDER":    "ses",
+		"SMEM_MAIL_FROM":        "SMemories <no-reply@mail.smemories.io>",
 		"SMEM_TRUST_PROXY":      "true",
 		"SMEM_MEMORY_LIMIT_MIB": "1638",
 	}
@@ -59,6 +61,8 @@ func TestProdContractValid(t *testing.T) {
 		"metrics on localhost":             with("SMEM_METRICS_ADDR", "localhost:9090"),
 		"metrics on a private address":     with("SMEM_METRICS_ADDR", "10.0.1.5:9090"),
 		"metrics on all interfaces, opted": with("SMEM_METRICS_ADDR", "0.0.0.0:9090", "SMEM_METRICS_ALLOW_ANY_INTERFACE", "true"),
+		"bare from address":                with("SMEM_MAIL_FROM", "no-reply@mail.smemories.io"),
+		"configuration set":                with("SMEM_SES_CONFIGURATION_SET", "smem-prod"),
 		"google on with a strong key":      with("SMEM_GOOGLE_CLIENT_ID", "id", "SMEM_GOOGLE_CLIENT_SECRET", "s", "SMEM_OIDC_COOKIE_KEY", secOIDC),
 	} {
 		if _, err := Load(exact(m)); err != nil {
@@ -98,6 +102,15 @@ func TestProdContractRefusals(t *testing.T) {
 		{"no bucket", with("SMEM_S3_BUCKET", ""), "SMEM_S3_BUCKET"},
 		{"access key without secret", with("SMEM_S3_ACCESS_KEY", "k"), "SMEM_S3_ACCESS_KEY"},
 		{"secret without access key", with("SMEM_S3_SECRET_KEY", secS3), "SMEM_S3_SECRET_KEY"},
+		{"log mailer", with("SMEM_MAIL_PROVIDER", "log"), "SMEM_MAIL_PROVIDER"},
+		{"no mail provider", with("SMEM_MAIL_PROVIDER", ""), "SMEM_MAIL_PROVIDER"},
+		{"unknown mail provider", with("SMEM_MAIL_PROVIDER", "sendgrid"), "SMEM_MAIL_PROVIDER"},
+		{"no sender", with("SMEM_MAIL_FROM", ""), "SMEM_MAIL_FROM"},
+		{"malformed sender", with("SMEM_MAIL_FROM", "SMemories no-reply"), "SMEM_MAIL_FROM"},
+		{"sender on example.com", with("SMEM_MAIL_FROM", "no-reply@example.com"), "SMEM_MAIL_FROM"},
+		{"sender on a subdomain of example.org", with("SMEM_MAIL_FROM", "SMemories <no-reply@mail.Example.ORG>"), "SMEM_MAIL_FROM"},
+		{"sender on .test", with("SMEM_MAIL_FROM", "no-reply@smemories.test"), "SMEM_MAIL_FROM"},
+		{"sender on localhost", with("SMEM_MAIL_FROM", "no-reply@localhost"), "SMEM_MAIL_FROM"},
 		{"dev fixed code", with("SMEM_DEV_FIXED_OTP", "123123"), "SMEM_DEV_FIXED_OTP"},
 		{"no memory limit", with("SMEM_MEMORY_LIMIT_MIB", ""), "SMEM_MEMORY_LIMIT_MIB"},
 		{"metrics on 0.0.0.0", with("SMEM_METRICS_ADDR", "0.0.0.0:9090"), "SMEM_METRICS_ADDR"},
@@ -123,6 +136,36 @@ func TestProdContractRefusals(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// The mail settings outside prod: the log mailer needs nothing, ses needs a well-formed sender, an example domain is fine in dev.
+func TestMailSettingsOutsideProd(t *testing.T) {
+	dev := func(kv ...string) map[string]string {
+		return with(append([]string{"SMEM_ENV", "dev", "SMEM_DB_DSN", "app:p@tcp(db:3306)/d", "SMEM_REDIS_URL", "redis://127.0.0.1:6379/0",
+			"SMEM_ALLOWED_ORIGINS", "http://localhost:5173", "SMEM_PUBLIC_BASE_URL", "http://localhost:5173", "SMEM_MEMORY_LIMIT_MIB", "",
+			"SMEM_MAIL_PROVIDER", "", "SMEM_MAIL_FROM", ""}, kv...)...)
+	}
+	cfg, err := Load(exact(dev()))
+	if err != nil || cfg.MailProvider != "" {
+		t.Fatalf("default: %v %q", err, cfg.MailProvider)
+	}
+	if _, err := Load(exact(dev("SMEM_MAIL_PROVIDER", "log"))); err != nil {
+		t.Errorf("log: %v", err)
+	}
+	if cfg, err = Load(exact(dev("SMEM_MAIL_PROVIDER", "ses", "SMEM_MAIL_FROM", "no-reply@example.com", "SMEM_SES_CONFIGURATION_SET", "x"))); err != nil || cfg.MailFrom == "" || cfg.SESConfigurationSet != "x" {
+		t.Errorf("ses on an example domain in dev: %v", err)
+	}
+	if _, err := Load(exact(dev("SMEM_MAIL_PROVIDER", "ses"))); err == nil || !strings.Contains(err.Error(), "SMEM_MAIL_FROM") {
+		t.Errorf("ses without a sender: %v", err)
+	}
+}
+
+// The one-off tasks do not read mail settings.
+func TestMailSettingsNotNeededByOneOffTasks(t *testing.T) {
+	task := map[string]string{"SMEM_ENV": "prod", "SMEM_DB_DSN": prodBase()["SMEM_DB_DSN"], "SMEM_S3_BUCKET": "smemories-prod"}
+	if _, err := LoadMigrate(exact(task)); err != nil {
+		t.Fatal(err)
 	}
 }
 

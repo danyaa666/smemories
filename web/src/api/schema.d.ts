@@ -129,7 +129,7 @@ export interface paths {
         put?: never;
         /**
          * Send a new verification code to the signed-in user
-         * @description Called by the "send a new code" button. At most 3 per hour per user (`ERROR_RATE_LIMITED` with `Retry-After`). The new code replaces the previous one, which stops working. A user whose address is already verified gets `already_verified: true` and nothing is sent. A mailer failure is `ERROR_INTERNAL` and is logged without the code. Takes no body. A request with the session cookie must come from an allowed Origin.
+         * @description Called by the "send a new code" button. At most 3 per hour per user (`ERROR_RATE_LIMITED` with `Retry-After`). The new code replaces the previous one, which stops working. A user whose address is already verified gets `already_verified: true` and nothing is sent. This is the one endpoint that waits for the mail provider (at most 10 seconds): a provider that is throttling or down is `ERROR_MAIL_UNAVAILABLE` (503 with `Retry-After`; the try is not counted), and an address the provider refuses is `ERROR_EMAIL_UNDELIVERABLE` (400, the address is the caller's own). Registration and forgot-password send in the background and never wait. Takes no body. A request with the session cookie must come from an allowed Origin.
          */
         post: operations["resendVerification"];
         delete?: never;
@@ -1564,7 +1564,7 @@ export interface components {
                 "application/json": components["schemas"]["ApiError"];
             };
         };
-        /** @description A Redis-backed store or the hashing pool could not serve the request, so it failed closed and nothing was accepted: `ERROR_BUSY`, `ERROR_LIMITER_UNAVAILABLE`, `ERROR_CODE_STORE_UNAVAILABLE` or `ERROR_SESSION_STORE_UNAVAILABLE`. Retry after `Retry-After`. */
+        /** @description A Redis-backed store or the hashing pool could not serve the request, so it failed closed and nothing was accepted: `ERROR_BUSY`, `ERROR_LIMITER_UNAVAILABLE`, `ERROR_CODE_STORE_UNAVAILABLE` or `ERROR_SESSION_STORE_UNAVAILABLE`; or, on resend-verification only, the mail provider could not take the message (`ERROR_MAIL_UNAVAILABLE`). Retry after `Retry-After`. */
         ApiAuthUnavailable: {
             headers: {
                 /** @description Seconds to wait before retrying. */
@@ -1805,6 +1805,7 @@ export interface operations {
                     "application/json": components["schemas"]["ResendVerificationResponse"];
                 };
             };
+            400: components["responses"]["ApiBadRequest"];
             401: components["responses"]["ApiUnauthorized"];
             403: components["responses"]["ApiForbidden"];
             415: components["responses"]["ApiUnsupportedMediaType"];
