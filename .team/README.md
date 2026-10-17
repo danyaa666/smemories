@@ -10,8 +10,9 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 11 | T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050 |
-| QA_PASS | 1 | T-061 |
+| BACKLOG | 10 | T-020, T-021, T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050 |
+| TODO | 1 | T-022 |
+| CHANGES_REQUESTED | 1 | T-061 |
 | MERGED | 6 | T-032, T-059, T-060, T-072, T-079, T-085 |
 | DONE | 59 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-028, T-030, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-073, T-074, T-075, T-076, T-077, T-078, T-080, T-081, T-082, T-083 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
@@ -20,7 +21,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-032 (Approve merge of T-061 (template picker, print guide, public print-feedback counter, PR #71)?)
 
-_Board last written 2026-10-16 23:48Z_
+_Board last written 2026-10-17 00:13Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -1359,7 +1360,7 @@ Replace LogMailer with a real provider (SES is the natural fit on AWS) including
 #### Comments
 
 ### T-022 — [E06] Dockerfile, production config and migrations as a one-off task
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** infra
 - **Milestone:** M2
@@ -1370,8 +1371,8 @@ Replace LogMailer with a real provider (SES is the natural fit on AWS) including
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
-- **Comments-seen:** 1
+- **Updated:** 2026-10-17 00:13Z by leader
+- **Comments-seen:** 2
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E06-go-live/02-dockerfile-production-config-and-migrations.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1381,6 +1382,7 @@ Multi-stage Dockerfile (distroless or alpine, non-root), production config valid
 
 #### Comments
 - 2026-10-07 06:42Z · leader · Leader note from the T-004 review: go.mod says go 1.26.0, and govulncheck reports 11 reachable standard-library vulnerabilities at that exact patch. CI therefore builds with the newest 1.26 patch (board L-10). The Dockerfile must do the same: base image on the newest golang:1.26 patch, never an old pinned patch, and rebuild regularly (Dependabot's docker ecosystem should watch it).
+- 2026-10-17 00:13Z · leader · Full spec written 2026-10-17 (image, read-only rootfs, graceful shutdown, prod config contract, S3 default credential chain + timeouts, migrate one-off with lock + schema-version check, Trivy/SBOM/smoke job). No AWS account needed. Risk high: owner approval before merge. Read the leader notes below the spec as well.
 
 ### T-023 — [E06] AWS infrastructure as code and deploy pipeline
 - **Status:** BACKLOG
@@ -2834,19 +2836,19 @@ Navy and gold canvas as the second HTML template.
 - 2026-10-16 23:35Z · leader · merged 8f1f885 (PR #70). Review: web template navy-classic + manifest; the profile text loss in print fixed at the cause (px paragraph heights), 18 new profile-at-maximum print-check cases (49/49); QA reproduced the old failure, verified ~20 profile cases at A5/A4/Letter (worst font 10.9 pt at Letter), short profiles print byte-identical to before, memory-book and basic unaffected; CI green on the same head. Known: a name of ~80-100 characters hits the 9 pt floor and is cut inside its box (counted on the print screen); the public form still offers 'Add photo' for navy-classic although friends' photos are not printed. For owner to check: after T-061 lands, pick navy-classic and print; samples docs/templates/navy-classic-*; Vietnamese strings bookPages.navy.* (Khóa, Vài điều về mình, Để lại đôi lời, Lưu bút, Tạm biệt, Tạm biệt khóa {{year}}).
 
 ### T-061 — [E05] Web: template picker and print screen with device guidance
-- **Status:** QA_PASS
+- **Status:** CHANGES_REQUESTED
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
 - **Depends-on:** T-058, T-059
 - **Risk:** high
-- **Rework:** 0
+- **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** leader
+- **Assignee:** —
 - **Branch:** task/t-061-e05-web-template-picker-and-print-screen
 - **PR:** https://github.com/danyaa666/smemories/pull/71
-- **Updated:** 2026-10-16 23:16Z by qa
-- **Comments-seen:** 4
+- **Updated:** 2026-10-17 00:13Z by leader
+- **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E05-templates-export/12-template-picker-and-print-screen.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2876,6 +2878,7 @@ Pick a template for the page size, print with per-browser guidance, anonymous wo
   9. Vietnamese strings are listed in the PR description for the owner (title "Cai dat in cho thiet bi cua ban", steps etc.). Possible wording check: Chrome's Vietnamese UI may call "Destination" something other than "May in".
   Cleaned up: my API, Vite, private DB smem_test_qa061, Redis db 9 keys, throwaway valkey container; no .team files in the PR.
 - 2026-10-16 23:16Z · leader · Leader review OK on c7a8fd1: counter table holds only (browser_family, verdict, hits) with one upsert (exactly 1200 hits under 1200 concurrent writes), no read route, strict body + enum validation, 30/h per IP then 429, template_id validated against the registry in the Service, ERROR_INVALID_TEMPLATE; web-only picker/guide reuse T-058/T-059. The two non-blocking QA findings are accepted by policy: the Origin check is auth.Guard like every public route (403 only with a session cookie) and the rate limiter fails open with an ERROR log (docs/redis.md: only sessions and OTP attempts fail closed; the counter is non-critical). CI green, QA_PASS on the same head. Waiting for owner approval (Risk high). Owner to check after merge: run make migrate (new table print_feedback_tab), /yearbooks/<id>/book (picker, print guide, feedback question), and the Vietnamese strings in the PR description.
+- 2026-10-17 00:13Z · leader · PR #71 now CONFLICTS with develop (T-060, T-085 and T-032 merged after QA). Merge develop into the branch, keep both sides, and note that T-085 added auth.MustUser (every handler that reads the signed-in user must use it instead of auth.UserFrom: the new templateapi and printfeedback handlers, and any yearbook update path you touched) plus must_user_test.go per package; re-run the full gates and print-check; the picker must now also list navy-classic (T-060 merged: its manifest and component are on develop). Then READY_FOR_QA; QA will re-test the merged state.
 
 ### T-062 — [E01] CI: get the newest Go patch straight from go.dev (no manifest lag)
 - **Status:** DONE
