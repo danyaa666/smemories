@@ -11,6 +11,7 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 9 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091 |
+| TODO | 3 | T-092, T-093, T-094 |
 | DONE | 74 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
@@ -18,7 +19,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-032 (Approve merge of T-061 (template picker, print guide, public print-feedback counter, PR #71)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-035 (Approve merge of T-022 slice 1 (production Dockerfile, graceful shutdown, image smoke test, PR #74)?); Q-036 (Approve merge of T-086 slice (a): production config contract and S3 default credential chain (PR #78, adds the AWS SDK config module)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-038 (Approve merge of T-088: smemories-migrate advisory lock and API schema-version check (PR #80)?); Q-039 (Approve merge of T-089: image scan (Trivy + SBOM), secret hygiene and config hardening (PR #81)?); Q-040 (Approve merge of T-021: Amazon SES mailer behind a provider-neutral interface (PR #82)?); Q-041 (Phase 1 is code-complete. What should the team do next?)
 
-_Board last written 2026-10-18 14:14Z_
+_Board last written 2026-10-19 04:10Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -518,6 +519,7 @@ Owner decisions (2026-10-06, `/team-init` interview). "Rejected" lists the optio
 | D-29 | **Transactional email goes through Amazon SES (SESv2 API), sent from a verified subdomain.** | Owner answer in chat 2026-10-17 (Q-033, leader recommended it): same AWS account as D-08, about 0.10 USD per 1000 emails, DKIM/SPF/DMARC records, bounce and complaint feedback through SNS. A new SES account starts in the sandbox: leaving it is a one-time request the owner files. Volume is tiny (6-digit codes). The sending domain is still to be given by the owner (Q-037). | Resend; Postmark | Volume or deliverability outgrow SES, or the owner prefers another vendor |
 | D-30 | **The repository stays unlicensed (all rights reserved) for now.** | Owner answer in chat 2026-10-17 (Q-034, option A, as recommended). The repo is public (D-09) but no LICENSE file is added; third-party licences stay in THIRD_PARTY_NOTICES.md. The container image label says `LicenseRef-All-Rights-Reserved` instead of NOASSERTION (T-089). | MIT; Apache-2.0; AGPL-3.0 | The owner decides to let others run or fork SMemories |
 | D-31 | **Anything that needs a real domain or AWS credentials is built and tested against local stubs first and verified live only in a final go-live phase, after the first phase (M1 plus the go-live code work) is complete.** | Owner instruction in chat 2026-10-17 (answer to Q-037). Dev and QA keep working without an AWS account or a domain. Deferred to the go-live phase: T-023 (AWS infrastructure and deploy pipeline), T-024 (observability on AWS), T-025 (backups and restore drill on AWS), T-031 (auth hardening that needs the infrastructure), the live verification of T-021 (real SES: domain identity, DNS records, sandbox exit), T-050 (removing the dev shortcut, which e2e and local development still use until then), the domain, the AWS region and the first deploy. The order of the phase is in the E06 PRD ("Live verification phase"). | Doing T-023 now with a throwaway account | Phase 1 is code-complete and the owner gives the domain, the AWS account and the region |
+| D-32 | **The plain-text export of a book gives every photo as a permanent public link (no sign-in), made unguessable, revocable and limited to approved content.** | Owner answer in chat 2026-10-19 (AskUserQuestion; the leader had recommended owner-only links and warned that photos are friends' personal data, so the owner chose convenience knowingly). Conditions the leader added so the choice stays safe: link = media id + 128-bit HMAC with a server secret and a per-book `link_epoch`; the owner can switch all links of a book off (`revoke-photo-links`); a link stops working when the note is hidden or deleted, or the photo or book is deleted; only the re-encoded `display` variant without EXIF is served; `noindex`, no referrer, rate limits; the token is never logged; a warning dialog before the first export. Remaining exposure the owner accepted: anyone holding a link can open that photo until the owner revokes it, and caches may serve a revoked link for up to 5 minutes. Open recommendation, not yet decided: a one-line notice on the public friend form that the owner may share photos by link. Tasks: T-092 (links API, risk high), T-093 (text export API), T-094 (web). | Owner-only links (leader recommendation); expiring signed links | A real complaint about a shared link, a school or class pilot (D-01 minors rule), or a wish for per-photo revoke / expiry |
 
 Leader decisions (low-risk, inside the approved stack):
 
@@ -4222,6 +4224,63 @@ Spec: .team/epics/E06-go-live/10-migrate-docs-and-smoke-robustness.md (read it f
 - **Comments-seen:** 0
 
 Small leftovers from the T-090 QA: (1) scripts/image-smoke.sh: when SMOKE_TIMEOUT fires it exits 143 with no FAIL message and leaves an orphaned sleep holding the pipe open (make image-smoke | tail hangs): print a FAIL line naming the step, kill the child by PID and exit 1. (2) Mail failures of class config are retried 3 times in the background: do not retry them (a misconfiguration will not fix itself in seconds). (3) The message '1 migrations' should read '1 migration'. (4) Add to the T-024 notes: alarm on the ERROR log line for request-path resend failures too, since the metric counts background sends only. Acceptance: each item has a test or a visible check; make lint build test, integration tests and make image-smoke stay green.
+
+#### Comments
+
+### T-092 — [E05] Public photo links: signed token, public-media endpoint, revoke-all (API)
+- **Status:** TODO
+- **Priority:** P1
+- **Type:** feature
+- **Milestone:** M1
+- **Depends-on:** —
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-19 04:10Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E05-templates-export/14-public-photo-links-api.md (read it from the repo root). Decision D-32: the owner chose permanent public photo links; this task adds the HMAC token, GET /api/public-media/get-content, POST /api/yearbook/revoke-photo-links and the SMEM_MEDIA_LINK_SECRET config. Risk high: owner approves the merge.
+
+#### Comments
+
+### T-093 — [E05] Book as plain text with photo links (API)
+- **Status:** TODO
+- **Priority:** P1
+- **Type:** feature
+- **Milestone:** M1
+- **Depends-on:** T-092
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-19 04:10Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E05-templates-export/15-book-text-export-api.md. GET /api/book-export/get-text builds the UTF-8 text (profile, approved notes, public photo links from T-092), en/vi labels, no silent cut.
+
+#### Comments
+
+### T-094 — [E05] Web: Export as text on the print screen, public-link warning, disable links
+- **Status:** TODO
+- **Priority:** P1
+- **Type:** feature
+- **Milestone:** M1
+- **Depends-on:** T-092, T-093
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-19 04:10Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E05-templates-export/16-book-text-export-web.md. Download and copy buttons, one-time public-link warning dialog, Disable photo links, e2e step with an anonymous link fetch and revoke.
 
 #### Comments
 
