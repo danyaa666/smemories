@@ -11,15 +11,16 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 9 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091 |
-| TODO | 3 | T-092, T-093, T-094 |
+| TODO | 2 | T-093, T-094 |
+| IN_PROGRESS | 1 | T-092 |
 | DONE | 74 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
 **Awaiting your review (MERGED):** nothing
 
-**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-032 (Approve merge of T-061 (template picker, print guide, public print-feedback counter, PR #71)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-035 (Approve merge of T-022 slice 1 (production Dockerfile, graceful shutdown, image smoke test, PR #74)?); Q-036 (Approve merge of T-086 slice (a): production config contract and S3 default credential chain (PR #78, adds the AWS SDK config module)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-038 (Approve merge of T-088: smemories-migrate advisory lock and API schema-version check (PR #80)?); Q-039 (Approve merge of T-089: image scan (Trivy + SBOM), secret hygiene and config hardening (PR #81)?); Q-040 (Approve merge of T-021: Amazon SES mailer behind a provider-neutral interface (PR #82)?); Q-041 (Phase 1 is code-complete. What should the team do next?)
+**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?)
 
-_Board last written 2026-10-19 04:10Z_
+_Board last written 2026-10-19 04:11Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -403,7 +404,7 @@ Small CI-file change (go-integration timeout-minutes 15 -> 40) plus 'make test-i
 - **Answer:** approved by owner via team approve T-081 (merged 5cfe240, accepted)
 
 ### Q-032 — Approve merge of T-061 (template picker, print guide, public print-feedback counter, PR #71)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-16 23:16Z
 - **Blocks:** T-061
 - **Recommendation:** approve
@@ -428,14 +429,14 @@ Context: the API can only log codes today (LogMailer); production needs a real m
 Context: github.com/danyaa666/smemories is public (D-09) but has no LICENSE file, which legally means nobody may reuse the code. The container image label shows NOASSERTION (T-022). Options: A) none, all rights reserved (current) - safest while the business model is open; B) MIT - permissive, anyone can reuse and sell it; C) Apache-2.0 - permissive with a patent grant; D) AGPL-3.0 - copyleft, a hosted copy must publish its changes. Third-party font licences (OFL) are already tracked in THIRD_PARTY_NOTICES.md. Recommendation: A until you decide whether you want others to run or fork SMemories. Not blocking anything.
 
 ### Q-035 — Approve merge of T-022 slice 1 (production Dockerfile, graceful shutdown, image smoke test, PR #74)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-17 01:02Z
 - **Blocks:** T-022
 - **Recommendation:** approve
 - **Answer:** _(pending)_
 
 ### Q-036 — Approve merge of T-086 slice (a): production config contract and S3 default credential chain (PR #78, adds the AWS SDK config module)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-17 09:21Z
 - **Blocks:** T-086
 - **Recommendation:** approve
@@ -451,28 +452,28 @@ Context: github.com/danyaa666/smemories is public (D-09) but has no LICENSE file
 Context: Amazon SES (D-29) needs a verified domain to send from, with DKIM/SPF/DMARC records, and the AWS deployment (T-023) needs the public hostname and an HTTPS certificate. Needed from you: (1) the domain name (do you own one yet, which? or shall I list cheap registrar options when you want to buy one), (2) who can edit its DNS records (you, a registrar panel, or Route 53 in the AWS account), (3) the AWS account/region you want (default recommendation: ap-southeast-1 Singapore for Vietnam users, or us-east-1; your call), (4) that you will file the one-time SES request to leave the sandbox when T-021 is ready (about a day). None of this blocks the code: T-021 builds the SES mailer against a local stub first.
 
 ### Q-038 — Approve merge of T-088: smemories-migrate advisory lock and API schema-version check (PR #80)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-17 13:39Z
 - **Blocks:** T-088
 - **Recommendation:** approve
 - **Answer:** _(pending)_
 
 ### Q-039 — Approve merge of T-089: image scan (Trivy + SBOM), secret hygiene and config hardening (PR #81)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-17 13:56Z
 - **Blocks:** T-089
 - **Recommendation:** approve
 - **Answer:** _(pending)_
 
 ### Q-040 — Approve merge of T-021: Amazon SES mailer behind a provider-neutral interface (PR #82)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-17 14:28Z
 - **Blocks:** T-021
 - **Recommendation:** approve
 - **Answer:** _(pending)_
 
 ### Q-041 — Phase 1 is code-complete. What should the team do next?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-17 16:47Z
 - **Blocks:** —
 - **Recommendation:** A: open the go-live phase now, then M1b
@@ -4228,7 +4229,7 @@ Small leftovers from the T-090 QA: (1) scripts/image-smoke.sh: when SMOKE_TIMEOU
 #### Comments
 
 ### T-092 — [E05] Public photo links: signed token, public-media endpoint, revoke-all (API)
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -4236,10 +4237,10 @@ Small leftovers from the T-090 QA: (1) scripts/image-smoke.sh: when SMOKE_TIMEOU
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-092-e05-public-photo-links-signed-token-publ
 - **PR:** —
-- **Updated:** 2026-10-19 04:10Z by leader
+- **Updated:** 2026-10-19 04:10Z by dev
 - **Comments-seen:** 0
 
 Spec: .team/epics/E05-templates-export/14-public-photo-links-api.md (read it from the repo root). Decision D-32: the owner chose permanent public photo links; this task adds the HMAC token, GET /api/public-media/get-content, POST /api/yearbook/revoke-photo-links and the SMEM_MEDIA_LINK_SECRET config. Risk high: owner approves the merge.
