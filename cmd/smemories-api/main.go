@@ -21,6 +21,7 @@ import (
 	"github.com/danyaa666/smemories/internal/httpx"
 	"github.com/danyaa666/smemories/internal/mailer"
 	"github.com/danyaa666/smemories/internal/media"
+	"github.com/danyaa666/smemories/internal/medialink"
 	"github.com/danyaa666/smemories/internal/metrics"
 	"github.com/danyaa666/smemories/internal/notes"
 	"github.com/danyaa666/smemories/internal/printfeedback"
@@ -154,15 +155,26 @@ func main() {
 		os.Exit(1)
 	}
 	mediaSvc := media.NewService(media.NewStore(d), store, cfg.MediaMaxConcurrent, limiters, nil)
+	linkSigner, ok := medialink.New(cfg.MediaLinkSecret)
+	if !ok { // config.Load already refused a short secret; this is a programming error
+		logger.Error("public photo link setup failed")
+		os.Exit(1)
+	}
+	mediaSvc.SetPublicLinks(linkSigner)
+	if cfg.MediaLinkSecretRandom {
+		logger.Warn("SMEM_MEDIA_LINK_SECRET is not set: using a random per-process secret, photo links stop working when the API restarts")
+	}
 	cursors := httpx.NewCursors(cfg.OTPKey)
 	mt.Gauge("media_processing_slots_in_use", "Images being processed now.", func() float64 { return float64(mediaSvc.SlotsInUse()) })
 	mt.Gauge("media_processing_slots", "Images that can be processed at once (SMEM_MEDIA_MAX_CONCURRENT).", func() float64 { return float64(mediaSvc.Slots()) })
 	mediaH := media.NewHandler(mediaSvc, cfg.MediaMaxBytes, authH.RequireUser, cfg.AllowedOrigins, cursors, logger)
+	mediaH.SetPublicCounter(mt.PublicMedia)
 	bookStore := yearbook.NewStore(d)
 	notesStore := notes.NewStore(d)
 	notesSvc := notes.NewService(notesStore, mediaSvc, cursors, limiters, logger, nil)
 	mediaSvc.SetRefClearer(bookStore, notesSvc) // the yearbook store first: it locks the photo's book
 	bookSvc := yearbook.NewService(bookStore, cursors, mediaSvc, nil, mediaSvc, notesSvc)
+	bookSvc.SetLimiters(limiters)
 	bookH := yearbook.NewHandler(bookSvc, authH.RequireUser, cfg.AllowedOrigins)
 	bookDataH := bookdata.NewHandler(bookdata.NewService(bookSvc, notesSvc), authH.RequireUser)
 	templateH := templateapi.NewHandler(authH.RequireUser)
