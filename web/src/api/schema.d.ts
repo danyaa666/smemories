@@ -358,6 +358,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/yearbook/revoke-photo-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Switch off every public photo link of a yearbook
+         * @description Called by the signed-in owner (the export screen, T-094). Raises the book's link epoch by one, atomically, so every public photo link made before (`GET /api/public-media/get-content`) stops working at once; links made afterwards carry the new epoch. It cannot be undone and there is no way to revoke a single photo. A shared cache may still serve a photo for up to 5 minutes after the call. The book's `updated_at` is not changed. A book that does not exist and someone else's both answer `ERROR_NOT_FOUND`; a missing `id` and unknown fields are `ERROR_PARAM`. Limited to 10 calls per hour per user (`ERROR_RATE_LIMITED`, with `Retry-After`; fails open when Redis is down). A request with the session cookie must come from an allowed Origin.
+         */
+        post: operations["revokeYearbookPhotoLinks"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/yearbook/delete": {
         parameters: {
             query?: never;
@@ -652,6 +672,26 @@ export interface paths {
          * @description Called by the print screen after the owner printed: one anonymous answer, yes or no, for the browser family the guide was chosen for. Public: no session is needed and none is read. The server only adds one to a counter per (`browser_family`, `verdict`); it stores no user, book, IP address or user agent. At most 30 answers per client IP per hour (`ERROR_RATE_LIMITED` with `Retry-After`; the limiter fails open if Redis is down). The body is strict: any other field, a value outside the enums or a body that is not a JSON object is `ERROR_PARAM`. A request that carries a session cookie must come from an allowed Origin. Not idempotent (each call counts once); the web sends it once per click and never retries a 4xx.
          */
         post: operations["createPrintFeedback"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/public-media/get-content": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Open a photo through a public link (public)
+         * @description Called by anyone who holds a photo link, for example from the plain-text export of a book (T-093); there is no session and none is read, no cookie is set and no CORS headers are sent. The `token` is `<photo id>.<22-character signature>` and is a **bearer secret** (decision D-32): it is never logged (the access log records the route only), never put in an error and never used as a metric label. A link works while three things hold: the signature matches the photo, its book and the book's current link epoch (the owner raises the epoch with `POST /api/yearbook/revoke-photo-links`, which ends every earlier link of that book at once); the photo is the cover or the profile photo of its book, or belongs to an `approved` note of that book; and the photo, the note and the book still exist. Hiding or deleting the note stops its photos at once. **Every other case** (missing, malformed or oversized `token`, unknown photo, wrong signature, old epoch, pending, hidden or deleted note, deleted book or photo, a photo no one refers to) answers the same `404 ERROR_NOT_FOUND` with the same body, so nothing can be learned by guessing. Binary on success, no envelope: the `display` version only (the re-encoded image, 3000 px at most, without EXIF, GPS or other metadata; never the original and never another size). `Content-Type` comes from the stored record; `X-Content-Type-Options: nosniff`, `Content-Disposition: inline`, `X-Robots-Tag: noindex, nofollow`, `Referrer-Policy: no-referrer` and `Cross-Origin-Resource-Policy: cross-origin` are always set. `Cache-Control: public, max-age=300`: a shared cache or CDN may keep serving a revoked or unshared photo for up to 5 minutes. Honours `HEAD`, `Range` (206) and `If-None-Match` (304); a refused link is never answered 304. Limits per client IP: 60 requests that find nothing per 15 minutes (only misses count, so a good link never uses this budget) and 600 requests of any kind per 15 minutes; both answer `ERROR_RATE_LIMITED` with `Retry-After`, and both let the request through when Redis is down. The route may take up to 2 minutes for a slow client.
+         */
+        get: operations["getPublicMediaContent"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -977,6 +1017,10 @@ export interface components {
         };
         YearbookDeleteRequest: {
             /** @description Required. ULID of the yearbook to delete. */
+            id: string;
+        };
+        YearbookRevokePhotoLinksRequest: {
+            /** @description Required. ULID of the yearbook whose public photo links are switched off. */
             id: string;
         };
         /** @description A stored photo. Carries no storage key, hash or URL; the client builds the content URL from `id`. */
@@ -2144,6 +2188,39 @@ export interface operations {
             503: components["responses"]["ApiSessionStoreUnavailable"];
         };
     };
+    revokeYearbookPhotoLinks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["YearbookRevokePhotoLinksRequest"];
+            };
+        };
+        responses: {
+            /** @description Every earlier link is off. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmptyResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            429: components["responses"]["ApiRateLimited"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
     deleteYearbook: {
         parameters: {
             query?: never;
@@ -2644,6 +2721,69 @@ export interface operations {
             415: components["responses"]["ApiUnsupportedMediaType"];
             429: components["responses"]["ApiRateLimited"];
             500: components["responses"]["ApiInternal"];
+        };
+    };
+    getPublicMediaContent: {
+        parameters: {
+            query: {
+                /** @description The link token, `<26-character photo ULID>.<22 base64url characters>`. A bearer secret. */
+                token: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The image bytes. Not an envelope. */
+            200: {
+                headers: {
+                    /** @description Always `public, max-age=300` on success. */
+                    "Cache-Control"?: "public, max-age=300";
+                    /** @description Always `inline`. */
+                    "Content-Disposition"?: "inline";
+                    /** @description Always `nosniff`. */
+                    "X-Content-Type-Options"?: "nosniff";
+                    /** @description Always `noindex, nofollow`. */
+                    "X-Robots-Tag"?: "noindex, nofollow";
+                    /** @description Always `no-referrer`. */
+                    "Referrer-Policy"?: "no-referrer";
+                    /** @description Always `cross-origin`. */
+                    "Cross-Origin-Resource-Policy"?: "cross-origin";
+                    /** @description Per photo content. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/jpeg": string;
+                    "image/png": string;
+                };
+            };
+            /** @description The requested byte range (`Range` request header). */
+            206: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not modified (`If-None-Match` matched a link that is still valid). */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["ApiNotFound"];
+            /** @description Range not satisfiable. */
+            416: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            429: components["responses"]["ApiRateLimited"];
+            500: components["responses"]["ApiInternal"];
+            502: components["responses"]["ApiBadGateway"];
         };
     };
     getPublicCollect: {

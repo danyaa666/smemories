@@ -748,6 +748,53 @@ paths:
         "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
         "500": {$ref: "#/components/responses/ApiInternal"}
         "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/yearbook/revoke-photo-links:
+    post:
+      operationId: revokeYearbookPhotoLinks
+      tags: [yearbook]
+      summary: Switch off every public photo link of a yearbook
+      description: >-
+        Called by the signed-in owner (the export screen, T-094). Raises the book's link epoch by one, atomically, so every public photo link made before
+        (`GET /api/public-media/get-content`) stops working at once; links made afterwards carry the new epoch. It cannot be undone and there is no way to
+        revoke a single photo. A shared cache may still serve a photo for up to 5 minutes after the call. The book's `updated_at` is not changed. A book that
+        does not exist and someone else's both answer `ERROR_NOT_FOUND`; a missing `id` and unknown fields are `ERROR_PARAM`. Limited to 10 calls per hour
+        per user (`ERROR_RATE_LIMITED`, with `Retry-After`; fails open when Redis is down). A request with the session cookie must come from an allowed Origin.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: The yearbook does not exist or belongs to someone else; the two cannot be told apart.}
+        - {code: ERROR_RATE_LIMITED, description: "More than 10 calls in an hour; wait `Retry-After` seconds."}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/YearbookRevokePhotoLinksRequest"}
+            examples:
+              revoke:
+                value: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E}
+      responses:
+        "200":
+          description: Every earlier link is off.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/EmptyResponse"}
+              examples:
+                revoked:
+                  value: {status: OK, data: {}}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "429": {$ref: "#/components/responses/ApiRateLimited"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
   /api/yearbook/delete:
     post:
       operationId: deleteYearbook
@@ -1461,6 +1508,66 @@ paths:
         "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
         "429": {$ref: "#/components/responses/ApiRateLimited"}
         "500": {$ref: "#/components/responses/ApiInternal"}
+  /api/public-media/get-content:
+    get:
+      operationId: getPublicMediaContent
+      tags: [media]
+      summary: Open a photo through a public link (public)
+      description: >-
+        Called by anyone who holds a photo link, for example from the plain-text export of a book (T-093); there is no session and none is read, no cookie
+        is set and no CORS headers are sent. The `token` is `<photo id>.<22-character signature>` and is a **bearer secret** (decision D-32): it is
+        never logged (the access log records the route only), never put in an error and never used as a metric label. A link works while three things hold:
+        the signature matches the photo, its book and the book's current link epoch (the owner raises the epoch with `POST /api/yearbook/revoke-photo-links`,
+        which ends every earlier link of that book at once); the photo is the cover or the profile photo of its book, or belongs to an `approved` note of
+        that book; and the photo, the note and the book still exist. Hiding or deleting the note stops its photos at once. **Every other case** (missing,
+        malformed or oversized `token`, unknown photo, wrong signature, old epoch, pending, hidden or deleted note, deleted book or photo, a photo no one refers
+        to) answers the same `404 ERROR_NOT_FOUND` with the same body, so nothing can be learned by guessing. Binary on success, no envelope: the `display`
+        version only (the re-encoded image, 3000 px at most, without EXIF, GPS or other metadata; never the original and never another size).
+        `Content-Type` comes from the stored record; `X-Content-Type-Options: nosniff`, `Content-Disposition: inline`, `X-Robots-Tag: noindex, nofollow`,
+        `Referrer-Policy: no-referrer` and `Cross-Origin-Resource-Policy: cross-origin` are always set. `Cache-Control: public, max-age=300`: a shared cache
+        or CDN may keep serving a revoked or unshared photo for up to 5 minutes. Honours `HEAD`, `Range` (206) and `If-None-Match` (304); a refused link is
+        never answered 304. Limits per client IP: 60 requests that find nothing per 15 minutes (only misses count, so a good link never uses this budget) and
+        600 requests of any kind per 15 minutes; both answer `ERROR_RATE_LIMITED` with `Retry-After`, and both let the request through when Redis is down.
+        The route may take up to 2 minutes for a slow client.
+      x-auth: public
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: "The link is not valid for any reason; the reasons cannot be told apart."}
+        - {code: ERROR_RATE_LIMITED, description: "Too many requests from this client IP; wait `Retry-After` seconds."}
+        - {code: ERROR_STORAGE_ERROR, description: The object store failed; retry later.}
+      security: []
+      parameters:
+        - {name: token, in: query, required: true, schema: {type: string, maxLength: 128}, description: "The link token, `<26-character photo ULID>.<22 base64url characters>`. A bearer secret."}
+      responses:
+        "200":
+          description: The image bytes. Not an envelope.
+          headers:
+            Cache-Control: {description: "Always `public, max-age=300` on success.", schema: {type: string, const: "public, max-age=300"}}
+            Content-Disposition: {description: "Always `inline`.", schema: {type: string, const: inline}}
+            X-Content-Type-Options: {description: "Always `nosniff`.", schema: {type: string, const: nosniff}}
+            X-Robots-Tag: {description: "Always `noindex, nofollow`.", schema: {type: string, const: "noindex, nofollow"}}
+            Referrer-Policy: {description: "Always `no-referrer`.", schema: {type: string, const: no-referrer}}
+            Cross-Origin-Resource-Policy: {description: "Always `cross-origin`.", schema: {type: string, const: cross-origin}}
+            ETag: {description: "Per photo content.", schema: {type: string}}
+          content:
+            image/jpeg:
+              schema: {type: string, format: binary}
+              examples:
+                jpeg:
+                  summary: The bytes of a JPEG
+                  value: "(binary JPEG bytes)"
+            image/png:
+              schema: {type: string, format: binary}
+              examples:
+                png:
+                  summary: The bytes of a PNG (a photo with transparency)
+                  value: "(binary PNG bytes)"
+        "206": {description: The requested byte range (`Range` request header).}
+        "304": {description: Not modified (`If-None-Match` matched a link that is still valid).}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "416": {description: Range not satisfiable.}
+        "429": {$ref: "#/components/responses/ApiRateLimited"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "502": {$ref: "#/components/responses/ApiBadGateway"}
   /api/public-collect/get:
     get:
       operationId: getPublicCollect
@@ -1921,6 +2028,12 @@ components:
       required: [id]
       properties:
         id: {type: string, description: "Required. ULID of the yearbook to delete."}
+    YearbookRevokePhotoLinksRequest:
+      type: object
+      additionalProperties: false
+      required: [id]
+      properties:
+        id: {type: string, description: "Required. ULID of the yearbook whose public photo links are switched off."}
     Media:
       type: object
       description: A stored photo. Carries no storage key, hash or URL; the client builds the content URL from `id`.
