@@ -12,7 +12,7 @@
 |---|---:|---|
 | BACKLOG | 12 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-095, T-096, T-097 |
 | TODO | 2 | T-093, T-094 |
-| IN_PROGRESS | 1 | T-092 |
+| READY_FOR_QA | 1 | T-092 |
 | DONE | 74 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
@@ -20,7 +20,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?)
 
-_Board last written 2026-10-19 04:19Z_
+_Board last written 2026-10-19 04:31Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4231,7 +4231,7 @@ Small leftovers from the T-090 QA: (1) scripts/image-smoke.sh: when SMOKE_TIMEOU
 #### Comments
 
 ### T-092 — [E05] Public photo links: signed token, public-media endpoint, revoke-all (API)
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -4239,15 +4239,16 @@ Small leftovers from the T-090 QA: (1) scripts/image-smoke.sh: when SMOKE_TIMEOU
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-092-e05-public-photo-links-signed-token-publ
-- **PR:** —
-- **Updated:** 2026-10-19 04:10Z by dev
+- **PR:** https://github.com/danyaa666/smemories/pull/85
+- **Updated:** 2026-10-19 04:31Z by dev
 - **Comments-seen:** 0
 
 Spec: .team/epics/E05-templates-export/14-public-photo-links-api.md (read it from the repo root). Decision D-32: the owner chose permanent public photo links; this task adds the HMAC token, GET /api/public-media/get-content, POST /api/yearbook/revoke-photo-links and the SMEM_MEDIA_LINK_SECRET config. Risk high: owner approves the merge.
 
 #### Comments
+- 2026-10-19 04:31Z · dev · PR #85, head b061020. Requirements 1-8 as specified. QA: run 'make lint test test-integration'; newman postman/public-media.postman_collection.json (needs API with SMEM_MEDIA_LINK_SECRET=<base64>, pass --env-var linkSecret=same, runs twice; make reset-limits before a third run); probes: MAC byte tampering, replay after revoke, note hidden after link handed out, HEAD/Range, log/metrics scraping, dev restart WARN, prod start without the secret. Known gaps: scripts/image-smoke.sh prod refusals not run locally (needs image build); Newman cannot prove 'no cookie sent' (its cookie jar merges), Go tests do; each in-flight request holds up to 10 MiB in memory (same as get-content), no per-process cap. Risk high: owner approves the merge.
 
 ### T-093 — [E05] Book as plain text with photo links (API)
 - **Status:** TODO
