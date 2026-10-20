@@ -11,17 +11,18 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 12 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-095, T-096, T-097 |
-| TODO | 11 | T-093, T-094, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108 |
-| READY_FOR_QA | 2 | T-098, T-099 |
-| QA_PASS | 1 | T-092 |
+| TODO | 10 | T-093, T-094, T-100, T-101, T-102, T-104, T-105, T-106, T-107, T-108 |
+| IN_PROGRESS | 1 | T-103 |
+| READY_FOR_QA | 1 | T-099 |
+| QA_PASS | 2 | T-092, T-098 |
 | DONE | 74 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
 **Awaiting your review (MERGED):** nothing
 
-**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?)
+**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?)
 
-_Board last written 2026-10-20 21:42Z_
+_Board last written 2026-10-20 21:59Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -512,6 +513,15 @@ Security audit finding L6. GitHub says Dependabot alerts are disabled and securi
 - **Answer:** _(pending)_
 
 QA_PASS and leader review OK on b061020. Adds the permanent public photo links you chose (D-32): signed 128-bit token, GET /api/public-media/get-content, POST /api/yearbook/revoke-photo-links, SMEM_MEDIA_LINK_SECRET (prod refuses to start without it), migration adding yearbook_tab.link_epoch. The only red CI job (image) is a pre-existing flaky migrate race also seen on develop; T-108 fixes it. Reply 'team approve T-092' to approve.
+
+### Q-045 — Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?
+- **Status:** OPEN
+- **Asked:** 2026-10-20 21:59Z
+- **Blocks:** T-098
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+QA_PASS and leader review OK on 33737ef, CI green. Rate limits now group IPv6 clients by /64, a new per-account limit stops password guessing after 50 failures in 15 minutes (fail closed), a successful password reset clears that counter, and a WARN appears if the proxy header is trusted from a public peer. Reply 'team approve T-098'.
 
 <!-- questions:end -->
 
@@ -4401,7 +4411,7 @@ Spec: .team/epics/E11-signatures/03-signature-print.md. Next phase.
 #### Comments
 
 ### T-098 — [E12] IPv6 /64 keying and a per-account login limiter
-- **Status:** READY_FOR_QA
+- **Status:** QA_PASS
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
@@ -4409,11 +4419,11 @@ Spec: .team/epics/E11-signatures/03-signature-print.md. Next phase.
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** leader
 - **Branch:** task/t-098-e12-ipv6-64-keying-and-a-per-account-log
 - **PR:** https://github.com/danyaa666/smemories/pull/87
-- **Updated:** 2026-10-20 17:25Z by dev
-- **Comments-seen:** 3
+- **Updated:** 2026-10-20 21:58Z by qa
+- **Comments-seen:** 5
 
 Spec: `.team/epics/E12-security-hardening/01-ipv6-keying-and-account-login-limit.md`. Audit M1: every per-IP limiter keys on the full address, so one IPv6 /64 walks around all of them, and login has no per-account cap. Mask IPv6 to /64 in ResolveClientIP, add a fail-closed per-account failed-login limiter. Risk high: auth.
 
@@ -4421,6 +4431,8 @@ Spec: `.team/epics/E12-security-hardening/01-ipv6-keying-and-account-login-limit
 - 2026-10-20 05:34Z · leader · Leader review 2026-10-20: spec updated (requirement 4 and AC6: a successful password reset clears the account counter; known residual note). Re-read the spec from the repo root before you start.
 - 2026-10-20 16:48Z · leader · Leader 2026-10-20: spec updated again (requirement 1b from audit run 1: canonical address text and a WARN when SMEM_TRUST_PROXY is on behind a public peer). Re-read the spec.
 - 2026-10-20 17:25Z · dev · PR #87 head 33737ef. /64 keying + WARN + login_account limiter (closed, 50/15min) + Limiter.Reset on successful reset-password. Tests: httpx TestClientIP/TestTrustProxyWarns..., auth limiters_integration_test (AC2,3,6), config, ratelimit Reset. Verify: go test -race -tags integration ./..., golangci-lint 0 issues. Not changed: endpoints (no Postman change).
+- 2026-10-20 21:58Z · qa · QA_PASS T-098, PR #87 head 33737ef (CI all green: go, go-integration, e2e, security, image, web; mergeable CLEAN). Own compose project qa098 on ports 23306/26379/29000/29001, taken down (no -v). EVIDENCE: AC1 (ResolveClientIP table) -> go test -race ./internal/httpx PASS, cases incl. /64 same+other, mapped, zone, [::1], upper/long form, v6 and mapped XFF hop, garbage; plus LIVE with SMEM_TRUST_PROXY=true via X-Forwarded-For: 10 failures from 10 spellings/hosts of 2001:db8:1:2::/64 (long form, upper case, :0:0:0: form, many hosts) -> 11th = 429, 11th with zone id = 429, other /64 = 401; 5x 203.0.113.5 + 5x ::ffff:203.0.113.5 / ::FFFF: / 0:0:0:0:0:ffff: spellings -> 11th via ::ffff:cb00:7105 = 429, 203.0.113.6 = 401. AC2 -> LIVE: 50 failures for one email from 50 different /64s = 401 each, 51st = 429 ERROR_RATE_LIMITED + Retry-After 899, right password while locked = 429, other account = 200; integration TestLoginAccountLimitAcrossAddresses, TestSuccessfulLoginsDoNotUseUpTheAccountBudget (49 fails + 5 successes + 50th fail OK, 51st 429) PASS; refund: after a success the account zset stayed at 3. Concurrency: 70 parallel wrong logins from 70 /64s on a limit-50 account = exactly 50x401 + 20x429, zcard 50 (also integration 5/25 test, -count=3 stable). AC3 -> LIVE docker stop redis: right and wrong password both 503 ERROR_LIMITER_UNAVAILABLE + Retry-After 5, recovers to 200 after start; the new limiter alone via TestLoginAccountLimiterFailsClosed PASS (and refunds pair/ip). AC4 -> make lint exit 0 (gofmt, vet x2, golangci-lint, web lint); go test -race ./... PASS; integration (same flags as make test-integration, run directly because the Makefile's .env include overrides the DSN env vars) all packages ok (media/notes/storage re-run with SMEM_TEST_S3_ENDPOINT after my own env mistake); Postman via postman CLI (newman absent): templates 122/0 failed, yearbooks 203/0, media 144/0, notes 141/0 (twice), notes-moderation 164/0, auth 215 assertions with only the 20 Google-folder failures (API has no SMEM_GOOGLE_*; run twice, same result), platform 1 failure = the manual 'readyz with database stopped' step. No endpoint changed so no Postman change expected. AC5 -> TestLoadLoginFailsPerAccount + TestEveryVariableIsDocumented PASS; API startup with =0 and =abc exits with config error naming SMEM_RATE_LOGIN_FAILS_PER_ACCOUNT. AC6 -> LIVE: A locked at 50, B at 3; forgot+reset (email in upper case with spaces) 200, A logs in with the new password at once, A's login_account key deleted, B's key still 3, a wrong-code reset (400) deleted nothing; integration TestPasswordResetClearsTheAccountLoginCounter PASS. Oversize email: 300/5000/100000-char emails -> 401, max Redis key 102 chars (one shared '?' hash key), TestLoginAccountKeyStaysBounded PASS. Req 1b: TestTrustProxyWarnsOncePerMinuteForAPublicPeer PASS (private/loopback/ULA silent, public peers v4+v6 give exactly one WARN, address not in the message, no WARN with trust off); API log grep for 198.51/2001:db8/203.0.113 = 0 hits. Limiter.Reset: Memory + Redis + guard (never errors) tests PASS; only WithClientIP caller outside tests is router.go, all test callers updated, build+vet with -tags integration clean. Docs: redis.md, production-config.md, auth-otp.md (L-15 trade-off), .env.example, README updated. NON-BLOCKING: (1) the WARN test proves suppression within a minute but not re-firing after one (time.Now not injectable); the live WARN could not be triggered from loopback. (2) peerIsInternal does not count CGNAT 100.64.0.0/10 as internal, so a proxy on such a peer would WARN; fine for an ALB in a VPC. (3) AC3 live check hit login_pair first (503 before the new limiter), the new limiter's own fail-closed is covered by the integration test only. (4) PR base is older than develop tip b3878c2 but GitHub reports it CLEAN. I added no test files.
+- 2026-10-20 21:59Z · leader · Leader review OK on 33737ef: clientKey via netip (zone dropped, IPv4-mapped unmapped, IPv6 masked to /64, canonical text) used by both the header and RemoteAddr paths, one function for every limiter; login_account limiter fail-closed; reset clears only that account's key after the commit (a failed Reset only means the owner waits up to 15 minutes, acceptable); proxy WARN rate-limited with an atomic CAS. QA_PASS with live probes (50/51 failures, 70 parallel, /64 sharing, Redis down, reset clear, oversize email). Non-blocking: CGNAT peers (100.64.0.0/10) would trigger the WARN; note it in docs/production-config.md when T-023 picks the network. T-103 will touch reset.go too: whichever merges second merges develop. Waiting for the owner's approval (risk high).
 
 ### T-099 — [E12] Mandatory SMEM_ENV and local-only dev/test
 - **Status:** READY_FOR_QA
@@ -4502,7 +4514,7 @@ Spec: .team/epics/E12-security-hardening/05-upload-slot-fairness.md (read it fro
 #### Comments
 
 ### T-103 — [E12] Sessions issued during a password reset or Google merge must not survive it (credential epoch)
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
@@ -4510,10 +4522,10 @@ Spec: .team/epics/E12-security-hardening/05-upload-slot-fairness.md (read it fro
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-103-e12-sessions-issued-during-a-password-re
 - **PR:** —
-- **Updated:** 2026-10-20 16:48Z by leader
+- **Updated:** 2026-10-20 21:42Z by dev
 - **Comments-seen:** 0
 
 Spec: .team/epics/E12-security-hardening/06-session-fence-against-credential-change.md (read it from the repo root). Source: audit run 1, docs/security-audit-skill-2026-10-20/ (PR #86). Risk high: owner approves the merge.
