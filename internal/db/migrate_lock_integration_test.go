@@ -52,7 +52,6 @@ func TestMigrateUpConcurrentAppliesOnce(t *testing.T) {
 	ctx := context.Background()
 	d := dbtest.NewEmpty(t)
 	d.SetMaxOpenConns(20)
-	versionOf(t, d) // creates goose_db_version first, so the tasks race on the migrations themselves
 	var logs syncBuf
 	logger := slog.New(slog.NewJSONHandler(&logs, nil))
 
@@ -88,6 +87,63 @@ func TestMigrateUpConcurrentAppliesOnce(t *testing.T) {
 	}
 	if err := db.CheckSchema(ctx, d); err != nil {
 		t.Errorf("CheckSchema after concurrent up: %v", err)
+	}
+}
+
+// T-108: the version table is created, and its version-0 row inserted, under the advisory lock. Task A is paused (through the statement spy)
+// right after it created goose_db_version, before the insert of version 0 is committed; a task B started now must wait for the lock and not
+// read the half-made table ("missing zero version migration"). No sleep decides the outcome: B is seen either failing or blocked in GET_LOCK.
+func TestMigrateUpWaitsForVersionTableCreation(t *testing.T) {
+	ctx := context.Background()
+	d := dbtest.NewEmpty(t)
+	created, release := make(chan struct{}), make(chan struct{})
+	var once sync.Once
+	releaseA := func() { once.Do(func() { close(release) }) }
+	defer releaseA()
+	var paused sync.Once
+	a := dbtest.Spy(t, d, func(q string) {
+		if strings.Contains(q, "INSERT INTO goose_db_version") {
+			paused.Do(func() {
+				close(created) // the table exists, its zero row does not
+				<-release
+			})
+		}
+	})
+	a.SetMaxOpenConns(4)
+
+	doneA, doneB := make(chan error, 1), make(chan error, 1)
+	go func() { doneA <- db.MigrateUpLog(ctx, a, nil, time.Minute) }()
+	select {
+	case <-created:
+	case err := <-doneA:
+		t.Fatalf("task A finished without creating the version table first: %v", err)
+	case <-time.After(30 * time.Second):
+		t.Fatal("task A never reached the version table")
+	}
+
+	go func() { doneB <- db.MigrateUpLog(ctx, d, nil, time.Minute) }()
+	deadline := time.After(30 * time.Second)
+	for blocked := false; !blocked; {
+		select {
+		case err := <-doneB:
+			t.Fatalf("task B did not wait for task A, which was creating the version table: %v", err)
+		case <-deadline:
+			t.Fatal("task B neither failed nor waited for the lock")
+		case <-time.After(20 * time.Millisecond):
+		}
+		if err := d.QueryRowContext(ctx, "SELECT COUNT(*) > 0 FROM information_schema.processlist WHERE info LIKE 'SELECT GET_LOCK%'").Scan(&blocked); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	releaseA()
+	for name, ch := range map[string]chan error{"A": doneA, "B": doneB} {
+		if err := <-ch; err != nil {
+			t.Errorf("task %s: %v", name, err)
+		}
+	}
+	if got, want := versionOf(t, d), int64(migrationFiles(t)); got < want {
+		t.Errorf("schema at version %d, want at least %d", got, want)
 	}
 }
 
