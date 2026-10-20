@@ -11,18 +11,18 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 12 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-095, T-096, T-097 |
-| TODO | 9 | T-093, T-094, T-100, T-101, T-104, T-105, T-106, T-107, T-108 |
+| TODO | 8 | T-093, T-094, T-100, T-101, T-104, T-105, T-106, T-107 |
+| IN_PROGRESS | 1 | T-108 |
 | READY_FOR_QA | 2 | T-102, T-103 |
-| IN_QA | 1 | T-099 |
-| QA_PASS | 2 | T-092, T-098 |
+| QA_PASS | 3 | T-092, T-098, T-099 |
 | DONE | 74 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
 **Awaiting your review (MERGED):** nothing
 
-**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?)
+**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?)
 
-_Board last written 2026-10-20 22:16Z_
+_Board last written 2026-10-20 22:43Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -522,6 +522,15 @@ QA_PASS and leader review OK on b061020. Adds the permanent public photo links y
 - **Answer:** _(pending)_
 
 QA_PASS and leader review OK on 33737ef, CI green. Rate limits now group IPv6 clients by /64, a new per-account limit stops password guessing after 50 failures in 15 minutes (fail closed), a successful password reset clears that counter, and a WARN appears if the proxy header is trusted from a public peer. Reply 'team approve T-098'.
+
+### Q-046 — Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?
+- **Status:** OPEN
+- **Asked:** 2026-10-20 22:43Z
+- **Blocks:** T-099
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+QA_PASS and leader review OK on 8e07f4f, CI green. All binaries now refuse to start without SMEM_ENV, and dev/test refuse non-local origins or base URLs, so a deployed environment cannot run with the public OTP key or the fixed code. Reply 'team approve T-099'.
 
 <!-- questions:end -->
 
@@ -4435,7 +4444,7 @@ Spec: `.team/epics/E12-security-hardening/01-ipv6-keying-and-account-login-limit
 - 2026-10-20 21:59Z · leader · Leader review OK on 33737ef: clientKey via netip (zone dropped, IPv4-mapped unmapped, IPv6 masked to /64, canonical text) used by both the header and RemoteAddr paths, one function for every limiter; login_account limiter fail-closed; reset clears only that account's key after the commit (a failed Reset only means the owner waits up to 15 minutes, acceptable); proxy WARN rate-limited with an atomic CAS. QA_PASS with live probes (50/51 failures, 70 parallel, /64 sharing, Redis down, reset clear, oversize email). Non-blocking: CGNAT peers (100.64.0.0/10) would trigger the WARN; note it in docs/production-config.md when T-023 picks the network. T-103 will touch reset.go too: whichever merges second merges develop. Waiting for the owner's approval (risk high).
 
 ### T-099 — [E12] Mandatory SMEM_ENV and local-only dev/test
-- **Status:** IN_QA
+- **Status:** QA_PASS
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
@@ -4443,17 +4452,25 @@ Spec: `.team/epics/E12-security-hardening/01-ipv6-keying-and-account-login-limit
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** leader
 - **Branch:** task/t-099-e12-mandatory-smem-env-and-local-only-de
 - **PR:** https://github.com/danyaa666/smemories/pull/88
-- **Updated:** 2026-10-20 21:59Z by qa
-- **Comments-seen:** 2
+- **Updated:** 2026-10-20 22:43Z by qa
+- **Comments-seen:** 4
 
 Spec: `.team/epics/E12-security-hardening/02-mandatory-env-and-local-only-dev-test.md`. Audit M2 and L7: SMEM_ENV defaults to dev, which prints OTP codes, uses the public OTP key and drops the cookie Secure flag. Make it required in every command, and refuse dev/test when origins are not local. Risk high: production configuration.
 
 #### Comments
 - 2026-10-20 05:34Z · leader · Leader review 2026-10-20: spec updated (known limitation: tunnels are refused in dev/test). Re-read the spec from the repo root before you start.
 - 2026-10-20 18:44Z · dev · PR #88 head 8e07f4f. SMEM_ENV required in Load/LoadMigrate; dev/test local-only (origins + base URL); Makefile run/migrate explicit, reset-limits errors; smoke has 2 new checks (refuse_api) and uses local origin for the test-mode API. Verified: make build test lint, test-integration, e2e, image-smoke (script copy that swaps registry pull for local image check, pulls hang here), AC4 shown failing for both checks with guard removed. Risk high: owner approves merge. Overlap with T-098 in internal/config + production-config.md. Seen once: migrate 'missing zero version' flake (T-108).
+- 2026-10-20 22:43Z · qa · QA_PASS T-099, PR #88 head 8e07f4f (CI green: go, go-integration, e2e, image, security, web). Evidence I produced (clean clone of 8e07f4f, own compose project qa099, ports 43306/46379/49000/49001/48080, taken down without -v):
+  AC1: TestLoadEnvRequired (Load and LoadMigrate: empty, unset, dev/test/prod ok, staging refused) PASS. Real binaries built from the head, env -i: smemories-api, smemories-migrate, smemories-media-backfill with SMEM_ENV unset and with SMEM_ENV= all print 'config error: SMEM_ENV is required: dev, test or prod', exit 1. staging -> 'must be one of dev, test, prod'.
+  AC2: TestLoadDevTestAreLocalOnly PASS. Real binary matrix (dev and test, each as SMEM_ALLOWED_ORIGINS and as SMEM_PUBLIC_BASE_URL, 24 hosts): PASS localhost, LOCALHOST, app.localhost, a.b.localhost, 127.0.0.1, 127.5.5.5, 10.1.2.3, 172.16.0.9, 192.168.1.20, [::1], [fe80::1], 169.254.1.1, [fd00::1], [::ffff:127.0.0.1]. REFUSED (message names the variable and says use SMEM_ENV=prod) app/example.com, 8.8.8.8, [2001:4860::1], [::ffff:8.8.8.8], 0.0.0.0, localhost.evil.com, evil-localhost.com, 127.0.0.1.nip.io, 192.168.1.20.example.com, 'localhost.' (trailing dot). A public entry second in a comma list is refused. Staging-like (test/dev + https://app.example.com as origin or base URL) refused by api, migrate and backfill. Prod unchanged: same first-line error as origin/develop binaries for 5 prod configs (api and migrate); smoke prod refusals + prod one-off tasks pass.
+  AC3: README quick start from a clean clone (.env from .env.example, ports changed as the README says): make up migrate; make run -> /healthz 200, /readyz {status:ready}, log env=dev. With SMEM_ENV removed from .env: make migrate runs with SMEM_ENV=dev and works; make reset-limits stops with a clear error unless SMEM_ENV is set; bare binary without SMEM_ENV refuses. make e2e PASS (1 test). make test-integration PASS on all packages (media/notes/storage first failed only because storagetest defaults SMEM_TEST_S3_ENDPOINT to :9000 and my MinIO was on :49000; rerun with SMEM_TEST_S3_ENDPOINT set: ok). Image smoke: see below.
+  AC4: make image built the real image from the head. Real 'make image-smoke' HANGS here too, at the services step: 'docker pull -q mysql:8.4@sha256:6ea9...' (bounded 600) after the image build and the static checks (user, no shell, 3 binaries, 52 MiB) passed; all 3 pinned images are already local, so I killed my own run at ~8 min. Copy with only the pull line replaced by 'docker image inspect' (/image-smoke-nopull.sh, scratchpad) against the real image: ALL PASS incl. 'the API refuses to start without SMEM_ENV' and 'refuses SMEM_ENV=test with a public base URL or origin'; concurrent-migrate step passed (no T-108 race this time). Guard removed (scratch copy, image rebuilt): (a) no-default guard removed -> SMOKE FAIL 'the refusal does not name SMEM_ENV' (API logged env=dev); (b) only local-only guard removed -> SMOKE FAIL 'the refusal does not name SMEM_PUBLIC_BASE_URL'.
+  AC5: make build test lint exit 0 in the clean clone; TestEveryVariableIsDocumented PASS; docs (production-config, dev-shortcuts, container, media, README, .env.example) updated, no remaining 'default dev' text.
+  Non-blocking: (1) the real make image-smoke cannot pass on this machine because of the registry pull hang (environment, not the PR; CI image job is green). (2) 169.254.x (incl. the cloud metadata address) and 0-prefixed private ranges are allowed in dev/test by design (spec says link-local allowed). (3) 'http://localhost.' with a trailing dot is refused (conservative, fine). (4) test-integration needs SMEM_TEST_S3_ENDPOINT when MinIO is not on :9000 (pre-existing, not T-099). Risk high: owner approves merge.
+- 2026-10-20 22:43Z · leader · Leader review OK on 8e07f4f: SMEM_ENV read without default and refused when empty (all three binaries via Load/LoadMigrate); checkLocalOnly applies to every origin and the base URL in dev/test, reusing the private-host rules plus *.localhost; prod unchanged; Dockerfile untouched as specified. QA_PASS: 24 hosts probed, staging-like sets refused for api/migrate/backfill, clean-clone quick start works, AC4 shown by removing each guard. Real image-smoke hangs on docker pull on this machine only (environmental); CI image job green. Waiting for the owner's approval (risk high).
 
 ### T-100 — [E12] Canonical public ids and the stored id for object keys
 - **Status:** TODO
@@ -4611,7 +4628,7 @@ Spec: .team/epics/E12-security-hardening/07-bounded-photo-download-memory.md (re
 #### Comments
 
 ### T-108 — [E06] Concurrent smemories-migrate up on an empty database fails (missing zero version migration)
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P1
 - **Type:** bug
 - **Milestone:** M2
@@ -4619,10 +4636,10 @@ Spec: .team/epics/E12-security-hardening/07-bounded-photo-download-memory.md (re
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-108-e06-concurrent-smemories-migrate-up-on-a
 - **PR:** —
-- **Updated:** 2026-10-20 22:16Z by leader
+- **Updated:** 2026-10-20 22:17Z by dev
 - **Comments-seen:** 1
 
 Spec: .team/epics/E06-go-live/11-concurrent-migrate-race.md. CI image job flake seen on develop and on PR #85 (QA of T-092); fix the lock order in internal/db/migrate.go.
