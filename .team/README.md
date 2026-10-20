@@ -11,10 +11,9 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 12 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-095, T-096, T-097 |
-| TODO | 8 | T-093, T-094, T-100, T-101, T-104, T-105, T-106, T-107 |
-| IN_PROGRESS | 1 | T-108 |
-| READY_FOR_QA | 2 | T-102, T-103 |
-| QA_PASS | 3 | T-092, T-098, T-099 |
+| TODO | 9 | T-093, T-094, T-100, T-101, T-104, T-105, T-106, T-107, T-109 |
+| READY_FOR_QA | 2 | T-102, T-108 |
+| QA_PASS | 4 | T-092, T-098, T-099, T-103 |
 | DONE | 74 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
@@ -22,7 +21,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?)
 
-_Board last written 2026-10-20 22:43Z_
+_Board last written 2026-10-20 23:20Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4532,7 +4531,7 @@ Spec: .team/epics/E12-security-hardening/05-upload-slot-fairness.md (read it fro
 - 2026-10-20 22:16Z · dev · PR #90 head cc04be8. media/create: per-user cap 2 (429, Retry-After 5, before body), shared slot kept before read, httpx.PaceBody with new httpx.PhoneUploadPace (408 frees slots), read deadline moved out after read. notes/submit: slot released once before the drain. New gauge smem_media_uploads_in_progress. Tests: TestPerUserUploadCap, TestSlowUploadsDoNotStarveOthersForLong, TestRateLimitedSubmissionReleasesItsSlotBeforeTheDrain (+ unit); TestQuotas adjusted to max 2 parallel uploads per user. lint 0 issues, full unit + integration -race green. Overlap with #85: media/handler.go, integration_test.go (env.mh), main.go, docs. Risk high: owner approves merge. No Postman change (no new endpoint).
 
 ### T-103 — [E12] Sessions issued during a password reset or Google merge must not survive it (credential epoch)
-- **Status:** READY_FOR_QA
+- **Status:** QA_PASS
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
@@ -4540,16 +4539,26 @@ Spec: .team/epics/E12-security-hardening/05-upload-slot-fairness.md (read it fro
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** leader
 - **Branch:** task/t-103-e12-sessions-issued-during-a-password-re
 - **PR:** https://github.com/danyaa666/smemories/pull/89
-- **Updated:** 2026-10-20 22:02Z by dev
-- **Comments-seen:** 1
+- **Updated:** 2026-10-20 23:19Z by qa
+- **Comments-seen:** 3
 
 Spec: .team/epics/E12-security-hardening/06-session-fence-against-credential-change.md (read it from the repo root). Source: audit run 1, docs/security-audit-skill-2026-10-20/ (PR #86). Risk high: owner approves the merge.
 
 #### Comments
 - 2026-10-20 22:02Z · dev · PR #89 head c443c11. auth_epoch migration 20261021100000; race tests committed first (ade7bd1) and red on develop (30/30), green after. Verify: run migration before binary; TestGooglePreHijackingRollsBack... replaced on purpose (req 3). Merge develop later vs T-098/T-099. Owner approves merge (risk high).
+- 2026-10-20 23:19Z · qa · QA_PASS, PR #89 head c443c11 (CI green after re-run; own compose project qa103 on ports 23306/26379/29000, taken down without -v).
+  AC1: race tests on ade7bd1 (tests only) with -race -count=3 against real MySQL+Redis: TestLoginRacingPasswordReset, TestLoginRacingGoogleMerge, TestLoginDuringOpenResetTransaction FAIL 3/3 (Authenticate = nil, want ErrUnauthenticated); TestSessionWithStaleEpoch fails there too (no auth_epoch column); control TestLoginAfterCredentialChangeIsRefused passes. On head: all of them pass 3/3.
+  AC2: live API (head binary, SMEM_ENV=dev): 12 parallel threads logging in with the old password in a loop while forgot+reset (code 123123) ran. 22 sessions obtained (1 created after the reset committed), plus 3 pre-reset cookies: 25 checked, 0 survivors (all 401). Login with new password 200 and get-me 200. auth_epoch 0 -> 1. Google merge: covered by TestLoginRacingGoogleMergeLeavesNoSession and the 3-run loop (no live Google IdP here).
+  Req 4: sessions of the old binary (no epoch field) kept working after migrate+deploy (bob 200), the same kind of session of a reset account 401.
+  Req 3: TestCredentialChangesRaiseTheEpochAndSurvivePurgeFailure: purge returning an error after commit -> reset returns nil, error logged, old session still refused. TestGooglePreHijackingSurvivesRedisFailureAfterCommit matches req 3 (takeover commits, squatter session 401 although it is still in Redis); the replaced test is correct.
+  AC3: TestAuthenticateStillCostsOneQuery (dbtest.Spy) = 1 statement.
+  AC4: migration applied on a DB with 12 users (default 0 for all), down then up also fine. make lint exit 0; make test exit 0; make test-integration -race: all packages ok (auth 175 s); media/notes/storage first failed only because my MinIO was not up, re-run with it: ok. Auth Postman collection (postman CLI) x2 back to back: 96 requests, 76 non-Google requests and all reset/login steps pass; the only 20 failing assertions are in the Google sign-in folder (needs SMEM_GOOGLE_* which I did not set, as the collection says).
+  CI note: first CI run was red on TestConcurrentResetHasOneWinner (0 winners). Not caused by T-103: reproduced identically on develop b3878c2 under CPU load (-cpu 1 plus 12 busy loops, 4 of 4 failures on both). Cause: the code is consumed before the hash, and a starved hash slot gives ErrBusy (known ponytail comment in reset.go). Re-ran the failed job: green. Pre-existing flake, worth a separate small task (test should use a larger hashWait).
+  Non-blocking: (a) sessions that a racing login writes after the purge stay in Redis (usess index) until presented or their 30-day expiry; they are always refused (401) and deleted on first use, so no access, only dead keys. (b) migrate down then up resets auth_epoch to 0, so a rollback would revive sessions revoked by earlier resets; document in the rollback runbook. (c) No postman change needed (no endpoint change).
+- 2026-10-20 23:20Z · leader · QA_PASS received; leader review at the next GO tick (5-hour usage over the limit). Non-blocking notes kept for the review: refused stale sessions stay in Redis until used or expired; migrate down then up resets auth_epoch to 0 (rollback would revive them: document in docs/deploy.md rollback notes).
 
 ### T-104 — [E12] Media processing robustness: slots released on every path, no panics, decoded limits
 - **Status:** TODO
@@ -4628,7 +4637,7 @@ Spec: .team/epics/E12-security-hardening/07-bounded-photo-download-memory.md (re
 #### Comments
 
 ### T-108 — [E06] Concurrent smemories-migrate up on an empty database fails (missing zero version migration)
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P1
 - **Type:** bug
 - **Milestone:** M2
@@ -4636,16 +4645,36 @@ Spec: .team/epics/E12-security-hardening/07-bounded-photo-download-memory.md (re
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-108-e06-concurrent-smemories-migrate-up-on-a
-- **PR:** —
-- **Updated:** 2026-10-20 22:17Z by dev
-- **Comments-seen:** 1
+- **PR:** https://github.com/danyaa666/smemories/pull/91
+- **Updated:** 2026-10-20 23:08Z by dev
+- **Comments-seen:** 2
 
 Spec: .team/epics/E06-go-live/11-concurrent-migrate-race.md. CI image job flake seen on develop and on PR #85 (QA of T-092); fix the lock order in internal/db/migrate.go.
 
 #### Comments
 - 2026-10-20 22:16Z · leader · Leader 2026-10-20: raised to P1. The flaky image job hits every PR's CI, and this task touches only internal/db, so it does not collide with the five open media/auth PRs.
+- 2026-10-20 23:08Z · dev · Root cause: goose Up calls HasPending first, which ignores the session locker and creates goose_db_version + version-0 row without the lock; B can take the lock between A's CREATE TABLE and the version-0 commit. Fix: GetDBVersion (locked) before Up in MigrateUpLog. Test TestMigrateUpWaitsForVersionTableCreation fails on develop code with 'missing zero version migration', passes with -race -count=20. 50/50 smoke runs on a local copy of the script (pull line -> docker image inspect; Dockerfile built without the syntax line, both because the registry hangs here); CI runs the real ones. Head d856c25. Known gap in PR: status/version on an empty DB concurrent with first up still create the table unlocked. Risk high: owner approves merge.
+
+### T-109 — [E02] Flaky TestConcurrentResetHasOneWinner under CPU load
+- **Status:** TODO
+- **Priority:** P3
+- **Type:** bug
+- **Milestone:** M2
+- **Depends-on:** —
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-20 23:20Z by leader
+- **Comments-seen:** 0
+
+QA of T-103 (2026-10-21): go-integration was red once on internal/auth TestConcurrentResetHasOneWinner; the same failure reproduces on develop b3878c2 under CPU load, so it is the test, not T-103. Find why (likely the hash-slot wait in the test env is shorter than the hashing under load), make the test deterministic (larger hashWait or a held slot released on cue, no sleeps), and show it green with go test -race -count=50 while the machine is loaded (e.g. a parallel go test ./... in the background). No production code change unless the test proves a real bug.
+
+#### Comments
 
 <!-- tasks:end -->
 
