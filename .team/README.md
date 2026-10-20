@@ -11,9 +11,9 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 12 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-095, T-096, T-097 |
-| TODO | 10 | T-093, T-094, T-100, T-101, T-102, T-104, T-105, T-106, T-107, T-108 |
-| IN_PROGRESS | 1 | T-103 |
-| READY_FOR_QA | 1 | T-099 |
+| TODO | 9 | T-093, T-094, T-100, T-101, T-104, T-105, T-106, T-107, T-108 |
+| READY_FOR_QA | 2 | T-102, T-103 |
+| IN_QA | 1 | T-099 |
 | QA_PASS | 2 | T-092, T-098 |
 | DONE | 74 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
@@ -22,7 +22,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?)
 
-_Board last written 2026-10-20 21:59Z_
+_Board last written 2026-10-20 22:16Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4435,7 +4435,7 @@ Spec: `.team/epics/E12-security-hardening/01-ipv6-keying-and-account-login-limit
 - 2026-10-20 21:59Z · leader · Leader review OK on 33737ef: clientKey via netip (zone dropped, IPv4-mapped unmapped, IPv6 masked to /64, canonical text) used by both the header and RemoteAddr paths, one function for every limiter; login_account limiter fail-closed; reset clears only that account's key after the commit (a failed Reset only means the owner waits up to 15 minutes, acceptable); proxy WARN rate-limited with an atomic CAS. QA_PASS with live probes (50/51 failures, 70 parallel, /64 sharing, Redis down, reset clear, oversize email). Non-blocking: CGNAT peers (100.64.0.0/10) would trigger the WARN; note it in docs/production-config.md when T-023 picks the network. T-103 will touch reset.go too: whichever merges second merges develop. Waiting for the owner's approval (risk high).
 
 ### T-099 — [E12] Mandatory SMEM_ENV and local-only dev/test
-- **Status:** READY_FOR_QA
+- **Status:** IN_QA
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
@@ -4443,10 +4443,10 @@ Spec: `.team/epics/E12-security-hardening/01-ipv6-keying-and-account-login-limit
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** qa
 - **Branch:** task/t-099-e12-mandatory-smem-env-and-local-only-de
 - **PR:** https://github.com/danyaa666/smemories/pull/88
-- **Updated:** 2026-10-20 18:44Z by dev
+- **Updated:** 2026-10-20 21:59Z by qa
 - **Comments-seen:** 2
 
 Spec: `.team/epics/E12-security-hardening/02-mandatory-env-and-local-only-dev-test.md`. Audit M2 and L7: SMEM_ENV defaults to dev, which prints OTP codes, uses the public OTP key and drops the cookie Secure flag. Make it required in every command, and refuse dev/test when origins are not local. Risk high: production configuration.
@@ -4495,7 +4495,7 @@ Spec: `.team/epics/E12-security-hardening/04-readyz-greeting-session-lifetime.md
 #### Comments
 
 ### T-102 — [E12] Upload slot fairness: per-user cap and paced body on media/create; early release for rejected public submissions
-- **Status:** TODO
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
@@ -4504,17 +4504,18 @@ Spec: `.team/epics/E12-security-hardening/04-readyz-greeting-session-lifetime.md
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-20 16:48Z by leader
-- **Comments-seen:** 0
+- **Branch:** task/t-102-e12-upload-slot-fairness-per-user-cap-an
+- **PR:** https://github.com/danyaa666/smemories/pull/90
+- **Updated:** 2026-10-20 22:16Z by dev
+- **Comments-seen:** 1
 
 Spec: .team/epics/E12-security-hardening/05-upload-slot-fairness.md (read it from the repo root). Source: audit run 1, docs/security-audit-skill-2026-10-20/ (PR #86). Risk high: owner approves the merge.
 
 #### Comments
+- 2026-10-20 22:16Z · dev · PR #90 head cc04be8. media/create: per-user cap 2 (429, Retry-After 5, before body), shared slot kept before read, httpx.PaceBody with new httpx.PhoneUploadPace (408 frees slots), read deadline moved out after read. notes/submit: slot released once before the drain. New gauge smem_media_uploads_in_progress. Tests: TestPerUserUploadCap, TestSlowUploadsDoNotStarveOthersForLong, TestRateLimitedSubmissionReleasesItsSlotBeforeTheDrain (+ unit); TestQuotas adjusted to max 2 parallel uploads per user. lint 0 issues, full unit + integration -race green. Overlap with #85: media/handler.go, integration_test.go (env.mh), main.go, docs. Risk high: owner approves merge. No Postman change (no new endpoint).
 
 ### T-103 — [E12] Sessions issued during a password reset or Google merge must not survive it (credential epoch)
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
@@ -4522,15 +4523,16 @@ Spec: .team/epics/E12-security-hardening/05-upload-slot-fairness.md (read it fro
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-103-e12-sessions-issued-during-a-password-re
-- **PR:** —
-- **Updated:** 2026-10-20 21:42Z by dev
-- **Comments-seen:** 0
+- **PR:** https://github.com/danyaa666/smemories/pull/89
+- **Updated:** 2026-10-20 22:02Z by dev
+- **Comments-seen:** 1
 
 Spec: .team/epics/E12-security-hardening/06-session-fence-against-credential-change.md (read it from the repo root). Source: audit run 1, docs/security-audit-skill-2026-10-20/ (PR #86). Risk high: owner approves the merge.
 
 #### Comments
+- 2026-10-20 22:02Z · dev · PR #89 head c443c11. auth_epoch migration 20261021100000; race tests committed first (ade7bd1) and red on develop (30/30), green after. Verify: run migration before binary; TestGooglePreHijackingRollsBack... replaced on purpose (req 3). Merge develop later vs T-098/T-099. Owner approves merge (risk high).
 
 ### T-104 — [E12] Media processing robustness: slots released on every path, no panics, decoded limits
 - **Status:** TODO
@@ -4610,7 +4612,7 @@ Spec: .team/epics/E12-security-hardening/07-bounded-photo-download-memory.md (re
 
 ### T-108 — [E06] Concurrent smemories-migrate up on an empty database fails (missing zero version migration)
 - **Status:** TODO
-- **Priority:** P2
+- **Priority:** P1
 - **Type:** bug
 - **Milestone:** M2
 - **Depends-on:** —
@@ -4620,12 +4622,13 @@ Spec: .team/epics/E12-security-hardening/07-bounded-photo-download-memory.md (re
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-20 18:15Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-20 22:16Z by leader
+- **Comments-seen:** 1
 
 Spec: .team/epics/E06-go-live/11-concurrent-migrate-race.md. CI image job flake seen on develop and on PR #85 (QA of T-092); fix the lock order in internal/db/migrate.go.
 
 #### Comments
+- 2026-10-20 22:16Z · leader · Leader 2026-10-20: raised to P1. The flaky image job hits every PR's CI, and this task touches only internal/db, so it does not collide with the five open media/auth PRs.
 
 <!-- tasks:end -->
 
