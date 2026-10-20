@@ -12,8 +12,7 @@
 |---|---:|---|
 | BACKLOG | 12 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-095, T-096, T-097 |
 | TODO | 11 | T-093, T-094, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108 |
-| IN_PROGRESS | 1 | T-099 |
-| READY_FOR_QA | 1 | T-098 |
+| READY_FOR_QA | 2 | T-098, T-099 |
 | QA_PASS | 1 | T-092 |
 | DONE | 74 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
@@ -22,7 +21,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?)
 
-_Board last written 2026-10-20 18:15Z_
+_Board last written 2026-10-20 21:42Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4280,7 +4279,7 @@ Small leftovers from the T-090 QA: (1) scripts/image-smoke.sh: when SMOKE_TIMEOU
 - **Branch:** task/t-092-e05-public-photo-links-signed-token-publ
 - **PR:** https://github.com/danyaa666/smemories/pull/85
 - **Updated:** 2026-10-20 18:14Z by qa
-- **Comments-seen:** 1
+- **Comments-seen:** 3
 
 Spec: .team/epics/E05-templates-export/14-public-photo-links-api.md (read it from the repo root). Decision D-32: the owner chose permanent public photo links; this task adds the HMAC token, GET /api/public-media/get-content, POST /api/yearbook/revoke-photo-links and the SMEM_MEDIA_LINK_SECRET config. Risk high: owner approves the merge.
 
@@ -4424,7 +4423,7 @@ Spec: `.team/epics/E12-security-hardening/01-ipv6-keying-and-account-login-limit
 - 2026-10-20 17:25Z · dev · PR #87 head 33737ef. /64 keying + WARN + login_account limiter (closed, 50/15min) + Limiter.Reset on successful reset-password. Tests: httpx TestClientIP/TestTrustProxyWarns..., auth limiters_integration_test (AC2,3,6), config, ratelimit Reset. Verify: go test -race -tags integration ./..., golangci-lint 0 issues. Not changed: endpoints (no Postman change).
 
 ### T-099 — [E12] Mandatory SMEM_ENV and local-only dev/test
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
@@ -4432,16 +4431,17 @@ Spec: `.team/epics/E12-security-hardening/01-ipv6-keying-and-account-login-limit
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-099-e12-mandatory-smem-env-and-local-only-de
-- **PR:** —
-- **Updated:** 2026-10-20 17:26Z by dev
-- **Comments-seen:** 1
+- **PR:** https://github.com/danyaa666/smemories/pull/88
+- **Updated:** 2026-10-20 18:44Z by dev
+- **Comments-seen:** 2
 
 Spec: `.team/epics/E12-security-hardening/02-mandatory-env-and-local-only-dev-test.md`. Audit M2 and L7: SMEM_ENV defaults to dev, which prints OTP codes, uses the public OTP key and drops the cookie Secure flag. Make it required in every command, and refuse dev/test when origins are not local. Risk high: production configuration.
 
 #### Comments
 - 2026-10-20 05:34Z · leader · Leader review 2026-10-20: spec updated (known limitation: tunnels are refused in dev/test). Re-read the spec from the repo root before you start.
+- 2026-10-20 18:44Z · dev · PR #88 head 8e07f4f. SMEM_ENV required in Load/LoadMigrate; dev/test local-only (origins + base URL); Makefile run/migrate explicit, reset-limits errors; smoke has 2 new checks (refuse_api) and uses local origin for the test-mode API. Verified: make build test lint, test-integration, e2e, image-smoke (script copy that swaps registry pull for local image check, pulls hang here), AC4 shown failing for both checks with guard removed. Risk high: owner approves merge. Overlap with T-098 in internal/config + production-config.md. Seen once: migrate 'missing zero version' flake (T-108).
 
 ### T-100 — [E12] Canonical public ids and the stored id for object keys
 - **Status:** TODO
