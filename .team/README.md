@@ -20,7 +20,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-042 (Who may promote to main: stop agents bypassing branch protection?); Q-043 (Turn on Dependabot alerts and security updates for the public repo?)
 
-_Board last written 2026-10-20 05:30Z_
+_Board last written 2026-10-20 05:34Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4380,11 +4380,12 @@ Spec: .team/epics/E11-signatures/03-signature-print.md. Next phase.
 - **Branch:** —
 - **PR:** —
 - **Updated:** 2026-10-20 05:28Z by leader
-- **Comments-seen:** 0
+- **Comments-seen:** 1
 
 Spec: `.team/epics/E12-security-hardening/01-ipv6-keying-and-account-login-limit.md`. Audit M1: every per-IP limiter keys on the full address, so one IPv6 /64 walks around all of them, and login has no per-account cap. Mask IPv6 to /64 in ResolveClientIP, add a fail-closed per-account failed-login limiter. Risk high: auth.
 
 #### Comments
+- 2026-10-20 05:34Z · leader · Leader review 2026-10-20: spec updated (requirement 4 and AC6: a successful password reset clears the account counter; known residual note). Re-read the spec from the repo root before you start.
 
 ### T-099 — [E12] Mandatory SMEM_ENV and local-only dev/test
 - **Status:** TODO
@@ -4399,30 +4400,32 @@ Spec: `.team/epics/E12-security-hardening/01-ipv6-keying-and-account-login-limit
 - **Branch:** —
 - **PR:** —
 - **Updated:** 2026-10-20 05:28Z by leader
-- **Comments-seen:** 0
+- **Comments-seen:** 1
 
 Spec: `.team/epics/E12-security-hardening/02-mandatory-env-and-local-only-dev-test.md`. Audit M2 and L7: SMEM_ENV defaults to dev, which prints OTP codes, uses the public OTP key and drops the cookie Secure flag. Make it required in every command, and refuse dev/test when origins are not local. Risk high: production configuration.
 
 #### Comments
+- 2026-10-20 05:34Z · leader · Leader review 2026-10-20: spec updated (known limitation: tunnels are refused in dev/test). Re-read the spec from the repo root before you start.
 
 ### T-100 — [E12] Canonical public ids and the stored id for object keys
 - **Status:** TODO
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
-- **Depends-on:** —
+- **Depends-on:** T-092
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-20 05:28Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-20 05:34Z by leader
+- **Comments-seen:** 1
 
 Spec: `.team/epics/E12-security-hardening/03-canonical-public-ids.md`. Audit M3: public_id columns compare case-insensitively and media/yearbook use the caller's spelling in S3 prefixes, so a user can orphan objects, reset their quota and defeat deletion. Validate ids at the edge, build keys from the stored id. Do before T-025. Risk high: data.
 
 #### Comments
+- 2026-10-20 05:34Z · leader · Leader review 2026-10-20: now depends on T-092 (its new endpoints and token must be covered); spec updated in requirement 2. Re-read the spec from the repo root before you start.
 
 ### T-101 — [E12] Small hardening: readyz cache, generic code-email greeting, absolute session lifetime
 - **Status:** TODO

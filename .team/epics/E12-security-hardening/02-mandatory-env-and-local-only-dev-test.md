@@ -20,6 +20,9 @@
 - [ ] AC4 — The two new smoke checks run and fail the job when the guard is removed (show it once locally).
 - [ ] AC5 — `make build test lint` green; `docs` updated; `TestEveryVariableIsDocumented` green.
 
+#### Known limitation (leader note)
+A public tunnel (ngrok, Cloudflare Tunnel) used for phone testing is refused in `dev`/`test` because its host is not local. That is the intended effect (a tunnel exposes the fixed code and the public OTP key to the internet). The README quick start says to use the LAN address of the machine for phone tests.
+
 #### Risk
 `high` (production configuration). A missed caller makes a command refuse to start, which is loud and local. Nothing weakens prod.
 
