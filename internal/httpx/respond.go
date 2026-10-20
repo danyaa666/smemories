@@ -52,6 +52,18 @@ type BodyPace struct {
 	Grace   time.Duration
 }
 
+// PhoneUploadPace is the pace every phone-upload route demands (public submit-note since T-034, owner media/create since
+// T-102): no byte for 10 s, or under 16 KiB/s on average after a 15 s grace, or over 2 min in total is dropped. A 10 MiB photo
+// over a 2 Mbit/s link (256 KiB/s) needs about 40 s and passes with room to spare.
+var PhoneUploadPace = BodyPace{Idle: phoneIdle, Total: phoneTotal, MinRate: phoneMinRate, Grace: phoneGrace}
+
+const (
+	phoneIdle    = 10 * time.Second
+	phoneTotal   = 2 * time.Minute
+	phoneMinRate = 16 << 10 // bytes per second
+	phoneGrace   = 15 * time.Second
+)
+
 // PaceBody makes every read of r.Body move the connection's read deadline to p.Idle from now, but never past
 // p.Total from this call, and fails the read when the average rate stays under p.MinRate after p.Grace. A client
 // that stalls or drips bytes is dropped (the read fails with os.ErrDeadlineExceeded, which WriteBodyError reports

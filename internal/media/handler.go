@@ -10,6 +10,7 @@ import (
 	"math"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/danyaa666/smemories/internal/apperr"
@@ -36,6 +37,10 @@ const (
 	busyRetryAfter = "2" // seconds, for a refused upload
 
 	uploadQueueFactor = 4 // uploads in flight per processing slot
+
+	// maxUploadsPerUser is how many uploads one account may have in progress (T-102); the next one is 429 before its body is read.
+	maxUploadsPerUser = 2
+	userCapRetryAfter = 5 * time.Second
 )
 
 // Handler serves the media endpoints: it decodes, validates the shape, calls the Service and writes the answer.
@@ -46,14 +51,42 @@ type Handler struct {
 	allowedOrigins []string
 	cursors        *httpx.Cursors
 	logger         *slog.Logger
-	inflight       chan struct{} // uploads being read or processed; bounds the memory held in request buffers
+	inflight       chan struct{}  // uploads being read or processed; bounds the memory held in request buffers
+	pace           httpx.BodyPace // what the body must keep up with; a field only so that a test can shorten it
+	userMu         sync.Mutex
+	perUser        map[uint64]int // uploads in progress per internal user id (this process only: with N API tasks the cap is N x 2)
 }
 
 // NewHandler builds the handler. At most 4x the service's processing slots of uploads are in flight at
 // once (each buffers up to maxBytes); more get 503 ERROR_BUSY.
 func NewHandler(svc *Service, maxBytes int64, requireUser func(http.Handler) http.Handler, allowedOrigins []string, cursors *httpx.Cursors, logger *slog.Logger) *Handler {
 	return &Handler{svc: svc, maxBytes: maxBytes, requireUser: requireUser, allowedOrigins: allowedOrigins, cursors: cursors, logger: logger,
-		inflight: make(chan struct{}, uploadQueueFactor*cap(svc.sem))}
+		inflight: make(chan struct{}, uploadQueueFactor*cap(svc.sem)), pace: httpx.PhoneUploadPace, perUser: map[uint64]int{}}
+}
+
+// UploadsInProgress is how many owner uploads hold a shared slot now (for metrics).
+func (h *Handler) UploadsInProgress() int { return len(h.inflight) }
+
+// takeUser counts one more upload in progress for user; false when the user is at maxUploadsPerUser. It never waits.
+func (h *Handler) takeUser(user uint64) bool {
+	h.userMu.Lock()
+	defer h.userMu.Unlock()
+	if h.perUser == nil {
+		h.perUser = map[uint64]int{}
+	}
+	if h.perUser[user] >= maxUploadsPerUser {
+		return false
+	}
+	h.perUser[user]++
+	return true
+}
+
+func (h *Handler) releaseUser(user uint64) {
+	h.userMu.Lock()
+	defer h.userMu.Unlock()
+	if h.perUser[user]--; h.perUser[user] <= 0 {
+		delete(h.perUser, user)
+	}
 }
 
 // Routes registers the endpoints on mux (pass to httpx.NewRouter).
@@ -97,6 +130,12 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	// One account cannot hold the shared pool: its own cap comes first, before any body byte is read (T-102).
+	if !h.takeUser(u.InternalID) {
+		h.fail(w, r, tooManyUploads(userCapRetryAfter))
+		return
+	}
+	defer h.releaseUser(u.InternalID)
 	select {
 	case h.inflight <- struct{}{}:
 		defer func() { <-h.inflight }()
@@ -105,10 +144,13 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		h.fail(w, r, ErrBusy)
 		return
 	}
+	// The slot stays before the read (it bounds the request buffers); the pace makes a stalled or dripping body end in 408 and free it.
+	httpx.PaceBody(w, r, h.pace)
 	yearbookID, data, ok := h.readForm(w, r)
 	if !ok {
 		return
 	}
+	httpx.ExtendDeadlines(w, uploadProcessing, 0) // the pace left a read deadline 10 s out; processing may take longer and must not look like a gone client
 	m, err := h.svc.Upload(r.Context(), u.InternalID, yearbookID, data)
 	if err != nil {
 		h.fail(w, r, err)

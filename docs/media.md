@@ -15,6 +15,11 @@ Errors are the v2 envelope (`ERROR_INVALID_IMAGE` 400, `ERROR_UNSUPPORTED_MEDIA_
   carry a per-route timeout (`httpx.WithTimeout`: 2.5 min for create = 2 min to receive the body + 30 s to process, 2 min for get-content) and, in the same wrapper (`slowRoute`),
   move the connection's write deadline to the route timeout plus 10 s (and the read deadline of create to 2 min). A route timeout longer than `WriteTimeout` without that
   would be cut off by the server; `TestSlowRouteSurvivesServerWriteTimeout` proves it against a real server.
+- **Upload fairness (T-102).** `create` takes slots in this order, each refused before any body byte is read: (1) the **per-user cap**, at most 2 uploads in progress per internal user id
+  (`maxUploadsPerUser`), the third is `429 ERROR_RATE_LIMITED` with `Retry-After: 5`; (2) the **shared pool** of 4 x `SMEM_MEDIA_MAX_CONCURRENT` slots (8 by default; it bounds the memory of request
+  buffers, so it is taken before the body is read), a full pool is `503 ERROR_BUSY`. Then the body is read under `httpx.PhoneUploadPace`, the same pace as the public route: no byte for 10 s, or under 16 KiB/s
+  on average after a 15 s grace, or more than 2 min in total ends the upload with `408` and gives both slots back (a 10 MiB photo over 2 Mbit/s takes about 40 s and passes). The per-user count is an
+  in-process map released by `defer` on every path; with N API tasks one user can hold 2 x N uploads, which is still bounded by each task's own pool. `smem_media_uploads_in_progress` shows the pool.
 - **Page tokens.** `next_id` is `httpx.Cursors.Seal(scope, position)`: AES-256-GCM of the position with the scope (`media/get-list:<yearbook id>`) as associated data, base64url. A
   client cannot read the internal id inside or change it, and a token from another yearbook or another list is `ERROR_PARAM`. The key is derived (HMAC-SHA256 with a fixed label) from
   `SMEM_OTP_KEY`, so there is no extra secret to configure; changing that key only makes clients start their list again. The same helper serves the other list endpoints.
@@ -56,7 +61,7 @@ A refused submission (`503 ERROR_BUSY`, 2 to 6 s random `Retry-After`) is answer
 the per-IP request limits, so a class that retries cannot lock itself out. A body must keep moving: no byte for 10 s, or less than 16 KiB/s on
 average after a 15 s grace period, or more than 120 s in total is dropped with `408`. The link is resolved first, from the query parameter `token`
 (T-034 order, kept by T-068): an unknown, malformed or revoked token is a `404` sent at once, without reading or spooling the body. The other rejections (full link, closed link,
-rate limit, bad text) are sent only after the rest of the body has been read (same limits), so a browser shows the answer instead of a connection reset.
+rate limit, bad text) are sent only after the rest of the body has been read (same limits), so a browser shows the answer instead of a connection reset. A request refused before its photos are processed (rate limit, closed or full link) gives its upload slot back **before** it drains the rest of the body (T-102): while draining it holds only a socket, never one of the `SMEM_PUBLIC_UPLOAD_MAX_CONNS` slots.
 
 **Disk sizing.** Worst case is `SMEM_PUBLIC_UPLOAD_MAX_CONNS` x 32 MiB = 1.5 GiB of temporary files (48 x 32 MiB), in practice far less. In production
 (T-022) the ephemeral storage of the task, or the volume behind `SMEM_UPLOAD_TMP_DIR`, must exceed that plus headroom. A process that is killed (or whose drain

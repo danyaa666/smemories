@@ -143,6 +143,7 @@ type env struct {
 	st      *flaky
 	svc     *Service
 	h       http.Handler
+	mh      *Handler
 	books   []string
 	lim     *ratelimit.Factory
 	cursors *httpx.Cursors
@@ -175,6 +176,7 @@ func newEnv(t *testing.T) *env {
 	e.svc = NewService(NewStore(d), e.st, 2, e.lim, nil) // two at a time, so parallel tests queue on the semaphore
 	e.cursors = httpx.NewCursors([]byte(strings.Repeat("c", 32)))
 	mh := NewHandler(e.svc, 10<<20, ah.RequireUser, []string{origin}, e.cursors, logger)
+	e.mh = mh
 	bookStore := yearbook.NewStore(d)
 	e.svc.SetRefClearer(bookStore)
 	yh := yearbook.NewHandler(yearbook.NewService(bookStore, e.cursors, e.svc, nil, e.svc), ah.RequireUser, []string{origin})
@@ -560,14 +562,18 @@ func TestQuotas(t *testing.T) {
 		}
 	}
 
-	// 197 rows, then 6 parallel uploads: exactly three fit, the rest are refused, and refused ones leave no objects.
+	// 197 rows, then 6 uploads, at most maxUploadsPerUser at a time (T-102: a third at once is 429): exactly three fit, the rest are
+	// refused, and refused ones leave no objects.
 	fill(197, 1)
 	var wg sync.WaitGroup
 	codes := make([]int, 6)
+	turn := make(chan struct{}, maxUploadsPerUser)
 	for i := range codes {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+			turn <- struct{}{}
+			defer func() { <-turn }()
 			codes[i] = e.upload(u, book, "a.jpg", "image/jpeg", photo(t)).Code
 		}()
 	}
