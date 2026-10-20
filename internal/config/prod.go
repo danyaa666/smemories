@@ -81,11 +81,29 @@ func privateHost(addr string) bool {
 	if err != nil {
 		return false
 	}
+	return privateName(host)
+}
+
+// privateName is privateHost for a bare host name or IP.
+func privateName(host string) bool {
 	if host == "localhost" {
 		return true
 	}
 	ip := net.ParseIP(host)
 	return ip != nil && !ip.IsUnspecified() && (ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast())
+}
+
+// checkLocalOnly makes dev and test local-only (T-099): both accept the public OTP key and the fixed code, so a deployed
+// environment must be prod. host is localhost, *.localhost or a loopback, private or link-local IP; anything else is refused.
+func checkLocalOnly(env, name, host string) error {
+	if env == "prod" {
+		return nil
+	}
+	host = strings.ToLower(host)
+	if privateName(host) || strings.HasSuffix(host, ".localhost") {
+		return nil
+	}
+	return fmt.Errorf("%s: host %q is not local; SMEM_ENV=%s is for local use only (localhost or a private address), a deployed environment must use SMEM_ENV=prod", name, host, env)
 }
 
 // redactURL returns s with any user:pass@ replaced by ***@ and any query string or fragment replaced by ?*** / #***, so a refusal message

@@ -33,8 +33,9 @@ lint:
 	golangci-lint run
 	$(MAKE) web-lint
 
+# SMEM_ENV has no default in the binaries (T-099); .env supplies dev, and these targets say so explicitly when .env is missing.
 run:
-	go run ./cmd/smemories-api
+	SMEM_ENV=$(or $(SMEM_ENV),dev) go run ./cmd/smemories-api
 
 # Web (Vite + React, ./web). node_modules is installed on demand from package-lock.json.
 web-install:
@@ -82,10 +83,10 @@ down:
 	docker compose down
 
 migrate:
-	go run ./cmd/smemories-migrate up
+	SMEM_ENV=$(or $(SMEM_ENV),dev) go run ./cmd/smemories-migrate up
 
 migrate-down:
-	go run ./cmd/smemories-migrate down --allow-down
+	SMEM_ENV=$(or $(SMEM_ENV),dev) go run ./cmd/smemories-migrate down --allow-down
 
 # Needs `make up` first.
 # -timeout 30m (T-077): Go's default is 10m per package, and internal/media took 763-858 s on a loaded machine before its tests ran in parallel;
@@ -100,7 +101,7 @@ verify-newman-users:
 
 # Dev only: forgets every rate-limiter window (keys smem:<SMEM_ENV>:rl:*) in the compose Redis, so Newman can be re-run from one address.
 reset-limits:
-	docker compose exec -T redis sh -c "valkey-cli --scan --pattern 'smem:$(or $(SMEM_ENV),dev):rl:*' | xargs -r -n 100 valkey-cli DEL"
+	docker compose exec -T redis sh -c "valkey-cli --scan --pattern 'smem:$(or $(SMEM_ENV),$(error SMEM_ENV is not set: use .env or `make reset-limits SMEM_ENV=dev`)):rl:*' | xargs -r -n 100 valkey-cli DEL"
 
 # Production image (T-022, docs/container.md). Needs only Docker. IMAGE names the tag; VERSION and COMMIT end up in the OCI labels and in the log line "starting".
 IMAGE ?= smemories:local

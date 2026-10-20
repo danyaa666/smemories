@@ -9,6 +9,10 @@ names the variable and echoes no secret. Image and run flags: [container.md](con
 `SMEM_MAIL_PROVIDER=ses` and `SMEM_MAIL_FROM` are required. The image smoke test runs the full API with `SMEM_ENV=test` and checks the prod refusals and the
 one-off tasks with `SMEM_ENV=prod`.
 
+**`dev` and `test` are local-only (T-099).** Both accept the public OTP key and the fixed code, so a deployed environment must be `prod`. In `dev` or `test` the loader (api,
+migrate and backfill alike) refuses an `SMEM_ALLOWED_ORIGINS` entry or an `SMEM_PUBLIC_BASE_URL` whose host is not `localhost`, `*.localhost` or a loopback, private or link-local IP; the
+message names the variable. LAN addresses stay allowed for phone testing at home; a public tunnel is refused on purpose. The image smoke test proves the missing-`SMEM_ENV` and public-base-URL refusals.
+
 ## Which command reads what
 
 - **api**: everything.
@@ -25,7 +29,7 @@ task definition, `SM` = Secrets Manager injected as an environment variable, `SS
 
 | Variable | Required in prod | Default | Secret | AWS source | Commands | Prod rule |
 |---|---|---|---|---|---|---|
-| `SMEM_ENV` | yes, must be `prod` | `dev` | no | env | api, migrate, backfill | one of `dev`, `test`, `prod`. Anything but `dev`/`test` also forbids every dev shortcut. |
+| `SMEM_ENV` | yes, must be `prod` | none: required in every environment, an unset or empty value is refused (`SMEM_ENV is required: dev, test or prod`) | no | env | api, migrate, backfill | one of `dev`, `test`, `prod`. Anything but `dev`/`test` also forbids every dev shortcut. `dev` and `test` are local-only (see below). Set it in every task definition; the image sets none. |
 | `SMEM_HTTP_ADDR` | no | `:8080` | no | env | api | `host:port`. |
 | `SMEM_LOG_LEVEL` | no | `info` | no | env | api, migrate, backfill | `debug`, `info`, `warn`, `error`. |
 | `SMEM_HTTP_REQUEST_TIMEOUT` | no | `30s` | no | env | api | at least `1s`. |

@@ -14,11 +14,15 @@ import (
 var prodTestDefaults = map[string]string{"SMEM_DB_ALLOW_INSECURE": "true", "SMEM_REDIS_ALLOW_INSECURE": "true", "SMEM_MEMORY_LIMIT_MIB": "1536",
 	"SMEM_MAIL_PROVIDER": "ses", "SMEM_MAIL_FROM": "SMemories <no-reply@mail.smemories.io>"}
 
-// env serves m; SMEM_REDIS_URL defaults to a valid URL unless the case sets it (even to ""), and prod gets prodTestDefaults.
+// env serves m; SMEM_ENV and SMEM_REDIS_URL default to dev and a valid URL unless the case sets them (even to ""; the loader itself has no
+// SMEM_ENV default, T-099), and prod gets prodTestDefaults.
 func env(m map[string]string) func(string) string {
 	return func(k string) string {
 		if v, ok := m[k]; ok {
 			return v
+		}
+		if k == "SMEM_ENV" {
+			return "dev"
 		}
 		if k == "SMEM_REDIS_URL" {
 			return "redis://127.0.0.1:6379/0"
@@ -31,6 +35,66 @@ func env(m map[string]string) func(string) string {
 }
 
 const dsn = "u:p@tcp(127.0.0.1:3306)/db"
+
+// testOrigin is an origin that env accepts: dev and test are local-only (T-099), prod needs a public https one.
+func testOrigin(envName string) string {
+	if envName == "prod" {
+		return "https://a.example.com"
+	}
+	return "http://localhost:5173"
+}
+
+// T-099: SMEM_ENV has no default, in Load and in LoadMigrate.
+func TestLoadEnvRequired(t *testing.T) {
+	for _, load := range []func(func(string) string) (Config, error){Load, LoadMigrate} {
+		if _, err := load(env(map[string]string{"SMEM_ENV": "", "SMEM_DB_DSN": dsn})); err == nil || !strings.Contains(err.Error(), "SMEM_ENV is required") {
+			t.Errorf("empty SMEM_ENV: want a refusal naming SMEM_ENV, got %v", err)
+		}
+		// Unset: the getenv func knows no SMEM_ENV at all (env() would supply dev).
+		if _, err := load(func(k string) string { return map[string]string{"SMEM_DB_DSN": dsn}[k] }); err == nil || !strings.Contains(err.Error(), "SMEM_ENV is required") {
+			t.Errorf("unset SMEM_ENV: want a refusal naming SMEM_ENV, got %v", err)
+		}
+		for _, e := range []string{"dev", "test", "prod"} {
+			if _, err := load(env(map[string]string{"SMEM_ENV": e, "SMEM_DB_DSN": dsn, "SMEM_ALLOWED_ORIGINS": testOrigin(e), "SMEM_PUBLIC_BASE_URL": testOrigin(e), "SMEM_OTP_KEY": strings.Repeat("k", 32), "SMEM_S3_BUCKET": "b"})); err != nil {
+				t.Errorf("SMEM_ENV=%s: %v", e, err)
+			}
+		}
+		if _, err := load(env(map[string]string{"SMEM_ENV": "staging", "SMEM_DB_DSN": dsn})); err == nil || !strings.Contains(err.Error(), "SMEM_ENV") {
+			t.Errorf("staging: got %v", err)
+		}
+	}
+}
+
+// T-099: dev and test refuse a host that is not local, in the origins and in the public base URL, for the API and for the one-off tasks.
+func TestLoadDevTestAreLocalOnly(t *testing.T) {
+	good := []string{"http://localhost:5173", "http://127.0.0.1:3000", "http://192.168.1.20:5173", "http://[::1]:5173", "http://app.localhost", "http://10.0.0.5", "http://169.254.1.1", "http://LOCALHOST:5173"}
+	bad := []string{"https://app.example.com", "http://8.8.8.8:5173", "http://0.0.0.0:5173", "http://localhost.example.com", "http://notlocalhost", "http://[2001:db8::1]"}
+	for _, load := range []func(func(string) string) (Config, error){Load, LoadMigrate} {
+		for _, e := range []string{"dev", "test"} {
+			for _, name := range []string{"SMEM_ALLOWED_ORIGINS", "SMEM_PUBLIC_BASE_URL"} {
+				for _, v := range good {
+					if _, err := load(env(map[string]string{"SMEM_ENV": e, "SMEM_DB_DSN": dsn, name: v})); err != nil {
+						t.Errorf("%s=%s %s: %v", e, v, name, err)
+					}
+				}
+				for _, v := range bad {
+					_, err := load(env(map[string]string{"SMEM_ENV": e, "SMEM_DB_DSN": dsn, name: v}))
+					if err == nil || !strings.Contains(err.Error(), name) || !strings.Contains(err.Error(), "SMEM_ENV=prod") {
+						t.Errorf("%s %s=%s: want a local-only refusal naming the variable, got %v", e, name, v, err)
+					}
+				}
+			}
+		}
+		// One bad entry in a list is enough.
+		if _, err := load(env(map[string]string{"SMEM_ENV": "test", "SMEM_DB_DSN": dsn, "SMEM_ALLOWED_ORIGINS": "http://localhost:5173, https://app.example.com"})); err == nil {
+			t.Error("a public origin in a list must be refused in test")
+		}
+	}
+	// Prod is unchanged: a public host is what it needs.
+	if _, err := Load(env(map[string]string{"SMEM_ENV": "prod", "SMEM_DB_DSN": dsn, "SMEM_ALLOWED_ORIGINS": "https://app.example.com", "SMEM_PUBLIC_BASE_URL": "https://app.example.com", "SMEM_OTP_KEY": strings.Repeat("k", 32), "SMEM_S3_BUCKET": "b"})); err != nil {
+		t.Errorf("prod with a public host: %v", err)
+	}
+}
 
 func TestLoadDefaults(t *testing.T) {
 	cfg, err := Load(env(map[string]string{"SMEM_DB_DSN": dsn}))
@@ -46,7 +110,7 @@ func TestLoadDefaults(t *testing.T) {
 }
 
 func TestLoadDSNRequiredOutsideTest(t *testing.T) {
-	for _, e := range []string{"", "dev", "prod"} {
+	for _, e := range []string{"dev", "prod"} {
 		if _, err := Load(env(map[string]string{"SMEM_ENV": e})); err == nil || !strings.Contains(err.Error(), "SMEM_DB_DSN") {
 			t.Errorf("SMEM_ENV=%q without DSN: want error naming SMEM_DB_DSN, got %v", e, err)
 		}
@@ -179,8 +243,8 @@ func TestLoadPublicBaseURL(t *testing.T) {
 	if err != nil || cfg.PublicBaseURL != "http://localhost:5173" {
 		t.Fatalf("dev default: %q, %v", cfg.PublicBaseURL, err)
 	}
-	cfg, err = Load(env(map[string]string{"SMEM_DB_DSN": dsn, "SMEM_PUBLIC_BASE_URL": "https://app.example.com/"}))
-	if err != nil || cfg.PublicBaseURL != "https://app.example.com" {
+	cfg, err = Load(env(map[string]string{"SMEM_DB_DSN": dsn, "SMEM_PUBLIC_BASE_URL": "http://localhost:5173/"}))
+	if err != nil || cfg.PublicBaseURL != "http://localhost:5173" {
 		t.Fatalf("trailing slash must be trimmed: %q, %v", cfg.PublicBaseURL, err)
 	}
 	prod := map[string]string{"SMEM_DB_DSN": dsn, "SMEM_ENV": "prod", "SMEM_ALLOWED_ORIGINS": "https://app.example.com", "SMEM_S3_BUCKET": "b"}
@@ -201,7 +265,7 @@ func TestLoadGoogle(t *testing.T) {
 	}
 	full := map[string]string{
 		"SMEM_DB_DSN": dsn, "SMEM_GOOGLE_CLIENT_ID": "id", "SMEM_GOOGLE_CLIENT_SECRET": "sec",
-		"SMEM_PUBLIC_BASE_URL": "https://app.example.com", "SMEM_OIDC_COOKIE_KEY": strings.Repeat("k", 32),
+		"SMEM_PUBLIC_BASE_URL": "http://localhost:5173", "SMEM_OIDC_COOKIE_KEY": strings.Repeat("k", 32),
 	}
 	cfg, err = Load(env(full))
 	if err != nil || cfg.GoogleClientID != "id" || cfg.GoogleClientSecret != "sec" || cfg.GoogleIssuer != "https://accounts.google.com" || len(cfg.OIDCCookieKey) != 32 {
@@ -251,7 +315,7 @@ func TestLoadRedisDefaults(t *testing.T) {
 
 func TestLoadRedisRequiredInEveryEnv(t *testing.T) {
 	for _, e := range []string{"dev", "test", "prod"} {
-		_, err := Load(env(map[string]string{"SMEM_ENV": e, "SMEM_DB_DSN": dsn, "SMEM_REDIS_URL": "", "SMEM_ALLOWED_ORIGINS": "https://a.example", "SMEM_PUBLIC_BASE_URL": "https://a.example", "SMEM_S3_BUCKET": "b"}))
+		_, err := Load(env(map[string]string{"SMEM_ENV": e, "SMEM_DB_DSN": dsn, "SMEM_REDIS_URL": "", "SMEM_ALLOWED_ORIGINS": testOrigin(e), "SMEM_PUBLIC_BASE_URL": testOrigin(e), "SMEM_S3_BUCKET": "b"}))
 		if err == nil || !strings.Contains(err.Error(), "SMEM_REDIS_URL") {
 			t.Errorf("SMEM_ENV=%s without SMEM_REDIS_URL: want error naming it, got %v", e, err)
 		}
@@ -330,7 +394,7 @@ func TestLoadRequestTimeout(t *testing.T) {
 }
 
 func TestLoadOTPKey(t *testing.T) {
-	base := map[string]string{"SMEM_DB_DSN": dsn, "SMEM_ALLOWED_ORIGINS": "https://a.example.com", "SMEM_PUBLIC_BASE_URL": "https://a.example.com", "SMEM_S3_BUCKET": "b"}
+	base := map[string]string{"SMEM_DB_DSN": dsn, "SMEM_S3_BUCKET": "b"}
 	with := func(kv ...string) map[string]string {
 		m := map[string]string{}
 		for k, v := range base {
@@ -339,6 +403,7 @@ func TestLoadOTPKey(t *testing.T) {
 		for i := 0; i < len(kv); i += 2 {
 			m[kv[i]] = kv[i+1]
 		}
+		m["SMEM_ALLOWED_ORIGINS"], m["SMEM_PUBLIC_BASE_URL"] = testOrigin(m["SMEM_ENV"]), testOrigin(m["SMEM_ENV"])
 		return m
 	}
 	key := strings.Repeat("k", 32)
@@ -369,7 +434,7 @@ func TestLoadDevFixedOTP(t *testing.T) {
 	load := func(envName, fixed string) (Config, error) {
 		return Load(env(map[string]string{
 			"SMEM_DB_DSN": dsn, "SMEM_ENV": envName, "SMEM_DEV_FIXED_OTP": fixed, "SMEM_OTP_KEY": strings.Repeat("k", 32),
-			"SMEM_ALLOWED_ORIGINS": "https://a.example.com", "SMEM_PUBLIC_BASE_URL": "https://a.example.com", "SMEM_S3_BUCKET": "b",
+			"SMEM_ALLOWED_ORIGINS": testOrigin(envName), "SMEM_PUBLIC_BASE_URL": testOrigin(envName), "SMEM_S3_BUCKET": "b",
 		}))
 	}
 	for _, e := range []string{"dev", "test"} {
@@ -378,10 +443,8 @@ func TestLoadDevFixedOTP(t *testing.T) {
 			t.Errorf("SMEM_ENV=%s: %q, %v", e, cfg.DevFixedOTP, err)
 		}
 	}
-	for _, e := range []string{"prod", ""} { // "" defaults to dev for everything else, but not for this
-		if _, err := load(e, "123123"); err == nil || !strings.Contains(err.Error(), "SMEM_DEV_FIXED_OTP") {
-			t.Errorf("SMEM_ENV=%q with the fixed code: want a refusal naming SMEM_DEV_FIXED_OTP, got %v", e, err)
-		}
+	if _, err := load("prod", "123123"); err == nil || !strings.Contains(err.Error(), "SMEM_DEV_FIXED_OTP") {
+		t.Errorf("prod with the fixed code: want a refusal naming SMEM_DEV_FIXED_OTP, got %v", err)
 	}
 	for _, e := range []string{"production", "staging", "Dev"} { // already invalid environments
 		if _, err := load(e, "123123"); err == nil {
@@ -393,8 +456,8 @@ func TestLoadDevFixedOTP(t *testing.T) {
 			t.Errorf("fixed code %q: want an error, got %v", bad, err)
 		}
 	}
-	for _, e := range []string{"prod", "dev", ""} { // unset is fine everywhere and means off
-		if cfg, err := load(e, ""); e != "" && (err != nil || cfg.DevFixedOTP != "") {
+	for _, e := range []string{"prod", "dev"} { // unset is fine everywhere and means off
+		if cfg, err := load(e, ""); err != nil || cfg.DevFixedOTP != "" {
 			t.Errorf("SMEM_ENV=%q unset: %q, %v", e, cfg.DevFixedOTP, err)
 		}
 	}

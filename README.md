@@ -109,7 +109,7 @@ Run the API locally:
 
 ```sh
 make up migrate               # creates .env, starts MySQL + MinIO, applies migrations
-make run                      # make loads .env for you
+make run                      # make loads .env for you (SMEM_ENV=dev comes from it)
 curl -i localhost:8080/healthz   # {"status":"ok"}
 curl -i localhost:8080/readyz    # {"status":"ready"}; 503 ERROR_NOT_READY while MySQL or Redis is down
 ```
@@ -123,11 +123,16 @@ old stack run `COMPOSE_PROJECT_NAME=smemories docker compose down` once from the
 Always start and stop the stack with `make up` / `make down`: a bare `docker compose ...` outside make targets the old shared `smemories`
 project, and a bare `docker compose down -v` would delete that project's data volumes.
 
+`dev` and `test` are local-only: the API and the one-off tasks refuse to start when `SMEM_ALLOWED_ORIGINS` or `SMEM_PUBLIC_BASE_URL` has a host that is not
+`localhost`, `*.localhost` or a loopback, private or link-local IP. For testing on a phone, open the web app by the LAN address of this machine (for example
+`http://192.168.1.20:5173`, and list that origin in `SMEM_ALLOWED_ORIGINS`); a public tunnel (ngrok, Cloudflare Tunnel) is refused on purpose, because it would expose the public
+OTP key and the fixed code to the internet. A deployed environment is always `SMEM_ENV=prod`.
+
 MinIO console: <http://127.0.0.1:9001> (credentials in `.env`). MinIO stopped publishing Docker images, so
 the compose file uses a frozen Bitnami build; it is for local development only.
 
 Configuration is read from environment variables (see `.env.example`): `SMEM_HTTP_ADDR` (default `:8080`),
-`SMEM_ENV` (`dev|test|prod`, default `dev`), `SMEM_LOG_LEVEL` (`debug|info|warn|error`, default `info`),
+`SMEM_ENV` (`dev|test|prod`; **required, no default**: every binary refuses to start without it, `.env.example` sets `dev`), `SMEM_LOG_LEVEL` (`debug|info|warn|error`, default `info`),
 `SMEM_DB_DSN` (`user:pass@tcp(host:port)/db`; required, in every `SMEM_ENV`, for the API binary, which exits with a clear message when it is empty), and the pool settings
 `SMEM_DB_MAX_OPEN` (20), `SMEM_DB_MAX_IDLE` (default: the value of `SMEM_DB_MAX_OPEN`), `SMEM_DB_CONN_MAX_LIFETIME` (5m).
 Request deadline: `SMEM_HTTP_REQUEST_TIMEOUT` (30s, minimum 1s) cancels the context of every request unless a route sets its own.
