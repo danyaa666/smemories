@@ -183,3 +183,25 @@ func BenchmarkRedisTake(b *testing.B) {
 		}
 	}
 }
+
+func TestRedisResetForgetsOnlyThatKey(t *testing.T) {
+	c := redistest.New(t)
+	l := ratelimit.NewRedis(c, "t", 1, time.Minute, nil)
+	take(t, l, "k")
+	take(t, l, "other")
+	if ok, _ := take(t, l, "k"); ok {
+		t.Fatal("k should be at its limit")
+	}
+	if err := l.Reset(context.Background(), "k"); err != nil {
+		t.Fatal(err)
+	}
+	if err := l.Reset(context.Background(), "never-used"); err != nil {
+		t.Fatalf("resetting an unknown key: %v", err)
+	}
+	if ok, _ := take(t, l, "k"); !ok {
+		t.Fatal("reset should free the key")
+	}
+	if ok, _ := take(t, l, "other"); ok {
+		t.Fatal("reset touched another key")
+	}
+}

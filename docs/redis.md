@@ -89,6 +89,7 @@ Redis `TIME` command, so API tasks with skewed clocks agree, and `PEXPIRE`s the 
 `Refund` removes the most recent hit (`ZPOPMAX`). On a refusal `Take` returns how long until the oldest hit leaves the window, which
 becomes `Retry-After`. `ratelimit.Memory` is the in-process version for unit tests only; `main.go` does not use it.
 
+An "IP" key is the client key of `httpx.ResolveClientIP`: the IPv4 text, or the /64 prefix of an IPv6 address (T-098, [production-config.md](production-config.md#client-ip-and-smem_trust_proxy)).
 Keys hold only IPs, numeric or public ids, or a SHA-256 hash of the normalised email (never the address itself).
 
 Fail policy when Redis is unreachable (`ratelimit.Factory`): **open** lets the request through and logs one ERROR per minute
@@ -100,6 +101,7 @@ Fail policy when Redis is unreachable (`ratelimit.Factory`): **open** lets the r
 | `register` | `SMEM_RATE_REGISTER_PER_HOUR` (5) | 1 h | IP | open |
 | `login_pair` | `SMEM_RATE_LOGIN_FAILS_PER_EMAIL` (10) failures | 15 min | IP + hashed email | closed |
 | `login_ip` | `SMEM_RATE_LOGIN_FAILS_PER_IP` (100) failures | 15 min | IP | closed |
+| `login_account` | `SMEM_RATE_LOGIN_FAILS_PER_ACCOUNT` (50) failures | 15 min | hashed email, any address (T-098) | closed; a successful password reset deletes the key |
 | `forgot_ip` | 5 | 1 h | IP | open |
 | `forgot_email` | 3 | 1 h | hashed email | open |
 | `reset_tries` | 20 | 1 h | IP | closed |

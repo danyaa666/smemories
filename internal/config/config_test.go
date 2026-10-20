@@ -111,8 +111,18 @@ func TestLoadAuthDefaults(t *testing.T) {
 	}
 	if len(cfg.AllowedOrigins) != 1 || cfg.AllowedOrigins[0] != "http://localhost:5173" || cfg.TrustProxy ||
 		cfg.MaxHashes != 4 || cfg.ArgonMemoryKiB != 19456 || cfg.ArgonTime != 2 || cfg.ArgonParallelism != 1 ||
-		cfg.RegisterPerHour != 5 || cfg.LoginFailsPerPair != 10 || cfg.LoginFailsPerIP != 100 {
+		cfg.RegisterPerHour != 5 || cfg.LoginFailsPerPair != 10 || cfg.LoginFailsPerIP != 100 || cfg.LoginFailsPerAcct != 50 {
 		t.Fatalf("unexpected auth defaults: %+v", cfg)
+	}
+}
+
+func TestLoadLoginFailsPerAccount(t *testing.T) {
+	cfg, err := Load(env(map[string]string{"SMEM_DB_DSN": dsn, "SMEM_RATE_LOGIN_FAILS_PER_ACCOUNT": "7"}))
+	if err != nil || cfg.LoginFailsPerAcct != 7 {
+		t.Fatalf("got %d, %v", cfg.LoginFailsPerAcct, err)
+	}
+	if _, err := Load(env(map[string]string{"SMEM_DB_DSN": dsn, "SMEM_RATE_LOGIN_FAILS_PER_ACCOUNT": "-3"})); err == nil || !strings.Contains(err.Error(), "SMEM_RATE_LOGIN_FAILS_PER_ACCOUNT") {
+		t.Errorf("negative value: got %v", err)
 	}
 }
 
@@ -132,7 +142,7 @@ func TestLoadAllowedOrigins(t *testing.T) {
 			t.Errorf("origin %q: got %v", bad, err)
 		}
 	}
-	for k, v := range map[string]string{"SMEM_TRUST_PROXY": "maybe", "SMEM_AUTH_MAX_CONCURRENT_HASHES": "0", "SMEM_AUTH_ARGON_MEMORY_KIB": "99999999999", "SMEM_AUTH_ARGON_PARALLELISM": "300", "SMEM_RATE_REGISTER_PER_HOUR": "x"} {
+	for k, v := range map[string]string{"SMEM_TRUST_PROXY": "maybe", "SMEM_AUTH_MAX_CONCURRENT_HASHES": "0", "SMEM_AUTH_ARGON_MEMORY_KIB": "99999999999", "SMEM_AUTH_ARGON_PARALLELISM": "300", "SMEM_RATE_REGISTER_PER_HOUR": "x", "SMEM_RATE_LOGIN_FAILS_PER_ACCOUNT": "0"} {
 		if _, err := Load(env(map[string]string{"SMEM_DB_DSN": dsn, k: v})); err == nil || !strings.Contains(err.Error(), k) {
 			t.Errorf("%s=%s: got %v", k, v, err)
 		}
