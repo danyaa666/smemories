@@ -1,5 +1,13 @@
 # E06_T-023 — AWS infrastructure as code and deploy pipeline
 
+> **From the security audit (2026-10-20, [docs/security-audit-2026-10-20.md](../../../docs/security-audit-2026-10-20.md)), checklist for this task:**
+> 1. **Edge headers on the web origin:** `Content-Security-Policy` (`default-src 'self'; img-src 'self' blob: data:; frame-ancestors 'none'; base-uri 'none'`; fonts are self-hosted, L-12), `Strict-Transport-Security`, `Referrer-Policy: no-referrer`, `X-Content-Type-Options: nosniff`. Test the CSP against the real build and the print screen.
+> 2. **Log hygiene (L5):** the public link token is in the query string of `GET /api/public-collect/get` and `POST /api/public-collect/submit-note`. ALB access logs and CloudFront standard logs would record it: leave them off, or drop the query string, and say which in `docs/deploy.md`.
+> 3. **Client address behind CloudFront:** `SMEM_TRUST_PROXY` takes the last `X-Forwarded-For` hop. With CloudFront in front of the ALB that hop is the CloudFront edge address, not the visitor, and every per-client limit then keys on edge addresses. Decide the topology (ALB only, or CloudFront with the viewer address passed in a header) and make `ResolveClientIP` match it; T-098 masks IPv6 to /64 after that choice.
+> 4. **`/readyz` and `/healthz`** reachable by the ALB health check only, not through the public path (T-101 caches the result, this removes the exposure).
+> 5. **Database users:** one for `smemories-migrate` (DDL), one for the API (DML only on the app tables), no `smem_test_%` grant in production.
+> 6. **Repo settings (owner questions on the board):** Dependabot alerts and security updates on; agent identity and `enforce_admins`.
+
 **Epic:** E06-go-live · **PRD:** [PRD.md](PRD.md) · **Milestone:** M2 · **Risk:** high · **Priority:** P2 · **Type:** infra
 
 <!-- Migrated from the board block on 2026-10-07; the text below is unchanged. The board keeps status, dependencies and comments only. -->

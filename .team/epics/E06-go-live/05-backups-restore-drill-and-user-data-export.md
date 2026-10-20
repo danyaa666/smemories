@@ -1,5 +1,7 @@
 # E06_T-025 — Backups, restore drill, and user data export/deletion
 
+> **From the security audit (2026-10-20, finding M3):** T-100 (E12) must be merged first. Until then a yearbook delete purges `yearbooks/<caller's spelling>/`, so a differently spelled id leaves the photos in S3 while the rows go. The orphan sweep above should also cover objects under a non-canonical spelling of a prefix that T-100 has not yet made impossible.
+
 > **From T-065 QA (2026-10-11):** an upload that races a book delete can leave objects in the store with no media row (`PurgeYearbook` removes the prefix once, before the transaction). Include an orphan-object sweep (objects under `yearbooks/<id>/` whose yearbook no longer exists) in the data-deletion and housekeeping work, with a dry-run mode.
 
 > **E10 note (2026-10-09, D-26):** the database has no foreign keys, so deleting a user is an explicit transaction: delete each of the user's yearbooks through `yearbook.Service.Delete` (which purges storage and calls every child purger), then `user_identity_tab` rows, then the `user_tab` row; sessions and codes live in Redis and are removed by key. Extend the zero-rows test of T-066 (`dbtest.AssertNoOrphans` and the full-book test) to cover a user with several books before this task can pass QA.
