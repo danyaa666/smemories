@@ -18,9 +18,9 @@
 
 **Awaiting your review (MERGED):** nothing
 
-**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-042 (Who may promote to main: stop agents bypassing branch protection?); Q-043 (Turn on Dependabot alerts and security updates for the public repo?)
+**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?)
 
-_Board last written 2026-10-20 16:48Z_
+_Board last written 2026-10-20 17:03Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -484,22 +484,22 @@ Context: Amazon SES (D-29) needs a verified domain to send from, with DKIM/SPF/D
 Status: the personal-yearbook journey is built end to end (sign-up with codes, username, yearbooks with profile and photos, friend links and public form, moderation inbox with reorder/delete, two print templates, template picker and print guide, PDF through the browser) and guarded by an end-to-end CI test. The go-live code work is done and tested against stubs: production image (read-only, graceful shutdown, Trivy/SBOM), production config contract, migration lock and schema check, SES mailer behind a provider interface. Left that needs nothing from you: two tiny P3 leftovers (T-029 MinIO image swap, T-091 smoke-test polish). Options: A) Go-live phase now (D-31): you give the domain, DNS access, AWS account/region and billing OK; I run T-023 infra, live SES, T-050 (remove the dev code), T-031/T-024/T-025, first deploy; real users and real feedback come first. B) M1b guided customisation (D-19 stage 1): per-book colours, fonts, page order and visibility with a PDF preview, built before launch. C) M3 class yearbook (many contributors, roles, invites): the biggest feature, wanted only after go-live (D-11 says go-live before M3). D) Polish only: fix the small known items (public form hides 'Add photo' for navy-classic, feedback double-click guard, 320px inbox card, accessibility nits) and wait. Recommendation: A, then M1b. Everything else about the plan stays as in the roadmap; tell me if you want a different order.
 
 ### Q-042 — Who may promote to main: stop agents bypassing branch protection?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-20 05:30Z
 - **Blocks:** T-023
 - **Recommendation:** B now (enforce_admins on main only), A before go-live. Not enforce_admins on develop: the board commits are pushed straight to develop as admin and would be rejected.
-- **Answer:** _(pending)_
+- **Answer:** Owner (chat 2026-10-21): as recommended. B now: enforce_admins=true on main only (owner switches it; develop stays as is because board commits are pushed there). A before go-live: a separate GitHub account or bot for the agents with write, not admin, and a ruleset on main that only the owner can bypass, 1 required review; it is a prerequisite of the first deploy (E06 live phase).
 
 Security audit finding M4 (docs/security-audit-2026-10-20.md). main and develop require the checks go, go-integration, web and security, but enforce_admins is off and 0 approvals are required. The dev, qa and leader agents use your gh login, which is an admin, and .claude/settings.json allows git push (not force). So an agent can push or merge to main and skip the checks; 'only the owner promotes to main' is a rule, not a control.
 Options: (A) a separate GitHub account or bot for the agents with write (not admin) access, a ruleset on main that only you can bypass, and 1 required review. Strongest; costs a new account and a token swap in the team setup. (B) enforce_admins=true on main only: checks can no longer be skipped on main and direct pushes to it stop, but an agent can still open and merge a PR to main. Free, one setting, no workflow change. (C) leave as is: the risk stays a policy risk.
 Blocked meanwhile: nothing; do it before T-023 deploys from main.
 
 ### Q-043 — Turn on Dependabot alerts and security updates for the public repo?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-20 05:30Z
 - **Blocks:** —
 - **Recommendation:** Yes: free for public repos, one toggle in Settings, Code security.
-- **Answer:** _(pending)_
+- **Answer:** Owner (chat 2026-10-21): no. Dependabot alerts and security updates stay off; the weekly dependabot.yml version PRs and the CI govulncheck/npm audit checks remain the controls.
 
 Security audit finding L6. GitHub says Dependabot alerts are disabled and security updates are disabled for danyaa666/smemories (secret scanning and push protection are already on, and dependabot.yml still opens weekly version PRs). CI govulncheck fails the build on a reachable Go vulnerability and npm audit only warns, so today nobody is told when a dependency gets an advisory between weekly PRs. Turning both on costs nothing and sends advisories to you and opens fix PRs against develop. I did not change the setting: it is a repository setting and yours to switch. Blocked meanwhile: nothing.
 
@@ -543,6 +543,8 @@ Owner decisions (2026-10-06, `/team-init` interview). "Rejected" lists the optio
 | D-30 | **The repository stays unlicensed (all rights reserved) for now.** | Owner answer in chat 2026-10-17 (Q-034, option A, as recommended). The repo is public (D-09) but no LICENSE file is added; third-party licences stay in THIRD_PARTY_NOTICES.md. The container image label says `LicenseRef-All-Rights-Reserved` instead of NOASSERTION (T-089). | MIT; Apache-2.0; AGPL-3.0 | The owner decides to let others run or fork SMemories |
 | D-31 | **Anything that needs a real domain or AWS credentials is built and tested against local stubs first and verified live only in a final go-live phase, after the first phase (M1 plus the go-live code work) is complete.** | Owner instruction in chat 2026-10-17 (answer to Q-037). Dev and QA keep working without an AWS account or a domain. Deferred to the go-live phase: T-023 (AWS infrastructure and deploy pipeline), T-024 (observability on AWS), T-025 (backups and restore drill on AWS), T-031 (auth hardening that needs the infrastructure), the live verification of T-021 (real SES: domain identity, DNS records, sandbox exit), T-050 (removing the dev shortcut, which e2e and local development still use until then), the domain, the AWS region and the first deploy. The order of the phase is in the E06 PRD ("Live verification phase"). | Doing T-023 now with a throwaway account | Phase 1 is code-complete and the owner gives the domain, the AWS account and the region |
 | D-32 | **The plain-text export of a book gives every photo as a permanent public link (no sign-in), made unguessable, revocable and limited to approved content.** | Owner answer in chat 2026-10-19 (AskUserQuestion; the leader had recommended owner-only links and warned that photos are friends' personal data, so the owner chose convenience knowingly). Conditions the leader added so the choice stays safe: link = media id + 128-bit HMAC with a server secret and a per-book `link_epoch`; the owner can switch all links of a book off (`revoke-photo-links`); a link stops working when the note is hidden or deleted, or the photo or book is deleted; only the re-encoded `display` variant without EXIF is served; `noindex`, no referrer, rate limits; the token is never logged; a warning dialog before the first export. Remaining exposure the owner accepted: anyone holding a link can open that photo until the owner revokes it, and caches may serve a revoked link for up to 5 minutes. Open recommendation, not yet decided: a one-line notice on the public friend form that the owner may share photos by link. Tasks: T-092 (links API, risk high), T-093 (text export API), T-094 (web). | Owner-only links (leader recommendation); expiring signed links | A real complaint about a shared link, a school or class pilot (D-01 minors rule), or a wish for per-photo revoke / expiry |
+| D-33 | **Promotion to `main` is enforced, in two steps: `enforce_admins` on `main` now; a separate agent account and an owner-only ruleset before go-live.** | Owner answer 2026-10-21 to Q-042 (audit finding M4, leader recommendation). Step 1 stops checks being skipped and direct pushes to `main`; an agent with the owner's admin login could still merge a PR to `main`, so step 2 (agents on a write-only account, ruleset bypass = owner, 1 review) is a prerequisite of the first deploy. `develop` keeps admin pushes because the board commits go there. | Leave as is | An agent pushes or merges to `main` despite the rule |
+| D-34 | **Dependabot alerts and security updates stay off.** | Owner answer 2026-10-21 to Q-043 (audit finding L6; the leader had recommended turning them on). The weekly version PRs from `dependabot.yml`, `govulncheck` (fails the build) and `npm audit` (warns) remain. | Turn both on | A dependency advisory is missed between weekly PRs |
 
 Leader decisions (low-risk, inside the approved stack):
 
