@@ -71,22 +71,34 @@ func (s *Service) ResetPassword(ctx context.Context, ip, email, code, password s
 	if err != nil {
 		return err
 	}
-	return s.store.resetPassword(ctx, u.InternalID, phc, now, s.sessions.DeleteAll)
+	return s.store.resetPassword(ctx, u.InternalID, phc, now, s.afterCommit(s.sessions.DeleteAll))
 }
 
-// resetPassword stores the new hash and deletes every session of the user. The sessions go before the
-// commit: if Redis fails the password is not changed either, and the sign-out can never be skipped.
+// resetPassword stores the new hash and raises the user's auth_epoch in one transaction. The epoch is what signs every
+// existing session (and any a racing login is about to create) out; dropSessions runs after the commit as a clean-up and its
+// error is returned (Service.afterCommit logs it and makes it nil).
 func (s *Store) resetPassword(ctx context.Context, userID uint64, phc string, now time.Time, dropSessions func(ctx context.Context, userID uint64) error) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = tx.Rollback() }()
-	if _, err := tx.ExecContext(ctx, `UPDATE user_tab SET password_hash = ?, updated_at = ? WHERE id = ?`, phc, now.UnixMilli(), userID); err != nil {
+	if _, err := tx.ExecContext(ctx, `UPDATE user_tab SET password_hash = ?, auth_epoch = auth_epoch + 1, updated_at = ? WHERE id = ?`, phc, now.UnixMilli(), userID); err != nil {
 		return err
 	}
-	if err := dropSessions(ctx, userID); err != nil {
+	if err := tx.Commit(); err != nil {
 		return err
 	}
-	return tx.Commit()
+	return dropSessions(ctx, userID)
+}
+
+// afterCommit wraps a session purge that runs after a credential change committed: the auth_epoch already revokes every
+// session, so a purge failure is logged and does not fail the request.
+func (s *Service) afterCommit(drop func(ctx context.Context, userID uint64) error) func(ctx context.Context, userID uint64) error {
+	return func(ctx context.Context, userID uint64) error {
+		if err := drop(ctx, userID); err != nil {
+			s.sessions.logger.Error("auth: session purge after credential change failed; the epoch still revokes them", "error", err)
+		}
+		return nil
+	}
 }

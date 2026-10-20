@@ -247,7 +247,7 @@ func (s *Service) issue(ctx context.Context, u *User, userAgent, oldToken string
 	if err != nil {
 		return nil, nil, err
 	}
-	row.userID = u.InternalID
+	row.userID, row.epoch = u.InternalID, u.AuthEpoch
 	if err := s.sessions.Create(ctx, row); err != nil { // also sweeps the user's expired sessions
 		return nil, nil, err
 	}
@@ -266,7 +266,7 @@ func (s *Service) Authenticate(ctx context.Context, token string) (u *User, refr
 	}
 	hash := hashToken(token)
 	now := s.now().UTC()
-	uid, lastSeen, err := s.sessions.Lookup(ctx, hash)
+	uid, epoch, lastSeen, err := s.sessions.Lookup(ctx, hash)
 	if errors.Is(err, errNotFound) {
 		return nil, nil, ErrUnauthenticated
 	}
@@ -284,6 +284,10 @@ func (s *Service) Authenticate(ctx context.Context, token string) (u *User, refr
 	}
 	if err != nil {
 		return nil, nil, err
+	}
+	if u.AuthEpoch != epoch { // issued before a password reset or Google merge: revoked
+		_ = s.sessions.Delete(ctx, hash) // best effort, the refusal does not depend on it
+		return nil, nil, ErrUnauthenticated
 	}
 	if exp.Sub(now) < SessionTTL/2 {
 		alive, err := s.sessions.Extend(ctx, hash, uid, now, SessionTTL)

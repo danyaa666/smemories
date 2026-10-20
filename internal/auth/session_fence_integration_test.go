@@ -5,6 +5,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -192,8 +193,8 @@ func TestSessionWithStaleEpochIsRefusedAndDeleted(t *testing.T) {
 		t.Fatal(err)
 	}
 	e.mustBeSignedOut(s, "stale epoch")
-	if n := e.sessionCount(); n != 0 {
-		t.Errorf("%d sessions left in Redis, want the stale one deleted", n)
+	if n, err := e.rc.Client().Exists(ctx, e.rc.Key("sess", tokenKey(hashToken(s.Token)))).Result(); err != nil || n != 0 {
+		t.Errorf("the stale session is still in Redis (%d, %v)", n, err)
 	}
 	if _, _, err := e.svc.Authenticate(ctx, e.loginOK(testMail, fenceOldPW).Token); err != nil {
 		t.Errorf("a session issued after the bump must work: %v", err)
@@ -211,5 +212,38 @@ func TestAuthenticateStillCostsOneQuery(t *testing.T) {
 	}
 	if got := n.Load(); got != 1 {
 		t.Errorf("Authenticate issued %d MySQL statements, want 1", got)
+	}
+}
+
+// ResetPassword and the Google merge each raise the epoch by one; a failing purge after the commit does not fail the reset.
+func TestCredentialChangesRaiseTheEpochAndSurvivePurgeFailure(t *testing.T) {
+	e, uid := newFenceEnv(t)
+	ctx := context.Background()
+	epoch := func() int { return e.count(`SELECT auth_epoch FROM user_tab WHERE id = ?`, uid) }
+	if epoch() != 0 {
+		t.Fatalf("new accounts start at epoch 0, got %d", epoch())
+	}
+	before := e.loginOK(testMail, fenceOldPW)
+	phc, err := e.hasher.Hash(ctx, fenceNewPW)
+	if err != nil {
+		t.Fatal(err)
+	}
+	failing := func(context.Context, uint64) error { return errors.New("redis down") } //nolint:forbidigo // test double
+	if err := e.svc.store.resetPassword(ctx, uid, phc, e.clock.now(), e.svc.afterCommit(failing)); err != nil {
+		t.Fatalf("a purge failure after the commit must not fail the reset: %v", err)
+	}
+	if epoch() != 1 {
+		t.Errorf("epoch after reset = %d, want 1", epoch())
+	}
+	if !strings.Contains(e.logs.String(), "session purge after credential change failed") {
+		t.Errorf("the purge failure was not logged: %s", e.logs.String())
+	}
+	e.mustBeSignedOut(before, "the epoch revokes the session although the purge failed")
+
+	if _, _, err := e.svc.SignInGoogle(ctx, "ua", "", &GoogleIdentity{Subject: "s1", Email: testMail, Name: "V"}); err != nil {
+		t.Fatal(err)
+	}
+	if epoch() != 2 {
+		t.Errorf("epoch after the Google merge = %d, want 2", epoch())
 	}
 }
