@@ -11,16 +11,18 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 12 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-095, T-096, T-097 |
-| TODO | 12 | T-093, T-094, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107 |
-| READY_FOR_QA | 1 | T-092 |
+| TODO | 11 | T-093, T-094, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108 |
+| IN_PROGRESS | 1 | T-099 |
+| READY_FOR_QA | 1 | T-098 |
+| QA_PASS | 1 | T-092 |
 | DONE | 74 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
 **Awaiting your review (MERGED):** nothing
 
-**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?)
+**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?)
 
-_Board last written 2026-10-20 17:07Z_
+_Board last written 2026-10-20 18:15Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -502,6 +504,15 @@ Blocked meanwhile: nothing; do it before T-023 deploys from main.
 - **Answer:** Owner (chat 2026-10-21): no. Dependabot alerts and security updates stay off; the weekly dependabot.yml version PRs and the CI govulncheck/npm audit checks remain the controls.
 
 Security audit finding L6. GitHub says Dependabot alerts are disabled and security updates are disabled for danyaa666/smemories (secret scanning and push protection are already on, and dependabot.yml still opens weekly version PRs). CI govulncheck fails the build on a reachable Go vulnerability and npm audit only warns, so today nobody is told when a dependency gets an advisory between weekly PRs. Turning both on costs nothing and sends advisories to you and opens fix PRs against develop. I did not change the setting: it is a repository setting and yours to switch. Blocked meanwhile: nothing.
+
+### Q-044 — Approve merge of T-092 (public photo links API, PR #85)?
+- **Status:** OPEN
+- **Asked:** 2026-10-20 18:15Z
+- **Blocks:** T-092
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+QA_PASS and leader review OK on b061020. Adds the permanent public photo links you chose (D-32): signed 128-bit token, GET /api/public-media/get-content, POST /api/yearbook/revoke-photo-links, SMEM_MEDIA_LINK_SECRET (prod refuses to start without it), migration adding yearbook_tab.link_epoch. The only red CI job (image) is a pre-existing flaky migrate race also seen on develop; T-108 fixes it. Reply 'team approve T-092' to approve.
 
 <!-- questions:end -->
 
@@ -4257,7 +4268,7 @@ Small leftovers from the T-090 QA: (1) scripts/image-smoke.sh: when SMOKE_TIMEOU
 #### Comments
 
 ### T-092 — [E05] Public photo links: signed token, public-media endpoint, revoke-all (API)
-- **Status:** READY_FOR_QA
+- **Status:** QA_PASS
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -4265,16 +4276,35 @@ Small leftovers from the T-090 QA: (1) scripts/image-smoke.sh: when SMOKE_TIMEOU
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** leader
 - **Branch:** task/t-092-e05-public-photo-links-signed-token-publ
 - **PR:** https://github.com/danyaa666/smemories/pull/85
-- **Updated:** 2026-10-19 04:31Z by dev
+- **Updated:** 2026-10-20 18:14Z by qa
 - **Comments-seen:** 1
 
 Spec: .team/epics/E05-templates-export/14-public-photo-links-api.md (read it from the repo root). Decision D-32: the owner chose permanent public photo links; this task adds the HMAC token, GET /api/public-media/get-content, POST /api/yearbook/revoke-photo-links and the SMEM_MEDIA_LINK_SECRET config. Risk high: owner approves the merge.
 
 #### Comments
 - 2026-10-19 04:31Z · dev · PR #85, head b061020. Requirements 1-8 as specified. QA: run 'make lint test test-integration'; newman postman/public-media.postman_collection.json (needs API with SMEM_MEDIA_LINK_SECRET=<base64>, pass --env-var linkSecret=same, runs twice; make reset-limits before a third run); probes: MAC byte tampering, replay after revoke, note hidden after link handed out, HEAD/Range, log/metrics scraping, dev restart WARN, prod start without the secret. Known gaps: scripts/image-smoke.sh prod refusals not run locally (needs image build); Newman cannot prove 'no cookie sent' (its cookie jar merges), Go tests do; each in-flight request holds up to 10 MiB in memory (same as get-content), no per-process cap. Risk high: owner approves the merge.
+- 2026-10-20 18:14Z · qa · QA_PASS on PR #85 head b061020 (worktree clean, no .team/ change in the PR). My own stack: compose project qa092, ports 23306/26379/29000, own API on :28080 with a known SMEM_MEDIA_LINK_SECRET; main stack untouched.
+  EVIDENCE (AC -> how verified -> result)
+  AC1 token unit tests: go test -race ./... all green; probe: 48 MAC byte flips (every byte 0..15 x 0x01/0x80/0xFF) + 1386 single-char substitutions over all 22 MAC chars + padding/case/whitespace/NUL/'+'/'/'/missing-dot/oversize variants -> every one 404, none accepted (non-canonical last-char spellings too, strict base64url). Result PASS.
+  AC2 integration: make test-integration equivalent green (all packages; media/notes/storage/yearbook re-run against my own MinIO via SMEM_TEST_S3_ENDPOINT). My probes on the live API: cover + profile photo + approved-note photo served anonymously, no Set-Cookie in 200 or 404, no CORS header even with a foreign Origin; pending, hidden (after the link was handed out), re-pending, deleted note (batch-delete), deleted photo (media/delete), deleted book, unreferenced photo, other book's media with this book's id/epoch, wrong secret, unknown id: all 404; hide -> 404, re-approve -> 200 again with the SAME token. Revoke: old token 404, epoch+1 token 200, epoch+2 404 after a second revoke; foreign user's book 404, no session 401, unknown id 404; 10 parallel revokes -> epoch exactly 10 (no lost increment); 11th -> 429 Retry-After 3600; foreign Origin 403. Result PASS.
+  AC3 config: unit tests green (prod unset/short/non-base64 name the variable and never the value; dev/test random + WARN). Live: restarted the dev API without the secret -> one WARN "SMEM_MEDIA_LINK_SECRET is not set ... links stop working when the API restarts", the old link then 404. make image + image-smoke (see below) proves the prod binary refuses a missing and a short secret and does not echo it. Secret/token scraping: after ~2000 public requests (ok, 404, 429, storage down 502, %zz and 640 KB tokens) the log has 0 hits for the secret, the recognisable tokens, any of the 1100 possible MACs of a photo, and no 'token=' (only the route label); /metrics has 0 hits and only result=ok|not_found|rate_limited. One storage-error ERROR line contains the object key (photo ULID, not the MAC): not the credential. Result PASS.
+  AC4 EXIF/GPS: fixture photo-gps.jpg (APP1 Exif with GPS IFD 0x8825) and my own JPEG with EXIF+GPS, XMP, COM, ICC, and PNG with tEXt, eXIf, iTXt(XMP): served bytes contain only DQT/SOF/DHT/SOS (JPEG) and IHDR/IDAT/IEND (PNG); no marker strings. Served bytes are byte-identical to the owner's display variant; thumb/print/variant/id params are ignored (display only). Result PASS.
+  AC5 limiters: 600 good requests -> 200, 601st 429 (public_media_all) and good hits did NOT use the miss budget; 60 misses then 429 with Retry-After 900 (public_media_miss); with the miss budget spent a valid link from that IP also gets 429 (see note 1). Redis stopped: good link 200, bad 404, exactly 1 ERROR 'ratelimit: limiter failed' (policy open) in 10 requests. 404 bodies byte-identical for 9 failure kinds incl. headers (only X-Request-Id/Date differ), also for HEAD (same Content-Length); If-None-Match and Range on a refused link never give 304/206. Timing medians: unknown id 3.4 ms, bad MAC 3.6, valid MAC unshareable 3.6, wrong epoch 3.6, malformed 1.8 (see note 2). Result PASS.
+  AC6 docs/contract: api/openapi.yaml, schema.d.ts (npm run check:api, typecheck ok), docs media/redis/production-config/observability updated, doc test green; golangci-lint 0 issues, gofmt/vet (incl. -tags integration) clean; migration test (rolls up/down/up with data) green. Newman (npx newman 6.2.3) postman/public-media.postman_collection.json twice back to back with --env-var linkSecret=<same> : 39 requests, 89 assertions, 0 failed, both runs. HEAD 200 no body, Range 206 with Content-Range, 416 unsatisfiable, ETag + If-None-Match 304 with the same cache header, 405 for POST/PUT/DELETE/OPTIONS (Allow: GET, HEAD). 10 MiB class: photo-large.jpg (2400x1200, 54989 B) served in 10 ms, equal to the owner's display bytes. Result PASS.
+  make image + image-smoke: the plain 'make image-smoke' could not start here because 'docker pull mysql:8.4@sha256...' hung on this machine for 10 min (images are present locally, registry unreachable from the VM; environment, not the PR). I ran an unmodified copy of scripts/image-smoke.sh with only the pull line replaced by 'docker image inspect' on an image built with make image (IMAGE=smemories:qa092): 19 ok, including 'prod start refuses a missing or short SMEM_MEDIA_LINK_SECRET' and 'two concurrent smemories-migrate up applied each of the 21 migrations once'.
+  CI IMAGE FLAKE ('concurrent smemories-migrate up (2) failed: missing zero version migration'): NOT caused by this PR. (a) The PR changes nothing in internal/db/migrate.go or cmd/smemories-migrate; the message is goose's errMissingZeroVersion on an empty database when two migrate tasks start together. (b) The identical failure is in CI history on develop pushes before this PR: 39198267128 (2026-10-19 04:12Z), 39050881511, 39050859675, 39046179690, 39043864850 (2026-10-17). (c) Locally with this PR's image: 16 passes, 1 failure (same message, on a loaded machine) in 17 runs; with the develop image (68e088a): 18 passes in 18 runs. Not statistically separable; the failure is rare and load dependent. NOTE the CI run 39199933036 is on attempt 2 and the image job failed on both attempts (so the leader's re-run failed too): red CI on the head is a gate, so a third re-run (gh run rerun 39199933036 --failed) is needed before merge; and a separate task should fix the race (suspect: version-table initialisation vs the advisory lock in internal/db/migrate.go with goose v3.28).
+  NON-BLOCKING OBSERVATIONS
+  1. With the per-IP miss budget (60/15 min) spent, a VALID link from the same IP is also 429 (the limiter is taken before the token is checked, the hit is refunded only afterwards). Behind a shared NAT (a school) 60 bad guesses lock out everyone on that IP for up to 15 min. Same behaviour as public_misses of public-collect and docs say 'a good link never uses this budget' (true, but it can still be blocked); consider one sentence in docs/media.md.
+  2. A malformed token answers about 1.7 ms faster than a well-formed one (no database call). That reveals only the token shape, not whether a photo exists (unknown id vs existing photo with bad MAC vs unshareable photo are within 0.2 ms).
+  3. The revoke limiter (10/hour/user) means an owner who revoked 10 times cannot revoke again for an hour; acceptable, maybe mention in the T-094 UI.
+  4. Known by the dev and accepted: up to 10 MiB per in-flight request in memory, no per-process cap; Newman cannot prove 'no cookie sent' (the Go tests and my http.client probes with no Cookie header do).
+  5. The ETag is the content hash prefix shared with the owner endpoint (pre-existing behaviour).
+  6. Integration-test hint: internal/storage/storagetest defaults to http://127.0.0.1:9000; running the suite on a non-default MinIO port needs SMEM_TEST_S3_ENDPOINT (not documented in the Makefile target).
+  No test files added by QA (the dev's tests plus my probes cover the plan).
+- 2026-10-20 18:15Z · leader · Leader review OK on b061020: token = canonical ULID + 128-bit HMAC (strict base64, fixed length, hmac.Equal), MAC over the stored yearbook id and link_epoch; one query decides shareable (cover, profile, approved note) with the join justified in code (1:1 by primary key, indexed EXISTS); identical 404s; display variant only; headers and cache as specified; migration expand-only. QA_PASS with tamper, replay, hidden-note, log and EXIF probes. CI image failure is the pre-existing migrate race (develop shows it too) -> T-108; re-run requested. Follow-ups already tracked: memory per download (T-107), shared-NAT miss budget (T-098 /64 keying, T-031). Waiting for the owner's approval (risk high).
 
 ### T-093 — [E05] Book as plain text with photo links (API)
 - **Status:** TODO
@@ -4372,7 +4402,7 @@ Spec: .team/epics/E11-signatures/03-signature-print.md. Next phase.
 #### Comments
 
 ### T-098 — [E12] IPv6 /64 keying and a per-account login limiter
-- **Status:** TODO
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
@@ -4381,19 +4411,20 @@ Spec: .team/epics/E11-signatures/03-signature-print.md. Next phase.
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-20 05:28Z by leader
-- **Comments-seen:** 2
+- **Branch:** task/t-098-e12-ipv6-64-keying-and-a-per-account-log
+- **PR:** https://github.com/danyaa666/smemories/pull/87
+- **Updated:** 2026-10-20 17:25Z by dev
+- **Comments-seen:** 3
 
 Spec: `.team/epics/E12-security-hardening/01-ipv6-keying-and-account-login-limit.md`. Audit M1: every per-IP limiter keys on the full address, so one IPv6 /64 walks around all of them, and login has no per-account cap. Mask IPv6 to /64 in ResolveClientIP, add a fail-closed per-account failed-login limiter. Risk high: auth.
 
 #### Comments
 - 2026-10-20 05:34Z · leader · Leader review 2026-10-20: spec updated (requirement 4 and AC6: a successful password reset clears the account counter; known residual note). Re-read the spec from the repo root before you start.
 - 2026-10-20 16:48Z · leader · Leader 2026-10-20: spec updated again (requirement 1b from audit run 1: canonical address text and a WARN when SMEM_TRUST_PROXY is on behind a public peer). Re-read the spec.
+- 2026-10-20 17:25Z · dev · PR #87 head 33737ef. /64 keying + WARN + login_account limiter (closed, 50/15min) + Limiter.Reset on successful reset-password. Tests: httpx TestClientIP/TestTrustProxyWarns..., auth limiters_integration_test (AC2,3,6), config, ratelimit Reset. Verify: go test -race -tags integration ./..., golangci-lint 0 issues. Not changed: endpoints (no Postman change).
 
 ### T-099 — [E12] Mandatory SMEM_ENV and local-only dev/test
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
@@ -4401,10 +4432,10 @@ Spec: `.team/epics/E12-security-hardening/01-ipv6-keying-and-account-login-limit
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-099-e12-mandatory-smem-env-and-local-only-de
 - **PR:** —
-- **Updated:** 2026-10-20 05:28Z by leader
+- **Updated:** 2026-10-20 17:26Z by dev
 - **Comments-seen:** 1
 
 Spec: `.team/epics/E12-security-hardening/02-mandatory-env-and-local-only-dev-test.md`. Audit M2 and L7: SMEM_ENV defaults to dev, which prints OTP codes, uses the public OTP key and drops the cookie Secure flag. Make it required in every command, and refuse dev/test when origins are not local. Risk high: production configuration.
@@ -4562,6 +4593,25 @@ Spec: .team/epics/E12-security-hardening/10-auth-and-repo-hygiene.md (read it fr
 - **Comments-seen:** 0
 
 Spec: .team/epics/E12-security-hardening/07-bounded-photo-download-memory.md (read it from the repo root). Source: audit run 1, docs/security-audit-skill-2026-10-20/ (PR #86). Risk high: owner approves the merge.
+
+#### Comments
+
+### T-108 — [E06] Concurrent smemories-migrate up on an empty database fails (missing zero version migration)
+- **Status:** TODO
+- **Priority:** P2
+- **Type:** bug
+- **Milestone:** M2
+- **Depends-on:** —
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-20 18:15Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E06-go-live/11-concurrent-migrate-race.md. CI image job flake seen on develop and on PR #85 (QA of T-092); fix the lock order in internal/db/migrate.go.
 
 #### Comments
 
