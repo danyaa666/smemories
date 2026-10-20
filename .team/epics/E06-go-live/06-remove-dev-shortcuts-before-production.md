@@ -27,3 +27,6 @@ This is the control that stops a test backdoor reaching real users; the check mu
 #### Test plan
 - Dev: run the script on the dirty tree (fails) and the clean tree (passes); full auth test suite.
 - QA should probe: re-adding a tagged line (the script catches it), the literal `123123` in a comment, a Dockerfile `ENV`, case variants.
+
+#### Added by the leader (2026-10-20, audit run 1)
+The audit notes that some dev-only behaviour is a *default* rather than a tagged shortcut, so this script would not see it: the public `devOTPKey` fallback, the log mailer, and the `*_ALLOW_INSECURE` opt-outs. For each one, either show that the prod config refuses it (a config test that the script runs or that CI already runs, named in the PR) or tag and register it in `docs/dev-shortcuts.md`. With T-099, `dev` and `test` are local-only, which is the main guard; this item makes the check script's coverage honest.

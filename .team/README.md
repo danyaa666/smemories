@@ -11,7 +11,7 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 12 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-095, T-096, T-097 |
-| TODO | 6 | T-093, T-094, T-098, T-099, T-100, T-101 |
+| TODO | 12 | T-093, T-094, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107 |
 | READY_FOR_QA | 1 | T-092 |
 | DONE | 74 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
@@ -20,7 +20,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-042 (Who may promote to main: stop agents bypassing branch protection?); Q-043 (Turn on Dependabot alerts and security updates for the public repo?)
 
-_Board last written 2026-10-20 05:34Z_
+_Board last written 2026-10-20 16:48Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -1576,7 +1576,7 @@ Multi-stage Dockerfile (distroless or alpine, non-root), production config valid
 - **Branch:** —
 - **PR:** —
 - **Updated:** 2026-10-09 02:28Z by leader
-- **Comments-seen:** 1
+- **Comments-seen:** 2
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E06-go-live/03-aws-infrastructure-as-code-and-deploy.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1586,6 +1586,7 @@ Fargate service, RDS MySQL (private subnets, encrypted, backups), S3 (private, e
 
 #### Comments
 - 2026-10-17 15:11Z · leader · DEFERRED by the owner (decision D-31, 2026-10-17): this needs a real domain or AWS credentials, or is a go-live gate. Do not start it until the leader opens the go-live phase (E06 PRD, 'Live verification phase'). Stays BACKLOG.
+- 2026-10-20 16:48Z · leader · Leader 2026-10-20: audit run 1 items 3-6 added to the spec checklist (more token paths kept out of edge logs, upload spool sizing, Redis sizing, readyz private).
 
 ### T-024 — [E06] Observability: metrics, alarms, uptime check, log retention
 - **Status:** BACKLOG
@@ -2482,7 +2483,7 @@ Code input screens (paste, auto-submit, resend cooldown) replacing the link page
 - **Branch:** —
 - **PR:** —
 - **Updated:** 2026-10-09 02:28Z by leader
-- **Comments-seen:** 1
+- **Comments-seen:** 2
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E06-go-live/06-remove-dev-shortcuts-before-production.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -2492,6 +2493,7 @@ Go-live gate: delete the dev fixed OTP and every DEV-SHORTCUT, fail CI and the d
 
 #### Comments
 - 2026-10-17 15:11Z · leader · DEFERRED by the owner (decision D-31, 2026-10-17): this needs a real domain or AWS credentials, or is a go-live gate. Do not start it until the leader opens the go-live phase (E06 PRD, 'Live verification phase'). Stays BACKLOG.
+- 2026-10-20 16:48Z · leader · Leader 2026-10-20: spec addition from audit run 1 (dev-selected defaults must be shown prod-refused or registered).
 
 ### T-051 — [E01] Redis foundation: local stack (Valkey), client, config, readiness, CI
 - **Status:** DONE
@@ -4380,12 +4382,13 @@ Spec: .team/epics/E11-signatures/03-signature-print.md. Next phase.
 - **Branch:** —
 - **PR:** —
 - **Updated:** 2026-10-20 05:28Z by leader
-- **Comments-seen:** 1
+- **Comments-seen:** 2
 
 Spec: `.team/epics/E12-security-hardening/01-ipv6-keying-and-account-login-limit.md`. Audit M1: every per-IP limiter keys on the full address, so one IPv6 /64 walks around all of them, and login has no per-account cap. Mask IPv6 to /64 in ResolveClientIP, add a fail-closed per-account failed-login limiter. Risk high: auth.
 
 #### Comments
 - 2026-10-20 05:34Z · leader · Leader review 2026-10-20: spec updated (requirement 4 and AC6: a successful password reset clears the account counter; known residual note). Re-read the spec from the repo root before you start.
+- 2026-10-20 16:48Z · leader · Leader 2026-10-20: spec updated again (requirement 1b from audit run 1: canonical address text and a WARN when SMEM_TRUST_PROXY is on behind a public peer). Re-read the spec.
 
 ### T-099 — [E12] Mandatory SMEM_ENV and local-only dev/test
 - **Status:** TODO
@@ -4443,6 +4446,120 @@ Spec: `.team/epics/E12-security-hardening/03-canonical-public-ids.md`. Audit M3:
 - **Comments-seen:** 0
 
 Spec: `.team/epics/E12-security-hardening/04-readyz-greeting-session-lifetime.md`. Audit L1, L2, L3: cache /readyz for 2 s, drop the unverified display name from the code emails, add a 90-day absolute session lifetime. Risk high: auth and sessions.
+
+#### Comments
+
+### T-102 — [E12] Upload slot fairness: per-user cap and paced body on media/create; early release for rejected public submissions
+- **Status:** TODO
+- **Priority:** P2
+- **Type:** security
+- **Milestone:** M2
+- **Depends-on:** —
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-20 16:48Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E12-security-hardening/05-upload-slot-fairness.md (read it from the repo root). Source: audit run 1, docs/security-audit-skill-2026-10-20/ (PR #86). Risk high: owner approves the merge.
+
+#### Comments
+
+### T-103 — [E12] Sessions issued during a password reset or Google merge must not survive it (credential epoch)
+- **Status:** TODO
+- **Priority:** P2
+- **Type:** security
+- **Milestone:** M2
+- **Depends-on:** —
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-20 16:48Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E12-security-hardening/06-session-fence-against-credential-change.md (read it from the repo root). Source: audit run 1, docs/security-audit-skill-2026-10-20/ (PR #86). Risk high: owner approves the merge.
+
+#### Comments
+
+### T-104 — [E12] Media processing robustness: slots released on every path, no panics, decoded limits
+- **Status:** TODO
+- **Priority:** P2
+- **Type:** security
+- **Milestone:** M2
+- **Depends-on:** —
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-20 16:48Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E12-security-hardening/08-media-processing-robustness.md (read it from the repo root). Source: audit run 1, docs/security-audit-skill-2026-10-20/ (PR #86). Risk high: owner approves the merge.
+
+#### Comments
+
+### T-105 — [E12] Note links capped and paged; contributor photos cannot exhaust the owner's quota
+- **Status:** TODO
+- **Priority:** P3
+- **Type:** security
+- **Milestone:** M2
+- **Depends-on:** —
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-20 16:48Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E12-security-hardening/09-links-and-contributor-quota.md (read it from the repo root). Source: audit run 1, docs/security-audit-skill-2026-10-20/ (PR #86). Risk high: owner approves the merge.
+
+#### Comments
+
+### T-106 — [E12] Auth and repository hygiene from audit run 1
+- **Status:** TODO
+- **Priority:** P3
+- **Type:** security
+- **Milestone:** M2
+- **Depends-on:** —
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-20 16:48Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E12-security-hardening/10-auth-and-repo-hygiene.md (read it from the repo root). Source: audit run 1, docs/security-audit-skill-2026-10-20/ (PR #86). Risk high: owner approves the merge.
+
+#### Comments
+
+### T-107 — [E12] Bound the memory of photo downloads (get-content and public-media)
+- **Status:** TODO
+- **Priority:** P2
+- **Type:** security
+- **Milestone:** M2
+- **Depends-on:** T-092
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-20 16:48Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E12-security-hardening/07-bounded-photo-download-memory.md (read it from the repo root). Source: audit run 1, docs/security-audit-skill-2026-10-20/ (PR #86). Risk high: owner approves the merge.
 
 #### Comments
 

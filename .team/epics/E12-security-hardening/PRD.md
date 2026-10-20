@@ -1,6 +1,6 @@
 # E12 — Security hardening from the 2026-10-20 audit
 
-**Status:** planned   **Milestone:** M2 (before the first deploy, T-023)   **Source:** [docs/security-audit-2026-10-20.md](../../../docs/security-audit-2026-10-20.md), leader decision L-15.
+**Status:** planned   **Milestone:** M2 (before the first deploy, T-023)   **Source:** [docs/security-audit-2026-10-20.md](../../../docs/security-audit-2026-10-20.md), audit run 1 (`docs/security-audit-skill-2026-10-20/`, PR #86), leader decision L-15.
 
 ## Problem
 The audit found no critical or high issue, but four gaps that are cheap to close now and expensive to find in production: rate limits that an IPv6 host can walk around and no per-account login cap (M1), a process that silently boots in `dev` mode when `SMEM_ENV` is missing (M2, L7), client-chosen spelling of public ids that lets a user orphan S3 objects and defeat deletion (M3), and a few small items (L1-L3).
@@ -16,6 +16,14 @@ The audit found no critical or high issue, but four gaps that are cheap to close
 | T-099 Mandatory `SMEM_ENV` and local-only dev/test | `02-mandatory-env-and-local-only-dev-test.md` | M2, L7 | — |
 | T-100 Canonical public ids and the stored id for object keys | `03-canonical-public-ids.md` | M3 | — (before T-025) |
 | T-101 Small hardening: readyz cache, generic code-email greeting, absolute session lifetime | `04-readyz-greeting-session-lifetime.md` | L1, L2, L3 | — |
+| T-102 Upload slot fairness (per-user cap, paced body, early release) | `05-upload-slot-fairness.md` | run 1: confirmed finding, lead 7 | — |
+| T-103 Sessions issued during a reset or Google merge must not survive it | `06-session-fence-against-credential-change.md` | run 1: lead 2 | — |
+| T-107 Bound photo download memory | `07-bounded-photo-download-memory.md` | run 1: lead 4 | T-092 |
+| T-104 Media processing robustness (slots, panics, decoded limits) | `08-media-processing-robustness.md` | run 1: lead 5, hardening note | — |
+| T-105 Note links capped and paged; separate contributor photo quota | `09-links-and-contributor-quota.md` | run 1: lead 6, hardening note | — |
+| T-106 Auth and repository hygiene | `10-auth-and-repo-hygiene.md` | run 1: hardening notes | — |
+
+Audit run 1 (2026-10-20, `docs/security-audit-skill-2026-10-20/`, PR #86, skill-based, source-only) added T-102..T-107 (T-107 is the download-memory task). Its leads 1, 3 and 9 are covered by T-098 and T-100 (plus the T-023 sizing note); lead 8 and the edge items went into the T-023 spec; the dev-default item went into T-050.
 
 ## Design decisions (L-15)
 - **Per-account login limit is a trade-off, accepted.** Counting failures per account lets an attacker lock a victim's *login* for up to 15 minutes by failing 50 times. It cannot touch password reset or Google sign-in, and the limit is high enough that only automation hits it. The alternative (no per-account cap) leaves guessing bounded only by argon2 cost.

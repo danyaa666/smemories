@@ -8,6 +8,12 @@
 > 5. **Database users:** one for `smemories-migrate` (DDL), one for the API (DML only on the app tables), no `smem_test_%` grant in production.
 > 6. **Repo settings (owner questions on the board):** Dependabot alerts and security updates on; agent identity and `enforce_admins`.
 
+> **From audit run 1 (2026-10-20, `docs/security-audit-skill-2026-10-20/`, PR #86), also for this task:**
+> 3. **Log hygiene, more paths:** the link token is also in the SPA path `/c/<token>` and the photo-link token in `GET /api/public-media/get-content?token=` (T-092). Edge access logs must not record the path or query of `/c/*`, `/api/public-collect/*` and `/api/public-media/*` (or those logs stay off).
+> 4. **Upload spool sizing (lead 8):** the API can hold `SMEM_PUBLIC_UPLOAD_MAX_CONNS` x 32 MiB of spooled bodies (1.5 GiB by default) in `SMEM_UPLOAD_TMP_DIR`. The task definition gives that directory an ephemeral volume of at least that size plus 25 %, or the config lowers the connection cap; state which in the plan, and alarm on spool write errors.
+> 5. **Shared Redis (lead 9):** limiter keys share the ElastiCache node with sessions and codes under `noeviction`. Size the node for the worst case after /64 keying (T-098) and add a memory alarm at 70 %.
+> 6. **`/readyz`** reachable only from the ALB health check, not through CloudFront (T-101 caches it, this keeps it private).
+
 **Epic:** E06-go-live · **PRD:** [PRD.md](PRD.md) · **Milestone:** M2 · **Risk:** high · **Priority:** P2 · **Type:** infra
 
 <!-- Migrated from the board block on 2026-10-07; the text below is unchanged. The board keeps status, dependencies and comments only. -->
