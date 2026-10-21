@@ -11,19 +11,19 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 12 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-095, T-096, T-097 |
-| TODO | 8 | T-094, T-100, T-101, T-104, T-105, T-106, T-107, T-109 |
+| TODO | 9 | T-094, T-100, T-101, T-104, T-105, T-106, T-107, T-109, T-110 |
 | IN_PROGRESS | 1 | T-093 |
-| READY_FOR_QA | 2 | T-102, T-103 |
-| QA_PASS | 1 | T-108 |
+| READY_FOR_QA | 1 | T-103 |
+| QA_PASS | 2 | T-102, T-108 |
 | MERGED | 3 | T-092, T-098, T-099 |
 | DONE | 74 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
 **Awaiting your review (MERGED):** T-092 ([E05] Public photo links: signed token, public-media endpoint, revoke-all (API)); T-098 ([E12] IPv6 /64 keying and a per-account login limiter); T-099 ([E12] Mandatory SMEM_ENV and local-only dev/test)
 
-**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?)
+**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?)
 
-_Board last written 2026-10-21 03:17Z_
+_Board last written 2026-10-21 03:31Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -541,6 +541,15 @@ QA_PASS and leader review OK on 8e07f4f, CI green. All binaries now refuse to st
 - **Answer:** _(pending)_
 
 QA_PASS and leader review OK on d856c25, CI green. Takes the migration lock before goose creates its version table, which fixes the flaky CI image job seen on every PR. 9 lines of code plus a test that fails on the old code. Reply 'team approve T-108'.
+
+### Q-048 — Approve merge of T-102 (upload slot fairness, PR #90)?
+- **Status:** OPEN
+- **Asked:** 2026-10-21 03:31Z
+- **Blocks:** T-102
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+QA_PASS and leader review OK on d714aad, CI green. One account can no longer block everyone's photo uploads with slow uploads (2 in progress per user, slow bodies cut off with 408), and rejected public submissions free their slot early. Follow-up T-110 closes the remaining gap (several throwaway accounts) with a verified-email rule and a per-client cap. Reply 'team approve T-102'.
 
 <!-- questions:end -->
 
@@ -4539,7 +4548,7 @@ Spec: `.team/epics/E12-security-hardening/04-readyz-greeting-session-lifetime.md
 #### Comments
 
 ### T-102 — [E12] Upload slot fairness: per-user cap and paced body on media/create; early release for rejected public submissions
-- **Status:** READY_FOR_QA
+- **Status:** QA_PASS
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
@@ -4547,11 +4556,11 @@ Spec: `.team/epics/E12-security-hardening/04-readyz-greeting-session-lifetime.md
 - **Risk:** high
 - **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** leader
 - **Branch:** task/t-102-e12-upload-slot-fairness-per-user-cap-an
 - **PR:** https://github.com/danyaa666/smemories/pull/90
-- **Updated:** 2026-10-21 03:04Z by dev
-- **Comments-seen:** 3
+- **Updated:** 2026-10-21 03:30Z by qa
+- **Comments-seen:** 5
 
 Spec: .team/epics/E12-security-hardening/05-upload-slot-fairness.md (read it from the repo root). Source: audit run 1, docs/security-audit-skill-2026-10-20/ (PR #86). Risk high: owner approves the merge.
 
@@ -4559,6 +4568,19 @@ Spec: .team/epics/E12-security-hardening/05-upload-slot-fairness.md (read it fro
 - 2026-10-20 22:16Z · dev · PR #90 head cc04be8. media/create: per-user cap 2 (429, Retry-After 5, before body), shared slot kept before read, httpx.PaceBody with new httpx.PhoneUploadPace (408 frees slots), read deadline moved out after read. notes/submit: slot released once before the drain. New gauge smem_media_uploads_in_progress. Tests: TestPerUserUploadCap, TestSlowUploadsDoNotStarveOthersForLong, TestRateLimitedSubmissionReleasesItsSlotBeforeTheDrain (+ unit); TestQuotas adjusted to max 2 parallel uploads per user. lint 0 issues, full unit + integration -race green. Overlap with #85: media/handler.go, integration_test.go (env.mh), main.go, docs. Risk high: owner approves merge. No Postman change (no new endpoint).
 - 2026-10-21 02:43Z · leader · Leader 2026-10-21: PR #90 CONFLICTS with develop after T-092 (399ffa6, internal/media/handler.go, integration_test.go, main.go, docs/media.md, docs/observability.md) and T-098 (765b8bc) merged. Merge develop into the branch (no rebase, no force-push), keep both sides (T-092's public-media route and countPublic, your per-user cap and pacing), re-run make lint test test-integration, push and set READY_FOR_QA. QA then tests the merged head.
 - 2026-10-21 03:04Z · dev · Merged origin/develop (T-092, T-098) into the branch, merge commit d714aad, no rebase, no force-push. Only 3 textual conflicts, kept both sides: media/handler.go (Handler keeps perUser/userMu/pace plus countPublic), main.go (uploads_in_progress gauge plus mediaH.SetPublicCounter), media/integration_test.go (e.mh plus signer/metrics/SetPublicCounter). docs/media.md and docs/observability.md auto-merged with both T-102 and T-092 text. No behaviour change. make lint, make test, make test-integration (-race) green on a private compose project (ports 33702/36702/39702), taken down without -v. Nothing under .team/ in the PR. Verify: per-user cap 2 + pacing on media/create, early release in notes/submit, public-media route still works.
+- 2026-10-21 03:30Z · qa · QA_PASS on PR #90 head d714aad (CI green: e2e, go, go-integration, image, security, web). Env: own compose project qat102 (ports 33812/36812/39812, down without -v), SMEM_ENV=test for tests and dev for the real API binary, real default pace (not the shortened test pace). Evidence:
+  AC1 real binary, A with 2 drips (1 byte/5 s): 3rd upload -> 429 ERROR_RATE_LIMITED, Retry-After 5, in 0.00 s (also with a 9.8 MiB body via curl: 429 visible, no reset); B uploads 200 in 0.04 s meanwhile; gauge smem_media_uploads_in_progress 2 -> 0; drippers end 408 at 15 s and 20 s; A can upload again.
+  AC2 8 users x 1 drip fill the pool (gauge 8): ninth gets 503 Retry-After 2, retried every 2 s, gets in at 14-16 s when the 408s free the slots; all 8 drippers 408 at 15-20 s, gauge 0. 9.8 MiB JPEG at 2 Mbit/s (256 KiB/s throttled), two in parallel from one user: both 200 in 41.9 s, a third meanwhile 429.
+  AC3 public submit-note, 70 unknown-token posts from one address (60x404 then 429), then 10 bodies mid-upload: PR head gauge smem_public_uploads_in_progress = 0 and all 10 answer 429 Retry-After 900 with the same envelope; develop as control: gauge 8 and 2 of 10 refused. Answer body identical modulo request_id. Dev tests TestRateLimitedSubmissionReleasesItsSlotBeforeTheDrain and TestRateLimitedDrainStaysPaced pass.
+  AC4 make lint exit 0; make test exit 0; make -e test-integration (-race, every package ok, media 116 s, notes 231 s); postman media x2 (75 req/144 assertions, 0 failed both runs), public-media x2 (39/89, 0 failed; T-092 route works), notes x2 (74/141, 0 failed; submit flow). Trial merge of origin/develop (T-099, 2da2fbf) into d714aad: no conflicts, go vet -tags integration OK, media/notes/config/httpx unit tests and the 4 new fairness integration tests pass on the merged tree.
+  Leaks: client abort mid-body, bad image, unknown yearbook, short body: gauge back to 0, cap released (3 uploads 200 right after). Pace edge: 600 KB at 12 KiB/s -> 408 at 15.6 s; at 24 KiB/s -> passes the pace (400 invalid image from junk bytes).
+  Trade-offs raised by dev: (1) 408 below 16 KiB/s (128 kbit/s) on the owner route: NOT a problem. 10 MiB already needs 85 KiB/s to finish inside the 2 min total, so only sub-2 MiB photos on 2G-class links are newly affected; same numbers as the public route since T-034. Web uploads originals one at a time (Photos.tsx), so a retry is a plain re-pick. (2) Per-user count per process: NOT a problem; the shared pool is per process too, so each task is protected the same way; cap is 2 x N tasks per user.
+  Non-blocking observations for the leader:
+  a) Residual starvation with several accounts: 4 accounts x 2 drips that reopen as soon as they get 408 held the 8-slot pool for the whole 75 s I watched (victim 75/75 503). The per-user cap raises the attacker cost from 1 account to 4 (register limit 5/h/IP, no email verification needed to upload) but does not remove it. AC2 holds as written (one-shot holds end by the pace). A per-IP share or a verified-email requirement on media/create would close it; suggest a follow-up task, not a blocker.
+  b) Early release means a rate-limited address can keep many sockets draining (only a socket each, paced 10 s idle): 1500 held at once gave +56 MB RSS (~37 KB each), healthz 14 ms, no slots or disk. Previously capped at 8 per IP. By design in the spec; rely on LB connection limits / container fd limit (T-022/T-023).
+  c) No Postman edge entry for the new 429 (a collection cannot drip a body); covered by Go integration tests and my runs. Fine.
+  d) Makefile includes .env, so a private stack needs make -e for the env overrides (not a product issue).
+- 2026-10-21 03:31Z · leader · Leader review OK on d714aad: per-user cap is a mutex-guarded map taken before the shared slot and released by defer on every path; pacing reuses the public route's numbers and the deadline is extended for processing after the body; public early release keeps the answer body identical (QA: gauge 0 vs 8 on develop). QA_PASS. QA's two non-blocking findings (4 accounts can still fill the pool; unbounded drains after the early release) go to T-110. Waiting for the owner's approval (risk high).
 
 ### T-103 — [E12] Sessions issued during a password reset or Google merge must not survive it (credential epoch)
 - **Status:** READY_FOR_QA
@@ -4713,6 +4735,25 @@ Spec: .team/epics/E06-go-live/11-concurrent-migrate-race.md. CI image job flake 
 - **Comments-seen:** 0
 
 QA of T-103 (2026-10-21): go-integration was red once on internal/auth TestConcurrentResetHasOneWinner; the same failure reproduces on develop b3878c2 under CPU load, so it is the test, not T-103. Find why (likely the hash-slot wait in the test env is shorter than the hashing under load), make the test deterministic (larger hashWait or a held slot released on cue, no sleeps), and show it green with go test -race -count=50 while the machine is loaded (e.g. a parallel go test ./... in the background). No production code change unless the test proves a real bug.
+
+#### Comments
+
+### T-110 — [E12] Owner uploads need a verified email and a per-client share; bound drains of rejected public bodies
+- **Status:** TODO
+- **Priority:** P2
+- **Type:** security
+- **Milestone:** M2
+- **Depends-on:** T-102
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-21 03:31Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E12-security-hardening/11-upload-abuse-followup.md (read it from the repo root). Source: QA of T-102. Risk high: owner approves the merge.
 
 #### Comments
 
