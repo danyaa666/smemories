@@ -19,6 +19,8 @@ type Limiter interface {
 	// Refund removes the most recent hit for key, undoing a Take (for example after a successful
 	// login: only failures should count).
 	Refund(ctx context.Context, key string) error
+	// Reset forgets every hit for key (a successful password reset gives the account its login budget back).
+	Reset(ctx context.Context, key string) error
 }
 
 // Memory is a per-process Limiter for unit tests. Do not use it in the API: its counts are not
@@ -65,6 +67,14 @@ func (l *Memory) Refund(_ context.Context, key string) error {
 		return nil
 	}
 	l.hits[key] = hs[:len(hs)-1]
+	return nil
+}
+
+// Reset implements Limiter.
+func (l *Memory) Reset(_ context.Context, key string) error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	delete(l.hits, key)
 	return nil
 }
 

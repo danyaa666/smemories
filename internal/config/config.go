@@ -40,6 +40,7 @@ type Config struct {
 	RegisterPerHour   int           // SMEM_RATE_REGISTER_PER_HOUR (per IP), default 5
 	LoginFailsPerPair int           // SMEM_RATE_LOGIN_FAILS_PER_EMAIL (per IP+email, 15 min), default 10
 	LoginFailsPerIP   int           // SMEM_RATE_LOGIN_FAILS_PER_IP (15 min), default 100
+	LoginFailsPerAcct int           // SMEM_RATE_LOGIN_FAILS_PER_ACCOUNT (per account, 15 min), default 50
 
 	GoogleClientID     string // SMEM_GOOGLE_CLIENT_ID: empty = Google sign-in off (the endpoints answer 404)
 	GoogleClientSecret string // SMEM_GOOGLE_CLIENT_SECRET: required with a client id. Never log it.
@@ -225,6 +226,9 @@ func load(getenv func(string) string, forAPI bool) (Config, error) {
 		return Config{}, err
 	}
 	if cfg.LoginFailsPerIP, err = getInt(get, "SMEM_RATE_LOGIN_FAILS_PER_IP", "100", 1); err != nil {
+		return Config{}, err
+	}
+	if cfg.LoginFailsPerAcct, err = getInt(get, "SMEM_RATE_LOGIN_FAILS_PER_ACCOUNT", "50", 1); err != nil {
 		return Config{}, err
 	}
 	if cfg.GoogleClientID = getenv("SMEM_GOOGLE_CLIENT_ID"); cfg.GoogleClientID != "" {

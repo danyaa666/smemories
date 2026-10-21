@@ -127,6 +127,7 @@ func main() {
 	}
 	svc, err := auth.NewService(auth.NewStore(d), sessions, hasher, auth.Limits{
 		RegisterPerHour: cfg.RegisterPerHour, LoginFailsPerPair: cfg.LoginFailsPerPair, LoginFailsPerIP: cfg.LoginFailsPerIP,
+		LoginFailsPerAccount: cfg.LoginFailsPerAcct,
 	}, auth.Mail{Mailer: mail, Logger: logger, OnFailure: mt.MailSendFailed}, codes, limiters, nil)
 	if err != nil {
 		logger.Error("auth setup failed", "error", err)
