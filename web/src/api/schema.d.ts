@@ -638,6 +638,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/book-export/get-text": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the book as one plain-text document with public photo links
+         * @description Called by the signed-in owner's export screen (T-094). The server builds one UTF-8 text document (`\n` line ends, no BOM, NFC) of the owner's book: the yearbook information, the owner profile, the approved notes in book order and, for every photo, a public link `<SMEM_PUBLIC_BASE_URL>/api/public-media/get-content?token=...` made with the same signer as `GET /api/public-media/get-content` (decision D-32; the links are bearer secrets that work without a session until the owner calls `POST /api/yearbook/revoke-photo-links` or the note is hidden). Photos listed: the profile photo, the cover photo and at most 3 per note. Only `approved` notes appear, in the order of `GET /api/note/get-list?status=approved`; pending and hidden notes and their photos never do. The fields and their order follow the book's template (the field catalogue labels, docs/note-fields.md), then any answered field the template no longer asks for; a book without a template uses the default fields. Fixed labels follow `lang`. No internal id, storage key, hash or email is in the text. At most 1000 notes: with more, the text holds the first 1000 in book order, says "1000 of N notes are included" (localised), `truncated` is true and `approved_total` is the real count; never a silent cut. `lang` is `en` or `vi` and defaults to the book's language, anything else is `ERROR_PARAM`. `yearbook_id` must be a canonical ULID (26 upper-case characters), else `ERROR_PARAM`. Needs a verified email (`ERROR_EMAIL_NOT_VERIFIED`). A missing yearbook and one owned by someone else both answer `ERROR_NOT_FOUND`. Limited to 30 calls per 10 minutes per user (`ERROR_RATE_LIMITED`, with `Retry-After`; fails open when Redis is down). Every call makes fresh links of the book's current epoch. The answer is never cached (it holds bearer links). Format and limits: docs/book-export.md. Safe to repeat.
+         */
+        get: operations["getBookExportText"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/template/get-list": {
         parameters: {
             query?: never;
@@ -1310,6 +1330,28 @@ export interface components {
                 /** @description Number of approved notes the book has, also when more than 300 (then `notes` holds the first 300 in book order). */
                 approved_total: number;
                 /** @description True when the book has more approved notes than the 300 returned (`approved_total` > `note_count`); the renderer shows a warning. Always present. */
+                truncated: boolean;
+            };
+        };
+        BookExportResponse: {
+            /**
+             * @description Always `OK` on success.
+             * @constant
+             */
+            status: "OK";
+            /** @description The book as a text document. */
+            data: {
+                /** @description Suggested file name: the title folded to lower-case ASCII words joined by `-` (at most 40 characters), `-`, the UTC date as yyyymmdd and `.txt`; `yearbook-<yyyymmdd>.txt` when nothing of the title is left. Only `[a-z0-9-.]`. */
+                filename: string;
+                /** @description The whole document, UTF-8, `\n` line ends, no BOM. Contains bearer photo links: treat it like a secret and never log it. */
+                text: string;
+                /** @description Number of notes in the text. */
+                note_count: number;
+                /** @description Number of photo links in the text (profile photo, cover photo and at most 3 per note). */
+                photo_count: number;
+                /** @description Number of approved notes the book has, also when more than 1000 (then the text holds the first 1000 in book order). */
+                approved_total: number;
+                /** @description True when the book has more approved notes than the text holds (`approved_total` > `note_count`); the text says so too. Always present. */
                 truncated: boolean;
             };
         };
@@ -2662,6 +2704,38 @@ export interface operations {
             401: components["responses"]["ApiUnauthorized"];
             403: components["responses"]["ApiForbidden"];
             404: components["responses"]["ApiNotFound"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    getBookExportText: {
+        parameters: {
+            query: {
+                /** @description Yearbook ULID (canonical upper case). */
+                yearbook_id: string;
+                /** @description Language of the fixed labels: `en` or `vi`. Defaults to the book's language. */
+                lang?: "en" | "vi";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The text document. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookExportResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            429: components["responses"]["ApiRateLimited"];
             500: components["responses"]["ApiInternal"];
             503: components["responses"]["ApiSessionStoreUnavailable"];
         };

@@ -1,0 +1,24 @@
+SMemories — Empty
+Xuất ngày: 2026-10-19
+
+== Lời nhắn từ bạn bè (2) ==
+Đã đưa vào 2 trong tổng số 1500 lời nhắn
+
+--- 1 / 2 ---
+Tên của bạn: Trần Văn Ngô
+Lời nhắn:
+  Dòng một
+
+  Dòng ba 🎉
+Chúng mình quen nhau thế nào:
+  Ở lớp 10
+Điều mình ước cho bạn:
+  Luôn vui
+Ảnh 1: https://app.example.com/api/public-media/get-content?token=01JAAAAAAAAAAAAAAAAAAAAAAA.KH0sSVL_ZtyhFsVpGCHWtg
+Ảnh 2: https://app.example.com/api/public-media/get-content?token=01JBBBBBBBBBBBBBBBBBBBBBBB.ocQHfcBSjuHZ2Y7KJ-IbmA
+Ảnh 3: https://app.example.com/api/public-media/get-content?token=01JCCCCCCCCCCCCCCCCCCCCCCC.9kyUYKttRaNIe140WLr_Qg
+
+--- 2 / 2 ---
+Tên của bạn: Lê Thị Hoà
+Lời nhắn:
+  Chúc bạn thành công

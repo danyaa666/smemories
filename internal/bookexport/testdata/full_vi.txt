@@ -1,0 +1,47 @@
+SMemories — Lớp 12A1 — Kỷ yếu
+Trường: THPT Nguyễn Huệ
+Lớp: 12A1
+Năm tốt nghiệp: 2026
+Châm ngôn: Học, học nữa, học mãi
+Xuất ngày: 2026-10-19
+
+== Giới thiệu về mình ==
+Họ và tên: Nguyễn Thị Ánh Tuyết
+Biệt danh: Tuyết
+Câu nói yêu thích: Cười lên nào 😊
+Sở thích:
+  Vẽ
+  Đọc sách
+Dự định tương lai: Bác sĩ
+Ảnh: https://app.example.com/api/public-media/get-content?token=01JPPPPPPPPPPPPPPPPPPPPPPP.rJOQtiOo4TBGNLOAmjhpHw
+Ảnh bìa: https://app.example.com/api/public-media/get-content?token=01JCCCCCCCCCCCCCCCCCCCCCCC._UgtQfXhq_N1-xplpKCA8g
+
+== Lời nhắn từ bạn bè (3) ==
+
+--- 1 / 3 ---
+Tên của bạn: Trần Văn Ngô
+Chúng mình quen nhau thế nào:
+  Ở lớp 10
+Điều mình ước cho bạn:
+  Luôn vui
+Lời nhắn:
+  Dòng một
+
+  Dòng ba 🎉
+Ảnh 1: https://app.example.com/api/public-media/get-content?token=01JAAAAAAAAAAAAAAAAAAAAAAA.MaiKGVAGBsrdhSm0sztriA
+Ảnh 2: https://app.example.com/api/public-media/get-content?token=01JBBBBBBBBBBBBBBBBBBBBBBB.vPl51cSJb7tBhILwAkScmQ
+Ảnh 3: https://app.example.com/api/public-media/get-content?token=01JCCCCCCCCCCCCCCCCCCCCCCC._UgtQfXhq_N1-xplpKCA8g
+
+--- 2 / 3 ---
+Tên của bạn: Lê Thị Hoà
+Lời nhắn:
+  Chúc bạn thành công
+
+--- 3 / 3 ---
+Tên của bạn: Phạm Anh
+Kỷ niệm đẹp nhất của chúng ta:
+  Chuyến đi Đà Lạt
+Lời nhắn:
+  Giữ liên lạc nhé
+Mối quan hệ: bạn cùng bàn
+Ảnh 1: https://app.example.com/api/public-media/get-content?token=01JEEEEEEEEEEEEEEEEEEEEEEE.0Fbrmbbc1kFyZ2njwK3paw

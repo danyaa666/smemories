@@ -99,6 +99,7 @@ The Postman collection and `web/src/api/schema.d.ts` follow the file; the defini
 | `GET /v1/yearbooks/{id}/collections` | `GET /api/note-collection/get-list?yearbook_id=` | |
 | `DELETE /v1/collections/{id}` | `POST /api/note-collection/revoke` | body `id` |
 | `GET /v1/public/collect/{token}` | `GET /api/public-collect/get?token=` | no session |
+| (new, T-093) | `GET /api/book-export/get-text?yearbook_id=&lang=` | the book as plain text with public photo links (D-32); see [book-export.md](book-export.md) |
 | `POST /v1/public/collect/{token}/notes` (T-034) | `POST /api/public-collect/submit-note?token=` | **deliberate exception:** `token` is a query parameter, not a body field, so the link is checked before the (up to 32 MiB) body is read; the body is the multipart form. Never logged (access log records the route only) |
 
-New endpoints (moderation T-013, book data T-056, template list and print feedback T-061, ...) are written in v2 from the start; pick the namespace by the same rule (`note`, `book-data`, `template`, `print-feedback`).
+New endpoints (moderation T-013, book data T-056, template list and print feedback T-061, ...) are written in v2 from the start; pick the namespace by the same rule (`note`, `book-data`, `book-export`, `template`, `print-feedback`).

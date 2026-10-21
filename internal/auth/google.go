@@ -341,7 +341,7 @@ func (s *Service) SignInGoogle(ctx context.Context, userAgent, oldToken string, 
 	if strings.HasPrefix(strings.ToLower(id.Locale), "vi") {
 		locale = "vi"
 	}
-	u, err := s.store.googleUser(ctx, id, &User{DisplayName: name, Locale: locale}, now, s.sessions.DeleteAll)
+	u, err := s.store.googleUser(ctx, id, &User{DisplayName: name, Locale: locale}, now, s.afterCommit(s.sessions.DeleteAll))
 	if err != nil {
 		return nil, nil, err
 	}

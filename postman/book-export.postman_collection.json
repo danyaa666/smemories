@@ -1,0 +1,1650 @@
+{
+  "info": {
+    "name": "SMemories - book as plain text",
+    "description": "Book export as text (T-093, D-32): `GET /api/book-export/get-text?yearbook_id=&lang=` and the public photo link inside it. `{status,data}` envelope, `ERROR_*` codes. Uses the three fixed accounts of notes.postman_collection.json: run that collection's Setup once (or this one's Setup) and then `make verify-newman-users`, so A and B are verified and C is not. Run from the repository root: `newman run postman/book-export.postman_collection.json --working-dir postman` (one note uploads fixtures/media/photo-gps.jpg). Start the API with SMEM_ENV=dev and the `make up` stack; the text links start with SMEM_PUBLIC_BASE_URL, but the requests that open them use `baseUrl`. The Full flow creates and deletes its own yearbook, so the collection can run twice in a row; a run makes 4 public submissions (limit 100 per IP per hour), about 10 export calls (limit 30 per 10 minutes per user) and one revoke (limit 10 per hour); `make reset-limits` clears the limits.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "origin",
+      "value": "http://localhost:5173"
+    },
+    {
+      "key": "emailA",
+      "value": "newman-notes-a@example.com"
+    },
+    {
+      "key": "emailB",
+      "value": "newman-notes-b@example.com"
+    },
+    {
+      "key": "emailC",
+      "value": "newman-notes-c@example.com"
+    },
+    {
+      "key": "password",
+      "value": "Fake-Newman-notes-pw-1"
+    },
+    {
+      "key": "tokenA",
+      "value": ""
+    },
+    {
+      "key": "tokenB",
+      "value": ""
+    },
+    {
+      "key": "tokenC",
+      "value": ""
+    },
+    {
+      "key": "bookId",
+      "value": ""
+    },
+    {
+      "key": "linkToken",
+      "value": ""
+    },
+    {
+      "key": "n1",
+      "value": ""
+    },
+    {
+      "key": "n2",
+      "value": ""
+    },
+    {
+      "key": "n3",
+      "value": ""
+    },
+    {
+      "key": "n4",
+      "value": ""
+    },
+    {
+      "key": "photoToken",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Setup (once per database)",
+      "item": [
+        {
+          "name": "Register A (verified later; 200, or 409/429 when an earlier run already did)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{emailA}}\",\"password\":\"{{password}}\",\"display_name\":\"Newman Alice\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('created, or already there', () => pm.expect(pm.response.code).to.be.oneOf([200, 409, 429]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register B (verified later; 200, or 409/429 when an earlier run already did)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{emailB}}\",\"password\":\"{{password}}\",\"display_name\":\"Newman Bob\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('created, or already there', () => pm.expect(pm.response.code).to.be.oneOf([200, 409, 429]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register C (stays unverified; 200, or 409/429 when an earlier run already did)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{emailC}}\",\"password\":\"{{password}}\",\"display_name\":\"Newman Carol\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('created, or already there', () => pm.expect(pm.response.code).to.be.oneOf([200, 409, 429]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Full flow",
+      "item": [
+        {
+          "name": "1. Login A (verified)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{emailA}}\",\"password\":\"{{password}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const m = /smem_session=([^;]+)/.exec(pm.response.headers.get('Set-Cookie') || '');",
+                  "pm.test('session cookie issued', () => pm.expect(m).to.not.be.null);",
+                  "pm.collectionVariables.set('tokenA', m ? m[1] : '');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. Login B (verified)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{emailB}}\",\"password\":\"{{password}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const m = /smem_session=([^;]+)/.exec(pm.response.headers.get('Set-Cookie') || '');",
+                  "pm.test('session cookie issued', () => pm.expect(m).to.not.be.null);",
+                  "pm.collectionVariables.set('tokenB', m ? m[1] : '');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3. Login C (never verified)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{emailC}}\",\"password\":\"{{password}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const m = /smem_session=([^;]+)/.exec(pm.response.headers.get('Set-Cookie') || '');",
+                  "pm.test('session cookie issued', () => pm.expect(m).to.not.be.null);",
+                  "pm.collectionVariables.set('tokenC', m ? m[1] : '');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4. A creates a Vietnamese yearbook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/yearbook/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "yearbook",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\": \"Lớp 12A — Kỷ yếu\", \"language\": \"vi\", \"school_name\": \"THPT Nguyễn Huệ\", \"class_name\": \"12A\", \"graduation_year\": 2026}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('bookId', pm.response.json().data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5. A creates a link labelled Export",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/note-collection/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "note-collection",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"yearbook_id\":\"{{bookId}}\",\"label\":\"Export\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('linkToken', pm.response.json().data.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6. Friend sends note N1 (no photo)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{linkToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "{\"name\": \"Trần Văn Ngô\", \"message\": \"Dòng một\\n\\nDòng ba 🎉\"}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('n1', pm.response.json().data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "7. Friend sends note N2 with a photo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{linkToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "{\"name\": \"Lê Thị Hoà\", \"message\": \"Chúc bạn thành công\"}",
+                  "type": "text"
+                },
+                {
+                  "key": "photos",
+                  "type": "file",
+                  "src": "fixtures/media/photo-gps.jpg"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('n2', pm.response.json().data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "8. Friend sends note N3 with a photo (will be hidden)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{linkToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "{\"name\": \"HiddenFriend\", \"message\": \"private\"}",
+                  "type": "text"
+                },
+                {
+                  "key": "photos",
+                  "type": "file",
+                  "src": "fixtures/media/photo-gps.jpg"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('n3', pm.response.json().data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "9. Friend sends note N4 (stays pending)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{linkToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "{\"name\": \"PendingFriend\", \"message\": \"later\"}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('n4', pm.response.json().data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10. No approved note yet: the book's language, 'No notes yet', nothing truncated",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/book-export/get-text?yearbook_id={{bookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "book-export",
+                "get-text"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('shape', () => pm.expect(Object.keys(d).sort()).to.eql(['approved_total','filename','note_count','photo_count','text','truncated']));",
+                  "pm.test('counts', () => { pm.expect(d.note_count).to.eql(0); pm.expect(d.photo_count).to.eql(0); pm.expect(d.approved_total).to.eql(0); pm.expect(d.truncated).to.eql(false); });",
+                  "pm.test('Vietnamese by default', () => { pm.expect(d.text).to.include('Chưa có lời nhắn nào'); pm.expect(d.text).to.include('Lời nhắn từ bạn bè (0)'); });",
+                  "pm.test('title block', () => { pm.expect(d.text.startsWith('SMemories — Lớp 12A — Kỷ yếu\\n')).to.eql(true); pm.expect(d.text).to.include('Trường: THPT Nguyễn Huệ\\n'); pm.expect(d.text).to.include('Năm tốt nghiệp: 2026\\n'); });",
+                  "pm.test('filename', () => pm.expect(d.filename).to.match(/^lop-12a-ky-yeu-\\d{8}\\.txt$/));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "11. A approves N2 then N1 (book order N2, N1)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/note/batch-update-status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "note",
+                "batch-update-status"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"yearbook_id\":\"{{bookId}}\",\"ids\":[\"{{n2}}\",\"{{n1}}\"],\"status\":\"approved\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "11b. A hides N3",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/note/batch-update-status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "note",
+                "batch-update-status"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"yearbook_id\":\"{{bookId}}\",\"ids\":[\"{{n3}}\"],\"status\":\"hidden\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "12. English text: approved notes only, in book order, one photo link, nothing internal",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/book-export/get-text?yearbook_id={{bookId}}&lang=en",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "book-export",
+                "get-text"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookId}}"
+                },
+                {
+                  "key": "lang",
+                  "value": "en"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json(); const d = j.data;",
+                  "pm.test('shape', () => pm.expect(Object.keys(d).sort()).to.eql(['approved_total','filename','note_count','photo_count','text','truncated']));",
+                  "pm.test('counts', () => { pm.expect(d.note_count).to.eql(2); pm.expect(d.photo_count).to.eql(1); pm.expect(d.approved_total).to.eql(2); pm.expect(d.truncated).to.eql(false); });",
+                  "pm.test('English labels', () => { pm.expect(d.text).to.include('School: THPT Nguyễn Huệ\\n'); pm.expect(d.text).to.include('Graduation year: 2026\\n'); pm.expect(d.text).to.match(/\\nExported: \\d{4}-\\d{2}-\\d{2}\\n/); pm.expect(d.text).to.include('== Notes from friends (2) =='); });",
+                  "pm.test('book order, N2 first', () => { const a = d.text.indexOf('Lê Thị Hoà'), b = d.text.indexOf('Trần Văn Ngô'); pm.expect(a).to.be.above(0); pm.expect(b).to.be.above(a); });",
+                  "pm.test('long answer on its own indented lines', () => pm.expect(d.text).to.include('Your message:\\n  Dòng một\\n\\n  Dòng ba 🎉\\n'));",
+                  "pm.test('hidden and pending notes are not in the text', () => { pm.expect(d.text).to.not.include('HiddenFriend'); pm.expect(d.text).to.not.include('PendingFriend'); });",
+                  "pm.test('nothing internal', () => { const raw = pm.response.text(); [pm.collectionVariables.get('bookId'), pm.collectionVariables.get('n1'), pm.collectionVariables.get('n2'), pm.collectionVariables.get('emailA')].forEach(v => pm.expect(raw).to.not.include(v)); pm.expect(d.text).to.not.include('@'); });",
+                  "const links = [...d.text.matchAll(/https?:\\/\\/\\S+\\/api\\/public-media\\/get-content\\?token=(\\S+)/g)];",
+                  "pm.test('one photo link, a token', () => { pm.expect(links.length).to.eql(1); pm.expect(links[0][1]).to.match(/^[0-9A-HJKMNP-TV-Z]{26}\\.[A-Za-z0-9_-]{22}$/); });",
+                  "pm.test('Photo 1 label under N2', () => pm.expect(d.text).to.match(/Photo 1: https?:\\/\\/\\S+\\n/));",
+                  "pm.test('not cached', () => pm.expect(pm.response.headers.get('Cache-Control')).to.eql('no-store'));",
+                  "pm.collectionVariables.set('photoToken', links.length ? links[0][1] : '');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "13. The link in the text opens anonymously (no cookie, image bytes)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-media/get-content?token={{photoToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-media",
+                "get-content"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{photoToken}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('image', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/^image\\//));",
+                  "pm.test('no cookie', () => pm.expect(pm.response.headers.get('Set-Cookie')).to.eql(undefined));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "14. Exporting again gives the same link while the epoch is unchanged",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/book-export/get-text?yearbook_id={{bookId}}&lang=en",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "book-export",
+                "get-text"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookId}}"
+                },
+                {
+                  "key": "lang",
+                  "value": "en"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('same link again', () => pm.expect(pm.response.json().data.text).to.include(pm.collectionVariables.get('photoToken')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15. Another user's book - 404",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/book-export/get-text?yearbook_id={{bookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "book-export",
+                "get-text"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('ERROR_NOT_FOUND', () => { const j = pm.response.json(); pm.expect(j.status).to.eql('ERROR_NOT_FOUND'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "16. Unverified email - 403",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenC}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/book-export/get-text?yearbook_id={{bookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "book-export",
+                "get-text"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 403', () => pm.response.to.have.status(403));",
+                  "pm.test('ERROR_EMAIL_NOT_VERIFIED', () => { const j = pm.response.json(); pm.expect(j.status).to.eql('ERROR_EMAIL_NOT_VERIFIED'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "17. No session - 401",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/book-export/get-text?yearbook_id={{bookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "book-export",
+                "get-text"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 401', () => pm.response.to.have.status(401));",
+                  "pm.test('ERROR_UNAUTHORIZED', () => { const j = pm.response.json(); pm.expect(j.status).to.eql('ERROR_UNAUTHORIZED'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "18. A revokes the photo links of the book",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/yearbook/revoke-photo-links",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "yearbook",
+                "revoke-photo-links"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{bookId}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "19. The link of the old export is dead - 404",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-media/get-content?token={{photoToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-media",
+                "get-content"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{photoToken}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('ERROR_NOT_FOUND', () => { const j = pm.response.json(); pm.expect(j.status).to.eql('ERROR_NOT_FOUND'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "20. A new export has a new link, and it opens",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/book-export/get-text?yearbook_id={{bookId}}&lang=en",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "book-export",
+                "get-text"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookId}}"
+                },
+                {
+                  "key": "lang",
+                  "value": "en"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const m = /get-content\\?token=(\\S+)/.exec(pm.response.json().data.text);",
+                  "pm.test('a link', () => pm.expect(m).to.not.be.null);",
+                  "pm.test('a different token', () => pm.expect(m[1]).to.not.eql(pm.collectionVariables.get('photoToken')));",
+                  "pm.collectionVariables.set('photoToken', m ? m[1] : '');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "21. ... the new link opens anonymously",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-media/get-content?token={{photoToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-media",
+                "get-content"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{photoToken}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "22. A deletes the yearbook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/yearbook/delete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "yearbook",
+                "delete"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{bookId}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "23. The export of a deleted book - 404",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/book-export/get-text?yearbook_id={{bookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "book-export",
+                "get-text"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('ERROR_NOT_FOUND', () => { const j = pm.response.json(); pm.expect(j.status).to.eql('ERROR_NOT_FOUND'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Edge cases",
+      "item": [
+        {
+          "name": "E1. Missing yearbook_id - 400",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/book-export/get-text",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "book-export",
+                "get-text"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('ERROR_PARAM', () => { const j = pm.response.json(); pm.expect(j.status).to.eql('ERROR_PARAM'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E2. Lower-case id - 400",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/book-export/get-text?yearbook_id=01arz3ndektsv4rrffq69g5fav",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "book-export",
+                "get-text"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "01arz3ndektsv4rrffq69g5fav"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('ERROR_PARAM', () => { const j = pm.response.json(); pm.expect(j.status).to.eql('ERROR_PARAM'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E3. Not an id - 400",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/book-export/get-text?yearbook_id=abc",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "book-export",
+                "get-text"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "abc"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('ERROR_PARAM', () => { const j = pm.response.json(); pm.expect(j.status).to.eql('ERROR_PARAM'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E4. Unknown yearbook - 404",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/book-export/get-text?yearbook_id=01ARZ3NDEKTSV4RRFFQ69G5FAV",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "book-export",
+                "get-text"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "01ARZ3NDEKTSV4RRFFQ69G5FAV"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('ERROR_NOT_FOUND', () => { const j = pm.response.json(); pm.expect(j.status).to.eql('ERROR_NOT_FOUND'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E5. A language that does not exist - 400",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/book-export/get-text?yearbook_id=01ARZ3NDEKTSV4RRFFQ69G5FAV&lang=fr",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "book-export",
+                "get-text"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "01ARZ3NDEKTSV4RRFFQ69G5FAV"
+                },
+                {
+                  "key": "lang",
+                  "value": "fr"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('ERROR_PARAM', () => { const j = pm.response.json(); pm.expect(j.status).to.eql('ERROR_PARAM'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E6. Upper-case language - 400",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/book-export/get-text?yearbook_id=01ARZ3NDEKTSV4RRFFQ69G5FAV&lang=EN",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "book-export",
+                "get-text"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "01ARZ3NDEKTSV4RRFFQ69G5FAV"
+                },
+                {
+                  "key": "lang",
+                  "value": "EN"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('ERROR_PARAM', () => { const j = pm.response.json(); pm.expect(j.status).to.eql('ERROR_PARAM'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E7. POST is not allowed - 405",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/book-export/get-text?yearbook_id=01ARZ3NDEKTSV4RRFFQ69G5FAV",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "book-export",
+                "get-text"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "01ARZ3NDEKTSV4RRFFQ69G5FAV"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 405', () => pm.response.to.have.status(405));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

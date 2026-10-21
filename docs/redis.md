@@ -37,7 +37,7 @@ one server in an emergency without colliding. Parts must come from hashes or num
 
 | Prefix | Owner | Content |
 |---|---|---|
-| `smem:<env>:sess:<h>` | T-052 | one hash per login session, `<h>` = hex sha256 of the cookie value (the raw token never reaches Redis): `user_id`, `created_at`, `last_seen_at` (unix ms), `user_agent`; `EXPIRE` = remaining lifetime (30 days, slid forward once half has passed) |
+| `smem:<env>:sess:<h>` | T-052 | one hash per login session, `<h>` = hex sha256 of the cookie value (the raw token never reaches Redis): `user_id`, `created_at`, `last_seen_at` (unix ms), `user_agent`, `epoch` (the user's `auth_epoch` at login); `EXPIRE` = remaining lifetime (30 days, slid forward once half has passed) |
 | `smem:<env>:usess:<user id>` | T-052 | set of that user's `<h>` (for "delete every session of the user"); its expiry is pushed to the latest session expiry; a login also removes the user's expired members |
 | `smem:<env>:otp:<purpose>:<user id>` | T-048 | one hash per live email code (`verify` or `reset`): `h` HMAC of the code, `a` wrong attempts, `x` expiry (ms) |
 | `smem:<env>:rl:<limiter>:<key>` | T-053 | one sorted set per limited key (see Rate limiters); the key expires with the window |
@@ -48,8 +48,10 @@ one server in an emergency without colliding. Parts must come from hashes or num
 `internal/auth/sessions.go`. One round trip per authenticated request (`HGETALL`), then one MySQL lookup of the user by id;
 a Lua script runs only at login (create + sweep), when the session slides (at most every 15 days), at logout and for
 delete-all. The slide script checks the session still exists first, so a logout or password reset that wins a race is never
-undone. Delete-all (password reset, the Google pre-hijacking defence) runs inside the MySQL transaction **before** the commit:
-if Redis fails, the password change or takeover is rolled back too and can be retried. The scripts read the `sess:<h>` keys named
+undone. Password reset and the Google pre-hijacking defence raise the user's `auth_epoch` (MySQL, T-103) in their transaction; a session
+stores the epoch it was issued under (`epoch` field, missing = 0) and `Authenticate`, which already reads the user row, refuses and deletes a
+session whose epoch differs. That is the guarantee, including against a login that read the old password before the change and writes its
+session after it. Delete-all then runs **after** the commit as a clean-up; if Redis fails it is logged and the change stays. The scripts read the `sess:<h>` keys named
 by the index set, so Redis must be a single node (Valkey, or ElastiCache without cluster mode); cluster mode would need
 hash tags. Nothing is migrated: migration `0012` drops the `sessions` table and everybody signs in again once.
 
@@ -116,6 +118,7 @@ Fail policy when Redis is unreachable (`ratelimit.Factory`): **open** lets the r
 | `public_media_miss` | 60 (only misses count) | 15 min | IP | open (public photo links, T-092) |
 | `public_media_all` | 600 | 15 min | IP | open (public photo links, T-092) |
 | `revoke_links` | 10 | 1 h | user id | open (`yearbook/revoke-photo-links`, T-092) |
+| `book_export` | 30 | 10 min | user id | open (`book-export/get-text`, T-093) |
 | `submit_ip_hour` | 100 | 1 h | IP | open |
 | `submit_ip_day` | 300 | 24 h | IP | open |
 | `submit_collection_hour` | 60 | 1 h | collection id | open |

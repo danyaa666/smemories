@@ -28,8 +28,11 @@ Reset: `POST /api/auth/forgot-password {email}` always answers `200` with an emp
 account, sends a reset code in the background. `POST /api/auth/reset-password {email, code, password}` checks, in this order: the
 address format, the 20 attempts per hour per IP, the password rules (`ERROR_WEAK_PASSWORD`, the code is untouched, so the answer cannot
 confirm a code), then the code. Unknown address, wrong code and no live code all answer `400 ERROR_INVALID_CODE`; for an unknown address
-the API runs the same Redis script on a key that never exists, so the work is the same. Success: new password stored, all sessions
-of the user deleted, the code consumed.
+the API runs the same Redis script on a key that never exists, so the work is the same. Success: new password stored and the user's
+`auth_epoch` raised by one in the same transaction (T-103), the code consumed. The epoch is what revokes the sessions: a session stores the epoch it was
+issued under and is refused (401, and deleted) once the user's differs, so even a login that read the old password before the reset and creates its
+session after it is signed out. After the commit the user's sessions are also deleted from Redis as a clean-up; if that fails it is logged and the reset
+still succeeds. Sessions written before the epoch existed count as epoch 0.
 
 ## Sending
 
