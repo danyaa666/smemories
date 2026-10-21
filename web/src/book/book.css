@@ -302,3 +302,18 @@
     box-shadow: none;
   }
 }
+
+/* Export as text (T-094): screen only, inside .bk-ui. */
+.bk-export {
+  margin-top: var(--space-6);
+}
+.bk-export-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+.bk-export-text {
+  box-sizing: border-box;
+  width: 100%;
+  font: inherit;
+}
