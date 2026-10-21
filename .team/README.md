@@ -12,18 +12,16 @@
 |---|---:|---|
 | BACKLOG | 12 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-095, T-096, T-097 |
 | TODO | 9 | T-094, T-100, T-101, T-104, T-105, T-106, T-107, T-109, T-110 |
-| IN_PROGRESS | 1 | T-093 |
-| READY_FOR_QA | 1 | T-103 |
-| QA_PASS | 2 | T-102, T-108 |
-| MERGED | 3 | T-092, T-098, T-099 |
-| DONE | 74 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090 |
+| READY_FOR_QA | 2 | T-093, T-103 |
+| MERGED | 2 | T-102, T-108 |
+| DONE | 77 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-092, T-098, T-099 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-092 ([E05] Public photo links: signed token, public-media endpoint, revoke-all (API)); T-098 ([E12] IPv6 /64 keying and a per-account login limiter); T-099 ([E12] Mandatory SMEM_ENV and local-only dev/test)
+**Awaiting your review (MERGED):** T-102 ([E12] Upload slot fairness: per-user cap and paced body on media/create; early release for rejected public submissions); T-108 ([E06] Concurrent smemories-migrate up on an empty database fails (missing zero version migration))
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?)
 
-_Board last written 2026-10-21 03:31Z_
+_Board last written 2026-10-21 03:43Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4305,7 +4303,7 @@ Small leftovers from the T-090 QA: (1) scripts/image-smoke.sh: when SMOKE_TIMEOU
 #### Comments
 
 ### T-092 — [E05] Public photo links: signed token, public-media endpoint, revoke-all (API)
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -4316,7 +4314,7 @@ Small leftovers from the T-090 QA: (1) scripts/image-smoke.sh: when SMOKE_TIMEOU
 - **Assignee:** —
 - **Branch:** task/t-092-e05-public-photo-links-signed-token-publ
 - **PR:** https://github.com/danyaa666/smemories/pull/85
-- **Updated:** 2026-10-21 01:45Z by leader
+- **Updated:** 2026-10-21 03:43Z by human
 - **Comments-seen:** 5
 
 Spec: .team/epics/E05-templates-export/14-public-photo-links-api.md (read it from the repo root). Decision D-32: the owner chose permanent public photo links; this task adds the HMAC token, GET /api/public-media/get-content, POST /api/yearbook/revoke-photo-links and the SMEM_MEDIA_LINK_SECRET config. Risk high: owner approves the merge.
@@ -4344,9 +4342,10 @@ Spec: .team/epics/E05-templates-export/14-public-photo-links-api.md (read it fro
 - 2026-10-20 18:15Z · leader · Leader review OK on b061020: token = canonical ULID + 128-bit HMAC (strict base64, fixed length, hmac.Equal), MAC over the stored yearbook id and link_epoch; one query decides shareable (cover, profile, approved note) with the join justified in code (1:1 by primary key, indexed EXISTS); identical 404s; display variant only; headers and cache as specified; migration expand-only. QA_PASS with tamper, replay, hidden-note, log and EXIF probes. CI image failure is the pre-existing migrate race (develop shows it too) -> T-108; re-run requested. Follow-ups already tracked: memory per download (T-107), shared-NAT miss budget (T-098 /64 keying, T-031). Waiting for the owner's approval (risk high).
 - 2026-10-21 01:44Z · human · owner approved merge
 - 2026-10-21 01:45Z · leader · MERGED into develop as 399ffa6 (PR #85) after owner approval. Unblocks T-093, T-100, T-107.
+- 2026-10-21 03:43Z · human · accepted by owner
 
 ### T-093 — [E05] Book as plain text with photo links (API)
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -4354,15 +4353,16 @@ Spec: .team/epics/E05-templates-export/14-public-photo-links-api.md (read it fro
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-093-e05-book-as-plain-text-with-photo-links-
-- **PR:** —
-- **Updated:** 2026-10-21 03:16Z by dev
-- **Comments-seen:** 0
+- **PR:** https://github.com/danyaa666/smemories/pull/92
+- **Updated:** 2026-10-21 03:32Z by dev
+- **Comments-seen:** 1
 
 Spec: .team/epics/E05-templates-export/15-book-text-export-api.md. GET /api/book-export/get-text builds the UTF-8 text (profile, approved notes, public photo links from T-092), en/vi labels, no silent cut.
 
 #### Comments
+- 2026-10-21 03:32Z · dev · PR #92 head 6111818. GET /api/book-export/get-text (package internal/bookexport), cap 1000 via notes.ExportNotes, T-092 signer + link_epoch, limiter book_export 30/10min. Verify: golden files en/vi (testdata), integration (anonymous links, hidden/revoke, query count, 1001 notes), newman postman/book-export.postman_collection.json twice (needs make verify-newman-users), docs/book-export.md. Gaps: none known. Lint, unit, full integration all green on a private stack.
 
 ### T-094 — [E05] Web: Export as text on the print screen, public-link warning, disable links
 - **Status:** TODO
@@ -4441,7 +4441,7 @@ Spec: .team/epics/E11-signatures/03-signature-print.md. Next phase.
 #### Comments
 
 ### T-098 — [E12] IPv6 /64 keying and a per-account login limiter
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
@@ -4452,7 +4452,7 @@ Spec: .team/epics/E11-signatures/03-signature-print.md. Next phase.
 - **Assignee:** —
 - **Branch:** task/t-098-e12-ipv6-64-keying-and-a-per-account-log
 - **PR:** https://github.com/danyaa666/smemories/pull/87
-- **Updated:** 2026-10-21 01:45Z by leader
+- **Updated:** 2026-10-21 03:43Z by human
 - **Comments-seen:** 7
 
 Spec: `.team/epics/E12-security-hardening/01-ipv6-keying-and-account-login-limit.md`. Audit M1: every per-IP limiter keys on the full address, so one IPv6 /64 walks around all of them, and login has no per-account cap. Mask IPv6 to /64 in ResolveClientIP, add a fail-closed per-account failed-login limiter. Risk high: auth.
@@ -4465,9 +4465,10 @@ Spec: `.team/epics/E12-security-hardening/01-ipv6-keying-and-account-login-limit
 - 2026-10-20 21:59Z · leader · Leader review OK on 33737ef: clientKey via netip (zone dropped, IPv4-mapped unmapped, IPv6 masked to /64, canonical text) used by both the header and RemoteAddr paths, one function for every limiter; login_account limiter fail-closed; reset clears only that account's key after the commit (a failed Reset only means the owner waits up to 15 minutes, acceptable); proxy WARN rate-limited with an atomic CAS. QA_PASS with live probes (50/51 failures, 70 parallel, /64 sharing, Redis down, reset clear, oversize email). Non-blocking: CGNAT peers (100.64.0.0/10) would trigger the WARN; note it in docs/production-config.md when T-023 picks the network. T-103 will touch reset.go too: whichever merges second merges develop. Waiting for the owner's approval (risk high).
 - 2026-10-21 01:44Z · human · owner approved merge
 - 2026-10-21 01:45Z · leader · MERGED into develop as 765b8bc (PR #87) after owner approval.
+- 2026-10-21 03:43Z · human · accepted by owner
 
 ### T-099 — [E12] Mandatory SMEM_ENV and local-only dev/test
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
@@ -4478,7 +4479,7 @@ Spec: `.team/epics/E12-security-hardening/01-ipv6-keying-and-account-login-limit
 - **Assignee:** —
 - **Branch:** task/t-099-e12-mandatory-smem-env-and-local-only-de
 - **PR:** https://github.com/danyaa666/smemories/pull/88
-- **Updated:** 2026-10-21 03:17Z by leader
+- **Updated:** 2026-10-21 03:43Z by human
 - **Comments-seen:** 10
 
 Spec: `.team/epics/E12-security-hardening/02-mandatory-env-and-local-only-dev-test.md`. Audit M2 and L7: SMEM_ENV defaults to dev, which prints OTP codes, uses the public OTP key and drops the cookie Secure flag. Make it required in every command, and refuse dev/test when origins are not local. Risk high: production configuration.
@@ -4507,6 +4508,7 @@ Spec: `.team/epics/E12-security-hardening/02-mandatory-env-and-local-only-dev-te
   5. Real make image-smoke (no pull-line copy needed, the pull did not hang this time): EXIT 0, incl. 'the API refuses to start without SMEM_ENV', 'the API refuses SMEM_ENV=test with a public base URL or origin', 'prod start refuses a missing or short SMEM_MEDIA_LINK_SECRET'.
   Non-blocking: named volumes qa099b_* left (no -v by rule). Risk high: owner already approved merge on 8e07f4f; leader to merge.
 - 2026-10-21 03:17Z · leader · MERGED into develop as e0ed6af (PR #88) after owner approval and the QA re-check of the develop merge. Local setups now need SMEM_ENV set (make up writes it into .env from .env.example).
+- 2026-10-21 03:43Z · human · accepted by owner
 
 ### T-100 — [E12] Canonical public ids and the stored id for object keys
 - **Status:** TODO
@@ -4548,18 +4550,18 @@ Spec: `.team/epics/E12-security-hardening/04-readyz-greeting-session-lifetime.md
 #### Comments
 
 ### T-102 — [E12] Upload slot fairness: per-user cap and paced body on media/create; early release for rejected public submissions
-- **Status:** QA_PASS
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
 - **Depends-on:** —
 - **Risk:** high
 - **Rework:** 1
-- **Owner-approved:** —
-- **Assignee:** leader
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-102-e12-upload-slot-fairness-per-user-cap-an
 - **PR:** https://github.com/danyaa666/smemories/pull/90
-- **Updated:** 2026-10-21 03:30Z by qa
+- **Updated:** 2026-10-21 03:43Z by leader
 - **Comments-seen:** 5
 
 Spec: .team/epics/E12-security-hardening/05-upload-slot-fairness.md (read it from the repo root). Source: audit run 1, docs/security-audit-skill-2026-10-20/ (PR #86). Risk high: owner approves the merge.
@@ -4581,6 +4583,8 @@ Spec: .team/epics/E12-security-hardening/05-upload-slot-fairness.md (read it fro
   c) No Postman edge entry for the new 429 (a collection cannot drip a body); covered by Go integration tests and my runs. Fine.
   d) Makefile includes .env, so a private stack needs make -e for the env overrides (not a product issue).
 - 2026-10-21 03:31Z · leader · Leader review OK on d714aad: per-user cap is a mutex-guarded map taken before the shared slot and released by defer on every path; pacing reuses the public route's numbers and the deadline is extended for processing after the body; public early release keeps the answer body identical (QA: gauge 0 vs 8 on develop). QA_PASS. QA's two non-blocking findings (4 accounts can still fill the pool; unbounded drains after the early release) go to T-110. Waiting for the owner's approval (risk high).
+- 2026-10-21 03:42Z · human · owner approved merge
+- 2026-10-21 03:43Z · leader · MERGED into develop as 5f526d7 (PR #90) after owner approval. Follow-up T-110 (verified email + per-client share, bounded drains).
 
 ### T-103 — [E12] Sessions issued during a password reset or Google merge must not survive it (credential epoch)
 - **Status:** READY_FOR_QA
@@ -4691,18 +4695,18 @@ Spec: .team/epics/E12-security-hardening/07-bounded-photo-download-memory.md (re
 #### Comments
 
 ### T-108 — [E06] Concurrent smemories-migrate up on an empty database fails (missing zero version migration)
-- **Status:** QA_PASS
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** bug
 - **Milestone:** M2
 - **Depends-on:** —
 - **Risk:** high
 - **Rework:** 0
-- **Owner-approved:** —
-- **Assignee:** leader
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-108-e06-concurrent-smemories-migrate-up-on-a
 - **PR:** https://github.com/danyaa666/smemories/pull/91
-- **Updated:** 2026-10-21 03:02Z by qa
+- **Updated:** 2026-10-21 03:42Z by leader
 - **Comments-seen:** 4
 
 Spec: .team/epics/E06-go-live/11-concurrent-migrate-race.md. CI image job flake seen on develop and on PR #85 (QA of T-092); fix the lock order in internal/db/migrate.go.
@@ -4718,6 +4722,8 @@ Spec: .team/epics/E06-go-live/11-concurrent-migrate-race.md. CI image job flake 
   Known gap (status/version on an empty DB during the first up still create the table unlocked): does NOT matter for docs/deploy.md. The deploy flow is migrate task first, then API; the API's CheckSchema only reads (handles missing table, writes nothing), so it cannot race. status/version are operator tools for the runbook, run on a database that already has the table. Even in the worst case it is a failed command, no data harm, rerunnable. Tried 40 rounds of 3 up + 3 version + 3 status on an empty DB: 0 failures, final state correct. Fixing it would need status/version to take the lock; non-blocking, optional follow-up.
   Non-blocking: in my env TestUTF8MB4RoundTrip failed on sql_mode only because my compose lacked the project's --sql-mode flag (not the PR). Nothing under .team/ touched in the PR; no test files added by me.
 - 2026-10-21 03:02Z · leader · Leader review OK on d856c25: a 9-line change in MigrateUpLog (GetDBVersion under the session lock before goose Up, only when locking is on), the deterministic test fails 10/10 on develop's code and passes with -race -count=20; T-088 behaviours unchanged (QA checked exit 2/3 by hand); real image-smoke 7/7 and CI green. The status/version gap does not affect the deploy flow (QA). Waiting for the owner's approval (risk high).
+- 2026-10-21 03:42Z · human · owner approved merge
+- 2026-10-21 03:42Z · leader · MERGED into develop as 95cd024 (PR #91) after owner approval.
 
 ### T-109 — [E02] Flaky TestConcurrentResetHasOneWinner under CPU load
 - **Status:** TODO
