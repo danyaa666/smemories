@@ -76,3 +76,6 @@ type FieldRef struct {
 func Default() []FieldRef {
 	return []FieldRef{{"name", true}, {"relationship", false}, {"message", true}}
 }
+
+// All returns every catalogue field in catalogue order (a copy).
+func All() []Field { return append([]Field(nil), fields...) }

@@ -16,6 +16,7 @@ import (
 
 	"github.com/danyaa666/smemories/internal/auth"
 	"github.com/danyaa666/smemories/internal/bookdata"
+	"github.com/danyaa666/smemories/internal/bookexport"
 	"github.com/danyaa666/smemories/internal/config"
 	"github.com/danyaa666/smemories/internal/db"
 	"github.com/danyaa666/smemories/internal/httpx"
@@ -178,6 +179,7 @@ func main() {
 	bookSvc.SetLimiters(limiters)
 	bookH := yearbook.NewHandler(bookSvc, authH.RequireUser, cfg.AllowedOrigins)
 	bookDataH := bookdata.NewHandler(bookdata.NewService(bookSvc, notesSvc), authH.RequireUser)
+	bookExportH := bookexport.NewHandler(bookexport.NewService(bookSvc, notesSvc, linkSigner, cfg.PublicBaseURL, limiters, nil), authH.RequireUser)
 	templateH := templateapi.NewHandler(authH.RequireUser)
 	feedbackH := printfeedback.NewHandler(printfeedback.NewService(printfeedback.NewStore(d), limiters, nil), cfg.AllowedOrigins, authH.ClientIP)
 	notesH := notes.NewHandler(notesSvc, cfg.MediaMaxBytes, authH.RequireUser, cfg.AllowedOrigins, authH.ClientIP, logger)
@@ -190,7 +192,7 @@ func main() {
 	}
 	notesH.SweepSpool() // files a crash or kill left behind; before the listener accepts traffic
 
-	srv := httpx.NewServer(cfg.HTTPAddr, httpx.NewRouterWith(logger, httpx.RouterConfig{RequestTimeout: cfg.RequestTimeout, TrustProxy: cfg.TrustProxy, Metrics: mt}, httpx.Ready(d, logger, httpx.Draining(ctx), httpx.Dep{Name: "redis", Ping: rc.Ready}), authH.Routes, bookH.Routes, mediaH.Routes, notesH.Routes, bookDataH.Routes, templateH.Routes, feedbackH.Routes))
+	srv := httpx.NewServer(cfg.HTTPAddr, httpx.NewRouterWith(logger, httpx.RouterConfig{RequestTimeout: cfg.RequestTimeout, TrustProxy: cfg.TrustProxy, Metrics: mt}, httpx.Ready(d, logger, httpx.Draining(ctx), httpx.Dep{Name: "redis", Ping: rc.Ready}), authH.Routes, bookH.Routes, mediaH.Routes, notesH.Routes, bookDataH.Routes, bookExportH.Routes, templateH.Routes, feedbackH.Routes))
 	if cfg.MetricsAddr != "" { // internal listener only; the public mux never serves /metrics
 		mln, err := net.Listen("tcp", cfg.MetricsAddr)
 		if err != nil {

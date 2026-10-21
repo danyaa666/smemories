@@ -17,19 +17,30 @@ type BookNote struct {
 	PhotoIDs []string        `json:"photo_ids"` // media ids, fetched with media/get-content?variant=print
 }
 
-// ApprovedNotes returns the approved notes of the owner's book in book order (at most maxBookNotes) and the real number of
+// ApprovedNotes returns the approved notes of the owner's book in book order (at most the cap) and the real number of
 // approved notes, which is larger when the book was cut. Two queries whatever the number of notes, plus one count when the
 // cap was reached. A book that is not the owner's has no rows here: the caller checks ownership of the book itself.
 func (s *Service) ApprovedNotes(ctx context.Context, ownerID uint64, verified bool, bookID string) ([]*BookNote, int, error) {
 	if err := checkOwner(verified, bookID); err != nil {
 		return nil, 0, err
 	}
-	return s.mod.approvedNotes(ctx, ownerID, bookID)
+	return s.mod.approvedNotes(ctx, ownerID, bookID, maxBookNotes)
 }
 
-func (s *Store) approvedNotes(ctx context.Context, ownerID uint64, bookID string) ([]*BookNote, int, error) {
-	out, err := s.approvedPage(ctx, ownerID, bookID)
-	if err != nil || len(out) < maxBookNotes {
+// MaxExportNotes bounds the text export of a book (T-093): more than the book-data cap, because no browser has to draw it.
+const MaxExportNotes = 1000
+
+// ExportNotes is ApprovedNotes with the export cap: the same rows in the same order and the same two queries.
+func (s *Service) ExportNotes(ctx context.Context, ownerID uint64, verified bool, bookID string) ([]*BookNote, int, error) {
+	if err := checkOwner(verified, bookID); err != nil {
+		return nil, 0, err
+	}
+	return s.mod.approvedNotes(ctx, ownerID, bookID, MaxExportNotes)
+}
+
+func (s *Store) approvedNotes(ctx context.Context, ownerID uint64, bookID string, limit int) ([]*BookNote, int, error) {
+	out, err := s.approvedPage(ctx, ownerID, bookID, limit)
+	if err != nil || len(out) < limit {
 		return out, len(out), err
 	}
 	var total int
@@ -39,11 +50,11 @@ func (s *Store) approvedNotes(ctx context.Context, ownerID uint64, bookID string
 	return out, max(total, len(out)), err
 }
 
-func (s *Store) approvedPage(ctx context.Context, ownerID uint64, bookID string) ([]*BookNote, error) {
+func (s *Store) approvedPage(ctx context.Context, ownerID uint64, bookID string, limit int) ([]*BookNote, error) {
 	rows, err := s.db.QueryContext(ctx,
 		`SELECT n.id, n.public_id, n.answers FROM note_tab n JOIN yearbook_tab y ON y.id = n.yearbook_id
 		 WHERE y.owner_id = ? AND y.public_id = ? AND n.status = ? ORDER BY n.sort_order, n.id LIMIT ?`,
-		ownerID, bookID, StatusApproved, maxBookNotes)
+		ownerID, bookID, StatusApproved, limit)
 	if err != nil {
 		return nil, err
 	}
