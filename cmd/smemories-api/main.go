@@ -187,6 +187,7 @@ func main() {
 	notesH := notes.NewHandler(notesSvc, cfg.MediaMaxBytes, authH.RequireUser, cfg.AllowedOrigins, authH.ClientIP, logger)
 	notesH.SetUploadLimits(cfg.PublicUploadConns, cfg.PublicUploadsPerIP, cfg.UploadTmpDir)
 	mt.Gauge("public_uploads_in_progress", "Public note submissions in progress.", func() float64 { return float64(notesH.UploadsInProgress()) })
+	mt.Gauge("public_drains_in_progress", "Rejected public submissions whose body is being drained (a socket, no upload slot).", func() float64 { return float64(notesH.DrainsInProgress()) })
 	mt.Gauge("public_uploads_max", "Public note submissions allowed at once (SMEM_PUBLIC_UPLOAD_MAX_CONNS).", func() float64 { return float64(cfg.PublicUploadConns) })
 	if err := notesH.CheckSpool(); err != nil {
 		logger.Error("upload spool is not writable: mount a writable volume (tmpfs) and point SMEM_UPLOAD_TMP_DIR at it", "dir", cfg.UploadTmpDir, "error", err)

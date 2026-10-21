@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "SMemories - public photo links",
-    "description": "Public photo links (T-092, D-32): `GET /api/public-media/get-content?token=` (no session, no cookie, display variant only) and `POST /api/yearbook/revoke-photo-links`. `{status,data}` envelope, `ERROR_*` codes; the photo is binary on success and the error envelope on failure.\n\n**Setup.** The API must run with a known `SMEM_MEDIA_LINK_SECRET` (base64, at least 32 bytes): `export SMEM_MEDIA_LINK_SECRET=$(openssl rand -base64 48)`, start the API (SMEM_ENV=dev, `make up` stack), then from the repository root: `newman run postman/public-media.postman_collection.json --working-dir postman --env-var \"linkSecret=$SMEM_MEDIA_LINK_SECRET\"`. The collection computes the link tokens itself with the same HMAC as `internal/medialink` (there is no API that hands a token out before T-093), so a wrong secret shows up as `404` on the first anonymous request. Without `SMEM_MEDIA_LINK_SECRET` the dev API uses a random secret and no token can be built here.\n\nRun the whole collection in order (Edge cases uses the users of the Full flow). Each run registers 2 users: the register limit is 5 per hour per IP, so a third run in the hour needs `make reset-limits`. The anonymous requests of one run are 20 or so, of which about 10 are misses (limit 60 per 15 minutes per IP). The anonymous requests send an empty `smem_session=` cookie (Newman merges its own cookie jar into the header, so the Go integration tests, which send no cookie at all, are the proof that no session is read). Every refusal of a link must be byte-identical: the requests pin `X-Request-Id`, step 7 stores the first 404 body and the others compare with it. Not covered here (the Go integration tests cover them): the approved-note photo (needs a verified email and the note form), hidden/pending/deleted notes, the 60/600 per IP limits, the 10 revokes per hour limit, Redis down.",
+    "description": "Public photo links (T-092, D-32): `GET /api/public-media/get-content?token=` (no session, no cookie, display variant only) and `POST /api/yearbook/revoke-photo-links`. `{status,data}` envelope, `ERROR_*` codes; the photo is binary on success and the error envelope on failure.\n\n**Setup.** The API must run with a known `SMEM_MEDIA_LINK_SECRET` (base64, at least 32 bytes): `export SMEM_MEDIA_LINK_SECRET=$(openssl rand -base64 48)`, start the API (SMEM_ENV=dev, `make up` stack), then from the repository root: `newman run postman/public-media.postman_collection.json --working-dir postman --env-var \"linkSecret=$SMEM_MEDIA_LINK_SECRET\"`. The collection computes the link tokens itself with the same HMAC as `internal/medialink` (there is no API that hands a token out before T-093), so a wrong secret shows up as `404` on the first anonymous request. Without `SMEM_MEDIA_LINK_SECRET` the dev API uses a random secret and no token can be built here.\n\nRun the whole collection in order (Edge cases uses the users of the Full flow). The anonymous requests of one run are 20 or so, of which about 10 are misses (limit 60 per 15 minutes per IP). The anonymous requests send an empty `smem_session=` cookie (Newman merges its own cookie jar into the header, so the Go integration tests, which send no cookie at all, are the proof that no session is read). Every refusal of a link must be byte-identical: the requests pin `X-Request-Id`, step 7 stores the first 404 body and the others compare with it. Not covered here (the Go integration tests cover them): the approved-note photo (needs a verified email and the note form), hidden/pending/deleted notes, the 60/600 per IP limits, the 10 revokes per hour limit, Redis down.\n\nAccounts: the owner endpoints need a verified email (T-110: `POST /api/media/create` answers 403 `ERROR_EMAIL_NOT_VERIFIED` without it), and the dev mail is only printed to the API's stdout, which Newman cannot read. So the collection uses the three fixed accounts of notes.postman_collection.json (A and B verified, C never verified): run `newman run <this file> --folder \"Setup (once per database)\" --working-dir .` once, then `make verify-newman-users` (marks A and B verified in the dev database), and after that run the whole collection as often as you like; the Full flow only logs in. ",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -19,15 +19,15 @@
     },
     {
       "key": "emailA",
-      "value": ""
+      "value": "newman-notes-a@example.com"
     },
     {
       "key": "emailB",
-      "value": ""
+      "value": "newman-notes-b@example.com"
     },
     {
       "key": "password",
-      "value": ""
+      "value": "Fake-Newman-notes-pw-1"
     },
     {
       "key": "tokenA",
@@ -68,41 +68,25 @@
     {
       "key": "notFoundBody",
       "value": ""
+    },
+    {
+      "key": "emailC",
+      "value": "newman-notes-c@example.com"
+    },
+    {
+      "key": "tokenC",
+      "value": ""
     }
   ],
   "item": [
     {
-      "name": "Full flow",
-      "event": [
-        {
-          "listen": "prerequest",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "// Runs before every request in the folder; generate only before the first one so the whole flow shares one pair of accounts and one epoch counter.",
-              "if (pm.info.requestName.startsWith('1. ')) {",
-              "  const n = Date.now() + '-' + Math.floor(Math.random() * 1e6);",
-              "  pm.collectionVariables.set('emailA', 'newman-plink-a-' + n + '@example.com');",
-              "  pm.collectionVariables.set('emailB', 'newman-plink-b-' + n + '@example.com');",
-              "  pm.collectionVariables.set('password', 'Fake-Newman-pw-' + n);",
-              "  pm.collectionVariables.set('linkEpoch', '0');",
-              "  pm.collectionVariables.set('oldEpoch', '0');",
-              "  pm.collectionVariables.set('notFoundBody', '');",
-              "}"
-            ]
-          }
-        }
-      ],
+      "name": "Setup (once per database)",
       "item": [
         {
-          "name": "1. Register user A",
+          "name": "Register A (verified later; 200, or 409/429 when an earlier run already did)",
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Cookie",
-                "value": "smem_session="
-              },
               {
                 "key": "Origin",
                 "value": "{{origin}}"
@@ -125,7 +109,158 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"email\":\"{{emailA}}\",\"password\":\"{{password}}\",\"display_name\":\"Newman A\"}"
+              "raw": "{\"email\":\"{{emailA}}\",\"password\":\"{{password}}\",\"display_name\":\"Newman Alice \\u0110\\u1eb7ng\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('created, or already there', () => pm.expect(pm.response.code).to.be.oneOf([200, 409, 429]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register B (verified later; 200, or 409/429 when an earlier run already did)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{emailB}}\",\"password\":\"{{password}}\",\"display_name\":\"Newman Bob\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('created, or already there', () => pm.expect(pm.response.code).to.be.oneOf([200, 409, 429]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register C (stays unverified; 200, or 409/429 when an earlier run already did)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{emailC}}\",\"password\":\"{{password}}\",\"display_name\":\"Newman Carol\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('created, or already there', () => pm.expect(pm.response.code).to.be.oneOf([200, 409, 429]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Full flow",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Runs before every request in the folder; generate only before the first one so the whole flow shares one pair of accounts and one epoch counter.",
+              "if (pm.info.requestName.startsWith('1. ')) {",
+              "  pm.collectionVariables.set('linkEpoch', '0');",
+              "  pm.collectionVariables.set('oldEpoch', '0');",
+              "  pm.collectionVariables.set('notFoundBody', '');",
+              "}"
+            ]
+          }
+        }
+      ],
+      "item": [
+        {
+          "name": "1. Login A",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{emailA}}\",\"password\":\"{{password}}\"}"
             }
           },
           "event": [
@@ -144,7 +279,7 @@
           ]
         },
         {
-          "name": "2. Register user B",
+          "name": "2. Login B",
           "request": {
             "method": "POST",
             "header": [
@@ -162,19 +297,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/auth/register",
+              "raw": "{{baseUrl}}/api/auth/login",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
                 "auth",
-                "register"
+                "login"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"email\":\"{{emailB}}\",\"password\":\"{{password}}\",\"display_name\":\"Newman B\"}"
+              "raw": "{\"email\":\"{{emailB}}\",\"password\":\"{{password}}\"}"
             }
           },
           "event": [

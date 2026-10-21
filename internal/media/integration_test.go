@@ -221,9 +221,24 @@ func newEnv(t *testing.T) *env {
 	return e
 }
 
-type user struct{ cookie string }
+type user struct {
+	cookie string
+	ip     string // the address a socket test claims to come from (X-Test-IP, see serve); "" = the real one
+}
+
+// from is u as seen from another address.
+func (u user) from(ip string) user { u.ip = ip; return u }
 
 func (e *env) register(email string) user {
+	e.t.Helper()
+	u := e.registerUnverified(email)
+	// verified accounts get email_verified_at set directly (T-007 covers the mail flow); owner uploads need it (T-110)
+	e.exec(`UPDATE user_tab SET email_verified_at = ? WHERE email = ?`, time.Now().UnixMilli(), email)
+	return u
+}
+
+// registerUnverified is a fresh password account whose email was never confirmed.
+func (e *env) registerUnverified(email string) user {
 	e.t.Helper()
 	b, _ := json.Marshal(map[string]string{"email": email, "password": testPW, "display_name": "Tester"})
 	rec := httptest.NewRecorder()
@@ -235,7 +250,7 @@ func (e *env) register(email string) user {
 	}
 	for _, c := range rec.Result().Cookies() {
 		if c.Name == auth.CookieName {
-			return user{c.Value}
+			return user{cookie: c.Value}
 		}
 	}
 	e.t.Fatal("no session cookie")

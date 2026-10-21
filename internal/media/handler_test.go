@@ -167,11 +167,16 @@ func TestSlowRouteSurvivesServerWriteTimeout(t *testing.T) {
 	}
 }
 
+// newCapHandler is a Handler with the upload caps of NewHandler and a shared pool of pool slots, and no service.
+func newCapHandler(pool int) *Handler {
+	return &Handler{inflight: make(chan struct{}, pool), logger: nopLogger(), perUser: map[uint64]int{}, perClient: map[string]int{}, clientCap: maxUploadsPerClient}
+}
+
 func TestCreateBusyWhenTooManyInFlight(t *testing.T) {
-	h := &Handler{inflight: make(chan struct{}, 1), logger: nopLogger()}
+	h := newCapHandler(1)
 	h.inflight <- struct{}{} // one upload already running
 	rec := httptest.NewRecorder()
-	h.create(rec, httptest.NewRequest("POST", "/api/media/create", nil).WithContext(auth.WithUser(context.Background(), &auth.User{InternalID: 1})))
+	h.create(rec, httptest.NewRequest("POST", "/api/media/create", nil).WithContext(auth.WithUser(context.Background(), &auth.User{InternalID: 1, EmailVerified: true})))
 	if rec.Code != 503 || rec.Header().Get("Retry-After") == "" || !strings.Contains(rec.Body.String(), `"ERROR_BUSY"`) {
 		t.Fatalf("got %d %s", rec.Code, rec.Body)
 	}
@@ -180,14 +185,14 @@ func TestCreateBusyWhenTooManyInFlight(t *testing.T) {
 // T-102: the third upload of one user is 429 with Retry-After 5 before anything else (the shared pool is not touched), another
 // user is not counted, and the count is given back on every path.
 func TestCreatePerUserCap(t *testing.T) {
-	h := &Handler{inflight: make(chan struct{}, 8), logger: nopLogger()}
+	h := newCapHandler(8)
 	call := func(id uint64) *httptest.ResponseRecorder {
 		rec := httptest.NewRecorder()
-		h.create(rec, httptest.NewRequest("POST", "/api/media/create", nil).WithContext(auth.WithUser(context.Background(), &auth.User{InternalID: id})))
+		h.create(rec, httptest.NewRequest("POST", "/api/media/create", nil).WithContext(auth.WithUser(context.Background(), &auth.User{InternalID: id, EmailVerified: true})))
 		return rec
 	}
 	for range maxUploadsPerUser {
-		if !h.takeUser(1) {
+		if !take(&h.userMu, h.perUser, 1, maxUploadsPerUser) {
 			t.Fatal("two uploads per user must be allowed")
 		}
 	}
@@ -199,10 +204,42 @@ func TestCreatePerUserCap(t *testing.T) {
 		t.Fatalf("other user: %d", rec.Code)
 	}
 	for range maxUploadsPerUser {
-		h.releaseUser(1)
+		release(&h.userMu, h.perUser, 1)
 	}
 	if len(h.perUser) != 0 {
 		t.Fatalf("counts left: %v", h.perUser)
+	}
+}
+
+// T-110: an unverified account is 403 ERROR_EMAIL_NOT_VERIFIED before any slot is taken or a body byte is read; the fifth upload
+// from one client key is 429 with Retry-After 5 whoever the user is, and the counts are given back.
+func TestCreateNeedsVerifiedEmailAndHasPerClientCap(t *testing.T) {
+	h := newCapHandler(8)
+	call := func(id uint64, verified bool) *httptest.ResponseRecorder {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest("POST", "/api/media/create", nil)
+		req.RemoteAddr = "192.0.2.7:1234"
+		h.create(rec, req.WithContext(auth.WithUser(context.Background(), &auth.User{InternalID: id, EmailVerified: verified})))
+		return rec
+	}
+	h.inflight <- struct{}{}
+	h.inflight <- struct{}{}
+	rec := call(1, false)
+	if rec.Code != 403 || !strings.Contains(rec.Body.String(), `"ERROR_EMAIL_NOT_VERIFIED"`) || len(h.perUser) != 0 || len(h.perClient) != 0 || len(h.inflight) != 2 {
+		t.Fatalf("unverified: %d %s counts=%v %v inflight=%d", rec.Code, rec.Body, h.perUser, h.perClient, len(h.inflight))
+	}
+	for range maxUploadsPerClient { // four uploads of four different users are in progress behind the same address
+		if !take(&h.userMu, h.perClient, "192.0.2.7", maxUploadsPerClient) {
+			t.Fatal("four uploads per client must be allowed")
+		}
+	}
+	rec = call(9, true)
+	if rec.Code != 429 || rec.Header().Get("Retry-After") != "5" || len(h.perUser) != 0 {
+		t.Fatalf("fifth from one client: %d %q %s user counts=%v", rec.Code, rec.Header().Get("Retry-After"), rec.Body, h.perUser)
+	}
+	release(&h.userMu, h.perClient, "192.0.2.7")
+	if rec = call(9, true); rec.Code == 429 || len(h.perUser) != 0 || h.perClient["192.0.2.7"] != maxUploadsPerClient-1 { // the empty body fails on the form, and gives the counts back
+		t.Fatalf("after a release: %d %s counts=%v %v", rec.Code, rec.Body, h.perUser, h.perClient)
 	}
 }
 

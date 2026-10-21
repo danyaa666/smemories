@@ -15,6 +15,7 @@ var (
 	CodeInvalidImage         = apperr.NewCode("ERROR_INVALID_IMAGE", 400)
 	CodeQuotaExceeded        = apperr.NewCode("ERROR_QUOTA_EXCEEDED", 409)
 	CodeBusy                 = apperr.NewCode("ERROR_BUSY", 503)
+	CodeEmailNotVerified     = apperr.NewCode("ERROR_EMAIL_NOT_VERIFIED", 403) // the same code as the moderation endpoints (internal/notes)
 	// CodeStorage is the object store failing: 502, the BadGateway family, with its own name for the client.
 	CodeStorage = apperr.NewCode("ERROR_STORAGE_ERROR", 502)
 )

@@ -34,6 +34,8 @@ type Handler struct {
 	upTotal        int            // submissions in progress (their bodies spooled to disk)
 	upIP           map[string]int // ... per client IP
 	upMax, upPerIP int
+	drIP           map[string]int // rejected bodies being drained per client IP (T-110), guarded by upMu
+	drTotal        int
 	tmpDir         string // where bodies are spooled; "" = the OS temp dir
 }
 
@@ -41,7 +43,7 @@ type Handler struct {
 func NewHandler(svc *Service, maxPhoto int64, requireUser func(http.Handler) http.Handler, allowedOrigins []string, clientIP func(*http.Request) string, logger *slog.Logger) *Handler {
 	return &Handler{svc: svc, requireUser: requireUser, allowedOrigins: allowedOrigins, clientIP: clientIP, logger: logger,
 		maxPhoto: maxPhoto, verifier: allowAll{},
-		upIP: map[string]int{}, upMax: defaultUploadConns, upPerIP: defaultUploadsPerIP}
+		upIP: map[string]int{}, drIP: map[string]int{}, upMax: defaultUploadConns, upPerIP: defaultUploadsPerIP}
 }
 
 // SetUploadLimits sets how many public submissions may be in progress at once (default 48) and how many of those

@@ -856,18 +856,21 @@ paths:
         the yearbook may upload (`ERROR_NOT_FOUND` otherwise). The request body is capped at `SMEM_MEDIA_MAX_BYTES` (default 10 MiB) for
         the file plus 64 KiB of framing. The route may take up to 2.5 minutes (2 minutes to receive a slow phone upload, 30 seconds to
         process it). Limits: 200 photos per yearbook, 500 MiB per user, 60 uploads per 10 minutes per user, and at most four times the
-        number of image-processing slots in progress at once (`ERROR_BUSY`, retry after `Retry-After`). A request with the session cookie
+        number of image-processing slots in progress at once (`ERROR_BUSY`, retry after `Retry-After`). Needs a verified email
+        (`ERROR_EMAIL_NOT_VERIFIED`, checked before the body is read), and at most 2 uploads in progress per user and 4 per client address
+        (`ERROR_RATE_LIMITED` with `Retry-After: 5`). A request with the session cookie
         must come from an allowed Origin. Not idempotent: retrying after a lost answer may store the photo twice. The answer carries no
         storage key or URL: fetch the image with `GET /api/media/get-content?id=`.
       x-auth: required
       x-error-codes:
+        - {code: ERROR_EMAIL_NOT_VERIFIED, description: The owner's email address is not verified yet; nothing was read or stored.}
         - {code: ERROR_NOT_FOUND, description: The yearbook does not exist or belongs to someone else; the two cannot be told apart.}
         - {code: ERROR_INVALID_IMAGE, description: "The image is corrupt, over 12000 px on a side, over 50 megapixels for JPEG or 25 megapixels for PNG and WebP, or its estimated decoded size is over 128 MiB."}
         - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: The request is not multipart/form-data, or the file is not a JPEG, PNG or WebP image.}
         - {code: ERROR_QUOTA_EXCEEDED, description: "The yearbook already holds 200 photos or the user's photos together reach 500 MiB."}
         - {code: ERROR_TOO_LARGE, description: "The file or the request body is over the cap (`SMEM_MEDIA_MAX_BYTES` plus framing)."}
         - {code: ERROR_REQUEST_TIMEOUT, description: The request body did not arrive in time; nothing was stored.}
-        - {code: ERROR_RATE_LIMITED, description: "More than 60 uploads in 10 minutes for this user; wait `Retry-After` seconds."}
+        - {code: ERROR_RATE_LIMITED, description: "More than 60 uploads in 10 minutes for this user, or already 2 uploads in progress for this user or 4 for this client address; wait `Retry-After` seconds."}
         - {code: ERROR_BUSY, description: "Too many uploads are in progress; retry after `Retry-After`."}
         - {code: ERROR_STORAGE_ERROR, description: The object store failed; nothing was kept, retry later.}
         - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}

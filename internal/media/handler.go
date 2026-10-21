@@ -42,6 +42,9 @@ const (
 	// maxUploadsPerUser is how many uploads one account may have in progress (T-102); the next one is 429 before its body is read.
 	maxUploadsPerUser = 2
 	userCapRetryAfter = 5 * time.Second
+	// maxUploadsPerClient is how many owner uploads one client key (httpx.ClientIP) may have in progress (T-110): throwaway accounts
+	// behind one address cannot fill the shared pool. Taken right after the per-user cap.
+	maxUploadsPerClient = 4
 )
 
 // Handler serves the media endpoints: it decodes, validates the shape, calls the Service and writes the answer.
@@ -56,6 +59,8 @@ type Handler struct {
 	pace           httpx.BodyPace // what the body must keep up with; a field only so that a test can shorten it
 	userMu         sync.Mutex
 	perUser        map[uint64]int      // uploads in progress per internal user id (this process only: with N API tasks the cap is N x 2)
+	perClient      map[string]int      // ... per client key (httpx.ClientIP), same lock
+	clientCap      int                 // maxUploadsPerClient; a field only so that a test can raise it
 	countPublic    func(result string) // metrics of the public endpoint (PublicOK, PublicNotFound, PublicRateLimited); nil = not counted
 }
 
@@ -73,31 +78,28 @@ func (h *Handler) SetPublicCounter(f func(result string)) { h.countPublic = f }
 // once (each buffers up to maxBytes); more get 503 ERROR_BUSY.
 func NewHandler(svc *Service, maxBytes int64, requireUser func(http.Handler) http.Handler, allowedOrigins []string, cursors *httpx.Cursors, logger *slog.Logger) *Handler {
 	return &Handler{svc: svc, maxBytes: maxBytes, requireUser: requireUser, allowedOrigins: allowedOrigins, cursors: cursors, logger: logger,
-		inflight: make(chan struct{}, uploadQueueFactor*cap(svc.sem)), pace: httpx.PhoneUploadPace, perUser: map[uint64]int{}}
+		inflight: make(chan struct{}, uploadQueueFactor*cap(svc.sem)), pace: httpx.PhoneUploadPace, perUser: map[uint64]int{}, perClient: map[string]int{}, clientCap: maxUploadsPerClient}
 }
 
 // UploadsInProgress is how many owner uploads hold a shared slot now (for metrics).
 func (h *Handler) UploadsInProgress() int { return len(h.inflight) }
 
-// takeUser counts one more upload in progress for user; false when the user is at maxUploadsPerUser. It never waits.
-func (h *Handler) takeUser(user uint64) bool {
-	h.userMu.Lock()
-	defer h.userMu.Unlock()
-	if h.perUser == nil {
-		h.perUser = map[uint64]int{}
-	}
-	if h.perUser[user] >= maxUploadsPerUser {
+// take counts one more upload in progress under key in counts; false when key is at max. It never waits.
+func take[K comparable](mu *sync.Mutex, counts map[K]int, key K, max int) bool {
+	mu.Lock()
+	defer mu.Unlock()
+	if counts[key] >= max {
 		return false
 	}
-	h.perUser[user]++
+	counts[key]++
 	return true
 }
 
-func (h *Handler) releaseUser(user uint64) {
-	h.userMu.Lock()
-	defer h.userMu.Unlock()
-	if h.perUser[user]--; h.perUser[user] <= 0 {
-		delete(h.perUser, user)
+func release[K comparable](mu *sync.Mutex, counts map[K]int, key K) {
+	mu.Lock()
+	defer mu.Unlock()
+	if counts[key]--; counts[key] <= 0 {
+		delete(counts, key)
 	}
 }
 
@@ -157,12 +159,23 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	// One account cannot hold the shared pool: its own cap comes first, before any body byte is read (T-102).
-	if !h.takeUser(u.InternalID) {
+	// Only a verified email uploads (like the moderation endpoints), decided before a slot is taken or a body byte is read (T-110).
+	if !u.EmailVerified {
+		h.fail(w, r, apperr.New(CodeEmailNotVerified, "verify your email first"))
+		return
+	}
+	// One account, then one address, cannot hold the shared pool: their caps come first, before any body byte is read (T-102, T-110).
+	if !take(&h.userMu, h.perUser, u.InternalID, maxUploadsPerUser) {
 		h.fail(w, r, tooManyUploads(userCapRetryAfter))
 		return
 	}
-	defer h.releaseUser(u.InternalID)
+	defer release(&h.userMu, h.perUser, u.InternalID)
+	client := httpx.ClientIP(r)
+	if !take(&h.userMu, h.perClient, client, h.clientCap) {
+		h.fail(w, r, tooManyUploads(userCapRetryAfter))
+		return
+	}
+	defer release(&h.userMu, h.perClient, client)
 	select {
 	case h.inflight <- struct{}{}:
 		defer func() { <-h.inflight }()
