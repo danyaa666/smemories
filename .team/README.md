@@ -12,8 +12,8 @@
 |---|---:|---|
 | BACKLOG | 12 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-095, T-096, T-097 |
 | TODO | 9 | T-101, T-105, T-106, T-107, T-109, T-110, T-111, T-112, T-113 |
-| IN_PROGRESS | 1 | T-094 |
-| READY_FOR_QA | 1 | T-100 |
+| READY_FOR_QA | 1 | T-094 |
+| IN_QA | 1 | T-100 |
 | QA_PASS | 1 | T-104 |
 | DONE | 81 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-092, T-093, T-098, T-099, T-102, T-103, T-108 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
@@ -22,7 +22,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?)
 
-_Board last written 2026-10-21 12:57Z_
+_Board last written 2026-10-21 13:01Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4404,7 +4404,7 @@ Spec: .team/epics/E05-templates-export/15-book-text-export-api.md. GET /api/book
 - 2026-10-21 08:13Z · human · accepted by owner
 
 ### T-094 — [E05] Web: Export as text on the print screen, public-link warning, disable links
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -4412,15 +4412,16 @@ Spec: .team/epics/E05-templates-export/15-book-text-export-api.md. GET /api/book
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-094-e05-web-export-as-text-on-the-print-scre
-- **PR:** —
-- **Updated:** 2026-10-21 12:52Z by dev
-- **Comments-seen:** 0
+- **PR:** https://github.com/danyaa666/smemories/pull/95
+- **Updated:** 2026-10-21 13:01Z by dev
+- **Comments-seen:** 1
 
 Spec: .team/epics/E05-templates-export/16-book-text-export-web.md. Download and copy buttons, one-time public-link warning dialog, Disable photo links, e2e step with an anonymous link fetch and revoke.
 
 #### Comments
+- 2026-10-21 13:01Z · dev · PR #95 head a794c23. Export as text section (download, copy, disable links, warning + confirm dialogs, truncated notice, en/vi). 12 component tests, 360 web tests, lint/typecheck/i18n/check:api green, make e2e green incl. anonymous link 200 then 404 after disable. Screenshots 375/1280 on branch screenshots/t-094 (linked in PR). QA: try Safari clipboard/download, Vietnamese diacritics. Warning state resets on leaving the screen as well as reload.
 
 ### T-095 — [E11] Signature storage, validation and API
 - **Status:** BACKLOG
@@ -4550,7 +4551,7 @@ Spec: `.team/epics/E12-security-hardening/02-mandatory-env-and-local-only-dev-te
 - 2026-10-21 03:43Z · human · accepted by owner
 
 ### T-100 — [E12] Canonical public ids and the stored id for object keys
-- **Status:** READY_FOR_QA
+- **Status:** IN_QA
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
@@ -4558,10 +4559,10 @@ Spec: `.team/epics/E12-security-hardening/02-mandatory-env-and-local-only-dev-te
 - **Risk:** high
 - **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** qa
 - **Branch:** task/t-100-e12-canonical-public-ids-and-the-stored-
 - **PR:** https://github.com/danyaa666/smemories/pull/93
-- **Updated:** 2026-10-21 12:51Z by dev
+- **Updated:** 2026-10-21 12:58Z by qa
 - **Comments-seen:** 6
 
 Spec: `.team/epics/E12-security-hardening/03-canonical-public-ids.md`. Audit M3: public_id columns compare case-insensitively and media/yearbook use the caller's spelling in S3 prefixes, so a user can orphan objects, reset their quota and defeat deletion. Validate ids at the edge, build keys from the stored id. Do before T-025. Risk high: data.
@@ -4834,7 +4835,7 @@ Spec: .team/epics/E12-security-hardening/11-upload-abuse-followup.md (read it fr
 
 ### T-111 — [E13] Versioned acceptance of the Terms and Privacy Policy (API)
 - **Status:** TODO
-- **Priority:** P2
+- **Priority:** P1
 - **Type:** feature
 - **Milestone:** M2
 - **Depends-on:** —
@@ -4844,12 +4845,13 @@ Spec: .team/epics/E12-security-hardening/11-upload-abuse-followup.md (read it fr
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-21 08:18Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-21 13:01Z by leader
+- **Comments-seen:** 1
 
 Spec: .team/epics/E13-legal/01-terms-acceptance-api.md (read it from the repo root). Decision D-35. Register requires the current version, a gate on signed-in endpoints until accepted, accept-terms endpoint, version stored on notes. Risk high: owner approves the merge.
 
 #### Comments
+- 2026-10-21 13:01Z · leader · Leader 2026-10-21: raised to P1 (owner request; touches auth and notes submit, no overlap with the open media PRs #93/#94).
 
 ### T-112 — [E13] Web: Terms and Privacy pages, sign-up checkbox, accept screen, friend-form notice
 - **Status:** TODO
