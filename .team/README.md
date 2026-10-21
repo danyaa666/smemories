@@ -12,9 +12,9 @@
 |---|---:|---|
 | BACKLOG | 12 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-095, T-096, T-097 |
 | TODO | 8 | T-101, T-105, T-106, T-109, T-110, T-113, T-114, T-115 |
-| IN_PROGRESS | 1 | T-107 |
+| READY_FOR_QA | 1 | T-112 |
+| IN_QA | 1 | T-107 |
 | QA_PASS | 1 | T-111 |
-| CHANGES_REQUESTED | 1 | T-112 |
 | DONE | 84 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-092, T-093, T-094, T-098, T-099, T-100, T-102, T-103, T-104, T-108 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
@@ -22,7 +22,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?); Q-051 (Approve merge of T-100 (canonical public ids, PR #93)?); Q-052 (Approve merge of T-111 (Terms acceptance API, PR #96; merges together with T-112)?)
 
-_Board last written 2026-10-21 18:16Z_
+_Board last written 2026-10-21 18:17Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4793,7 +4793,7 @@ Spec: .team/epics/E12-security-hardening/10-auth-and-repo-hygiene.md (read it fr
 #### Comments
 
 ### T-107 — [E12] Bound the memory of photo downloads (get-content and public-media)
-- **Status:** IN_PROGRESS
+- **Status:** IN_QA
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
@@ -4801,15 +4801,16 @@ Spec: .team/epics/E12-security-hardening/10-auth-and-repo-hygiene.md (read it fr
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** qa
 - **Branch:** task/t-107-e12-bound-the-memory-of-photo-downloads-
-- **PR:** —
-- **Updated:** 2026-10-21 17:43Z by dev
-- **Comments-seen:** 0
+- **PR:** https://github.com/danyaa666/smemories/pull/98
+- **Updated:** 2026-10-21 18:17Z by qa
+- **Comments-seen:** 1
 
 Spec: .team/epics/E12-security-hardening/07-bounded-photo-download-memory.md (read it from the repo root). Source: audit run 1, docs/security-audit-skill-2026-10-20/ (PR #86). Risk high: owner approves the merge.
 
 #### Comments
+- 2026-10-21 18:16Z · dev · PR #98, head 8dc097a. Chose streaming (Storage.Open = HEAD + lazy ranged GET under http.ServeContent), no byte budget/env var. Cap 8 per user/IP (429 before DB/store), httpx.PaceWriter slow-reader drop, smem_media_download_inflight. 64 slow readers x 8 MiB: heap +7 MiB, RSS +7 MiB (+30 under -race) vs 512 MiB buffered. Lint, full -race integration, Postman media+public-media, make e2e green. Verify: ranged GET on real S3, 8-cap vs shared NAT on public route.
 
 ### T-108 — [E06] Concurrent smemories-migrate up on an empty database fails (missing zero version migration)
 - **Status:** DONE
@@ -4912,7 +4913,7 @@ Spec: .team/epics/E13-legal/01-terms-acceptance-api.md (read it from the repo ro
 - 2026-10-21 18:16Z · leader · Leader review OK on e0a1ba6: one gate in requireUser (needTerms) compares the user row's terms_version with legal.CurrentVersion on every signed-in route; the exempt routes are explicit (get-me, accept-terms, verify-email, resend-verification via requireSession; logout needs no session); register validates accept_terms_version and stores it in the account transaction; the four-doc version test ties text and constant. QA_PASS: 22 gated routes probed live, migration up/down/up on data, Postman gate flow 12/12. Merge together with T-112 (#96 then #97). Waiting for the owner's approval (risk high).
 
 ### T-112 — [E13] Web: Terms and Privacy pages, sign-up checkbox, accept screen, friend-form notice
-- **Status:** CHANGES_REQUESTED
+- **Status:** READY_FOR_QA
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M2
@@ -4922,9 +4923,9 @@ Spec: .team/epics/E13-legal/01-terms-acceptance-api.md (read it from the repo ro
 - **Owner-approved:** —
 - **Assignee:** —
 - **Branch:** task/t-112-e13-web-terms-and-privacy-pages-sign-up-checkbox
-- **PR:** https://github.com/danyaa666/smemories/pull/97
-- **Updated:** 2026-10-21 18:16Z by leader
-- **Comments-seen:** 6
+- **PR:** 97
+- **Updated:** 2026-10-21 18:17Z by dev
+- **Comments-seen:** 8
 
 Spec: .team/epics/E13-legal/02-legal-pages-web.md. Pages from docs/legal (draft banner while DRAFT), required checkbox at sign-up, accept screen, footer links, notice on the public note form, e2e step.
 
@@ -4941,6 +4942,8 @@ Spec: .team/epics/E13-legal/02-legal-pages-web.md. Pages from docs/legal (draft 
   Checks: make lint test (web 365 tests) green, make e2e green (journey incl. checkbox step and step 1b), all Go integration green. Screenshots in docs/legal/screenshots ignored as requested; my own are in the QA scratchpad.
   Non-blocking: e2e step 1b simulates the old version by rewriting the get-me response (the real gate is covered by T-111 tests and by my browser run); footer links in the signed-in shell leave the shell for the public layout; a stale web page registering after a version bump would get the 400 terms_required message (i18n key exists). Merge #96 then #97.
 - 2026-10-21 18:16Z · leader · QA_PASS received on c9f0c4c (77 browser checks). One rework before merge, no QA re-check needed: remove docs/legal/screenshots from the PR (put them on a screenshots/t-112 branch linked from the PR body, like T-094). Nothing else changes. Then READY_FOR_QA is not needed: set QA_PASS? No: set READY_FOR_QA and the leader confirms the file-only diff.
+- 2026-10-21 18:17Z · dev · Rework is files-only: 96ab278 deletes the 20 docs/legal/screenshots/ images (git diff c9f0c4c 96ab278 lists only those deletions); images kept on branch screenshots/t-112 (from c9f0c4c); PR body links updated. No code change, leader checks without new QA run.
+- 2026-10-21 18:17Z · leader · Leader checked 96ab278: git diff c9f0c4c..96ab278 is exactly the 20 deleted screenshot files, nothing else. The board only lets QA set QA_PASS, so QA confirms this files-only diff in its next run (no functional re-test needed) and records QA_PASS; then #96 and #97 merge once the owner approves T-111.
 
 ### T-113 — [E12] Media memory estimate for lossy WebP with alpha (ALPH) is too low
 - **Status:** TODO
