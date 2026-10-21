@@ -21,7 +21,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?)
 
-_Board last written 2026-10-21 08:24Z_
+_Board last written 2026-10-21 12:43Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4368,7 +4368,7 @@ Spec: .team/epics/E05-templates-export/14-public-photo-links-api.md (read it fro
 - **Branch:** task/t-093-e05-book-as-plain-text-with-photo-links-
 - **PR:** https://github.com/danyaa666/smemories/pull/92
 - **Updated:** 2026-10-21 08:13Z by human
-- **Comments-seen:** 4
+- **Comments-seen:** 5
 
 Spec: .team/epics/E05-templates-export/15-book-text-export-api.md. GET /api/book-export/get-text builds the UTF-8 text (profile, approved notes, public photo links from T-092), en/vi labels, no silent cut.
 
@@ -4595,7 +4595,7 @@ Spec: `.team/epics/E12-security-hardening/04-readyz-greeting-session-lifetime.md
 - **Branch:** task/t-102-e12-upload-slot-fairness-per-user-cap-an
 - **PR:** https://github.com/danyaa666/smemories/pull/90
 - **Updated:** 2026-10-21 08:13Z by human
-- **Comments-seen:** 7
+- **Comments-seen:** 8
 
 Spec: .team/epics/E12-security-hardening/05-upload-slot-fairness.md (read it from the repo root). Source: audit run 1, docs/security-audit-skill-2026-10-20/ (PR #86). Risk high: owner approves the merge.
 
@@ -4633,7 +4633,7 @@ Spec: .team/epics/E12-security-hardening/05-upload-slot-fairness.md (read it fro
 - **Branch:** task/t-103-e12-sessions-issued-during-a-password-re
 - **PR:** https://github.com/danyaa666/smemories/pull/89
 - **Updated:** 2026-10-21 08:13Z by human
-- **Comments-seen:** 7
+- **Comments-seen:** 10
 
 Spec: .team/epics/E12-security-hardening/06-session-fence-against-credential-change.md (read it from the repo root). Source: audit run 1, docs/security-audit-skill-2026-10-20/ (PR #86). Risk high: owner approves the merge.
 
@@ -4754,7 +4754,7 @@ Spec: .team/epics/E12-security-hardening/07-bounded-photo-download-memory.md (re
 - **Branch:** task/t-108-e06-concurrent-smemories-migrate-up-on-a
 - **PR:** https://github.com/danyaa666/smemories/pull/91
 - **Updated:** 2026-10-21 08:13Z by human
-- **Comments-seen:** 6
+- **Comments-seen:** 7
 
 Spec: .team/epics/E06-go-live/11-concurrent-migrate-race.md. CI image job flake seen on develop and on PR #85 (QA of T-092); fix the lock order in internal/db/migrate.go.
 
