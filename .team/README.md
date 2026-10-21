@@ -11,9 +11,10 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 12 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-095, T-096, T-097 |
-| TODO | 8 | T-101, T-105, T-106, T-109, T-110, T-113, T-114, T-115 |
+| TODO | 7 | T-101, T-105, T-106, T-109, T-113, T-114, T-115 |
+| IN_PROGRESS | 1 | T-110 |
 | READY_FOR_QA | 1 | T-112 |
-| IN_QA | 1 | T-107 |
+| QA_FAIL | 1 | T-107 |
 | QA_PASS | 1 | T-111 |
 | DONE | 84 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-092, T-093, T-094, T-098, T-099, T-100, T-102, T-103, T-104, T-108 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
@@ -22,7 +23,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?); Q-051 (Approve merge of T-100 (canonical public ids, PR #93)?); Q-052 (Approve merge of T-111 (Terms acceptance API, PR #96; merges together with T-112)?)
 
-_Board last written 2026-10-21 18:17Z_
+_Board last written 2026-10-21 19:10Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4793,24 +4794,50 @@ Spec: .team/epics/E12-security-hardening/10-auth-and-repo-hygiene.md (read it fr
 #### Comments
 
 ### T-107 — [E12] Bound the memory of photo downloads (get-content and public-media)
-- **Status:** IN_QA
+- **Status:** QA_FAIL
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
 - **Depends-on:** T-092
 - **Risk:** high
-- **Rework:** 0
+- **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** —
 - **Branch:** task/t-107-e12-bound-the-memory-of-photo-downloads-
 - **PR:** https://github.com/danyaa666/smemories/pull/98
-- **Updated:** 2026-10-21 18:17Z by qa
-- **Comments-seen:** 1
+- **Updated:** 2026-10-21 19:09Z by qa
+- **Comments-seen:** 3
 
 Spec: .team/epics/E12-security-hardening/07-bounded-photo-download-memory.md (read it from the repo root). Source: audit run 1, docs/security-audit-skill-2026-10-20/ (PR #86). Risk high: owner approves the merge.
 
 #### Comments
 - 2026-10-21 18:16Z · dev · PR #98, head 8dc097a. Chose streaming (Storage.Open = HEAD + lazy ranged GET under http.ServeContent), no byte budget/env var. Cap 8 per user/IP (429 before DB/store), httpx.PaceWriter slow-reader drop, smem_media_download_inflight. 64 slow readers x 8 MiB: heap +7 MiB, RSS +7 MiB (+30 under -race) vs 512 MiB buffered. Lint, full -race integration, Postman media+public-media, make e2e green. Verify: ranged GET on real S3, 8-cap vs shared NAT on public route.
+- 2026-10-21 19:09Z · qa · QA_FAIL T-107, PR #98, head 8dc097a (CI green on that head; make lint, make test, make test-integration -race all green here; media+public-media Postman green twice each; make e2e green).
+  
+  ISSUES
+  1. [major, AC3] A page of 30 thumbnails does NOT load when the browser multiplexes (HTTP/2). The cap of 8 per user is hit by a normal gallery page.
+     Repro (real Chromium via Playwright, tools/e2e's playwright): a node http2 TLS server on :18443 serves a page with 30 `<img loading="lazy" src="/api/media/get-content?id=<photo>&variant=thumb&n=i">` and proxies to the API (one HTTP/1.1 request per stream, as CloudFront/ALB do), session cookie set.
+     Expected: 30/30 images. Actual on head 8dc097a: 8 of 30 render, 22 answered 429 (3 rounds, identical). Same page through the same proxy against develop (bac2cf1): 30/30. Same page over HTTP/1.1 (browser limit of 6 per host): 30/30, so the dev's test (TestThirtyThumbnailsLoad uses 6 at a time) and the e2e only cover the HTTP/1.1 case.
+     Quick repro without a browser: 30 concurrent thumb requests of one user: `seq 30 | xargs -P30 -I{} curl -s -o /dev/null -w "%{http_code}\n" -H "Cookie: smem_session=<tok>" "$API/api/media/get-content?id=$ID&variant=thumb" | sort | uniq -c` gave 17x200 and 13x429 (python threads, 10 pages of 30: 124 ok / 176 429). A thumbnail is ~1.4 KB here and still overlaps, so real networks are worse (a 50 KB thumb on a 1 Mbit/s link stays in flight for 0.4 s, and all 30 multiplex at once).
+     Why it matters: the web has no concurrency limit (web/src: only native loading="lazy" in Photos/NoteCard/PhotoTile/Yearbooks; the "6 at a time" in book/ready.ts is the print preload only), the target is CloudFront/ALB (T-023, h2 to the browser), and an <img> does not retry a 429, so thumbnails stay broken until reload. The docs/media.md claim "a page of 30 thumbnails is never refused" is only true on HTTP/1.1.
+     Suspected area: internal/media/handler.go maxDownloadsPerClient = 8 counts every in-flight download, small or big. With streaming a download costs one 32 KiB buffer and one store connection, so 8 protects little. Options (dev/leader to choose, spec says 8 so the leader may need to amend it): raise the owner cap well above a page (for example 32 or 64) and keep a lower cap only for the 8 MiB-class load; or count only display/print variants (thumb exempt or a separate larger cap); or add a client-side limiter (~6 concurrent) in the web for every gallery image. Whatever is chosen, add a test with 30 truly parallel thumb requests (not 6 at a time), and update docs/media.md.
+     Same shape on the public route (cap 8 per client address): one browser over h2 showing more than 8 public photos, or a few people behind one NAT, gets 429s with no retry (the NAT concern you listed is confirmed as real, see below).
+  
+  VERIFIED (my own evidence, real API + MinIO in compose project qat107 on ports 13306/16379/19000, develop built from bac2cf1 on :18081 vs head on :18080, same DB/bucket/secret)
+  - AC1 memory: 64 slow readers (8 users x 8, owner route) of an 8 MiB object, real MinIO, at +5 s: head heap_inuse +10.4 MiB / RSS +0.2 MiB (second run +4.4 MiB / +0.1 MiB); public route 8 IPs x 8: heap +0.6 MiB / RSS +0.0. Develop, same load: heap +969 MiB, RSS +1102 MiB (and held for the whole 40 s watched). In-test numbers (go test -race -v, 3 runs): heap +4..6 MiB, RSS +1/+28 MiB (RSS in a -race test process is noisy, one run even fell).
+  - AC2 equality: 314 requests (owner display/thumb/print/bad variant + public; GET and HEAD; full, mid/open/suffix/0-0/last-byte/clipped/unsatisfiable/invalid/multi/overlapping ranges, unknown unit, If-None-Match exact/weak/list/*/other, INM+Range, If-Range etag match/mismatch/date match/old, If-Modified-Since, If-Match ok/bad, Accept-Encoding, plus 401/404/400 errors) sent to develop and head: status, every header except Date/X-Request-Id, and body sha256 identical in all 314 (0 differences). Head bodies equal the bytes I put in MinIO.
+  - 304 / HEAD fetch no body (mc admin trace on MinIO): HEAD, 304 and 416 = one HeadObject, zero GetObject, on both routes. Full GET = HeadObject + one GetObject (206 ranged). Suffix and middle ranges = HeadObject + ranged GetObject. Develop does one full GetObject even for a 304.
+  - Per-client cap: 8 held then the 9th = 429 ERROR_RATE_LIMITED, Retry-After: 2, Cache-Control: no-store, also for HEAD and for an unknown id (so it precedes id checks); another user unaffected; a freed slot is reusable. Public: 9th from the same address 429 (also with a garbage token, so before the link check), another address 200; rate_limited counter increments. MySQL Com_select: the 9th owner request costs 1 select (RequireUser loads the user, it runs before the cap because the key is the user id), a normal request costs 2 more; the 429 does no media or store work. Public 429 does no DB work. Non-blocking: spec says "before any DB" but auth necessarily precedes.
+  - Slow readers, server side (gauge), small SO_RCVBUF client: stalled reader dropped at 10.3 s; 2 KiB/s drip dropped at 16.2 s, 8 KiB/s at 18.3 s, 40 KiB/s kept; 64 stalled readers all gone by 15.4 s. Gauge smem_media_download_inflight 64 -> 0, and 0 after every client close/abort. (A client sees the end late because kernel buffers still hold data; judge by the gauge.)
+  - Postman: media (86 req / 165 assertions) and public-media (39 / 89) twice each against the head, 0 failures (the register limit of 5 per hour per IP needs `make reset-limits` between runs, as before). No 429 request was added to either collection (dev's note): acceptable, covered by Go tests, but I would add one E-case if the cap is reworked.
+  - Flaky/hang watch: whole `make test-integration` once (all ok, media 99 s), and the new download tests 3x with -race (27 s): no MySQL handshake hang seen.
+  
+  OTHER NOTES (non-blocking)
+  - The cap and the gauge are per process (N tasks = N x 8), documented.
+  - The store GET lives as long as the client downloads, up to the 2-minute total (a 17 KiB/s reader holds one MinIO connection and a goroutine for 2 min; capped 8 per client but there is no global bound on clients); S3 transport has no connection limit set. Acceptable for now, mention for T-023 sizing.
+  - A ranged or early-closed GET closes the store connection, so each range request costs a new connection (documented by the dev).
+  - Environment incident: during my run Docker Desktop's VM stopped answering (docker.sock 500, "no route to host 192.168.65.7:2376"), a media -race run then timed out with "test database unreachable". It was not the test or the code: I quit and reopened Docker Desktop once (containers restarted by themselves, the kind containers too), then reran everything above successfully. My stack qat107 is down (no -v; volumes qat107_* remain).
+- 2026-10-21 19:10Z · leader · Leader 2026-10-22 after QA_FAIL: the spec was wrong, not the code. Requirement 2 and AC3 are amended: the per-user and per-client-key cap is 64 (streaming already keeps memory flat; the cap only bounds connections), and AC3 now requires 30 and 100 thumbnails to load over HTTP/2. Rework: change the constant, update docs/media.md with the reason, add the HTTP/2 gallery check (the QA's h2-proxy repro is on this board), keep everything else (AC1/AC2 passed). Re-read the spec.
 
 ### T-108 — [E06] Concurrent smemories-migrate up on an empty database fails (missing zero version migration)
 - **Status:** DONE
@@ -4864,7 +4891,7 @@ QA of T-103 (2026-10-21): go-integration was red once on internal/auth TestConcu
 #### Comments
 
 ### T-110 — [E12] Owner uploads need a verified email and a per-client share; bound drains of rejected public bodies
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
@@ -4872,10 +4899,10 @@ QA of T-103 (2026-10-21): go-integration was red once on internal/auth TestConcu
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-110-e12-owner-uploads-need-a-verified-email-
 - **PR:** —
-- **Updated:** 2026-10-21 03:31Z by leader
+- **Updated:** 2026-10-21 18:44Z by dev
 - **Comments-seen:** 0
 
 Spec: .team/epics/E12-security-hardening/11-upload-abuse-followup.md (read it from the repo root). Source: QA of T-102. Risk high: owner approves the merge.
