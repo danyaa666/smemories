@@ -10,18 +10,17 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 12 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-095, T-096, T-097 |
+| BACKLOG | 13 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-095, T-096, T-097, T-116 |
 | TODO | 7 | T-101, T-105, T-106, T-109, T-113, T-114, T-115 |
-| READY_FOR_QA | 1 | T-107 |
-| QA_PASS | 3 | T-110, T-111, T-112 |
+| QA_PASS | 4 | T-107, T-110, T-111, T-112 |
 | DONE | 84 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-092, T-093, T-094, T-098, T-099, T-100, T-102, T-103, T-104, T-108 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
 **Awaiting your review (MERGED):** nothing
 
-**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?); Q-051 (Approve merge of T-100 (canonical public ids, PR #93)?); Q-052 (Approve merge of T-111 (Terms acceptance API, PR #96; merges together with T-112)?); Q-053 (Approve merge of T-110 (upload abuse follow-up, PR #99)?)
+**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?); Q-051 (Approve merge of T-100 (canonical public ids, PR #93)?); Q-052 (Approve merge of T-111 (Terms acceptance API, PR #96; merges together with T-112)?); Q-053 (Approve merge of T-110 (upload abuse follow-up, PR #99)?); Q-054 (Approve merge of T-107 (bounded photo download memory, PR #98)?)
 
-_Board last written 2026-10-21 23:04Z_
+_Board last written 2026-10-21 23:24Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -594,6 +593,15 @@ QA_PASS and leader review OK on e0a1ba6, CI green. Sign-up requires accepting th
 - **Answer:** _(pending)_
 
 QA_PASS and leader review OK on d0c5ed8, CI green. Photo upload now needs a verified email, each network address may have at most 4 uploads in progress, and at most 16 rejected public submissions per address are drained (the rest are cut off). QA replayed the attack: a victim's uploads succeeded 23 of 23 times (before: 503 every time). Reply 'team approve T-110'.
+
+### Q-054 — Approve merge of T-107 (bounded photo download memory, PR #98)?
+- **Status:** OPEN
+- **Asked:** 2026-10-21 23:24Z
+- **Blocks:** T-107
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+QA_PASS and leader review OK on 70efad7, CI green. Photos are streamed instead of loaded whole: QA measured +5 MiB memory under 64 slow readers versus about +1 GB on today's develop; responses are byte-identical; a user or address can have at most 64 downloads at once (galleries of 100 thumbnails load over HTTP/2). Reply 'team approve T-107'.
 
 <!-- questions:end -->
 
@@ -4801,7 +4809,7 @@ Spec: .team/epics/E12-security-hardening/10-auth-and-repo-hygiene.md (read it fr
 #### Comments
 
 ### T-107 — [E12] Bound the memory of photo downloads (get-content and public-media)
-- **Status:** READY_FOR_QA
+- **Status:** QA_PASS
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
@@ -4809,11 +4817,11 @@ Spec: .team/epics/E12-security-hardening/10-auth-and-repo-hygiene.md (read it fr
 - **Risk:** high
 - **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** leader
 - **Branch:** task/t-107-e12-bound-the-memory-of-photo-downloads-
 - **PR:** https://github.com/danyaa666/smemories/pull/98
-- **Updated:** 2026-10-21 23:01Z by dev
-- **Comments-seen:** 5
+- **Updated:** 2026-10-21 23:24Z by qa
+- **Comments-seen:** 7
 
 Spec: .team/epics/E12-security-hardening/07-bounded-photo-download-memory.md (read it from the repo root). Source: audit run 1, docs/security-audit-skill-2026-10-20/ (PR #86). Risk high: owner approves the merge.
 
@@ -4847,6 +4855,27 @@ Spec: .team/epics/E12-security-hardening/07-bounded-photo-download-memory.md (re
 - 2026-10-21 19:10Z · leader · Leader 2026-10-22 after QA_FAIL: the spec was wrong, not the code. Requirement 2 and AC3 are amended: the per-user and per-client-key cap is 64 (streaming already keeps memory flat; the cap only bounds connections), and AC3 now requires 30 and 100 thumbnails to load over HTTP/2. Rework: change the constant, update docs/media.md with the reason, add the HTTP/2 gallery check (the QA's h2-proxy repro is on this board), keep everything else (AC1/AC2 passed). Re-read the spec.
 - 2026-10-21 23:01Z · dev · Rework head 70efad7 (merged origin/develop, no force-push). Cap 64 (constant), reason in docs/media.md. DEVIATION to confirm: cap 64 alone failed 100 thumbs over h2 (Chromium via h2 proxy: 83/100, 17x429, all 100 start in the same instant), so a client at the cap waits up to 500 ms (downloadGrace) for a slot before the 429; 64 slow readers still get 429. New tools/e2e/h2-gallery.spec.mjs in make e2e: 30 and 100 thumbs over h2 and http/1.1 all 200 (3 runs); Go: TestGalleryPageOfThumbnailsLoadsAtOnce (fails at cap 8), TestDownloadAtTheCapWaitsForAFreedSlot, 65th=429 both routes. make lint test test-integration (-race) + make e2e green; Postman not re-run. QA: re-run e2e + your h2 repro; check the wait is acceptable. Risk high: owner approves merge.
 - 2026-10-21 23:01Z · leader · Leader 2026-10-22: the 500 ms wait for a freed slot before the 429 (downloadGrace in takeDownload) is accepted as part of requirement 2: bounded, it keeps 64 slow readers refused, and it makes a 100-thumbnail HTTP/2 burst load. QA re-checks with make e2e (new h2-gallery spec) and the h2 repro.
+- 2026-10-21 23:24Z · qa · QA_PASS T-107 (re-check), PR #98, head 70efad7. CI green on that head (go, go-integration, e2e, image, security, web); PR MERGEABLE/CLEAN. All evidence mine: own compose project qat107b on 13306/16379/19000, head API :18080, current develop (e4426c5) API :18081, same DB/bucket/secret. Torn down (no -v).
+  
+  EVIDENCE (AC -> how -> result)
+  - Mechanical: make lint (go vet, golangci-lint 0 issues, web lint/typecheck/i18n/api) + make test green. make test-integration (-race, SMEM_TEST_S3_ENDPOINT=http://127.0.0.1:19000) all packages ok (media 108 s, notes 187 s, storage 7 s). make e2e green: 5 passed (h2-gallery x4 + journey). (A first integration run failed only because I had not pointed the tests' S3 endpoint at my stack; rerun with the variable was green.)
+  - Cap 64, both routes (my script, real MinIO, 8 MiB object held by slow readers with a 4 KiB SO_RCVBUF): 63 held -> 64th = 200; 64 held, gauge 64 -> 65th = 429 ERROR_RATE_LIMITED, Retry-After: 2, Cache-Control: no-store, after 507-512 ms; again 429. Same on owner (per user) and public (per XFF address). Public rate_limited counter 0 -> 22.
+  - Grace bounded: 20 parallel refused requests at the cap: all 429, max wait 508-511 ms, total 511-512 ms (they wait in parallel, they do not stack). 64 slow readers are still refused. A slot freed ~200 ms into a 65th request: 200 in 215-256 ms (both routes).
+  - AC3 h2: my Chromium (Playwright) + node http2 TLS proxy (one HTTP/1.1 request per stream to the API), 3 rounds each: 30 and 100 thumbnails over h2 = 30/30 and 100/100 all 200; same over HTTP/1.1 (--disable-http2). Also with 150 ms and 400 ms of simulated S3 latency per store request (delaying TCP proxy in front of MinIO): 30 and 100 all render at 150 ms (0.32 s per thumb). The old head 8dc097a gave 8/30 here.
+  - make e2e now includes tools/e2e/h2-gallery.spec.mjs (playwright.config testMatch + E2E_API_URL in scripts/e2e.sh): 30 and 100 thumbnails over h2 and http/1.1, each asserts protocol, all statuses 200 and every image decoded.
+  - AC1 memory flat: 64 slow readers of an 8 MiB object (8 users x 8, owner): head heap +5.4 MiB, RSS +9.8 MiB at +5 s; public route (8 addresses x 8): heap -0.2 MiB, RSS +0.7 MiB. Current develop, same load: heap +866 MiB, RSS +1072 MiB. Go test TestSlowReadersDoNotHoldTheObjectInMemory green.
+  - Slow readers dropped: stalled reader gauge 0 at 10.3 s; 2 KiB/s drip at 10.4 s; 64 stalled readers all gone at 15.4 s. Gauge smem_media_download_inflight: 64 -> 0 in every run (also 0.0 right after closing the held sockets, and after the Chromium runs).
+  - AC2 after the merge: 314 requests (owner display/thumb/print/bad variant + public; GET+HEAD; full and ~15 range shapes, If-None-Match/If-Range/If-Modified-Since/If-Match variants, Accept-Encoding, 401/404/400 errors) to current develop and to the head: status, all headers except Date/X-Request-Id, body sha256 identical in all 314 (0 differences); head bodies equal the bytes in MinIO.
+  - Postman (verify-newman-users run, reset-limits between runs): media 86 requests / 165 assertions and public-media 39 / 89, run twice each, 0 failures.
+  - Trial merge of PR #99 (T-110, d0c5ed8) into 70efad7: CONFLICTS in internal/media/handler.go (4 hunks: the const block, the Handler struct fields, NewHandler, and the helper block where T-110 replaced takeUser/releaseUser by generic take/release and T-107 adds takeDownload/tryDownload/paced next to them) and in docs/media.md (the "Upload fairness" paragraph, next to the new "Photo downloads" paragraph). No other file conflicts. Purely adjacent additions; I resolved it keeping both sides in a throwaway worktree: gofmt only needed to realign two struct comments, go build, go vet (with -tags integration), golangci-lint (0 issues), unit tests, and -race integration for internal/media (75 s) and internal/notes (121 s) all pass. Note the package-level generic func release in T-110 is shadowed by the local `release` variable in T-107's content/publicContent/tryDownload; it compiles and lints clean. Whichever of #98/#99 merges second needs that rebase (dev's job, ~10 min).
+  
+  NON-BLOCKING OBSERVATIONS
+  1. The 500 ms grace only covers a burst while the first 64 downloads end quickly. With simulated 400 ms of store latency per request (0.8 s per thumb, far above S3 in the same region) 100 thumbnails over h2 give 64x200 + 36x429 (30 thumbnails stay 30/30 at any latency). Fine for AC3 as written; for T-023 sizing keep thumbnails served in well under 500 ms, or raise the cap if galleries of more than 64 images become normal.
+  2. On my machine removing the grace (cap 64 alone) still renders 100/100 in Chromium (dev saw 83/100), and TestGalleryPageOfThumbnailsLoadsAtOnce also passes without the grace, so neither the Go test nor the e2e spec reliably fails if downloadGrace is dropped; TestDownloadAtTheCapWaitsForAFreedSlot (slot freed after grace/5) does cover it for the constant 500 ms (with grace 0 it degenerates). With cap 8 and grace 500 both gallery checks also pass; only cap 8 + grace 0 fails them. Timing-dependent, not a blocker.
+  3. A request waiting for a slot polls every 5 ms under the handler's mutex; a client sending thousands of simultaneous requests at its cap costs a goroutine each for 500 ms. Bounded, acceptable.
+  4. Still no 429 request in the media / public-media Postman collections (covered by Go tests): fine.
+  5. Cap and gauge are per process (N tasks = N x 64), documented.
+- 2026-10-21 23:24Z · leader · Leader review OK on 70efad7: streaming keeps memory flat (QA: +5/+10 MiB vs +866/+1072 MiB on develop), responses byte-identical to develop (314 requests), cap 64 with a bounded 500 ms grace, HTTP/2 galleries of 30 and 100 render. Known limit (QA): with slow storage (400 ms per object) a 100-image HTTP/2 burst still gets some 429s; the web gallery limiter in T-116 is the follow-up if real S3 latency shows it. Trial merge with #99 conflicts (adjacent additions in media/handler.go and docs/media.md): whichever merges second merges develop. Waiting for the owner's approval (risk high).
 
 ### T-108 — [E06] Concurrent smemories-migrate up on an empty database fails (missing zero version migration)
 - **Status:** DONE
@@ -5047,6 +5076,25 @@ QA of T-100 (2026-10-21): since T-100 a non-canonical id answers 400 ERROR_PARAM
 - **Comments-seen:** 0
 
 QA of T-094 (2026-10-21): after Continue in the public-link warning and after confirming Disable photo links, focus lands on <body>, so keyboard users restart at the top; return focus to the button that opened the dialog (in the shared Dialog component if that is where it belongs, covering backdrop click too). Also: a failed CI e2e run keeps a Playwright trace that contains the photo-link URL (a bearer token of the throwaway e2e database); scrub it or disable traces for that step. Component test for focus return; show the trace setting in the PR.
+
+#### Comments
+
+### T-116 — [E12] Web: limit concurrent photo requests on gallery pages (follow-up to T-107)
+- **Status:** BACKLOG
+- **Priority:** P3
+- **Type:** feature
+- **Milestone:** M2
+- **Depends-on:** —
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-21 23:24Z by leader
+- **Comments-seen:** 0
+
+QA of T-107 (2026-10-22): with 400 ms storage latency per object, a 100-thumbnail HTTP/2 burst gets 64 x 200 and 36 x 429, and <img> does not retry. If real S3 latency in the go-live phase shows this, load gallery images through a small client-side queue (at most 16 in flight, retry a 429 after Retry-After) instead of raising the server cap. Measure first on the deployed stack.
 
 #### Comments
 
