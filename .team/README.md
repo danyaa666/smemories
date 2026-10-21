@@ -12,8 +12,7 @@
 |---|---:|---|
 | BACKLOG | 12 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-095, T-096, T-097 |
 | TODO | 7 | T-101, T-105, T-106, T-109, T-113, T-114, T-115 |
-| IN_PROGRESS | 1 | T-110 |
-| READY_FOR_QA | 1 | T-112 |
+| READY_FOR_QA | 2 | T-110, T-112 |
 | QA_FAIL | 1 | T-107 |
 | QA_PASS | 1 | T-111 |
 | DONE | 84 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-092, T-093, T-094, T-098, T-099, T-100, T-102, T-103, T-104, T-108 |
@@ -23,7 +22,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?); Q-051 (Approve merge of T-100 (canonical public ids, PR #93)?); Q-052 (Approve merge of T-111 (Terms acceptance API, PR #96; merges together with T-112)?)
 
-_Board last written 2026-10-21 19:10Z_
+_Board last written 2026-10-21 19:19Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4891,7 +4890,7 @@ QA of T-103 (2026-10-21): go-integration was red once on internal/auth TestConcu
 #### Comments
 
 ### T-110 — [E12] Owner uploads need a verified email and a per-client share; bound drains of rejected public bodies
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
@@ -4899,15 +4898,16 @@ QA of T-103 (2026-10-21): go-integration was red once on internal/auth TestConcu
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-110-e12-owner-uploads-need-a-verified-email-
-- **PR:** —
-- **Updated:** 2026-10-21 18:44Z by dev
-- **Comments-seen:** 0
+- **PR:** https://github.com/danyaa666/smemories/pull/99
+- **Updated:** 2026-10-21 19:19Z by dev
+- **Comments-seen:** 1
 
 Spec: .team/epics/E12-security-hardening/11-upload-abuse-followup.md (read it from the repo root). Source: QA of T-102. Risk high: owner approves the merge.
 
 #### Comments
+- 2026-10-21 19:19Z · dev · PR #99 head d0c5ed8. Verified email 403 + per-client cap 4 (429 Retry-After 5) on media/create; 16 drains/client with Connection: close + gauge smem_public_drains_in_progress. Ran: lint, go test -race -tags integration ./... , vitest, Postman media 91/172 and public-media 42/92 (now fixed newman-notes accounts: Setup + make verify-newman-users), make e2e: all green. NOT run: make image-smoke (I added a verify-account step in scripts/image-smoke.sh) - QA please run. AC3 memory is Go heap (29.3->31.4 MiB with 16 draining+84 closed), not RSS of 1500 sockets. PR #98 (T-107) overlaps handler.go: expect conflicts, I merge develop later. Risk high: owner approves.
 
 ### T-111 — [E13] Versioned acceptance of the Terms and Privacy Policy (API)
 - **Status:** QA_PASS
