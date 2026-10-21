@@ -20,7 +20,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?); Q-051 (Approve merge of T-100 (canonical public ids, PR #93)?)
 
-_Board last written 2026-10-21 14:07Z_
+_Board last written 2026-10-21 17:43Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4423,7 +4423,7 @@ Spec: .team/epics/E05-templates-export/15-book-text-export-api.md. GET /api/book
 - **Branch:** task/t-094-e05-web-export-as-text-on-the-print-scre
 - **PR:** https://github.com/danyaa666/smemories/pull/95
 - **Updated:** 2026-10-21 13:52Z by human
-- **Comments-seen:** 3
+- **Comments-seen:** 4
 
 Spec: .team/epics/E05-templates-export/16-book-text-export-web.md. Download and copy buttons, one-time public-link warning dialog, Disable photo links, e2e step with an anonymous link fetch and revoke.
 
@@ -4580,7 +4580,7 @@ Spec: `.team/epics/E12-security-hardening/02-mandatory-env-and-local-only-dev-te
 - **Branch:** task/t-100-e12-canonical-public-ids-and-the-stored-
 - **PR:** https://github.com/danyaa666/smemories/pull/93
 - **Updated:** 2026-10-21 13:52Z by human
-- **Comments-seen:** 8
+- **Comments-seen:** 11
 
 Spec: `.team/epics/E12-security-hardening/03-canonical-public-ids.md`. Audit M3: public_id columns compare case-insensitively and media/yearbook use the caller's spelling in S3 prefixes, so a user can orphan objects, reset their quota and defeat deletion. Validate ids at the edge, build keys from the stored id. Do before T-025. Risk high: data.
 
@@ -4723,7 +4723,7 @@ Spec: .team/epics/E12-security-hardening/06-session-fence-against-credential-cha
 - **Branch:** task/t-104-e12-media-processing-robustness-slots-re
 - **PR:** https://github.com/danyaa666/smemories/pull/94
 - **Updated:** 2026-10-21 13:52Z by human
-- **Comments-seen:** 3
+- **Comments-seen:** 6
 
 Spec: .team/epics/E12-security-hardening/08-media-processing-robustness.md (read it from the repo root). Source: audit run 1, docs/security-audit-skill-2026-10-20/ (PR #86). Risk high: owner approves the merge.
 
