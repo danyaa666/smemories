@@ -11,17 +11,19 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 12 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-095, T-096, T-097 |
-| TODO | 9 | T-094, T-100, T-101, T-104, T-105, T-106, T-107, T-109, T-110 |
-| READY_FOR_QA | 2 | T-093, T-103 |
+| TODO | 8 | T-094, T-101, T-104, T-105, T-106, T-107, T-109, T-110 |
+| IN_PROGRESS | 1 | T-100 |
+| READY_FOR_QA | 1 | T-093 |
+| QA_PASS | 1 | T-103 |
 | MERGED | 2 | T-102, T-108 |
 | DONE | 77 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-092, T-098, T-099 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
 **Awaiting your review (MERGED):** T-102 ([E12] Upload slot fairness: per-user cap and paced body on media/create; early release for rejected public submissions); T-108 ([E06] Concurrent smemories-migrate up on an empty database fails (missing zero version migration))
 
-**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?)
+**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?)
 
-_Board last written 2026-10-21 07:43Z_
+_Board last written 2026-10-21 08:00Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -548,6 +550,15 @@ QA_PASS and leader review OK on d856c25, CI green. Takes the migration lock befo
 - **Answer:** _(pending)_
 
 QA_PASS and leader review OK on d714aad, CI green. One account can no longer block everyone's photo uploads with slow uploads (2 in progress per user, slow bodies cut off with 408), and rejected public submissions free their slot early. Follow-up T-110 closes the remaining gap (several throwaway accounts) with a verified-email rule and a per-client cap. Reply 'team approve T-102'.
+
+### Q-049 — Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?
+- **Status:** OPEN
+- **Asked:** 2026-10-21 08:00Z
+- **Blocks:** T-103
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+QA_PASS twice (before and after the develop merge) and leader review OK on b732c51, CI green. A login racing a password reset could create a session that survived the reset for 30 days; now every session carries the user's credential epoch and is refused once a reset or Google merge bumps it. Existing sessions keep working. Deploy: migration first, then the binary; rollback note added to docs/deploy.md. Reply 'team approve T-103'.
 
 <!-- questions:end -->
 
@@ -4511,7 +4522,7 @@ Spec: `.team/epics/E12-security-hardening/02-mandatory-env-and-local-only-dev-te
 - 2026-10-21 03:43Z · human · accepted by owner
 
 ### T-100 — [E12] Canonical public ids and the stored id for object keys
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
@@ -4519,10 +4530,10 @@ Spec: `.team/epics/E12-security-hardening/02-mandatory-env-and-local-only-dev-te
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-100-e12-canonical-public-ids-and-the-stored-
 - **PR:** —
-- **Updated:** 2026-10-20 05:34Z by leader
+- **Updated:** 2026-10-21 07:44Z by dev
 - **Comments-seen:** 1
 
 Spec: `.team/epics/E12-security-hardening/03-canonical-public-ids.md`. Audit M3: public_id columns compare case-insensitively and media/yearbook use the caller's spelling in S3 prefixes, so a user can orphan objects, reset their quota and defeat deletion. Validate ids at the edge, build keys from the stored id. Do before T-025. Risk high: data.
@@ -4587,7 +4598,7 @@ Spec: .team/epics/E12-security-hardening/05-upload-slot-fairness.md (read it fro
 - 2026-10-21 03:43Z · leader · MERGED into develop as 5f526d7 (PR #90) after owner approval. Follow-up T-110 (verified email + per-client share, bounded drains).
 
 ### T-103 — [E12] Sessions issued during a password reset or Google merge must not survive it (credential epoch)
-- **Status:** READY_FOR_QA
+- **Status:** QA_PASS
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
@@ -4595,11 +4606,11 @@ Spec: .team/epics/E12-security-hardening/05-upload-slot-fairness.md (read it fro
 - **Risk:** high
 - **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** leader
 - **Branch:** task/t-103-e12-sessions-issued-during-a-password-re
 - **PR:** https://github.com/danyaa666/smemories/pull/89
-- **Updated:** 2026-10-21 03:16Z by dev
-- **Comments-seen:** 5
+- **Updated:** 2026-10-21 07:59Z by qa
+- **Comments-seen:** 7
 
 Spec: .team/epics/E12-security-hardening/06-session-fence-against-credential-change.md (read it from the repo root). Source: audit run 1, docs/security-audit-skill-2026-10-20/ (PR #86). Risk high: owner approves the merge.
 
@@ -4617,6 +4628,15 @@ Spec: .team/epics/E12-security-hardening/06-session-fence-against-credential-cha
 - 2026-10-20 23:20Z · leader · QA_PASS received; leader review at the next GO tick (5-hour usage over the limit). Non-blocking notes kept for the review: refused stale sessions stay in Redis until used or expired; migrate down then up resets auth_epoch to 0 (rollback would revive them: document in docs/deploy.md rollback notes).
 - 2026-10-21 02:43Z · leader · Leader review OK on c443c11: reset and Google merge bump user_tab.auth_epoch inside their transactions; Login carries the epoch read with the hash into the session; Authenticate compares it with the user row it already reads (no extra query) and deletes a mismatching session; epoch-less sessions count as 0; purge moved after the commit and only logged on failure. Rework needed before merge: (1) PR #89 CONFLICTS with develop since T-098 (765b8bc) also changed internal/auth/reset.go and service.go: merge develop (no rebase, no force-push) and keep both: T-098's loginAcct.Reset after a successful reset AND your epoch/after-commit purge; (2) add to docs/deploy.md rollback notes that migrating down then up resets auth_epoch to 0 and so revives sessions revoked since the migration (QA note), with the advice to purge sessions (DeleteAll per user or a full session flush) after such a rollback. Re-run make lint test test-integration; QA re-checks the merge only. Owner approval is asked after that.
 - 2026-10-21 03:16Z · dev · PR #89 head b732c51 (merge of origin/develop, no rebase). Conflict only in internal/auth/reset.go ResetPassword: kept T-098's loginAcct.Reset(accountKey(email)) after a successful reset AND the epoch bump + s.afterCommit(DeleteAll); service.go auto-merged (T-098 Limits/loginAcct plus my epoch check in Authenticate). docs/deploy.md: new 'Rollback notes' section (down then up resets auth_epoch to 0, revives revoked sessions; purge sessions with DeleteAll per user or a full flush). No other behaviour change. Verify: reset path calls both. make lint test test-integration (-race) green on private compose dev103rw, ports 33306/36379/39000/39001, taken down without -v: auth 369 s incl. race tests ok; media/notes/storage needed SMEM_TEST_S3_ENDPOINT=http://127.0.0.1:39000 (storagetest default is :9000), then ok.
+- 2026-10-21 07:59Z · qa · QA_PASS re-check, PR #89 head b732c51 (merge of develop + deploy.md note). Own compose project qa103b, ports 43306/46379/49000/49001, taken down without -v.
+  1 Merge: internal/auth/reset.go ResetPassword calls store.resetPassword (auth_epoch = auth_epoch + 1 in the tx, then s.afterCommit(sessions.DeleteAll)) AND, after success, loginAcct.Reset(accountKey(email)) from T-098. service.go keeps both (T-098 limits/loginAcct + epoch check in Authenticate). Live probe confirms both effects (item 3).
+  2 Race tests, -race -count=3, real MySQL+Redis: on ade7bd1 TestLoginRacingPasswordReset, TestLoginRacingGoogleMerge, TestLoginDuringOpenResetTransaction, TestSessionWithStaleEpochIsRefusedAndDeleted FAIL 3/3 (controls TestLoginAfterCredentialChangeIsRefused, TestAuthenticateStillCostsOneQuery pass); on b732c51 all of them plus TestCredentialChangesRaiseTheEpochAndSurvivePurgeFailure and TestGooglePreHijackingSurvivesRedisFailureAfterCommit pass 3/3.
+  3 Live reset probe (head binary, SMEM_ENV=dev, SMEM_RATE_LOGIN_FAILS_PER_ACCOUNT=3): 5 sessions, get-me 200 x5; 3 wrong logins (401) then the correct password gives 429 (account counter full); forgot+reset (123123) 200; the 5 old cookies get-me 401 x5; old password 401; new password login 200 and get-me 200 (counter cleared by loginAcct.Reset); Redis sess keys 6 -> 1 (only the new login); auth_epoch 1.
+  4 Rollback note (docs/deploy.md 'Rollback notes') is correct: migrate-down then up set auth_epoch back to 0 for both probe users (was 1). With an epoch-0 session re-planted in Redis (as if a purge had failed): refused 401 after the reset, 200 again after down+up (revived), 401 after deleting it (the advised purge). Wording matches.
+  5 make lint test test-integration (-race, -timeout 30m, SMEM_TEST_S3_ENDPOINT=http://127.0.0.1:49000) exit 0: golangci-lint 0 issues; every package ok (auth 465 s, db 240 s, notes 352 s, yearbook 179 s, media 140 s).
+  6 CI on b732c51: go, go-integration, e2e, web, security, image all pass (the image job, re-run by the leader, passed in 2m21s; no migrate race). PR MERGEABLE.
+  Non-blocking: the branch does not yet contain T-099/T-102/T-108 (develop at 2f76ed6 is ahead); GitHub reports no conflicts, but I tested the PR head only, not a trial merge with them. A worktree .env is denied to my shell, so I passed the ports as make command-line variables (no .env created by me that I could verify).
+- 2026-10-21 08:00Z · leader · Leader: QA re-check passed on b732c51 (merge keeps T-098's counter reset and the epoch; rollback note verified by down/up; CI green incl. image). Earlier leader review stands. Waiting for the owner's approval (risk high).
 
 ### T-104 — [E12] Media processing robustness: slots released on every path, no panics, decoded limits
 - **Status:** TODO
