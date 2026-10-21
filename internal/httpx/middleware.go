@@ -9,9 +9,11 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/netip"
 	"regexp"
 	"runtime/debug"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/danyaa666/smemories/internal/apperr"
@@ -233,29 +235,78 @@ func WithTimeout(d time.Duration, next http.Handler) http.Handler {
 	})
 }
 
-// ResolveClientIP is RemoteAddr's host, or with trustProxy the last X-Forwarded-For hop (the
-// one our own proxy appended; earlier hops are client-controlled) when it parses as an IP.
+// ipv6KeyBits is the prefix an IPv6 client is keyed by: one host owns a whole /64, so every
+// per-client limit would otherwise be unlimited for it (T-098).
+const ipv6KeyBits = 64
+
+// clientKey returns the canonical rate-limit key of an address: IPv4 text, an IPv4-mapped IPv6
+// address as its IPv4 text, any other IPv6 address as its /64 prefix (zone dropped).
+func clientKey(s string) (string, bool) {
+	a, err := netip.ParseAddr(s)
+	if err != nil {
+		return "", false
+	}
+	a = a.WithZone("").Unmap()
+	if a.Is6() {
+		a = netip.PrefixFrom(a, ipv6KeyBits).Masked().Addr()
+	}
+	return a.String(), true
+}
+
+// ResolveClientIP is the rate-limit key of the client: RemoteAddr's host, or with trustProxy the
+// last X-Forwarded-For hop (the one our own proxy appended; earlier hops are client-controlled)
+// when it parses as an IP. IPv4 stays as is; IPv6 becomes its /64 prefix (see clientKey). An
+// unparsable RemoteAddr is returned unchanged.
 func ResolveClientIP(r *http.Request, trustProxy bool) string {
 	if trustProxy {
 		if xff := r.Header.Values("X-Forwarded-For"); len(xff) > 0 {
 			hops := strings.Split(xff[len(xff)-1], ",")
-			if ip := strings.TrimSpace(hops[len(hops)-1]); net.ParseIP(ip) != nil {
-				return ip
+			if k, ok := clientKey(strings.TrimSpace(hops[len(hops)-1])); ok {
+				return k
 			}
 		}
 	}
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
-		return r.RemoteAddr
+		host = r.RemoteAddr
+	}
+	if k, ok := clientKey(host); ok {
+		return k
 	}
 	return host
 }
 
+// proxyWarnEvery spaces the "trusted proxy header from a public peer" warnings.
+const proxyWarnEvery = time.Minute
+
+// peerIsInternal reports whether the direct peer is a loopback, private or link-local address
+// (where our own load balancer lives). An unparsable peer counts as internal: nothing to judge.
+func peerIsInternal(remoteAddr string) bool {
+	host, _, err := net.SplitHostPort(remoteAddr)
+	if err != nil {
+		host = remoteAddr
+	}
+	a, err := netip.ParseAddr(host)
+	if err != nil {
+		return true
+	}
+	a = a.WithZone("").Unmap()
+	return a.IsLoopback() || a.IsPrivate() || a.IsLinkLocalUnicast()
+}
+
 // WithClientIP resolves the client address once per request (see ResolveClientIP) and stores
-// it for ClientIP.
-func WithClientIP(trustProxy bool) func(http.Handler) http.Handler {
+// it for ClientIP. With trustProxy and a log it warns (at most once a minute, never with the
+// address) when the direct peer is a public address: a deployment trusting a header it should not.
+func WithClientIP(trustProxy bool, log *slog.Logger) func(http.Handler) http.Handler {
+	var lastWarn atomic.Int64 // unix nanos
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if trustProxy && log != nil && !peerIsInternal(r.RemoteAddr) {
+				now, last := time.Now().UnixNano(), lastWarn.Load()
+				if now-last >= int64(proxyWarnEvery) && lastWarn.CompareAndSwap(last, now) {
+					log.Warn("SMEM_TRUST_PROXY is on but a request came straight from a public address; the client address can be forged (reachable without the load balancer?)")
+				}
+			}
 			ip := ResolveClientIP(r, trustProxy)
 			next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), clientIPKey{}, ip)))
 		})

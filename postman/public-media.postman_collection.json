@@ -1,0 +1,2182 @@
+{
+  "info": {
+    "name": "SMemories - public photo links",
+    "description": "Public photo links (T-092, D-32): `GET /api/public-media/get-content?token=` (no session, no cookie, display variant only) and `POST /api/yearbook/revoke-photo-links`. `{status,data}` envelope, `ERROR_*` codes; the photo is binary on success and the error envelope on failure.\n\n**Setup.** The API must run with a known `SMEM_MEDIA_LINK_SECRET` (base64, at least 32 bytes): `export SMEM_MEDIA_LINK_SECRET=$(openssl rand -base64 48)`, start the API (SMEM_ENV=dev, `make up` stack), then from the repository root: `newman run postman/public-media.postman_collection.json --working-dir postman --env-var \"linkSecret=$SMEM_MEDIA_LINK_SECRET\"`. The collection computes the link tokens itself with the same HMAC as `internal/medialink` (there is no API that hands a token out before T-093), so a wrong secret shows up as `404` on the first anonymous request. Without `SMEM_MEDIA_LINK_SECRET` the dev API uses a random secret and no token can be built here.\n\nRun the whole collection in order (Edge cases uses the users of the Full flow). Each run registers 2 users: the register limit is 5 per hour per IP, so a third run in the hour needs `make reset-limits`. The anonymous requests of one run are 20 or so, of which about 10 are misses (limit 60 per 15 minutes per IP). The anonymous requests send an empty `smem_session=` cookie (Newman merges its own cookie jar into the header, so the Go integration tests, which send no cookie at all, are the proof that no session is read). Every refusal of a link must be byte-identical: the requests pin `X-Request-Id`, step 7 stores the first 404 body and the others compare with it. Not covered here (the Go integration tests cover them): the approved-note photo (needs a verified email and the note form), hidden/pending/deleted notes, the 60/600 per IP limits, the 10 revokes per hour limit, Redis down.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "origin",
+      "value": "http://localhost:5173"
+    },
+    {
+      "key": "linkSecret",
+      "value": ""
+    },
+    {
+      "key": "emailA",
+      "value": ""
+    },
+    {
+      "key": "emailB",
+      "value": ""
+    },
+    {
+      "key": "password",
+      "value": ""
+    },
+    {
+      "key": "tokenA",
+      "value": ""
+    },
+    {
+      "key": "tokenB",
+      "value": ""
+    },
+    {
+      "key": "bookId",
+      "value": ""
+    },
+    {
+      "key": "bookIdB",
+      "value": ""
+    },
+    {
+      "key": "coverId",
+      "value": ""
+    },
+    {
+      "key": "profileId",
+      "value": ""
+    },
+    {
+      "key": "loneId",
+      "value": ""
+    },
+    {
+      "key": "linkEpoch",
+      "value": "0"
+    },
+    {
+      "key": "oldEpoch",
+      "value": "0"
+    },
+    {
+      "key": "notFoundBody",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Full flow",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Runs before every request in the folder; generate only before the first one so the whole flow shares one pair of accounts and one epoch counter.",
+              "if (pm.info.requestName.startsWith('1. ')) {",
+              "  const n = Date.now() + '-' + Math.floor(Math.random() * 1e6);",
+              "  pm.collectionVariables.set('emailA', 'newman-plink-a-' + n + '@example.com');",
+              "  pm.collectionVariables.set('emailB', 'newman-plink-b-' + n + '@example.com');",
+              "  pm.collectionVariables.set('password', 'Fake-Newman-pw-' + n);",
+              "  pm.collectionVariables.set('linkEpoch', '0');",
+              "  pm.collectionVariables.set('oldEpoch', '0');",
+              "  pm.collectionVariables.set('notFoundBody', '');",
+              "}"
+            ]
+          }
+        }
+      ],
+      "item": [
+        {
+          "name": "1. Register user A",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{emailA}}\",\"password\":\"{{password}}\",\"display_name\":\"Newman A\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const m = /smem_session=([^;]+)/.exec(pm.response.headers.get('Set-Cookie') || '');",
+                  "pm.test('session cookie issued', () => pm.expect(m).to.not.be.null);",
+                  "pm.collectionVariables.set('tokenA', m ? m[1] : '');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. Register user B",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{emailB}}\",\"password\":\"{{password}}\",\"display_name\":\"Newman B\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const m = /smem_session=([^;]+)/.exec(pm.response.headers.get('Set-Cookie') || '');",
+                  "pm.test('session cookie issued', () => pm.expect(m).to.not.be.null);",
+                  "pm.collectionVariables.set('tokenB', m ? m[1] : '');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3. A creates a yearbook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/yearbook/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "yearbook",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"Newman public links\",\"language\":\"en\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('bookId', pm.response.json().data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3b. B creates a yearbook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/yearbook/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "yearbook",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"Newman other book\",\"language\":\"en\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('bookIdB', pm.response.json().data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4. A uploads a photo with GPS EXIF (will be the cover)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/media/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "media",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "yearbook_id",
+                  "type": "text",
+                  "value": "{{bookId}}"
+                },
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "fixtures/media/photo-gps.jpg"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('coverId', pm.response.json().data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5. A uploads a second photo (will be the profile photo)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/media/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "media",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "yearbook_id",
+                  "type": "text",
+                  "value": "{{bookId}}"
+                },
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "fixtures/media/photo-gps.jpg"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('profileId', pm.response.json().data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6. A uploads a third photo that nothing refers to",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/media/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "media",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "yearbook_id",
+                  "type": "text",
+                  "value": "{{bookId}}"
+                },
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "fixtures/media/photo-gps.jpg"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('loneId', pm.response.json().data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "7. A photo nobody refers to yet has no working link - 404 (this body is the reference for every refusal)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              },
+              {
+                "key": "X-Request-Id",
+                "value": "newman-public-link-0001"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-media/get-content?token={{linkToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-media",
+                "get-content"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const secret = pm.variables.get('linkSecret');",
+                  "if (!secret) { throw new Error('linkSecret is not set: pass --env-var \"linkSecret=<the API SMEM_MEDIA_LINK_SECRET>\"'); }",
+                  "const mediaId = pm.collectionVariables.get('coverId');",
+                  "const msg = 'pm1|' + mediaId + '|' + pm.collectionVariables.get('bookId') + '|' + pm.collectionVariables.get('linkEpoch');",
+                  "const mac = CryptoJS.HmacSHA256(msg, CryptoJS.enc.Base64.parse(secret));",
+                  "const first16 = CryptoJS.lib.WordArray.create(mac.words.slice(0, 4), 16);",
+                  "const mac22 = CryptoJS.enc.Base64.stringify(first16).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/, '');",
+                  "pm.variables.set('linkToken', mediaId + '.' + mac22);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('error ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));",
+                  "pm.collectionVariables.set('notFoundBody', pm.response.text());",
+                  "pm.test('an error is never cached', () => pm.expect(pm.response.headers.get('Cache-Control')).to.eql('no-store'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "8. A sets the cover",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/yearbook/update",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "yearbook",
+                "update"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{bookId}}\",\"cover_media_id\":\"{{coverId}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "9. A sets the profile photo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/yearbook/update-profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "yearbook",
+                "update-profile"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"yearbook_id\":\"{{bookId}}\",\"full_name\":\"Newman A\",\"photo_media_id\":\"{{profileId}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10. The cover opens anonymously: right headers, no EXIF/GPS, no cookie",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              },
+              {
+                "key": "X-Request-Id",
+                "value": "newman-public-link-0001"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-media/get-content?token={{linkToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-media",
+                "get-content"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const secret = pm.variables.get('linkSecret');",
+                  "if (!secret) { throw new Error('linkSecret is not set: pass --env-var \"linkSecret=<the API SMEM_MEDIA_LINK_SECRET>\"'); }",
+                  "const mediaId = pm.collectionVariables.get('coverId');",
+                  "const msg = 'pm1|' + mediaId + '|' + pm.collectionVariables.get('bookId') + '|' + pm.collectionVariables.get('linkEpoch');",
+                  "const mac = CryptoJS.HmacSHA256(msg, CryptoJS.enc.Base64.parse(secret));",
+                  "const first16 = CryptoJS.lib.WordArray.create(mac.words.slice(0, 4), 16);",
+                  "const mac22 = CryptoJS.enc.Base64.stringify(first16).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/, '');",
+                  "pm.variables.set('linkToken', mediaId + '.' + mac22);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const h = (n) => pm.response.headers.get(n);",
+                  "pm.test('headers of a public photo', () => {",
+                  "  pm.expect(h('Content-Type')).to.eql('image/jpeg');",
+                  "  pm.expect(h('X-Content-Type-Options')).to.eql('nosniff');",
+                  "  pm.expect(h('Content-Disposition')).to.eql('inline');",
+                  "  pm.expect(h('Cache-Control')).to.eql('public, max-age=300');",
+                  "  pm.expect(h('X-Robots-Tag')).to.eql('noindex, nofollow');",
+                  "  pm.expect(h('Referrer-Policy')).to.eql('no-referrer');",
+                  "  pm.expect(h('Cross-Origin-Resource-Policy')).to.eql('cross-origin');",
+                  "  pm.expect(h('ETag')).to.be.a('string');",
+                  "});",
+                  "pm.test('no cookie is set', () => pm.expect(h('Set-Cookie')).to.eql(undefined));",
+                  "const bytes = pm.response.stream;",
+                  "pm.test('a JPEG without any metadata segment (no EXIF, GPS, XMP, comment)', () => {",
+                  "  pm.expect(bytes[0]).to.eql(0xFF); pm.expect(bytes[1]).to.eql(0xD8);",
+                  "  let i = 2;",
+                  "  while (i + 4 <= bytes.length && bytes[i] === 0xFF && bytes[i + 1] !== 0xDA) {",
+                  "    const m = bytes[i + 1];",
+                  "    pm.expect(m >= 0xE1 && m <= 0xEF || m === 0xFE, 'segment FF' + m.toString(16)).to.eql(false);",
+                  "    i += 2 + bytes.readUInt16BE(i + 2);",
+                  "  }",
+                  "  pm.expect(bytes.toString('latin1').indexOf('Exif')).to.eql(-1);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "11. The profile photo opens anonymously",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              },
+              {
+                "key": "X-Request-Id",
+                "value": "newman-public-link-0001"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-media/get-content?token={{linkToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-media",
+                "get-content"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const secret = pm.variables.get('linkSecret');",
+                  "if (!secret) { throw new Error('linkSecret is not set: pass --env-var \"linkSecret=<the API SMEM_MEDIA_LINK_SECRET>\"'); }",
+                  "const mediaId = pm.collectionVariables.get('profileId');",
+                  "const msg = 'pm1|' + mediaId + '|' + pm.collectionVariables.get('bookId') + '|' + pm.collectionVariables.get('linkEpoch');",
+                  "const mac = CryptoJS.HmacSHA256(msg, CryptoJS.enc.Base64.parse(secret));",
+                  "const first16 = CryptoJS.lib.WordArray.create(mac.words.slice(0, 4), 16);",
+                  "const mac22 = CryptoJS.enc.Base64.stringify(first16).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/, '');",
+                  "pm.variables.set('linkToken', mediaId + '.' + mac22);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const h = (n) => pm.response.headers.get(n);",
+                  "pm.test('headers of a public photo', () => {",
+                  "  pm.expect(h('Content-Type')).to.eql('image/jpeg');",
+                  "  pm.expect(h('X-Content-Type-Options')).to.eql('nosniff');",
+                  "  pm.expect(h('Content-Disposition')).to.eql('inline');",
+                  "  pm.expect(h('Cache-Control')).to.eql('public, max-age=300');",
+                  "  pm.expect(h('X-Robots-Tag')).to.eql('noindex, nofollow');",
+                  "  pm.expect(h('Referrer-Policy')).to.eql('no-referrer');",
+                  "  pm.expect(h('Cross-Origin-Resource-Policy')).to.eql('cross-origin');",
+                  "  pm.expect(h('ETag')).to.be.a('string');",
+                  "});",
+                  "pm.test('no cookie is set', () => pm.expect(h('Set-Cookie')).to.eql(undefined));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "12. HEAD answers the headers and no body",
+          "request": {
+            "method": "HEAD",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              },
+              {
+                "key": "X-Request-Id",
+                "value": "newman-public-link-0001"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-media/get-content?token={{linkToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-media",
+                "get-content"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const secret = pm.variables.get('linkSecret');",
+                  "if (!secret) { throw new Error('linkSecret is not set: pass --env-var \"linkSecret=<the API SMEM_MEDIA_LINK_SECRET>\"'); }",
+                  "const mediaId = pm.collectionVariables.get('coverId');",
+                  "const msg = 'pm1|' + mediaId + '|' + pm.collectionVariables.get('bookId') + '|' + pm.collectionVariables.get('linkEpoch');",
+                  "const mac = CryptoJS.HmacSHA256(msg, CryptoJS.enc.Base64.parse(secret));",
+                  "const first16 = CryptoJS.lib.WordArray.create(mac.words.slice(0, 4), 16);",
+                  "const mac22 = CryptoJS.enc.Base64.stringify(first16).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/, '');",
+                  "pm.variables.set('linkToken', mediaId + '.' + mac22);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('no body', () => pm.expect(pm.response.stream.length).to.eql(0));",
+                  "pm.test('the length is announced', () => pm.expect(Number(pm.response.headers.get('Content-Length'))).to.be.above(0));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "13. A byte range",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              },
+              {
+                "key": "X-Request-Id",
+                "value": "newman-public-link-0001"
+              },
+              {
+                "key": "Range",
+                "value": "bytes=0-9"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-media/get-content?token={{linkToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-media",
+                "get-content"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const secret = pm.variables.get('linkSecret');",
+                  "if (!secret) { throw new Error('linkSecret is not set: pass --env-var \"linkSecret=<the API SMEM_MEDIA_LINK_SECRET>\"'); }",
+                  "const mediaId = pm.collectionVariables.get('coverId');",
+                  "const msg = 'pm1|' + mediaId + '|' + pm.collectionVariables.get('bookId') + '|' + pm.collectionVariables.get('linkEpoch');",
+                  "const mac = CryptoJS.HmacSHA256(msg, CryptoJS.enc.Base64.parse(secret));",
+                  "const first16 = CryptoJS.lib.WordArray.create(mac.words.slice(0, 4), 16);",
+                  "const mac22 = CryptoJS.enc.Base64.stringify(first16).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/, '');",
+                  "pm.variables.set('linkToken', mediaId + '.' + mac22);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 206', () => pm.response.to.have.status(206));",
+                  "pm.test('ten bytes', () => pm.expect(pm.response.stream.length).to.eql(10));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "14. A photo no one refers to - 404, same body",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              },
+              {
+                "key": "X-Request-Id",
+                "value": "newman-public-link-0001"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-media/get-content?token={{linkToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-media",
+                "get-content"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const secret = pm.variables.get('linkSecret');",
+                  "if (!secret) { throw new Error('linkSecret is not set: pass --env-var \"linkSecret=<the API SMEM_MEDIA_LINK_SECRET>\"'); }",
+                  "const mediaId = pm.collectionVariables.get('loneId');",
+                  "const msg = 'pm1|' + mediaId + '|' + pm.collectionVariables.get('bookId') + '|' + pm.collectionVariables.get('linkEpoch');",
+                  "const mac = CryptoJS.HmacSHA256(msg, CryptoJS.enc.Base64.parse(secret));",
+                  "const first16 = CryptoJS.lib.WordArray.create(mac.words.slice(0, 4), 16);",
+                  "const mac22 = CryptoJS.enc.Base64.stringify(first16).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/, '');",
+                  "pm.variables.set('linkToken', mediaId + '.' + mac22);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('error ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));",
+                  "pm.test('same body as every other refusal', () => pm.expect(pm.response.text()).to.eql(pm.collectionVariables.get('notFoundBody')));",
+                  "pm.test('no cookie set, nothing cached', () => { pm.expect(pm.response.headers.get('Set-Cookie')).to.eql(undefined); pm.expect(pm.response.headers.get('Cache-Control')).to.eql('no-store'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15. A tampered signature - 404, same body",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              },
+              {
+                "key": "X-Request-Id",
+                "value": "newman-public-link-0001"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-media/get-content?token={{linkToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-media",
+                "get-content"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const secret = pm.variables.get('linkSecret');",
+                  "if (!secret) { throw new Error('linkSecret is not set: pass --env-var \"linkSecret=<the API SMEM_MEDIA_LINK_SECRET>\"'); }",
+                  "const mediaId = pm.collectionVariables.get('coverId');",
+                  "const msg = 'pm1|' + mediaId + '|' + pm.collectionVariables.get('bookId') + '|' + pm.collectionVariables.get('linkEpoch');",
+                  "const mac = CryptoJS.HmacSHA256(msg, CryptoJS.enc.Base64.parse(secret));",
+                  "const first16 = CryptoJS.lib.WordArray.create(mac.words.slice(0, 4), 16);",
+                  "const mac22 = CryptoJS.enc.Base64.stringify(first16).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/, '');",
+                  "pm.variables.set('linkToken', mediaId + '.' + mac22);",
+                  "const t = pm.variables.get('linkToken'); const k = t.length - 5; pm.variables.set('linkToken', t.slice(0, k) + (t[k] === 'A' ? 'B' : 'A') + t.slice(k + 1));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('error ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));",
+                  "pm.test('same body as every other refusal', () => pm.expect(pm.response.text()).to.eql(pm.collectionVariables.get('notFoundBody')));",
+                  "pm.test('no cookie set, nothing cached', () => { pm.expect(pm.response.headers.get('Set-Cookie')).to.eql(undefined); pm.expect(pm.response.headers.get('Cache-Control')).to.eql('no-store'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "16. A signature made for another book - 404, same body",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              },
+              {
+                "key": "X-Request-Id",
+                "value": "newman-public-link-0001"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-media/get-content?token={{linkToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-media",
+                "get-content"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const secret = pm.variables.get('linkSecret');",
+                  "if (!secret) { throw new Error('linkSecret is not set: pass --env-var \"linkSecret=<the API SMEM_MEDIA_LINK_SECRET>\"'); }",
+                  "const mediaId = pm.collectionVariables.get('coverId');",
+                  "const msg = 'pm1|' + mediaId + '|' + pm.collectionVariables.get('bookIdB') + '|' + pm.collectionVariables.get('linkEpoch');",
+                  "const mac = CryptoJS.HmacSHA256(msg, CryptoJS.enc.Base64.parse(secret));",
+                  "const first16 = CryptoJS.lib.WordArray.create(mac.words.slice(0, 4), 16);",
+                  "const mac22 = CryptoJS.enc.Base64.stringify(first16).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/, '');",
+                  "pm.variables.set('linkToken', mediaId + '.' + mac22);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('error ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));",
+                  "pm.test('same body as every other refusal', () => pm.expect(pm.response.text()).to.eql(pm.collectionVariables.get('notFoundBody')));",
+                  "pm.test('no cookie set, nothing cached', () => { pm.expect(pm.response.headers.get('Set-Cookie')).to.eql(undefined); pm.expect(pm.response.headers.get('Cache-Control')).to.eql('no-store'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "17. B cannot revoke A's links - 404",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/yearbook/revoke-photo-links",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "yearbook",
+                "revoke-photo-links"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{bookId}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('error ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "18. Revoking without a session - 401",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/yearbook/revoke-photo-links",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "yearbook",
+                "revoke-photo-links"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{bookId}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 401', () => pm.response.to.have.status(401));",
+                  "pm.test('error ERROR_UNAUTHORIZED', () => pm.expect(pm.response.json().status).to.eql('ERROR_UNAUTHORIZED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "19. The cover still opens after those refused revokes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              },
+              {
+                "key": "X-Request-Id",
+                "value": "newman-public-link-0001"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-media/get-content?token={{linkToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-media",
+                "get-content"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const secret = pm.variables.get('linkSecret');",
+                  "if (!secret) { throw new Error('linkSecret is not set: pass --env-var \"linkSecret=<the API SMEM_MEDIA_LINK_SECRET>\"'); }",
+                  "const mediaId = pm.collectionVariables.get('coverId');",
+                  "const msg = 'pm1|' + mediaId + '|' + pm.collectionVariables.get('bookId') + '|' + pm.collectionVariables.get('linkEpoch');",
+                  "const mac = CryptoJS.HmacSHA256(msg, CryptoJS.enc.Base64.parse(secret));",
+                  "const first16 = CryptoJS.lib.WordArray.create(mac.words.slice(0, 4), 16);",
+                  "const mac22 = CryptoJS.enc.Base64.stringify(first16).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/, '');",
+                  "pm.variables.set('linkToken', mediaId + '.' + mac22);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "20. A revokes every photo link of the book",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/yearbook/revoke-photo-links",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "yearbook",
+                "revoke-photo-links"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{bookId}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('data is empty', () => pm.expect(pm.response.json()).to.eql({status: 'OK', data: {}}));",
+                  "pm.collectionVariables.set('oldEpoch', pm.collectionVariables.get('linkEpoch'));",
+                  "pm.collectionVariables.set('linkEpoch', String(Number(pm.collectionVariables.get('linkEpoch')) + 1));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "21. The link made before the revoke is dead - 404, same body",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              },
+              {
+                "key": "X-Request-Id",
+                "value": "newman-public-link-0001"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-media/get-content?token={{linkToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-media",
+                "get-content"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const secret = pm.variables.get('linkSecret');",
+                  "if (!secret) { throw new Error('linkSecret is not set: pass --env-var \"linkSecret=<the API SMEM_MEDIA_LINK_SECRET>\"'); }",
+                  "const mediaId = pm.collectionVariables.get('coverId');",
+                  "const msg = 'pm1|' + mediaId + '|' + pm.collectionVariables.get('bookId') + '|' + pm.collectionVariables.get('oldEpoch');",
+                  "const mac = CryptoJS.HmacSHA256(msg, CryptoJS.enc.Base64.parse(secret));",
+                  "const first16 = CryptoJS.lib.WordArray.create(mac.words.slice(0, 4), 16);",
+                  "const mac22 = CryptoJS.enc.Base64.stringify(first16).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/, '');",
+                  "pm.variables.set('linkToken', mediaId + '.' + mac22);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('error ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));",
+                  "pm.test('same body as every other refusal', () => pm.expect(pm.response.text()).to.eql(pm.collectionVariables.get('notFoundBody')));",
+                  "pm.test('no cookie set, nothing cached', () => { pm.expect(pm.response.headers.get('Set-Cookie')).to.eql(undefined); pm.expect(pm.response.headers.get('Cache-Control')).to.eql('no-store'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "22. A link for the new epoch opens the cover again",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              },
+              {
+                "key": "X-Request-Id",
+                "value": "newman-public-link-0001"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-media/get-content?token={{linkToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-media",
+                "get-content"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const secret = pm.variables.get('linkSecret');",
+                  "if (!secret) { throw new Error('linkSecret is not set: pass --env-var \"linkSecret=<the API SMEM_MEDIA_LINK_SECRET>\"'); }",
+                  "const mediaId = pm.collectionVariables.get('coverId');",
+                  "const msg = 'pm1|' + mediaId + '|' + pm.collectionVariables.get('bookId') + '|' + pm.collectionVariables.get('linkEpoch');",
+                  "const mac = CryptoJS.HmacSHA256(msg, CryptoJS.enc.Base64.parse(secret));",
+                  "const first16 = CryptoJS.lib.WordArray.create(mac.words.slice(0, 4), 16);",
+                  "const mac22 = CryptoJS.enc.Base64.stringify(first16).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/, '');",
+                  "pm.variables.set('linkToken', mediaId + '.' + mac22);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "23. ... and the profile photo",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              },
+              {
+                "key": "X-Request-Id",
+                "value": "newman-public-link-0001"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-media/get-content?token={{linkToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-media",
+                "get-content"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const secret = pm.variables.get('linkSecret');",
+                  "if (!secret) { throw new Error('linkSecret is not set: pass --env-var \"linkSecret=<the API SMEM_MEDIA_LINK_SECRET>\"'); }",
+                  "const mediaId = pm.collectionVariables.get('profileId');",
+                  "const msg = 'pm1|' + mediaId + '|' + pm.collectionVariables.get('bookId') + '|' + pm.collectionVariables.get('linkEpoch');",
+                  "const mac = CryptoJS.HmacSHA256(msg, CryptoJS.enc.Base64.parse(secret));",
+                  "const first16 = CryptoJS.lib.WordArray.create(mac.words.slice(0, 4), 16);",
+                  "const mac22 = CryptoJS.enc.Base64.stringify(first16).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/, '');",
+                  "pm.variables.set('linkToken', mediaId + '.' + mac22);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "24. A deletes the yearbook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/yearbook/delete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "yearbook",
+                "delete"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{bookId}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "25. The link of a deleted book is dead - 404, same body",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              },
+              {
+                "key": "X-Request-Id",
+                "value": "newman-public-link-0001"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-media/get-content?token={{linkToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-media",
+                "get-content"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const secret = pm.variables.get('linkSecret');",
+                  "if (!secret) { throw new Error('linkSecret is not set: pass --env-var \"linkSecret=<the API SMEM_MEDIA_LINK_SECRET>\"'); }",
+                  "const mediaId = pm.collectionVariables.get('coverId');",
+                  "const msg = 'pm1|' + mediaId + '|' + pm.collectionVariables.get('bookId') + '|' + pm.collectionVariables.get('linkEpoch');",
+                  "const mac = CryptoJS.HmacSHA256(msg, CryptoJS.enc.Base64.parse(secret));",
+                  "const first16 = CryptoJS.lib.WordArray.create(mac.words.slice(0, 4), 16);",
+                  "const mac22 = CryptoJS.enc.Base64.stringify(first16).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/, '');",
+                  "pm.variables.set('linkToken', mediaId + '.' + mac22);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('error ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));",
+                  "pm.test('same body as every other refusal', () => pm.expect(pm.response.text()).to.eql(pm.collectionVariables.get('notFoundBody')));",
+                  "pm.test('no cookie set, nothing cached', () => { pm.expect(pm.response.headers.get('Set-Cookie')).to.eql(undefined); pm.expect(pm.response.headers.get('Cache-Control')).to.eql('no-store'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "26. B deletes the yearbook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/yearbook/delete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "yearbook",
+                "delete"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{bookIdB}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Edge cases",
+      "item": [
+        {
+          "name": "E1. A (new) yearbook for the revoke checks",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/yearbook/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "yearbook",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"Newman edge book\",\"language\":\"en\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('bookId', pm.response.json().data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E2. No token parameter - 404, same body",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              },
+              {
+                "key": "X-Request-Id",
+                "value": "newman-public-link-0001"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-media/get-content",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-media",
+                "get-content"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('error ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));",
+                  "pm.test('same body as every other refusal', () => pm.expect(pm.response.text()).to.eql(pm.collectionVariables.get('notFoundBody')));",
+                  "pm.test('no cookie set, nothing cached', () => { pm.expect(pm.response.headers.get('Set-Cookie')).to.eql(undefined); pm.expect(pm.response.headers.get('Cache-Control')).to.eql('no-store'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E3. Empty token - 404, same body",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              },
+              {
+                "key": "X-Request-Id",
+                "value": "newman-public-link-0001"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-media/get-content?token=",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-media",
+                "get-content"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": ""
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('error ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));",
+                  "pm.test('same body as every other refusal', () => pm.expect(pm.response.text()).to.eql(pm.collectionVariables.get('notFoundBody')));",
+                  "pm.test('no cookie set, nothing cached', () => { pm.expect(pm.response.headers.get('Set-Cookie')).to.eql(undefined); pm.expect(pm.response.headers.get('Cache-Control')).to.eql('no-store'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E4. Not a token - 404, same body",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              },
+              {
+                "key": "X-Request-Id",
+                "value": "newman-public-link-0001"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-media/get-content?token=not-a-token",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-media",
+                "get-content"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "not-a-token"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('error ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));",
+                  "pm.test('same body as every other refusal', () => pm.expect(pm.response.text()).to.eql(pm.collectionVariables.get('notFoundBody')));",
+                  "pm.test('no cookie set, nothing cached', () => { pm.expect(pm.response.headers.get('Set-Cookie')).to.eql(undefined); pm.expect(pm.response.headers.get('Cache-Control')).to.eql('no-store'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E5. A well-formed token for a photo that does not exist - 404, same body",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              },
+              {
+                "key": "X-Request-Id",
+                "value": "newman-public-link-0001"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-media/get-content?token=01J0000000000000000000000Z.AAAAAAAAAAAAAAAAAAAAAA",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-media",
+                "get-content"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "01J0000000000000000000000Z.AAAAAAAAAAAAAAAAAAAAAA"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('error ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));",
+                  "pm.test('same body as every other refusal', () => pm.expect(pm.response.text()).to.eql(pm.collectionVariables.get('notFoundBody')));",
+                  "pm.test('no cookie set, nothing cached', () => { pm.expect(pm.response.headers.get('Set-Cookie')).to.eql(undefined); pm.expect(pm.response.headers.get('Cache-Control')).to.eql('no-store'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E6. An oversized token (500 characters) - 404, same body",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              },
+              {
+                "key": "X-Request-Id",
+                "value": "newman-public-link-0001"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-media/get-content?token=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-media",
+                "get-content"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('error ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));",
+                  "pm.test('same body as every other refusal', () => pm.expect(pm.response.text()).to.eql(pm.collectionVariables.get('notFoundBody')));",
+                  "pm.test('no cookie set, nothing cached', () => { pm.expect(pm.response.headers.get('Set-Cookie')).to.eql(undefined); pm.expect(pm.response.headers.get('Cache-Control')).to.eql('no-store'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E7. POST is not allowed - 405",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              },
+              {
+                "key": "X-Request-Id",
+                "value": "newman-public-link-0001"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-media/get-content?token=x",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-media",
+                "get-content"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "x"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 405', () => pm.response.to.have.status(405));",
+                  "pm.test('error ERROR_METHOD_NOT_ALLOWED', () => pm.expect(pm.response.json().status).to.eql('ERROR_METHOD_NOT_ALLOWED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E8. Revoke without id - 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/yearbook/revoke-photo-links",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "yearbook",
+                "revoke-photo-links"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E9. Revoke an unknown yearbook - 404",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/yearbook/revoke-photo-links",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "yearbook",
+                "revoke-photo-links"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"01ARZ3NDEKTSV4RRFFQ69G5FAV\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('error ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E10. Revoke with an unknown field - 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/yearbook/revoke-photo-links",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "yearbook",
+                "revoke-photo-links"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{bookId}}\",\"all\":true}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E11. Revoke from a foreign origin - 403",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "https://evil.example.com"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/yearbook/revoke-photo-links",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "yearbook",
+                "revoke-photo-links"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{bookId}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 403', () => pm.response.to.have.status(403));",
+                  "pm.test('error ERROR_CSRF_ORIGIN_MISMATCH', () => pm.expect(pm.response.json().status).to.eql('ERROR_CSRF_ORIGIN_MISMATCH'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E12. Clean up: A deletes the edge yearbook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/yearbook/delete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "yearbook",
+                "delete"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{bookId}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

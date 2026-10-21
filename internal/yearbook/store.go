@@ -407,6 +407,25 @@ func (s *Store) ClearMediaRefs(ctx context.Context, tx *sql.Tx, mediaID int64) e
 	return err
 }
 
+// bumpLinkEpoch adds 1 to the book's link_epoch (every public photo link made so far stops verifying). One atomic statement
+// on one row, so concurrent revokes both count and it takes no lock that could be part of a cycle. updated_at is left alone on
+// purpose: this is a security counter, not an edit, and the book list is ordered by updated_at.
+// ErrNotFound when the book is gone or not the owner's.
+func (s *Store) bumpLinkEpoch(ctx context.Context, ownerID uint64, publicID string) error {
+	res, err := s.db.ExecContext(ctx, `UPDATE yearbook_tab SET link_epoch = link_epoch + 1 WHERE owner_id = ? AND public_id = ?`, ownerID, publicID)
+	if err != nil {
+		return apperr.Wrap(apperr.Internal, err, "bump link epoch")
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return apperr.Wrap(apperr.Internal, err, "bump link epoch")
+	}
+	if n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
 // remove deletes the book y with everything that belongs to it in one transaction: the profiles, then every child purger,
 // then the book; any failure rolls all of it back.
 //

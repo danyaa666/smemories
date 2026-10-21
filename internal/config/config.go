@@ -2,6 +2,8 @@
 package config
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"fmt"
 	"log/slog"
 	"net"
@@ -11,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/danyaa666/smemories/internal/medialink"
 )
 
 // Config is the validated process configuration.
@@ -36,6 +40,7 @@ type Config struct {
 	RegisterPerHour   int           // SMEM_RATE_REGISTER_PER_HOUR (per IP), default 5
 	LoginFailsPerPair int           // SMEM_RATE_LOGIN_FAILS_PER_EMAIL (per IP+email, 15 min), default 10
 	LoginFailsPerIP   int           // SMEM_RATE_LOGIN_FAILS_PER_IP (15 min), default 100
+	LoginFailsPerAcct int           // SMEM_RATE_LOGIN_FAILS_PER_ACCOUNT (per account, 15 min), default 50
 
 	GoogleClientID     string // SMEM_GOOGLE_CLIENT_ID: empty = Google sign-in off (the endpoints answer 404)
 	GoogleClientSecret string // SMEM_GOOGLE_CLIENT_SECRET: required with a client id. Never log it.
@@ -76,6 +81,9 @@ type Config struct {
 	MailFrom            string // SMEM_MAIL_FROM: "SMemories <no-reply@mail.example.com>"; required with ses and in prod
 	SESConfigurationSet string // SMEM_SES_CONFIGURATION_SET: optional SES configuration set (reputation metrics)
 
+	MediaLinkSecret       []byte // SMEM_MEDIA_LINK_SECRET: HMAC key of the public photo links (T-092), base64, at least 32 bytes decoded; required in prod. Never log it.
+	MediaLinkSecretRandom bool   // true when it was unset (dev, test) and a random per-process secret was made: links stop working when the API restarts
+
 	DevFixedOTP string // DEV-SHORTCUT(otp) SMEM_DEV_FIXED_OTP: 6 digits accepted as every email code; only with SMEM_ENV=dev or test, otherwise the API refuses to start (docs/dev-shortcuts.md)
 }
 
@@ -85,6 +93,7 @@ const devOTPKey = "smemories-dev-only-otp-key-not-a-secret"
 const (
 	minOTPKeyBytes    = 32
 	minOIDCKeyBytes   = 32
+	minMediaLinkBytes = medialink.MinSecretBytes
 	minArgonMemoryKiB = 8
 )
 
@@ -230,6 +239,9 @@ func load(getenv func(string) string, forAPI bool) (Config, error) {
 	if cfg.LoginFailsPerIP, err = getInt(get, "SMEM_RATE_LOGIN_FAILS_PER_IP", "100", 1); err != nil {
 		return Config{}, err
 	}
+	if cfg.LoginFailsPerAcct, err = getInt(get, "SMEM_RATE_LOGIN_FAILS_PER_ACCOUNT", "50", 1); err != nil {
+		return Config{}, err
+	}
 	if cfg.GoogleClientID = getenv("SMEM_GOOGLE_CLIENT_ID"); cfg.GoogleClientID != "" {
 		if err := cfg.loadGoogle(getenv, get); err != nil {
 			return Config{}, err
@@ -300,7 +312,39 @@ func load(getenv func(string) string, forAPI bool) (Config, error) {
 	if err := cfg.loadMail(getenv); err != nil {
 		return Config{}, err
 	}
+	if err := cfg.loadMediaLink(getenv); err != nil {
+		return Config{}, err
+	}
 	return cfg, nil
+}
+
+// loadMediaLink reads the secret of the public photo links (T-092, D-32). Unset: prod refuses to start; dev and test get a random
+// per-process secret (nothing guessable, so it is not a dev shortcut) and main logs one WARN. The messages name the variable and
+// never repeat its value.
+func (cfg *Config) loadMediaLink(getenv func(string) string) error {
+	raw := strings.TrimSpace(getenv("SMEM_MEDIA_LINK_SECRET")) // a secret pasted with a trailing newline still works
+	if raw == "" {
+		if cfg.Env == "prod" {
+			return fmt.Errorf("SMEM_MEDIA_LINK_SECRET is required when SMEM_ENV is prod (at least %d random bytes, base64, e.g. `openssl rand -base64 48`)", minMediaLinkBytes)
+		}
+		cfg.MediaLinkSecret = make([]byte, minMediaLinkBytes)
+		if _, err := rand.Read(cfg.MediaLinkSecret); err != nil {
+			return fmt.Errorf("SMEM_MEDIA_LINK_SECRET: no random source for the per-process secret")
+		}
+		cfg.MediaLinkSecretRandom = true
+		return nil
+	}
+	key, err := base64.StdEncoding.DecodeString(raw)
+	if err != nil {
+		if key, err = base64.RawStdEncoding.DecodeString(raw); err != nil {
+			return fmt.Errorf("SMEM_MEDIA_LINK_SECRET is not valid base64 (e.g. `openssl rand -base64 48`)")
+		}
+	}
+	if len(key) < minMediaLinkBytes {
+		return fmt.Errorf("SMEM_MEDIA_LINK_SECRET is too short: %d bytes after decoding, want at least %d", len(key), minMediaLinkBytes)
+	}
+	cfg.MediaLinkSecret = key
+	return nil
 }
 
 // loadMail reads the mail settings (T-021). The provider name itself is validated by mailer.New; prod accepts only ses.

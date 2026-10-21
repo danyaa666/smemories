@@ -60,6 +60,8 @@ func (f *fakeStore) modify(_ context.Context, owner uint64, id string, nowMs int
 	return y, nil
 }
 
+func (f *fakeStore) bumpLinkEpoch(context.Context, uint64, string) error { return nil }
+
 func (f *fakeStore) remove(_ context.Context, _ uint64, y *Yearbook, _ []ChildPurger) error {
 	f.note("remove")
 	f.removed = append(f.removed, y.ID)

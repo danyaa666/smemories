@@ -89,6 +89,7 @@ task definition, `SM` = Secrets Manager injected as an environment variable, `SS
 | Variable | Required in prod | Default | Secret | AWS source | Commands | Prod rule |
 |---|---|---|---|---|---|---|
 | `SMEM_OTP_KEY` | yes | none (fixed dev key in dev and test) | **yes** | SM | api | at least **32 bytes** (`openssl rand -base64 48`). Also derives the page-token key: rotating it only restarts clients' lists and invalidates outstanding email codes. |
+| `SMEM_MEDIA_LINK_SECRET` | yes | none (dev and test: a random per-process secret and one WARN, links stop working when the API restarts) | **yes** | SM | api | base64 (`openssl rand -base64 48`), at least **32 bytes** decoded; a missing, short or non-base64 value stops the API and the message names the variable, never its value. HMAC key of the public photo links (T-092, D-32). **Rotating it kills every link ever handed out** (the owner's per-book switch is `yearbook/revoke-photo-links`); give it to the API task only: the migrate and backfill tasks never serve photos and do not read it. Not a dev shortcut: the random dev value is unguessable. |
 | `SMEM_GOOGLE_CLIENT_ID` | no | empty = Google sign-in off | no | env | api | when set, the three below are required. |
 | `SMEM_GOOGLE_CLIENT_SECRET` | with the client id | none | **yes** | SM | api | |
 | `SMEM_OIDC_COOKIE_KEY` | with the client id | none | **yes** | SM | api | at least **32 bytes**. |
@@ -106,6 +107,7 @@ task definition, `SM` = Secrets Manager injected as an environment variable, `SS
 | `SMEM_RATE_REGISTER_PER_HOUR` | no | `5` | no | env | api | per client IP. |
 | `SMEM_RATE_LOGIN_FAILS_PER_EMAIL` | no | `10` | no | env | api | per IP and email, 15 min. |
 | `SMEM_RATE_LOGIN_FAILS_PER_IP` | no | `100` | no | env | api | 15 min. |
+| `SMEM_RATE_LOGIN_FAILS_PER_ACCOUNT` | no | `50` | no | env | api | failed logins per account from any address, 15 min; integer >= 1. Fails closed. A successful password reset clears it. |
 | `SMEM_MEDIA_MAX_BYTES` | no | `10485760` | no | env | api | 1 to 104857600. |
 | `SMEM_MEDIA_MAX_CONCURRENT` | no | `2` | no | env | api | images decoded at once ([media.md](media.md)). |
 | `SMEM_PUBLIC_UPLOAD_CONCURRENT_PER_IP` | no | `8` | no | env | api | |
@@ -122,7 +124,14 @@ task definition, `SM` = Secrets Manager injected as an environment variable, `SS
 
 `SMEM_TRUST_PROXY=true` takes the client address from the last `X-Forwarded-For` hop. Set it **only** when the task is reachable solely through the ALB (security group allows
 the ALB only): then that hop is the one the ALB appended and the per-IP rate limits see real clients. Without it every request shares the ALB's address and the limits lock everybody
-out together; with it on a task that clients can reach directly, any client can forge its address and walk around the limits.
+out together; with it on a task that clients can reach directly, any client can forge its address and walk around the limits. The API logs one WARN a minute
+(`SMEM_TRUST_PROXY is on but a request came straight from a public address`, never the address) when the flag is on and a request's direct peer is not a loopback, private
+or link-local address.
+
+**IPv6 is keyed by its /64.** Every per-client limit uses the string `httpx.ResolveClientIP` returns: an IPv4 address as is, an IPv4-mapped IPv6 address (`::ffff:a.b.c.d`) as its
+IPv4 text, any other IPv6 address as its first 64 bits in canonical form (`2001:db8:1:2::`, zone dropped), because one IPv6 host owns a whole /64. Two students on one campus
+/64 therefore share the per-IP budgets, as two on one NAT address already do (T-031 owns measuring real class bursts). A delegated /56 or /48 still gives an attacker 256 or
+65,536 keys; the per-account login limit bounds password guessing regardless of addresses, and the edge rate rule (T-031) bounds volume.
 
 ## S3 credentials and timeouts
 

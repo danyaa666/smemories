@@ -16,22 +16,24 @@ const (
 	secOTP    = "otp-key-SECRET-3-0123456789abcdef"
 	secOIDC   = "oidc-key-SECRET-4-0123456789abcdef"
 	secS3     = "s3-SECRET-5"
+	secLink   = "c2VjcmV0LW1lZGlhLWxpbmstMDEyMzQ1Njc4OWFiY2RlZi1TRUNSRVQtNg==" // base64 of 43 bytes
 )
 
 // prodBase is a complete, valid production environment for the API (what the Fargate task definition provides).
 func prodBase() map[string]string {
 	return map[string]string{
-		"SMEM_ENV":              "prod",
-		"SMEM_DB_DSN":           "app:" + secDBPass + "@tcp(db.internal:3306)/smemories?tls=true",
-		"SMEM_REDIS_URL":        "rediss://:" + secRedis + "@cache.internal:6379/0",
-		"SMEM_ALLOWED_ORIGINS":  "https://app.example.com",
-		"SMEM_PUBLIC_BASE_URL":  "https://app.example.com",
-		"SMEM_OTP_KEY":          secOTP,
-		"SMEM_S3_BUCKET":        "smemories-prod",
-		"SMEM_MAIL_PROVIDER":    "ses",
-		"SMEM_MAIL_FROM":        "SMemories <no-reply@mail.smemories.io>",
-		"SMEM_TRUST_PROXY":      "true",
-		"SMEM_MEMORY_LIMIT_MIB": "1638",
+		"SMEM_ENV":               "prod",
+		"SMEM_DB_DSN":            "app:" + secDBPass + "@tcp(db.internal:3306)/smemories?tls=true",
+		"SMEM_REDIS_URL":         "rediss://:" + secRedis + "@cache.internal:6379/0",
+		"SMEM_ALLOWED_ORIGINS":   "https://app.example.com",
+		"SMEM_PUBLIC_BASE_URL":   "https://app.example.com",
+		"SMEM_OTP_KEY":           secOTP,
+		"SMEM_MEDIA_LINK_SECRET": secLink,
+		"SMEM_S3_BUCKET":         "smemories-prod",
+		"SMEM_MAIL_PROVIDER":     "ses",
+		"SMEM_MAIL_FROM":         "SMemories <no-reply@mail.smemories.io>",
+		"SMEM_TRUST_PROXY":       "true",
+		"SMEM_MEMORY_LIMIT_MIB":  "1638",
 	}
 }
 
@@ -123,6 +125,9 @@ func TestProdContractRefusals(t *testing.T) {
 		{"sender on .test", with("SMEM_MAIL_FROM", "no-reply@smemories.test"), "SMEM_MAIL_FROM"},
 		{"sender on localhost", with("SMEM_MAIL_FROM", "no-reply@localhost"), "SMEM_MAIL_FROM"},
 		{"dev fixed code", with("SMEM_DEV_FIXED_OTP", "123123"), "SMEM_DEV_FIXED_OTP"},
+		{"no media link secret", with("SMEM_MEDIA_LINK_SECRET", ""), "SMEM_MEDIA_LINK_SECRET"},
+		{"short media link secret", with("SMEM_MEDIA_LINK_SECRET", "c2hvcnQ="), "SMEM_MEDIA_LINK_SECRET"},
+		{"media link secret not base64", with("SMEM_MEDIA_LINK_SECRET", secLink+"*"), "SMEM_MEDIA_LINK_SECRET"},
 		{"no memory limit", with("SMEM_MEMORY_LIMIT_MIB", ""), "SMEM_MEMORY_LIMIT_MIB"},
 		{"metrics on 0.0.0.0", with("SMEM_METRICS_ADDR", "0.0.0.0:9090"), "SMEM_METRICS_ADDR"},
 		{"metrics on :port", with("SMEM_METRICS_ADDR", ":9090"), "SMEM_METRICS_ADDR"},
@@ -131,7 +136,7 @@ func TestProdContractRefusals(t *testing.T) {
 		{"metrics on a public name", with("SMEM_METRICS_ADDR", "metrics.example.com:9090"), "SMEM_METRICS_ADDR"},
 		{"bad metrics opt-out value", with("SMEM_METRICS_ALLOW_ANY_INTERFACE", "sure"), "SMEM_METRICS_ALLOW_ANY_INTERFACE"},
 	}
-	secrets := []string{secDBPass, secRedis, secOTP, secOIDC, secS3, "123123"}
+	secrets := []string{secDBPass, secRedis, secOTP, secOIDC, secS3, secLink, "123123"}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			_, err := Load(exact(c.env))

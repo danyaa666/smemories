@@ -22,6 +22,7 @@ Every label comes from a small fixed set: `route` is the mux pattern (`GET /api/
 | `smem_mail_send_failures_total` | counter | class | emails given up on after the retries (`unavailable`, `rejected`, `config`, `shutdown`, `other`); background sends only; `config` is an account or setup problem only the operator can fix and must page, `shutdown` counts emails dropped when the process had to exit ([email.md](email.md)) |
 | `smem_media_processing_slots_in_use` / `smem_media_processing_slots` | gauge | | images being processed / `SMEM_MEDIA_MAX_CONCURRENT` |
 | `smem_public_uploads_in_progress` / `smem_public_uploads_max` | gauge | | public note submissions in progress / `SMEM_PUBLIC_UPLOAD_MAX_CONNS` |
+| `smem_public_media_requests_total` | counter | result | public photo link requests (`ok`, `not_found`, `rate_limited`; T-092); a spike of `not_found` is someone guessing tokens, and the three values are the only labels, never a token or id |
 | `go_sql_*` (`db_name="smemories"`) | gauge/counter | db_name | `sql.DBStats`: open, in-use and idle connections, wait count and duration |
 | `smem_redis_pool_connections`, `_idle_connections` | gauge | | go-redis pool size |
 | `smem_redis_pool_hits_total`, `_misses_total`, `_timeouts_total` | counter | | go-redis pool use |

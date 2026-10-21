@@ -71,7 +71,13 @@ func (s *Service) ResetPassword(ctx context.Context, ip, email, code, password s
 	if err != nil {
 		return err
 	}
-	return s.store.resetPassword(ctx, u.InternalID, phc, now, s.sessions.DeleteAll)
+	if err := s.store.resetPassword(ctx, u.InternalID, phc, now, s.sessions.DeleteAll); err != nil {
+		return err
+	}
+	// The owner proved control of the email: give the account its login budget back, so an attacker who keeps
+	// it at the failure limit cannot keep the owner out after a reset (T-098). Best effort; the window ends it anyway.
+	_ = s.loginAcct.Reset(ctx, accountKey(email))
+	return nil
 }
 
 // resetPassword stores the new hash and deletes every session of the user. The sessions go before the
