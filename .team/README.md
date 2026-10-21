@@ -12,8 +12,8 @@
 |---|---:|---|
 | BACKLOG | 12 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-095, T-096, T-097 |
 | TODO | 8 | T-094, T-101, T-104, T-105, T-106, T-107, T-109, T-110 |
-| IN_PROGRESS | 1 | T-100 |
-| READY_FOR_QA | 1 | T-093 |
+| READY_FOR_QA | 1 | T-100 |
+| IN_QA | 1 | T-093 |
 | QA_PASS | 1 | T-103 |
 | MERGED | 2 | T-102, T-108 |
 | DONE | 77 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-092, T-098, T-099 |
@@ -23,7 +23,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?)
 
-_Board last written 2026-10-21 08:00Z_
+_Board last written 2026-10-21 08:06Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4356,7 +4356,7 @@ Spec: .team/epics/E05-templates-export/14-public-photo-links-api.md (read it fro
 - 2026-10-21 03:43Z · human · accepted by owner
 
 ### T-093 — [E05] Book as plain text with photo links (API)
-- **Status:** READY_FOR_QA
+- **Status:** IN_QA
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -4364,16 +4364,17 @@ Spec: .team/epics/E05-templates-export/14-public-photo-links-api.md (read it fro
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** qa
 - **Branch:** task/t-093-e05-book-as-plain-text-with-photo-links-
 - **PR:** https://github.com/danyaa666/smemories/pull/92
-- **Updated:** 2026-10-21 03:32Z by dev
-- **Comments-seen:** 1
+- **Updated:** 2026-10-21 08:00Z by qa
+- **Comments-seen:** 2
 
 Spec: .team/epics/E05-templates-export/15-book-text-export-api.md. GET /api/book-export/get-text builds the UTF-8 text (profile, approved notes, public photo links from T-092), en/vi labels, no silent cut.
 
 #### Comments
 - 2026-10-21 03:32Z · dev · PR #92 head 6111818. GET /api/book-export/get-text (package internal/bookexport), cap 1000 via notes.ExportNotes, T-092 signer + link_epoch, limiter book_export 30/10min. Verify: golden files en/vi (testdata), integration (anonymous links, hidden/revoke, query count, 1001 notes), newman postman/book-export.postman_collection.json twice (needs make verify-newman-users), docs/book-export.md. Gaps: none known. Lint, unit, full integration all green on a private stack.
+- 2026-10-21 08:06Z · leader · Leader 2026-10-21: T-100 (PR #93) introduces ulid.Valid as the one canonical-id validator. Whichever of #92/#93 merges second must make book-export/get-text use ulid.Valid for yearbook_id (ERROR_PARAM before any query).
 
 ### T-094 — [E05] Web: Export as text on the print screen, public-link warning, disable links
 - **Status:** TODO
@@ -4522,7 +4523,7 @@ Spec: `.team/epics/E12-security-hardening/02-mandatory-env-and-local-only-dev-te
 - 2026-10-21 03:43Z · human · accepted by owner
 
 ### T-100 — [E12] Canonical public ids and the stored id for object keys
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
@@ -4530,16 +4531,18 @@ Spec: `.team/epics/E12-security-hardening/02-mandatory-env-and-local-only-dev-te
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-100-e12-canonical-public-ids-and-the-stored-
-- **PR:** —
-- **Updated:** 2026-10-21 07:44Z by dev
-- **Comments-seen:** 1
+- **PR:** https://github.com/danyaa666/smemories/pull/93
+- **Updated:** 2026-10-21 08:06Z by dev
+- **Comments-seen:** 3
 
 Spec: `.team/epics/E12-security-hardening/03-canonical-public-ids.md`. Audit M3: public_id columns compare case-insensitively and media/yearbook use the caller's spelling in S3 prefixes, so a user can orphan objects, reset their quota and defeat deletion. Validate ids at the edge, build keys from the stored id. Do before T-025. Risk high: data.
 
 #### Comments
 - 2026-10-20 05:34Z · leader · Leader review 2026-10-20: now depends on T-092 (its new endpoints and token must be covered); spec updated in requirement 2. Re-read the spec from the repo root before you start.
+- 2026-10-21 08:06Z · dev · PR #93 head d021ada. ulid.Valid shared by notes/medialink; non-canonical ids ERROR_PARAM at yearbook, media, note-collection edges before any query; Upload prefix from stored public_id, yearbook Delete purges y.ID; openapi patterns, schema.d.ts, api-contract, Postman (media E36c-m M3 replay, notes, yearbooks). Edge table in the PR. book-export/get-text (T-093, PR #92) NOT covered: that PR must call ulid.Valid. cover_media_id/photo_media_id non-canonical answer ERROR_INVALID_MEDIA (400), not ERROR_PARAM. QA: probe each id param with lower/mixed case, spaces, ../; upload+delete with both spellings and list the bucket. Existing tests using non-ULID ids as unknown now expect 400.
+- 2026-10-21 08:06Z · leader · Leader 2026-10-21: book-export (T-093, PR #92) is not on develop yet; whichever merges second switches it to ulid.Valid. ERROR_INVALID_MEDIA for a non-canonical cover/photo id is acceptable (same 400 as an unknown photo).
 
 ### T-101 — [E12] Small hardening: readyz cache, generic code-email greeting, absolute session lifetime
 - **Status:** TODO
