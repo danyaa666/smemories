@@ -2620,7 +2620,7 @@
           ]
         },
         {
-          "name": "Get - id that is not a ULID - 404",
+          "name": "Get - id that is not a ULID - 400 ERROR_PARAM (T-100)",
           "request": {
             "method": "GET",
             "header": [
@@ -2657,8 +2657,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 404', () => pm.response.to.have.status(404));",
-                  "pm.test('error code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));",
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));",
                   "pm.test('has request_id', () => pm.expect(pm.response.json().request_id).to.be.a('string').and.not.empty);"
                 ]
               }

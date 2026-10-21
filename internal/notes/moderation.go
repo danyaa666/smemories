@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/danyaa666/smemories/internal/apperr"
+	"github.com/danyaa666/smemories/internal/ulid"
 )
 
 // Limits of the moderation endpoints (api/openapi.yaml, tag note).
@@ -112,26 +113,10 @@ func checkOwner(verified bool, bookID string) error {
 	if bookID == "" {
 		return apperr.New(apperr.Param, "yearbook_id is required")
 	}
-	if !isPublicID(bookID) {
+	if !ulid.Valid(bookID) {
 		return apperr.New(apperr.Param, "yearbook_id must be a yearbook id")
 	}
 	return nil
-}
-
-const crockford = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
-
-// isPublicID reports whether s is a canonical ULID: 26 upper-case Crockford base32 characters. The public_id columns
-// compare case-insensitively, so anything else would match a row under another spelling of its id.
-func isPublicID(s string) bool {
-	if len(s) != publicIDLen {
-		return false
-	}
-	for i := 0; i < len(s); i++ {
-		if strings.IndexByte(crockford, s[i]) < 0 {
-			return false
-		}
-	}
-	return true
 }
 
 // checkIDs validates the ids of a batch: at most max, each a public id, no duplicates; empty only when allowEmpty.
@@ -144,7 +129,7 @@ func checkIDs(ids []string, limit int, allowEmpty bool) error {
 	}
 	seen := make(map[string]struct{}, len(ids))
 	for _, id := range ids {
-		if !isPublicID(id) {
+		if !ulid.Valid(id) {
 			return apperr.New(apperr.Param, "ids must be note ids")
 		}
 		if _, dup := seen[id]; dup {

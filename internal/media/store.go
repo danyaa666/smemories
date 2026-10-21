@@ -48,17 +48,19 @@ type rowQuerier interface {
 	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
 }
 
-// ownedYearbook returns the internal id of a yearbook the user owns.
-func (s *Store) ownedYearbook(ctx context.Context, ownerID uint64, publicID string) (uint64, error) {
+// ownedYearbook returns the internal id and the STORED public id of a yearbook the user owns. Object keys are built from the
+// stored id: the column compares case-insensitively, so the caller's spelling may differ from it (audit M3).
+func (s *Store) ownedYearbook(ctx context.Context, ownerID uint64, publicID string) (uint64, string, error) {
 	var id uint64
-	err := s.db.QueryRowContext(ctx, `SELECT id FROM yearbook_tab WHERE owner_id = ? AND public_id = ?`, ownerID, publicID).Scan(&id)
+	var stored string
+	err := s.db.QueryRowContext(ctx, `SELECT id, public_id FROM yearbook_tab WHERE owner_id = ? AND public_id = ?`, ownerID, publicID).Scan(&id, &stored)
 	if errors.Is(err, sql.ErrNoRows) {
-		return 0, ErrNotFound
+		return 0, "", ErrNotFound
 	}
 	if err != nil {
-		return 0, dbError(err, "select yearbook")
+		return 0, "", dbError(err, "select yearbook")
 	}
-	return id, nil
+	return id, stored, nil
 }
 
 // checkQuota fails with ErrQuota when adding one more photo of size add would pass a limit.

@@ -1066,7 +1066,7 @@ export interface components {
             };
         };
         MediaCreateRequest: {
-            /** @description Required. ULID of a yearbook the caller owns */
+            /** @description Required. ULID of a yearbook the caller owns (26 upper-case characters). */
             yearbook_id: string;
             /**
              * Format: binary

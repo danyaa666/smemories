@@ -42,7 +42,7 @@ Error:
 ## 4. Field rules
 
 - **Timestamps**: Unix milliseconds as a JSON number (`int64`), named `*_at` (`created_at`, `deadline_at`). Unset optional timestamps are `null`. Always say "Unix ms" in the description.
-- **Ids**: the public id of a row is its ULID string (`id`, `yearbook_id`, ...). Internal numeric ids never leave the server (L-05 stays; the ULID is our ordered unique id, no UUID). Any other `int64`/`uint64` that can exceed 2^53 is a string; small counters and sizes (`bytes`, `width`) stay numbers.
+- **Ids**: the public id of a row is its ULID string (`id`, `yearbook_id`, ...). Ids are **canonical**: exactly 26 upper-case Crockford base32 characters (`^[0-9A-HJKMNP-TV-Z]{26}$`, `ulid.Valid`). The database compares ids case-insensitively, so every endpoint that takes an id from the client answers any other spelling (lower case, wrong length, spaces, look-alike characters) with 400 `ERROR_PARAM` before it queries anything (`ERROR_INVALID_MEDIA` for a `cover_media_id` / `photo_media_id` field, the code of an unknown photo); object-store keys are built from the stored id, never from the caller's spelling (T-100, audit M3). Internal numeric ids never leave the server (L-05 stays; the ULID is our ordered unique id, no UUID). Any other `int64`/`uint64` that can exceed 2^53 is a string; small counters and sizes (`bytes`, `width`) stay numbers.
 - **Calendar dates** that are not an instant (a birthday) are `"YYYY-MM-DD"` strings. This is the one documented exception to Unix ms.
 - **Enums** list every valid value and its meaning in the description.
 - Every field states required / optional and its default if the default changes behaviour.

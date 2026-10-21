@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -27,7 +28,7 @@ type fakeStore struct {
 }
 
 func newFakeStore() *fakeStore {
-	return &fakeStore{owners: map[string]uint64{"book1": 1}, byHash: map[[32]byte]*Public{}, revoked: map[string]int64{}}
+	return &fakeStore{owners: map[string]uint64{book1: 1}, byHash: map[[32]byte]*Public{}, revoked: map[string]int64{}}
 }
 
 func (f *fakeStore) create(_ context.Context, ownerID uint64, bookID string, c *Collection, hash [32]byte) error {
@@ -52,7 +53,7 @@ func (f *fakeStore) revoke(_ context.Context, ownerID uint64, id string, now int
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	for _, c := range f.created {
-		if c.ID == id && f.owners["book1"] == ownerID {
+		if c.ID == id && f.owners[book1] == ownerID {
 			if _, done := f.revoked[id]; !done {
 				f.revoked[id] = now
 			}
@@ -124,6 +125,9 @@ func newFixture() *fixture {
 	return f
 }
 
+// book1 is a canonical public id (the services refuse any other spelling before they query).
+const book1 = "01J9Z3K6V8Q4M7N2P5R8T0W1X1"
+
 func wantCode(t *testing.T, err error, code apperr.Code) {
 	t.Helper()
 	if err == nil || apperr.CodeOf(err) != code {
@@ -137,31 +141,31 @@ func TestCreateCollectionRules(t *testing.T) {
 	str := func(s string) *string { return &s }
 	ms := func(d time.Duration) *int64 { v := f.now.Add(d).UnixMilli(); return &v }
 
-	_, err := f.svc.CreateCollection(ctx, 1, false, &CreateInput{YearbookID: "book1"})
+	_, err := f.svc.CreateCollection(ctx, 1, false, &CreateInput{YearbookID: book1})
 	wantCode(t, err, CodeEmailNotVerified)
 	_, err = f.svc.CreateCollection(ctx, 1, true, &CreateInput{})
 	wantCode(t, err, apperr.Param)
-	_, err = f.svc.CreateCollection(ctx, 2, true, &CreateInput{YearbookID: "book1"}) // someone else's book
+	_, err = f.svc.CreateCollection(ctx, 2, true, &CreateInput{YearbookID: book1}) // someone else's book
 	wantCode(t, err, apperr.NotFound)
-	_, err = f.svc.CreateCollection(ctx, 1, true, &CreateInput{YearbookID: "nope"})
+	_, err = f.svc.CreateCollection(ctx, 1, true, &CreateInput{YearbookID: "01J9Z3K6V8Q4M7N2P5R8T0W1X2"})
 	wantCode(t, err, apperr.NotFound)
 	for name, in := range map[string]*CreateInput{
-		"label too long": {YearbookID: "book1", Label: str(string(make([]rune, maxLabel+1)))},
-		"control char":   {YearbookID: "book1", Label: str("bell\a")},
+		"label too long": {YearbookID: book1, Label: str(string(make([]rune, maxLabel+1)))},
+		"control char":   {YearbookID: book1, Label: str("bell\a")},
 	} {
 		if _, err := f.svc.CreateCollection(ctx, 1, true, in); apperr.CodeOf(err) != CodeInvalidLabel {
 			t.Errorf("%s: %v", name, err)
 		}
 	}
 	for name, d := range map[string]*int64{"past": ms(-time.Hour), "now": ms(0), "over a year": ms(366*24*time.Hour + time.Hour), "zero": new(int64)} {
-		if _, err := f.svc.CreateCollection(ctx, 1, true, &CreateInput{YearbookID: "book1", DeadlineAt: d}); apperr.CodeOf(err) != CodeInvalidDeadline {
+		if _, err := f.svc.CreateCollection(ctx, 1, true, &CreateInput{YearbookID: book1, DeadlineAt: d}); apperr.CodeOf(err) != CodeInvalidDeadline {
 			t.Errorf("deadline %s: %v", name, err)
 		}
 	}
 	if len(f.st.created) != 0 {
 		t.Fatalf("%d links created by rejected requests", len(f.st.created))
 	}
-	c, err := f.svc.CreateCollection(ctx, 1, true, &CreateInput{YearbookID: "book1", Label: str("  Class  "), DeadlineAt: ms(time.Hour)})
+	c, err := f.svc.CreateCollection(ctx, 1, true, &CreateInput{YearbookID: book1, Label: str("  Class  "), DeadlineAt: ms(time.Hour)})
 	if err != nil || len(c.Token) != tokenLen || c.Label != "Class" || c.CreatedAt != f.now.UnixMilli() {
 		t.Fatalf("created %+v: %v", c, err)
 	}
@@ -171,7 +175,7 @@ func TestResolveRules(t *testing.T) {
 	f := newFixture()
 	ctx := context.Background()
 	deadline := f.now.Add(time.Hour).UnixMilli()
-	c, err := f.svc.CreateCollection(ctx, 1, true, &CreateInput{YearbookID: "book1", DeadlineAt: &deadline})
+	c, err := f.svc.CreateCollection(ctx, 1, true, &CreateInput{YearbookID: book1, DeadlineAt: &deadline})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -180,7 +184,7 @@ func TestResolveRules(t *testing.T) {
 		t.Fatalf("open link: %v", err)
 	}
 	// unknown, malformed and revoked links are one and the same error
-	revoked, _ := f.svc.CreateCollection(ctx, 1, true, &CreateInput{YearbookID: "book1"})
+	revoked, _ := f.svc.CreateCollection(ctx, 1, true, &CreateInput{YearbookID: book1})
 	hash, _ := tokenHash(revoked.Token)
 	delete(f.st.byHash, hash) // what the real store does for revoked_at IS NOT NULL
 	for _, tok := range []string{"", "short", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", revoked.Token, c.Token + "x"} {
@@ -208,7 +212,7 @@ func TestResolveRules(t *testing.T) {
 func TestResolveLimits(t *testing.T) {
 	f := newFixture()
 	ctx := context.Background()
-	c, _ := f.svc.CreateCollection(ctx, 1, true, &CreateInput{YearbookID: "book1"})
+	c, _ := f.svc.CreateCollection(ctx, 1, true, &CreateInput{YearbookID: book1})
 	for range missesPerWindow {
 		_, _ = f.svc.Resolve(ctx, "ip", "x")
 	}
@@ -230,7 +234,7 @@ func TestResolveLimits(t *testing.T) {
 func TestRevokeAndListOwnership(t *testing.T) {
 	f := newFixture()
 	ctx := context.Background()
-	c, _ := f.svc.CreateCollection(ctx, 1, true, &CreateInput{YearbookID: "book1"})
+	c, _ := f.svc.CreateCollection(ctx, 1, true, &CreateInput{YearbookID: book1})
 	wantCode(t, f.svc.RevokeCollection(ctx, 2, c.ID), apperr.NotFound) // someone else's link
 	wantCode(t, f.svc.RevokeCollection(ctx, 1, ""), apperr.Param)
 	if err := f.svc.RevokeCollection(ctx, 1, c.ID); err != nil {
@@ -241,7 +245,7 @@ func TestRevokeAndListOwnership(t *testing.T) {
 	if err := f.svc.RevokeCollection(ctx, 1, c.ID); err != nil || f.st.revoked[c.ID] != first {
 		t.Fatalf("revoking again must succeed and keep the first time: %v", err)
 	}
-	_, err := f.svc.ListCollections(ctx, 2, "book1")
+	_, err := f.svc.ListCollections(ctx, 2, book1)
 	wantCode(t, err, apperr.NotFound)
 	_, err = f.svc.ListCollections(ctx, 1, "")
 	wantCode(t, err, apperr.Param)
@@ -364,5 +368,27 @@ func TestTakeSubmit(t *testing.T) {
 func TestStatusApprovedIsWhatPublicPhotoLinksRequire(t *testing.T) {
 	if StatusApproved != media.ShareableNoteStatus {
 		t.Fatalf("notes.StatusApproved %q != media.ShareableNoteStatus %q", StatusApproved, media.ShareableNoteStatus)
+	}
+}
+
+// Audit M3: an id that is not a canonical ULID is ERROR_PARAM before the store is asked (the columns match any spelling).
+func TestCollectionsRefuseNonCanonicalIDs(t *testing.T) {
+	f := newFixture()
+	ctx := context.Background()
+	c, err := f.svc.CreateCollection(ctx, 1, true, &CreateInput{YearbookID: book1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	created := len(f.st.created)
+	for _, bad := range []string{strings.ToLower(book1), book1[:25], book1 + "A", " " + book1[1:], book1[:25] + "I"} {
+		_, err := f.svc.CreateCollection(ctx, 1, true, &CreateInput{YearbookID: bad})
+		wantCode(t, err, apperr.Param)
+		_, err = f.svc.ListCollections(ctx, 1, bad)
+		wantCode(t, err, apperr.Param)
+		wantCode(t, f.svc.RevokeCollection(ctx, 1, bad), apperr.Param)
+		wantCode(t, f.svc.RevokeCollection(ctx, 1, strings.ToLower(c.ID)), apperr.Param)
+	}
+	if len(f.st.created) != created || len(f.st.revoked) != 0 {
+		t.Fatal("the store was touched by a refused id")
 	}
 }

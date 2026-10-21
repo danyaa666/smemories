@@ -372,10 +372,15 @@ func TestOwnership(t *testing.T) {
 		e.revoke(who, id).status(404, "ERROR_NOT_FOUND")
 	}
 	e.create(bob, aBook, `{}`).status(404, "ERROR_NOT_FOUND")
-	for _, missing := range []string{"01ARZ3NDEKTSV4RRFFQ69G5FAV", "nope", strings.Repeat("x", 500)} {
-		e.create(alice, missing, `{}`).status(404, "ERROR_NOT_FOUND")
-		e.list(alice, missing).status(404, "ERROR_NOT_FOUND")
-		e.revoke(alice, missing).status(404, "ERROR_NOT_FOUND")
+	missing := "01ARZ3NDEKTSV4RRFFQ69G5FAV"
+	e.create(alice, missing, `{}`).status(404, "ERROR_NOT_FOUND")
+	e.list(alice, missing).status(404, "ERROR_NOT_FOUND")
+	e.revoke(alice, missing).status(404, "ERROR_NOT_FOUND")
+	// T-100 (audit M3): anything that is not a canonical id, including the real ids in another spelling, is refused before the database.
+	for _, bad := range []string{"nope", strings.Repeat("x", 500), strings.ToLower(aBook), strings.ToLower(id), " " + aBook} {
+		e.create(alice, bad, `{}`).status(400, "ERROR_PARAM")
+		e.list(alice, bad).status(400, "ERROR_PARAM")
+		e.revoke(alice, bad).status(400, "ERROR_PARAM")
 	}
 	e.lookup(token).status(200, "") // nothing above touched the link
 	if e.count(`SELECT COUNT(*) FROM note_collection_tab WHERE revoked_at IS NOT NULL`) != 0 {

@@ -101,14 +101,14 @@ func yearbookPrefix(yearbookID string) string { return "yearbooks/" + yearbookID
 
 // Upload validates and stores one photo for a yearbook the user owns.
 func (s *Service) Upload(ctx context.Context, ownerID uint64, yearbookID string, data []byte) (*Media, error) {
-	yb, err := s.store.ownedYearbook(ctx, ownerID, yearbookID)
+	yb, stored, err := s.store.ownedYearbook(ctx, ownerID, yearbookID)
 	if err != nil {
 		return nil, err
 	}
 	if ok, retry, _ := s.limiter.Take(ctx, strconv.FormatUint(ownerID, 10)); !ok {
 		return nil, tooManyUploads(retry)
 	}
-	return s.save(ctx, ownerID, yb, yearbookID, KindOwner, func() ([]byte, error) { return data, nil }, 0)
+	return s.save(ctx, ownerID, yb, stored, KindOwner, func() ([]byte, error) { return data, nil }, 0)
 }
 
 // UploadContributor stores a photo sent through a collection link (T-034) in the yearbook with internal
@@ -223,7 +223,7 @@ func (s *Service) List(ctx context.Context, ownerID uint64, yearbookID, uploader
 	default:
 		return nil, 0, apperr.New(apperr.Param, "uploader must be owner, contributor or all")
 	}
-	yb, err := s.store.ownedYearbook(ctx, ownerID, yearbookID)
+	yb, _, err := s.store.ownedYearbook(ctx, ownerID, yearbookID)
 	if err != nil {
 		return nil, 0, err
 	}

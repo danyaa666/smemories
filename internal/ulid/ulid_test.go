@@ -2,6 +2,7 @@ package ulid
 
 import (
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 )
@@ -33,5 +34,35 @@ func TestTimestampPrefixKnownValue(t *testing.T) {
 func TestPreEpochTimeClampsToZero(t *testing.T) {
 	if got := New(time.UnixMilli(-1))[:10]; got != "0000000000" {
 		t.Fatalf("pre-1970 time should clamp to 0, got prefix %q", got)
+	}
+}
+
+func TestValid(t *testing.T) {
+	const ok = "01ARYZ6S41TSV4RRFFQ69G5FAV"
+	if !Valid(ok) || !Valid(New(time.Now())) {
+		t.Fatal("a canonical id was refused")
+	}
+	for name, s := range map[string]string{
+		"empty":                         "",
+		"lower case":                    strings.ToLower(ok),
+		"mixed case":                    ok[:13] + strings.ToLower(ok[13:]),
+		"25 characters":                 ok[:25],
+		"27 characters":                 ok + "A",
+		"I":                             "I" + ok[1:],
+		"L":                             "L" + ok[1:],
+		"O":                             "O" + ok[1:],
+		"U":                             "U" + ok[1:],
+		"space":                         " " + ok[1:],
+		"trailing space":                ok[:25] + " ",
+		"trailing newline":              ok[:25] + "\n",
+		"nul":                           ok[:25] + "\x00",
+		"accented look-alike (E-acute)": "\u00c9" + ok[2:], // 2 bytes: the total is 26 bytes, so only the alphabet check refuses it
+		"fullwidth digit":               "\uff10" + ok[3:],
+		"slash":                         ok[:25] + "/",
+		"dot dot":                       "../" + ok[3:],
+	} {
+		if Valid(s) {
+			t.Errorf("%s: %q accepted", name, s)
+		}
 	}
 }

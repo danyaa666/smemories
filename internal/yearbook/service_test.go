@@ -9,6 +9,7 @@ import (
 
 	"github.com/danyaa666/smemories/internal/apperr"
 	"github.com/danyaa666/smemories/internal/httpx"
+	"github.com/danyaa666/smemories/internal/ulid"
 )
 
 // fakeStore records what the service asks of the store; books maps owner -> public id -> book.
@@ -22,6 +23,7 @@ type fakeStore struct {
 	modifiedN int64 // the nowMs of the last modify
 	removed   []string
 	order     *[]string
+	calls     int // every store method that reached the (fake) database
 }
 
 func (f *fakeStore) note(s string) {
@@ -31,12 +33,14 @@ func (f *fakeStore) note(s string) {
 }
 
 func (f *fakeStore) create(_ context.Context, _ uint64, y *Yearbook) error {
+	f.calls++
 	f.created = append(f.created, *y)
 	return f.createErr
 }
 
 func (f *fakeStore) get(_ context.Context, owner uint64, id string) (*Yearbook, error) {
 	f.note("get")
+	f.calls++
 	if y, ok := f.books[owner][id]; ok {
 		return &y, nil // y is a copy, so the stored book is untouched
 	}
@@ -44,6 +48,7 @@ func (f *fakeStore) get(_ context.Context, owner uint64, id string) (*Yearbook, 
 }
 
 func (f *fakeStore) list(_ context.Context, _ uint64, c *cursor, limit int) ([]Yearbook, *cursor, error) {
+	f.calls++
 	f.gotLimit, f.gotAfter = limit, c
 	return nil, f.nextOut, nil
 }
@@ -60,10 +65,11 @@ func (f *fakeStore) modify(_ context.Context, owner uint64, id string, nowMs int
 	return y, nil
 }
 
-func (f *fakeStore) bumpLinkEpoch(context.Context, uint64, string) error { return nil }
+func (f *fakeStore) bumpLinkEpoch(context.Context, uint64, string) error { f.calls++; return nil }
 
 func (f *fakeStore) remove(_ context.Context, _ uint64, y *Yearbook, _ []ChildPurger) error {
 	f.note("remove")
+	f.calls++
 	f.removed = append(f.removed, y.ID)
 	return nil
 }
@@ -99,7 +105,7 @@ func TestServiceCreateDefaultsAndRequiredFields(t *testing.T) {
 	if y.CreatedAt != testNow.UnixMilli() || y.UpdatedAt != y.CreatedAt {
 		t.Errorf("times %d/%d, want %d", y.CreatedAt, y.UpdatedAt, testNow.UnixMilli())
 	}
-	if len(y.ID) != publicIDLen || len(y.Profile.ID) != publicIDLen || y.ID == y.Profile.ID {
+	if !ulid.Valid(y.ID) || !ulid.Valid(y.Profile.ID) || y.ID == y.Profile.ID {
 		t.Errorf("ids %q %q", y.ID, y.Profile.ID)
 	}
 	if p := y.Profile; !p.IsOwner || p.FullName != "Đặng Thị Hồng" {
@@ -241,3 +247,21 @@ func TestServiceDeletePurgesStorageBeforeTheTransaction(t *testing.T) {
 		t.Error("the book was removed although the object store failed")
 	}
 }
+
+// Audit M3 (T-100): the delete purges the prefix of the STORED id, whatever spelling the caller used.
+func TestServiceDeletePurgesTheStoredID(t *testing.T) {
+	const stored = "01J9Z3K6V8Q4M7N2P5R8T0W1XY"
+	f := &fakeStore{books: map[uint64]map[string]Yearbook{1: {strings.ToLower(stored): {ID: stored}}}} // the fake finds it under the caller's spelling, like the ci column
+	var got string
+	s := newTestService(f, purgerFunc(func(id string) error { got = id; return nil }))
+	if err := s.Delete(context.Background(), 1, strings.ToLower(stored)); err != nil {
+		t.Fatal(err)
+	}
+	if got != stored {
+		t.Fatalf("purged %q, want the stored id %q", got, stored)
+	}
+}
+
+type purgerFunc func(id string) error
+
+func (p purgerFunc) PurgeYearbook(_ context.Context, id string) error { return p(id) }

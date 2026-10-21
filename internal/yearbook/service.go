@@ -150,8 +150,8 @@ func (s *Service) Delete(ctx context.Context, ownerID uint64, publicID string) e
 	if err != nil {
 		return err
 	}
-	if s.purger != nil {
-		if err := s.purger.PurgeYearbook(ctx, publicID); err != nil {
+	if s.purger != nil { // the prefix is built from the stored id, never from the caller's spelling of it (audit M3)
+		if err := s.purger.PurgeYearbook(ctx, y.ID); err != nil {
 			return apperr.Wrap(CodeStorage, err, "object storage failed")
 		}
 	}
