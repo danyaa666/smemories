@@ -11,17 +11,18 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 12 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-095, T-096, T-097 |
-| TODO | 9 | T-094, T-101, T-105, T-106, T-107, T-109, T-110, T-111, T-112 |
-| READY_FOR_QA | 1 | T-104 |
-| CHANGES_REQUESTED | 1 | T-100 |
+| TODO | 9 | T-101, T-105, T-106, T-107, T-109, T-110, T-111, T-112, T-113 |
+| IN_PROGRESS | 1 | T-094 |
+| READY_FOR_QA | 1 | T-100 |
+| QA_PASS | 1 | T-104 |
 | DONE | 81 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-092, T-093, T-098, T-099, T-102, T-103, T-108 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
 **Awaiting your review (MERGED):** nothing
 
-**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?)
+**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?)
 
-_Board last written 2026-10-21 12:43Z_
+_Board last written 2026-10-21 12:57Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -558,6 +559,15 @@ QA_PASS and leader review OK on d714aad, CI green. One account can no longer blo
 - **Answer:** _(pending)_
 
 QA_PASS twice (before and after the develop merge) and leader review OK on b732c51, CI green. A login racing a password reset could create a session that survived the reset for 30 days; now every session carries the user's credential epoch and is refused once a reset or Google merge bumps it. Existing sessions keep working. Deploy: migration first, then the binary; rollback note added to docs/deploy.md. Reply 'team approve T-103'.
+
+### Q-050 — Approve merge of T-104 (media processing robustness, PR #94)?
+- **Status:** OPEN
+- **Asked:** 2026-10-21 12:57Z
+- **Blocks:** T-104
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+QA_PASS and leader review OK on 968b9d7, CI green. A crash inside image decoding, scaling or encoding (including the background print-size step) now answers 400 instead of taking the whole API down, the processing slot is always released, and decoded image sizes are re-checked. QA sent about 40 hostile files through the owner upload and the public form: all refused, server stayed up. Reply 'team approve T-104'.
 
 <!-- questions:end -->
 
@@ -4394,7 +4404,7 @@ Spec: .team/epics/E05-templates-export/15-book-text-export-api.md. GET /api/book
 - 2026-10-21 08:13Z · human · accepted by owner
 
 ### T-094 — [E05] Web: Export as text on the print screen, public-link warning, disable links
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -4402,10 +4412,10 @@ Spec: .team/epics/E05-templates-export/15-book-text-export-api.md. GET /api/book
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-094-e05-web-export-as-text-on-the-print-scre
 - **PR:** —
-- **Updated:** 2026-10-19 04:10Z by leader
+- **Updated:** 2026-10-21 12:52Z by dev
 - **Comments-seen:** 0
 
 Spec: .team/epics/E05-templates-export/16-book-text-export-web.md. Download and copy buttons, one-time public-link warning dialog, Disable photo links, e2e step with an anonymous link fetch and revoke.
@@ -4540,7 +4550,7 @@ Spec: `.team/epics/E12-security-hardening/02-mandatory-env-and-local-only-dev-te
 - 2026-10-21 03:43Z · human · accepted by owner
 
 ### T-100 — [E12] Canonical public ids and the stored id for object keys
-- **Status:** CHANGES_REQUESTED
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
@@ -4551,8 +4561,8 @@ Spec: `.team/epics/E12-security-hardening/02-mandatory-env-and-local-only-dev-te
 - **Assignee:** —
 - **Branch:** task/t-100-e12-canonical-public-ids-and-the-stored-
 - **PR:** https://github.com/danyaa666/smemories/pull/93
-- **Updated:** 2026-10-21 08:10Z by leader
-- **Comments-seen:** 5
+- **Updated:** 2026-10-21 12:51Z by dev
+- **Comments-seen:** 6
 
 Spec: `.team/epics/E12-security-hardening/03-canonical-public-ids.md`. Audit M3: public_id columns compare case-insensitively and media/yearbook use the caller's spelling in S3 prefixes, so a user can orphan objects, reset their quota and defeat deletion. Validate ids at the edge, build keys from the stored id. Do before T-025. Risk high: data.
 
@@ -4562,6 +4572,7 @@ Spec: `.team/epics/E12-security-hardening/03-canonical-public-ids.md`. Audit M3:
 - 2026-10-21 08:06Z · leader · Leader 2026-10-21: book-export (T-093, PR #92) is not on develop yet; whichever merges second switches it to ulid.Valid. ERROR_INVALID_MEDIA for a non-canonical cover/photo id is acceptable (same 400 as an unknown photo).
 - 2026-10-21 08:10Z · leader · Leader 2026-10-21: T-093 merged first (058deba). When you next merge develop into PR #93, make book-export/get-text use ulid.Valid for yearbook_id.
 - 2026-10-21 08:10Z · leader · Leader 2026-10-21: before QA, merge develop into PR #93 (T-093 is now on develop as 058deba) and make book-export/get-text validate yearbook_id with ulid.Valid (add it to the PR's edge table, one handler test with a lower-case id). No other change. Then READY_FOR_QA.
+- 2026-10-21 12:51Z · dev · Merged origin/develop (058deba T-093, T-099, T-102, T-103, T-108; no conflicts). book-export/get-text now rejects a non-canonical yearbook_id with ERROR_PARAM in the handler (ulid.Valid, before the service); test TestHandlerRefusesANonCanonicalYearbookID (lower case, short, empty, trailing space; nil service); edge table updated. Nothing else changed. Head 2210d38. make lint test test-integration -race green (private compose project t100dev, taken down without -v). Do not merge PR #94 into this branch: both touch internal/media/service.go.
 
 ### T-101 — [E12] Small hardening: readyz cache, generic code-email greeting, absolute session lifetime
 - **Status:** TODO
@@ -4665,7 +4676,7 @@ Spec: .team/epics/E12-security-hardening/06-session-fence-against-credential-cha
 - 2026-10-21 08:13Z · human · accepted by owner
 
 ### T-104 — [E12] Media processing robustness: slots released on every path, no panics, decoded limits
-- **Status:** READY_FOR_QA
+- **Status:** QA_PASS
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
@@ -4673,16 +4684,26 @@ Spec: .team/epics/E12-security-hardening/06-session-fence-against-credential-cha
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** leader
 - **Branch:** task/t-104-e12-media-processing-robustness-slots-re
 - **PR:** https://github.com/danyaa666/smemories/pull/94
-- **Updated:** 2026-10-21 08:23Z by dev
-- **Comments-seen:** 1
+- **Updated:** 2026-10-21 12:57Z by qa
+- **Comments-seen:** 3
 
 Spec: .team/epics/E12-security-hardening/08-media-processing-robustness.md (read it from the repo root). Source: audit run 1, docs/security-audit-skill-2026-10-20/ (PR #86). Risk high: owner approves the merge.
 
 #### Comments
 - 2026-10-21 08:23Z · dev · PR #94 head 968b9d7. processPhoto = acquire + defer release; recover in process/print goroutine/printOf/loader -> 400 + one ERROR log + smem_media_process_panics_total; matchesHeader after decode (size + NYCbCrA alpha plane). x/image v0.46.0 webp already refuses VP8X canvas/frame mismatch before allocating (fixture testdata/vp8x-canvas-mismatch.webp pins it). Tests: robustness_test.go, panic_integration_test.go; lint + full integration suite green (private compose t104, now down). Verify: removing the print-goroutine recover kills the test binary. Overlap with #93: save() slot block moved.
+- 2026-10-21 12:57Z · qa · QA_PASS, PR #94 head 968b9d7 (CI green; merges into current develop without conflict, merged tree builds and media/notes/metrics integration tests pass with -race).
+  Evidence (AC -> how -> result):
+  AC1 panicking loader/decoder/encoder -> robustness_test.go + panic_integration_test.go (go test -race, run by me) -> PASS: 400 ERROR_INVALID_IMAGE, panicError hidden from client message, slot gauge 0, one ERROR line, counter +1. Mutations I made in a scratch worktree: removing recoverTo("print") -> test binary dies with "panic: boom [recovered, repanicked]" from the process.func1 goroutine (proves the test); removing recoverTo("load") fails TestProcessPhotoGivesTheSlotBackOnEveryPath/loader_panics; removing recoverTo("process") fails the decoder and encoder panic tests.
+    Seams: decodeImage/encodeImage are swapped only in tests that never call t.Parallel nor newEnv (which is parallel); Go resumes parallel tests only after all serial ones finish, so no overlap. Extra: a panic in the display encode while the print goroutine is still running is handled (my throwaway test, -race x3, no race; not committed).
+  AC2 VP8X: read x/image v0.46.0 webp/decode.go myself. DecodeConfig of VP8X returns the canvas without reading the frame (lines 177-196). Decode: VP8 case line 86 refuses frame != canvas before DecodeFrame allocates; VP8L case lines 117-148 peeks the header and refuses mismatch before vp8l.Decode; ALPH is allocated from the canvas (readAlpha) which withinLimits already bounded (canvas <= 25 MP). So the dev's claim holds; fixture testdata/vp8x-canvas-mismatch.webp (58 B) is kept and tested (allocation < 8 MiB). Also my own VP8X files (5000x5000 and 16383x16383 canvas with ALPH raw-short/VP8L, no frame, 2^24 x 2^24) -> all 400 fast.
+  AC3 -> make lint exit 0; go test -race ./... all ok (media 30 s); make test-integration on my compose project qat104 (ports 23306/26379/29000, SMEM_TEST_S3_ENDPOINT=:29000, SMEM_ENV via .env) all 26 packages ok incl. media 142 s. Existing image/fuzz-seed/print-size tests pass (TestProcessPrintVersion, TestPrintOfDisplay, TestPrintOfKeepsDisplayWhenPrintIsNotSmaller).
+  Real API probe (binary built from head, SMEM_ENV=dev, metrics on): 40 hostile files x 2 routes (owner POST /api/media/create and public POST /api/public-collect/submit-note): truncated and corrupt JPEG/PNG/WebP, garbage with valid magic, JPEG SOF and PNG IHDR and WebP VP8/VP8L header lying big (60000, 2^31-1, 16383), zero dims, bad CRC, PNG zlib bombs (5001x5000 and short-IDAT 4000x30000 -> 400; 5000x5000 and 4096x4096 16-bit -> accepted as they are within the documented caps, ~1 s), VP8X files. Every refusal was 400 ERROR_INVALID_IMAGE; header-lying-small files decode consistently and are accepted. A 40-request parallel burst of the same files: only 400/429/503 (limits), server stayed up (/healthz 200), smem_media_processing_slots_in_use 0 and smem_media_uploads_in_progress 0 afterwards, panics_total 0, no ERROR log lines. Real panics cannot be triggered through the API (none known), so that path is covered by the seam tests only.
+  Non-blocking observations: (1) a corrupt lossy WebP with a damaged middle is accepted and re-encoded (the decoder tolerates it); not a safety issue. (2) withinLimits estimates lossy WebP+alpha at 2.5 B/px but ALPH compression=1 decodes to a transient NRGBA (4 B/px), so a valid 5000x5000 file could peak near 160 MB against a 62 MB estimate; pre-existing and outside T-104, worth a follow-up note for the memory budget. (3) printOf panics (backfill CLI) are recovered but not logged/counted by the service (only the CLI path); fine. (4) If the display encode panics, wg.Wait is skipped and the print goroutine may outlive the slot release for a moment; harmless (its output is discarded), mention only.
+  Stack qat104 taken down without -v; my API process stopped (own pid). No .team/ changes in the PR.
+- 2026-10-21 12:57Z · leader · Leader review OK on 968b9d7: processPhoto owns the slot (acquire + defer release in one function), recoverTo on load/process/print with reportPanic counting after the recover; decoded bounds re-checked; VP8X proven harmless by reading x/image and pinned by a fixture. QA_PASS with ~40 hostile files through owner upload and the public form plus a burst: all 400, server up, gauges 0. QA follow-up (lossy WebP with ALPH decodes to NRGBA, ~4 B/px vs the 2.5 B/px estimate) goes to T-113. Waiting for the owner's approval (risk high).
 
 ### T-105 — [E12] Note links capped and paged; contributor photos cannot exhaust the owner's quota
 - **Status:** TODO
@@ -4846,6 +4867,25 @@ Spec: .team/epics/E13-legal/01-terms-acceptance-api.md (read it from the repo ro
 - **Comments-seen:** 0
 
 Spec: .team/epics/E13-legal/02-legal-pages-web.md. Pages from docs/legal (draft banner while DRAFT), required checkbox at sign-up, accept screen, footer links, notice on the public note form, e2e step.
+
+#### Comments
+
+### T-113 — [E12] Media memory estimate for lossy WebP with alpha (ALPH) is too low
+- **Status:** TODO
+- **Priority:** P3
+- **Type:** bug
+- **Milestone:** M2
+- **Depends-on:** —
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-21 12:57Z by leader
+- **Comments-seen:** 0
+
+QA of T-104 (2026-10-21): a lossy WebP with an ALPH chunk (compression 1) decodes to a transient NRGBA at about 4 bytes per pixel, while the decode-memory estimate in internal/media assumes about 2.5; a valid 5000x5000 file can peak near 160 MB against an estimated 62 MB, so the processing-slot and SMEM_MEMORY_LIMIT_MIB sizing (docs/media.md) is optimistic. Fix the estimate per format (WebP with alpha uses 4 B/px, or the real decoder output size), add a test with a WebP-with-alpha fixture that measures the peak (testing.AllocsPerRun or runtime.MemStats around one decode), update the numbers in docs/media.md. No behaviour change for JPEG and PNG.
 
 #### Comments
 
