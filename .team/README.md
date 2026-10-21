@@ -21,7 +21,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?)
 
-_Board last written 2026-10-21 03:43Z_
+_Board last written 2026-10-21 07:43Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4315,7 +4315,7 @@ Small leftovers from the T-090 QA: (1) scripts/image-smoke.sh: when SMOKE_TIMEOU
 - **Branch:** task/t-092-e05-public-photo-links-signed-token-publ
 - **PR:** https://github.com/danyaa666/smemories/pull/85
 - **Updated:** 2026-10-21 03:43Z by human
-- **Comments-seen:** 5
+- **Comments-seen:** 6
 
 Spec: .team/epics/E05-templates-export/14-public-photo-links-api.md (read it from the repo root). Decision D-32: the owner chose permanent public photo links; this task adds the HMAC token, GET /api/public-media/get-content, POST /api/yearbook/revoke-photo-links and the SMEM_MEDIA_LINK_SECRET config. Risk high: owner approves the merge.
 
@@ -4453,7 +4453,7 @@ Spec: .team/epics/E11-signatures/03-signature-print.md. Next phase.
 - **Branch:** task/t-098-e12-ipv6-64-keying-and-a-per-account-log
 - **PR:** https://github.com/danyaa666/smemories/pull/87
 - **Updated:** 2026-10-21 03:43Z by human
-- **Comments-seen:** 7
+- **Comments-seen:** 8
 
 Spec: `.team/epics/E12-security-hardening/01-ipv6-keying-and-account-login-limit.md`. Audit M1: every per-IP limiter keys on the full address, so one IPv6 /64 walks around all of them, and login has no per-account cap. Mask IPv6 to /64 in ResolveClientIP, add a fail-closed per-account failed-login limiter. Risk high: auth.
 
@@ -4480,7 +4480,7 @@ Spec: `.team/epics/E12-security-hardening/01-ipv6-keying-and-account-login-limit
 - **Branch:** task/t-099-e12-mandatory-smem-env-and-local-only-de
 - **PR:** https://github.com/danyaa666/smemories/pull/88
 - **Updated:** 2026-10-21 03:43Z by human
-- **Comments-seen:** 10
+- **Comments-seen:** 11
 
 Spec: `.team/epics/E12-security-hardening/02-mandatory-env-and-local-only-dev-test.md`. Audit M2 and L7: SMEM_ENV defaults to dev, which prints OTP codes, uses the public OTP key and drops the cookie Secure flag. Make it required in every command, and refuse dev/test when origins are not local. Risk high: production configuration.
 
@@ -4562,7 +4562,7 @@ Spec: `.team/epics/E12-security-hardening/04-readyz-greeting-session-lifetime.md
 - **Branch:** task/t-102-e12-upload-slot-fairness-per-user-cap-an
 - **PR:** https://github.com/danyaa666/smemories/pull/90
 - **Updated:** 2026-10-21 03:43Z by leader
-- **Comments-seen:** 5
+- **Comments-seen:** 7
 
 Spec: .team/epics/E12-security-hardening/05-upload-slot-fairness.md (read it from the repo root). Source: audit run 1, docs/security-audit-skill-2026-10-20/ (PR #86). Risk high: owner approves the merge.
 
@@ -4707,7 +4707,7 @@ Spec: .team/epics/E12-security-hardening/07-bounded-photo-download-memory.md (re
 - **Branch:** task/t-108-e06-concurrent-smemories-migrate-up-on-a
 - **PR:** https://github.com/danyaa666/smemories/pull/91
 - **Updated:** 2026-10-21 03:42Z by leader
-- **Comments-seen:** 4
+- **Comments-seen:** 6
 
 Spec: .team/epics/E06-go-live/11-concurrent-migrate-race.md. CI image job flake seen on develop and on PR #85 (QA of T-092); fix the lock order in internal/db/migrate.go.
 
