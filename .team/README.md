@@ -13,8 +13,8 @@
 | BACKLOG | 12 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-095, T-096, T-097 |
 | TODO | 7 | T-094, T-101, T-105, T-106, T-107, T-109, T-110 |
 | IN_PROGRESS | 1 | T-104 |
-| READY_FOR_QA | 1 | T-100 |
 | QA_PASS | 1 | T-103 |
+| CHANGES_REQUESTED | 1 | T-100 |
 | MERGED | 3 | T-093, T-102, T-108 |
 | DONE | 77 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-092, T-098, T-099 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
@@ -4539,19 +4539,19 @@ Spec: `.team/epics/E12-security-hardening/02-mandatory-env-and-local-only-dev-te
 - 2026-10-21 03:43Z · human · accepted by owner
 
 ### T-100 — [E12] Canonical public ids and the stored id for object keys
-- **Status:** READY_FOR_QA
+- **Status:** CHANGES_REQUESTED
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
 - **Depends-on:** T-092
 - **Risk:** high
-- **Rework:** 0
+- **Rework:** 1
 - **Owner-approved:** —
 - **Assignee:** —
 - **Branch:** task/t-100-e12-canonical-public-ids-and-the-stored-
 - **PR:** https://github.com/danyaa666/smemories/pull/93
-- **Updated:** 2026-10-21 08:06Z by dev
-- **Comments-seen:** 4
+- **Updated:** 2026-10-21 08:10Z by leader
+- **Comments-seen:** 5
 
 Spec: `.team/epics/E12-security-hardening/03-canonical-public-ids.md`. Audit M3: public_id columns compare case-insensitively and media/yearbook use the caller's spelling in S3 prefixes, so a user can orphan objects, reset their quota and defeat deletion. Validate ids at the edge, build keys from the stored id. Do before T-025. Risk high: data.
 
@@ -4560,6 +4560,7 @@ Spec: `.team/epics/E12-security-hardening/03-canonical-public-ids.md`. Audit M3:
 - 2026-10-21 08:06Z · dev · PR #93 head d021ada. ulid.Valid shared by notes/medialink; non-canonical ids ERROR_PARAM at yearbook, media, note-collection edges before any query; Upload prefix from stored public_id, yearbook Delete purges y.ID; openapi patterns, schema.d.ts, api-contract, Postman (media E36c-m M3 replay, notes, yearbooks). Edge table in the PR. book-export/get-text (T-093, PR #92) NOT covered: that PR must call ulid.Valid. cover_media_id/photo_media_id non-canonical answer ERROR_INVALID_MEDIA (400), not ERROR_PARAM. QA: probe each id param with lower/mixed case, spaces, ../; upload+delete with both spellings and list the bucket. Existing tests using non-ULID ids as unknown now expect 400.
 - 2026-10-21 08:06Z · leader · Leader 2026-10-21: book-export (T-093, PR #92) is not on develop yet; whichever merges second switches it to ulid.Valid. ERROR_INVALID_MEDIA for a non-canonical cover/photo id is acceptable (same 400 as an unknown photo).
 - 2026-10-21 08:10Z · leader · Leader 2026-10-21: T-093 merged first (058deba). When you next merge develop into PR #93, make book-export/get-text use ulid.Valid for yearbook_id.
+- 2026-10-21 08:10Z · leader · Leader 2026-10-21: before QA, merge develop into PR #93 (T-093 is now on develop as 058deba) and make book-export/get-text validate yearbook_id with ulid.Valid (add it to the PR's edge table, one handler test with a lower-case id). No other change. Then READY_FOR_QA.
 
 ### T-101 — [E12] Small hardening: readyz cache, generic code-email greeting, absolute session lifetime
 - **Status:** TODO
