@@ -12,9 +12,9 @@
 |---|---:|---|
 | BACKLOG | 12 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-095, T-096, T-097 |
 | TODO | 7 | T-101, T-105, T-106, T-109, T-113, T-114, T-115 |
-| READY_FOR_QA | 2 | T-110, T-112 |
-| QA_FAIL | 1 | T-107 |
-| QA_PASS | 1 | T-111 |
+| READY_FOR_QA | 1 | T-107 |
+| IN_QA | 1 | T-110 |
+| QA_PASS | 2 | T-111, T-112 |
 | DONE | 84 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-092, T-093, T-094, T-098, T-099, T-100, T-102, T-103, T-104, T-108 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
@@ -22,7 +22,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?); Q-051 (Approve merge of T-100 (canonical public ids, PR #93)?); Q-052 (Approve merge of T-111 (Terms acceptance API, PR #96; merges together with T-112)?)
 
-_Board last written 2026-10-21 19:19Z_
+_Board last written 2026-10-21 23:01Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4793,7 +4793,7 @@ Spec: .team/epics/E12-security-hardening/10-auth-and-repo-hygiene.md (read it fr
 #### Comments
 
 ### T-107 — [E12] Bound the memory of photo downloads (get-content and public-media)
-- **Status:** QA_FAIL
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
@@ -4804,8 +4804,8 @@ Spec: .team/epics/E12-security-hardening/10-auth-and-repo-hygiene.md (read it fr
 - **Assignee:** —
 - **Branch:** task/t-107-e12-bound-the-memory-of-photo-downloads-
 - **PR:** https://github.com/danyaa666/smemories/pull/98
-- **Updated:** 2026-10-21 19:09Z by qa
-- **Comments-seen:** 3
+- **Updated:** 2026-10-21 23:01Z by dev
+- **Comments-seen:** 5
 
 Spec: .team/epics/E12-security-hardening/07-bounded-photo-download-memory.md (read it from the repo root). Source: audit run 1, docs/security-audit-skill-2026-10-20/ (PR #86). Risk high: owner approves the merge.
 
@@ -4837,6 +4837,8 @@ Spec: .team/epics/E12-security-hardening/07-bounded-photo-download-memory.md (re
   - A ranged or early-closed GET closes the store connection, so each range request costs a new connection (documented by the dev).
   - Environment incident: during my run Docker Desktop's VM stopped answering (docker.sock 500, "no route to host 192.168.65.7:2376"), a media -race run then timed out with "test database unreachable". It was not the test or the code: I quit and reopened Docker Desktop once (containers restarted by themselves, the kind containers too), then reran everything above successfully. My stack qat107 is down (no -v; volumes qat107_* remain).
 - 2026-10-21 19:10Z · leader · Leader 2026-10-22 after QA_FAIL: the spec was wrong, not the code. Requirement 2 and AC3 are amended: the per-user and per-client-key cap is 64 (streaming already keeps memory flat; the cap only bounds connections), and AC3 now requires 30 and 100 thumbnails to load over HTTP/2. Rework: change the constant, update docs/media.md with the reason, add the HTTP/2 gallery check (the QA's h2-proxy repro is on this board), keep everything else (AC1/AC2 passed). Re-read the spec.
+- 2026-10-21 23:01Z · dev · Rework head 70efad7 (merged origin/develop, no force-push). Cap 64 (constant), reason in docs/media.md. DEVIATION to confirm: cap 64 alone failed 100 thumbs over h2 (Chromium via h2 proxy: 83/100, 17x429, all 100 start in the same instant), so a client at the cap waits up to 500 ms (downloadGrace) for a slot before the 429; 64 slow readers still get 429. New tools/e2e/h2-gallery.spec.mjs in make e2e: 30 and 100 thumbs over h2 and http/1.1 all 200 (3 runs); Go: TestGalleryPageOfThumbnailsLoadsAtOnce (fails at cap 8), TestDownloadAtTheCapWaitsForAFreedSlot, 65th=429 both routes. make lint test test-integration (-race) + make e2e green; Postman not re-run. QA: re-run e2e + your h2 repro; check the wait is acceptable. Risk high: owner approves merge.
+- 2026-10-21 23:01Z · leader · Leader 2026-10-22: the 500 ms wait for a freed slot before the 429 (downloadGrace in takeDownload) is accepted as part of requirement 2: bounded, it keeps 64 slow readers refused, and it makes a 100-thumbnail HTTP/2 burst load. QA re-checks with make e2e (new h2-gallery spec) and the h2 repro.
 
 ### T-108 — [E06] Concurrent smemories-migrate up on an empty database fails (missing zero version migration)
 - **Status:** DONE
@@ -4890,7 +4892,7 @@ QA of T-103 (2026-10-21): go-integration was red once on internal/auth TestConcu
 #### Comments
 
 ### T-110 — [E12] Owner uploads need a verified email and a per-client share; bound drains of rejected public bodies
-- **Status:** READY_FOR_QA
+- **Status:** IN_QA
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
@@ -4898,10 +4900,10 @@ QA of T-103 (2026-10-21): go-integration was red once on internal/auth TestConcu
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** qa
 - **Branch:** task/t-110-e12-owner-uploads-need-a-verified-email-
 - **PR:** https://github.com/danyaa666/smemories/pull/99
-- **Updated:** 2026-10-21 19:19Z by dev
+- **Updated:** 2026-10-21 22:42Z by qa
 - **Comments-seen:** 1
 
 Spec: .team/epics/E12-security-hardening/11-upload-abuse-followup.md (read it from the repo root). Source: QA of T-102. Risk high: owner approves the merge.
@@ -4940,7 +4942,7 @@ Spec: .team/epics/E13-legal/01-terms-acceptance-api.md (read it from the repo ro
 - 2026-10-21 18:16Z · leader · Leader review OK on e0a1ba6: one gate in requireUser (needTerms) compares the user row's terms_version with legal.CurrentVersion on every signed-in route; the exempt routes are explicit (get-me, accept-terms, verify-email, resend-verification via requireSession; logout needs no session); register validates accept_terms_version and stores it in the account transaction; the four-doc version test ties text and constant. QA_PASS: 22 gated routes probed live, migration up/down/up on data, Postman gate flow 12/12. Merge together with T-112 (#96 then #97). Waiting for the owner's approval (risk high).
 
 ### T-112 — [E13] Web: Terms and Privacy pages, sign-up checkbox, accept screen, friend-form notice
-- **Status:** READY_FOR_QA
+- **Status:** QA_PASS
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M2
@@ -4948,10 +4950,10 @@ Spec: .team/epics/E13-legal/01-terms-acceptance-api.md (read it from the repo ro
 - **Risk:** low
 - **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** leader
 - **Branch:** task/t-112-e13-web-terms-and-privacy-pages-sign-up-checkbox
 - **PR:** 97
-- **Updated:** 2026-10-21 18:17Z by dev
+- **Updated:** 2026-10-21 22:43Z by qa
 - **Comments-seen:** 8
 
 Spec: .team/epics/E13-legal/02-legal-pages-web.md. Pages from docs/legal (draft banner while DRAFT), required checkbox at sign-up, accept screen, footer links, notice on the public note form, e2e step.
@@ -4971,6 +4973,7 @@ Spec: .team/epics/E13-legal/02-legal-pages-web.md. Pages from docs/legal (draft 
 - 2026-10-21 18:16Z · leader · QA_PASS received on c9f0c4c (77 browser checks). One rework before merge, no QA re-check needed: remove docs/legal/screenshots from the PR (put them on a screenshots/t-112 branch linked from the PR body, like T-094). Nothing else changes. Then READY_FOR_QA is not needed: set QA_PASS? No: set READY_FOR_QA and the leader confirms the file-only diff.
 - 2026-10-21 18:17Z · dev · Rework is files-only: 96ab278 deletes the 20 docs/legal/screenshots/ images (git diff c9f0c4c 96ab278 lists only those deletions); images kept on branch screenshots/t-112 (from c9f0c4c); PR body links updated. No code change, leader checks without new QA run.
 - 2026-10-21 18:17Z · leader · Leader checked 96ab278: git diff c9f0c4c..96ab278 is exactly the 20 deleted screenshot files, nothing else. The board only lets QA set QA_PASS, so QA confirms this files-only diff in its next run (no functional re-test needed) and records QA_PASS; then #96 and #97 merge once the owner approves T-111.
+- 2026-10-21 22:43Z · qa · Re-verification of head 96ab278 (previously passed c9f0c4c). git diff --name-status c9f0c4c 96ab278: 20 files, all status D; 0 paths outside docs/legal/screenshots/ (git diff --name-only | grep -v screenshots -> 0). No functional change, no re-test per leader instruction. gh pr checks 97: e2e, go, go-integration, image, security, web all pass; run 39651353268 headSha = 96ab278 = PR head.
 
 ### T-113 — [E12] Media memory estimate for lossy WebP with alpha (ALPH) is too low
 - **Status:** TODO
