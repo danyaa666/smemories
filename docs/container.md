@@ -74,11 +74,11 @@ in every environment.
   what is tested, and two runs side by side do not touch each other; the tag is removed at the end), then runs [`scripts/image-smoke.sh`](../scripts/image-smoke.sh), which starts
   its own private MySQL, Valkey and MinIO (never the `make up` stack) and checks: user, labels, no shell, file list, size under 60 MB;
   the API refusing an un-migrated database, two concurrent `smemories-migrate up`, `status`, `version`, `down` refused in prod, `smemories-media-backfill --dry-run`; the prod refusals (dev OTP shortcut, missing or short
-  `SMEM_OTP_KEY` and `SMEM_MEDIA_LINK_SECRET`, no secret echoed); a read-only root without the spool; the API under `--read-only --user 65532 --cap-drop ALL` (health,
+  `SMEM_OTP_KEY` and `SMEM_MEDIA_LINK_SECRET`, no secret echoed); the API refusing to start without `SMEM_ENV` and with `SMEM_ENV=test` plus a public base URL or origin (T-099: the image sets no `SMEM_ENV`, every task definition must); a read-only root without the spool; the API under `--read-only --user 65532 --cap-drop ALL` (health,
   register, login, yearbook create, photo upload); SIGTERM during a slow request (readyz 503 while draining, the request completes, exit 0).
 - Section 3 of the script also proves that a prod start refuses plaintext database and Redis (the script sets `SMEM_DB_ALLOW_INSECURE` and `SMEM_REDIS_ALLOW_INSECURE`
   for its private network only), http origins, a missing memory limit, a public metrics address and a missing bucket.
-- The API part runs with `SMEM_ENV=test` and the log mailer, which refuses `prod`; production uses Amazon SES (`SMEM_MAIL_PROVIDER=ses`, [email.md](email.md)),
+- The API part runs with `SMEM_ENV=test`, local origins (`http://localhost:5173`: dev and test are local-only) and the log mailer, which refuses `prod`; production uses Amazon SES (`SMEM_MAIL_PROVIDER=ses`, [email.md](email.md)),
   which the smoke test cannot reach, so SES is covered by the stub tests in `internal/mailer`.
 - Every wait of the smoke test is bounded (T-090): each one-off task by `SMOKE_TASK_TIMEOUT` (120 s), every `curl` by `--max-time`, the image pulls by 600 s and the whole script by
   `SMOKE_TIMEOUT` (900 s; a warm run takes about 30 s), so a stuck container fails the run with a message instead of hanging it.

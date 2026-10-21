@@ -20,7 +20,7 @@ import (
 // Config is the validated process configuration.
 type Config struct {
 	HTTPAddr    string     // SMEM_HTTP_ADDR, host:port to listen on
-	Env         string     // SMEM_ENV: dev, test or prod
+	Env         string     // SMEM_ENV: dev, test or prod; required, no default
 	LogLevel    slog.Level // SMEM_LOG_LEVEL: debug, info, warn or error
 	MetricsAddr string     // SMEM_METRICS_ADDR: host:port of the internal /metrics listener, empty = off (never the public address)
 
@@ -122,7 +122,10 @@ func load(getenv func(string) string, forAPI bool) (Config, error) {
 	}
 
 	var err error
-	cfg := Config{HTTPAddr: get("SMEM_HTTP_ADDR", ":8080"), Env: get("SMEM_ENV", "dev")}
+	cfg := Config{HTTPAddr: get("SMEM_HTTP_ADDR", ":8080"), Env: getenv("SMEM_ENV")}
+	if cfg.Env == "" { // no default: a task that loses the variable must not boot in the weakest mode (T-099)
+		return Config{}, fmt.Errorf("SMEM_ENV is required: dev, test or prod")
+	}
 
 	if _, port, err := net.SplitHostPort(cfg.HTTPAddr); err != nil {
 		return Config{}, fmt.Errorf("SMEM_HTTP_ADDR=%q: want host:port, e.g. :8080", cfg.HTTPAddr)
@@ -180,6 +183,9 @@ func load(getenv func(string) string, forAPI bool) (Config, error) {
 		if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.Path != "" || u.RawQuery != "" || u.User != nil {
 			return Config{}, fmt.Errorf("SMEM_ALLOWED_ORIGINS: %q is not an origin such as https://example.com (no credentials, path or query)", redactURL(o))
 		}
+		if err := checkLocalOnly(cfg.Env, "SMEM_ALLOWED_ORIGINS", u.Hostname()); err != nil {
+			return Config{}, err
+		}
 		cfg.AllowedOrigins = append(cfg.AllowedOrigins, strings.ToLower(u.Scheme+"://"+u.Host))
 	}
 	if len(cfg.AllowedOrigins) == 0 && forAPI {
@@ -194,6 +200,11 @@ func load(getenv func(string) string, forAPI bool) (Config, error) {
 	}
 	if u, err := url.Parse(base); base != "" && (err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.RawQuery != "" || u.Fragment != "" || u.User != nil) {
 		return Config{}, fmt.Errorf("SMEM_PUBLIC_BASE_URL=%q: want a URL such as https://app.example.com (no credentials, query or fragment)", redactURL(base))
+	}
+	if u, _ := url.Parse(base); base != "" {
+		if err := checkLocalOnly(cfg.Env, "SMEM_PUBLIC_BASE_URL", u.Hostname()); err != nil {
+			return Config{}, err
+		}
 	}
 	cfg.PublicBaseURL = strings.TrimRight(base, "/")
 	if cfg.TrustProxy, err = strconv.ParseBool(get("SMEM_TRUST_PROXY", "false")); err != nil {
@@ -405,7 +416,7 @@ func (cfg *Config) loadOTP(getenv func(string) string) error {
 	} else {
 		return fmt.Errorf("SMEM_OTP_KEY is required when SMEM_ENV is %s (at least %d random bytes, e.g. `openssl rand -base64 48`)", cfg.Env, minOTPKeyBytes)
 	}
-	// DEV-SHORTCUT(otp): the fixed code. The raw SMEM_ENV is read, not cfg.Env, so an empty SMEM_ENV (which defaults to dev) refuses too.
+	// DEV-SHORTCUT(otp): the fixed code. The raw SMEM_ENV is read, not cfg.Env (SMEM_ENV has no default; load already refuses an empty one).
 	if fixed := getenv("SMEM_DEV_FIXED_OTP"); fixed != "" { // DEV-SHORTCUT(otp)
 		if env := getenv("SMEM_ENV"); env != "dev" && env != "test" { // DEV-SHORTCUT(otp)
 			return fmt.Errorf("SMEM_DEV_FIXED_OTP is set but SMEM_ENV=%q: the fixed code is only allowed when SMEM_ENV is dev or test; unset it", env) // DEV-SHORTCUT(otp)

@@ -7,6 +7,7 @@
 #   2. the API refuses an un-migrated database; two concurrent smemories-migrate up are safe; down is refused in prod; status, version
 #      and smemories-media-backfill --dry-run from the same image
 #   3. the API refuses to start in prod with the dev OTP shortcut set and with SMEM_OTP_KEY missing
+#   3b. the API refuses to start without SMEM_ENV, and with SMEM_ENV=test and a public base URL or origin (T-099)
 #   4. a read-only root filesystem without the writable spool mount fails at start-up with a clear message
 #   5. the API with --read-only --user 65532 --cap-drop ALL: healthz, readyz, register, yearbook create, photo upload
 #   6. SIGTERM during a slow request: /readyz answers 503 while draining, the request still completes, exit code 0
@@ -29,7 +30,8 @@ MAX_MB=60
 TASK_TIMEOUT="${SMOKE_TASK_TIMEOUT:-120}"   # seconds for one docker run of a one-off task or a refused start
 SMOKE_TIMEOUT="${SMOKE_TIMEOUT:-900}"       # seconds for the whole script (about 40 s warm; image pulls on a cold runner take longer)
 BUCKET=smemories-smoke
-ORIGIN=https://smoke.example.com
+ORIGIN=http://localhost:5173             # what the API in test mode allows: dev and test are local-only (T-099)
+PROD_ORIGIN=https://smoke.example.com   # what the prod refusals use
 
 TMP="$(mktemp -d)"
 rand() { od -An -N24 -tx1 /dev/urandom | tr -d ' \n'; }
@@ -208,7 +210,7 @@ done
 ok "the one-off tasks log the opt-out and static-key WARNs without a secret"
 
 # --- 3. the API refuses an unsafe prod configuration ----------------------------------------------------------------
-PROD_API=(-e SMEM_ENV=prod -e SMEM_REDIS_URL=redis://127.0.0.1:6379/0 -e SMEM_REDIS_ALLOW_INSECURE=true -e SMEM_MEMORY_LIMIT_MIB=1536 -e SMEM_ALLOWED_ORIGINS=$ORIGIN -e SMEM_PUBLIC_BASE_URL=$ORIGIN)
+PROD_API=(-e SMEM_ENV=prod -e SMEM_REDIS_URL=redis://127.0.0.1:6379/0 -e SMEM_REDIS_ALLOW_INSECURE=true -e SMEM_MEMORY_LIMIT_MIB=1536 -e SMEM_ALLOWED_ORIGINS=$PROD_ORIGIN -e SMEM_PUBLIC_BASE_URL=$PROD_ORIGIN)
 refuse() { # refuse <variable that must be named> <docker run args...>
   local var="$1" out code=0
   shift
@@ -237,6 +239,23 @@ refuse SMEM_S3_BUCKET -e SMEM_OTP_KEY="$OTP_KEY" -e SMEM_S3_BUCKET=
 refuse SMEM_S3_ENDPOINT -e SMEM_OTP_KEY="$OTP_KEY" -e SMEM_S3_ALLOW_INSECURE=false
 refuse SMEM_PUBLIC_BASE_URL -e SMEM_OTP_KEY="$OTP_KEY" -e SMEM_PUBLIC_BASE_URL=https://user:hunter2pw@smoke.example.com
 ok "prod start refuses plaintext database, Redis and object store, http origins, a base URL with credentials, a missing memory limit, a public metrics address and a missing bucket"
+
+# --- 3b. SMEM_ENV is mandatory and dev/test are local-only (T-099) -------------------------------------------------
+# api.env has valid settings and no SMEM_ENV: the image sets none either, so a task that loses the variable must not boot in dev mode.
+refuse_api() { # refuse_api <variable that must be named> <docker run args...>
+  local var="$1" out code=0
+  shift
+  out="$(task --rm "${HARDEN[@]}" --tmpfs /spool:rw,noexec,nosuid,size=64m,uid=65532,mode=0700 --env-file "$TMP/api.env" "$@" "$IMAGE" 2>&1)" || code=$?
+  [ "$code" -ne 0 ] || fail "the API started although $var is wrong"
+  echo "$out" | grep -q "$var" || fail "the refusal does not name $var: $out"
+  if echo "$out" | grep -q "$OTP_KEY\|$DB_PW\|$S3_PW"; then fail "the refusal echoes a secret"; fi
+}
+refuse_api SMEM_ENV
+refuse_api SMEM_ENV -e SMEM_ENV=
+ok "the API refuses to start without SMEM_ENV"
+refuse_api SMEM_PUBLIC_BASE_URL -e SMEM_ENV=test -e SMEM_PUBLIC_BASE_URL=https://app.example.com
+refuse_api SMEM_ALLOWED_ORIGINS -e SMEM_ENV=test -e SMEM_ALLOWED_ORIGINS=https://app.example.com
+ok "the API refuses SMEM_ENV=test with a public base URL or origin"
 
 # --- 4. read-only root without the writable spool ----------------------------------------------------------------
 code=0
