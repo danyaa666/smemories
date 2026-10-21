@@ -10,6 +10,7 @@ import { BookPages, pageCount } from "../book/BookPages";
 import { useFitReport } from "../book/fit";
 import { PrintGuide } from "../book/PrintGuide";
 import { TemplatePicker } from "../book/TemplatePicker";
+import { TextExport } from "../book/TextExport";
 import { noteFits, ownFits } from "../book/fitReport";
 import { getTemplate } from "../book/templates";
 import { photoIds, useFontsLoaded, usePhotoPreload } from "../book/ready";
@@ -185,6 +186,7 @@ function BookScreen({ data, bookId }: { data: BookData; bookId: string }) {
           {t("print.print")}
         </Button>
         <PrintGuide size={size} />
+        <TextExport bookId={bookId} />
       </div>
       <div ref={ref} className="bk-stage" style={stageStyle}>
         <Provider>
