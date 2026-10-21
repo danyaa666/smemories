@@ -13,17 +13,16 @@
 | BACKLOG | 12 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-095, T-096, T-097 |
 | TODO | 7 | T-094, T-101, T-105, T-106, T-107, T-109, T-110 |
 | IN_PROGRESS | 1 | T-104 |
-| QA_PASS | 1 | T-103 |
 | CHANGES_REQUESTED | 1 | T-100 |
-| MERGED | 3 | T-093, T-102, T-108 |
+| MERGED | 4 | T-093, T-102, T-103, T-108 |
 | DONE | 77 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-092, T-098, T-099 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-093 ([E05] Book as plain text with photo links (API)); T-102 ([E12] Upload slot fairness: per-user cap and paced body on media/create; early release for rejected public submissions); T-108 ([E06] Concurrent smemories-migrate up on an empty database fails (missing zero version migration))
+**Awaiting your review (MERGED):** T-093 ([E05] Book as plain text with photo links (API)); T-102 ([E12] Upload slot fairness: per-user cap and paced body on media/create; early release for rejected public submissions); T-103 ([E12] Sessions issued during a password reset or Google merge must not survive it (credential epoch)); T-108 ([E06] Concurrent smemories-migrate up on an empty database fails (missing zero version migration))
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?)
 
-_Board last written 2026-10-21 08:10Z_
+_Board last written 2026-10-21 08:13Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4619,18 +4618,18 @@ Spec: .team/epics/E12-security-hardening/05-upload-slot-fairness.md (read it fro
 - 2026-10-21 03:43Z · leader · MERGED into develop as 5f526d7 (PR #90) after owner approval. Follow-up T-110 (verified email + per-client share, bounded drains).
 
 ### T-103 — [E12] Sessions issued during a password reset or Google merge must not survive it (credential epoch)
-- **Status:** QA_PASS
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
 - **Depends-on:** —
 - **Risk:** high
 - **Rework:** 1
-- **Owner-approved:** —
-- **Assignee:** leader
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-103-e12-sessions-issued-during-a-password-re
 - **PR:** https://github.com/danyaa666/smemories/pull/89
-- **Updated:** 2026-10-21 07:59Z by qa
+- **Updated:** 2026-10-21 08:13Z by leader
 - **Comments-seen:** 7
 
 Spec: .team/epics/E12-security-hardening/06-session-fence-against-credential-change.md (read it from the repo root). Source: audit run 1, docs/security-audit-skill-2026-10-20/ (PR #86). Risk high: owner approves the merge.
@@ -4658,6 +4657,8 @@ Spec: .team/epics/E12-security-hardening/06-session-fence-against-credential-cha
   6 CI on b732c51: go, go-integration, e2e, web, security, image all pass (the image job, re-run by the leader, passed in 2m21s; no migrate race). PR MERGEABLE.
   Non-blocking: the branch does not yet contain T-099/T-102/T-108 (develop at 2f76ed6 is ahead); GitHub reports no conflicts, but I tested the PR head only, not a trial merge with them. A worktree .env is denied to my shell, so I passed the ports as make command-line variables (no .env created by me that I could verify).
 - 2026-10-21 08:00Z · leader · Leader: QA re-check passed on b732c51 (merge keeps T-098's counter reset and the epoch; rollback note verified by down/up; CI green incl. image). Earlier leader review stands. Waiting for the owner's approval (risk high).
+- 2026-10-21 08:12Z · human · owner approved merge
+- 2026-10-21 08:13Z · leader · MERGED into develop as bfbd73c (PR #89) after owner approval. Deploy: migration 20261021100000 before the binary; rollback notes in docs/deploy.md.
 
 ### T-104 — [E12] Media processing robustness: slots released on every path, no panics, decoded limits
 - **Status:** IN_PROGRESS
