@@ -16,6 +16,7 @@ import (
 	"github.com/danyaa666/smemories/internal/apperr"
 	"github.com/danyaa666/smemories/internal/auth"
 	"github.com/danyaa666/smemories/internal/httpx"
+	"github.com/danyaa666/smemories/internal/ulid"
 )
 
 const (
@@ -139,6 +140,18 @@ func toJSON(m *Media, yearbookID string) mediaJSON {
 	return mediaJSON{m.ID, yearbookID, m.ContentType, m.Bytes, m.Width, m.Height, m.CreatedAt}
 }
 
+// checkID is ERROR_PARAM for a missing id and for one that is not a canonical public id (ulid.Valid), answered before any
+// query or object-store call: the public_id columns match any spelling of an id.
+func checkID(id, name string) error {
+	if id == "" {
+		return apperr.New(apperr.Param, name+" is required")
+	}
+	if !ulid.Valid(id) {
+		return apperr.New(apperr.Param, name+" is not a valid id")
+	}
+	return nil
+}
+
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	u, ok := auth.MustUser(w, r)
 	if !ok {
@@ -180,8 +193,8 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	}
 	q := r.URL.Query()
 	yearbookID := q.Get("yearbook_id")
-	if yearbookID == "" {
-		h.fail(w, r, apperr.New(apperr.Param, "yearbook_id is required"))
+	if err := checkID(yearbookID, "yearbook_id"); err != nil {
+		h.fail(w, r, err)
 		return
 	}
 	limit, err := httpx.ParseLimit(r, DefaultListLimit, MaxListLimit)
@@ -255,7 +268,7 @@ func (h *Handler) readForm(w http.ResponseWriter, r *http.Request) (yearbookID s
 				httpx.WriteBodyError(w, r, bodyErr(err))
 				return "", nil, false
 			}
-			if len(b) > maxIDBytes {
+			if len(b) > maxIDBytes || !ulid.Valid(string(b)) { // canonical ids only: the column matches any spelling (audit M3)
 				h.fail(w, r, apperr.New(apperr.Param, "yearbook_id is not a yearbook id"))
 				return "", nil, false
 			}
@@ -308,8 +321,8 @@ func (h *Handler) content(w http.ResponseWriter, r *http.Request) {
 	}
 	q := r.URL.Query()
 	id := q.Get("id")
-	if id == "" {
-		h.fail(w, r, apperr.New(apperr.Param, "id is required"))
+	if err := checkID(id, "id"); err != nil {
+		h.fail(w, r, err)
 		return
 	}
 	variant := q.Get("variant")
@@ -399,8 +412,8 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 	if !httpx.DecodeJSON(w, r, &in) {
 		return
 	}
-	if in.ID == "" {
-		h.fail(w, r, apperr.New(apperr.Param, "id is required"))
+	if err := checkID(in.ID, "id"); err != nil {
+		h.fail(w, r, err)
 		return
 	}
 	if err := h.svc.Delete(r.Context(), u.InternalID, in.ID); err != nil {

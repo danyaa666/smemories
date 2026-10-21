@@ -80,15 +80,3 @@ func TestPageTokens(t *testing.T) {
 		t.Error("the last page has no token")
 	}
 }
-
-func TestIsPublicID(t *testing.T) {
-	ok := "01HZX3K9QJ5V7M2N8P4R6T0WYZ"
-	if !isPublicID(ok) {
-		t.Fatal("canonical id rejected")
-	}
-	for _, bad := range []string{"", strings.ToLower(ok), ok[:25], ok + "A", "I" + ok[1:], "L" + ok[1:], "O" + ok[1:], "U" + ok[1:], ok[:25] + "-", ok[:25] + "é"} {
-		if isPublicID(bad) {
-			t.Fatalf("%q accepted", bad)
-		}
-	}
-}

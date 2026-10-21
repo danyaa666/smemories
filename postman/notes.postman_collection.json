@@ -3573,6 +3573,175 @@
           ]
         },
         {
+          "name": "Create with a lower-case yearbook_id - 400 ERROR_PARAM (T-100)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/note-collection/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "note-collection",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"yearbook_id\":\"{{bookIdLower}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// T-100 (audit M3): a real id in lower case. The database would match it; the API must refuse it.",
+                  "pm.variables.set('bookIdLower', pm.collectionVariables.get('bookId').toLowerCase());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List with a lower-case yearbook_id - 400 ERROR_PARAM (T-100)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/note-collection/get-list?yearbook_id={{bookIdLower}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "note-collection",
+                "get-list"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookIdLower}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// T-100 (audit M3): a real id in lower case. The database would match it; the API must refuse it.",
+                  "pm.variables.set('bookIdLower', pm.collectionVariables.get('bookId').toLowerCase());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Revoke with a lower-case id - 400 ERROR_PARAM (T-100)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/note-collection/revoke",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "note-collection",
+                "revoke"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{bookIdLower}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// T-100 (audit M3): a real id in lower case. The database would match it; the API must refuse it.",
+                  "pm.variables.set('bookIdLower', pm.collectionVariables.get('bookId').toLowerCase());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Clean up: A deletes the yearbook - 200",
           "request": {
             "method": "POST",

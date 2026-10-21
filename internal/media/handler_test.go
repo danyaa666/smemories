@@ -77,6 +77,12 @@ func TestReadForm(t *testing.T) {
 			_ = mw.WriteField("yearbook_id", strings.Repeat("A", 65))
 			file("file", 10)(mw)
 		},
+		"lower-case yearbook_id": func(mw *multipart.Writer) {
+			_ = mw.WriteField("yearbook_id", strings.ToLower(bookID))
+			file("file", 10)(mw)
+		},
+		"yearbook_id with I":     func(mw *multipart.Writer) { _ = mw.WriteField("yearbook_id", "I"+bookID[1:]); file("file", 10)(mw) },
+		"yearbook_id padded":     func(mw *multipart.Writer) { _ = mw.WriteField("yearbook_id", bookID+" "); file("file", 10)(mw) },
 		"empty body":             func(*multipart.Writer) {},
 		"only yearbook_id field": withBook(),
 	} {
@@ -210,4 +216,28 @@ func TestPhoneUploadPaceAllowsSlowLink(t *testing.T) {
 	if p.Total != uploadReadTimeout {
 		t.Fatalf("pace total %v differs from the route's read time %v", p.Total, uploadReadTimeout)
 	}
+}
+
+// Audit M3 (T-100): list, content and delete answer ERROR_PARAM for an id that is not a canonical ULID before the service is
+// called. The handler has no service here, so reaching it would panic.
+func TestIDEndpointsRefuseNonCanonicalIDs(t *testing.T) {
+	h := &Handler{logger: nopLogger()}
+	user := auth.WithUser(context.Background(), &auth.User{InternalID: 1})
+	for _, bad := range []string{strings.ToLower(bookID), bookID[:25], bookID + "A", "O" + bookID[1:], "..%2F" + bookID[5:], "%20" + bookID[1:]} {
+		for name, rec := range map[string]*httptest.ResponseRecorder{
+			"list":    do(h.list, httptest.NewRequest("GET", "/api/media/get-list?yearbook_id="+bad, nil).WithContext(user)),
+			"content": do(h.content, httptest.NewRequest("GET", "/api/media/get-content?id="+bad, nil).WithContext(user)),
+			"delete":  do(h.delete, httptest.NewRequest("POST", "/api/media/delete", strings.NewReader(`{"id":"`+bad+`"}`)).WithContext(user)),
+		} {
+			if rec.Code != 400 || !strings.Contains(rec.Body.String(), `"ERROR_PARAM"`) {
+				t.Errorf("%s with %q: %d %s", name, bad, rec.Code, rec.Body)
+			}
+		}
+	}
+}
+
+func do(f http.HandlerFunc, r *http.Request) *httptest.ResponseRecorder {
+	rec := httptest.NewRecorder()
+	f(rec, r)
+	return rec
 }

@@ -106,13 +106,24 @@ type Created struct {
 	Token string
 }
 
+// checkID is ERROR_PARAM for a missing id and for one that is not a canonical public id (ulid.Valid), before any query.
+func checkID(id, name string) error {
+	if id == "" {
+		return apperr.New(apperr.Param, name+" is required")
+	}
+	if !ulid.Valid(id) {
+		return apperr.New(apperr.Param, name+" is not a valid id")
+	}
+	return nil
+}
+
 // CreateCollection makes a link for a book of the owner: the owner's email must be verified, at most maxActive links stay active.
 func (s *Service) CreateCollection(ctx context.Context, ownerID uint64, emailVerified bool, in *CreateInput) (*Created, error) {
 	if !emailVerified {
 		return nil, apperr.New(CodeEmailNotVerified, "verify your email first")
 	}
-	if in.YearbookID == "" {
-		return nil, apperr.New(apperr.Param, "yearbook_id is required")
+	if err := checkID(in.YearbookID, "yearbook_id"); err != nil {
+		return nil, err
 	}
 	now := s.now().UTC()
 	c := &Collection{ID: ulid.New(now), CreatedAt: now.UnixMilli()}
@@ -142,16 +153,16 @@ func (s *Service) CreateCollection(ctx context.Context, ownerID uint64, emailVer
 
 // ListCollections returns the book's links, newest first, revoked ones included. ponytail: unpaged (at most five are active); add a cursor if the revoked ones pile up.
 func (s *Service) ListCollections(ctx context.Context, ownerID uint64, yearbookID string) ([]*Collection, error) {
-	if yearbookID == "" {
-		return nil, apperr.New(apperr.Param, "yearbook_id is required")
+	if err := checkID(yearbookID, "yearbook_id"); err != nil {
+		return nil, err
 	}
 	return s.store.list(ctx, ownerID, yearbookID)
 }
 
 // RevokeCollection stops a link at once; revoking it again succeeds.
 func (s *Service) RevokeCollection(ctx context.Context, ownerID uint64, id string) error {
-	if id == "" {
-		return apperr.New(apperr.Param, "id is required")
+	if err := checkID(id, "id"); err != nil {
+		return err
 	}
 	return s.store.revoke(ctx, ownerID, id, s.now().UnixMilli())
 }

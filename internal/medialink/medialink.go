@@ -11,8 +11,9 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
-	"regexp"
 	"strconv"
+
+	"github.com/danyaa666/smemories/internal/ulid"
 )
 
 const (
@@ -25,9 +26,6 @@ const (
 	idLen    = 26 // a ULID
 	version  = "pm1|"
 )
-
-// idPattern is a ULID in Crockford base32 as internal/ulid writes it (upper case, no I L O U).
-var idPattern = regexp.MustCompile(`^[0-9A-HJKMNP-TV-Z]{26}$`)
 
 // b64 is strict: a final character with non-zero spare bits is refused, so a MAC has exactly one valid spelling.
 var b64 = base64.RawURLEncoding.Strict()
@@ -61,7 +59,7 @@ func Parse(token string) (mediaID string, mac []byte, ok bool) {
 		return "", nil, false
 	}
 	mediaID = token[:idLen]
-	if !idPattern.MatchString(mediaID) {
+	if !ulid.Valid(mediaID) {
 		return "", nil, false
 	}
 	mac, err := b64.DecodeString(token[idLen+1:])

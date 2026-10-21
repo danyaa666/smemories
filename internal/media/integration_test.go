@@ -152,6 +152,7 @@ type env struct {
 	signer  *medialink.Signer // T-092: signs the public photo links of this env's API
 	logs    *syncBuf          // everything the API logged
 	metrics *metrics.Metrics
+	bookSvc *yearbook.Service // the yearbook service the API uses, for tests that call it without the handlers
 }
 
 // syncBuf is a log sink that tests read while requests may still be finishing.
@@ -209,6 +210,7 @@ func newEnv(t *testing.T) *env {
 	e.svc.SetRefClearer(bookStore)
 	bookSvc := yearbook.NewService(bookStore, e.cursors, e.svc, nil, e.svc)
 	bookSvc.SetLimiters(e.lim)
+	e.bookSvc = bookSvc
 	yh := yearbook.NewHandler(bookSvc, ah.RequireUser, []string{origin})
 	e.h = httpx.NewRouterWith(logger, httpx.RouterConfig{Metrics: e.metrics}, ah.Routes, yh.Routes, mh.Routes)
 	t.Cleanup(func() { // objects of every book this test created

@@ -3545,6 +3545,635 @@
           ]
         },
         {
+          "name": "E36c. M3 attack step 1: upload with a lower-case yearbook_id - 400 ERROR_PARAM (nothing is stored)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/media/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "media",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "yearbook_id",
+                  "type": "text",
+                  "value": "{{bookIdLower}}"
+                },
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "fixtures/media/photo-gps.jpg"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// T-100 (audit M3): the same id in lower case. The database would match it; the API must refuse it.",
+                  "pm.variables.set('bookIdLower', pm.collectionVariables.get('bookId').toLowerCase());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E36d. List with a lower-case yearbook_id - 400 ERROR_PARAM",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/media/get-list?yearbook_id={{bookIdLower}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "media",
+                "get-list"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookIdLower}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// T-100 (audit M3): the same id in lower case. The database would match it; the API must refuse it.",
+                  "pm.variables.set('bookIdLower', pm.collectionVariables.get('bookId').toLowerCase());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E36e. Download with a lower-case id - 400 ERROR_PARAM",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/media/get-content?id={{bookIdLower}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "media",
+                "get-content"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{bookIdLower}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// T-100 (audit M3): the same id in lower case. The database would match it; the API must refuse it.",
+                  "pm.variables.set('bookIdLower', pm.collectionVariables.get('bookId').toLowerCase());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E36f. Delete a photo with a lower-case id - 400 ERROR_PARAM",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/media/delete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "media",
+                "delete"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{bookIdLower}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// T-100 (audit M3): the same id in lower case. The database would match it; the API must refuse it.",
+                  "pm.variables.set('bookIdLower', pm.collectionVariables.get('bookId').toLowerCase());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E36g. Get a yearbook with a lower-case id - 400 ERROR_PARAM",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/yearbook/get?id={{bookIdLower}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "yearbook",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{bookIdLower}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// T-100 (audit M3): the same id in lower case. The database would match it; the API must refuse it.",
+                  "pm.variables.set('bookIdLower', pm.collectionVariables.get('bookId').toLowerCase());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E36h. Update a yearbook with a lower-case id - 400 ERROR_PARAM",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/yearbook/update",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "yearbook",
+                "update"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{bookIdLower}}\",\"title\":\"x\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// T-100 (audit M3): the same id in lower case. The database would match it; the API must refuse it.",
+                  "pm.variables.set('bookIdLower', pm.collectionVariables.get('bookId').toLowerCase());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E36i. Update the profile with a lower-case yearbook_id - 400 ERROR_PARAM",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/yearbook/update-profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "yearbook",
+                "update-profile"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"yearbook_id\":\"{{bookIdLower}}\",\"full_name\":\"x\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// T-100 (audit M3): the same id in lower case. The database would match it; the API must refuse it.",
+                  "pm.variables.set('bookIdLower', pm.collectionVariables.get('bookId').toLowerCase());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E36j. M3 attack step 2: delete the yearbook with a lower-case id - 400 ERROR_PARAM",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/yearbook/delete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "yearbook",
+                "delete"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{bookIdLower}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// T-100 (audit M3): the same id in lower case. The database would match it; the API must refuse it.",
+                  "pm.variables.set('bookIdLower', pm.collectionVariables.get('bookId').toLowerCase());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E36k. Revoke photo links with a lower-case id - 400 ERROR_PARAM",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/yearbook/revoke-photo-links",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "yearbook",
+                "revoke-photo-links"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{bookIdLower}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// T-100 (audit M3): the same id in lower case. The database would match it; the API must refuse it.",
+                  "pm.variables.set('bookIdLower', pm.collectionVariables.get('bookId').toLowerCase());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E36l. A lower-case cover_media_id - 400 ERROR_INVALID_MEDIA",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/yearbook/update",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "yearbook",
+                "update"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{bookId}}\",\"cover_media_id\":\"{{bookIdLower}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// T-100 (audit M3): the same id in lower case. The database would match it; the API must refuse it.",
+                  "pm.variables.set('bookIdLower', pm.collectionVariables.get('bookId').toLowerCase());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error ERROR_INVALID_MEDIA', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_MEDIA'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E36m. The canonical id still works - 200",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/yearbook/get?id={{bookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "yearbook",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{bookId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "E37. Clean up: A deletes the yearbook",
           "request": {
             "method": "POST",

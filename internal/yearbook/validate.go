@@ -9,6 +9,7 @@ import (
 	"github.com/danyaa666/smemories/internal/apperr"
 	"github.com/danyaa666/smemories/internal/templates"
 	"github.com/danyaa666/smemories/internal/textx"
+	"github.com/danyaa666/smemories/internal/ulid"
 )
 
 // Limits in characters (AC5).
@@ -39,6 +40,15 @@ var (
 // invalid is the 400 for a rejected field: the business code ERROR_INVALID_<FIELD>, which the web shows under that field.
 func invalid(field string) error {
 	return apperr.New(apperr.NewCode("ERROR_INVALID_"+strings.ToUpper(field), apperr.Param.HTTP), field+" is not valid")
+}
+
+// mediaID is ERROR_INVALID_MEDIA, the code an unknown photo already gets, for a photo id that is not a canonical public id (the
+// column matches any spelling). Handlers call it before the service, so nothing is queried. nil (clear) is fine.
+func mediaID(id *string) error {
+	if id != nil && !ulid.Valid(*id) {
+		return invalid("media")
+	}
+	return nil
 }
 
 // maxTemplateID is the size of the template_id column.

@@ -623,7 +623,7 @@ paths:
       security:
         - sessionCookie: []
       parameters:
-        - {name: id, in: query, required: true, schema: {type: string}, description: Yearbook ULID.}
+        - {name: id, in: query, required: true, schema: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$'}, description: Yearbook ULID.}
       responses:
         "200":
           description: The book.
@@ -661,7 +661,7 @@ paths:
         - {code: ERROR_INVALID_LANGUAGE, description: "Field `language`: missing on create, or not `en` or `vi`."}
         - {code: ERROR_INVALID_PAGE_SIZE, description: "Field `page_size`: not `A5`, `A4` or `Letter`."}
         - {code: ERROR_INVALID_TEMPLATE, description: "Field `template_id`: not a template of the registry, one that does not support the book's page size, or (on update) a page-size change to a size the book's chosen template does not support."}
-        - {code: ERROR_INVALID_MEDIA, description: "`cover_media_id` is not a photo of this yearbook (unknown, deleted, or another book's)."}
+        - {code: ERROR_INVALID_MEDIA, description: "`cover_media_id` is not a photo of this yearbook (unknown, deleted, or another book's), or not a canonical ULID."}
         - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
         - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
         - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
@@ -714,7 +714,7 @@ paths:
         - {code: ERROR_INVALID_QUOTE, description: "Field `quote`: over 500 characters or containing control characters."}
         - {code: ERROR_INVALID_HOBBIES, description: "Field `hobbies`: over 300 characters or containing control characters."}
         - {code: ERROR_INVALID_FUTURE_PLANS, description: "Field `future_plans`: over 300 characters or containing control characters."}
-        - {code: ERROR_INVALID_MEDIA, description: "`photo_media_id` is not a photo of this yearbook (unknown, deleted, or another book's)."}
+        - {code: ERROR_INVALID_MEDIA, description: "`photo_media_id` is not a photo of this yearbook (unknown, deleted, or another book's), or not a canonical ULID."}
         - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
         - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
         - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
@@ -927,7 +927,7 @@ paths:
       security:
         - sessionCookie: []
       parameters:
-        - {name: yearbook_id, in: query, required: true, schema: {type: string}, description: Yearbook ULID.}
+        - {name: yearbook_id, in: query, required: true, schema: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$'}, description: Yearbook ULID.}
         - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100, default: 50}, description: "Page size, default 50, maximum 100."}
         - {name: next_id, in: query, required: false, schema: {type: string}, description: "Opaque token from the previous page; omit it for the first page."}
         - {name: uploader, in: query, required: false, schema: {type: string, enum: [owner, contributor, all], default: owner}, description: "Whose photos to list: `owner` (the owner's own uploads, default), `contributor` (photos sent through a collection link) or `all`."}
@@ -972,7 +972,7 @@ paths:
       security:
         - sessionCookie: []
       parameters:
-        - {name: id, in: query, required: true, schema: {type: string}, description: Photo ULID (the `id` of a list item or of the upload answer).}
+        - {name: id, in: query, required: true, schema: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$'}, description: Photo ULID (the `id` of a list item or of the upload answer).}
         - {name: variant, in: query, required: false, schema: {type: string, enum: [display, thumb, print], default: display}, description: "Which stored version to send: `display` (long edge at most 3000 px, the default), `thumb` (480 px JPEG) or `print` (long edge at most 1800 px, for the print renderer). Anything else is `ERROR_PARAM`."}
       responses:
         "200":
@@ -1122,7 +1122,7 @@ paths:
       security:
         - sessionCookie: []
       parameters:
-        - {name: yearbook_id, in: query, required: true, schema: {type: string}, description: Yearbook ULID.}
+        - {name: yearbook_id, in: query, required: true, schema: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$'}, description: Yearbook ULID.}
       responses:
         "200":
           description: The links.
@@ -1205,7 +1205,7 @@ paths:
       security:
         - sessionCookie: []
       parameters:
-        - {name: yearbook_id, in: query, required: true, schema: {type: string}, description: Yearbook ULID.}
+        - {name: yearbook_id, in: query, required: true, schema: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$'}, description: Yearbook ULID.}
         - {name: status, in: query, required: false, schema: {type: string, enum: [pending, approved, hidden]}, description: "Only notes in this status; omitted means all. `approved` is in book order, the others newest first."}
         - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100, default: 50}, description: Page size.}
         - {name: next_id, in: query, required: false, schema: {type: string}, description: "Opaque cursor from the previous page's `next_id`; omit for the first page."}
@@ -1409,7 +1409,7 @@ paths:
       security:
         - sessionCookie: []
       parameters:
-        - {name: yearbook_id, in: query, required: true, schema: {type: string}, description: Yearbook ULID (canonical upper case).}
+        - {name: yearbook_id, in: query, required: true, schema: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$'}, description: Yearbook ULID (canonical upper case).}
       responses:
         "200":
           description: The book.
@@ -2053,7 +2053,7 @@ components:
       additionalProperties: false
       required: [id]
       properties:
-        id: {type: string, description: "Required. ULID of the yearbook to change."}
+        id: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$', description: "Required. ULID of the yearbook to change."}
         title: {type: string, minLength: 1, maxLength: 120, description: "Optional. 1 to 120 characters after trimming; absent = unchanged."}
         school_name: {type: string, maxLength: 120, description: "Optional, up to 120 characters; the empty string clears it; absent = unchanged."}
         class_name: {type: string, maxLength: 120, description: "Optional, up to 120 characters; the empty string clears it; absent = unchanged."}
@@ -2061,33 +2061,33 @@ components:
         motto: {type: string, maxLength: 200, description: "Optional, up to 200 characters; the empty string clears it; absent = unchanged."}
         language: {type: string, enum: [en, vi], description: "Optional. `en` or `vi`; absent = unchanged."}
         page_size: {type: string, enum: [A5, A4, Letter], description: "Optional paper size; absent = unchanged."}
-        cover_media_id: {type: [string, "null"], description: "Optional. Photo ULID, which must be a photo of this yearbook (else `ERROR_INVALID_MEDIA`); null clears the cover; absent = unchanged."}
+        cover_media_id: {type: [string, "null"], pattern: '^[0-9A-HJKMNP-TV-Z]{26}$', description: "Optional. Photo ULID, which must be a photo of this yearbook (else `ERROR_INVALID_MEDIA`); null clears the cover; absent = unchanged."}
         template_id: {type: [string, "null"], maxLength: 32, description: "Optional. Id of a template from `GET /api/template/get-list` that supports the book's page size (after this change), else `ERROR_INVALID_TEMPLATE`; null clears it (the plain layout); absent = unchanged."}
     YearbookUpdateProfileRequest:
       type: object
       additionalProperties: false
       required: [yearbook_id, full_name]
       properties:
-        yearbook_id: {type: string, description: "Required. ULID of the yearbook whose profile is replaced."}
+        yearbook_id: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$', description: "Required. ULID of the yearbook whose profile is replaced."}
         full_name: {type: string, minLength: 1, maxLength: 100, description: "Required. 1 to 100 characters after trimming."}
         nickname: {type: string, maxLength: 50, description: "Optional, up to 50 characters; omitted = cleared."}
         birthday: {type: [string, "null"], format: date, description: "Optional `YYYY-MM-DD`, a real date strictly before today (UTC) and not before 1900-01-01; omitted or null = cleared."}
         quote: {type: string, maxLength: 500, description: "Optional, up to 500 characters; omitted = cleared."}
         hobbies: {type: string, maxLength: 300, description: "Optional, up to 300 characters; omitted = cleared."}
         future_plans: {type: string, maxLength: 300, description: "Optional, up to 300 characters; omitted = cleared."}
-        photo_media_id: {type: [string, "null"], description: "Optional. Photo ULID, which must be a photo of this yearbook (else `ERROR_INVALID_MEDIA`); omitted or null = cleared."}
+        photo_media_id: {type: [string, "null"], pattern: '^[0-9A-HJKMNP-TV-Z]{26}$', description: "Optional. Photo ULID, which must be a photo of this yearbook (else `ERROR_INVALID_MEDIA`); omitted or null = cleared."}
     YearbookDeleteRequest:
       type: object
       additionalProperties: false
       required: [id]
       properties:
-        id: {type: string, description: "Required. ULID of the yearbook to delete."}
+        id: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$', description: "Required. ULID of the yearbook to delete."}
     YearbookRevokePhotoLinksRequest:
       type: object
       additionalProperties: false
       required: [id]
       properties:
-        id: {type: string, description: "Required. ULID of the yearbook whose public photo links are switched off."}
+        id: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$', description: "Required. ULID of the yearbook whose public photo links are switched off."}
     Media:
       type: object
       description: A stored photo. Carries no storage key, hash or URL; the client builds the content URL from `id`.
@@ -2125,14 +2125,14 @@ components:
       type: object
       required: [yearbook_id, file]
       properties:
-        yearbook_id: {type: string, description: Required. ULID of a yearbook the caller owns, at most 64 characters.}
+        yearbook_id: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$', description: Required. ULID of a yearbook the caller owns (26 upper-case characters).}
         file: {type: string, format: binary, description: "Required. The image: JPEG, PNG or WebP, at most `SMEM_MEDIA_MAX_BYTES` (default 10 MiB)."}
     MediaDeleteRequest:
       type: object
       additionalProperties: false
       required: [id]
       properties:
-        id: {type: string, description: Required. ULID of the photo to delete.}
+        id: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$', description: Required. ULID of the photo to delete.}
     ApiError:
       type: object
       description: >-
@@ -2161,7 +2161,7 @@ components:
       additionalProperties: false
       required: [yearbook_id]
       properties:
-        yearbook_id: {type: string, description: Required. ULID of a yearbook the caller owns.}
+        yearbook_id: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$', description: Required. ULID of a yearbook the caller owns.}
         label: {type: string, maxLength: 60, description: "Optional, default empty. At most 60 characters, NFC and trimmed, no control or format characters."}
         deadline_at: {type: [integer, "null"], format: int64, description: "Optional, default null (no deadline). Unix ms; must be in the future and at most one year ahead."}
     NoteCollectionCreateResponse:
@@ -2211,7 +2211,7 @@ components:
       additionalProperties: false
       required: [id]
       properties:
-        id: {type: string, description: Required. ULID of a collection of one of the caller's yearbooks.}
+        id: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$', description: Required. ULID of a collection of one of the caller's yearbooks.}
     NoteCounts:
       type: object
       description: The notes of a whole yearbook by status.
@@ -2347,37 +2347,37 @@ components:
       additionalProperties: false
       required: [yearbook_id, ids, status]
       properties:
-        yearbook_id: {type: string, description: Required. ULID of a yearbook the caller owns.}
+        yearbook_id: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$', description: Required. ULID of a yearbook the caller owns.}
         ids:
           type: array
           description: "Required. 1 to 100 note ULIDs of that yearbook, no repeats. When approving, the order sets the order at the end of the book."
           minItems: 1
           maxItems: 100
-          items: {type: string}
+          items: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$'}
         status: {type: string, enum: [pending, approved, hidden], description: "Required. The status to set: `pending`, `approved` or `hidden`."}
     NoteReorderRequest:
       type: object
       additionalProperties: false
       required: [yearbook_id, ids]
       properties:
-        yearbook_id: {type: string, description: Required. ULID of a yearbook the caller owns.}
+        yearbook_id: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$', description: Required. ULID of a yearbook the caller owns.}
         ids:
           type: array
           description: "Required. Exactly the ULIDs of the notes that are approved now, in the wanted order, no repeats. At most 300; may be empty only when no note is approved."
           maxItems: 300
-          items: {type: string}
+          items: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$'}
     NoteDeleteRequest:
       type: object
       additionalProperties: false
       required: [yearbook_id, ids]
       properties:
-        yearbook_id: {type: string, description: Required. ULID of a yearbook the caller owns.}
+        yearbook_id: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$', description: Required. ULID of a yearbook the caller owns.}
         ids:
           type: array
           description: "Required. 1 to 100 note ULIDs of that yearbook, no repeats."
           minItems: 1
           maxItems: 100
-          items: {type: string}
+          items: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$'}
     TemplateListResponse:
       type: object
       required: [status, data]

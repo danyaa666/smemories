@@ -6,8 +6,10 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/danyaa666/smemories/internal/apperr"
 	"github.com/danyaa666/smemories/internal/auth"
 	"github.com/danyaa666/smemories/internal/httpx"
+	"github.com/danyaa666/smemories/internal/ulid"
 )
 
 // Handler serves GET /api/book-export/get-text.
@@ -32,6 +34,10 @@ func (h *Handler) getText(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	q := r.URL.Query()
+	if !ulid.Valid(q.Get("yearbook_id")) { // canonical public id only (T-100), before any query
+		httpx.Fail(w, r, apperr.New(apperr.Param, "yearbook_id must be a yearbook id"))
+		return
+	}
 	e, err := h.svc.GetText(r.Context(), u.InternalID, u.EmailVerified, q.Get("yearbook_id"), q.Get("lang"))
 	if err != nil {
 		var ra *RetryAfterError

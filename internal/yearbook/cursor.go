@@ -5,14 +5,13 @@ import (
 	"strings"
 
 	"github.com/danyaa666/smemories/internal/apperr"
+	"github.com/danyaa666/smemories/internal/ulid"
 )
 
 const (
 	// A cursor time outside years 1..9999 is a tampered token, not a position in anyone's list.
 	minCursorMs = -62135596800000 // 0001-01-01T00:00:00Z
 	maxCursorMs = 253402300799999 // 9999-12-31T23:59:59.999Z
-
-	publicIDLen = 26 // a ULID
 )
 
 // Tokens makes and reads the opaque next_id tokens; *httpx.Cursors implements it.
@@ -42,7 +41,7 @@ func openCursor(t Tokens, ownerID uint64, token string) (*cursor, error) {
 	}
 	ms, id, ok := strings.Cut(pos, ".")
 	n, perr := strconv.ParseInt(ms, 10, 64)
-	if !ok || perr != nil || len(id) != publicIDLen || n < minCursorMs || n > maxCursorMs {
+	if !ok || perr != nil || !ulid.Valid(id) || n < minCursorMs || n > maxCursorMs {
 		return nil, apperr.New(apperr.Param, "next_id is not a valid page token")
 	}
 	return &cursor{n, id}, nil

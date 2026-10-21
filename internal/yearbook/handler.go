@@ -12,6 +12,7 @@ import (
 	"github.com/danyaa666/smemories/internal/apperr"
 	"github.com/danyaa666/smemories/internal/auth"
 	"github.com/danyaa666/smemories/internal/httpx"
+	"github.com/danyaa666/smemories/internal/ulid"
 )
 
 // Handler serves /api/yearbook/*: it decodes, checks the shape, calls the Service and writes the answer.
@@ -53,12 +54,18 @@ type (
 	}
 )
 
-// required is ERROR_PARAM for a missing id.
-func required(w http.ResponseWriter, r *http.Request, id, name string) bool {
-	if id == "" {
+// validID is ERROR_PARAM, answered before any query or object-store call, for a missing id and for one that is not a
+// canonical public id (ulid.Valid): the public_id columns match any spelling of an id.
+func validID(w http.ResponseWriter, r *http.Request, id, name string) bool {
+	switch {
+	case id == "":
 		fail(w, r, apperr.New(apperr.Param, name+" is required"))
+	case !ulid.Valid(id):
+		fail(w, r, apperr.New(apperr.Param, name+" is not a valid id"))
+	default:
+		return true
 	}
-	return id != ""
+	return false
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
@@ -94,7 +101,7 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := r.URL.Query().Get("id")
-	if required(w, r, id, "id") {
+	if validID(w, r, id, "id") {
 		y, err := h.svc.Get(r.Context(), u.InternalID, id)
 		respond(w, r, y, err)
 	}
@@ -106,7 +113,11 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var in updateInput
-	if httpx.DecodeJSON(w, r, &in) && required(w, r, in.ID, "id") {
+	if httpx.DecodeJSON(w, r, &in) && validID(w, r, in.ID, "id") {
+		if err := mediaID(in.CoverMediaID.Val); err != nil {
+			fail(w, r, err)
+			return
+		}
 		y, err := h.svc.Update(r.Context(), u.InternalID, in.ID, &in.BookInput)
 		respond(w, r, y, err)
 	}
@@ -118,7 +129,11 @@ func (h *Handler) updateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var in profileUpdateInput
-	if httpx.DecodeJSON(w, r, &in) && required(w, r, in.YearbookID, "yearbook_id") {
+	if httpx.DecodeJSON(w, r, &in) && validID(w, r, in.YearbookID, "yearbook_id") {
+		if err := mediaID(in.PhotoMediaID); err != nil {
+			fail(w, r, err)
+			return
+		}
 		y, err := h.svc.UpdateProfile(r.Context(), u.InternalID, in.YearbookID, &in.ProfileInput)
 		respond(w, r, y, err)
 	}
@@ -131,7 +146,7 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var in deleteInput
-	if httpx.DecodeJSON(w, r, &in) && required(w, r, in.ID, "id") {
+	if httpx.DecodeJSON(w, r, &in) && validID(w, r, in.ID, "id") {
 		respond(w, r, nil, h.svc.Delete(r.Context(), u.InternalID, in.ID))
 	}
 }
@@ -143,7 +158,7 @@ func (h *Handler) revokePhotoLinks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var in deleteInput // {id}
-	if httpx.DecodeJSON(w, r, &in) && required(w, r, in.ID, "id") {
+	if httpx.DecodeJSON(w, r, &in) && validID(w, r, in.ID, "id") {
 		respond(w, r, nil, h.svc.RevokePhotoLinks(r.Context(), u.InternalID, in.ID))
 	}
 }

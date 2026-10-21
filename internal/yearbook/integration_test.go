@@ -419,14 +419,18 @@ func TestOwnershipMatrix(t *testing.T) {
 	}
 	var bodies []string
 	for i, call := range calls {
-		for _, target := range []string{id, missing, "not-a-ulid", "1"} {
+		for _, target := range []string{id, missing} {
 			rec := call(target).status(404, "ERROR_NOT_FOUND")
 			bodies = append(bodies, fmt.Sprint(i)+rec.Body.String()[:strings.Index(rec.Body.String(), `"request_id"`)])
 		}
+		// T-100 (audit M3): a malformed id, or the real id in another spelling, is ERROR_PARAM before any query.
+		for _, target := range []string{"not-a-ulid", "1", strings.ToLower(id), strings.ToLower(missing)} {
+			call(target).status(400, "ERROR_PARAM")
+		}
 	}
-	// identical bodies (apart from request_id) per verb for own-missing, foreign and garbage ids
-	for i := 0; i < len(bodies); i += 4 {
-		for _, b := range bodies[i : i+4] {
+	// identical bodies (apart from request_id) per verb for own-missing and foreign ids
+	for i := 0; i < len(bodies); i += 2 {
+		for _, b := range bodies[i : i+2] {
 			if b != bodies[i] {
 				t.Fatalf("404 bodies differ: %q vs %q", b, bodies[i])
 			}

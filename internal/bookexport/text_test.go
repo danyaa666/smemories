@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"flag"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -15,6 +16,7 @@ import (
 	"golang.org/x/text/unicode/norm"
 
 	"github.com/danyaa666/smemories/internal/apperr"
+	"github.com/danyaa666/smemories/internal/auth"
 	"github.com/danyaa666/smemories/internal/medialink"
 	"github.com/danyaa666/smemories/internal/notes"
 	"github.com/danyaa666/smemories/internal/yearbook"
@@ -233,5 +235,18 @@ func TestHandlerRefusesARequestWithoutAUser(t *testing.T) {
 	(&Handler{}).getText(rec, newRequest())
 	if rec.Code != 401 || !strings.Contains(rec.Body.String(), "ERROR_UNAUTHORIZED") {
 		t.Errorf("got %d %s", rec.Code, rec.Body)
+	}
+}
+
+// T-100: a lower-case (non-canonical) yearbook_id is ERROR_PARAM at the edge, before the service (nil here) is touched.
+func TestHandlerRefusesANonCanonicalYearbookID(t *testing.T) {
+	for _, id := range []string{"", "abc", strings.ToLower(bookID), bookID + " "} {
+		rec := newRecorder()
+		r := newRequest()
+		r.URL.RawQuery = url.Values{"yearbook_id": {id}}.Encode()
+		(&Handler{}).getText(rec, r.WithContext(auth.WithUser(r.Context(), &auth.User{InternalID: 7})))
+		if rec.Code != 400 || !strings.Contains(rec.Body.String(), "ERROR_PARAM") {
+			t.Errorf("%q: got %d %s", id, rec.Code, rec.Body)
+		}
 	}
 }
