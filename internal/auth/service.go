@@ -49,6 +49,8 @@ type Limits struct {
 	RegisterPerHour   int // per IP
 	LoginFailsPerPair int // per IP + email, per 15 min
 	LoginFailsPerIP   int // per IP, per 15 min
+	// LoginFailsPerAccount counts failed logins for one account from any address, per 15 min (T-098).
+	LoginFailsPerAccount int
 }
 
 // Service holds the auth rules; it knows nothing about HTTP.
@@ -63,6 +65,7 @@ type Service struct {
 	register  ratelimit.Limiter
 	loginPair ratelimit.Limiter
 	loginIP   ratelimit.Limiter
+	loginAcct ratelimit.Limiter // per account, any address; reset by a successful password reset
 
 	mail          Mail
 	bg            sync.WaitGroup // emails being sent in the background
@@ -97,6 +100,7 @@ func NewService(store *Store, sessions *Sessions, hasher *Hasher, limits Limits,
 		register:  limiters.Open("register", limits.RegisterPerHour, registerWindow),
 		loginPair: limiters.Closed("login_pair", limits.LoginFailsPerPair, loginWindow),
 		loginIP:   limiters.Closed("login_ip", limits.LoginFailsPerIP, loginWindow),
+		loginAcct: limiters.Closed("login_account", limits.LoginFailsPerAccount, loginWindow),
 
 		resend: limiters.Open("verify_resend", resendPerHour, time.Hour),
 		// Open like resend: it only caps how long a user can keep hitting a provider that is down.
@@ -108,6 +112,15 @@ func NewService(store *Store, sessions *Sessions, hasher *Hasher, limits Limits,
 		// Closed: the limit stops probing which names exist (T-081).
 		usernameFails: limiters.Closed("username_tries", usernameTriesPerHr, time.Hour),
 	}, nil
+}
+
+// accountKey is the limiter key of an account: the hash of its normalised email, with an oversize
+// address collapsed first so an attacker cannot choose arbitrarily large map keys.
+func accountKey(email string) string {
+	if len(email) > maxEmailLen {
+		email = "?"
+	}
+	return hashKey(email)
 }
 
 // hashKey is the hex SHA-256 of a value that must not appear in a Redis key (an email address). Callers
@@ -189,13 +202,10 @@ func (s *Service) newSession(now time.Time, userAgent string) (*Session, session
 // oldToken (the cookie the browser sent, if any) is revoked so a session is never reused.
 func (s *Service) Login(ctx context.Context, ip, userAgent, email, password, oldToken string) (*User, *Session, error) {
 	email = normalizeEmail(email)
-	emailKey := email
-	if len(emailKey) > maxEmailLen {
-		emailKey = "?" // do not let an attacker choose arbitrarily large map keys
-	}
-	pairKey := ip + "|" + hashKey(emailKey) // no email address in a Redis key
+	acctKey := accountKey(email)
+	pairKey := ip + "|" + acctKey // no email address in a Redis key
 	// Every attempt is counted up front and refunded on success (or when we are too busy to
-	// judge it), so parallel guesses cannot slip past the limit. Both limiters fail closed (503
+	// judge it), so parallel guesses cannot slip past the limit. All three limiters fail closed (503
 	// limiter_unavailable when Redis is down): they are the lockouts that stop password guessing.
 	ok, retry, err := s.loginPair.Take(ctx, pairKey)
 	if err != nil {
@@ -212,7 +222,20 @@ func (s *Service) Login(ctx context.Context, ip, userAgent, email, password, old
 		}
 		return nil, nil, RateLimitedError{retry}
 	}
-	refund := func() { _ = s.loginPair.Refund(ctx, pairKey); _ = s.loginIP.Refund(ctx, ip) }
+	ok, retry, err = s.loginAcct.Take(ctx, acctKey)
+	if err != nil || !ok {
+		_ = s.loginPair.Refund(ctx, pairKey)
+		_ = s.loginIP.Refund(ctx, ip)
+		if err != nil {
+			return nil, nil, err
+		}
+		return nil, nil, RateLimitedError{retry}
+	}
+	refund := func() {
+		_ = s.loginPair.Refund(ctx, pairKey)
+		_ = s.loginIP.Refund(ctx, ip)
+		_ = s.loginAcct.Refund(ctx, acctKey)
+	}
 
 	password = normalizePassword(password)
 	if n := utf8.RuneCountInString(password); n == 0 || n > maxPasswordLen { // never hash oversize input

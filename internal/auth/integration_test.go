@@ -81,7 +81,7 @@ var testOTPKey = []byte(strings.Repeat("k", MinOTPKeyBytes))
 func newEnv(t *testing.T, o opts) *env {
 	t.Helper()
 	if o.limits == (Limits{}) {
-		o.limits = Limits{RegisterPerHour: 1000, LoginFailsPerPair: 1000, LoginFailsPerIP: 1000}
+		o.limits = Limits{RegisterPerHour: 1000, LoginFailsPerPair: 1000, LoginFailsPerIP: 1000, LoginFailsPerAccount: 1000}
 	}
 	if o.maxHashes == 0 {
 		o.maxHashes = 4
@@ -704,7 +704,7 @@ func TestMeWithoutValidSession(t *testing.T) {
 
 // AC6: rate limits.
 func TestLoginRateLimitPerEmailAndIP(t *testing.T) {
-	e := newEnv(t, opts{limits: Limits{RegisterPerHour: 100, LoginFailsPerPair: 3, LoginFailsPerIP: 5}})
+	e := newEnv(t, opts{limits: Limits{RegisterPerHour: 100, LoginFailsPerPair: 3, LoginFailsPerIP: 5, LoginFailsPerAccount: 1000}})
 	want(t, e.register(testMail, testPW, "A"), 200, "")
 	want(t, e.register("bob@example.com", testPW, "B"), 200, "")
 
@@ -729,7 +729,7 @@ func TestLoginRateLimitPerEmailAndIP(t *testing.T) {
 }
 
 func TestSuccessfulLoginsDoNotUseUpTheFailureBudget(t *testing.T) {
-	e := newEnv(t, opts{limits: Limits{RegisterPerHour: 100, LoginFailsPerPair: 2, LoginFailsPerIP: 2}})
+	e := newEnv(t, opts{limits: Limits{RegisterPerHour: 100, LoginFailsPerPair: 2, LoginFailsPerIP: 2, LoginFailsPerAccount: 1000}})
 	want(t, e.register(testMail, testPW, "A"), 200, "")
 	for i := 0; i < 10; i++ {
 		want(t, e.login(testMail, testPW, ""), 200, "")
@@ -737,7 +737,7 @@ func TestSuccessfulLoginsDoNotUseUpTheFailureBudget(t *testing.T) {
 }
 
 func TestParallelGuessesCannotOutrunTheLimit(t *testing.T) {
-	e := newEnv(t, opts{limits: Limits{RegisterPerHour: 100, LoginFailsPerPair: 5, LoginFailsPerIP: 100}})
+	e := newEnv(t, opts{limits: Limits{RegisterPerHour: 100, LoginFailsPerPair: 5, LoginFailsPerIP: 100, LoginFailsPerAccount: 1000}})
 	want(t, e.register(testMail, testPW, "A"), 200, "")
 	var wg sync.WaitGroup
 	var mu sync.Mutex
@@ -759,7 +759,7 @@ func TestParallelGuessesCannotOutrunTheLimit(t *testing.T) {
 }
 
 func TestRegisterRateLimit(t *testing.T) {
-	e := newEnv(t, opts{limits: Limits{RegisterPerHour: 3, LoginFailsPerPair: 10, LoginFailsPerIP: 100}})
+	e := newEnv(t, opts{limits: Limits{RegisterPerHour: 3, LoginFailsPerPair: 10, LoginFailsPerIP: 100, LoginFailsPerAccount: 1000}})
 	for i := 0; i < 3; i++ {
 		want(t, e.register(fmt.Sprintf("u%d@example.com", i), testPW, "U"), 200, "")
 	}
@@ -778,7 +778,7 @@ func TestRegisterRateLimit(t *testing.T) {
 }
 
 func TestClientIPAndTrustProxy(t *testing.T) {
-	lim := Limits{RegisterPerHour: 100, LoginFailsPerPair: 2, LoginFailsPerIP: 100}
+	lim := Limits{RegisterPerHour: 100, LoginFailsPerPair: 2, LoginFailsPerIP: 100, LoginFailsPerAccount: 1000}
 	for _, trust := range []bool{false, true} {
 		e := newEnv(t, opts{limits: lim, trustProxy: trust})
 		want(t, e.register(testMail, testPW, "A"), 200, "")

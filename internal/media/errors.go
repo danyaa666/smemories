@@ -50,3 +50,7 @@ func (e *RateLimitedError) Unwrap() error { return e.Err }
 func tooManyUploads(wait time.Duration) error {
 	return &RateLimitedError{Err: apperr.New(apperr.RateLimited, "too many uploads, try again later"), RetryAfter: wait}
 }
+
+func tooManyPublic(wait time.Duration) error {
+	return &RateLimitedError{Err: apperr.New(apperr.RateLimited, "too many requests, try again later"), RetryAfter: wait}
+}

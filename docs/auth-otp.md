@@ -65,6 +65,14 @@ attacker gets 15 guesses per hour per account: a chance of about 1.5 x 10^-5 per
 are limited to 20 per hour per user and reset attempts to 20 per hour per IP (Redis limiters `verify_tries` and `reset_tries`, which fail closed: `503 limiter_unavailable` when Redis is down; `docs/redis.md`).
 Codes are drawn with `crypto/rand` (uniform, leading zeros kept), compared as HMACs in constant time, and never logged.
 
+## Login limits (T-098)
+
+A login is counted up front against three limiters and refunded when the password is right: per (client, email) `login_pair` (10), per client `login_ip` (100) and per account
+`login_account` (50, from any address); all fail closed and answer `429 ERROR_RATE_LIMITED` with `Retry-After`. A "client" is the IPv4 address or the /64 of an IPv6 address
+([production-config.md](production-config.md#client-ip-and-smem_trust_proxy)). **Accepted trade-off (L-15):** an attacker who fails 50 times locks that account's *login* for up to
+15 minutes. Password reset and Google sign-in are not affected, and a successful `reset-password` clears the account counter at once, so the owner is never kept out after proving control
+of the email. The alternative, no per-account cap, would leave guessing bounded only by the argon2 cost.
+
 ## Configuration
 
 - `SMEM_OTP_KEY`: at least 32 random bytes; required unless `SMEM_ENV` is `dev` or `test` (a fixed development key is used there).

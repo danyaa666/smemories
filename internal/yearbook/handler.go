@@ -6,6 +6,8 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/danyaa666/smemories/internal/apperr"
 	"github.com/danyaa666/smemories/internal/auth"
@@ -33,6 +35,7 @@ func (h *Handler) Routes(mux *http.ServeMux) {
 	mux.Handle("POST /api/yearbook/update", write(h.update))
 	mux.Handle("POST /api/yearbook/update-profile", write(h.updateProfile))
 	mux.Handle("POST /api/yearbook/delete", write(h.delete))
+	mux.Handle("POST /api/yearbook/revoke-photo-links", write(h.revokePhotoLinks))
 }
 
 // The request bodies: the id (or yearbook_id) next to the fields the service validates.
@@ -133,6 +136,18 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// revokePhotoLinks switches off every public photo link of the book (T-092, D-32). Answers an empty data.
+func (h *Handler) revokePhotoLinks(w http.ResponseWriter, r *http.Request) {
+	u, ok := auth.MustUser(w, r)
+	if !ok {
+		return
+	}
+	var in deleteInput // {id}
+	if httpx.DecodeJSON(w, r, &in) && required(w, r, in.ID, "id") {
+		respond(w, r, nil, h.svc.RevokePhotoLinks(r.Context(), u.InternalID, in.ID))
+	}
+}
+
 // respond answers data, or err when there is one.
 func respond(w http.ResponseWriter, r *http.Request, data any, err error) {
 	if err != nil {
@@ -145,6 +160,10 @@ func respond(w http.ResponseWriter, r *http.Request, data any, err error) {
 // fail answers err. A storage failure is logged (Fail logs only the codes that are our fault), the rest, a gone client
 // included, is httpx.Fail.
 func fail(w http.ResponseWriter, r *http.Request, err error) {
+	var ra *RetryAfterError
+	if errors.As(err, &ra) {
+		w.Header().Set("Retry-After", strconv.Itoa(max(int((ra.After+time.Second-1)/time.Second), 1)))
+	}
 	if apperr.Is(err, CodeStorage) && !errors.Is(err, context.Canceled) {
 		httpx.LoggerFrom(r.Context()).Error("yearbook: storage failed", "request_id", httpx.RequestIDFrom(r.Context()), "error", err)
 	}

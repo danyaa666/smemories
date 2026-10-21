@@ -29,7 +29,7 @@ Error:
 - `status` is always a string: `"OK"` or an error code (`ERROR_` + SCREAMING_SNAKE_CASE). The error code is the contract; `error_message` is English text for logs, the client localises.
 - `request_id` is our addition (support and log correlation). It is also the `X-Request-Id` response header.
 - **HTTP status is kept as well** (deviation from the skill, which is silent): 200 success (also for what used to be 201/204; an empty result is `"data": {}`), 400 invalid input, 401 not signed in, 403 forbidden, 404 not found, 409 conflict, 413 too large, 429 rate limited (with `Retry-After`), 503 dependency down, 500 internal. Browsers, proxies and the edge need real status codes.
-- Binary responses (`media/get-content`) have no envelope on success; their errors do.
+- Binary responses (`media/get-content`, `public-media/get-content`) have no envelope on success; their errors do.
 
 ## 3. Error codes
 

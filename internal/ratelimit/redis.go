@@ -163,6 +163,14 @@ func (g *guard) Refund(ctx context.Context, key string) error {
 	return nil
 }
 
+// Reset never fails: a lost reset only leaves the caller's counter where it was (the window still ends it).
+func (g *guard) Reset(ctx context.Context, key string) error {
+	if err := g.in.Reset(context.WithoutCancel(ctx), key); err != nil {
+		g.f.fault(g.name, g.closed, err)
+	}
+	return nil
+}
+
 // Redis is the shared Limiter: one sorted set per key, smem:<env>:rl:<name>:<key>.
 type Redis struct {
 	rc     *redis.Client
@@ -207,4 +215,9 @@ func (l *Redis) Take(ctx context.Context, key string) (bool, time.Duration, erro
 // Refund implements Limiter.
 func (l *Redis) Refund(ctx context.Context, key string) error {
 	return redis.Classify(refundScr.Run(ctx, l.rc.Client(), []string{l.key(key)}).Err())
+}
+
+// Reset implements Limiter.
+func (l *Redis) Reset(ctx context.Context, key string) error {
+	return redis.Classify(l.rc.Client().Del(ctx, l.key(key)).Err())
 }

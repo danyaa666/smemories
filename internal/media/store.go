@@ -151,6 +151,44 @@ func (s *Store) owned(ctx context.Context, ownerID uint64, publicID string) (*Me
 	return m, nil
 }
 
+// ShareableNoteStatus is the status a note must have for its photos to be reachable through a public link. It is
+// notes.StatusApproved (notes imports media, so the value is repeated here; a notes test pins them together).
+const ShareableNoteStatus = "approved"
+
+// publicPhoto is what the public endpoint needs to decide about one link: the photo, its book's public id and current link epoch,
+// and whether the photo may be shared at all right now.
+type publicPhoto struct {
+	m          Media
+	yearbookID string
+	epoch      uint32
+	shareable  bool
+}
+
+// publicPhoto loads a photo by public id for the public endpoint, without any ownership scope: the token is the credential.
+// One row, one statement, whatever the answer, so a bad link, a hidden note and a deleted book take about the same time.
+// A photo is shareable when it is the cover or a profile photo of its book, or belongs to an approved note of its book; a
+// deleted note, book or photo has no row left to match. The media-to-book join is 1:1 by primary key (like owned), and the
+// three tests use the indexes on cover_media_id, photo_media_id and note_photo_tab.media_id.
+// <=> is null-safe equality: a book without a cover is false, not NULL.
+func (s *Store) publicPhoto(ctx context.Context, mediaID string) (*publicPhoto, error) {
+	p := new(publicPhoto)
+	err := s.db.QueryRowContext(ctx,
+		`SELECT m.id, m.public_id, m.object_key, m.content_type, m.bytes, m.sha256, m.created_at, y.public_id, y.link_epoch,
+		   (y.cover_media_id <=> m.id
+		    OR EXISTS (SELECT 1 FROM profile_tab p WHERE p.yearbook_id = y.id AND p.photo_media_id = m.id)
+		    OR EXISTS (SELECT 1 FROM note_photo_tab np JOIN note_tab n ON n.id = np.note_id
+		               WHERE np.media_id = m.id AND n.yearbook_id = y.id AND n.status = ?))
+		 FROM media_tab m JOIN yearbook_tab y ON y.id = m.yearbook_id WHERE m.public_id = ?`, ShareableNoteStatus, mediaID).
+		Scan(&p.m.RowID, &p.m.ID, &p.m.ObjectKey, &p.m.ContentType, &p.m.Bytes, &p.m.SHA256, &p.m.CreatedAt, &p.yearbookID, &p.epoch, &p.shareable)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, dbError(err, "select public photo")
+	}
+	return p, nil
+}
+
 // keys lists the objects of a photo that exist (the print object is missing until the backfill ran).
 func (m *Media) keys() []string {
 	if m.PrintKey == "" {

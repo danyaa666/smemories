@@ -104,3 +104,21 @@ func TestOnRejectCountsOnlyRefusals(t *testing.T) {
 		t.Fatalf("rejections = %v, want two for probe (the first hit is allowed)", got)
 	}
 }
+
+func TestMemoryResetForgetsOnlyThatKey(t *testing.T) {
+	l := NewMemory(1, time.Minute, (&clock{t: time.Unix(1000, 0)}).now)
+	take(l, "k")
+	take(l, "other")
+	if ok, _ := take(l, "k"); ok {
+		t.Fatal("k should be at its limit")
+	}
+	if err := l.Reset(context.Background(), "k"); err != nil {
+		t.Fatal(err)
+	}
+	if ok, _ := take(l, "k"); !ok {
+		t.Fatal("reset should free the key")
+	}
+	if ok, _ := take(l, "other"); ok {
+		t.Fatal("reset touched another key")
+	}
+}

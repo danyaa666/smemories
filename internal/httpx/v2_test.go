@@ -309,7 +309,16 @@ func TestClientIP(t *testing.T) {
 		want  string
 	}{
 		{"remote host", r("203.0.113.9:5555", "1.1.1.1"), false, "203.0.113.9"},
-		{"ipv6", r("[2001:db8::1]:5555"), false, "2001:db8::1"},
+		{"ipv6 is keyed by its /64", r("[2001:db8:1:2:aaaa:bbbb:cccc:dddd]:5555"), false, "2001:db8:1:2::"},
+		{"same /64, other host", r("[2001:db8:1:2:1::9]:5555"), false, "2001:db8:1:2::"},
+		{"other /64", r("[2001:db8:1:3::1]:5555"), false, "2001:db8:1:3::"},
+		{"ipv4-mapped is the ipv4 text", r("[::ffff:203.0.113.9]:5555"), false, "203.0.113.9"},
+		{"zone id is dropped", r("[fe80::1%eth0]:5555"), false, "fe80::"},
+		{"loopback v6", r("[::1]:5555"), false, "::"},
+		{"upper case and long form share a key", r("[2001:0DB8:0001:0002:0000:0000:0000:0001]:1"), false, "2001:db8:1:2::"},
+		{"ipv6 last hop", r("10.0.0.1:1", "1.1.1.1, 2001:db8:5:6:7:8:9:a"), true, "2001:db8:5:6::"},
+		{"ipv4-mapped last hop", r("10.0.0.1:1", "::ffff:198.51.100.7"), true, "198.51.100.7"},
+		{"garbage remote is kept", r("not-an-addr"), false, "not-an-addr"},
 		{"no port", r("203.0.113.9"), false, "203.0.113.9"},
 		{"last hop", r("10.0.0.1:1", "1.1.1.1, 198.51.100.7"), true, "198.51.100.7"},
 		{"last header", r("10.0.0.1:1", "9.9.9.9", "1.1.1.1, 198.51.100.8"), true, "198.51.100.8"},
@@ -320,7 +329,7 @@ func TestClientIP(t *testing.T) {
 			t.Errorf("%s: ResolveClientIP = %q, want %q", c.name, got, c.want)
 		}
 		var viaMW string
-		WithClientIP(c.trust)(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) { viaMW = ClientIP(r) })).
+		WithClientIP(c.trust, nil)(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) { viaMW = ClientIP(r) })).
 			ServeHTTP(httptest.NewRecorder(), c.req)
 		if viaMW != c.want {
 			t.Errorf("%s: ClientIP via middleware = %q, want %q", c.name, viaMW, c.want)
@@ -328,6 +337,39 @@ func TestClientIP(t *testing.T) {
 	}
 	if got := ClientIP(r("203.0.113.9:1", "1.1.1.1")); got != "203.0.113.9" {
 		t.Errorf("ClientIP without the middleware must not trust headers, got %q", got)
+	}
+}
+
+func TestTrustProxyWarnsOncePerMinuteForAPublicPeer(t *testing.T) {
+	var buf bytes.Buffer
+	log := slog.New(slog.NewTextHandler(&buf, nil))
+	h := WithClientIP(true, log)(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	serve := func(remote string) {
+		req := httptest.NewRequest("GET", "/", nil)
+		req.RemoteAddr = remote
+		h.ServeHTTP(httptest.NewRecorder(), req)
+	}
+	serve("10.0.0.1:1")
+	serve("[::1]:1")
+	serve("[fd00::7]:1")
+	if buf.Len() != 0 {
+		t.Fatalf("private and loopback peers must not warn, got %q", buf.String())
+	}
+	serve("203.0.113.9:1")
+	serve("[2001:db8::1]:1")
+	if n := strings.Count(buf.String(), "SMEM_TRUST_PROXY"); n != 1 {
+		t.Fatalf("want exactly one warning in a minute, got %d: %q", n, buf.String())
+	}
+	if strings.Contains(buf.String(), "203.0.113.9") {
+		t.Fatalf("the peer address must not be logged: %q", buf.String())
+	}
+	buf.Reset()
+	off := WithClientIP(false, log)(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	req := httptest.NewRequest("GET", "/", nil)
+	req.RemoteAddr = "203.0.113.9:1"
+	off.ServeHTTP(httptest.NewRecorder(), req)
+	if buf.Len() != 0 {
+		t.Fatalf("no warning without trustProxy, got %q", buf.String())
 	}
 }
 
