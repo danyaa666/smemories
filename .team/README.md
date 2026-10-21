@@ -13,16 +13,15 @@
 | BACKLOG | 12 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-095, T-096, T-097 |
 | TODO | 10 | T-101, T-105, T-106, T-107, T-109, T-110, T-112, T-113, T-114, T-115 |
 | READY_FOR_QA | 1 | T-111 |
-| QA_PASS | 2 | T-100, T-104 |
-| MERGED | 1 | T-094 |
+| MERGED | 3 | T-094, T-100, T-104 |
 | DONE | 81 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-092, T-093, T-098, T-099, T-102, T-103, T-108 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-094 ([E05] Web: Export as text on the print screen, public-link warning, disable links)
+**Awaiting your review (MERGED):** T-094 ([E05] Web: Export as text on the print screen, public-link warning, disable links); T-100 ([E12] Canonical public ids and the stored id for object keys); T-104 ([E12] Media processing robustness: slots released on every path, no panics, decoded limits)
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?); Q-051 (Approve merge of T-100 (canonical public ids, PR #93)?)
 
-_Board last written 2026-10-21 13:22Z_
+_Board last written 2026-10-21 13:51Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4569,18 +4568,18 @@ Spec: `.team/epics/E12-security-hardening/02-mandatory-env-and-local-only-dev-te
 - 2026-10-21 03:43Z · human · accepted by owner
 
 ### T-100 — [E12] Canonical public ids and the stored id for object keys
-- **Status:** QA_PASS
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
 - **Depends-on:** T-092
 - **Risk:** high
 - **Rework:** 1
-- **Owner-approved:** —
-- **Assignee:** leader
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-100-e12-canonical-public-ids-and-the-stored-
 - **PR:** https://github.com/danyaa666/smemories/pull/93
-- **Updated:** 2026-10-21 13:11Z by qa
+- **Updated:** 2026-10-21 13:50Z by leader
 - **Comments-seen:** 8
 
 Spec: `.team/epics/E12-security-hardening/03-canonical-public-ids.md`. Audit M3: public_id columns compare case-insensitively and media/yearbook use the caller's spelling in S3 prefixes, so a user can orphan objects, reset their quota and defeat deletion. Validate ids at the edge, build keys from the stored id. Do before T-025. Risk high: data.
@@ -4606,6 +4605,8 @@ Spec: `.team/epics/E12-security-hardening/03-canonical-public-ids.md`. Audit M3:
   a) web/src/pages/YearbookEdit.tsx:39 shows the 'book not found' text only for status 404. A hand-typed or lower-cased URL id (/books/abc/...) now answers 400 ERROR_PARAM, so the page shows the generic invalid_body error text instead of books.notFound. Not reachable from the app's own links; consider treating 400 like 404 there (small web follow-up, not part of T-100).
   b) The service-level test counts keys through the flaky wrapper's own record of Puts, not a bucket listing; its Get checks on the three keys after Delete do hit the real bucket and the mutation check above shows it catches both regressions, so I consider AC3 proven. Using a real list would be stronger but storage.S3 has no List method.
 - 2026-10-21 13:11Z · leader · Leader review OK on 2210d38: one ulid.Valid shared by notes, medialink and every edge (PR edge table), Upload builds the prefix from the stored public_id and Delete purges y.ID, so even a caller bypassing the handlers stays canonical. QA_PASS with ~250 hostile spellings over 15 endpoints and DB/bucket checksums unchanged, M3 replay fails at step 1, mutation checks on both fixes. Follow-up T-114 (web: show 'book not found' for a malformed id). Waiting for the owner's approval (risk high).
+- 2026-10-21 13:50Z · human · owner approved merge
+- 2026-10-21 13:50Z · leader · MERGED into develop as dbf5e8b (PR #93) after owner approval.
 
 ### T-101 — [E12] Small hardening: readyz cache, generic code-email greeting, absolute session lifetime
 - **Status:** TODO
@@ -4709,18 +4710,18 @@ Spec: .team/epics/E12-security-hardening/06-session-fence-against-credential-cha
 - 2026-10-21 08:13Z · human · accepted by owner
 
 ### T-104 — [E12] Media processing robustness: slots released on every path, no panics, decoded limits
-- **Status:** QA_PASS
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
 - **Depends-on:** —
 - **Risk:** high
 - **Rework:** 0
-- **Owner-approved:** —
-- **Assignee:** leader
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-104-e12-media-processing-robustness-slots-re
 - **PR:** https://github.com/danyaa666/smemories/pull/94
-- **Updated:** 2026-10-21 12:57Z by qa
+- **Updated:** 2026-10-21 13:51Z by leader
 - **Comments-seen:** 3
 
 Spec: .team/epics/E12-security-hardening/08-media-processing-robustness.md (read it from the repo root). Source: audit run 1, docs/security-audit-skill-2026-10-20/ (PR #86). Risk high: owner approves the merge.
@@ -4737,6 +4738,8 @@ Spec: .team/epics/E12-security-hardening/08-media-processing-robustness.md (read
   Non-blocking observations: (1) a corrupt lossy WebP with a damaged middle is accepted and re-encoded (the decoder tolerates it); not a safety issue. (2) withinLimits estimates lossy WebP+alpha at 2.5 B/px but ALPH compression=1 decodes to a transient NRGBA (4 B/px), so a valid 5000x5000 file could peak near 160 MB against a 62 MB estimate; pre-existing and outside T-104, worth a follow-up note for the memory budget. (3) printOf panics (backfill CLI) are recovered but not logged/counted by the service (only the CLI path); fine. (4) If the display encode panics, wg.Wait is skipped and the print goroutine may outlive the slot release for a moment; harmless (its output is discarded), mention only.
   Stack qat104 taken down without -v; my API process stopped (own pid). No .team/ changes in the PR.
 - 2026-10-21 12:57Z · leader · Leader review OK on 968b9d7: processPhoto owns the slot (acquire + defer release in one function), recoverTo on load/process/print with reportPanic counting after the recover; decoded bounds re-checked; VP8X proven harmless by reading x/image and pinned by a fixture. QA_PASS with ~40 hostile files through owner upload and the public form plus a burst: all 400, server up, gauges 0. QA follow-up (lossy WebP with ALPH decodes to NRGBA, ~4 B/px vs the 2.5 B/px estimate) goes to T-113. Waiting for the owner's approval (risk high).
+- 2026-10-21 13:50Z · human · owner approved merge
+- 2026-10-21 13:51Z · leader · MERGED into develop as c0b128d (PR #94) after owner approval, right after T-100 (both touch internal/media; merged clean, develop CI checks the combination).
 
 ### T-105 — [E12] Note links capped and paged; contributor photos cannot exhaust the owner's quota
 - **Status:** TODO
