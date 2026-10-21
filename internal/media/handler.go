@@ -43,9 +43,15 @@ const (
 	userCapRetryAfter = 5 * time.Second
 
 	// maxDownloadsPerClient is how many photo downloads one account (owner route) or one client address (public route) may have
-	// in progress (T-107); the next one is 429 before the store is touched. The web preloads 6 at a time and the rest are lazy.
-	maxDownloadsPerClient = 8
+	// in progress (T-107); the next one is 429 before the store is touched. It is 64 because over HTTP/2 (CloudFront, the ALB) a gallery page
+	// requests all its images at once and an <img> does not retry a 429; streaming keeps memory flat, so the cap only bounds open connections.
+	maxDownloadsPerClient = 64
 	downloadRetryAfter    = 2 * time.Second
+	// downloadGrace is how long a request at the cap waits for a slot before it is refused: a gallery page over HTTP/2 can start
+	// more than 64 requests in the same instant, and each of them (a thumbnail) ends within milliseconds. Slow readers hold their slot
+	// much longer, so a client that really has 64 downloads open is still refused after this wait.
+	downloadGrace = 500 * time.Millisecond
+	downloadPoll  = 5 * time.Millisecond
 )
 
 // Handler serves the media endpoints: it decodes, validates the shape, calls the Service and writes the answer.
@@ -95,9 +101,24 @@ func (h *Handler) DownloadsInProgress() int {
 	return h.dlTotal
 }
 
-// takeDownload counts one more download in progress for the client ("u:<id>" or "ip:<address>"); the returned func gives it
+// takeDownload is tryDownload that waits up to downloadGrace (or until ctx ends) for a slot at the cap.
+func (h *Handler) takeDownload(ctx context.Context, client string) (release func(), ok bool) {
+	deadline := time.Now().Add(downloadGrace)
+	for {
+		if release, ok = h.tryDownload(client); ok || !time.Now().Before(deadline) {
+			return release, ok
+		}
+		select {
+		case <-ctx.Done():
+			return nil, false
+		case <-time.After(downloadPoll):
+		}
+	}
+}
+
+// tryDownload counts one more download in progress for the client ("u:<id>" or "ip:<address>"); the returned func gives it
 // back (call it once, with defer). ok is false when the client is at maxDownloadsPerClient. It never waits.
-func (h *Handler) takeDownload(client string) (release func(), ok bool) {
+func (h *Handler) tryDownload(client string) (release func(), ok bool) {
 	h.dlMu.Lock()
 	defer h.dlMu.Unlock()
 	if h.dlPerClient == nil {
@@ -368,7 +389,7 @@ func (h *Handler) content(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// One account cannot hold every connection to the object store: its own cap comes before the database and the store (T-107).
-	release, ok := h.takeDownload("u:" + strconv.FormatUint(u.InternalID, 10))
+	release, ok := h.takeDownload(r.Context(), "u:"+strconv.FormatUint(u.InternalID, 10))
 	if !ok {
 		h.fail(w, r, tooManyDownloads(downloadRetryAfter))
 		return
@@ -423,7 +444,7 @@ func writeContent(w http.ResponseWriter, r *http.Request, m *Media, obj io.ReadS
 // document that must not be indexed, framed or leak its address. Every refusal of the link is the same 404.
 func (h *Handler) publicContent(w http.ResponseWriter, r *http.Request) {
 	ip := httpx.ClientIP(r)
-	release, ok := h.takeDownload("ip:" + ip) // before the limiters, the database and the store (T-107)
+	release, ok := h.takeDownload(r.Context(), "ip:"+ip) // before the limiters, the database and the store (T-107)
 	if !ok {
 		err := tooManyDownloads(downloadRetryAfter)
 		h.countPublicResult(err)

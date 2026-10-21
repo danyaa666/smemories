@@ -965,11 +965,11 @@ paths:
         `variant=print` is the 1800 px version for the print renderer; a photo uploaded before it existed, and not yet reached by the
         backfill (`smemories-media-backfill`), is answered in display size. The route may take up to 2 minutes for a slow client; a client that reads
         slower than 16 KiB/s (after 15 s) or stops reading for 10 s is disconnected. The bytes are streamed from the object store (T-107). One account may
-        have at most 8 downloads in progress; the ninth is `429 ERROR_RATE_LIMITED` with `Retry-After`, answered before anything is read.
+        have at most 64 downloads in progress; the 65th waits up to 0.5 s for a slot and is then `429 ERROR_RATE_LIMITED` with `Retry-After`, answered before anything is read.
       x-auth: required
       x-error-codes:
         - {code: ERROR_NOT_FOUND, description: The photo does not exist or belongs to someone else; the two cannot be told apart.}
-        - {code: ERROR_RATE_LIMITED, description: "This account already has 8 photo downloads in progress; retry after `Retry-After` seconds."}
+        - {code: ERROR_RATE_LIMITED, description: "This account already has 64 photo downloads in progress; retry after `Retry-After` seconds."}
         - {code: ERROR_STORAGE_ERROR, description: The object store failed or the stored object is gone; retry later.}
         - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
       security:
@@ -1586,12 +1586,12 @@ paths:
         or CDN may keep serving a revoked or unshared photo for up to 5 minutes. Honours `HEAD`, `Range` (206) and `If-None-Match` (304); a refused link is
         never answered 304. Limits per client IP: 60 requests that find nothing per 15 minutes (only misses count, so a good link never uses this budget) and
         600 requests of any kind per 15 minutes; both answer `ERROR_RATE_LIMITED` with `Retry-After`, and both let the request through when Redis is down.
-        A client IP may also have at most 8 downloads in progress (T-107): the ninth is the same `429 ERROR_RATE_LIMITED`, answered before the link is looked at.
+        A client IP may also have at most 64 downloads in progress (T-107): the 65th waits up to 0.5 s for a slot and is then the same `429 ERROR_RATE_LIMITED`, answered before the link is looked at.
         The route may take up to 2 minutes for a slow client; a client that reads slower than 16 KiB/s (after 15 s) or stops reading for 10 s is disconnected.
       x-auth: public
       x-error-codes:
         - {code: ERROR_NOT_FOUND, description: "The link is not valid for any reason; the reasons cannot be told apart."}
-        - {code: ERROR_RATE_LIMITED, description: "Too many requests, or already 8 downloads in progress, from this client IP; wait `Retry-After` seconds."}
+        - {code: ERROR_RATE_LIMITED, description: "Too many requests, or already 64 downloads in progress, from this client IP; wait `Retry-After` seconds."}
         - {code: ERROR_STORAGE_ERROR, description: The object store failed; retry later.}
       security: []
       parameters:

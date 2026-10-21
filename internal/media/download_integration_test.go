@@ -3,6 +3,7 @@
 package media
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"crypto/rand"
@@ -24,7 +25,7 @@ import (
 	"github.com/danyaa666/smemories/internal/httpx"
 )
 
-// T-107: photo downloads stream from the object store, at most 8 at a time per account / client address, and a slow reader is dropped.
+// T-107: photo downloads stream from the object store, at most 64 at a time per account / client address, and a slow reader is dropped.
 
 // setDisplay replaces the display object of a photo (its row, ETag and type stay) and returns the new bytes.
 func (e *env) setDisplay(mediaID string, size int) []byte {
@@ -55,6 +56,13 @@ func (e *env) hold(srv *httptest.Server, path, cookie string) net.Conn {
 		c = fmt.Sprintf("Cookie: %s=%s\r\n", auth.CookieName, cookie)
 	}
 	fmt.Fprintf(conn, "GET %s HTTP/1.1\r\nHost: x\r\n%sConnection: close\r\n\r\n", path, c)
+	// Wait for the status line so that the download is known to be streaming, not still failing (a held slot that frees itself would make a cap test flaky).
+	_ = conn.SetReadDeadline(time.Now().Add(20 * time.Second))
+	line, err := bufio.NewReaderSize(conn, 64).ReadString('\n')
+	_ = conn.SetReadDeadline(time.Time{})
+	if err != nil || !strings.HasPrefix(line, "HTTP/1.1 200") {
+		e.t.Fatalf("held download: %q %v", line, err)
+	}
 	return conn
 }
 
@@ -92,7 +100,7 @@ func get(t *testing.T, srv *httptest.Server, path, cookie string) dlAnswer {
 	return dlAnswer{res.StatusCode, res.Header, string(b)}
 }
 
-// AC3 (owner route): the 9th concurrent download of one account is 429 before the database or the store is touched (the id is not even
+// AC3 (owner route): the 65th concurrent download of one account is 429 before the database or the store is touched (the id is not even
 // a photo), another account is not affected, and a freed slot is usable again.
 func TestOwnerDownloadsAreCappedPerUser(t *testing.T) {
 	e := newEnv(t)
@@ -111,7 +119,7 @@ func TestOwnerDownloadsAreCappedPerUser(t *testing.T) {
 
 	over := get(t, srv, "/api/media/get-content?id=01J9Z3K6V8Q4M7N2P5R8T0W1XY", a.cookie) // would be 404 if it reached the database
 	if over.StatusCode != 429 || !strings.Contains(over.Body, "ERROR_RATE_LIMITED") || over.Header.Get("Retry-After") == "" || over.Header.Get("Cache-Control") != "no-store" {
-		t.Fatalf("9th download: %d %v %s", over.StatusCode, over.Header, over.Body)
+		t.Fatalf("65th download: %d %v %s", over.StatusCode, over.Header, over.Body)
 	}
 	if r := get(t, srv, "/api/media/get-content?id="+idB+"&variant=thumb", b.cookie); r.StatusCode != 200 {
 		t.Fatalf("another account: %d", r.StatusCode)
@@ -123,7 +131,27 @@ func TestOwnerDownloadsAreCappedPerUser(t *testing.T) {
 	}
 }
 
-// AC3 (public route): at most 8 per client address, answered before the limiters, the database and the store; counted as rate_limited.
+// A client at the cap waits briefly for a slot instead of being refused at once: the 65th request is served when a download ends within
+// the grace, and refused (the test above) when none does.
+func TestDownloadAtTheCapWaitsForAFreedSlot(t *testing.T) {
+	e := newEnv(t)
+	srv := e.serve()
+	a := e.register("a@example.com")
+	idA := e.uploadPhoto(a, e.newBook(a))
+	e.setDisplay(idA, 8<<20)
+	path := "/api/media/get-content?id=" + idA
+	var held []net.Conn
+	for range maxDownloadsPerClient {
+		held = append(held, e.hold(srv, path, a.cookie))
+	}
+	e.waitInflight(maxDownloadsPerClient)
+	time.AfterFunc(downloadGrace/5, func() { _ = held[0].Close() })
+	if r := get(t, srv, path+"&variant=thumb", a.cookie); r.StatusCode != 200 {
+		t.Fatalf("65th download with a slot freed during the grace: %d %s", r.StatusCode, r.Body)
+	}
+}
+
+// AC3 (public route): at most 64 per client address, answered before the limiters, the database and the store; counted as rate_limited.
 func TestPublicDownloadsAreCappedPerClient(t *testing.T) {
 	e := newEnv(t)
 	srv := e.serve()
@@ -140,44 +168,49 @@ func TestPublicDownloadsAreCappedPerClient(t *testing.T) {
 	e.waitInflight(maxDownloadsPerClient)
 	over := get(t, srv, "/api/public-media/get-content?token=garbage", "") // would be 404 if it reached the link check
 	if over.StatusCode != 429 || !strings.Contains(over.Body, "ERROR_RATE_LIMITED") || over.Header.Get("Retry-After") == "" {
-		t.Fatalf("9th download: %d %v %s", over.StatusCode, over.Header, over.Body)
+		t.Fatalf("65th download: %d %v %s", over.StatusCode, over.Header, over.Body)
 	}
 }
 
-// AC3: a normal page of 30 thumbnails fetched 6 at a time (what a browser does) is never refused.
-func TestThirtyThumbnailsLoad(t *testing.T) {
+// AC3: a gallery page over HTTP/2 asks for all its thumbnails at once (the browser's 6-per-host limit does not apply and an <img> does not
+// retry a 429): 30 and 100 truly parallel requests of one account are all answered 200. The browser itself is covered by `make e2e`.
+func TestGalleryPageOfThumbnailsLoadsAtOnce(t *testing.T) {
 	e := newEnv(t)
 	srv := e.serve()
 	u := e.register("a@example.com")
 	id := e.uploadPhoto(u, e.newBook(u))
-	sem := make(chan struct{}, 6)
-	errs := make(chan string, 30)
-	for range 30 {
-		sem <- struct{}{}
-		go func() {
-			defer func() { <-sem }()
-			req, _ := http.NewRequest("GET", srv.URL+"/api/media/get-content?id="+id+"&variant=thumb", nil)
-			req.AddCookie(&http.Cookie{Name: auth.CookieName, Value: u.cookie})
-			res, err := http.DefaultClient.Do(req)
-			if err != nil {
-				errs <- err.Error()
-				return
-			}
-			_, _ = io.Copy(io.Discard, res.Body)
-			_ = res.Body.Close()
-			if res.StatusCode != 200 {
-				errs <- strconv.Itoa(res.StatusCode)
-				return
-			}
-			errs <- ""
-		}()
-	}
-	for range 30 {
-		if m := <-errs; m != "" {
-			t.Fatalf("thumbnail: %s", m)
+	client := &http.Client{Transport: &http.Transport{MaxConnsPerHost: 0, MaxIdleConnsPerHost: 100}}
+	t.Cleanup(client.CloseIdleConnections)
+	for _, n := range []int{30, 100} {
+		start := make(chan struct{})
+		errs := make(chan string, n)
+		for range n {
+			go func() {
+				<-start
+				req, _ := http.NewRequest("GET", srv.URL+"/api/media/get-content?id="+id+"&variant=thumb", nil)
+				req.AddCookie(&http.Cookie{Name: auth.CookieName, Value: u.cookie})
+				res, err := client.Do(req)
+				if err != nil {
+					errs <- err.Error()
+					return
+				}
+				_, _ = io.Copy(io.Discard, res.Body)
+				_ = res.Body.Close()
+				if res.StatusCode != 200 {
+					errs <- strconv.Itoa(res.StatusCode)
+					return
+				}
+				errs <- ""
+			}()
 		}
+		close(start)
+		for range n {
+			if m := <-errs; m != "" {
+				t.Fatalf("%d thumbnails at once: %s", n, m)
+			}
+		}
+		e.waitInflight(0)
 	}
-	e.waitInflight(0)
 }
 
 // AC: a reader that stops reading is dropped after the idle time and its slot comes back (the 2-minute route timeout is not waited for).
@@ -271,7 +304,7 @@ func TestRangesHeadAndConditionalOnBothRoutes(t *testing.T) {
 // 64 x 8 MiB = 512 MiB. The bound is 48 MiB over the start (the copy buffers and socket buffers of 64 requests are a few MiB).
 // The RSS of the process is logged too (run with -v; the PR records it). Serial on purpose: nothing else runs while it measures.
 func TestSlowReadersDoNotHoldTheObjectInMemory(t *testing.T) {
-	const readers, perUser, objSize = 64, maxDownloadsPerClient, 8 << 20
+	const readers, perUser, objSize = 64, 8, 8 << 20 // 8 accounts x 8
 	e := newSerialEnv(t)
 	e.mh.dlPace = httpx.BodyPace{Idle: time.Minute, Total: time.Minute, Grace: time.Minute} // nobody is dropped during the measurement
 	srv := e.serve()
