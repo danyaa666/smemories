@@ -21,6 +21,7 @@ Every label comes from a small fixed set: `route` is the mux pattern (`GET /api/
 | `smem_ratelimit_rejected_total` | counter | limiter | hits refused by a rate limiter (limiter failures are not counted, they are logged) |
 | `smem_mail_send_failures_total` | counter | class | emails given up on after the retries (`unavailable`, `rejected`, `config`, `shutdown`, `other`); background sends only; `config` is an account or setup problem only the operator can fix and must page, `shutdown` counts emails dropped when the process had to exit ([email.md](email.md)) |
 | `smem_media_processing_slots_in_use` / `smem_media_processing_slots` | gauge | | images being processed / `SMEM_MEDIA_MAX_CONCURRENT` |
+| `smem_media_uploads_in_progress` | gauge | | owner uploads (`media/create`) holding a shared slot; the pool is 4 x `SMEM_MEDIA_MAX_CONCURRENT` (T-102) |
 | `smem_public_uploads_in_progress` / `smem_public_uploads_max` | gauge | | public note submissions in progress / `SMEM_PUBLIC_UPLOAD_MAX_CONNS` |
 | `smem_public_media_requests_total` | counter | result | public photo link requests (`ok`, `not_found`, `rate_limited`; T-092); a spike of `not_found` is someone guessing tokens, and the three values are the only labels, never a token or id |
 | `go_sql_*` (`db_name="smemories"`) | gauge/counter | db_name | `sql.DBStats`: open, in-use and idle connections, wait count and duration |

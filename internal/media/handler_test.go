@@ -170,3 +170,44 @@ func TestCreateBusyWhenTooManyInFlight(t *testing.T) {
 		t.Fatalf("got %d %s", rec.Code, rec.Body)
 	}
 }
+
+// T-102: the third upload of one user is 429 with Retry-After 5 before anything else (the shared pool is not touched), another
+// user is not counted, and the count is given back on every path.
+func TestCreatePerUserCap(t *testing.T) {
+	h := &Handler{inflight: make(chan struct{}, 8), logger: nopLogger()}
+	call := func(id uint64) *httptest.ResponseRecorder {
+		rec := httptest.NewRecorder()
+		h.create(rec, httptest.NewRequest("POST", "/api/media/create", nil).WithContext(auth.WithUser(context.Background(), &auth.User{InternalID: id})))
+		return rec
+	}
+	for range maxUploadsPerUser {
+		if !h.takeUser(1) {
+			t.Fatal("two uploads per user must be allowed")
+		}
+	}
+	rec := call(1)
+	if rec.Code != 429 || rec.Header().Get("Retry-After") != "5" || !strings.Contains(rec.Body.String(), `"ERROR_RATE_LIMITED"`) || len(h.inflight) != 0 {
+		t.Fatalf("third: %d %q %s inflight=%d", rec.Code, rec.Header().Get("Retry-After"), rec.Body, len(h.inflight))
+	}
+	if rec := call(2); rec.Code == 429 { // a different user (the body is empty, so it fails on the form, not on the cap)
+		t.Fatalf("other user: %d", rec.Code)
+	}
+	for range maxUploadsPerUser {
+		h.releaseUser(1)
+	}
+	if len(h.perUser) != 0 {
+		t.Fatalf("counts left: %v", h.perUser)
+	}
+}
+
+// The pace the owner route shares with the public route lets a 10 MiB photo through over a 2 Mbit/s link.
+func TestPhoneUploadPaceAllowsSlowLink(t *testing.T) {
+	p := httpx.PhoneUploadPace
+	const rate = 256 << 10 // 2 Mbit/s in bytes per second
+	if d := time.Duration(10<<20) * time.Second / rate; d >= p.Total || rate <= p.MinRate {
+		t.Fatalf("10 MiB takes %v (total %v), rate %d vs minimum %d", d, p.Total, rate, p.MinRate)
+	}
+	if p.Total != uploadReadTimeout {
+		t.Fatalf("pace total %v differs from the route's read time %v", p.Total, uploadReadTimeout)
+	}
+}
