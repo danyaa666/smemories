@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/danyaa666/smemories/internal/config"
+	"github.com/danyaa666/smemories/internal/legal"
 	"github.com/danyaa666/smemories/internal/mailer"
 	"github.com/danyaa666/smemories/internal/redis"
 )
@@ -643,7 +644,7 @@ func TestNewCodesRefusesFixedCodeOutsideDevAndTest(t *testing.T) {
 func TestRegisterLocale(t *testing.T) {
 	e := newEnv(t, opts{})
 	reg := func(email, locale string) *httptest.ResponseRecorder {
-		return e.do(req{method: "POST", path: "/api/auth/register", body: fmt.Sprintf(`{"email":%q,"password":%q,"display_name":"A"%s}`, email, testPW, locale)})
+		return e.do(req{method: "POST", path: "/api/auth/register", body: fmt.Sprintf(`{"email":%q,"password":%q,"display_name":"A","accept_terms_version":%q%s}`, email, testPW, legal.CurrentVersion, locale)})
 	}
 	for i, c := range []struct{ field, stored string }{
 		{``, "en"}, {`,"locale":null`, "en"}, {`,"locale":"en"`, "en"}, {`,"locale":"vi"`, "vi"},

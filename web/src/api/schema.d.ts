@@ -49,7 +49,7 @@ export interface paths {
         put?: never;
         /**
          * Create an account and sign in
-         * @description Called by the sign-up form. Creates the account and signs the caller in (the session cookie is set) and sends the 6-digit verification code by email. The email is trimmed, lower-cased and normalised to NFC; a duplicate (case-insensitive, and NFC/NFD spellings are the same address) is `ERROR_EMAIL_TAKEN`. Password: 10-128 characters after NFKC normalisation and not equal to the email. Display name: 1-100 characters after trimming, no control or format characters. Rate limit: 5 per hour per IP, counted once the input is valid. A cookie-less request needs no Origin; one that carries a session cookie must come from an allowed Origin. The account gets a default `username` (`user-` plus the last 8 characters of its id; longer slices on a clash, never an error). Not idempotent: a repeated call is `ERROR_EMAIL_TAKEN`. An unknown body field is `ERROR_PARAM`.
+         * @description Called by the sign-up form. Creates the account and signs the caller in (the session cookie is set) and sends the 6-digit verification code by email. The email is trimmed, lower-cased and normalised to NFC; a duplicate (case-insensitive, and NFC/NFD spellings are the same address) is `ERROR_EMAIL_TAKEN`. Password: 10-128 characters after NFKC normalisation and not equal to the email. Display name: 1-100 characters after trimming, no control or format characters. Rate limit: 5 per hour per IP, counted once the input is valid. A cookie-less request needs no Origin; one that carries a session cookie must come from an allowed Origin. The body must carry `accept_terms_version` equal to the current Terms version (D-35); a missing, empty or other value is `ERROR_TERMS_REQUIRED` (400) before anything is created, and on success the version and the time are stored in the same transaction as the account. The account gets a default `username` (`user-` plus the last 8 characters of its id; longer slices on a clash, never an error). Not idempotent: a repeated call is `ERROR_EMAIL_TAKEN`. An unknown body field is `ERROR_PARAM`.
          */
         post: operations["register"];
         delete?: never;
@@ -227,7 +227,7 @@ export interface paths {
         };
         /**
          * The signed-in user
-         * @description Called on every page load as the session bootstrap; `ERROR_UNAUTHORIZED` (401) means signed out. Sliding expiry: once more than half of the 30-day session lifetime has elapsed the expiry is extended and the cookie is sent again. `username` is the public handle (D-28); `username_next_change_at` is when it may change again, `null` when a change is allowed now. Read-only and idempotent.
+         * @description Called on every page load as the session bootstrap; `ERROR_UNAUTHORIZED` (401) means signed out. Sliding expiry: once more than half of the 30-day session lifetime has elapsed the expiry is extended and the cookie is sent again. `username` is the public handle (D-28); `username_next_change_at` is when it may change again, `null` when a change is allowed now. `terms` says which version of the Terms and Privacy Policy the user accepted (`accepted_version`, `null` = never), the current one, and whether the user must accept before any other signed-in endpoint works (`required`, see `/api/user/accept-terms`). This is one of the few endpoints that answer while `required` is true. Read-only and idempotent.
          */
         get: operations["getMe"];
         put?: never;
@@ -252,6 +252,26 @@ export interface paths {
          * @description Called by the profile form. The username is a unique, public handle (not a login name; sign-in stays email + password or Google). The input is trimmed and lower-cased, then must be 3-30 characters of `a-z 0-9 . _ -`, start and end with a letter or digit, and have no two special characters in a row (`ERROR_INVALID_USERNAME`). A fixed list (`admin`, `support`, `root`, `smemories`, ...) and every name starting with `user-` that is not the caller's own generated default are `ERROR_USERNAME_RESERVED`. A name already in use is `ERROR_USERNAME_TAKEN` (case-insensitive). A change is allowed once every 7 days after a user-made change (the first change from the default is allowed at once); a too-early change is `ERROR_USERNAME_CHANGE_TOO_SOON` with `Retry-After` in seconds and the allowed time in the message. Setting the current name again succeeds and does not start the cooldown. The cooldown check and the write are one conditional update, so concurrent requests cannot both pass. Taken, invalid and reserved attempts are limited to 20 per hour per user (`ERROR_RATE_LIMITED`) so the endpoint cannot be used to probe which names exist; successes, no-ops and cooldown answers do not count. Not idempotent in effect (it starts the cooldown). A request with the session cookie must come from an allowed Origin.
          */
         post: operations["updateUsername"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/user/accept-terms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept the current Terms of Use and Privacy Policy
+         * @description Called by the accept screen that the web shows when `get-me` says `terms.required` (a Google account on its first sign-in, an account created before the terms existed, or everyone after the texts changed). `version` must equal the current version (`terms.current_version`); an older value, which is what a stale page sends, is `ERROR_PARAM`. Stores the version and the time. Repeating it is harmless. Until it succeeds, every other signed-in endpoint answers `ERROR_TERMS_REQUIRED` (403); only `get-me`, this call, `/api/auth/logout` and the email-verification endpoints still work. A request with the session cookie must come from an allowed Origin.
+         */
+        post: operations["acceptTerms"];
         delete?: never;
         options?: never;
         head?: never;
@@ -797,6 +817,34 @@ export interface components {
              */
             username_next_change_at: number | null;
         };
+        /** @description Where the signed-in user stands on the Terms of Use and Privacy Policy (D-35). */
+        Terms: {
+            /** @description The version the user accepted (the date of the texts in `docs/legal`, e.g. `2026-10-21`); `null` = never accepted. */
+            accepted_version: string | null;
+            /** @description The version in force now. */
+            current_version: string;
+            /** @description True when `accepted_version` is not `current_version`: the user must call `/api/user/accept-terms` before any other signed-in endpoint works. */
+            required: boolean;
+        };
+        /** @description The user object plus `terms`. */
+        Me: components["schemas"]["User"] & {
+            terms: components["schemas"]["Terms"];
+        };
+        MeResponse: {
+            /**
+             * @description Always `OK` on success.
+             * @constant
+             */
+            status: "OK";
+            data: components["schemas"]["Me"];
+        };
+        AcceptTermsRequest: {
+            /**
+             * @description Required. The version the user was shown; it must equal the current version, otherwise `ERROR_PARAM` (a stale page). A non-string is `ERROR_PARAM`.
+             * @example 2026-10-21
+             */
+            version: string;
+        };
         UpdateUsernameRequest: {
             /**
              * @description Required. Trimmed and lower-cased (`Alice` is stored as `alice`), then 3-30 characters of `a-z 0-9 . _ -`, starting and ending with a letter or digit, with no two specials in a row; otherwise `ERROR_INVALID_USERNAME`. Non-ASCII characters are never valid. A non-string is `ERROR_PARAM`.
@@ -825,6 +873,11 @@ export interface components {
             };
         };
         RegisterRequest: {
+            /**
+             * @description Required. The version of the Terms of Use and Privacy Policy the sign-up form showed (the current one, `2026-10-21` at the time of writing; the web has it from the same constant as the texts in `docs/legal`). Missing, empty or another version is `ERROR_TERMS_REQUIRED` (HTTP 400) and nothing is created.
+             * @example 2026-10-21
+             */
+            accept_terms_version: string;
             /** @description Required. Trimmed, lower-cased and normalised to Unicode NFC, so NFC and NFD spellings of one address are the same account (also at login). The local part (before the last `@`) is at most 64 bytes, and the address contains no control (Cc) or format (Cf) characters; otherwise `ERROR_INVALID_EMAIL`. */
             email: string;
             /**
@@ -1547,7 +1600,7 @@ export interface components {
                 "application/json": components["schemas"]["ApiError"];
             };
         };
-        /** @description A business code listed in the operation's `x-error-codes` (for example `ERROR_CSRF_ORIGIN_MISMATCH`, `ERROR_EMAIL_NOT_VERIFIED`, `ERROR_VERIFICATION_FAILED`). */
+        /** @description A business code listed in the operation's `x-error-codes` (for example `ERROR_CSRF_ORIGIN_MISMATCH`, `ERROR_EMAIL_NOT_VERIFIED`, `ERROR_VERIFICATION_FAILED`). Every operation that needs the session cookie can also answer `ERROR_TERMS_REQUIRED` (403) until the user accepted the current Terms (`/api/user/accept-terms`); it is not repeated in each `x-error-codes`. Exempt: `get-me`, `accept-terms`, `logout`, `verify-email` and `resend-verification`. */
         ApiForbidden: {
             headers: {
                 [name: string]: unknown;
@@ -2036,7 +2089,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserResponse"];
+                    "application/json": components["schemas"]["MeResponse"];
                 };
             };
             401: components["responses"]["ApiUnauthorized"];
@@ -2075,6 +2128,37 @@ export interface operations {
             429: components["responses"]["ApiRateLimited"];
             500: components["responses"]["ApiInternal"];
             503: components["responses"]["ApiAuthUnavailable"];
+        };
+    };
+    acceptTerms: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AcceptTermsRequest"];
+            };
+        };
+        responses: {
+            /** @description The version is stored; the body is the same object as `get-me` (with `terms.required` false). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
         };
     };
     createYearbook: {

@@ -19,9 +19,10 @@ func TestQAWrongOriginOnEveryPost(t *testing.T) {
 	e := newEnv(t, opts{})
 	c := sessionCookie(t, e.register(testMail, testPW, "A")).Value
 	posts := map[string]string{
-		"/api/auth/register":            body("qa@example.com", testPW, "Q"),
+		"/api/auth/register":            regBody("qa@example.com", testPW, "Q"),
 		"/api/auth/login":               body(testMail, testPW, ""),
 		"/api/auth/logout":              "",
+		"/api/user/accept-terms":        `{"version":"2026-10-21"}`,
 		"/api/auth/verify-email":        `{"code":"000000"}`,
 		"/api/auth/resend-verification": "",
 		"/api/auth/forgot-password":     `{"email":"alice@example.com"}`,

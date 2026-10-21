@@ -22,6 +22,7 @@ import (
 	"github.com/danyaa666/smemories/internal/auth"
 	"github.com/danyaa666/smemories/internal/db/dbtest"
 	"github.com/danyaa666/smemories/internal/httpx"
+	"github.com/danyaa666/smemories/internal/legal"
 	"github.com/danyaa666/smemories/internal/mailer"
 	"github.com/danyaa666/smemories/internal/media"
 	"github.com/danyaa666/smemories/internal/notefields"
@@ -130,7 +131,7 @@ type user struct{ cookie string }
 // register creates an account; verified accounts get email_verified_at set directly (T-007 covers the mail flow).
 func (e *env) register(email, name string, verified bool) user {
 	e.t.Helper()
-	b, _ := json.Marshal(map[string]string{"email": email, "password": testPW, "display_name": name})
+	b, _ := json.Marshal(map[string]string{"email": email, "password": testPW, "display_name": name, "accept_terms_version": legal.CurrentVersion})
 	rec := httptest.NewRecorder()
 	r := httptest.NewRequest("POST", "/api/auth/register", bytes.NewReader(b))
 	r.Header.Set("Content-Type", "application/json")

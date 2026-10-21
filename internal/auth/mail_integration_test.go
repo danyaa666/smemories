@@ -145,7 +145,7 @@ func TestBackgroundRetryPolicy(t *testing.T) {
 			var mu sync.Mutex
 			sm := &scriptMailer{script: c.script}
 			e := newEnv(t, opts{mailer: sm, onFailure: func(class string) { mu.Lock(); failed = append(failed, class); mu.Unlock() }})
-			rec := e.do(req{method: "POST", path: "/api/auth/register", body: body(testMail, testPW, "Alice"), headers: map[string]string{"X-Request-Id": "req-abcdef123456"}})
+			rec := e.do(req{method: "POST", path: "/api/auth/register", body: regBody(testMail, testPW, "Alice"), headers: map[string]string{"X-Request-Id": "req-abcdef123456"}})
 			want(t, rec, 200, "")
 			e.svc.Wait()
 			if got := sm.sent(); got != c.wantSends {

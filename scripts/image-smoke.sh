@@ -282,8 +282,10 @@ for k in sys.argv[1].split("."): d=d[k]
 print(d)' "$1"; }
 EMAIL="smoke-$(od -An -N4 -tx1 /dev/urandom | tr -d ' \n')@example.com"
 PW="$(rand)"
+TERMS="$(sed -n 's/.*CurrentVersion = "\(.*\)".*/\1/p' "$(dirname "$0")/../internal/legal/legal.go")"   # T-111: register needs the current Terms version
+[ -n "$TERMS" ] || fail "cannot read legal.CurrentVersion"
 curl -fsS -m 60 -D "$TMP/h.txt" -o /dev/null -X POST "$BASE/api/auth/register" -H "Origin: $ORIGIN" -H 'Content-Type: application/json' \
-  -d "{\"email\":\"$EMAIL\",\"password\":\"$PW\",\"display_name\":\"Smoke\"}" || fail "register failed"
+  -d "{\"email\":\"$EMAIL\",\"password\":\"$PW\",\"display_name\":\"Smoke\",\"accept_terms_version\":\"$TERMS\"}" || fail "register failed"
 curl -fsS -m 60 -D "$TMP/h.txt" -o /dev/null -X POST "$BASE/api/auth/login" -H "Origin: $ORIGIN" -H 'Content-Type: application/json' \
   -d "{\"email\":\"$EMAIL\",\"password\":\"$PW\"}" || fail "login failed"
 COOKIE="$(tr -d '\r' <"$TMP/h.txt" | sed -n 's/^[Ss]et-[Cc]ookie: \(smem_session=[^;]*\).*/\1/p' | head -1)"

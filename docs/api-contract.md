@@ -37,6 +37,7 @@ Error:
 - `ERROR_CLIENT_CLOSED` (499, nginx's code): the client went away (`context.Canceled`) before the answer; nobody reads it, so it is only seen in access logs and metrics. `httpx.Fail` answers it once for every handler, it is never documented per endpoint and the web never shows it.
 - Everything else is **business-specific** and listed per endpoint: `ERROR_NOT_FOUND`, `ERROR_FORBIDDEN`, `ERROR_RATE_LIMITED`, `ERROR_LIMIT_REACHED`, and field-level codes such as `ERROR_INVALID_TITLE` (the web shows a message under the field).
 - Mapping from the old codes: `snake_case` becomes `ERROR_` + upper case (`invalid_title` -> `ERROR_INVALID_TITLE`, `internal_error` -> `ERROR_INTERNAL`, `invalid_body` / `unknown_field` -> `ERROR_PARAM`).
+- `ERROR_TERMS_REQUIRED` (T-111, D-35): HTTP 400 from `register` when `accept_terms_version` is missing or not the current version (nothing is created); HTTP 403 from every other endpoint that needs the session cookie while the user has not accepted the current Terms and Privacy Policy. The gate is one check in `auth.Handler.RequireUser`, so a new endpoint gets it by being wrapped like the others; only `get-me`, `accept-terms`, `logout` and the two email-verification endpoints skip it. The web answers it by sending the user to the accept screen. It is documented in `ApiForbidden` and in `register`, not in every `x-error-codes`.
 - Server code builds errors with `internal/apperr` (see `docs/go-conventions.md`); one mapper turns them into status + envelope.
 
 ## 4. Field rules
@@ -75,7 +76,7 @@ The Postman collection and `web/src/api/schema.d.ts` follow the file; the defini
 
 | Old (v1) | New (v2) | Notes |
 |---|---|---|
-| `POST /v1/auth/register` | `POST /api/auth/register` | |
+| `POST /v1/auth/register` | `POST /api/auth/register` | T-111: the body must carry `accept_terms_version` (the current Terms version) |
 | `POST /v1/auth/login` | `POST /api/auth/login` | |
 | `POST /v1/auth/logout` | `POST /api/auth/logout` | |
 | `POST /v1/auth/verify-email` | `POST /api/auth/verify-email` | T-048 made this a 6-digit code check; same name. Final auth names (T-071): `register`, `login`, `logout`, `verify-email`, `resend-verification`, `forgot-password`, `reset-password`, `google-start`, `google-callback`; `data` of `register`, `login` and `get-me` is the user object itself `{id, email, email_verified, display_name, locale, created_at}`; `logout`, `verify-email`, `forgot-password`, `reset-password` answer an empty `data`; `resend-verification` answers `{already_verified}` |
@@ -84,7 +85,8 @@ The Postman collection and `web/src/api/schema.d.ts` follow the file; the defini
 | `POST /v1/auth/reset-password` | `POST /api/auth/reset-password` | |
 | `GET /v1/auth/google/start` | `GET /api/auth/google-start` | |
 | `GET /v1/auth/google/callback` | `GET /api/auth/google-callback` | the redirect URI registered at Google changes: owner action |
-| `GET /v1/me` | `GET /api/user/get-me` | |
+| `GET /v1/me` | `GET /api/user/get-me` | T-111 adds `terms: {accepted_version, current_version, required}` to its `data` (the user object plus `terms`) |
+| (new, T-111) | `POST /api/user/accept-terms` | body `{version}`; stores the version and the time when it equals the current one, else `ERROR_PARAM`; `data` is the get-me object |
 | `POST /v1/yearbooks` | `POST /api/yearbook/create` | |
 | `GET /v1/yearbooks` | `GET /api/yearbook/get-list` | `limit`, `next_id` |
 | `GET /v1/yearbooks/{id}` | `GET /api/yearbook/get?id=` | |

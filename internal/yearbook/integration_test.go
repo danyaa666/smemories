@@ -20,6 +20,7 @@ import (
 	"github.com/danyaa666/smemories/internal/auth"
 	"github.com/danyaa666/smemories/internal/db/dbtest"
 	"github.com/danyaa666/smemories/internal/httpx"
+	"github.com/danyaa666/smemories/internal/legal"
 	"github.com/danyaa666/smemories/internal/mailer"
 	"github.com/danyaa666/smemories/internal/ratelimit"
 	"github.com/danyaa666/smemories/internal/redis/redistest"
@@ -99,7 +100,7 @@ type user struct{ cookie string }
 
 func (e *env) register(email, name string) user {
 	e.t.Helper()
-	b, _ := json.Marshal(map[string]string{"email": email, "password": testPW, "display_name": name})
+	b, _ := json.Marshal(map[string]string{"email": email, "password": testPW, "display_name": name, "accept_terms_version": legal.CurrentVersion})
 	rec := httptest.NewRecorder()
 	r := httptest.NewRequest("POST", "/api/auth/register", bytes.NewReader(b))
 	r.Header.Set("Content-Type", "application/json")
@@ -661,4 +662,20 @@ func TestV2Shapes(t *testing.T) {
 	}
 	e.do(alice, "GET", "/api/yearbook/delete", "").status(405, "ERROR_METHOD_NOT_ALLOWED")
 	e.do(alice, "POST", "/api/yearbook/get-list", `{}`).status(405, "ERROR_METHOD_NOT_ALLOWED")
+}
+
+// T-111 AC2: a signed-in user who has not accepted the current Terms is stopped by the one gate (RequireUser) on a yearbook
+// call, and can use it again after accept-terms.
+func TestTermsGateStopsYearbookCalls(t *testing.T) {
+	e := newEnv(t)
+	alice := e.register("alice@example.com", "Alice")
+	id := e.create(alice, "Before")
+	if _, err := e.db.Exec(`UPDATE user_tab SET terms_version = NULL`); err != nil {
+		t.Fatal(err)
+	}
+	e.get(alice, id).status(403, "ERROR_TERMS_REQUIRED")
+	e.do(alice, "POST", "/api/yearbook/create", `{"title":"Blocked","language":"en"}`).status(403, "ERROR_TERMS_REQUIRED")
+	e.do(alice, "GET", "/api/user/get-me", "").status(200, "")
+	e.do(alice, "POST", "/api/user/accept-terms", `{"version":"`+legal.CurrentVersion+`"}`).status(200, "")
+	e.get(alice, id).status(200, "")
 }

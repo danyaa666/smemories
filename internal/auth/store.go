@@ -48,6 +48,7 @@ type User struct {
 	UsernameChangedAt    int64  `json:"-"` // Unix ms of the last user-made change, 0 = never
 	InternalID           uint64 `json:"-"`
 	AuthEpoch            uint32 `json:"-"` // credential epoch (T-103): sessions issued under another epoch are refused
+	TermsVersion         string `json:"-"` // version of the Terms and Privacy Policy accepted, "" = never (T-111)
 }
 
 // Store is the users persistence (sessions live in Redis, see sessions.go). Every query is parameterised.
@@ -55,11 +56,11 @@ type Store struct{ db *sql.DB }
 
 func NewStore(db *sql.DB) *Store { return &Store{db: db} }
 
-const userCols = `u.id, u.public_id, u.email, u.email_verified_at IS NOT NULL, u.display_name, u.locale, u.created_at, u.username, u.username_changed_at, u.auth_epoch`
+const userCols = `u.id, u.public_id, u.email, u.email_verified_at IS NOT NULL, u.display_name, u.locale, u.created_at, u.username, u.username_changed_at, u.auth_epoch, COALESCE(u.terms_version, '')`
 
 func scanUser(sc interface{ Scan(...any) error }, extra ...any) (*User, error) {
 	u := new(User)
-	dest := append([]any{&u.InternalID, &u.ID, &u.Email, &u.EmailVerified, &u.DisplayName, &u.Locale, &u.CreatedAt, &u.Username, &u.UsernameChangedAt, &u.AuthEpoch}, extra...)
+	dest := append([]any{&u.InternalID, &u.ID, &u.Email, &u.EmailVerified, &u.DisplayName, &u.Locale, &u.CreatedAt, &u.Username, &u.UsernameChangedAt, &u.AuthEpoch, &u.TermsVersion}, extra...)
 	if err := sc.Scan(dest...); err != nil {
 		return nil, err
 	}
@@ -98,11 +99,17 @@ func isUsernameConflict(err error) bool {
 // conflict, so a registration never fails because of it; any other error (a duplicate email included) is returned as is. A
 // failed statement does not abort the surrounding transaction.
 func insertUser(ctx context.Context, tx *sql.Tx, u *User, passwordHash, verifiedAt any) error {
+	// Register sets TermsVersion (the account and its acceptance are one transaction); a Google account has none yet and
+	// must accept at its first request (T-111).
+	var termsVersion, termsAt any
+	if u.TermsVersion != "" {
+		termsVersion, termsAt = u.TermsVersion, u.CreatedAt
+	}
 	for attempt := 0; ; attempt++ { // the last attempt always returns, so the loop has no end
 		u.Username = defaultUsername(u.ID, attempt)
 		res, err := tx.ExecContext(ctx,
-			`INSERT INTO user_tab (public_id, email, password_hash, email_verified_at, display_name, locale, username, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?)`,
-			u.ID, u.Email, passwordHash, verifiedAt, u.DisplayName, u.Locale, u.Username, u.CreatedAt, u.CreatedAt)
+			`INSERT INTO user_tab (public_id, email, password_hash, email_verified_at, display_name, locale, username, terms_version, terms_accepted_at, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+			u.ID, u.Email, passwordHash, verifiedAt, u.DisplayName, u.Locale, u.Username, termsVersion, termsAt, u.CreatedAt, u.CreatedAt)
 		if err != nil {
 			if isUsernameConflict(err) && attempt < len(defaultSuffixLens)-1 {
 				continue
@@ -137,6 +144,13 @@ func (s *Store) changeUsername(ctx context.Context, id uint64, name string, nowM
 	}
 	n, err := res.RowsAffected()
 	return n == 1, err
+}
+
+// acceptTerms records that the user accepted version at nowMs. Repeating it is harmless and keeps the time of the first acceptance
+// (the WHERE matches only a user who has not accepted this version yet).
+func (s *Store) acceptTerms(ctx context.Context, id uint64, version string, nowMs int64) error {
+	_, err := s.db.ExecContext(ctx, `UPDATE user_tab SET terms_version = ?, terms_accepted_at = ?, updated_at = ? WHERE id = ? AND (terms_version IS NULL OR terms_version <> ?)`, version, nowMs, nowMs, id, version)
+	return err
 }
 
 // userByEmail returns the user and their password hash ("" when the account has none).
