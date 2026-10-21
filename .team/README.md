@@ -13,16 +13,15 @@
 | BACKLOG | 12 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-095, T-096, T-097 |
 | TODO | 7 | T-101, T-105, T-106, T-109, T-113, T-114, T-115 |
 | READY_FOR_QA | 1 | T-107 |
-| IN_QA | 1 | T-110 |
-| QA_PASS | 2 | T-111, T-112 |
+| QA_PASS | 3 | T-110, T-111, T-112 |
 | DONE | 84 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-092, T-093, T-094, T-098, T-099, T-100, T-102, T-103, T-104, T-108 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
 **Awaiting your review (MERGED):** nothing
 
-**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?); Q-051 (Approve merge of T-100 (canonical public ids, PR #93)?); Q-052 (Approve merge of T-111 (Terms acceptance API, PR #96; merges together with T-112)?)
+**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?); Q-051 (Approve merge of T-100 (canonical public ids, PR #93)?); Q-052 (Approve merge of T-111 (Terms acceptance API, PR #96; merges together with T-112)?); Q-053 (Approve merge of T-110 (upload abuse follow-up, PR #99)?)
 
-_Board last written 2026-10-21 23:01Z_
+_Board last written 2026-10-21 23:04Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -586,6 +585,15 @@ QA_PASS and leader review OK on 2210d38, CI green. Every id from the browser mus
 - **Answer:** _(pending)_
 
 QA_PASS and leader review OK on e0a1ba6, CI green. Sign-up requires accepting the current Terms and Privacy version; every signed-in request is refused with ERROR_TERMS_REQUIRED until the user accepts (existing accounts and new Google accounts accept once on the new screen from T-112); notes record the version shown. Merges together with T-112 (#97, web pages and checkbox), which passed QA too. The texts stay marked DRAFT until you finalise them before go-live. Reply 'team approve T-111'.
+
+### Q-053 — Approve merge of T-110 (upload abuse follow-up, PR #99)?
+- **Status:** OPEN
+- **Asked:** 2026-10-21 23:04Z
+- **Blocks:** T-110
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+QA_PASS and leader review OK on d0c5ed8, CI green. Photo upload now needs a verified email, each network address may have at most 4 uploads in progress, and at most 16 rejected public submissions per address are drained (the rest are cut off). QA replayed the attack: a victim's uploads succeeded 23 of 23 times (before: 503 every time). Reply 'team approve T-110'.
 
 <!-- questions:end -->
 
@@ -4892,7 +4900,7 @@ QA of T-103 (2026-10-21): go-integration was red once on internal/auth TestConcu
 #### Comments
 
 ### T-110 — [E12] Owner uploads need a verified email and a per-client share; bound drains of rejected public bodies
-- **Status:** IN_QA
+- **Status:** QA_PASS
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
@@ -4900,16 +4908,26 @@ QA of T-103 (2026-10-21): go-integration was red once on internal/auth TestConcu
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** leader
 - **Branch:** task/t-110-e12-owner-uploads-need-a-verified-email-
 - **PR:** https://github.com/danyaa666/smemories/pull/99
-- **Updated:** 2026-10-21 22:42Z by qa
-- **Comments-seen:** 1
+- **Updated:** 2026-10-21 23:04Z by qa
+- **Comments-seen:** 3
 
 Spec: .team/epics/E12-security-hardening/11-upload-abuse-followup.md (read it from the repo root). Source: QA of T-102. Risk high: owner approves the merge.
 
 #### Comments
 - 2026-10-21 19:19Z · dev · PR #99 head d0c5ed8. Verified email 403 + per-client cap 4 (429 Retry-After 5) on media/create; 16 drains/client with Connection: close + gauge smem_public_drains_in_progress. Ran: lint, go test -race -tags integration ./... , vitest, Postman media 91/172 and public-media 42/92 (now fixed newman-notes accounts: Setup + make verify-newman-users), make e2e: all green. NOT run: make image-smoke (I added a verify-account step in scripts/image-smoke.sh) - QA please run. AC3 memory is Go heap (29.3->31.4 MiB with 16 draining+84 closed), not RSS of 1500 sockets. PR #98 (T-107) overlaps handler.go: expect conflicts, I merge develop later. Risk high: owner approves.
+- 2026-10-21 23:04Z · qa · QA_PASS on PR #99 head d0c5ed8 (CI green: e2e, go, go-integration, image, security, web; MERGEABLE). Env: own compose project qa110 (ports 13306/16379/19000/19001, down without -v; qa110_* volumes left), real API binary built from the PR head with SMEM_ENV=dev, default pace, SMEM_TRUST_PROXY=true only to give each test its own client key via X-Forwarded-For.
+  AC1 unverified account: POST media/create -> 403 ERROR_EMAIL_NOT_VERIFIED in 0.02 s. Headers-only request (Content-Length 5000000, no body sent) -> 403 at once, so no body read; gauge smem_media_uploads_in_progress stays 0 after 7 attempts. Verified account uploads 200. 12 garbage (400) uploads and 4 abruptly closed drips from one key: gauge back to 0, 3 normal uploads then 200 (caps released on every path).
+  AC2 4 verified accounts behind one key: 2 accounts x 2 drips (1 byte/5 s) = 4 in progress (gauge 4); the 5th upload from that key (3rd and 4th account) -> 429 ERROR_RATE_LIMITED, Retry-After 5, in 0.00 s; victim from another key -> 200 in 0.02 s; drippers end 408 at 15.0 s, gauge 0, key can upload again. Attack replay (4 accounts x 2 drips reopened non-stop for 45 s, the T-102 starvation case): victim from another key 23/23 x 200, max pool gauge 4 of 8 (T-102 run: victim 75/75 x 503).
+  AC3 public submit-note, address warmed to 429 (70 unknown-token posts), then 100 bodies held mid-upload, SMEM_PUBLIC_UPLOAD_* raised so that the drain cap is the active bound: gauge smem_public_drains_in_progress = 16 at 3 s, 84 answered at once 429 ERROR_RATE_LIMITED + Connection: close and closed by the server, the 16 drained answer 429 at 10 s (idle pace); gauge 0 at the end, public_uploads gauge 0 throughout. Control = develop (T-102): 0/100 answered at 3 s, all 100 held to 10 s. With default config (per-IP slot cap 8) the same 100 give 15 drained + 85 x 503 ERROR_BUSY with Connection: close (slot refusal happens first, also bounded). A fully sent 2 MiB rate-limited body still gets a readable 429 (no reset) when under the cap.
+  RSS (process_resident_memory_bytes, macOS, noisy): 100 bodies PR 42.0 -> 48.4/48.8 MiB (+6.4), heap_inuse 23.2 -> 27.9; control develop 41.2 -> 27.1 (macOS compressed it, not a saving), heap 23.3 -> 28.8. 1500 bodies: PR RSS 41.9 -> 80.4 (a second run 24.1 -> 72.0), heap 25.9 MiB, 1484 answered/closed within 3 s; control develop RSS 41.1 -> 89.2, heap 44.4 MiB, none answered for 10 s. So the bound frees sockets and ~18 MiB of heap, but RSS at 1500 is still +30..48 MiB from the burst itself (1500 goroutines and connection buffers): see observation a.
+  AC4 make lint (gofmt, vet x2, golangci-lint, web lint/typecheck/i18n/api types) + make test (go -race, vitest 20 files/361 tests): exit 0. make test-integration (-race -tags integration ./..., media 112 s): exit 0, 27 packages ok. make image-smoke (real run, registry pull worked, no pull-line copy needed): 'image smoke test passed', incl. the dev's new verify-account step and 'photo upload ... works on a read-only root'. Postman via postman CLI (make verify-newman-users after the Setup folder), each run twice back to back, limits reset between: media 91 req/172 assertions 0 failed x2 (incl. the ERROR_EMAIL_NOT_VERIFIED edge entry), public-media 42/92 0 failed x2. make e2e: 1 passed. 
+  Web (real Chromium, vite preview + API, account registered and not verified, upload from the yearbook screen): media/create 403 ERROR_EMAIL_NOT_VERIFIED -> visible message 'Verify your email address first, then try again.' (en-US) and 'Hãy xác minh địa chỉ email trước, rồi thử lại.' (vi-VN); vitest case for 403 added.
+  Docs: docs/media.md, docs/observability.md (gauge), api/openapi.yaml (403 + 429 text), README, Postman updated and consistent with behaviour. No changes under .team/ in the PR.
+  Non-blocking observations: a) RSS at 1500 simultaneous bodies from one address is still +30..48 MiB (burst of handlers/buffers, not retained sockets); only an LB/fd limit bounds that, same as before. b) Per-process counts (client cap 4 x N tasks), already documented. c) PR #98 (T-107) overlaps media/handler.go: dev merges develop after; I did not trial-merge it. d) The client key is the last X-Forwarded-For hop when SMEM_TRUST_PROXY=true; behind the ALB that must be set for the cap to key on real clients (existing behaviour of httpx.ClientIP). Risk high: owner approves the merge.
+- 2026-10-21 23:04Z · leader · Leader review OK on d0c5ed8 (based on QA's evidence and the spec): verified-email check before any slot or body read, per-client cap of 4 after the per-user cap, drains capped at 16 per key with Connection: close, gauge, docs, web message. QA_PASS with the attack replay (victim 23/23 OK, was 503 every time), real image-smoke, Postman and e2e. Note for T-023: SMEM_TRUST_PROXY=true behind the ALB is required for per-client keys. Overlaps PR #98 (T-107) in media/handler.go: whichever merges second merges develop. Waiting for the owner's approval (risk high).
 
 ### T-111 — [E13] Versioned acceptance of the Terms and Privacy Policy (API)
 - **Status:** QA_PASS
@@ -4954,7 +4972,7 @@ Spec: .team/epics/E13-legal/01-terms-acceptance-api.md (read it from the repo ro
 - **Branch:** task/t-112-e13-web-terms-and-privacy-pages-sign-up-checkbox
 - **PR:** 97
 - **Updated:** 2026-10-21 22:43Z by qa
-- **Comments-seen:** 8
+- **Comments-seen:** 9
 
 Spec: .team/epics/E13-legal/02-legal-pages-web.md. Pages from docs/legal (draft banner while DRAFT), required checkbox at sign-up, accept screen, footer links, notice on the public note form, e2e step.
 
