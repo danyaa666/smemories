@@ -39,6 +39,7 @@ type Yearbook struct {
 	CreatedAt      int64   `json:"created_at"`     // Unix ms
 	UpdatedAt      int64   `json:"updated_at"`     // Unix ms
 	Profile        Profile `json:"profile"`
+	LinkEpoch      uint32  `json:"-"` // public photo links are valid for this epoch only (T-092); never in the API
 	internalID     uint64
 	coverRow       uint64 // media.id of the cover, 0 = none (AUTO_INCREMENT starts at 1)
 }
@@ -64,7 +65,7 @@ type Store struct{ db *sql.DB }
 
 func NewStore(db *sql.DB) *Store { return &Store{db: db} }
 
-const bookCols = `id, public_id, title, school_name, class_name, graduation_year, motto, language, page_size, template_id, cover_media_id, created_at, updated_at`
+const bookCols = `id, public_id, title, school_name, class_name, graduation_year, motto, language, page_size, template_id, cover_media_id, created_at, updated_at, link_epoch`
 
 const profileCols = `yearbook_id, public_id, is_owner, full_name, nickname, birthday, quote, hobbies, future_plans, photo_media_id`
 
@@ -82,7 +83,7 @@ func scanBook(sc scanner) (*Yearbook, error) {
 	var tmpl sql.NullString
 	var cover sql.Null[uint64]
 	err := sc.Scan(&y.internalID, &y.ID, &y.Title, &y.SchoolName, &y.ClassName, &grad, &y.Motto, &y.Language, &y.PageSize, &tmpl, &cover,
-		&y.CreatedAt, &y.UpdatedAt)
+		&y.CreatedAt, &y.UpdatedAt, &y.LinkEpoch)
 	if err != nil {
 		return nil, err
 	}

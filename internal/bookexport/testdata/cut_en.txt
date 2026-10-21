@@ -1,0 +1,24 @@
+SMemories — Empty
+Exported: 2026-10-19
+
+== Notes from friends (2) ==
+2 of 1500 notes are included
+
+--- 1 / 2 ---
+Your name: Trần Văn Ngô
+Your message:
+  Dòng một
+
+  Dòng ba 🎉
+How we met:
+  Ở lớp 10
+My wish for you:
+  Luôn vui
+Photo 1: https://app.example.com/api/public-media/get-content?token=01JAAAAAAAAAAAAAAAAAAAAAAA.KH0sSVL_ZtyhFsVpGCHWtg
+Photo 2: https://app.example.com/api/public-media/get-content?token=01JBBBBBBBBBBBBBBBBBBBBBBB.ocQHfcBSjuHZ2Y7KJ-IbmA
+Photo 3: https://app.example.com/api/public-media/get-content?token=01JCCCCCCCCCCCCCCCCCCCCCCC.9kyUYKttRaNIe140WLr_Qg
+
+--- 2 / 2 ---
+Your name: Lê Thị Hoà
+Your message:
+  Chúc bạn thành công

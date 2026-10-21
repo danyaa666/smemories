@@ -1,0 +1,47 @@
+SMemories — Lớp 12A1 — Kỷ yếu
+School: THPT Nguyễn Huệ
+Class: 12A1
+Graduation year: 2026
+Motto: Học, học nữa, học mãi
+Exported: 2026-10-19
+
+== About the owner ==
+Full name: Nguyễn Thị Ánh Tuyết
+Nickname: Tuyết
+Favourite quote: Cười lên nào 😊
+Hobbies:
+  Vẽ
+  Đọc sách
+Future plans: Bác sĩ
+Photo: https://app.example.com/api/public-media/get-content?token=01JPPPPPPPPPPPPPPPPPPPPPPP.rJOQtiOo4TBGNLOAmjhpHw
+Cover photo: https://app.example.com/api/public-media/get-content?token=01JCCCCCCCCCCCCCCCCCCCCCCC._UgtQfXhq_N1-xplpKCA8g
+
+== Notes from friends (3) ==
+
+--- 1 / 3 ---
+Your name: Trần Văn Ngô
+How we met:
+  Ở lớp 10
+My wish for you:
+  Luôn vui
+Your message:
+  Dòng một
+
+  Dòng ba 🎉
+Photo 1: https://app.example.com/api/public-media/get-content?token=01JAAAAAAAAAAAAAAAAAAAAAAA.MaiKGVAGBsrdhSm0sztriA
+Photo 2: https://app.example.com/api/public-media/get-content?token=01JBBBBBBBBBBBBBBBBBBBBBBB.vPl51cSJb7tBhILwAkScmQ
+Photo 3: https://app.example.com/api/public-media/get-content?token=01JCCCCCCCCCCCCCCCCCCCCCCC._UgtQfXhq_N1-xplpKCA8g
+
+--- 2 / 3 ---
+Your name: Lê Thị Hoà
+Your message:
+  Chúc bạn thành công
+
+--- 3 / 3 ---
+Your name: Phạm Anh
+Best memory together:
+  Chuyến đi Đà Lạt
+Your message:
+  Giữ liên lạc nhé
+Your relationship: bạn cùng bàn
+Photo 1: https://app.example.com/api/public-media/get-content?token=01JEEEEEEEEEEEEEEEEEEEEEEE.0Fbrmbbc1kFyZ2njwK3paw
