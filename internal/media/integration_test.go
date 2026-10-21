@@ -25,6 +25,8 @@ import (
 	"github.com/danyaa666/smemories/internal/db/dbtest"
 	"github.com/danyaa666/smemories/internal/httpx"
 	"github.com/danyaa666/smemories/internal/mailer"
+	"github.com/danyaa666/smemories/internal/medialink"
+	"github.com/danyaa666/smemories/internal/metrics"
 	"github.com/danyaa666/smemories/internal/ratelimit"
 	"github.com/danyaa666/smemories/internal/redis/redistest"
 	"github.com/danyaa666/smemories/internal/storage"
@@ -146,6 +148,27 @@ type env struct {
 	books   []string
 	lim     *ratelimit.Factory
 	cursors *httpx.Cursors
+	signer  *medialink.Signer // T-092: signs the public photo links of this env's API
+	logs    *syncBuf          // everything the API logged
+	metrics *metrics.Metrics
+}
+
+// syncBuf is a log sink that tests read while requests may still be finishing.
+type syncBuf struct {
+	mu sync.Mutex
+	b  bytes.Buffer
+}
+
+func (s *syncBuf) Write(p []byte) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.b.Write(p)
+}
+
+func (s *syncBuf) String() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.b.String()
 }
 
 func newEnv(t *testing.T) *env {
@@ -153,7 +176,8 @@ func newEnv(t *testing.T) *env {
 	t.Parallel() // T-077: every env has its own database, Redis prefix, ULID-keyed objects and processing semaphore, so tests never share state
 	d := dbtest.New(t)
 	e := &env{t: t, db: d, st: &flaky{Storage: storagetest.New(t), keys: map[string]bool{}}}
-	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
+	e.logs = &syncBuf{}
+	logger := slog.New(slog.NewJSONHandler(e.logs, nil))
 	mail, _ := mailer.NewLog("test", io.Discard)
 	hasher := auth.NewHasher(auth.HashParams{MemoryKiB: 64, Time: 1, Parallelism: 1}, 4, auth.HashWait)
 	rc := redistest.New(t)
@@ -175,10 +199,16 @@ func newEnv(t *testing.T) *env {
 	e.svc = NewService(NewStore(d), e.st, 2, e.lim, nil) // two at a time, so parallel tests queue on the semaphore
 	e.cursors = httpx.NewCursors([]byte(strings.Repeat("c", 32)))
 	mh := NewHandler(e.svc, 10<<20, ah.RequireUser, []string{origin}, e.cursors, logger)
+	e.signer, _ = medialink.New([]byte(strings.Repeat("L", medialink.MinSecretBytes)))
+	e.svc.SetPublicLinks(e.signer)
+	e.metrics = metrics.New()
+	mh.SetPublicCounter(e.metrics.PublicMedia)
 	bookStore := yearbook.NewStore(d)
 	e.svc.SetRefClearer(bookStore)
-	yh := yearbook.NewHandler(yearbook.NewService(bookStore, e.cursors, e.svc, nil, e.svc), ah.RequireUser, []string{origin})
-	e.h = httpx.NewRouter(logger, ah.Routes, yh.Routes, mh.Routes)
+	bookSvc := yearbook.NewService(bookStore, e.cursors, e.svc, nil, e.svc)
+	bookSvc.SetLimiters(e.lim)
+	yh := yearbook.NewHandler(bookSvc, ah.RequireUser, []string{origin})
+	e.h = httpx.NewRouterWith(logger, httpx.RouterConfig{Metrics: e.metrics}, ah.Routes, yh.Routes, mh.Routes)
 	t.Cleanup(func() { // objects of every book this test created
 		for _, id := range e.books {
 			_ = e.st.Storage.DeletePrefix(context.Background(), yearbookPrefix(id))

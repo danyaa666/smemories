@@ -33,7 +33,7 @@ ORIGIN=https://smoke.example.com
 
 TMP="$(mktemp -d)"
 rand() { od -An -N24 -tx1 /dev/urandom | tr -d ' \n'; }
-DB_PW="$(rand)"; ROOT_PW="$(rand)"; S3_USER="smokeminio"; S3_PW="$(rand)"; OTP_KEY="$(rand)$(rand)"
+DB_PW="$(rand)"; ROOT_PW="$(rand)"; S3_USER="smokeminio"; S3_PW="$(rand)"; OTP_KEY="$(rand)$(rand)"; LINK_KEY="$(rand)"   # LINK_KEY: 48 hex characters read as base64 are 36 bytes, over the 32 SMEM_MEDIA_LINK_SECRET needs
 
 cleanup() {
   [ -z "${WATCHDOG:-}" ] || kill "$WATCHDOG" 2>/dev/null || true
@@ -146,6 +146,7 @@ cat >"$TMP/api.env" <<EOF
 $(cat "$TMP/task.env")
 SMEM_REDIS_URL=redis://$RUN-redis:6379/0
 SMEM_OTP_KEY=$OTP_KEY
+SMEM_MEDIA_LINK_SECRET=$LINK_KEY
 SMEM_ALLOWED_ORIGINS=$ORIGIN
 SMEM_PUBLIC_BASE_URL=$ORIGIN
 SMEM_MEMORY_LIMIT_MIB=1536
@@ -214,12 +215,17 @@ refuse() { # refuse <variable that must be named> <docker run args...>
   out="$(task --rm "${HARDEN[@]}" --env-file "$TMP/task.env" "${PROD_API[@]}" "$@" "$IMAGE" 2>&1)" || code=$?
   [ "$code" -ne 0 ] || fail "the API started although $var is wrong"
   echo "$out" | grep -q "$var" || fail "the refusal does not name $var: $out"
-  if echo "$out" | grep -q "$OTP_KEY\|$DB_PW\|$S3_PW\|123123\|hunter2pw"; then fail "the refusal echoes a secret"; fi
+  if echo "$out" | grep -q "$OTP_KEY\|$LINK_KEY\|$DB_PW\|$S3_PW\|123123\|hunter2pw"; then fail "the refusal echoes a secret"; fi
 }
 refuse SMEM_DEV_FIXED_OTP -e SMEM_OTP_KEY="$OTP_KEY" -e SMEM_DEV_FIXED_OTP=123123
 refuse SMEM_OTP_KEY
 refuse SMEM_OTP_KEY -e SMEM_OTP_KEY=too-short
 ok "prod start refuses the dev shortcut and a missing or short SMEM_OTP_KEY"
+# The secret of the public photo links (T-092) is checked after the mail settings, so these starts carry a valid mailer.
+MAIL_OK=(-e SMEM_OTP_KEY="$OTP_KEY" -e SMEM_MAIL_PROVIDER=ses -e "SMEM_MAIL_FROM=SMemories <no-reply@mail.smoke.io>")
+refuse SMEM_MEDIA_LINK_SECRET "${MAIL_OK[@]}"
+refuse SMEM_MEDIA_LINK_SECRET "${MAIL_OK[@]}" -e SMEM_MEDIA_LINK_SECRET=c2hvcnQ=
+ok "prod start refuses a missing or short SMEM_MEDIA_LINK_SECRET"
 # The rest of the production contract (docs/production-config.md); the loader tests cover every row, these prove the binary in the image enforces it.
 refuse SMEM_DB_DSN -e SMEM_OTP_KEY="$OTP_KEY" -e SMEM_DB_ALLOW_INSECURE=false
 refuse SMEM_REDIS_URL -e SMEM_OTP_KEY="$OTP_KEY" -e SMEM_REDIS_ALLOW_INSECURE=false

@@ -111,6 +111,9 @@ Fail policy when Redis is unreachable (`ratelimit.Factory`): **open** lets the r
 | `google_callback` | 30 | 15 min | IP | open |
 | `public_misses` | 60 (only misses count) | 15 min | IP | open |
 | `public_all` | 600 | 15 min | IP | open |
+| `public_media_miss` | 60 (only misses count) | 15 min | IP | open (public photo links, T-092) |
+| `public_media_all` | 600 | 15 min | IP | open (public photo links, T-092) |
+| `revoke_links` | 10 | 1 h | user id | open (`yearbook/revoke-photo-links`, T-092) |
 | `submit_ip_hour` | 100 | 1 h | IP | open |
 | `submit_ip_day` | 300 | 24 h | IP | open |
 | `submit_collection_hour` | 60 | 1 h | collection id | open |

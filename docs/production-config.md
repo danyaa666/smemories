@@ -85,6 +85,7 @@ task definition, `SM` = Secrets Manager injected as an environment variable, `SS
 | Variable | Required in prod | Default | Secret | AWS source | Commands | Prod rule |
 |---|---|---|---|---|---|---|
 | `SMEM_OTP_KEY` | yes | none (fixed dev key in dev and test) | **yes** | SM | api | at least **32 bytes** (`openssl rand -base64 48`). Also derives the page-token key: rotating it only restarts clients' lists and invalidates outstanding email codes. |
+| `SMEM_MEDIA_LINK_SECRET` | yes | none (dev and test: a random per-process secret and one WARN, links stop working when the API restarts) | **yes** | SM | api | base64 (`openssl rand -base64 48`), at least **32 bytes** decoded; a missing, short or non-base64 value stops the API and the message names the variable, never its value. HMAC key of the public photo links (T-092, D-32). **Rotating it kills every link ever handed out** (the owner's per-book switch is `yearbook/revoke-photo-links`); give it to the API task only: the migrate and backfill tasks never serve photos and do not read it. Not a dev shortcut: the random dev value is unguessable. |
 | `SMEM_GOOGLE_CLIENT_ID` | no | empty = Google sign-in off | no | env | api | when set, the three below are required. |
 | `SMEM_GOOGLE_CLIENT_SECRET` | with the client id | none | **yes** | SM | api | |
 | `SMEM_OIDC_COOKIE_KEY` | with the client id | none | **yes** | SM | api | at least **32 bytes**. |
