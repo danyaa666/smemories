@@ -1,6 +1,8 @@
 package media
 
 import (
+	"fmt"
+	"runtime/debug"
 	"time"
 
 	"github.com/danyaa666/smemories/internal/apperr"
@@ -53,4 +55,22 @@ func tooManyUploads(wait time.Duration) error {
 
 func tooManyPublic(wait time.Duration) error {
 	return &RateLimitedError{Err: apperr.New(apperr.RateLimited, "too many requests, try again later"), RetryAfter: wait}
+}
+
+// panicError is a panic recovered in the image pipeline (T-104). It sits under an ErrInvalidImage-coded error, so the client
+// sees 400 ERROR_INVALID_IMAGE and nothing of the panic; Service.save logs and counts it. No image bytes are kept.
+type panicError struct {
+	where string // load, process, print or printOf
+	msg   string
+	stack []byte
+}
+
+func (p *panicError) Error() string { return "panic in " + p.where + ": " + p.msg }
+
+// recoverTo is deferred (directly, so recover works) around a step that runs untrusted input through a decoder, scaler or
+// encoder: a panic becomes the invalid-image error in *err.
+func recoverTo(where string, err *error) {
+	if r := recover(); r != nil {
+		*err = apperr.Wrap(CodeInvalidImage, &panicError{where: where, msg: fmt.Sprint(r), stack: debug.Stack()}, apperr.Message(ErrInvalidImage))
+	}
 }

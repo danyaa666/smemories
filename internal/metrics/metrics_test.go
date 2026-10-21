@@ -80,3 +80,15 @@ func TestMailSendFailuresAreExported(t *testing.T) {
 		}
 	}
 }
+
+// T-104: recovered panics of the image pipeline are counted and the counter is present from the first scrape.
+func TestMediaProcessPanicsAreExported(t *testing.T) {
+	m := New()
+	if out := scrape(t, m); !strings.Contains(out, "smem_media_process_panics_total 0") {
+		t.Errorf("counter missing at 0:\n%s", out)
+	}
+	m.MediaProcessPanic()
+	if out := scrape(t, m); !strings.Contains(out, "smem_media_process_panics_total 1") {
+		t.Errorf("counter did not move:\n%s", out)
+	}
+}

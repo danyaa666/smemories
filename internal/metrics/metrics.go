@@ -27,6 +27,7 @@ type Metrics struct {
 	rateLimited *prometheus.CounterVec
 	mailFailed  *prometheus.CounterVec
 	publicMedia *prometheus.CounterVec
+	mediaPanics prometheus.Counter
 }
 
 // New returns a registry with the Go runtime and process collectors and the HTTP and rate-limit instruments.
@@ -50,12 +51,15 @@ func New() *Metrics {
 		publicMedia: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Namespace: namespace, Name: "public_media_requests_total", Help: "Public photo link requests by result (ok, not_found, rate_limited). No ids or tokens.",
 		}, []string{"result"}),
+		mediaPanics: prometheus.NewCounter(prometheus.CounterOpts{
+			Namespace: namespace, Name: "media_process_panics_total", Help: "Panics recovered in the image pipeline (decode, scale, encode); each answered 400 ERROR_INVALID_IMAGE.",
+		}),
 	}
 	for _, r := range []string{"ok", "not_found", "rate_limited"} {
 		m.publicMedia.WithLabelValues(r) // present at 0 from the first scrape
 	}
 	m.reg.MustRegister(collectors.NewGoCollector(), collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
-		m.duration, m.inFlight, m.rateLimited, m.mailFailed, m.publicMedia)
+		m.duration, m.inFlight, m.rateLimited, m.mailFailed, m.publicMedia, m.mediaPanics)
 	return m
 }
 
@@ -92,6 +96,9 @@ func (m *Metrics) PublicMedia(result string) {
 	}
 	m.publicMedia.WithLabelValues(result).Inc()
 }
+
+// MediaProcessPanic counts one panic recovered in the image pipeline (T-104).
+func (m *Metrics) MediaProcessPanic() { m.mediaPanics.Inc() }
 
 // Gauge exports fn as a gauge read at scrape time.
 func (m *Metrics) Gauge(name, help string, fn func() float64) {

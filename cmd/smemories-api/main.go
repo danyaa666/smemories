@@ -171,6 +171,7 @@ func main() {
 	mediaH := media.NewHandler(mediaSvc, cfg.MediaMaxBytes, authH.RequireUser, cfg.AllowedOrigins, cursors, logger)
 	mt.Gauge("media_uploads_in_progress", "Owner photo uploads holding a shared upload slot (4 x SMEM_MEDIA_MAX_CONCURRENT slots).", func() float64 { return float64(mediaH.UploadsInProgress()) })
 	mediaH.SetPublicCounter(mt.PublicMedia)
+	mediaSvc.SetPanicReporter(logger, mt.MediaProcessPanic)
 	bookStore := yearbook.NewStore(d)
 	notesStore := notes.NewStore(d)
 	notesSvc := notes.NewService(notesStore, mediaSvc, cursors, limiters, logger, nil)
