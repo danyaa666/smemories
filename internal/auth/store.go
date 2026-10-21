@@ -47,6 +47,7 @@ type User struct {
 	UsernameNextChangeAt *int64 `json:"username_next_change_at"`
 	UsernameChangedAt    int64  `json:"-"` // Unix ms of the last user-made change, 0 = never
 	InternalID           uint64 `json:"-"`
+	AuthEpoch            uint32 `json:"-"` // credential epoch (T-103): sessions issued under another epoch are refused
 }
 
 // Store is the users persistence (sessions live in Redis, see sessions.go). Every query is parameterised.
@@ -54,11 +55,11 @@ type Store struct{ db *sql.DB }
 
 func NewStore(db *sql.DB) *Store { return &Store{db: db} }
 
-const userCols = `u.id, u.public_id, u.email, u.email_verified_at IS NOT NULL, u.display_name, u.locale, u.created_at, u.username, u.username_changed_at`
+const userCols = `u.id, u.public_id, u.email, u.email_verified_at IS NOT NULL, u.display_name, u.locale, u.created_at, u.username, u.username_changed_at, u.auth_epoch`
 
 func scanUser(sc interface{ Scan(...any) error }, extra ...any) (*User, error) {
 	u := new(User)
-	dest := append([]any{&u.InternalID, &u.ID, &u.Email, &u.EmailVerified, &u.DisplayName, &u.Locale, &u.CreatedAt, &u.Username, &u.UsernameChangedAt}, extra...)
+	dest := append([]any{&u.InternalID, &u.ID, &u.Email, &u.EmailVerified, &u.DisplayName, &u.Locale, &u.CreatedAt, &u.Username, &u.UsernameChangedAt, &u.AuthEpoch}, extra...)
 	if err := sc.Scan(dest...); err != nil {
 		return nil, err
 	}
@@ -157,6 +158,7 @@ type session struct {
 	now       time.Time
 	expires   time.Time
 	userAgent string
+	epoch     uint32 // the user's auth_epoch when the credential was read
 }
 
 // cleanUserAgent makes a client-supplied header safe to keep (valid UTF-8, at most maxUserAgentLen characters).
@@ -180,14 +182,23 @@ func (s *Store) userByID(ctx context.Context, id uint64) (*User, error) {
 // googleUser finds or creates the account for a Google identity in one transaction (see
 // Service.SignInGoogle for the rules). want carries the display name and locale to use if
 // the account is created. A concurrent callback for the same person can hit the unique key
-// or a deadlock; the loser retries and then finds the winner's rows.
+// or a deadlock; the loser retries and then finds the winner's rows. When an unverified local account was taken over,
+// dropSessions runs after the commit (the auth_epoch bump is what revokes the old sessions; the purge only cleans up) and its
+// error is returned.
 func (s *Store) googleUser(ctx context.Context, id *GoogleIdentity, want *User, now time.Time, dropSessions func(ctx context.Context, userID uint64) error) (*User, error) {
 	var u *User
+	var merged bool
 	err := retryTx(ctx, sleepCtx, func() (err error) {
-		u, err = s.googleUserTx(ctx, id, want, now, dropSessions)
+		u, merged, err = s.googleUserTx(ctx, id, want, now)
 		return err
 	})
-	return u, err
+	if err != nil {
+		return nil, err
+	}
+	if merged {
+		return u, dropSessions(ctx, u.InternalID)
+	}
+	return u, nil
 }
 
 func isRetryable(err error) bool {
@@ -222,49 +233,46 @@ func sleepCtx(ctx context.Context, d time.Duration) error {
 	}
 }
 
-func (s *Store) googleUserTx(ctx context.Context, id *GoogleIdentity, want *User, now time.Time, dropSessions func(ctx context.Context, userID uint64) error) (*User, error) {
+func (s *Store) googleUserTx(ctx context.Context, id *GoogleIdentity, want *User, now time.Time) (u *User, merged bool, err error) {
 	ms := now.UnixMilli()
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	defer func() { _ = tx.Rollback() }()
 
 	// 1:1 primary-key join inside the sign-in transaction (docs/db-conventions.md allows it); see T-047.
-	u, err := scanUser(tx.QueryRowContext(ctx,
+	u, err = scanUser(tx.QueryRowContext(ctx,
 		`SELECT `+userCols+` FROM user_identity_tab i JOIN user_tab u ON u.id = i.user_id WHERE i.provider = 'google' AND i.subject = ?`, id.Subject))
 	if err == nil {
-		return u, nil // known identity
+		return u, false, nil // known identity
 	}
 	if !errors.Is(err, sql.ErrNoRows) {
-		return nil, err
+		return nil, false, err
 	}
 
 	u, err = scanUser(tx.QueryRowContext(ctx, `SELECT `+userCols+` FROM user_tab u WHERE u.email = ? FOR UPDATE`, id.Email))
 	switch {
 	case err == nil && !u.EmailVerified:
-		// Pre-hijacking defence: whoever registered this address never proved they own it, so
-		// their password and sessions go before the real owner is linked.
-		if _, err = tx.ExecContext(ctx, `UPDATE user_tab SET password_hash = NULL, email_verified_at = ?, updated_at = ? WHERE id = ?`, ms, ms, u.InternalID); err != nil {
-			return nil, err
+		// Pre-hijacking defence: whoever registered this address never proved they own it, so their password and sessions go
+		// before the real owner is linked. The epoch bump revokes every session, including one that a login which already read
+		// the old row is about to create; the caller purges the Redis entries after the commit.
+		if _, err = tx.ExecContext(ctx, `UPDATE user_tab SET password_hash = NULL, email_verified_at = ?, auth_epoch = auth_epoch + 1, updated_at = ? WHERE id = ?`, ms, ms, u.InternalID); err != nil {
+			return nil, false, err
 		}
-		// Before the commit, so a Redis failure rolls everything back and the next try still finds the account unverified.
-		if err = dropSessions(ctx, u.InternalID); err != nil {
-			return nil, err
-		}
-		u.EmailVerified = true
+		u.EmailVerified, u.AuthEpoch, merged = true, u.AuthEpoch+1, true // the row is locked (FOR UPDATE), so +1 is exact
 	case err == nil:
 	case errors.Is(err, sql.ErrNoRows):
 		u = &User{ID: ulid.New(now), Email: id.Email, EmailVerified: true, DisplayName: want.DisplayName, Locale: want.Locale, CreatedAt: ms}
 		if err := insertUser(ctx, tx, u, nil, ms); err != nil {
-			return nil, err
+			return nil, false, err
 		}
 	default:
-		return nil, err
+		return nil, false, err
 	}
 	if _, err := tx.ExecContext(ctx,
 		`INSERT INTO user_identity_tab (user_id, provider, subject, email, created_at, updated_at) VALUES (?,'google',?,?,?,?)`, u.InternalID, id.Subject, id.Email, ms, ms); err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	return u, tx.Commit()
+	return u, merged, tx.Commit()
 }

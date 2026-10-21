@@ -85,6 +85,12 @@ A gap error (`missing migration X (the next applied one is Y)`) means a version 
 migration merged with a timestamp older than one already deployed, or a hand-edited `goose_db_version`). Apply the missing one by hand as in
 step 3 and record it, or re-time the file to a version later than the newest applied one before it ships.
 
+## Rollback notes
+
+- **`user_tab.auth_epoch` (T-103).** A password reset or a Google merge raises it, and a session is refused when its epoch no longer matches the user's. Migrating that
+  column down and then up again resets it to 0 for every user, which revives the sessions that were revoked since the migration. After such a rollback, purge sessions
+  before reopening traffic: `DeleteAll` per user, or a full session flush in Redis.
+
 ## Expand then contract
 
 From now on every migration must work with **the previous API version** as well as the new one, because the migrate task runs before the API rolls (and a

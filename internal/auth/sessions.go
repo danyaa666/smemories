@@ -27,7 +27,7 @@ func (e *SessionStoreError) Unwrap() error { return e.Err }
 
 // Redis layout (D-23, docs/redis.md), <h> = hex sha256 of the cookie value, the raw token never reaches Redis:
 //
-//	smem:<env>:sess:<h>     hash {user_id, created_at, last_seen_at (unix ms), user_agent}; expires with the session
+//	smem:<env>:sess:<h>     hash {user_id, created_at, last_seen_at (unix ms), user_agent, epoch}; expires with the session
 //	smem:<env>:usess:<uid>  set of that user's <h>; its expiry is pushed to the latest session expiry
 //
 // The scripts also touch the keys named by ARGV prefixes (sess keys of the set members), so they need a
@@ -35,9 +35,9 @@ func (e *SessionStoreError) Unwrap() error { return e.Err }
 //
 // createScript stores the session, drops the user's logically expired siblings from the index (the sweep the
 // old table got at every login) and registers the new one.
-// KEYS: sess, usess. ARGV: h, ttl ms, user id, now ms, user agent, sess key prefix.
+// KEYS: sess, usess. ARGV: h, ttl ms, user id, now ms, user agent, sess key prefix, auth epoch.
 const createScript = `
-redis.call('HSET', KEYS[1], 'user_id', ARGV[3], 'created_at', ARGV[4], 'last_seen_at', ARGV[4], 'user_agent', ARGV[5])
+redis.call('HSET', KEYS[1], 'user_id', ARGV[3], 'created_at', ARGV[4], 'last_seen_at', ARGV[4], 'user_agent', ARGV[5], 'epoch', ARGV[7])
 redis.call('PEXPIRE', KEYS[1], ARGV[2])
 for _, m in ipairs(redis.call('SMEMBERS', KEYS[2])) do
   local ls = redis.call('HGET', ARGV[6] .. m, 'last_seen_at')
@@ -128,22 +128,26 @@ func (s *Sessions) Create(ctx context.Context, sess session) error {
 	ttl := sess.expires.Sub(sess.now).Milliseconds()
 	h := tokenKey(sess.tokenHash)
 	return s.run(ctx, s.create, []string{s.sessKey(h), s.userKey(sess.userID)},
-		h, ttl, sess.userID, sess.now.UnixMilli(), cleanUserAgent(sess.userAgent), s.sessPrefix())
+		h, ttl, sess.userID, sess.now.UnixMilli(), cleanUserAgent(sess.userAgent), s.sessPrefix(), sess.epoch)
 }
 
-// Lookup returns the owner and the last-seen time of a session; errNotFound when it is unknown or expired
-// (Redis drops it at its expiry).
-func (s *Sessions) Lookup(ctx context.Context, tokenHash []byte) (uid uint64, lastSeen time.Time, err error) {
+// Lookup returns the owner, the credential epoch it was issued under (0 for a session written before T-103) and the
+// last-seen time of a session; errNotFound when it is unknown or expired (Redis drops it at its expiry).
+func (s *Sessions) Lookup(ctx context.Context, tokenHash []byte) (uid uint64, epoch uint32, lastSeen time.Time, err error) {
 	m, err := s.rc.Client().HGetAll(ctx, s.sessKey(tokenKey(tokenHash))).Result()
 	if err != nil {
-		return 0, time.Time{}, s.fail(err)
+		return 0, 0, time.Time{}, s.fail(err)
 	}
 	uid, uerr := strconv.ParseUint(m["user_id"], 10, 64)
 	ms, merr := strconv.ParseInt(m["last_seen_at"], 10, 64)
-	if uerr != nil || merr != nil || uid == 0 { // missing, or a hash this code did not write
-		return 0, time.Time{}, errNotFound
+	ep, eerr := strconv.ParseUint(m["epoch"], 10, 32)
+	if m["epoch"] == "" { // written before the epoch existed: epoch 0
+		ep, eerr = 0, nil
 	}
-	return uid, time.UnixMilli(ms).UTC(), nil
+	if uerr != nil || merr != nil || eerr != nil || uid == 0 { // missing, or a hash this code did not write
+		return 0, 0, time.Time{}, errNotFound
+	}
+	return uid, uint32(ep), time.UnixMilli(ms).UTC(), nil
 }
 
 // Extend slides the session to now+ttl. It reports false when the session no longer exists.

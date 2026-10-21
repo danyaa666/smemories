@@ -41,7 +41,7 @@ func TestSessionKeyLayout(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(m) != 4 || m["user_id"] != "7" || m["user_agent"] != "ua" || m["created_at"] != m["last_seen_at"] {
+	if len(m) != 5 || m["user_id"] != "7" || m["epoch"] != "0" || m["user_agent"] != "ua" || m["created_at"] != m["last_seen_at"] {
 		t.Fatalf("hash: %v", m)
 	}
 	if ttl := rdb.PTTL(ctx, key).Val(); ttl <= 59*time.Minute || ttl > time.Hour {
@@ -80,7 +80,7 @@ func TestSessionLookupExpireExtendDelete(t *testing.T) {
 	e := newEnv(t, opts{})
 	ctx := context.Background()
 	now := time.Now().UTC()
-	if _, _, err := e.sess.Lookup(ctx, tokenHashOf("nobody")); !errors.Is(err, errNotFound) {
+	if _, _, _, err := e.sess.Lookup(ctx, tokenHashOf("nobody")); !errors.Is(err, errNotFound) {
 		t.Fatalf("unknown: %v", err)
 	}
 	if err := e.sess.Create(ctx, sessionRow("short", 1, now, 1500*time.Millisecond)); err != nil {
@@ -89,14 +89,14 @@ func TestSessionLookupExpireExtendDelete(t *testing.T) {
 	if err := e.sess.Create(ctx, sessionRow("long", 1, now, time.Hour)); err != nil {
 		t.Fatal(err)
 	}
-	uid, seen, err := e.sess.Lookup(ctx, tokenHashOf("short"))
+	uid, _, seen, err := e.sess.Lookup(ctx, tokenHashOf("short"))
 	if err != nil || uid != 1 || !seen.Equal(now.Truncate(time.Millisecond)) {
 		t.Fatalf("lookup: %d %v %v", uid, seen, err)
 	}
 	// T-079: poll until Redis expires it (generous bound) instead of one fixed sleep.
 	deadline := time.Now().Add(15 * time.Second)
 	for {
-		_, _, err := e.sess.Lookup(ctx, tokenHashOf("short"))
+		_, _, _, err := e.sess.Lookup(ctx, tokenHashOf("short"))
 		if errors.Is(err, errNotFound) {
 			break
 		}
@@ -111,7 +111,7 @@ func TestSessionLookupExpireExtendDelete(t *testing.T) {
 	if err != nil || !ok {
 		t.Fatalf("extend: %v %v", ok, err)
 	}
-	if _, seen, _ := e.sess.Lookup(ctx, tokenHashOf("long")); !seen.Equal(later.Truncate(time.Millisecond)) {
+	if _, _, seen, _ := e.sess.Lookup(ctx, tokenHashOf("long")); !seen.Equal(later.Truncate(time.Millisecond)) {
 		t.Fatalf("last_seen_at %v", seen)
 	}
 	if ttl := e.rc.Client().PTTL(ctx, e.rc.Key("sess", hex.EncodeToString(tokenHashOf("long")))).Val(); ttl <= 119*time.Minute {
@@ -124,7 +124,7 @@ func TestSessionLookupExpireExtendDelete(t *testing.T) {
 	if err := e.sess.Delete(ctx, tokenHashOf("long")); err != nil { // twice is fine
 		t.Fatal(err)
 	}
-	if _, _, err := e.sess.Lookup(ctx, tokenHashOf("long")); !errors.Is(err, errNotFound) {
+	if _, _, _, err := e.sess.Lookup(ctx, tokenHashOf("long")); !errors.Is(err, errNotFound) {
 		t.Fatalf("deleted session found: %v", err)
 	}
 	if e.rc.Client().SIsMember(ctx, e.rc.Key("usess", "1"), hex.EncodeToString(tokenHashOf("long"))).Val() {
@@ -156,14 +156,14 @@ func TestSessionDeleteAll(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, tok := range []string{"a", "b", "c"} {
-		if _, _, err := e.sess.Lookup(ctx, tokenHashOf(tok)); !errors.Is(err, errNotFound) {
+		if _, _, _, err := e.sess.Lookup(ctx, tokenHashOf(tok)); !errors.Is(err, errNotFound) {
 			t.Fatalf("session %s survived: %v", tok, err)
 		}
 	}
 	if e.rc.Client().Exists(ctx, e.rc.Key("usess", "5")).Val() != 0 {
 		t.Fatal("index survived")
 	}
-	if _, _, err := e.sess.Lookup(ctx, tokenHashOf("other")); err != nil {
+	if _, _, _, err := e.sess.Lookup(ctx, tokenHashOf("other")); err != nil {
 		t.Fatalf("another user's session was removed: %v", err)
 	}
 	if err := e.sess.DeleteAll(ctx, 99); err != nil { // nobody: not an error
@@ -218,7 +218,7 @@ func TestSessionRefreshRacesNeverResurrect(t *testing.T) {
 			}
 		}()
 		wg.Wait()
-		if _, _, err := e.sess.Lookup(ctx, tokenHashOf(tok)); !errors.Is(err, errNotFound) {
+		if _, _, _, err := e.sess.Lookup(ctx, tokenHashOf(tok)); !errors.Is(err, errNotFound) {
 			t.Fatalf("round %d: session survived the logout: %v", i, err)
 		}
 	}
@@ -282,9 +282,9 @@ func TestSessionStoreDownFailsClosed(t *testing.T) {
 	want(t, e.me(cookie), 200, "")
 }
 
-// AC3 + AC4: a Redis failure during the Google pre-hijacking defence rolls the takeover back, so the next try still
-// finds the account unverified and removes the squatter's sessions.
-func TestGooglePreHijackingRollsBackWhenSessionsCannotBeDeleted(t *testing.T) {
+// T-103: the Google pre-hijacking defence no longer depends on Redis. The takeover commits (the credential epoch revokes the
+// squatter's sessions); the Redis purge after the commit is only a clean-up, so its failure is logged and does not undo anything.
+func TestGooglePreHijackingSurvivesRedisFailureAfterCommit(t *testing.T) {
 	e, p := newGoogleEnv(t, opts{})
 	reg := e.register("victim@example.com", testPW, "Squatter")
 	want(t, reg, 200, "")
@@ -292,17 +292,16 @@ func TestGooglePreHijackingRollsBackWhenSessionsCannotBeDeleted(t *testing.T) {
 	f := e.newFlow(p, "", oidctest.Claims{Sub: "victim-sub", Email: "victim@example.com", Name: "Victim"})
 
 	e.sess.rc = deadRedis(t)
-	if rec := f.callback(""); rec.Code != 302 || !strings.Contains(rec.Header().Get("Location"), "error=") {
+	if rec := f.callback(""); rec.Code != 302 || !strings.Contains(rec.Header().Get("Location"), "error=") { // no session can be issued
 		t.Fatalf("callback with Redis down: %d %q", rec.Code, rec.Header().Get("Location"))
 	}
-	if n := e.count(`SELECT COUNT(*) FROM user_tab WHERE password_hash IS NOT NULL AND email_verified_at IS NULL`); n != 1 {
-		t.Fatal("the account was taken over although the squatter's sessions could not be removed")
+	if n := e.count(`SELECT COUNT(*) FROM user_tab WHERE password_hash IS NULL AND email_verified_at IS NOT NULL`); n != 1 {
+		t.Fatal("the takeover must have committed")
 	}
 
 	e.sess.rc = e.rc
-	want(t, e.me(squatter), 200, "") // still the squatter's, the defence has not run yet
+	want(t, e.me(squatter), 401, "ERROR_UNAUTHORIZED") // the old session is still in Redis, the epoch refuses it
 	wantRedirect(t, e.google(p, "", oidctest.Claims{Sub: "victim-sub", Email: "victim@example.com", Name: "Victim"}), "/")
-	want(t, e.me(squatter), 401, "ERROR_UNAUTHORIZED")
 }
 
 // Password reset deletes all sessions of the user, including ones from several browsers (3 sessions, none survives).
