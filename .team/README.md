@@ -11,20 +11,19 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 12 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-095, T-096, T-097 |
-| TODO | 9 | T-093, T-094, T-100, T-101, T-104, T-105, T-106, T-107, T-109 |
-| IN_PROGRESS | 1 | T-102 |
-| READY_FOR_QA | 1 | T-099 |
+| TODO | 8 | T-094, T-100, T-101, T-104, T-105, T-106, T-107, T-109 |
+| IN_PROGRESS | 1 | T-093 |
+| READY_FOR_QA | 2 | T-102, T-103 |
 | QA_PASS | 1 | T-108 |
-| CHANGES_REQUESTED | 1 | T-103 |
-| MERGED | 2 | T-092, T-098 |
+| MERGED | 3 | T-092, T-098, T-099 |
 | DONE | 74 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-092 ([E05] Public photo links: signed token, public-media endpoint, revoke-all (API)); T-098 ([E12] IPv6 /64 keying and a per-account login limiter)
+**Awaiting your review (MERGED):** T-092 ([E05] Public photo links: signed token, public-media endpoint, revoke-all (API)); T-098 ([E12] IPv6 /64 keying and a per-account login limiter); T-099 ([E12] Mandatory SMEM_ENV and local-only dev/test)
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?)
 
-_Board last written 2026-10-21 03:02Z_
+_Board last written 2026-10-21 03:17Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4338,7 +4337,7 @@ Spec: .team/epics/E05-templates-export/14-public-photo-links-api.md (read it fro
 - 2026-10-21 01:45Z · leader · MERGED into develop as 399ffa6 (PR #85) after owner approval. Unblocks T-093, T-100, T-107.
 
 ### T-093 — [E05] Book as plain text with photo links (API)
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -4346,10 +4345,10 @@ Spec: .team/epics/E05-templates-export/14-public-photo-links-api.md (read it fro
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-093-e05-book-as-plain-text-with-photo-links-
 - **PR:** —
-- **Updated:** 2026-10-19 04:10Z by leader
+- **Updated:** 2026-10-21 03:16Z by dev
 - **Comments-seen:** 0
 
 Spec: .team/epics/E05-templates-export/15-book-text-export-api.md. GET /api/book-export/get-text builds the UTF-8 text (profile, approved notes, public photo links from T-092), en/vi labels, no silent cut.
@@ -4459,7 +4458,7 @@ Spec: `.team/epics/E12-security-hardening/01-ipv6-keying-and-account-login-limit
 - 2026-10-21 01:45Z · leader · MERGED into develop as 765b8bc (PR #87) after owner approval.
 
 ### T-099 — [E12] Mandatory SMEM_ENV and local-only dev/test
-- **Status:** READY_FOR_QA
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
@@ -4470,8 +4469,8 @@ Spec: `.team/epics/E12-security-hardening/01-ipv6-keying-and-account-login-limit
 - **Assignee:** —
 - **Branch:** task/t-099-e12-mandatory-smem-env-and-local-only-de
 - **PR:** https://github.com/danyaa666/smemories/pull/88
-- **Updated:** 2026-10-21 02:53Z by dev
-- **Comments-seen:** 8
+- **Updated:** 2026-10-21 03:17Z by leader
+- **Comments-seen:** 10
 
 Spec: `.team/epics/E12-security-hardening/02-mandatory-env-and-local-only-dev-test.md`. Audit M2 and L7: SMEM_ENV defaults to dev, which prints OTP codes, uses the public OTP key and drops the cookie Secure flag. Make it required in every command, and refuse dev/test when origins are not local. Risk high: production configuration.
 
@@ -4490,6 +4489,15 @@ Spec: `.team/epics/E12-security-hardening/02-mandatory-env-and-local-only-dev-te
 - 2026-10-21 01:45Z · leader · Owner approved, but PR #88 now CONFLICTS with develop after T-092 (399ffa6) and T-098 (765b8bc) merged (internal/config, docs/production-config.md, .env.example likely). Dev: merge develop into the branch (no force-push, no rebase), resolve keeping both sides' rules (SMEM_MEDIA_LINK_SECRET from T-092, SMEM_RATE_LOGIN_FAILS_PER_ACCOUNT and WithClientIP(trustProxy, logger) from T-098, mandatory SMEM_ENV and local-only checks from T-099), re-run make lint test test-integration and the two smoke checks, push, set READY_FOR_QA. QA re-checks only the merge.
 - 2026-10-21 02:53Z · dev · Merged origin/develop (T-092, T-098) into the branch, no rebase, head 5d72530. One textual conflict (docs/container.md smoke list): kept both the SMEM_MEDIA_LINK_SECRET prod refusal and the T-099 SMEM_ENV refusals. Auto-merged config keeps mandatory SMEM_ENV + local-only checks, SMEM_MEDIA_LINK_SECRET, SMEM_RATE_LOGIN_FAILS_PER_ACCOUNT. The only code change beyond the merge: TestLoadMediaLinkSecret dev/test cases now use a local origin and base URL (they used a public one, refused by the local-only rule) and TestLoadLoginFailsPerAccount sets SMEM_ENV explicitly. WithClientIP(trustProxy, logger) is untouched by this branch (no conflict). Verified in private compose project dev099 (ports 53306/56379/59000, taken down without -v): make lint test PASS, go test -race -tags integration ./... PASS (all packages), image smoke on an image built from the head via a copy of image-smoke.sh with only the docker pull line replaced by docker image inspect (real pull hangs on this machine, as in QA): ALL PASS incl. 'refuses to start without SMEM_ENV' and 'refuses SMEM_ENV=test with a public base URL or origin' and T-092's SMEM_MEDIA_LINK_SECRET refusals. Please re-check only the merge.
 - 2026-10-21 02:53Z · dev · develop merged (5d72530), conflicts resolved keeping both sides; see comment
+- 2026-10-21 03:16Z · qa · QA_PASS T-099 merge re-check, PR #88 head 5d72530 (develop contains T-092 and T-098; PR touches nothing under .team/). CI on 5d72530: e2e, go, go-integration, image, security, web all pass.
+  Evidence (worktree of 5d72530, own compose project qa099b, ports 43307/46380/49100/49101, down without -v):
+  1. SMEM_ENV mandatory + local-only: TestLoadEnvRequired, TestLoadDevTestAreLocalOnly PASS; built smemories-api, env -i with no SMEM_ENV -> 'config error: SMEM_ENV is required: dev, test or prod'.
+  2. T-092 secret: TestLoadMediaLinkSecret PASS (dev/test local cases); prod missing/short refusals shown by the real smoke ('prod start refuses a missing or short SMEM_MEDIA_LINK_SECRET').
+  3. T-098 per-account limit: TestLoadLoginFailsPerAccount PASS; binary with SMEM_ENV=dev SMEM_RATE_LOGIN_FAILS_PER_ACCOUNT=abc -> 'want an integer >= 1'. TestEveryVariableIsDocumented PASS. WithClientIP untouched by the branch (not in the PR file list).
+  4. make lint test exit 0, then make test-integration with SMEM_TEST_S3_ENDPOINT=http://127.0.0.1:49100 (my MinIO port; pre-existing storagetest default :9000): all packages ok, no failures.
+  5. Real make image-smoke (no pull-line copy needed, the pull did not hang this time): EXIT 0, incl. 'the API refuses to start without SMEM_ENV', 'the API refuses SMEM_ENV=test with a public base URL or origin', 'prod start refuses a missing or short SMEM_MEDIA_LINK_SECRET'.
+  Non-blocking: named volumes qa099b_* left (no -v by rule). Risk high: owner already approved merge on 8e07f4f; leader to merge.
+- 2026-10-21 03:17Z · leader · MERGED into develop as e0ed6af (PR #88) after owner approval and the QA re-check of the develop merge. Local setups now need SMEM_ENV set (make up writes it into .env from .env.example).
 
 ### T-100 — [E12] Canonical public ids and the stored id for object keys
 - **Status:** TODO
@@ -4531,7 +4539,7 @@ Spec: `.team/epics/E12-security-hardening/04-readyz-greeting-session-lifetime.md
 #### Comments
 
 ### T-102 — [E12] Upload slot fairness: per-user cap and paced body on media/create; early release for rejected public submissions
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
@@ -4539,20 +4547,21 @@ Spec: `.team/epics/E12-security-hardening/04-readyz-greeting-session-lifetime.md
 - **Risk:** high
 - **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-102-e12-upload-slot-fairness-per-user-cap-an
 - **PR:** https://github.com/danyaa666/smemories/pull/90
-- **Updated:** 2026-10-21 02:53Z by dev
-- **Comments-seen:** 2
+- **Updated:** 2026-10-21 03:04Z by dev
+- **Comments-seen:** 3
 
 Spec: .team/epics/E12-security-hardening/05-upload-slot-fairness.md (read it from the repo root). Source: audit run 1, docs/security-audit-skill-2026-10-20/ (PR #86). Risk high: owner approves the merge.
 
 #### Comments
 - 2026-10-20 22:16Z · dev · PR #90 head cc04be8. media/create: per-user cap 2 (429, Retry-After 5, before body), shared slot kept before read, httpx.PaceBody with new httpx.PhoneUploadPace (408 frees slots), read deadline moved out after read. notes/submit: slot released once before the drain. New gauge smem_media_uploads_in_progress. Tests: TestPerUserUploadCap, TestSlowUploadsDoNotStarveOthersForLong, TestRateLimitedSubmissionReleasesItsSlotBeforeTheDrain (+ unit); TestQuotas adjusted to max 2 parallel uploads per user. lint 0 issues, full unit + integration -race green. Overlap with #85: media/handler.go, integration_test.go (env.mh), main.go, docs. Risk high: owner approves merge. No Postman change (no new endpoint).
 - 2026-10-21 02:43Z · leader · Leader 2026-10-21: PR #90 CONFLICTS with develop after T-092 (399ffa6, internal/media/handler.go, integration_test.go, main.go, docs/media.md, docs/observability.md) and T-098 (765b8bc) merged. Merge develop into the branch (no rebase, no force-push), keep both sides (T-092's public-media route and countPublic, your per-user cap and pacing), re-run make lint test test-integration, push and set READY_FOR_QA. QA then tests the merged head.
+- 2026-10-21 03:04Z · dev · Merged origin/develop (T-092, T-098) into the branch, merge commit d714aad, no rebase, no force-push. Only 3 textual conflicts, kept both sides: media/handler.go (Handler keeps perUser/userMu/pace plus countPublic), main.go (uploads_in_progress gauge plus mediaH.SetPublicCounter), media/integration_test.go (e.mh plus signer/metrics/SetPublicCounter). docs/media.md and docs/observability.md auto-merged with both T-102 and T-092 text. No behaviour change. make lint, make test, make test-integration (-race) green on a private compose project (ports 33702/36702/39702), taken down without -v. Nothing under .team/ in the PR. Verify: per-user cap 2 + pacing on media/create, early release in notes/submit, public-media route still works.
 
 ### T-103 — [E12] Sessions issued during a password reset or Google merge must not survive it (credential epoch)
-- **Status:** CHANGES_REQUESTED
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
@@ -4563,8 +4572,8 @@ Spec: .team/epics/E12-security-hardening/05-upload-slot-fairness.md (read it fro
 - **Assignee:** —
 - **Branch:** task/t-103-e12-sessions-issued-during-a-password-re
 - **PR:** https://github.com/danyaa666/smemories/pull/89
-- **Updated:** 2026-10-21 02:43Z by leader
-- **Comments-seen:** 4
+- **Updated:** 2026-10-21 03:16Z by dev
+- **Comments-seen:** 5
 
 Spec: .team/epics/E12-security-hardening/06-session-fence-against-credential-change.md (read it from the repo root). Source: audit run 1, docs/security-audit-skill-2026-10-20/ (PR #86). Risk high: owner approves the merge.
 
@@ -4581,6 +4590,7 @@ Spec: .team/epics/E12-security-hardening/06-session-fence-against-credential-cha
   Non-blocking: (a) sessions that a racing login writes after the purge stay in Redis (usess index) until presented or their 30-day expiry; they are always refused (401) and deleted on first use, so no access, only dead keys. (b) migrate down then up resets auth_epoch to 0, so a rollback would revive sessions revoked by earlier resets; document in the rollback runbook. (c) No postman change needed (no endpoint change).
 - 2026-10-20 23:20Z · leader · QA_PASS received; leader review at the next GO tick (5-hour usage over the limit). Non-blocking notes kept for the review: refused stale sessions stay in Redis until used or expired; migrate down then up resets auth_epoch to 0 (rollback would revive them: document in docs/deploy.md rollback notes).
 - 2026-10-21 02:43Z · leader · Leader review OK on c443c11: reset and Google merge bump user_tab.auth_epoch inside their transactions; Login carries the epoch read with the hash into the session; Authenticate compares it with the user row it already reads (no extra query) and deletes a mismatching session; epoch-less sessions count as 0; purge moved after the commit and only logged on failure. Rework needed before merge: (1) PR #89 CONFLICTS with develop since T-098 (765b8bc) also changed internal/auth/reset.go and service.go: merge develop (no rebase, no force-push) and keep both: T-098's loginAcct.Reset after a successful reset AND your epoch/after-commit purge; (2) add to docs/deploy.md rollback notes that migrating down then up resets auth_epoch to 0 and so revives sessions revoked since the migration (QA note), with the advice to purge sessions (DeleteAll per user or a full session flush) after such a rollback. Re-run make lint test test-integration; QA re-checks the merge only. Owner approval is asked after that.
+- 2026-10-21 03:16Z · dev · PR #89 head b732c51 (merge of origin/develop, no rebase). Conflict only in internal/auth/reset.go ResetPassword: kept T-098's loginAcct.Reset(accountKey(email)) after a successful reset AND the epoch bump + s.afterCommit(DeleteAll); service.go auto-merged (T-098 Limits/loginAcct plus my epoch check in Authenticate). docs/deploy.md: new 'Rollback notes' section (down then up resets auth_epoch to 0, revives revoked sessions; purge sessions with DeleteAll per user or a full flush). No other behaviour change. Verify: reset path calls both. make lint test test-integration (-race) green on private compose dev103rw, ports 33306/36379/39000/39001, taken down without -v: auth 369 s incl. race tests ok; media/notes/storage needed SMEM_TEST_S3_ENDPOINT=http://127.0.0.1:39000 (storagetest default is :9000), then ok.
 
 ### T-104 — [E12] Media processing robustness: slots released on every path, no panics, decoded limits
 - **Status:** TODO
