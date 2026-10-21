@@ -11,17 +11,16 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 12 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-095, T-096, T-097 |
-| TODO | 10 | T-101, T-105, T-106, T-107, T-109, T-110, T-112, T-113, T-114, T-115 |
-| READY_FOR_QA | 1 | T-111 |
-| MERGED | 3 | T-094, T-100, T-104 |
-| DONE | 81 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-092, T-093, T-098, T-099, T-102, T-103, T-108 |
+| TODO | 9 | T-101, T-105, T-106, T-107, T-109, T-110, T-113, T-114, T-115 |
+| READY_FOR_QA | 2 | T-111, T-112 |
+| DONE | 84 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-092, T-093, T-094, T-098, T-099, T-100, T-102, T-103, T-104, T-108 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-094 ([E05] Web: Export as text on the print screen, public-link warning, disable links); T-100 ([E12] Canonical public ids and the stored id for object keys); T-104 ([E12] Media processing robustness: slots released on every path, no panics, decoded limits)
+**Awaiting your review (MERGED):** nothing
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?); Q-051 (Approve merge of T-100 (canonical public ids, PR #93)?)
 
-_Board last written 2026-10-21 13:51Z_
+_Board last written 2026-10-21 14:07Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4412,7 +4411,7 @@ Spec: .team/epics/E05-templates-export/15-book-text-export-api.md. GET /api/book
 - 2026-10-21 08:13Z · human · accepted by owner
 
 ### T-094 — [E05] Web: Export as text on the print screen, public-link warning, disable links
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -4423,7 +4422,7 @@ Spec: .team/epics/E05-templates-export/15-book-text-export-api.md. GET /api/book
 - **Assignee:** —
 - **Branch:** task/t-094-e05-web-export-as-text-on-the-print-scre
 - **PR:** https://github.com/danyaa666/smemories/pull/95
-- **Updated:** 2026-10-21 13:19Z by leader
+- **Updated:** 2026-10-21 13:52Z by human
 - **Comments-seen:** 3
 
 Spec: .team/epics/E05-templates-export/16-book-text-export-web.md. Download and copy buttons, one-time public-link warning dialog, Disable photo links, e2e step with an anonymous link fetch and revoke.
@@ -4439,6 +4438,7 @@ Spec: .team/epics/E05-templates-export/16-book-text-export-web.md. Download and 
   Other checks: Download saves lop-12a1-ky-yeu-qa-20261021.txt (data.filename), 719 bytes UTF-8, no BOM, no U+FFFD, Vietnamese intact, 2 photo links. Warning once per page load, again after reload, after SPA leave-and-return (dev's choice: acceptable and safer, matches D-32 intent; fine), and after Disable (spec). Copy: toast 'Copied' and clipboard equals the text; writeText rejected -> execCommand with the 611 chars selected; both refused -> read-only textarea fully selected and focused, instruction line, no false toast. Truncated notice '1000 of 1234 notes are included' (en) and 'Đã đưa 1000 trên 1234 lời nhắn vào tệp' (vi, with a mocked response). Disable: confirm text exact, Escape = no request and old link still 200, confirm = one POST, toast, old link 404, next export warns. Disable 500 -> generic error, dialog closed, page usable. In flight: 3 buttons disabled, 'Working...', dblclick = 1 request, Print stays enabled. Real limiter (31st call in 10 min) -> 429 shows 'Too many attempts. Try again in N min.'; 500 and offline show the generic and network messages; retry works; cleared cookies -> 'Your session has ended. Sign in again.' (the shared client behaviour). Print media hides the section. vi: warning, buttons Tiếp tục/Hủy and the confirm text verbatim as in the spec, NFC.
   NON-BLOCKING observations: (1) after Continue (and after Disable confirm) focus ends on <body> because the opener is disabled while the request runs and the Dialog's focus-restore skips it; a keyboard user restarts from the top. Fix idea: restore focus after busy clears. (2) Pre-existing shared Dialog: backdrop click leaves focus on body (the browser mousedown default runs after the restore). (3) Playwright trace/screenshot on failure would hold the photo URL (token) as an artifact in CI; the scrub only covers error text. Same as the existing collection token, low. (4) Vietnamese truncated string is the dev's wording (spec gives no vi text): 'Đã đưa N trên M lời nhắn vào tệp'; fine. (5) No margin between the section and the preview below it (cosmetic). Not tested: Safari, Firefox, Chrome Android, a real 1000-note book.
 - 2026-10-21 13:19Z · leader · Leader review OK and MERGED into develop as e49ced5 (PR #95); risk low, no owner approval needed. QA_PASS (Chromium only: Safari/WebKit and Chrome Android not run here; the owner's own phone check covers them). The text export feature (T-092..T-094) is complete. Non-blocking follow-ups in T-115: focus returns to the trigger after the dialogs; e2e failure traces should not keep the photo URL.
+- 2026-10-21 13:52Z · human · accepted by owner
 
 ### T-095 — [E11] Signature storage, validation and API
 - **Status:** BACKLOG
@@ -4568,7 +4568,7 @@ Spec: `.team/epics/E12-security-hardening/02-mandatory-env-and-local-only-dev-te
 - 2026-10-21 03:43Z · human · accepted by owner
 
 ### T-100 — [E12] Canonical public ids and the stored id for object keys
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
@@ -4579,7 +4579,7 @@ Spec: `.team/epics/E12-security-hardening/02-mandatory-env-and-local-only-dev-te
 - **Assignee:** —
 - **Branch:** task/t-100-e12-canonical-public-ids-and-the-stored-
 - **PR:** https://github.com/danyaa666/smemories/pull/93
-- **Updated:** 2026-10-21 13:50Z by leader
+- **Updated:** 2026-10-21 13:52Z by human
 - **Comments-seen:** 8
 
 Spec: `.team/epics/E12-security-hardening/03-canonical-public-ids.md`. Audit M3: public_id columns compare case-insensitively and media/yearbook use the caller's spelling in S3 prefixes, so a user can orphan objects, reset their quota and defeat deletion. Validate ids at the edge, build keys from the stored id. Do before T-025. Risk high: data.
@@ -4607,6 +4607,7 @@ Spec: `.team/epics/E12-security-hardening/03-canonical-public-ids.md`. Audit M3:
 - 2026-10-21 13:11Z · leader · Leader review OK on 2210d38: one ulid.Valid shared by notes, medialink and every edge (PR edge table), Upload builds the prefix from the stored public_id and Delete purges y.ID, so even a caller bypassing the handlers stays canonical. QA_PASS with ~250 hostile spellings over 15 endpoints and DB/bucket checksums unchanged, M3 replay fails at step 1, mutation checks on both fixes. Follow-up T-114 (web: show 'book not found' for a malformed id). Waiting for the owner's approval (risk high).
 - 2026-10-21 13:50Z · human · owner approved merge
 - 2026-10-21 13:50Z · leader · MERGED into develop as dbf5e8b (PR #93) after owner approval.
+- 2026-10-21 13:52Z · human · accepted by owner
 
 ### T-101 — [E12] Small hardening: readyz cache, generic code-email greeting, absolute session lifetime
 - **Status:** TODO
@@ -4710,7 +4711,7 @@ Spec: .team/epics/E12-security-hardening/06-session-fence-against-credential-cha
 - 2026-10-21 08:13Z · human · accepted by owner
 
 ### T-104 — [E12] Media processing robustness: slots released on every path, no panics, decoded limits
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
@@ -4721,7 +4722,7 @@ Spec: .team/epics/E12-security-hardening/06-session-fence-against-credential-cha
 - **Assignee:** —
 - **Branch:** task/t-104-e12-media-processing-robustness-slots-re
 - **PR:** https://github.com/danyaa666/smemories/pull/94
-- **Updated:** 2026-10-21 13:51Z by leader
+- **Updated:** 2026-10-21 13:52Z by human
 - **Comments-seen:** 3
 
 Spec: .team/epics/E12-security-hardening/08-media-processing-robustness.md (read it from the repo root). Source: audit run 1, docs/security-audit-skill-2026-10-20/ (PR #86). Risk high: owner approves the merge.
@@ -4740,6 +4741,7 @@ Spec: .team/epics/E12-security-hardening/08-media-processing-robustness.md (read
 - 2026-10-21 12:57Z · leader · Leader review OK on 968b9d7: processPhoto owns the slot (acquire + defer release in one function), recoverTo on load/process/print with reportPanic counting after the recover; decoded bounds re-checked; VP8X proven harmless by reading x/image and pinned by a fixture. QA_PASS with ~40 hostile files through owner upload and the public form plus a burst: all 400, server up, gauges 0. QA follow-up (lossy WebP with ALPH decodes to NRGBA, ~4 B/px vs the 2.5 B/px estimate) goes to T-113. Waiting for the owner's approval (risk high).
 - 2026-10-21 13:50Z · human · owner approved merge
 - 2026-10-21 13:51Z · leader · MERGED into develop as c0b128d (PR #94) after owner approval, right after T-100 (both touch internal/media; merged clean, develop CI checks the combination).
+- 2026-10-21 13:52Z · human · accepted by owner
 
 ### T-105 — [E12] Note links capped and paged; contributor photos cannot exhaust the owner's quota
 - **Status:** TODO
@@ -4891,7 +4893,7 @@ Spec: .team/epics/E13-legal/01-terms-acceptance-api.md (read it from the repo ro
 - 2026-10-21 13:22Z · leader · Leader 2026-10-21: merge order. T-111 alone breaks the web sign-up (no accept_terms_version) and gates every account with no accept screen, so it merges only together with T-112: T-112 is built stacked on this branch (task/t-111-...), and the leader merges #96 and then T-112's PR in one go after both pass QA and the owner approves T-111.
 
 ### T-112 — [E13] Web: Terms and Privacy pages, sign-up checkbox, accept screen, friend-form notice
-- **Status:** TODO
+- **Status:** READY_FOR_QA
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M2
@@ -4900,15 +4902,18 @@ Spec: .team/epics/E13-legal/01-terms-acceptance-api.md (read it from the repo ro
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-21 13:22Z by leader
-- **Comments-seen:** 1
+- **Branch:** task/t-112-e13-web-terms-and-privacy-pages-sign-up-checkbox
+- **PR:** https://github.com/danyaa666/smemories/pull/97
+- **Updated:** 2026-10-21 14:06Z by dev
+- **Comments-seen:** 4
 
 Spec: .team/epics/E13-legal/02-legal-pages-web.md. Pages from docs/legal (draft banner while DRAFT), required checkbox at sign-up, accept screen, footer links, notice on the public note form, e2e step.
 
 #### Comments
 - 2026-10-21 13:22Z · leader · Leader 2026-10-21: dependency removed on the board so the dev can start now, but build it STACKED: branch from T-111's branch (PR #96, head e0a1ba6), open the PR against develop and say in the PR body that it contains #96 until #96 merges. The leader merges #96 first, then this PR. Also drop the e2e injection of accept_terms_version that T-111 added (the checkbox now sends it).
+- 2026-10-21 13:55Z · leader · Owner instruction in chat 2026-10-21: start T-112 now and bypass the usage gate for this task only (5-hour usage was 69%, limit 60%); no config change. Applies to this one dev run, not to other tasks.
+- 2026-10-21 14:06Z · dev · PR #97 (head c9f0c4c) stacked on #96 (e0a1ba6): contains #96 until it merges; merge #96 first. Test: cd web && npm test lint typecheck lint:i18n build; make e2e (step 1b new). Screenshots in docs/legal/screenshots (375/1280, en/vi). Notes: vi legal files' status is 'BẢN NHÁP' not 'DRAFT', so draft detection accepts both; the old-version e2e step simulates the old version by rewriting the get-me answer (real accept-terms call; real 403 gate is T-111's integration tests); login now re-reads get-me because login answers no terms; the spec's 'version and date' is the doc's own 'Version 2026-10-21' line (not repeated). Dev usage-gate bypass used as recorded in the leader comment.
+- 2026-10-21 14:07Z · leader · Leader 2026-10-21: before merge, move the screenshots out of the PR (docs/legal/screenshots, ~0.9 MB of PNGs) onto a screenshots/t-112 branch linked from the PR body, as T-094 did; the rest waits for QA. Merge order stays #96 then #97.
 
 ### T-113 — [E12] Media memory estimate for lossy WebP with alpha (ALPH) is too low
 - **Status:** TODO
