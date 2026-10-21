@@ -12,7 +12,7 @@
 |---|---:|---|
 | BACKLOG | 12 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-095, T-096, T-097 |
 | TODO | 10 | T-101, T-105, T-106, T-107, T-109, T-110, T-112, T-113, T-114, T-115 |
-| IN_PROGRESS | 1 | T-111 |
+| READY_FOR_QA | 1 | T-111 |
 | QA_PASS | 2 | T-100, T-104 |
 | MERGED | 1 | T-094 |
 | DONE | 81 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-092, T-093, T-098, T-099, T-102, T-103, T-108 |
@@ -22,7 +22,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?); Q-051 (Approve merge of T-100 (canonical public ids, PR #93)?)
 
-_Board last written 2026-10-21 13:19Z_
+_Board last written 2026-10-21 13:22Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4866,7 +4866,7 @@ Spec: .team/epics/E12-security-hardening/11-upload-abuse-followup.md (read it fr
 #### Comments
 
 ### T-111 — [E13] Versioned acceptance of the Terms and Privacy Policy (API)
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M2
@@ -4874,35 +4874,38 @@ Spec: .team/epics/E12-security-hardening/11-upload-abuse-followup.md (read it fr
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-111-e13-versioned-acceptance-of-the-terms-an
-- **PR:** —
-- **Updated:** 2026-10-21 13:01Z by dev
-- **Comments-seen:** 1
+- **PR:** https://github.com/danyaa666/smemories/pull/96
+- **Updated:** 2026-10-21 13:22Z by dev
+- **Comments-seen:** 3
 
 Spec: .team/epics/E13-legal/01-terms-acceptance-api.md (read it from the repo root). Decision D-35. Register requires the current version, a gate on signed-in endpoints until accepted, accept-terms endpoint, version stored on notes. Risk high: owner approves the merge.
 
 #### Comments
 - 2026-10-21 13:01Z · leader · Leader 2026-10-21: raised to P1 (owner request; touches auth and notes submit, no overlap with the open media PRs #93/#94).
+- 2026-10-21 13:22Z · dev · PR #96 head e0a1ba6. Verify: migration 20261021110000 then binary; register needs accept_terms_version; one gate in auth RequireUser (403 ERROR_TERMS_REQUIRED) except get-me, accept-terms, verify-email, resend-verification (logout has no session); get-me terms; notes store version. Tests: auth/terms_integration_test.go, yearbook gate, db migration test; lint, unit, all integration, e2e, Newman auth/yearbooks/templates green. Gate in Postman needs make newman-unaccept-terms (see collection description). RISK: until T-112 the web sign-up and new Google accounts are blocked by the gate, merge T-112 right after. Owner approves merge (risk high).
+- 2026-10-21 13:22Z · leader · Leader 2026-10-21: merge order. T-111 alone breaks the web sign-up (no accept_terms_version) and gates every account with no accept screen, so it merges only together with T-112: T-112 is built stacked on this branch (task/t-111-...), and the leader merges #96 and then T-112's PR in one go after both pass QA and the owner approves T-111.
 
 ### T-112 — [E13] Web: Terms and Privacy pages, sign-up checkbox, accept screen, friend-form notice
 - **Status:** TODO
-- **Priority:** P2
+- **Priority:** P1
 - **Type:** feature
 - **Milestone:** M2
-- **Depends-on:** T-111
+- **Depends-on:** —
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-21 08:18Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-21 13:22Z by leader
+- **Comments-seen:** 1
 
 Spec: .team/epics/E13-legal/02-legal-pages-web.md. Pages from docs/legal (draft banner while DRAFT), required checkbox at sign-up, accept screen, footer links, notice on the public note form, e2e step.
 
 #### Comments
+- 2026-10-21 13:22Z · leader · Leader 2026-10-21: dependency removed on the board so the dev can start now, but build it STACKED: branch from T-111's branch (PR #96, head e0a1ba6), open the PR against develop and say in the PR body that it contains #96 until #96 merges. The leader merges #96 first, then this PR. Also drop the e2e injection of accept_terms_version that T-111 added (the checkbox now sends it).
 
 ### T-113 — [E12] Media memory estimate for lossy WebP with alpha (ALPH) is too low
 - **Status:** TODO
