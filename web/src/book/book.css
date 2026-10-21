@@ -270,6 +270,7 @@
   .bk-ui,
   .sidebar,
   .topbar,
+  .shell-footer,
   .tabbar {
     display: none !important;
   }

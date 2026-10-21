@@ -22,7 +22,10 @@ export function Login() {
   const [password, setPassword] = useState("");
   const m = useMutation({
     mutationFn: () => login(email, password),
-    onSuccess: (u) => qc.setQueryData(ME_KEY, u),
+    onSuccess: (u) => {
+      qc.setQueryData(ME_KEY, u);
+      void qc.invalidateQueries({ queryKey: ME_KEY }); // login answers no `terms`: get-me says whether the accept screen comes first
+    },
   });
   if (user) return <Navigate to={from} replace />;
   const submit = (e: FormEvent) => {

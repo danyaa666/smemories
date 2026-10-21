@@ -6,6 +6,7 @@ import { errorText } from "../auth/errors";
 import { useMe } from "../auth/useMe";
 import { useNoteCounts } from "./useNoteCounts";
 import { LanguageSwitcher } from "./LanguageSwitcher";
+import { LegalLinks } from "./LegalConsent";
 import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
 import { useMediaQuery } from "./useMediaQuery";
@@ -106,6 +107,9 @@ export function YearbookLayout({ items = NAV_ITEMS }: { items?: NavItem[] }) {
         <main>
           <Outlet />
         </main>
+        <footer className="shell-footer">
+          <LegalLinks />
+        </footer>
         <nav className="tabbar" aria-label={t("nav.main")}>
           {links.map((i) => (
             <NavLink key={i.key} to={i.to} end>
@@ -148,6 +152,7 @@ export function YearbookLayout({ items = NAV_ITEMS }: { items?: NavItem[] }) {
         <div className="sidebar-foot">
           {chip}
           <LanguageSwitcher />
+          <LegalLinks />
         </div>
       </aside>
       <main>
