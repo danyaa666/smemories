@@ -11,18 +11,18 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 12 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-095, T-096, T-097 |
-| TODO | 9 | T-101, T-105, T-106, T-107, T-109, T-110, T-112, T-113, T-114 |
+| TODO | 10 | T-101, T-105, T-106, T-107, T-109, T-110, T-112, T-113, T-114, T-115 |
 | IN_PROGRESS | 1 | T-111 |
-| READY_FOR_QA | 1 | T-094 |
 | QA_PASS | 2 | T-100, T-104 |
+| MERGED | 1 | T-094 |
 | DONE | 81 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-092, T-093, T-098, T-099, T-102, T-103, T-108 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** nothing
+**Awaiting your review (MERGED):** T-094 ([E05] Web: Export as text on the print screen, public-link warning, disable links)
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?); Q-051 (Approve merge of T-100 (canonical public ids, PR #93)?)
 
-_Board last written 2026-10-21 13:11Z_
+_Board last written 2026-10-21 13:19Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4413,7 +4413,7 @@ Spec: .team/epics/E05-templates-export/15-book-text-export-api.md. GET /api/book
 - 2026-10-21 08:13Z · human · accepted by owner
 
 ### T-094 — [E05] Web: Export as text on the print screen, public-link warning, disable links
-- **Status:** READY_FOR_QA
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -4424,13 +4424,22 @@ Spec: .team/epics/E05-templates-export/15-book-text-export-api.md. GET /api/book
 - **Assignee:** —
 - **Branch:** task/t-094-e05-web-export-as-text-on-the-print-scre
 - **PR:** https://github.com/danyaa666/smemories/pull/95
-- **Updated:** 2026-10-21 13:01Z by dev
-- **Comments-seen:** 1
+- **Updated:** 2026-10-21 13:19Z by leader
+- **Comments-seen:** 3
 
 Spec: .team/epics/E05-templates-export/16-book-text-export-web.md. Download and copy buttons, one-time public-link warning dialog, Disable photo links, e2e step with an anonymous link fetch and revoke.
 
 #### Comments
 - 2026-10-21 13:01Z · dev · PR #95 head a794c23. Export as text section (download, copy, disable links, warning + confirm dialogs, truncated notice, en/vi). 12 component tests, 360 web tests, lint/typecheck/i18n/check:api green, make e2e green incl. anonymous link 200 then 404 after disable. Screenshots 375/1280 on branch screenshots/t-094 (linked in PR). QA: try Safari clipboard/download, Vietnamese diacritics. Warning state resets on leaving the screen as well as reload.
+- 2026-10-21 13:19Z · qa · QA_PASS on PR #95 head a794c23 (CI all green; no .team/ change in the PR). Own stack: compose project qa094, ports 33094/36094/39094/39095, own API :28094 and web :24094, taken down without -v. Engines actually run: Chromium (Playwright 1248) only. WebKit and Firefox are NOT installed here, so Safari is unverified; the Safari clipboard-after-fetch case was simulated in Chromium (writeText rejecting with NotAllowedError after the fetch).
+  EVIDENCE (AC -> how -> result)
+  AC1 component tests: web npm test 360/360 green, textExport.test.tsx has 12 tests (warn once, Cancel, Continue, no lang param, Escape/focus, copy, execCommand fallback, textarea fallback, truncated, double click, 429, generic, revoke ok/fail). PASS.
+  AC2 real browser, my own script at 375 and 1280 px: section and both dialogs fit the viewport, no horizontal overflow; screenshots on branch screenshots/t-094 reviewed; keyboard-only run through BOTH dialogs at both widths: Enter opens, focus starts on Cancel, Tab and Shift+Tab stay inside (4 and 3 presses), Escape closes with no request and focus back on the opener, Cancel does nothing, backdrop click cancels, Tab+Enter on Continue downloads. PASS.
+  AC3 cd web: lint (eslint+prettier), typecheck, lint:i18n, check:api all green. make e2e (SMEM_ENV set by make) green: 1 passed; anonymous photo link 200 then 404 after Disable, toast seen. Output dir has 0 hits for 'public-media/get-content?token' and api.log 0 'token='; the scrub list covers the photo token. PASS.
+  AC4 docs/e2e.md step 9 added and the intro updated. PASS.
+  Other checks: Download saves lop-12a1-ky-yeu-qa-20261021.txt (data.filename), 719 bytes UTF-8, no BOM, no U+FFFD, Vietnamese intact, 2 photo links. Warning once per page load, again after reload, after SPA leave-and-return (dev's choice: acceptable and safer, matches D-32 intent; fine), and after Disable (spec). Copy: toast 'Copied' and clipboard equals the text; writeText rejected -> execCommand with the 611 chars selected; both refused -> read-only textarea fully selected and focused, instruction line, no false toast. Truncated notice '1000 of 1234 notes are included' (en) and 'Đã đưa 1000 trên 1234 lời nhắn vào tệp' (vi, with a mocked response). Disable: confirm text exact, Escape = no request and old link still 200, confirm = one POST, toast, old link 404, next export warns. Disable 500 -> generic error, dialog closed, page usable. In flight: 3 buttons disabled, 'Working...', dblclick = 1 request, Print stays enabled. Real limiter (31st call in 10 min) -> 429 shows 'Too many attempts. Try again in N min.'; 500 and offline show the generic and network messages; retry works; cleared cookies -> 'Your session has ended. Sign in again.' (the shared client behaviour). Print media hides the section. vi: warning, buttons Tiếp tục/Hủy and the confirm text verbatim as in the spec, NFC.
+  NON-BLOCKING observations: (1) after Continue (and after Disable confirm) focus ends on <body> because the opener is disabled while the request runs and the Dialog's focus-restore skips it; a keyboard user restarts from the top. Fix idea: restore focus after busy clears. (2) Pre-existing shared Dialog: backdrop click leaves focus on body (the browser mousedown default runs after the restore). (3) Playwright trace/screenshot on failure would hold the photo URL (token) as an artifact in CI; the scrub only covers error text. Same as the existing collection token, low. (4) Vietnamese truncated string is the dev's wording (spec gives no vi text): 'Đã đưa N trên M lời nhắn vào tệp'; fine. (5) No margin between the section and the preview below it (cosmetic). Not tested: Safari, Firefox, Chrome Android, a real 1000-note book.
+- 2026-10-21 13:19Z · leader · Leader review OK and MERGED into develop as e49ced5 (PR #95); risk low, no owner approval needed. QA_PASS (Chromium only: Safari/WebKit and Chrome Android not run here; the owner's own phone check covers them). The text export feature (T-092..T-094) is complete. Non-blocking follow-ups in T-115: focus returns to the trigger after the dialogs; e2e failure traces should not keep the photo URL.
 
 ### T-095 — [E11] Signature storage, validation and API
 - **Status:** BACKLOG
@@ -4930,6 +4939,25 @@ QA of T-104 (2026-10-21): a lossy WebP with an ALPH chunk (compression 1) decode
 - **Comments-seen:** 0
 
 QA of T-100 (2026-10-21): since T-100 a non-canonical id answers 400 ERROR_PARAM instead of 404, and web/src/pages/YearbookEdit.tsx (line ~39) only shows 'book not found' for 404, so a hand-typed or lower-cased URL shows the generic invalid-request text. Treat ERROR_PARAM on the yearbook id like not found on every page that takes :id from the URL (edit, notes, note links, book); component tests for 404 and 400. No API change.
+
+#### Comments
+
+### T-115 — [E05] Export dialogs return focus to their button; e2e traces drop photo-link URLs
+- **Status:** TODO
+- **Priority:** P3
+- **Type:** bug
+- **Milestone:** M2
+- **Depends-on:** —
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-21 13:19Z by leader
+- **Comments-seen:** 0
+
+QA of T-094 (2026-10-21): after Continue in the public-link warning and after confirming Disable photo links, focus lands on <body>, so keyboard users restart at the top; return focus to the button that opened the dialog (in the shared Dialog component if that is where it belongs, covering backdrop click too). Also: a failed CI e2e run keeps a Playwright trace that contains the photo-link URL (a bearer token of the throwaway e2e database); scrub it or disable traces for that step. Component test for focus return; show the trace setting in the PR.
 
 #### Comments
 
