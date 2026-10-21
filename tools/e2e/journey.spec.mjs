@@ -5,7 +5,7 @@
 //
 // The link token is a bearer secret: it is only ever in `link`, never logged, and every error leaving a step is scrubbed of it.
 import { expect, request, test } from "@playwright/test";
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -31,6 +31,7 @@ const NOTES = [
 ];
 
 let link = ""; // /c/<token>
+const secrets = []; // photo-link tokens (D-32): bearer secrets like the collection token, scrubbed from every error too
 
 /** One named step with a hard time limit. A failure says which step broke; the token never leaves it, not even in an error message. */
 async function step(title, body) {
@@ -38,9 +39,9 @@ async function step(title, body) {
     return await test.step(title, body, { timeout: STEP_MS });
   } catch (e) {
     if (!(e instanceof Error)) throw e;
-    const token = link.split("/").pop() || "\0"; // "\0": no token yet, nothing to hide
+    const tokens = [link.split("/").pop(), ...secrets].filter(Boolean); // none yet: nothing to hide
     const mark = `STEP FAILED: ${title}\n`;
-    const scrub = (s) => s.replaceAll(token, "<token>");
+    const scrub = (s) => tokens.reduce((out, token) => out.replaceAll(token, "<token>"), s);
     const message = mark + scrub(e.message);
     e.stack = e.stack ? mark + scrub(e.stack) : e.stack;
     e.message = message;
@@ -214,7 +215,39 @@ test("M1 journey: sign up, build a book, collect notes, print the PDF", async ({
     }
   });
 
-  await step("9. revoke the link: the friend's page is a dead end after one lookup; sign out closes the owner's pages", async () => {
+  await step("9. export as text: the warning, the file, an anonymous photo link works, Disable photo links ends it", async () => {
+    await owner.getByRole("button", { name: "Download text file" }).click();
+    const warning = owner.getByRole("dialog", { name: "Photo links are public" });
+    await expect(warning).toBeVisible();
+    const [download] = await Promise.all([
+      owner.waitForEvent("download"),
+      warning.getByRole("button", { name: "Continue" }).click(),
+    ]);
+    expect(download.suggestedFilename(), "file name").toMatch(/^[a-z0-9.-]+-\d{8}\.txt$/);
+    const body = norm(readFileSync(await download.path(), "utf8"));
+    // `.includes` and not `expect(body).toContain`: a failure must not print the text, which holds the links
+    for (const s of [TITLE, OWNER.name, ...NOTES.map((n) => n.name)])
+      expect(body.includes(norm(s)), `the text file contains "${s}"`).toBe(true);
+    const photo = readFileSync(await download.path(), "utf8").match(/https?:\/\/\S+\/api\/public-media\/get-content\?token=\S+/)?.[0];
+    expect(photo, "the text file has a photo link").toBeTruthy();
+    secrets.push(new URL(photo).searchParams.get("token"));
+
+    const anonymous = await request.newContext(); // a fresh context: no cookies, no session
+    try {
+      const open = await anonymous.get(photo);
+      expect(open.status(), "anonymous photo link").toBe(200);
+      expect(open.headers()["content-type"], "photo link content type").toMatch(/^image\//);
+
+      await owner.getByRole("button", { name: "Disable photo links" }).click();
+      await owner.getByRole("dialog", { name: "Disable photo links?" }).getByRole("button", { name: "Disable links" }).click();
+      await expect(owner.getByText("Photo links disabled")).toBeVisible();
+      expect((await anonymous.get(photo)).status(), "the same photo link after Disable photo links").toBe(404);
+    } finally {
+      await anonymous.dispose();
+    }
+  });
+
+  await step("10. revoke the link: the friend's page is a dead end after one lookup; sign out closes the owner's pages", async () => {
     await owner.goto(bookUrl("/note-links"));
     await owner.getByRole("button", { name: /^Revoke/ }).click();
     await owner.getByRole("dialog").getByRole("button", { name: "Revoke" }).click();

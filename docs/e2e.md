@@ -2,7 +2,7 @@
 
 One Playwright test (`tools/e2e/journey.spec.mjs`, Chromium only) drives the whole M1 journey in a real browser against the
 **built web app**, the **real API** and the real MySQL, Valkey and MinIO, so a regression anywhere in the chain (auth, yearbook,
-media, link, public form, moderation, book data, renderer, PDF) turns CI red. The manual half of the M1 exit criteria
+media, link, public form, moderation, book data, renderer, PDF, text export and public photo links) turns CI red. The manual half of the M1 exit criteria
 (Safari, phones, the print dialog) stays in `docs/spikes/print/OWNER-TESTS.md`.
 
 ## The journey (each is a `test.step`, so a failure names its step)
@@ -17,7 +17,10 @@ media, link, public form, moderation, book data, renderer, PDF) turns CI red. Th
 8. Print screen ready, `page.pdf()`: page count (`3 + ceil(notes / notes-per-page)`; memory-book has one friend per page, so 6),
    A5 size (420 x 595 pt), fonts embedded, title, owner and every note's author and message present, notes in book order, no text
    outside its page. The PDF helpers are the ones of `tools/print-check`.
-9. Revoke the link: the friend's page is a dead end after exactly one lookup request; sign out and the protected pages redirect to sign-in.
+9. Export as text (T-094): Download text file, accept the public-link warning, and the downloaded file holds the title, the owner
+   and the three note names and a photo link; that link opens from a fresh context with no cookies (200, `image/*`); Disable photo
+   links, confirm, and the same link is now 404. The photo token is scrubbed from every error like the collection token.
+10. Revoke the link: the friend's page is a dead end after exactly one lookup request; sign out and the protected pages redirect to sign-in.
 
 ## Run it locally
 
