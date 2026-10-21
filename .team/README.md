@@ -11,16 +11,18 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 12 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-095, T-096, T-097 |
-| TODO | 9 | T-101, T-105, T-106, T-107, T-109, T-110, T-113, T-114, T-115 |
-| READY_FOR_QA | 2 | T-111, T-112 |
+| TODO | 8 | T-101, T-105, T-106, T-109, T-110, T-113, T-114, T-115 |
+| IN_PROGRESS | 1 | T-107 |
+| QA_PASS | 1 | T-111 |
+| CHANGES_REQUESTED | 1 | T-112 |
 | DONE | 84 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-092, T-093, T-094, T-098, T-099, T-100, T-102, T-103, T-104, T-108 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
 **Awaiting your review (MERGED):** nothing
 
-**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?); Q-051 (Approve merge of T-100 (canonical public ids, PR #93)?)
+**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?); Q-051 (Approve merge of T-100 (canonical public ids, PR #93)?); Q-052 (Approve merge of T-111 (Terms acceptance API, PR #96; merges together with T-112)?)
 
-_Board last written 2026-10-21 17:43Z_
+_Board last written 2026-10-21 18:16Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -575,6 +577,15 @@ QA_PASS and leader review OK on 968b9d7, CI green. A crash inside image decoding
 - **Answer:** _(pending)_
 
 QA_PASS and leader review OK on 2210d38, CI green. Every id from the browser must be the canonical upper-case form (else 400 before any query), and photo storage paths and yearbook deletion use the stored id, so a lower-cased id can no longer leave photos behind in storage or reset the quota. QA probed ~250 bad spellings over 15 endpoints with no data touched. Reply 'team approve T-100'.
+
+### Q-052 — Approve merge of T-111 (Terms acceptance API, PR #96; merges together with T-112)?
+- **Status:** OPEN
+- **Asked:** 2026-10-21 18:16Z
+- **Blocks:** T-111
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+QA_PASS and leader review OK on e0a1ba6, CI green. Sign-up requires accepting the current Terms and Privacy version; every signed-in request is refused with ERROR_TERMS_REQUIRED until the user accepts (existing accounts and new Google accounts accept once on the new screen from T-112); notes record the version shown. Merges together with T-112 (#97, web pages and checkbox), which passed QA too. The texts stay marked DRAFT until you finalise them before go-live. Reply 'team approve T-111'.
 
 <!-- questions:end -->
 
@@ -4782,7 +4793,7 @@ Spec: .team/epics/E12-security-hardening/10-auth-and-repo-hygiene.md (read it fr
 #### Comments
 
 ### T-107 — [E12] Bound the memory of photo downloads (get-content and public-media)
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
@@ -4790,10 +4801,10 @@ Spec: .team/epics/E12-security-hardening/10-auth-and-repo-hygiene.md (read it fr
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-107-e12-bound-the-memory-of-photo-downloads-
 - **PR:** —
-- **Updated:** 2026-10-20 16:48Z by leader
+- **Updated:** 2026-10-21 17:43Z by dev
 - **Comments-seen:** 0
 
 Spec: .team/epics/E12-security-hardening/07-bounded-photo-download-memory.md (read it from the repo root). Source: audit run 1, docs/security-audit-skill-2026-10-20/ (PR #86). Risk high: owner approves the merge.
@@ -4871,7 +4882,7 @@ Spec: .team/epics/E12-security-hardening/11-upload-abuse-followup.md (read it fr
 #### Comments
 
 ### T-111 — [E13] Versioned acceptance of the Terms and Privacy Policy (API)
-- **Status:** READY_FOR_QA
+- **Status:** QA_PASS
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M2
@@ -4879,11 +4890,11 @@ Spec: .team/epics/E12-security-hardening/11-upload-abuse-followup.md (read it fr
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** leader
 - **Branch:** task/t-111-e13-versioned-acceptance-of-the-terms-an
 - **PR:** https://github.com/danyaa666/smemories/pull/96
-- **Updated:** 2026-10-21 13:22Z by dev
-- **Comments-seen:** 3
+- **Updated:** 2026-10-21 18:15Z by qa
+- **Comments-seen:** 5
 
 Spec: .team/epics/E13-legal/01-terms-acceptance-api.md (read it from the repo root). Decision D-35. Register requires the current version, a gate on signed-in endpoints until accepted, accept-terms endpoint, version stored on notes. Risk high: owner approves the merge.
 
@@ -4891,21 +4902,29 @@ Spec: .team/epics/E13-legal/01-terms-acceptance-api.md (read it from the repo ro
 - 2026-10-21 13:01Z · leader · Leader 2026-10-21: raised to P1 (owner request; touches auth and notes submit, no overlap with the open media PRs #93/#94).
 - 2026-10-21 13:22Z · dev · PR #96 head e0a1ba6. Verify: migration 20261021110000 then binary; register needs accept_terms_version; one gate in auth RequireUser (403 ERROR_TERMS_REQUIRED) except get-me, accept-terms, verify-email, resend-verification (logout has no session); get-me terms; notes store version. Tests: auth/terms_integration_test.go, yearbook gate, db migration test; lint, unit, all integration, e2e, Newman auth/yearbooks/templates green. Gate in Postman needs make newman-unaccept-terms (see collection description). RISK: until T-112 the web sign-up and new Google accounts are blocked by the gate, merge T-112 right after. Owner approves merge (risk high).
 - 2026-10-21 13:22Z · leader · Leader 2026-10-21: merge order. T-111 alone breaks the web sign-up (no accept_terms_version) and gates every account with no accept screen, so it merges only together with T-112: T-112 is built stacked on this branch (task/t-111-...), and the leader merges #96 and then T-112's PR in one go after both pass QA and the owner approves T-111.
+- 2026-10-21 18:15Z · qa · QA_PASS T-111 (PR #96 e0a1ba6; tested on combined head c9f0c4c, CI green on both PRs, both MERGEABLE). Own compose project qa-t111, ports 33911/36911/39011, SMEM_ENV=dev, torn down without -v.
+  AC1 register: live API: missing/empty/old/'2026-10-21 '/null -> 400 ERROR_TERMS_REQUIRED; number/bool -> 400 ERROR_PARAM; user count unchanged after 8 refusals, no cookie; bad pw + old version -> terms error first; current -> 200, DB terms_version=2026-10-21, terms_accepted_at==created_at. PASS.
+  AC2 gate: user_tab.terms_version NULL and then '2026-01-01': 403 ERROR_TERMS_REQUIRED on all 22 signed-in routes (yearbook x7, media x4 incl. real multipart upload -> 403, note-collection x3, note x4, book-data, book-export, template, update-username); get-me 200 with terms{accepted_version,current_version,required:true}, verify-email/resend-verification 200/400-invalid-code (not gated), logout 200, accept-terms 200; after accept the yearbook call is 200. accept-terms: stale/empty/missing -> 400 ERROR_PARAM and DB untouched; repeat keeps first terms_accepted_at (checked 1.2 s apart); bad Origin -> 403 CSRF; no session -> 401. Gate is the single RequireUser path (all packages wired with authH.RequireUser). Google: TestGoogleAccountMustAcceptTerms (fake OIDC) passes. PASS.
+  AC3: mutated each of the four docs/legal front-matter versions in turn: go test ./internal/legal fails each time, passes restored. Note via public-collect/submit-note stored terms_version=2026-10-21 (older seeded note stays NULL). PASS.
+  AC4 migration: base binary (merge-base 67adeb6) at 20261021100000, seeded 2 users + book + collection + note, then up: columns added, existing rows NULL; down --allow-down then up again OK. make lint (golangci 0 issues, gofmt, web lint/typecheck/i18n/api) and make test (Go -race all ok, web 365 tests) green. Integration: go test -race -tags integration ./... all packages ok (media/notes/storage rerun with SMEM_TEST_S3_ENDPOINT set to my MinIO port; the test default is :9000). make e2e green. 
+  Postman: auth collection, Terms gate two-step flow works as described (G1 setup, make newman-unaccept-terms, termsGate=1: G3/G4 403 ERROR_TERMS_REQUIRED, G5 get-me required, G6 accept, G7 200: 12/12 assertions). Full auth collection run twice back to back: 252 assertions, only the 20 in the 'Google sign-in' folder fail (no SMEM_GOOGLE_* configured here, pre-existing); notes collection 141/141. Two ERROR_TERMS_REQUIRED codes (400 at register, 403 at the gate): acceptable, documented in openapi, api-contract.md line 40 and the Postman descriptions; the web handles 403+terms_required.
+  Non-blocking: media/notes integration tests need SMEM_TEST_S3_ENDPOINT on non-default ports. Merge together with #97 (T-111 alone breaks web sign-up). Owner approval needed (risk high).
+- 2026-10-21 18:16Z · leader · Leader review OK on e0a1ba6: one gate in requireUser (needTerms) compares the user row's terms_version with legal.CurrentVersion on every signed-in route; the exempt routes are explicit (get-me, accept-terms, verify-email, resend-verification via requireSession; logout needs no session); register validates accept_terms_version and stores it in the account transaction; the four-doc version test ties text and constant. QA_PASS: 22 gated routes probed live, migration up/down/up on data, Postman gate flow 12/12. Merge together with T-112 (#96 then #97). Waiting for the owner's approval (risk high).
 
 ### T-112 — [E13] Web: Terms and Privacy pages, sign-up checkbox, accept screen, friend-form notice
-- **Status:** READY_FOR_QA
+- **Status:** CHANGES_REQUESTED
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M2
 - **Depends-on:** —
 - **Risk:** low
-- **Rework:** 0
+- **Rework:** 1
 - **Owner-approved:** —
 - **Assignee:** —
 - **Branch:** task/t-112-e13-web-terms-and-privacy-pages-sign-up-checkbox
 - **PR:** https://github.com/danyaa666/smemories/pull/97
-- **Updated:** 2026-10-21 14:06Z by dev
-- **Comments-seen:** 4
+- **Updated:** 2026-10-21 18:16Z by leader
+- **Comments-seen:** 6
 
 Spec: .team/epics/E13-legal/02-legal-pages-web.md. Pages from docs/legal (draft banner while DRAFT), required checkbox at sign-up, accept screen, footer links, notice on the public note form, e2e step.
 
@@ -4914,6 +4933,14 @@ Spec: .team/epics/E13-legal/02-legal-pages-web.md. Pages from docs/legal (draft 
 - 2026-10-21 13:55Z · leader · Owner instruction in chat 2026-10-21: start T-112 now and bypass the usage gate for this task only (5-hour usage was 69%, limit 60%); no config change. Applies to this one dev run, not to other tasks.
 - 2026-10-21 14:06Z · dev · PR #97 (head c9f0c4c) stacked on #96 (e0a1ba6): contains #96 until it merges; merge #96 first. Test: cd web && npm test lint typecheck lint:i18n build; make e2e (step 1b new). Screenshots in docs/legal/screenshots (375/1280, en/vi). Notes: vi legal files' status is 'BẢN NHÁP' not 'DRAFT', so draft detection accepts both; the old-version e2e step simulates the old version by rewriting the get-me answer (real accept-terms call; real 403 gate is T-111's integration tests); login now re-reads get-me because login answers no terms; the spec's 'version and date' is the doc's own 'Version 2026-10-21' line (not repeated). Dev usage-gate bypass used as recorded in the leader comment.
 - 2026-10-21 14:07Z · leader · Leader 2026-10-21: before merge, move the screenshots out of the PR (docs/legal/screenshots, ~0.9 MB of PNGs) onto a screenshots/t-112 branch linked from the PR body, as T-094 did; the rest waits for QA. Merge order stays #96 then #97.
+- 2026-10-21 18:15Z · qa · QA_PASS T-112 (PR #97 head c9f0c4c, stacked on #96; CI green, MERGEABLE, nothing under .team/ in the diff). Same own stack as T-111; built web served by vite preview against the combined API; Playwright script (77 checks, 0 fail).
+  Pages: /terms and /privacy en+vi at 1280 and 375: h1, draft banner 'Draft: not the final text' / 'Bản nháp: chưa phải bản chính thức', version 2026-10-21 in text, no horizontal overflow, no script/img/iframe in the DOM; detection accepts DRAFT and BẢN NHÁP (vi status is BẢN NHÁP). Renderer: grep finds no dangerouslySetInnerHTML/innerHTML; unit test feeds <img onerror>/<script> and gets text only. Source = docs/legal via ?raw + server.fs.allow, version test ties to the API constant.
+  Register (en 1280, vi 375, en 375): button disabled until ticked, Enter in the form while unticked sends nothing, label text verbatim (en and vi), both links target=_blank rel=noopener, request body has accept_terms_version=2026-10-21, DB stores it, new account is not sent to accept screen.
+  Accept flow: stale version (real 403 gate, DB set to 2026-01-01) -> /accept-terms 'Our terms have changed' / 'Điều khoản đã được cập nhật'; never accepted (login of NULL user) -> 'Before you start' / 'Trước khi bắt đầu'; button disabled until ticked, API stays 403 meanwhile, accept sends version, returns to /account where the user was going, DB updated; a version bump while signed in lands on the accept screen at the next navigation; Sign out from the screen ends the session (get-me 401); vi buttons 'Đồng ý và tiếp tục' / 'Đăng xuất'; 375 no overflow. (Google first sign-in is the same get-me state; real Google not configured here.)
+  Footer: Terms/Privacy links on public pages, and both visible in the signed-in shell at 1280 (sidebar) and 375 (footer). Friend form: notice under the send button, en and vi verbatim to the spec, two links /terms and /privacy new tab, no overflow at 375.
+  Checks: make lint test (web 365 tests) green, make e2e green (journey incl. checkbox step and step 1b), all Go integration green. Screenshots in docs/legal/screenshots ignored as requested; my own are in the QA scratchpad.
+  Non-blocking: e2e step 1b simulates the old version by rewriting the get-me response (the real gate is covered by T-111 tests and by my browser run); footer links in the signed-in shell leave the shell for the public layout; a stale web page registering after a version bump would get the 400 terms_required message (i18n key exists). Merge #96 then #97.
+- 2026-10-21 18:16Z · leader · QA_PASS received on c9f0c4c (77 browser checks). One rework before merge, no QA re-check needed: remove docs/legal/screenshots from the PR (put them on a screenshots/t-112 branch linked from the PR body, like T-094). Nothing else changes. Then READY_FOR_QA is not needed: set QA_PASS? No: set READY_FOR_QA and the leader confirms the file-only diff.
 
 ### T-113 — [E12] Media memory estimate for lossy WebP with alpha (ALPH) is too low
 - **Status:** TODO
