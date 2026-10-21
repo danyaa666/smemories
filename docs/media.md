@@ -46,6 +46,19 @@ and a progressive JPEG counts five times that, because the Go decoder keeps 4 by
 whose SOF cannot be read counts as progressive 4:4:4. Largest accepted: 4096 x 4096 16-bit PNG, 5000 x 5000 8-bit PNG or WebP,
 10000 x 5000 baseline 4:2:0 JPEG, 6000 x 7456 baseline 4:4:4 JPEG, about 18 MP progressive 4:2:0 JPEG.
 
+## Before and after decode, and panics (T-104)
+
+- **Before decode** (`image.DecodeConfig`, the header only): the content type is sniffed, then the side, pixel and estimated-memory limits above are applied to the size the header reports.
+- **After decode** (`matchesHeader`): the decoded image must have exactly the size the header reported, which is the size the limits judged; any difference is `400 ERROR_INVALID_IMAGE`. A lossy WebP with transparency (`NYCbCrA`)
+  must also have an alpha plane that covers the whole picture, because the standard library slices it by the luma rectangle. `printOf` (backfill) does the same.
+- **WebP VP8X canvas against frame.** `DecodeConfig` of a VP8X file returns the canvas size without reading the frame. `golang.org/x/image/webp` (v0.46.0, `decode.go`) compares the VP8 or VP8L frame header with the canvas
+  *before* it allocates and answers `errInvalidFormat` on a mismatch, so a tiny canvas with a huge frame never gets a big buffer. `testdata/vp8x-canvas-mismatch.webp` (58 bytes: 1x1 canvas with alpha, 1x1 ALPH, VP8 frame header
+  8000 x 8000) pins that: `TestProcessRefusesAWebPWhoseFrameIsLargerThanItsCanvas` checks the refusal and that it allocates next to nothing. Re-run it when `golang.org/x/image` is upgraded.
+- **Slots.** `Service.processPhoto` takes the processing slot and gives it back with `defer`, so no path leaks one (the gauge `smem_media_processing_slots_in_use` returns to 0). Loading from the spool file happens inside it.
+- **Panics.** Load, decode, scale and encode run under `recover`, and so does the goroutine that scales and encodes the print version (a panic in a goroutine is not caught by the HTTP recover middleware and would end the process).
+  A recovered panic answers `400 ERROR_INVALID_IMAGE` (the client sees no detail), writes one ERROR line "image processing panicked" (`where`, `panic`, `stack`; never image bytes) and increases
+  `smem_media_process_panics_total` ([observability.md](observability.md)). Any increase means a decoder bug or a crafted file: look at the stack.
+
 Photos sent through a collection link (`POST /api/public-collect/submit-note`, `media.Service.UploadContributorFrom`, T-034, v2 since T-068) use the same processing slots and limits, but the upload
 does not hold one. The whole body (at most 32 MiB) is first **spooled to a temporary file** while the phone sends it, so a slow client costs a
 socket and some disk, never memory and never a processing slot. Only when the body is complete are the text validated and the photos

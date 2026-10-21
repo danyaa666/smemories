@@ -29,6 +29,13 @@ const (
 	thumbQuality     = 80
 )
 
+// Seams for tests (T-104): the pipeline must survive a panic in a decoder or encoder, and no real input is known to cause one.
+// Tests replace them and must not run in parallel (no test does it today: they are serial, and every parallel test pauses until the serial ones end).
+var (
+	decodeImage = image.Decode
+	encodeImage = encode
+)
+
 // processed is the normalised result of an upload: metadata-free display, print and thumbnail encodings.
 //
 // processed is passed by value on purpose: the result of one pure function, a small immutable value.
@@ -42,7 +49,11 @@ type processed struct {
 // process validates an untrusted image and re-encodes it. Re-encoding is what strips metadata: the
 // pixels are decoded, oriented, resized and written by Go's encoders, which emit no EXIF, GPS, ICC
 // or comment segments, so nothing from the original file survives except the picture.
-func process(data []byte) (processed, error) {
+//
+// A panic anywhere in decode, scale or encode, the print goroutine included, becomes ErrInvalidImage (T-104): the
+// goroutine is not covered by the HTTP recover middleware, so an unrecovered panic there would end the process.
+func process(data []byte) (out processed, err error) {
+	defer recoverTo("process", &err)
 	if _, ok := sniff(data); !ok {
 		return processed{}, ErrUnsupported
 	}
@@ -51,8 +62,8 @@ func process(data []byte) (processed, error) {
 	if err != nil || !withinLimits(data, cfg, format) {
 		return processed{}, ErrInvalidImage
 	}
-	img, _, err := image.Decode(bytes.NewReader(data))
-	if err != nil {
+	img, _, err := decodeImage(bytes.NewReader(data))
+	if err != nil || !matchesHeader(img, cfg) {
 		return processed{}, ErrInvalidImage
 	}
 
@@ -60,7 +71,7 @@ func process(data []byte) (processed, error) {
 	// img is not used after resize, so the decoded pixels can be collected while the rest runs.
 	alpha := hasAlpha(img)
 	disp := orient(resize(img, displayEdge), exifOrientation(data, format))
-	out := processed{width: disp.Rect.Dx(), height: disp.Rect.Dy()}
+	out = processed{width: disp.Rect.Dx(), height: disp.Rect.Dy()}
 
 	out.contentType, out.ext = "image/jpeg", "jpg"
 	if alpha {
@@ -72,11 +83,12 @@ func process(data []byte) (processed, error) {
 	var printErr error
 	var wg sync.WaitGroup
 	wg.Go(func() {
+		defer recoverTo("print", &printErr)
 		if pr = printSized(disp); pr != disp {
-			out.print, printErr = encode(pr, alpha, printQuality)
+			out.print, printErr = encodeImage(pr, alpha, printQuality)
 		}
 	})
-	out.display, err = encode(disp, alpha, displayQuality)
+	out.display, err = encodeImage(disp, alpha, displayQuality)
 	wg.Wait()
 	if err = cmp.Or(err, printErr); err != nil {
 		return processed{}, err
@@ -121,19 +133,20 @@ func printSized(disp *image.NRGBA) *image.NRGBA {
 
 // printOf derives the print version from a stored display object (backfill). The display is already
 // oriented and at most displayEdge px, so decoding it is cheap and needs no limit checks beyond Decode's own header read.
-func printOf(display []byte) ([]byte, error) {
+func printOf(display []byte) (_ []byte, err error) {
+	defer recoverTo("printOf", &err)
 	cfg, _, err := image.DecodeConfig(bytes.NewReader(display))
 	if err != nil || cfg.Width > displayEdge || cfg.Height > displayEdge {
 		return nil, ErrInvalidImage
 	}
-	img, format, err := image.Decode(bytes.NewReader(display))
-	if err != nil {
+	img, format, err := decodeImage(bytes.NewReader(display))
+	if err != nil || !matchesHeader(img, cfg) {
 		return nil, ErrInvalidImage
 	}
 	// The display's format decides (PNG stays PNG even when its pixels happen to be opaque).
 	disp := resize(img, displayEdge)
 	if pr := printSized(disp); pr != disp {
-		enc, err := encode(pr, format == "png", printQuality)
+		enc, err := encodeImage(pr, format == "png", printQuality)
 		if err != nil || len(enc) < len(display) { // a synthetic PNG can be larger at 1800 px than at 3000 px: keep the display bytes then
 			return enc, err
 		}
@@ -145,6 +158,20 @@ func printOf(display []byte) ([]byte, error) {
 func sniff(data []byte) (string, bool) {
 	ct := http.DetectContentType(data[:min(len(data), 512)])
 	return ct, ct == "image/jpeg" || ct == "image/png" || ct == "image/webp"
+}
+
+// matchesHeader is the check after decode (T-104): the decoded image must be exactly the size DecodeConfig reported, which
+// is the size withinLimits judged, and an alpha plane (lossy WebP with transparency) must cover the whole picture, because
+// the stdlib slices it by the luma rectangle. A decoder that disagrees with its own header is refused, not trusted.
+func matchesHeader(img image.Image, cfg image.Config) bool {
+	b := img.Bounds()
+	if b.Dx() != cfg.Width || b.Dy() != cfg.Height {
+		return false
+	}
+	if a, ok := img.(*image.NYCbCrA); ok {
+		return b.Dy() == 0 || len(a.A) >= (b.Dy()-1)*a.AStride+b.Dx()
+	}
+	return true
 }
 
 // hasAlpha reports whether img has any non-opaque pixel.

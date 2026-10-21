@@ -4,11 +4,13 @@
 package media
 
 import (
+	"cmp"
 	"context"
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
 	"errors"
+	"log/slog"
 	"path"
 	"strconv"
 	"strings"
@@ -45,6 +47,8 @@ type Service struct {
 	now     func() time.Time
 
 	contributorWait time.Duration
+	logger          *slog.Logger // where a recovered panic of the image pipeline is logged (T-104); nil = slog.Default
+	onPanic         func()       // counts it (smem_media_process_panics_total); nil = not counted
 	refs            RefClearer
 
 	links   *medialink.Signer // public photo links (T-092); nil = the public endpoint answers 404 to everything
@@ -87,6 +91,11 @@ func NewService(store *Store, st storage.Storage, maxConcurrent int, limiters *r
 
 // SetPublicLinks turns the public photo endpoint on with the signer of the link tokens (wired once at start-up).
 func (s *Service) SetPublicLinks(l *medialink.Signer) { s.links = l }
+
+// SetPanicReporter says where a recovered panic of the image pipeline is logged and counted (wired once at start-up; either may be nil).
+func (s *Service) SetPanicReporter(logger *slog.Logger, count func()) {
+	s.logger, s.onPanic = logger, count
+}
 
 // SetContributorWait changes how long a contributor photo waits for a processing slot (default 10 s); for tests.
 func (s *Service) SetContributorWait(d time.Duration) { s.contributorWait = d }
@@ -135,25 +144,7 @@ func (s *Service) save(ctx context.Context, ownerID, yb uint64, yearbookID, kind
 	if err := checkQuota(ctx, s.store.db, ownerID, yb, 0); err != nil { // cheap early exit; insert re-checks under a lock
 		return nil, err
 	}
-	var timeout <-chan time.Time
-	if slotWait > 0 {
-		t := time.NewTimer(slotWait)
-		defer t.Stop()
-		timeout = t.C
-	}
-	select {
-	case s.sem <- struct{}{}:
-	case <-timeout:
-		return nil, ErrBusy
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	}
-	data, err := load()
-	var p processed
-	if err == nil {
-		p, err = process(data)
-	}
-	<-s.sem
+	p, err := s.processPhoto(ctx, load, slotWait)
 	if err != nil {
 		return nil, err
 	}
@@ -180,6 +171,46 @@ func (s *Service) save(ctx context.Context, ownerID, yb uint64, yearbookID, kind
 		return nil, err
 	}
 	return saved, nil
+}
+
+// processPhoto takes a processing slot, loads the bytes and runs the image pipeline. The slot is given back by defer, so
+// no path (an error, a panic in load) can leak it; a panic in load or in the pipeline becomes ErrInvalidImage (T-104),
+// is logged without image bytes and counted. slotWait 0 waits for a slot until ctx ends.
+func (s *Service) processPhoto(ctx context.Context, load func() ([]byte, error), slotWait time.Duration) (p processed, err error) {
+	var timeout <-chan time.Time
+	if slotWait > 0 {
+		t := time.NewTimer(slotWait)
+		defer t.Stop()
+		timeout = t.C
+	}
+	select {
+	case s.sem <- struct{}{}:
+	case <-timeout:
+		return processed{}, ErrBusy
+	case <-ctx.Done():
+		return processed{}, ctx.Err()
+	}
+	defer func() { <-s.sem }()
+	defer s.reportPanic(&err) // runs after recoverTo below has set err
+	defer recoverTo("load", &err)
+	data, err := load()
+	if err != nil {
+		return processed{}, err
+	}
+	return process(data)
+}
+
+// reportPanic logs and counts the panic behind *err, if there is one.
+func (s *Service) reportPanic(err *error) {
+	var pe *panicError
+	if !errors.As(*err, &pe) {
+		return
+	}
+	if s.onPanic != nil {
+		s.onPanic()
+	}
+	logger := cmp.Or(s.logger, slog.Default())
+	logger.Error("image processing panicked", "where", pe.where, "panic", pe.msg, "stack", string(pe.stack))
 }
 
 // Discard removes photos (objects and rows) that were stored for a submission that then failed. It uses
