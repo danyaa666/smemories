@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/base64"
 	"log/slog"
 	"maps"
 	"strconv"
@@ -12,7 +13,10 @@ import (
 // prodTestDefaults are what env adds for SMEM_ENV=prod, so the tests of one setting need not repeat the whole production contract
 // (that is prod_test.go's job, which does not use env): the plaintext opt-outs of a local network, a memory limit and the SES mailer.
 var prodTestDefaults = map[string]string{"SMEM_DB_ALLOW_INSECURE": "true", "SMEM_REDIS_ALLOW_INSECURE": "true", "SMEM_MEMORY_LIMIT_MIB": "1536",
-	"SMEM_MAIL_PROVIDER": "ses", "SMEM_MAIL_FROM": "SMemories <no-reply@mail.smemories.io>"}
+	"SMEM_MAIL_PROVIDER": "ses", "SMEM_MAIL_FROM": "SMemories <no-reply@mail.smemories.io>", "SMEM_MEDIA_LINK_SECRET": linkSecret}
+
+// linkSecret is a valid SMEM_MEDIA_LINK_SECRET (48 bytes, base64).
+var linkSecret = base64.StdEncoding.EncodeToString([]byte(strings.Repeat("s", 48)))
 
 // env serves m; SMEM_REDIS_URL defaults to a valid URL unless the case sets it (even to ""), and prod gets prodTestDefaults.
 func env(m map[string]string) func(string) string {
@@ -111,8 +115,18 @@ func TestLoadAuthDefaults(t *testing.T) {
 	}
 	if len(cfg.AllowedOrigins) != 1 || cfg.AllowedOrigins[0] != "http://localhost:5173" || cfg.TrustProxy ||
 		cfg.MaxHashes != 4 || cfg.ArgonMemoryKiB != 19456 || cfg.ArgonTime != 2 || cfg.ArgonParallelism != 1 ||
-		cfg.RegisterPerHour != 5 || cfg.LoginFailsPerPair != 10 || cfg.LoginFailsPerIP != 100 {
+		cfg.RegisterPerHour != 5 || cfg.LoginFailsPerPair != 10 || cfg.LoginFailsPerIP != 100 || cfg.LoginFailsPerAcct != 50 {
 		t.Fatalf("unexpected auth defaults: %+v", cfg)
+	}
+}
+
+func TestLoadLoginFailsPerAccount(t *testing.T) {
+	cfg, err := Load(env(map[string]string{"SMEM_DB_DSN": dsn, "SMEM_RATE_LOGIN_FAILS_PER_ACCOUNT": "7"}))
+	if err != nil || cfg.LoginFailsPerAcct != 7 {
+		t.Fatalf("got %d, %v", cfg.LoginFailsPerAcct, err)
+	}
+	if _, err := Load(env(map[string]string{"SMEM_DB_DSN": dsn, "SMEM_RATE_LOGIN_FAILS_PER_ACCOUNT": "-3"})); err == nil || !strings.Contains(err.Error(), "SMEM_RATE_LOGIN_FAILS_PER_ACCOUNT") {
+		t.Errorf("negative value: got %v", err)
 	}
 }
 
@@ -132,7 +146,7 @@ func TestLoadAllowedOrigins(t *testing.T) {
 			t.Errorf("origin %q: got %v", bad, err)
 		}
 	}
-	for k, v := range map[string]string{"SMEM_TRUST_PROXY": "maybe", "SMEM_AUTH_MAX_CONCURRENT_HASHES": "0", "SMEM_AUTH_ARGON_MEMORY_KIB": "99999999999", "SMEM_AUTH_ARGON_PARALLELISM": "300", "SMEM_RATE_REGISTER_PER_HOUR": "x"} {
+	for k, v := range map[string]string{"SMEM_TRUST_PROXY": "maybe", "SMEM_AUTH_MAX_CONCURRENT_HASHES": "0", "SMEM_AUTH_ARGON_MEMORY_KIB": "99999999999", "SMEM_AUTH_ARGON_PARALLELISM": "300", "SMEM_RATE_REGISTER_PER_HOUR": "x", "SMEM_RATE_LOGIN_FAILS_PER_ACCOUNT": "0"} {
 		if _, err := Load(env(map[string]string{"SMEM_DB_DSN": dsn, k: v})); err == nil || !strings.Contains(err.Error(), k) {
 			t.Errorf("%s=%s: got %v", k, v, err)
 		}
@@ -444,5 +458,51 @@ func TestLoadShutdown(t *testing.T) {
 	// The one-off tasks do not read the shutdown settings.
 	if _, err := LoadMigrate(env(map[string]string{"SMEM_DB_DSN": dsn, "SMEM_SHUTDOWN_TIMEOUT": "junk"})); err != nil {
 		t.Errorf("LoadMigrate must ignore SMEM_SHUTDOWN_TIMEOUT: %v", err)
+	}
+}
+
+// T-092: the secret of the public photo links. Prod refuses to start without a usable one and never echoes it; dev and test make a
+// random per-process secret and flag it so main logs the WARN.
+func TestLoadMediaLinkSecret(t *testing.T) {
+	prod := func(kv ...string) map[string]string {
+		m := map[string]string{"SMEM_ENV": "prod", "SMEM_DB_DSN": dsn, "SMEM_ALLOWED_ORIGINS": "https://a.example.com", "SMEM_PUBLIC_BASE_URL": "https://a.example.com",
+			"SMEM_S3_BUCKET": "b", "SMEM_OTP_KEY": strings.Repeat("k", 32)}
+		for i := 0; i < len(kv); i += 2 {
+			m[kv[i]] = kv[i+1]
+		}
+		return m
+	}
+	cfg, err := Load(env(prod()))
+	if err != nil || len(cfg.MediaLinkSecret) != 48 || cfg.MediaLinkSecretRandom {
+		t.Fatalf("prod with a valid secret: %d bytes, random=%v, %v", len(cfg.MediaLinkSecret), cfg.MediaLinkSecretRandom, err)
+	}
+	unpadded := strings.TrimRight(base64.StdEncoding.EncodeToString([]byte(strings.Repeat("s", 47))), "=")
+	if cfg, err = Load(env(prod("SMEM_MEDIA_LINK_SECRET", unpadded))); err != nil || len(cfg.MediaLinkSecret) != 47 {
+		t.Fatalf("unpadded base64: %d bytes, %v", len(cfg.MediaLinkSecret), err)
+	}
+	short := base64.StdEncoding.EncodeToString([]byte(strings.Repeat("s", 31)))
+	for name, v := range map[string]string{"unset": "", "31 bytes": short, "not base64": "not*base64*but-long-enough-to-pass-a-length-check"} {
+		_, err := Load(env(prod("SMEM_MEDIA_LINK_SECRET", v)))
+		if err == nil || !strings.Contains(err.Error(), "SMEM_MEDIA_LINK_SECRET") {
+			t.Errorf("prod, %s: want a refusal naming the variable, got %v", name, err)
+		} else if v != "" && strings.Contains(err.Error(), v) {
+			t.Errorf("prod, %s: the refusal repeats the value: %v", name, err)
+		}
+	}
+	for _, e := range []string{"dev", "test"} {
+		a, err := Load(env(prod("SMEM_ENV", e, "SMEM_MEDIA_LINK_SECRET", "")))
+		b, err2 := Load(env(prod("SMEM_ENV", e, "SMEM_MEDIA_LINK_SECRET", "")))
+		if err != nil || err2 != nil || len(a.MediaLinkSecret) < 32 || !a.MediaLinkSecretRandom {
+			t.Fatalf("%s, unset: %d bytes, random=%v, %v %v", e, len(a.MediaLinkSecret), a.MediaLinkSecretRandom, err, err2)
+		}
+		if string(a.MediaLinkSecret) == string(b.MediaLinkSecret) {
+			t.Errorf("%s: two loads made the same random secret", e)
+		}
+	}
+	if _, err := Load(env(prod("SMEM_ENV", "dev", "SMEM_MEDIA_LINK_SECRET", short))); err == nil {
+		t.Error("dev with a set but short secret must be refused too")
+	}
+	if _, err := LoadMigrate(env(prod("SMEM_MEDIA_LINK_SECRET", ""))); err != nil {
+		t.Errorf("the migrate task never serves photos and needs no secret: %v", err)
 	}
 }

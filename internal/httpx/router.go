@@ -37,7 +37,7 @@ func NewRouterWith(logger *slog.Logger, cfg RouterConfig, routes ...func(*http.S
 		register(mux)
 	}
 
-	h := WithClientIP(cfg.TrustProxy)(envelopeNotFound(mux))
+	h := WithClientIP(cfg.TrustProxy, logger)(envelopeNotFound(mux))
 	h = BodyLimit(DefaultMaxBody, h)
 	h = Timeout(cmp.Or(cfg.RequestTimeout, DefaultRequestTimeout))(h)
 	h = Recover(logger, h)

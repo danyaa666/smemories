@@ -8,6 +8,7 @@
 | `GET /api/media/get-list?yearbook_id=&limit=&next_id=&uploader=` | `data: {items, next_id}`, newest first, `limit` 1..100 (default 50). `uploader` is `owner` (default), `contributor` or `all`. |
 | `GET /api/media/get-content?id=&variant=display\|thumb\|print` | **Binary** on success (no envelope; `Content-Type` from the database, `nosniff`, `Cache-Control: private, max-age=3600`, `ETag` per variant, `HEAD`/`Range`/`If-None-Match` work); the JSON error envelope with `Cache-Control: no-store` on failure. |
 | `POST /api/media/delete` | JSON `{id}`; idempotent. |
+| `GET /api/public-media/get-content?token=` | **Public** (no session, no cookie, no CORS), **binary** display variant only, behind a signed link token; see "Public photo links" below. |
 
 Errors are the v2 envelope (`ERROR_INVALID_IMAGE` 400, `ERROR_UNSUPPORTED_MEDIA_TYPE` 415, `ERROR_QUOTA_EXCEEDED` 409, `ERROR_TOO_LARGE` 413, `ERROR_RATE_LIMITED` 429, `ERROR_BUSY` 503, `ERROR_STORAGE_ERROR` 502, `ERROR_NOT_FOUND` 404, `ERROR_PARAM` 400).
 
@@ -69,6 +70,31 @@ is cut off) leaves its files behind: at start-up, before the listener accepts tr
 directly in the spool directory (`SMEM_UPLOAD_TMP_DIR`, else the OS temp dir) that is older than 4 min (the 3 min route timeout plus 1 minute), so a live
 upload is never touched; sub-directories and symlinks are left alone, a failure is only a WARN, and one INFO line gives the count removed (T-074).
 Ephemeral storage is cleared on restart anyway. Many-address floods are the job of the WAF and load balancer limits (T-031).
+
+## Public photo links (T-092, decision D-32)
+
+The plain-text export of a book gives every photo as a link that opens **without a session**. Photos are third parties' personal data, so this is the one anonymous way to
+fetch a photo and it carries the controls the owner accepted with D-32. `internal/medialink` (pure functions), `media.Service.PublicContent`, `GET /api/public-media/get-content?token=`
+and `POST /api/yearbook/revoke-photo-links`.
+
+- **Token** = `<photo ULID>.<base64url(first 16 bytes of HMAC-SHA256(SMEM_MEDIA_LINK_SECRET, "pm1|" + media id + "|" + yearbook id + "|" + link_epoch))>`, 49 characters. The comparison is
+  constant time (`hmac.Equal`) and a MAC has exactly one valid spelling (strict base64url). The secret is `SMEM_MEDIA_LINK_SECRET` ([production-config.md](production-config.md)); rotating it ends every link.
+- **Revoke.** `yearbook_tab.link_epoch` (migration `20261019100000`) is part of the MAC. `POST /api/yearbook/revoke-photo-links {id}` adds 1 atomically: every earlier link of that book fails at once.
+  There is no per-photo revoke and no expiry (D-32). 10 calls per hour per user (`revoke_links`, fails open).
+- **What a link opens.** The photo is the cover or a profile photo of its book, or belongs to an `approved` note of that book (`media.ShareableNoteStatus`). Hiding or deleting the note, or deleting the photo or the book, stops the link at once.
+  The MAC and that test are evaluated in one query, and **every** failure (malformed token, unknown photo, wrong MAC, old epoch, pending/hidden/deleted note, photo no one refers to, deleted book or photo, a missing stored object)
+  is the same `404 ERROR_NOT_FOUND` with the same body (tests compare the bytes with a pinned `X-Request-Id`), so the endpoint is not an oracle.
+- **What is served.** The `display` variant only (the re-encoded image: no EXIF, GPS, XMP, ICC or comment segment survives, `TestPublicPhotoCarriesNoMetadata`; never the original, there is none stored, and never `thumb` or `print`).
+  Headers: `Content-Type` from the database, `X-Content-Type-Options: nosniff`, `Content-Disposition: inline`, `X-Robots-Tag: noindex, nofollow`, `Referrer-Policy: no-referrer`, `Cross-Origin-Resource-Policy: cross-origin`,
+  `Cache-Control: public, max-age=300`. `HEAD`, `Range` and `ETag`/`If-None-Match` work as in `media/get-content` (same `writeContent`); a refused link is never 304.
+- **A revoked link can still be served from a cache for up to 5 minutes** (`max-age=300`, and `public` lets CloudFront or any shared cache keep it). Same for a photo whose note was just hidden. This is part of what the owner accepted in D-32; shortening
+  it means changing `publicCacheControl`.
+- **Limits** per client IP, both fail open ([redis.md](redis.md)): `public_media_miss` 60 per 15 minutes (only misses count; a good link gives its hit back), `public_media_all` 600 per 15 minutes. The route timeout (2 minutes) and the connection deadline
+  extension of `get-content` apply; the bytes are read from the object store into memory like `get-content` (no processing slot is used: nothing is decoded).
+- **The token is a bearer credential and is never logged.** The access log records the route (`GET /api/public-media/get-content`), never the query; no error, log line, metric label or `/metrics` text contains a token or the secret
+  (`TestPublicTokenNeverReachesLogsOrMetrics` runs a request with a recognisable token down every path, storage failure and 429 included, and greps the captured output). Metric: `smem_public_media_requests_total{result="ok|not_found|rate_limited"}`.
+- **For T-023 / T-024 (edge and logging).** CloudFront and ALB **access logs record the query string**, so those logs hold live bearer tokens for `/api/public-media/get-content` (and for `/api/public-collect/*`):
+  give the log buckets the same access control and retention care as the logs of `public-collect`, and do not copy them into a general-purpose search. The `public` cache header lets the edge cache by full URL.
 
 ## Print size (T-057, decision D-24)
 

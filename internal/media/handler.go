@@ -54,8 +54,19 @@ type Handler struct {
 	inflight       chan struct{}  // uploads being read or processed; bounds the memory held in request buffers
 	pace           httpx.BodyPace // what the body must keep up with; a field only so that a test can shorten it
 	userMu         sync.Mutex
-	perUser        map[uint64]int // uploads in progress per internal user id (this process only: with N API tasks the cap is N x 2)
+	perUser        map[uint64]int      // uploads in progress per internal user id (this process only: with N API tasks the cap is N x 2)
+	countPublic    func(result string) // metrics of the public endpoint (PublicOK, PublicNotFound, PublicRateLimited); nil = not counted
 }
+
+// Results of a public photo request, the values of smem_public_media_requests_total{result}.
+const (
+	PublicOK          = "ok"
+	PublicNotFound    = "not_found"
+	PublicRateLimited = "rate_limited"
+)
+
+// SetPublicCounter registers who counts the outcome of each public photo request (wired once at start-up).
+func (h *Handler) SetPublicCounter(f func(result string)) { h.countPublic = f }
 
 // NewHandler builds the handler. At most 4x the service's processing slots of uploads are in flight at
 // once (each buffers up to maxBytes); more get 503 ERROR_BUSY.
@@ -96,6 +107,9 @@ func (h *Handler) Routes(mux *http.ServeMux) {
 	mux.Handle("GET /api/media/get-list", h.requireUser(http.HandlerFunc(h.list)))
 	mux.Handle("GET /api/media/get-content", h.requireUser(slowRoute(contentRouteTimeout, 0, http.HandlerFunc(h.content))))
 	mux.Handle("POST /api/media/delete", auth.Guard(h.allowedOrigins, h.requireUser(http.HandlerFunc(h.delete))))
+	// Public route (T-092, D-32): no session, no cookie, no CORS; the token is the credential and the access log records the route,
+	// never the query. Same per-route timeout as get-content.
+	mux.Handle("GET /api/public-media/get-content", slowRoute(contentRouteTimeout, 0, http.HandlerFunc(h.publicContent)))
 }
 
 // slowRoute gives a route its own request deadline (httpx.WithTimeout) and moves the connection's deadlines out to fit it:
@@ -312,10 +326,17 @@ func (h *Handler) content(w http.ResponseWriter, r *http.Request) {
 		h.fail(w, r, err) // an error is the JSON envelope with no-store (SecurityHeaders): an <img> only needs the status, and nothing is cached
 		return
 	}
+	writeContent(w, r, m, data, ct, variant, "private, max-age=3600")
+}
+
+// writeContent sends the bytes of a photo: Content-Type from the database (never from the uploader), nosniff, the given
+// Cache-Control and an ETag per variant; ServeContent adds Range, If-Range, If-None-Match and HEAD. Shared by the owner's
+// media/get-content and the public link endpoint.
+func writeContent(w http.ResponseWriter, r *http.Request, m *Media, data []byte, ct, variant, cacheControl string) {
 	hd := w.Header()
-	hd.Set("Content-Type", ct) // from the database, never from the uploader
+	hd.Set("Content-Type", ct)
 	hd.Set("X-Content-Type-Options", "nosniff")
-	hd.Set("Cache-Control", "private, max-age=3600")
+	hd.Set("Cache-Control", cacheControl)
 	etag := `"` + m.SHA256[:32]
 	switch variant {
 	case SizeThumb:
@@ -324,9 +345,45 @@ func (h *Handler) content(w http.ResponseWriter, r *http.Request) {
 		etag += "-p"
 	}
 	hd.Set("ETag", etag+`"`)
-	// ServeContent answers Range, If-Range and If-None-Match.
 	// ponytail: bytes flow through the API (bandwidth ceiling); M2 serves presigned URLs behind CloudFront.
 	http.ServeContent(w, r, "", time.UnixMilli(m.CreatedAt).UTC(), bytes.NewReader(data))
+}
+
+// publicContent serves one photo to anyone holding a valid link token: the display variant only, with the headers of a
+// document that must not be indexed, framed or leak its address. Every refusal of the link is the same 404.
+func (h *Handler) publicContent(w http.ResponseWriter, r *http.Request) {
+	m, data, err := h.svc.PublicContent(r.Context(), httpx.ClientIP(r), r.URL.Query().Get("token"))
+	if err != nil {
+		h.countPublicResult(err)
+		h.fail(w, r, err)
+		return
+	}
+	if h.countPublic != nil {
+		h.countPublic(PublicOK)
+	}
+	hd := w.Header()
+	hd.Set("Content-Disposition", "inline")
+	hd.Set("X-Robots-Tag", "noindex, nofollow")
+	hd.Set("Referrer-Policy", "no-referrer")
+	hd.Set("Cross-Origin-Resource-Policy", "cross-origin") // an <img> on any page may embed it; the token is the access control
+	// public: a revoked link can still be served from a cache for up to 5 minutes (docs/media.md).
+	writeContent(w, r, m, data, m.ContentType, SizeDisplay, publicCacheControl)
+}
+
+const publicCacheControl = "public, max-age=300"
+
+// countPublicResult counts a refused public request; other failures (storage, a gone client) are not part of the metric.
+func (h *Handler) countPublicResult(err error) {
+	if h.countPublic == nil {
+		return
+	}
+	var rl *RateLimitedError
+	switch {
+	case errors.As(err, &rl):
+		h.countPublic(PublicRateLimited)
+	case apperr.Is(err, apperr.NotFound):
+		h.countPublic(PublicNotFound)
+	}
 }
 
 type deleteInput struct {

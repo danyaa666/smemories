@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/danyaa666/smemories/internal/apperr"
+	"github.com/danyaa666/smemories/internal/medialink"
 	"github.com/danyaa666/smemories/internal/ratelimit"
 	"github.com/danyaa666/smemories/internal/storage"
 	"github.com/danyaa666/smemories/internal/ulid"
@@ -24,6 +25,11 @@ const (
 	uploadsPerWindow = 60
 	uploadWindow     = 10 * time.Minute
 	cleanupTimeout   = 10 * time.Second // deleting the objects of a failed upload, on its own context
+
+	// The public photo endpoint (T-092, docs/redis.md): lookups that found nothing, and all lookups, per client IP. Both fail open.
+	publicMissesPerWindow = 60
+	publicAllPerWindow    = 600
+	publicWindow          = 15 * time.Minute
 )
 
 // defaultContributorSlotWait is how long a public submission waits for a processing slot before it gives up
@@ -40,6 +46,10 @@ type Service struct {
 
 	contributorWait time.Duration
 	refs            RefClearer
+
+	links   *medialink.Signer // public photo links (T-092); nil = the public endpoint answers 404 to everything
+	pubMiss ratelimit.Limiter // public_media_miss: lookups that found nothing, per client IP
+	pubAll  ratelimit.Limiter // public_media_all: every public lookup, per client IP
 }
 
 // RefClearer clears the references other tables hold to a photo, in the caller's transaction, just before the photo row
@@ -71,8 +81,12 @@ func NewService(store *Store, st storage.Storage, maxConcurrent int, limiters *r
 		now = time.Now
 	}
 	return &Service{store: store, st: st, limiter: limiters.Open("media_upload", uploadsPerWindow, uploadWindow),
-		sem: make(chan struct{}, maxConcurrent), now: now, contributorWait: defaultContributorSlotWait}
+		sem: make(chan struct{}, maxConcurrent), now: now, contributorWait: defaultContributorSlotWait,
+		pubMiss: limiters.Open("public_media_miss", publicMissesPerWindow, publicWindow), pubAll: limiters.Open("public_media_all", publicAllPerWindow, publicWindow)}
 }
+
+// SetPublicLinks turns the public photo endpoint on with the signer of the link tokens (wired once at start-up).
+func (s *Service) SetPublicLinks(l *medialink.Signer) { s.links = l }
 
 // SetContributorWait changes how long a contributor photo waits for a processing slot (default 10 s); for tests.
 func (s *Service) SetContributorWait(d time.Duration) { s.contributorWait = d }
@@ -262,6 +276,55 @@ func (s *Service) Content(ctx context.Context, ownerID uint64, mediaID, size str
 		return nil, nil, "", "", storageFailed(err)
 	}
 	return m, b, ct, size, nil
+}
+
+// PublicContent answers a public photo link (T-092, D-32): the per-IP limits, the token, then the display bytes of the photo
+// if the link is valid for the book's current epoch and the photo is still shareable. Every failure of the link itself (malformed,
+// unknown photo, wrong MAC, revoked epoch, hidden or deleted note, deleted book or photo, missing object) is the same ErrNotFound;
+// the limiters answer a *RateLimitedError. Only misses count toward public_media_miss: a good link gives its hit back.
+// Nothing here puts the token in an error or a log line.
+func (s *Service) PublicContent(ctx context.Context, ip, token string) (*Media, []byte, error) {
+	if ok, wait, _ := s.pubAll.Take(ctx, ip); !ok {
+		return nil, nil, tooManyPublic(wait)
+	}
+	if ok, wait, _ := s.pubMiss.Take(ctx, ip); !ok {
+		return nil, nil, tooManyPublic(wait)
+	}
+	m, err := s.publicPhoto(ctx, token)
+	if err != nil {
+		return nil, nil, err
+	}
+	_ = s.pubMiss.Refund(ctx, ip)        // a valid link is not a guess, whatever the object store answers next
+	b, err := s.st.Get(ctx, m.ObjectKey) // the display variant only, never the original upload (there is none) or another size
+	if errors.Is(err, storage.ErrNotFound) {
+		return nil, nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, nil, storageFailed(err)
+	}
+	return m, b, nil
+}
+
+// publicPhoto is the link check: ErrNotFound unless the token is well formed, names a photo, carries the MAC for that photo's
+// book at the book's current epoch, and the photo is shareable. The MAC and the shareable test are both evaluated whenever the
+// photo exists, so the cases look alike from outside.
+func (s *Service) publicPhoto(ctx context.Context, token string) (*Media, error) {
+	if s.links == nil {
+		return nil, ErrNotFound
+	}
+	mediaID, mac, ok := medialink.Parse(token)
+	if !ok {
+		return nil, ErrNotFound
+	}
+	p, err := s.store.publicPhoto(ctx, mediaID)
+	if err != nil {
+		return nil, err
+	}
+	valid := s.links.Verify(p.m.ID, mac, p.yearbookID, p.epoch)
+	if !valid || !p.shareable {
+		return nil, ErrNotFound
+	}
+	return &p.m, nil
 }
 
 // Delete removes a photo's objects and row. Unknown or foreign ids succeed silently, so repeating a

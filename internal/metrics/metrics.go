@@ -26,6 +26,7 @@ type Metrics struct {
 	inFlight    prometheus.Gauge
 	rateLimited *prometheus.CounterVec
 	mailFailed  *prometheus.CounterVec
+	publicMedia *prometheus.CounterVec
 }
 
 // New returns a registry with the Go runtime and process collectors and the HTTP and rate-limit instruments.
@@ -46,9 +47,15 @@ func New() *Metrics {
 		mailFailed: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Namespace: namespace, Name: "mail_send_failures_total", Help: "Emails that could not be sent after the retries, by class (unavailable, rejected, config, shutdown, other).",
 		}, []string{"class"}),
+		publicMedia: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Namespace: namespace, Name: "public_media_requests_total", Help: "Public photo link requests by result (ok, not_found, rate_limited). No ids or tokens.",
+		}, []string{"result"}),
+	}
+	for _, r := range []string{"ok", "not_found", "rate_limited"} {
+		m.publicMedia.WithLabelValues(r) // present at 0 from the first scrape
 	}
 	m.reg.MustRegister(collectors.NewGoCollector(), collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
-		m.duration, m.inFlight, m.rateLimited, m.mailFailed)
+		m.duration, m.inFlight, m.rateLimited, m.mailFailed, m.publicMedia)
 	return m
 }
 
@@ -74,6 +81,17 @@ func (m *Metrics) RateLimited(name string) { m.rateLimited.WithLabelValues(name)
 
 // MailSendFailed counts one email given up on; class is one of mailer.ClassUnavailable, ClassRejected, ClassOther.
 func (m *Metrics) MailSendFailed(class string) { m.mailFailed.WithLabelValues(class).Inc() }
+
+// PublicMedia counts one public photo link request; result is a constant chosen in code (media.PublicOK, PublicNotFound,
+// PublicRateLimited). Any other value is counted as not_found so the label set stays closed.
+func (m *Metrics) PublicMedia(result string) {
+	switch result {
+	case "ok", "not_found", "rate_limited":
+	default:
+		result = "not_found"
+	}
+	m.publicMedia.WithLabelValues(result).Inc()
+}
 
 // Gauge exports fn as a gauge read at scrape time.
 func (m *Metrics) Gauge(name, help string, fn func() float64) {

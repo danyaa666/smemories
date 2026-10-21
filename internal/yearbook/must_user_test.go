@@ -17,6 +17,7 @@ func TestHandlersRefuseARequestWithoutAUser(t *testing.T) {
 		"update":        h.update,
 		"updateProfile": h.updateProfile,
 		"delete":        h.delete,
+		"revoke":        h.revokePhotoLinks,
 	} {
 		rec := httptest.NewRecorder()
 		f(rec, httptest.NewRequest(http.MethodPost, "/", strings.NewReader("{}")))

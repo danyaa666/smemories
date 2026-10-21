@@ -359,3 +359,10 @@ func TestTakeSubmit(t *testing.T) {
 		t.Fatal("a refusal consumed the IP allowance")
 	}
 }
+
+// T-092: the public photo link query repeats the approved status (media cannot import notes); this keeps the two together.
+func TestStatusApprovedIsWhatPublicPhotoLinksRequire(t *testing.T) {
+	if StatusApproved != media.ShareableNoteStatus {
+		t.Fatalf("notes.StatusApproved %q != media.ShareableNoteStatus %q", StatusApproved, media.ShareableNoteStatus)
+	}
+}
