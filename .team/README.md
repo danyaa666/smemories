@@ -11,19 +11,19 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 12 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-095, T-096, T-097 |
-| TODO | 8 | T-094, T-101, T-104, T-105, T-106, T-107, T-109, T-110 |
+| TODO | 7 | T-094, T-101, T-105, T-106, T-107, T-109, T-110 |
+| IN_PROGRESS | 1 | T-104 |
 | READY_FOR_QA | 1 | T-100 |
-| IN_QA | 1 | T-093 |
 | QA_PASS | 1 | T-103 |
-| MERGED | 2 | T-102, T-108 |
+| MERGED | 3 | T-093, T-102, T-108 |
 | DONE | 77 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-092, T-098, T-099 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-102 ([E12] Upload slot fairness: per-user cap and paced body on media/create; early release for rejected public submissions); T-108 ([E06] Concurrent smemories-migrate up on an empty database fails (missing zero version migration))
+**Awaiting your review (MERGED):** T-093 ([E05] Book as plain text with photo links (API)); T-102 ([E12] Upload slot fairness: per-user cap and paced body on media/create; early release for rejected public submissions); T-108 ([E06] Concurrent smemories-migrate up on an empty database fails (missing zero version migration))
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?)
 
-_Board last written 2026-10-21 08:06Z_
+_Board last written 2026-10-21 08:10Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4356,7 +4356,7 @@ Spec: .team/epics/E05-templates-export/14-public-photo-links-api.md (read it fro
 - 2026-10-21 03:43Z · human · accepted by owner
 
 ### T-093 — [E05] Book as plain text with photo links (API)
-- **Status:** IN_QA
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M1
@@ -4364,17 +4364,33 @@ Spec: .team/epics/E05-templates-export/14-public-photo-links-api.md (read it fro
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** —
 - **Branch:** task/t-093-e05-book-as-plain-text-with-photo-links-
 - **PR:** https://github.com/danyaa666/smemories/pull/92
-- **Updated:** 2026-10-21 08:00Z by qa
-- **Comments-seen:** 2
+- **Updated:** 2026-10-21 08:10Z by leader
+- **Comments-seen:** 4
 
 Spec: .team/epics/E05-templates-export/15-book-text-export-api.md. GET /api/book-export/get-text builds the UTF-8 text (profile, approved notes, public photo links from T-092), en/vi labels, no silent cut.
 
 #### Comments
 - 2026-10-21 03:32Z · dev · PR #92 head 6111818. GET /api/book-export/get-text (package internal/bookexport), cap 1000 via notes.ExportNotes, T-092 signer + link_epoch, limiter book_export 30/10min. Verify: golden files en/vi (testdata), integration (anonymous links, hidden/revoke, query count, 1001 notes), newman postman/book-export.postman_collection.json twice (needs make verify-newman-users), docs/book-export.md. Gaps: none known. Lint, unit, full integration all green on a private stack.
 - 2026-10-21 08:06Z · leader · Leader 2026-10-21: T-100 (PR #93) introduces ulid.Valid as the one canonical-id validator. Whichever of #92/#93 merges second must make book-export/get-text use ulid.Valid for yearbook_id (ERROR_PARAM before any query).
+- 2026-10-21 08:09Z · qa · QA_PASS on PR #92 head 6111818 (CI green: e2e, go, go-integration, image, security, web). Own compose project t093qa on ports 43306/43379/43000, real binary on 127.0.0.1:47731 with SMEM_ENV=dev, SMEM_MEDIA_LINK_SECRET set; project taken down without -v.
+  Mechanical: make lint test = exit 0; make test-integration = exit 0 (27 packages ok, internal/bookexport ok); newman postman/book-export.postman_collection.json run twice back to back (verify-newman-users between setup and runs): 31 requests, 65 assertions, 0 failed, both runs.
+  Evidence (my own scripts, real HTTP, fresh client with no cookies for links):
+  - AC1 goldens: read testdata en+vi; every label equals the spec list (en and vi), section/separator layout '--- i / n ---', 'Photo k:', 'No notes yet'/'Chưa có lời nhắn nào' as spec; all 8 files: no BOM, NFC, no CR, no trailing whitespace, end with one LF. Live NFD input (decomposed 'Trần Văn Ngô') came out NFC. Live export checked: 2000-char message, emoji, multi-line answer with a blank line, 3-photo note, note without optional fields, book with no template (default set), zero notes, owner with only a name (title block + notes, About section kept with the name only).
+  - AC2 approved only/order: 5 notes (3 approved, 1 hidden, 1 pending) -> text has the 3 approved in the order of note/get-list?status=approved (Lê, Trần, Phạm); hidden/pending names and bodies absent. Hidden photo: approved a note with 1 photo, link opened 200 anonymously, hid the note, same link 404, new export no longer has it (note_count 3).
+  - Anonymous links: all 5 links of the export (profile, cover, 3 note photos) in vi and en: 200 image/jpeg, no Set-Cookie, noindex, Referrer-Policy no-referrer, Cache-Control public max-age=300. Revoke (POST yearbook/revoke-photo-links {id}): the 5 old links 404, new export has 5 new links (0 overlap) all 200.
+  - Errors: other user's book 404 ERROR_NOT_FOUND; missing, 'abc', lower-case ULID -> 400 ERROR_PARAM; unknown valid ULID 404; lang fr / EN / 'vi ' / 'en,vi' -> 400 ERROR_PARAM; no session 401; unverified 403 and POST 405 (Postman steps 16 and E7).
+  - Query count (MySQL general_log, one export): 5 statements for a 3-note book and the same 5 for a 40-note book (user lookup, notes, photo links, book, profile). 1001 approved notes: note_count 1000, approved_total 1001, truncated true, text '== Notes from friends (1000) ==' then '1000 of 1001 notes are included' (vi variant has the localised line per golden); exactly 1000 approved: truncated false, no line. 8 ms, 92 KB.
+  - AC3: scanned the live text: no owner email, bucket/key, sha256 (no 64-hex), no yearbook/note/collection/link-token ids; the only ULID-like strings are the media ids inside link tokens (stripped the links, nothing left).
+  - Filename: 'Đặng Thị Ánh — Lớp 12A1 ✨' -> dang-thi-anh-lop-12a1-20261021.txt; Đ/đ/Ơ/Ư folded; emoji-only and '!!!' -> yearbook-20261021.txt; 50 and 120 char titles cut at 40 (no trailing dash); '12/34\56 .. ../etc/passwd' -> 12-34-56-etc-passwd; all match [a-z0-9-.]+.
+  - Limiter: 30 exports 200, 31st 429 ERROR_RATE_LIMITED with Retry-After 600; user B unaffected, other endpoints unaffected.
+  - Encoding: saved text -> file -I = text/plain charset=utf-8, xxd starts 'SMemories' (no EF BB BF), iconv valid, textutil (macOS text engine used by TextEdit) round-trip byte-identical and renders Vietnamese + emoji. I did not open the TextEdit GUI (no GUI tool available to me).
+  - AC4: openapi/schema.d.ts (web check:api in make lint green), Postman, api-contract row, redis.md row, docs/book-export.md present and match the behaviour.
+  Dev's three format choices vs spec: (1) long answers always on own lines: matches the spec ('Long answers on their own lines'), short fields inline - OK. (2) blank lines inside an answer stay empty: spec says 'each line indented' but also 'user text never altered except for the indent'; empty lines avoid trailing whitespace and the doc says so - acceptable, not wrong. (3) an answered field the template no longer asks for prints after the template's fields: exactly spec requirement 6; verified live (classic -> memory-book, 'Your relationship: deskmate' printed last) - OK.
+  Non-blocking observations: (a) filename fold drops letters with no NFD decomposition: 'Ünïcödé ñ ß æ ø Łódź' -> unicode-n-odz (ß, æ, ø, Ł lost, 'Łódź' becomes 'odz'); harmless for Vietnamese, a small transliteration table would be nicer. (b) profile text fields reject newlines at the API (ERROR_INVALID_HOBBIES), so the multi-line profile path in the golden is only reachable in unit tests; harmless. (c) a whitespace-only line inside an answer gets the two-space indent (trailing whitespace); cosmetic. (d) the limiter counts a call before ownership/id checks, so a malformed call also uses budget; fine at 30 per 10 minutes. No test files added; branch untouched.
+- 2026-10-21 08:10Z · leader · Leader review OK and MERGED into develop as 058deba (PR #92). Risk low, so no owner approval needed. Review: new package internal/bookexport (handler decodes, service builds), notes.ExportNotes reuses the book-data query shape with a 1000 cap and truncated flag, links from the merged T-092 signer, en/vi goldens. QA_PASS with live probes (anonymous links, hidden-note link dies, revoke, 1001 notes, no internal ids, UTF-8 without BOM). Non-blocking QA notes kept: filename fold drops ß/æ/ø/Ł; whitespace-only lines get the indent; malformed calls spend limiter budget. T-094 is unblocked; T-100 (PR #93) must switch book-export to ulid.Valid when it merges develop.
 
 ### T-094 — [E05] Web: Export as text on the print screen, public-link warning, disable links
 - **Status:** TODO
@@ -4535,7 +4551,7 @@ Spec: `.team/epics/E12-security-hardening/02-mandatory-env-and-local-only-dev-te
 - **Branch:** task/t-100-e12-canonical-public-ids-and-the-stored-
 - **PR:** https://github.com/danyaa666/smemories/pull/93
 - **Updated:** 2026-10-21 08:06Z by dev
-- **Comments-seen:** 3
+- **Comments-seen:** 4
 
 Spec: `.team/epics/E12-security-hardening/03-canonical-public-ids.md`. Audit M3: public_id columns compare case-insensitively and media/yearbook use the caller's spelling in S3 prefixes, so a user can orphan objects, reset their quota and defeat deletion. Validate ids at the edge, build keys from the stored id. Do before T-025. Risk high: data.
 
@@ -4543,6 +4559,7 @@ Spec: `.team/epics/E12-security-hardening/03-canonical-public-ids.md`. Audit M3:
 - 2026-10-20 05:34Z · leader · Leader review 2026-10-20: now depends on T-092 (its new endpoints and token must be covered); spec updated in requirement 2. Re-read the spec from the repo root before you start.
 - 2026-10-21 08:06Z · dev · PR #93 head d021ada. ulid.Valid shared by notes/medialink; non-canonical ids ERROR_PARAM at yearbook, media, note-collection edges before any query; Upload prefix from stored public_id, yearbook Delete purges y.ID; openapi patterns, schema.d.ts, api-contract, Postman (media E36c-m M3 replay, notes, yearbooks). Edge table in the PR. book-export/get-text (T-093, PR #92) NOT covered: that PR must call ulid.Valid. cover_media_id/photo_media_id non-canonical answer ERROR_INVALID_MEDIA (400), not ERROR_PARAM. QA: probe each id param with lower/mixed case, spaces, ../; upload+delete with both spellings and list the bucket. Existing tests using non-ULID ids as unknown now expect 400.
 - 2026-10-21 08:06Z · leader · Leader 2026-10-21: book-export (T-093, PR #92) is not on develop yet; whichever merges second switches it to ulid.Valid. ERROR_INVALID_MEDIA for a non-canonical cover/photo id is acceptable (same 400 as an unknown photo).
+- 2026-10-21 08:10Z · leader · Leader 2026-10-21: T-093 merged first (058deba). When you next merge develop into PR #93, make book-export/get-text use ulid.Valid for yearbook_id.
 
 ### T-101 — [E12] Small hardening: readyz cache, generic code-email greeting, absolute session lifetime
 - **Status:** TODO
@@ -4642,7 +4659,7 @@ Spec: .team/epics/E12-security-hardening/06-session-fence-against-credential-cha
 - 2026-10-21 08:00Z · leader · Leader: QA re-check passed on b732c51 (merge keeps T-098's counter reset and the epoch; rollback note verified by down/up; CI green incl. image). Earlier leader review stands. Waiting for the owner's approval (risk high).
 
 ### T-104 — [E12] Media processing robustness: slots released on every path, no panics, decoded limits
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
@@ -4650,10 +4667,10 @@ Spec: .team/epics/E12-security-hardening/06-session-fence-against-credential-cha
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-104-e12-media-processing-robustness-slots-re
 - **PR:** —
-- **Updated:** 2026-10-20 16:48Z by leader
+- **Updated:** 2026-10-21 08:07Z by dev
 - **Comments-seen:** 0
 
 Spec: .team/epics/E12-security-hardening/08-media-processing-robustness.md (read it from the repo root). Source: audit run 1, docs/security-audit-skill-2026-10-20/ (PR #86). Risk high: owner approves the merge.
