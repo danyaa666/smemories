@@ -11,18 +11,18 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 12 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-095, T-096, T-097 |
-| TODO | 9 | T-101, T-105, T-106, T-107, T-109, T-110, T-111, T-112, T-113 |
+| TODO | 9 | T-101, T-105, T-106, T-107, T-109, T-110, T-112, T-113, T-114 |
+| IN_PROGRESS | 1 | T-111 |
 | READY_FOR_QA | 1 | T-094 |
-| IN_QA | 1 | T-100 |
-| QA_PASS | 1 | T-104 |
+| QA_PASS | 2 | T-100, T-104 |
 | DONE | 81 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-092, T-093, T-098, T-099, T-102, T-103, T-108 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
 **Awaiting your review (MERGED):** nothing
 
-**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?)
+**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?); Q-051 (Approve merge of T-100 (canonical public ids, PR #93)?)
 
-_Board last written 2026-10-21 13:01Z_
+_Board last written 2026-10-21 13:11Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -568,6 +568,15 @@ QA_PASS twice (before and after the develop merge) and leader review OK on b732c
 - **Answer:** _(pending)_
 
 QA_PASS and leader review OK on 968b9d7, CI green. A crash inside image decoding, scaling or encoding (including the background print-size step) now answers 400 instead of taking the whole API down, the processing slot is always released, and decoded image sizes are re-checked. QA sent about 40 hostile files through the owner upload and the public form: all refused, server stayed up. Reply 'team approve T-104'.
+
+### Q-051 — Approve merge of T-100 (canonical public ids, PR #93)?
+- **Status:** OPEN
+- **Asked:** 2026-10-21 13:11Z
+- **Blocks:** T-100
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+QA_PASS and leader review OK on 2210d38, CI green. Every id from the browser must be the canonical upper-case form (else 400 before any query), and photo storage paths and yearbook deletion use the stored id, so a lower-cased id can no longer leave photos behind in storage or reset the quota. QA probed ~250 bad spellings over 15 endpoints with no data touched. Reply 'team approve T-100'.
 
 <!-- questions:end -->
 
@@ -4551,7 +4560,7 @@ Spec: `.team/epics/E12-security-hardening/02-mandatory-env-and-local-only-dev-te
 - 2026-10-21 03:43Z · human · accepted by owner
 
 ### T-100 — [E12] Canonical public ids and the stored id for object keys
-- **Status:** IN_QA
+- **Status:** QA_PASS
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
@@ -4559,11 +4568,11 @@ Spec: `.team/epics/E12-security-hardening/02-mandatory-env-and-local-only-dev-te
 - **Risk:** high
 - **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** leader
 - **Branch:** task/t-100-e12-canonical-public-ids-and-the-stored-
 - **PR:** https://github.com/danyaa666/smemories/pull/93
-- **Updated:** 2026-10-21 12:58Z by qa
-- **Comments-seen:** 6
+- **Updated:** 2026-10-21 13:11Z by qa
+- **Comments-seen:** 8
 
 Spec: `.team/epics/E12-security-hardening/03-canonical-public-ids.md`. Audit M3: public_id columns compare case-insensitively and media/yearbook use the caller's spelling in S3 prefixes, so a user can orphan objects, reset their quota and defeat deletion. Validate ids at the edge, build keys from the stored id. Do before T-025. Risk high: data.
 
@@ -4574,6 +4583,20 @@ Spec: `.team/epics/E12-security-hardening/03-canonical-public-ids.md`. Audit M3:
 - 2026-10-21 08:10Z · leader · Leader 2026-10-21: T-093 merged first (058deba). When you next merge develop into PR #93, make book-export/get-text use ulid.Valid for yearbook_id.
 - 2026-10-21 08:10Z · leader · Leader 2026-10-21: before QA, merge develop into PR #93 (T-093 is now on develop as 058deba) and make book-export/get-text validate yearbook_id with ulid.Valid (add it to the PR's edge table, one handler test with a lower-case id). No other change. Then READY_FOR_QA.
 - 2026-10-21 12:51Z · dev · Merged origin/develop (058deba T-093, T-099, T-102, T-103, T-108; no conflicts). book-export/get-text now rejects a non-canonical yearbook_id with ERROR_PARAM in the handler (ulid.Valid, before the service); test TestHandlerRefusesANonCanonicalYearbookID (lower case, short, empty, trailing space; nil service); edge table updated. Nothing else changed. Head 2210d38. make lint test test-integration -race green (private compose project t100dev, taken down without -v). Do not merge PR #94 into this branch: both touch internal/media/service.go.
+- 2026-10-21 13:11Z · qa · QA_PASS T-100, PR #93 head 2210d38 (CI: go, web, e2e, image, security green; go-integration was still running when I checked, but I ran the same suite locally). Own compose project qa100 on ports 53206/53279/53200, SMEM_ENV=test, SMEM_TEST_S3_ENDPOINT set; taken down without -v. Nothing under .team/ in the PR.
+  EVIDENCE
+  AC1 ulid.Valid: TestValid (valid, lower, mixed, 25/27 chars, I L O U, spaces, newline, NUL, accented, fullwidth, slash, ../) passes with -race -count=1.
+  AC2 handlers: unit tests pass (yearbook TestHandlersRefuseNonCanonicalIDs with counting fake store, media TestIDEndpointsRefuseNonCanonicalIDs with nil service, notes TestCollectionsRefuseNonCanonicalIDs, bookexport TestHandlerRefusesANonCanonicalYearbookID). LIVE probe against a built API (bucket qalive): 15 endpoints x 10 spellings (lower, mixed, trailing space, leading space, ../, trailing slash, 26 x I, accented E-acute, empty, NUL) + note ids + cover/photo ids = about 250 requests; every one 400 ERROR_PARAM (ERROR_INVALID_MEDIA for cover_media_id and photo_media_id), and a CHECKSUM TABLE of all MySQL tables plus a listing of the MinIO bucket were identical before and after each request. Control: a canonical yearbook/update changed the checksum, so the check is not vacuous. Endpoints: yearbook get/update/update-profile/delete/revoke-photo-links, media create(form field)/get-list/get-content/delete, note-collection create/get-list/revoke, note get-list/batch-update-status/reorder/batch-delete (yearbook_id and ids), book-data/get, book-export/get-text. public-media token with a lower/mixed/space/IIII/accented/../ id part, id only, empty: all 404 ERROR_NOT_FOUND (as before), canonical token 200 image. A grep of every public_id = ? and every Query().Get/id field found no endpoint without the check.
+  AC3 service level (real MySQL + MinIO): TestServicesUseTheStoredIDForObjectKeys passes. I also ran a temporary test (not committed) that listed the real bucket with mc: before: empty; after Upload(lower-case): 3 objects, all under yearbooks/<CANONICAL>/ and none under the lower-case prefix; after bookSvc.Delete(lower-case): empty; same for canonical upload then delete. Mutation check: reverting PurgeYearbook(y.ID) to the caller's spelling fails the test ('survived the yearbook delete'); reverting the Upload prefix to the caller's spelling fails it ('not under the canonical prefix'). Worktree restored, clean.
+  AC4 M3 replay through the API: upload with lower-case id 400 ERROR_PARAM, mixed-case 400, nothing stored (0 objects under either prefix, 0 media rows); canonical upload 200 (3 objects under the canonical prefix, 0 under lower-case); delete with lower-case 400 and the 3 objects + row remain; canonical delete 200, 0 objects, 0 rows. Postman media E36c..E36m pass.
+  AC5 canonical ids unchanged: make lint test test-integration exit 0 (golangci-lint 0 issues, gofmt/vet, web lint+typecheck+lint:i18n+check:api ok, 348 web tests, all Go packages incl. media 101s, notes 180s, yearbook 89s with -tags integration -race -count=1). openapi: pattern ^[0-9A-HJKMNP-TV-Z]{26}$ on every id param and request field and note id array (grep shows no remaining unpatterned id in the changed endpoints); schema.d.ts regenerated (description only, generator emits no patterns), check:api ok. Postman CLI against my API, run twice where noted: media x2 86 req / 165 assertions / 0 failed both runs (second run no uniqueness conflict); yearbooks x2 98/203/0; public-media 39/89/0 (with the known SMEM_MEDIA_LINK_SECRET); notes x2 77/147/0; notes-moderation x2 80/164/0; book-export x2 34/68/0; templates 48/122/0. Not related to the PR: auth fails only the Google folder (Google not configured, 404), platform fails only the manual 'stop the database first' step. Note: the notes-family collections need make verify-newman-users after their first registration, as documented.
+  JUDGEMENT of the dev's choices
+  1. ERROR_INVALID_MEDIA (400) for a non-canonical cover_media_id / photo_media_id: acceptable. Same status and code an unknown photo already gets, so no new information is leaked and no client branch changes; it is a documented deviation from AC2's ERROR_PARAM that the leader already accepted; openapi lists it. 
+  2. Existing tests changed 404 -> 400: acceptable and correct. Only ids that are not canonical ULIDs changed (e.g. 'nope', 'x'); a canonical-but-missing id still answers 404 (the dev split TestOwnershipMatrix into both cases and I saw 404 for a missing canonical id in the Postman yearbooks run). No test was weakened.
+  NON-BLOCKING observations
+  a) web/src/pages/YearbookEdit.tsx:39 shows the 'book not found' text only for status 404. A hand-typed or lower-cased URL id (/books/abc/...) now answers 400 ERROR_PARAM, so the page shows the generic invalid_body error text instead of books.notFound. Not reachable from the app's own links; consider treating 400 like 404 there (small web follow-up, not part of T-100).
+  b) The service-level test counts keys through the flaky wrapper's own record of Puts, not a bucket listing; its Get checks on the three keys after Delete do hit the real bucket and the mutation check above shows it catches both regressions, so I consider AC3 proven. Using a real list would be stronger but storage.S3 has no List method.
+- 2026-10-21 13:11Z · leader · Leader review OK on 2210d38: one ulid.Valid shared by notes, medialink and every edge (PR edge table), Upload builds the prefix from the stored public_id and Delete purges y.ID, so even a caller bypassing the handlers stays canonical. QA_PASS with ~250 hostile spellings over 15 endpoints and DB/bucket checksums unchanged, M3 replay fails at step 1, mutation checks on both fixes. Follow-up T-114 (web: show 'book not found' for a malformed id). Waiting for the owner's approval (risk high).
 
 ### T-101 — [E12] Small hardening: readyz cache, generic code-email greeting, absolute session lifetime
 - **Status:** TODO
@@ -4834,7 +4857,7 @@ Spec: .team/epics/E12-security-hardening/11-upload-abuse-followup.md (read it fr
 #### Comments
 
 ### T-111 — [E13] Versioned acceptance of the Terms and Privacy Policy (API)
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M2
@@ -4842,10 +4865,10 @@ Spec: .team/epics/E12-security-hardening/11-upload-abuse-followup.md (read it fr
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-111-e13-versioned-acceptance-of-the-terms-an
 - **PR:** —
-- **Updated:** 2026-10-21 13:01Z by leader
+- **Updated:** 2026-10-21 13:01Z by dev
 - **Comments-seen:** 1
 
 Spec: .team/epics/E13-legal/01-terms-acceptance-api.md (read it from the repo root). Decision D-35. Register requires the current version, a gate on signed-in endpoints until accepted, accept-terms endpoint, version stored on notes. Risk high: owner approves the merge.
@@ -4888,6 +4911,25 @@ Spec: .team/epics/E13-legal/02-legal-pages-web.md. Pages from docs/legal (draft 
 - **Comments-seen:** 0
 
 QA of T-104 (2026-10-21): a lossy WebP with an ALPH chunk (compression 1) decodes to a transient NRGBA at about 4 bytes per pixel, while the decode-memory estimate in internal/media assumes about 2.5; a valid 5000x5000 file can peak near 160 MB against an estimated 62 MB, so the processing-slot and SMEM_MEMORY_LIMIT_MIB sizing (docs/media.md) is optimistic. Fix the estimate per format (WebP with alpha uses 4 B/px, or the real decoder output size), add a test with a WebP-with-alpha fixture that measures the peak (testing.AllocsPerRun or runtime.MemStats around one decode), update the numbers in docs/media.md. No behaviour change for JPEG and PNG.
+
+#### Comments
+
+### T-114 — [E03] Web: a malformed yearbook id in the URL shows 'book not found'
+- **Status:** TODO
+- **Priority:** P3
+- **Type:** bug
+- **Milestone:** M2
+- **Depends-on:** T-100
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-21 13:11Z by leader
+- **Comments-seen:** 0
+
+QA of T-100 (2026-10-21): since T-100 a non-canonical id answers 400 ERROR_PARAM instead of 404, and web/src/pages/YearbookEdit.tsx (line ~39) only shows 'book not found' for 404, so a hand-typed or lower-cased URL shows the generic invalid-request text. Treat ERROR_PARAM on the yearbook id like not found on every page that takes :id from the URL (edit, notes, note links, book); component tests for 404 and 400. No API change.
 
 #### Comments
 
