@@ -34,7 +34,8 @@ harmless (it keeps failing until the schema is there) but noisy; keep the order.
 | `version` | prints the highest applied version (`0` on an empty database) |
 | `down --allow-down` | rolls back one migration. **Refused with `SMEM_ENV=prod`** (with or without the flag); `down` without the flag is a usage error. For dev and test only. |
 
-**Lock.** `up` and `down` take the MySQL advisory lock (`GET_LOCK`, name derived from the database name) on the connection that runs the migrations. A second
+**Lock.** `up` and `down` take the MySQL advisory lock (`GET_LOCK`, name derived from the database name) on the connection that runs the migrations, before anything reads or creates the version table
+(`goose_db_version`), so on an empty database the second task never sees it half made (T-108). A second
 task started at the same time waits (up to 5 minutes), then finds nothing left to apply and exits 0; the lock is released when the session ends, so a killed task
 never leaves it stuck. A task that cannot get the lock in 5 minutes exits 3. Each migration runs in its own statement group; MySQL commits DDL implicitly, so a failed
 migration can leave a half-applied table (runbook below). Never edit an applied migration; a bug in one is fixed by a new migration.

@@ -91,6 +91,15 @@ func MigrateUpLog(ctx context.Context, d *sql.DB, logger *slog.Logger, wait time
 	if err != nil {
 		return err
 	}
+	// goose's Up first calls HasPending, which ignores the session locker and creates the version table (and inserts its version 0) without
+	// the lock: a second task could then take the lock between the CREATE TABLE and the INSERT and fail with "missing zero version
+	// migration" (T-108). GetDBVersion does take the lock first, on the connection that then creates the table, so by the time Up runs the
+	// table is complete and HasPending only reads it.
+	if wait > 0 {
+		if _, err := p.GetDBVersion(ctx); err != nil {
+			return err
+		}
+	}
 	res, err := p.Up(ctx)
 	err = halfAppliedHint(err)
 	if logger != nil {
