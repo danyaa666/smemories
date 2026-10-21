@@ -12,17 +12,19 @@
 |---|---:|---|
 | BACKLOG | 12 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-095, T-096, T-097 |
 | TODO | 9 | T-093, T-094, T-100, T-101, T-104, T-105, T-106, T-107, T-109 |
-| READY_FOR_QA | 1 | T-108 |
-| CHANGES_REQUESTED | 3 | T-099, T-102, T-103 |
+| IN_PROGRESS | 1 | T-102 |
+| READY_FOR_QA | 1 | T-099 |
+| QA_PASS | 1 | T-108 |
+| CHANGES_REQUESTED | 1 | T-103 |
 | MERGED | 2 | T-092, T-098 |
 | DONE | 74 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
 **Awaiting your review (MERGED):** T-092 ([E05] Public photo links: signed token, public-media endpoint, revoke-all (API)); T-098 ([E12] IPv6 /64 keying and a per-account login limiter)
 
-**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?)
+**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?)
 
-_Board last written 2026-10-21 02:43Z_
+_Board last written 2026-10-21 03:02Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -531,6 +533,15 @@ QA_PASS and leader review OK on 33737ef, CI green. Rate limits now group IPv6 cl
 - **Answer:** _(pending)_
 
 QA_PASS and leader review OK on 8e07f4f, CI green. All binaries now refuse to start without SMEM_ENV, and dev/test refuse non-local origins or base URLs, so a deployed environment cannot run with the public OTP key or the fixed code. Reply 'team approve T-099'.
+
+### Q-047 — Approve merge of T-108 (concurrent migrate race fix, PR #91)?
+- **Status:** OPEN
+- **Asked:** 2026-10-21 03:02Z
+- **Blocks:** T-108
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+QA_PASS and leader review OK on d856c25, CI green. Takes the migration lock before goose creates its version table, which fixes the flaky CI image job seen on every PR. 9 lines of code plus a test that fails on the old code. Reply 'team approve T-108'.
 
 <!-- questions:end -->
 
@@ -4448,7 +4459,7 @@ Spec: `.team/epics/E12-security-hardening/01-ipv6-keying-and-account-login-limit
 - 2026-10-21 01:45Z · leader · MERGED into develop as 765b8bc (PR #87) after owner approval.
 
 ### T-099 — [E12] Mandatory SMEM_ENV and local-only dev/test
-- **Status:** CHANGES_REQUESTED
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
@@ -4459,8 +4470,8 @@ Spec: `.team/epics/E12-security-hardening/01-ipv6-keying-and-account-login-limit
 - **Assignee:** —
 - **Branch:** task/t-099-e12-mandatory-smem-env-and-local-only-de
 - **PR:** https://github.com/danyaa666/smemories/pull/88
-- **Updated:** 2026-10-21 01:45Z by leader
-- **Comments-seen:** 6
+- **Updated:** 2026-10-21 02:53Z by dev
+- **Comments-seen:** 8
 
 Spec: `.team/epics/E12-security-hardening/02-mandatory-env-and-local-only-dev-test.md`. Audit M2 and L7: SMEM_ENV defaults to dev, which prints OTP codes, uses the public OTP key and drops the cookie Secure flag. Make it required in every command, and refuse dev/test when origins are not local. Risk high: production configuration.
 
@@ -4477,6 +4488,8 @@ Spec: `.team/epics/E12-security-hardening/02-mandatory-env-and-local-only-dev-te
 - 2026-10-20 22:43Z · leader · Leader review OK on 8e07f4f: SMEM_ENV read without default and refused when empty (all three binaries via Load/LoadMigrate); checkLocalOnly applies to every origin and the base URL in dev/test, reusing the private-host rules plus *.localhost; prod unchanged; Dockerfile untouched as specified. QA_PASS: 24 hosts probed, staging-like sets refused for api/migrate/backfill, clean-clone quick start works, AC4 shown by removing each guard. Real image-smoke hangs on docker pull on this machine only (environmental); CI image job green. Waiting for the owner's approval (risk high).
 - 2026-10-21 01:44Z · human · owner approved merge
 - 2026-10-21 01:45Z · leader · Owner approved, but PR #88 now CONFLICTS with develop after T-092 (399ffa6) and T-098 (765b8bc) merged (internal/config, docs/production-config.md, .env.example likely). Dev: merge develop into the branch (no force-push, no rebase), resolve keeping both sides' rules (SMEM_MEDIA_LINK_SECRET from T-092, SMEM_RATE_LOGIN_FAILS_PER_ACCOUNT and WithClientIP(trustProxy, logger) from T-098, mandatory SMEM_ENV and local-only checks from T-099), re-run make lint test test-integration and the two smoke checks, push, set READY_FOR_QA. QA re-checks only the merge.
+- 2026-10-21 02:53Z · dev · Merged origin/develop (T-092, T-098) into the branch, no rebase, head 5d72530. One textual conflict (docs/container.md smoke list): kept both the SMEM_MEDIA_LINK_SECRET prod refusal and the T-099 SMEM_ENV refusals. Auto-merged config keeps mandatory SMEM_ENV + local-only checks, SMEM_MEDIA_LINK_SECRET, SMEM_RATE_LOGIN_FAILS_PER_ACCOUNT. The only code change beyond the merge: TestLoadMediaLinkSecret dev/test cases now use a local origin and base URL (they used a public one, refused by the local-only rule) and TestLoadLoginFailsPerAccount sets SMEM_ENV explicitly. WithClientIP(trustProxy, logger) is untouched by this branch (no conflict). Verified in private compose project dev099 (ports 53306/56379/59000, taken down without -v): make lint test PASS, go test -race -tags integration ./... PASS (all packages), image smoke on an image built from the head via a copy of image-smoke.sh with only the docker pull line replaced by docker image inspect (real pull hangs on this machine, as in QA): ALL PASS incl. 'refuses to start without SMEM_ENV' and 'refuses SMEM_ENV=test with a public base URL or origin' and T-092's SMEM_MEDIA_LINK_SECRET refusals. Please re-check only the merge.
+- 2026-10-21 02:53Z · dev · develop merged (5d72530), conflicts resolved keeping both sides; see comment
 
 ### T-100 — [E12] Canonical public ids and the stored id for object keys
 - **Status:** TODO
@@ -4518,7 +4531,7 @@ Spec: `.team/epics/E12-security-hardening/04-readyz-greeting-session-lifetime.md
 #### Comments
 
 ### T-102 — [E12] Upload slot fairness: per-user cap and paced body on media/create; early release for rejected public submissions
-- **Status:** CHANGES_REQUESTED
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
@@ -4526,10 +4539,10 @@ Spec: `.team/epics/E12-security-hardening/04-readyz-greeting-session-lifetime.md
 - **Risk:** high
 - **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** dev
 - **Branch:** task/t-102-e12-upload-slot-fairness-per-user-cap-an
 - **PR:** https://github.com/danyaa666/smemories/pull/90
-- **Updated:** 2026-10-21 02:43Z by leader
+- **Updated:** 2026-10-21 02:53Z by dev
 - **Comments-seen:** 2
 
 Spec: .team/epics/E12-security-hardening/05-upload-slot-fairness.md (read it from the repo root). Source: audit run 1, docs/security-audit-skill-2026-10-20/ (PR #86). Risk high: owner approves the merge.
@@ -4646,7 +4659,7 @@ Spec: .team/epics/E12-security-hardening/07-bounded-photo-download-memory.md (re
 #### Comments
 
 ### T-108 — [E06] Concurrent smemories-migrate up on an empty database fails (missing zero version migration)
-- **Status:** READY_FOR_QA
+- **Status:** QA_PASS
 - **Priority:** P1
 - **Type:** bug
 - **Milestone:** M2
@@ -4654,17 +4667,25 @@ Spec: .team/epics/E12-security-hardening/07-bounded-photo-download-memory.md (re
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** leader
 - **Branch:** task/t-108-e06-concurrent-smemories-migrate-up-on-a
 - **PR:** https://github.com/danyaa666/smemories/pull/91
-- **Updated:** 2026-10-20 23:08Z by dev
-- **Comments-seen:** 2
+- **Updated:** 2026-10-21 03:02Z by qa
+- **Comments-seen:** 4
 
 Spec: .team/epics/E06-go-live/11-concurrent-migrate-race.md. CI image job flake seen on develop and on PR #85 (QA of T-092); fix the lock order in internal/db/migrate.go.
 
 #### Comments
 - 2026-10-20 22:16Z · leader · Leader 2026-10-20: raised to P1. The flaky image job hits every PR's CI, and this task touches only internal/db, so it does not collide with the five open media/auth PRs.
 - 2026-10-20 23:08Z · dev · Root cause: goose Up calls HasPending first, which ignores the session locker and creates goose_db_version + version-0 row without the lock; B can take the lock between A's CREATE TABLE and the version-0 commit. Fix: GetDBVersion (locked) before Up in MigrateUpLog. Test TestMigrateUpWaitsForVersionTableCreation fails on develop code with 'missing zero version migration', passes with -race -count=20. 50/50 smoke runs on a local copy of the script (pull line -> docker image inspect; Dockerfile built without the syntax line, both because the registry hangs here); CI runs the real ones. Head d856c25. Known gap in PR: status/version on an empty DB concurrent with first up still create the table unlocked. Risk high: owner approves merge.
+- 2026-10-21 03:02Z · qa · QA_PASS head d856c25 (PR #91), CI all green (go, go-integration, e2e, image, security, web). Own MySQL 8.4 (compose project qa108, port 33618, down without -v).
+  AC1 race test: TestMigrateUpWaitsForVersionTableCreation with develop's migrate.go restored in the worktree: FAIL 10/10 (-count=10, 'task B did not wait ... missing zero version migration'); on the head: PASS, go test -race -count=20 green (15s). The old concurrent test lost its 'versionOf' pre-create line, so it now covers the empty-DB start too (passes).
+  AC3 T-088 unchanged: diff touches only MigrateUpLog (GetDBVersion under the lock before Up, guarded by wait>0) + docs sentence. internal/db migrate tests all pass (Cycle, LockTimeout, LockIsPerDatabase, HalfAppliedHint, ConcurrentAppliesOnce...); cmd/smemories-migrate tests pass (prod: bare down exit 2, down --allow-down exit 4). Binary by hand: bare down exit 2, prod bare down exit 2, up --allow-down exit 2. Real lock timeout: another session held GET_LOCK, 'migrate up' waited exactly 5:00 and exited 3 'another smemories-migrate holds the migration lock', no tables created. CheckSchema (API start-up guard) is untouched and read-only.
+  Stress: built head binary, fresh empty DB per round, 8 concurrent 'up': 20 rounds, 0 bad (all exit 0, exactly one applier, 20 versions); also 30 rounds x 24 concurrent: 0 bad. Note: the develop binary also showed 0 failures in 50 rounds locally (window too narrow), so the stress is no proof; the deterministic test is the evidence for AC1.
+  Image: 'make image' (real Dockerfile, no registry hang here) + real scripts/image-smoke.sh: passed 7 runs in a row (all checks incl. 'two concurrent smemories-migrate up applied each of the 20 migrations once', API refuses un-migrated DB, prod refuses down). Not 50 runs; CI image job green.
+  Known gap (status/version on an empty DB during the first up still create the table unlocked): does NOT matter for docs/deploy.md. The deploy flow is migrate task first, then API; the API's CheckSchema only reads (handles missing table, writes nothing), so it cannot race. status/version are operator tools for the runbook, run on a database that already has the table. Even in the worst case it is a failed command, no data harm, rerunnable. Tried 40 rounds of 3 up + 3 version + 3 status on an empty DB: 0 failures, final state correct. Fixing it would need status/version to take the lock; non-blocking, optional follow-up.
+  Non-blocking: in my env TestUTF8MB4RoundTrip failed on sql_mode only because my compose lacked the project's --sql-mode flag (not the PR). Nothing under .team/ touched in the PR; no test files added by me.
+- 2026-10-21 03:02Z · leader · Leader review OK on d856c25: a 9-line change in MigrateUpLog (GetDBVersion under the session lock before goose Up, only when locking is on), the deterministic test fails 10/10 on develop's code and passes with -race -count=20; T-088 behaviours unchanged (QA checked exit 2/3 by hand); real image-smoke 7/7 and CI green. The status/version gap does not affect the deploy flow (QA). Waiting for the owner's approval (risk high).
 
 ### T-109 — [E02] Flaky TestConcurrentResetHasOneWinner under CPU load
 - **Status:** TODO
