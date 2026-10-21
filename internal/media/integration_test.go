@@ -60,6 +60,16 @@ func (f *flaky) Get(ctx context.Context, key string) ([]byte, error) {
 	return f.Storage.Get(ctx, key)
 }
 
+func (f *flaky) Open(ctx context.Context, key string) (io.ReadSeekCloser, error) {
+	f.mu.Lock()
+	fail := f.failGet
+	f.mu.Unlock()
+	if fail {
+		return nil, errors.New("injected get failure")
+	}
+	return f.Storage.Open(ctx, key)
+}
+
 // count is how many objects exist under prefix.
 func (f *flaky) count(prefix string) int {
 	f.mu.Lock()
@@ -176,6 +186,15 @@ func (s *syncBuf) String() string {
 func newEnv(t *testing.T) *env {
 	t.Helper()
 	t.Parallel() // T-077: every env has its own database, Redis prefix, ULID-keyed objects and processing semaphore, so tests never share state
+	return buildEnv(t)
+}
+
+// newSerialEnv is newEnv for a test that measures the whole process (memory): it does not call t.Parallel, and the
+// parallel tests only resume once every serial test has finished, so nothing else runs while it measures.
+func newSerialEnv(t *testing.T) *env { t.Helper(); return buildEnv(t) }
+
+func buildEnv(t *testing.T) *env {
+	t.Helper()
 	d := dbtest.New(t)
 	e := &env{t: t, db: d, st: &flaky{Storage: storagetest.New(t), keys: map[string]bool{}}}
 	e.logs = &syncBuf{}

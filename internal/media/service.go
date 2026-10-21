@@ -10,6 +10,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"errors"
+	"io"
 	"log/slog"
 	"path"
 	"strconv"
@@ -283,9 +284,10 @@ func printKey(objectKey string) string {
 	return strings.TrimSuffix(objectKey, ext) + "-print" + ext
 }
 
-// Content returns the stored bytes of a photo the user owns in one of the Size* versions, with the size actually
+// Content opens the stored object of a photo the user owns in one of the Size* versions, with the size actually
 // served: a photo that has no print object yet (the backfill has not reached it) is served in display size.
-func (s *Service) Content(ctx context.Context, ownerID uint64, mediaID, size string) (*Media, []byte, string, string, error) {
+// The object is a stream (T-107): the caller closes it.
+func (s *Service) Content(ctx context.Context, ownerID uint64, mediaID, size string) (*Media, io.ReadSeekCloser, string, string, error) {
 	m, err := s.store.owned(ctx, ownerID, mediaID)
 	if err != nil {
 		return nil, nil, "", "", err
@@ -299,22 +301,22 @@ func (s *Service) Content(ctx context.Context, ownerID uint64, mediaID, size str
 	default:
 		size = SizeDisplay
 	}
-	b, err := s.st.Get(ctx, key)
+	obj, err := s.st.Open(ctx, key)
 	if errors.Is(err, storage.ErrNotFound) {
 		return nil, nil, "", "", ErrNotFound
 	}
 	if err != nil {
 		return nil, nil, "", "", storageFailed(err)
 	}
-	return m, b, ct, size, nil
+	return m, obj, ct, size, nil
 }
 
 // PublicContent answers a public photo link (T-092, D-32): the per-IP limits, the token, then the display bytes of the photo
 // if the link is valid for the book's current epoch and the photo is still shareable. Every failure of the link itself (malformed,
 // unknown photo, wrong MAC, revoked epoch, hidden or deleted note, deleted book or photo, missing object) is the same ErrNotFound;
 // the limiters answer a *RateLimitedError. Only misses count toward public_media_miss: a good link gives its hit back.
-// Nothing here puts the token in an error or a log line.
-func (s *Service) PublicContent(ctx context.Context, ip, token string) (*Media, []byte, error) {
+// Nothing here puts the token in an error or a log line. The object is a stream: the caller closes it.
+func (s *Service) PublicContent(ctx context.Context, ip, token string) (*Media, io.ReadSeekCloser, error) {
 	if ok, wait, _ := s.pubAll.Take(ctx, ip); !ok {
 		return nil, nil, tooManyPublic(wait)
 	}
@@ -325,15 +327,15 @@ func (s *Service) PublicContent(ctx context.Context, ip, token string) (*Media, 
 	if err != nil {
 		return nil, nil, err
 	}
-	_ = s.pubMiss.Refund(ctx, ip)        // a valid link is not a guess, whatever the object store answers next
-	b, err := s.st.Get(ctx, m.ObjectKey) // the display variant only, never the original upload (there is none) or another size
+	_ = s.pubMiss.Refund(ctx, ip)           // a valid link is not a guess, whatever the object store answers next
+	obj, err := s.st.Open(ctx, m.ObjectKey) // the display variant only, never the original upload (there is none) or another size
 	if errors.Is(err, storage.ErrNotFound) {
 		return nil, nil, ErrNotFound
 	}
 	if err != nil {
 		return nil, nil, storageFailed(err)
 	}
-	return m, b, nil
+	return m, obj, nil
 }
 
 // publicPhoto is the link check: ErrNotFound unless the token is well formed, names a photo, carries the MAC for that photo's

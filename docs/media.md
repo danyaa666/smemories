@@ -6,7 +6,7 @@
 |---|---|
 | `POST /api/media/create` | `multipart/form-data`: text field `yearbook_id` and the image in the part `file` (either order). Answers `{status:"OK", data:{id, yearbook_id, content_type, bytes, width, height, created_at}}`. |
 | `GET /api/media/get-list?yearbook_id=&limit=&next_id=&uploader=` | `data: {items, next_id}`, newest first, `limit` 1..100 (default 50). `uploader` is `owner` (default), `contributor` or `all`. |
-| `GET /api/media/get-content?id=&variant=display\|thumb\|print` | **Binary** on success (no envelope; `Content-Type` from the database, `nosniff`, `Cache-Control: private, max-age=3600`, `ETag` per variant, `HEAD`/`Range`/`If-None-Match` work); the JSON error envelope with `Cache-Control: no-store` on failure. |
+| `GET /api/media/get-content?id=&variant=display\|thumb\|print` | **Binary** on success (no envelope; `Content-Type` from the database, `nosniff`, `Cache-Control: private, max-age=3600`, `ETag` per variant, `HEAD`/`Range`/`If-None-Match` work; streamed from the object store, see "Photo downloads"); the JSON error envelope with `Cache-Control: no-store` on failure. |
 | `POST /api/media/delete` | JSON `{id}`; idempotent. |
 | `GET /api/public-media/get-content?token=` | **Public** (no session, no cookie, no CORS), **binary** display variant only, behind a signed link token; see "Public photo links" below. |
 
@@ -21,6 +21,14 @@ Errors are the v2 envelope (`ERROR_INVALID_IMAGE` 400, `ERROR_UNSUPPORTED_MEDIA_
   buffers, so it is taken before the body is read), a full pool is `503 ERROR_BUSY`. Then the body is read under `httpx.PhoneUploadPace`, the same pace as the public route: no byte for 10 s, or under 16 KiB/s
   on average after a 15 s grace, or more than 2 min in total ends the upload with `408` and gives both slots back (a 10 MiB photo over 2 Mbit/s takes about 40 s and passes). The per-user count is an
   in-process map released by `defer` on every path; with N API tasks one user can hold 2 x N uploads, which is still bounded by each task's own pool. `smem_media_uploads_in_progress` shows the pool.
+- **Photo downloads (T-107).** Both download routes **stream** the object from the store (`storage.Storage.Open`: a `HEAD` for the size, then a ranged `GET bytes=<position>-` on the first read), so a download holds
+  one 32 KiB copy buffer, not the photo: 64 slow readers of an 8 MiB photo grow the heap by about 7 MiB, where whole-object buffering held 512 MiB (`TestSlowReadersDoNotHoldTheObjectInMemory` logs heap and RSS). `Content-Length`,
+  `ETag`, `Range` (open, suffix and middle ranges: the store GET starts at the range start and is closed when the range is sent, so nothing before it is read; the connection of an early close is not reused), `If-None-Match`, `If-Range` and `HEAD` behave as before (`http.ServeContent` over a seekable stream; `HEAD` and 304 never fetch a body). Because the stream
+  is bounded by size, no byte budget (`SMEM_MEDIA_DOWNLOAD_MAX_BYTES`) exists. Each response is under `httpx.PaceWriter`: every write moves the connection's write deadline 10 s ahead, and a reader that averages under
+  16 KiB/s after a 15 s grace (or takes over 2 min) is dropped, which ends the stream and frees the slot, so a slow reader no longer holds a store connection for the whole route timeout. **Fairness:** at most 8 downloads in
+  progress per account (owner route, internal user id) and per client address (public route, `httpx.ClientIP`), the next is `429 ERROR_RATE_LIMITED` with `Retry-After: 2`, answered before the limiters, the database and the store
+  (and counted as `rate_limited` on the public route). The count is an in-process map (with N API tasks the cap is N x 8). The web preloads 6 prints at a time and lazy-loads the rest, so a page of 30 thumbnails is never refused
+  (`TestThirtyThumbnailsLoad`). `smem_media_download_inflight` ([observability.md](observability.md)) shows the downloads in progress.
 - **Page tokens.** `next_id` is `httpx.Cursors.Seal(scope, position)`: AES-256-GCM of the position with the scope (`media/get-list:<yearbook id>`) as associated data, base64url. A
   client cannot read the internal id inside or change it, and a token from another yearbook or another list is `ERROR_PARAM`. The key is derived (HMAC-SHA256 with a fixed label) from
   `SMEM_OTP_KEY`, so there is no extra secret to configure; changing that key only makes clients start their list again. The same helper serves the other list endpoints.
@@ -103,7 +111,7 @@ and `POST /api/yearbook/revoke-photo-links`.
 - **A revoked link can still be served from a cache for up to 5 minutes** (`max-age=300`, and `public` lets CloudFront or any shared cache keep it). Same for a photo whose note was just hidden. This is part of what the owner accepted in D-32; shortening
   it means changing `publicCacheControl`.
 - **Limits** per client IP, both fail open ([redis.md](redis.md)): `public_media_miss` 60 per 15 minutes (only misses count; a good link gives its hit back), `public_media_all` 600 per 15 minutes. The route timeout (2 minutes) and the connection deadline
-  extension of `get-content` apply; the bytes are read from the object store into memory like `get-content` (no processing slot is used: nothing is decoded).
+  extension of `get-content` apply; the bytes are streamed from the object store like `get-content`, with the same 8-per-address cap (no processing slot is used: nothing is decoded).
 - **The token is a bearer credential and is never logged.** The access log records the route (`GET /api/public-media/get-content`), never the query; no error, log line, metric label or `/metrics` text contains a token or the secret
   (`TestPublicTokenNeverReachesLogsOrMetrics` runs a request with a recognisable token down every path, storage failure and 429 included, and greps the captured output). Metric: `smem_public_media_requests_total{result="ok|not_found|rate_limited"}`.
 - **For T-023 / T-024 (edge and logging).** CloudFront and ALB **access logs record the query string**, so those logs hold live bearer tokens for `/api/public-media/get-content` (and for `/api/public-collect/*`):
