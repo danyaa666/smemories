@@ -36,6 +36,10 @@ const (
 	submitGrace        = 15 * time.Second
 	submitRouteTimeout = submitTotal + submitProcessing
 	submitWriteTimeout = submitRouteTimeout + 10*time.Second
+
+	// drainsPerClient bounds the rejected bodies one client key may have draining at once (T-110): the early release of the
+	// slot (T-102) leaves such a request holding only a socket, so without a bound one address could keep thousands.
+	drainsPerClient = 16
 )
 
 // submitPace is a variable only so that a test can shorten it: 10 s without a byte, 120 s in total, and after a
@@ -67,8 +71,8 @@ func (h *Handler) submit(w http.ResponseWriter, r *http.Request) {
 	httpx.PaceBody(w, r, submitPace)
 	rec := &errRecorder{r: r.Body}
 	r.Body = io.NopCloser(rec)
-	raw := w                                                        // only a guess or a revoked link is answered on this one
-	w = &drainWriter{ResponseWriter: w, rec: rec, release: release} // an early answer first swallows the rest of the body, so a browser can read it
+	raw := w                                                                      // only a guess or a revoked link is answered on this one
+	w = &drainWriter{ResponseWriter: w, rec: rec, release: release, h: h, ip: ip} // an early answer first swallows the rest of the body, so a browser can read it
 
 	p, err := h.svc.Resolve(r.Context(), ip, r.URL.Query().Get("token")) // the token is in the query, never in the body or the logs
 	if err != nil {
@@ -82,7 +86,7 @@ func (h *Handler) submit(w http.ResponseWriter, r *http.Request) {
 		// sender is a real friend with a valid token: let the browser finish its upload (to io.Discard, under the same pace and
 		// size limits, nothing on disk) so it can read the 409 instead of a connection reset (T-080)
 		release() // decided before any photo: only a socket is held while the body drains (T-102)
-		if _, derr := io.Copy(io.Discard, r.Body); derr != nil {
+		if derr := h.drain(raw, ip, r.Body); derr != nil {
 			httpx.WriteBodyError(raw, r, derr) // a stalled, slow or oversized body gets the same 408/413 as a normal upload
 			return
 		}
@@ -266,6 +270,38 @@ func (h *Handler) release(ip string) {
 	}
 }
 
+// drain swallows the rest of body so that a browser can read the answer to a rejected upload, but for at most drainsPerClient
+// rejected bodies per client key at once: beyond that nothing is read and the answer goes out with Connection: close (the
+// browser may see a reset). It returns the error of the body, if any.
+func (h *Handler) drain(w http.ResponseWriter, ip string, body io.Reader) error {
+	h.upMu.Lock()
+	if h.drIP[ip] >= drainsPerClient {
+		h.upMu.Unlock()
+		w.Header().Set("Connection", "close")
+		return nil
+	}
+	h.drIP[ip]++
+	h.drTotal++
+	h.upMu.Unlock()
+	defer func() {
+		h.upMu.Lock()
+		defer h.upMu.Unlock()
+		h.drTotal--
+		if h.drIP[ip]--; h.drIP[ip] <= 0 {
+			delete(h.drIP, ip)
+		}
+	}()
+	_, err := io.Copy(io.Discard, body)
+	return err
+}
+
+// DrainsInProgress is how many rejected bodies are being drained now (for metrics).
+func (h *Handler) DrainsInProgress() int {
+	h.upMu.Lock()
+	defer h.upMu.Unlock()
+	return h.drTotal
+}
+
 // errRecorder remembers the first non-EOF error of the reader it wraps.
 type errRecorder struct {
 	r   io.Reader
@@ -288,6 +324,8 @@ type drainWriter struct {
 	http.ResponseWriter
 	rec     *errRecorder
 	release func() // the submission slot, given back before the drain: a refused request holds only its socket (T-102)
+	h       *Handler
+	ip      string
 	drained bool
 }
 
@@ -296,7 +334,7 @@ func (d *drainWriter) drain() {
 		d.drained = true
 		d.release()
 		if d.rec.err == nil {
-			_, _ = io.Copy(io.Discard, d.rec)
+			_ = d.h.drain(d.ResponseWriter, d.ip, d.rec)
 		}
 	}
 }

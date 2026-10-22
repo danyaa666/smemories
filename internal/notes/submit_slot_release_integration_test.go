@@ -3,6 +3,10 @@
 package notes
 
 import (
+	"bufio"
+	"net"
+	"net/http"
+	"runtime"
 	"testing"
 	"time"
 
@@ -66,4 +70,62 @@ func TestRateLimitedDrainStaysPaced(t *testing.T) {
 		t.Fatalf("status %d after %v, want 429 within the idle window", got, time.Since(start))
 	}
 	e.waitFor("no slot held", func() bool { return e.inProgress() == 0 })
+}
+
+// T-110 AC3: 100 rate-limited bodies from one address: at most drainsPerClient are drained at once (smem_public_drains_in_progress), the
+// rest are answered at once and closed (Connection: close) without being read; the drained ones still get the same 429 after their
+// body, and everything is given back. Heap numbers are logged (go test -v) as the memory record.
+func TestRejectedBodiesDrainAtMostPerClient(t *testing.T) {
+	old := submitPace
+	submitPace = httpx.BodyPace{Idle: 20 * time.Second, Total: 60 * time.Second}
+	t.Cleanup(func() { submitPace = old })
+	e := newEnv(t)
+	const ip, total = "10.0.0.7", 100
+	for range missesPerWindow {
+		e.postFrom(t.Context(), ip, "unknown-token", answers("A", "m")).status(404, "ERROR_NOT_FOUND")
+	}
+	srv := e.serve()
+	body, ct := multipartOf(answers("A", "m"), photoPart(make([]byte, 1<<20)))
+	var heapBefore runtime.MemStats
+	runtime.ReadMemStats(&heapBefore)
+
+	var drained, closed []net.Conn
+	for range total {
+		conn := dial(t, srv)
+		sendHead(conn, ip, "unknown-token", ct, body.Len())
+		_, _ = conn.Write(body.Bytes()[:1000])
+		// A drained request answers only once its body is complete; a refused drain answers at once with Connection: close.
+		_ = conn.SetReadDeadline(time.Now().Add(300 * time.Millisecond))
+		res, err := http.ReadResponse(bufio.NewReader(conn), nil)
+		if err != nil {
+			drained = append(drained, conn)
+		} else {
+			if res.StatusCode != 429 || !res.Close {
+				t.Fatalf("a refused drain: %d close=%v, want 429 with Connection: close", res.StatusCode, res.Close)
+			}
+			_ = res.Body.Close()
+			closed = append(closed, conn)
+		}
+		_ = conn.SetReadDeadline(time.Time{})
+	}
+	if len(drained) != drainsPerClient || len(closed) != total-drainsPerClient {
+		t.Fatalf("%d drained and %d closed, want %d and %d", len(drained), len(closed), drainsPerClient, total-drainsPerClient)
+	}
+	if n := e.nh.DrainsInProgress(); n != drainsPerClient {
+		t.Fatalf("gauge %d, want %d", n, drainsPerClient)
+	}
+	if n := e.inProgress(); n != 0 {
+		t.Fatalf("%d upload slots held while draining", n)
+	}
+	var heapDuring runtime.MemStats
+	runtime.ReadMemStats(&heapDuring)
+	t.Logf("heap before %d KiB, with %d draining and %d closed %d KiB (sys %d KiB)", heapBefore.HeapAlloc>>10, len(drained), len(closed), heapDuring.HeapAlloc>>10, heapDuring.Sys>>10)
+	for _, c := range drained { // finishing the body gives the answer the browser would see
+		_, _ = c.Write(body.Bytes()[1000:])
+		if got := statusOf(t, c, 10*time.Second); got != 429 {
+			t.Fatalf("drained request answered %d, want 429", got)
+		}
+	}
+	e.waitFor("no drain left", func() bool { return e.nh.DrainsInProgress() == 0 })
+	e.noSpool()
 }

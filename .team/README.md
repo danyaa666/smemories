@@ -11,17 +11,17 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 13 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-095, T-096, T-097, T-116 |
-| TODO | 8 | T-101, T-105, T-106, T-109, T-113, T-114, T-115, T-117 |
-| READY_FOR_QA | 1 | T-110 |
-| MERGED | 3 | T-107, T-111, T-112 |
+| TODO | 7 | T-101, T-105, T-106, T-109, T-113, T-114, T-115 |
+| IN_PROGRESS | 1 | T-117 |
+| MERGED | 4 | T-107, T-110, T-111, T-112 |
 | DONE | 84 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-092, T-093, T-094, T-098, T-099, T-100, T-102, T-103, T-104, T-108 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-107 ([E12] Bound the memory of photo downloads (get-content and public-media)); T-111 ([E13] Versioned acceptance of the Terms and Privacy Policy (API)); T-112 ([E13] Web: Terms and Privacy pages, sign-up checkbox, accept screen, friend-form notice)
+**Awaiting your review (MERGED):** T-107 ([E12] Bound the memory of photo downloads (get-content and public-media)); T-110 ([E12] Owner uploads need a verified email and a per-client share; bound drains of rejected public bodies); T-111 ([E13] Versioned acceptance of the Terms and Privacy Policy (API)); T-112 ([E13] Web: Terms and Privacy pages, sign-up checkbox, accept screen, friend-form notice)
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?); Q-051 (Approve merge of T-100 (canonical public ids, PR #93)?); Q-052 (Approve merge of T-111 (Terms acceptance API, PR #96; merges together with T-112)?); Q-053 (Approve merge of T-110 (upload abuse follow-up, PR #99)?); Q-054 (Approve merge of T-107 (bounded photo download memory, PR #98)?)
 
-_Board last written 2026-10-22 01:08Z_
+_Board last written 2026-10-22 01:18Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4822,7 +4822,7 @@ Spec: .team/epics/E12-security-hardening/10-auth-and-repo-hygiene.md (read it fr
 - **Branch:** task/t-107-e12-bound-the-memory-of-photo-downloads-
 - **PR:** https://github.com/danyaa666/smemories/pull/98
 - **Updated:** 2026-10-22 00:59Z by leader
-- **Comments-seen:** 7
+- **Comments-seen:** 9
 
 Spec: .team/epics/E12-security-hardening/07-bounded-photo-download-memory.md (read it from the repo root). Source: audit run 1, docs/security-audit-skill-2026-10-20/ (PR #86). Risk high: owner approves the merge.
 
@@ -4932,7 +4932,7 @@ QA of T-103 (2026-10-21): go-integration was red once on internal/auth TestConcu
 #### Comments
 
 ### T-110 — [E12] Owner uploads need a verified email and a per-client share; bound drains of rejected public bodies
-- **Status:** READY_FOR_QA
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
@@ -4943,8 +4943,8 @@ QA of T-103 (2026-10-21): go-integration was red once on internal/auth TestConcu
 - **Assignee:** —
 - **Branch:** task/t-110-e12-owner-uploads-need-a-verified-email-
 - **PR:** 99
-- **Updated:** 2026-10-22 01:07Z by dev
-- **Comments-seen:** 3
+- **Updated:** 2026-10-22 01:18Z by leader
+- **Comments-seen:** 9
 
 Spec: .team/epics/E12-security-hardening/11-upload-abuse-followup.md (read it from the repo root). Source: QA of T-102. Risk high: owner approves the merge.
 
@@ -4964,6 +4964,13 @@ Spec: .team/epics/E12-security-hardening/11-upload-abuse-followup.md (read it fr
 - 2026-10-22 00:59Z · leader · Owner approved, but PR #99 now conflicts with develop after #98 (T-107) merged (internal/media/handler.go, docs/media.md: adjacent additions). Merge origin/develop into the branch, keep both sides, re-run go test + integration, push. No rebase, no force-push. No other changes.
 - 2026-10-22 01:07Z · dev · Merged origin/develop into the branch (merge commit e5e7010, PR #99 head e5e7010, MERGEABLE; BLOCKED only on pending CI/review). Conflicts were more than the two files named: internal/media/handler.go (consts, Handler fields, NewHandler, helpers: kept both: T-110 generic take/release per-user + per-client caps AND T-107 download cap/grace/dlPace/paced/DownloadsInProgress; dropped T-107's takeUser since T-110's take replaces it, no callers), docs/media.md (T-110 upload paragraph + T-107 'Photo downloads' bullet), internal/media/integration_test.go (T-110 register/registerUnverified helpers, register body now sends accept_terms_version from T-111), postman/media + public-media (kept T-110 Setup folder with Register A/B/C and added accept_terms_version={{termsVersion}} to those three register bodies, termsVersion variable from develop kept). Ran: go build, go vet, go test ./..., go test -race -tags integration ./... against the main compose stack (make up; I bypassed 'make test-integration' only because this worktree's stale ignored .env points at port 23306; same command, default DSN): all green. Web build not run (no web conflicts). NOT run: newman, e2e, image-smoke after the merge. Heads-up (develop, not this PR): tools/e2e/h2-gallery.spec.mjs registers without accept_terms_version (T-107 vs T-111 race), so make e2e likely fails on develop at its register step.
 - 2026-10-22 01:07Z · dev · merge of develop e5e7010, conflicts resolved keeping both sides; see comment
+- 2026-10-22 01:17Z · qa · QA_PASS re-verification on PR #99 head e5e7010 (merge of origin/develop: T-107, T-111, T-112). Env: own compose project qa110b (ports 13306/16379/19000/19001, down without -v), API built from the head, SMEM_ENV=dev, :18180.
+  1) Conflict resolution internal/media/handler.go: git diff origin/develop on that file shows only T-110 changes (maxUploadsPerClient, perClient/clientCap, generic take/release, verified-email check, client cap after user cap); T-107 code untouched (takeDownload/tryDownload/paced/DownloadsInProgress, downloadGrace, 64 cap, dlPace, content/publicContent use release). takeUser/releaseUser: no remaining reference anywhere (grep), generic take(&userMu, perUser, ...) has same semantics (never waits, deletes at <=0). Nothing lost.
+  2) Both behaviours hold: go test -race -tags integration -run (Download|Public|Client|Verified|PerUser|Drain|Fair) media+notes: TestOwnerDownloadsAreCappedPerUser, TestPublicDownloadsAreCappedPerClient, TestDownloadAtTheCapWaitsForAFreedSlot, TestSlowDownloadReaderIsDropped (T-107) and TestUnverifiedAccountCannotUpload, TestPerClientUploadShare, TestPerUserUploadCap, TestCreateNeedsVerifiedEmailAndHasPerClientCap, TestRejectedBodiesDrainAtMostPerClient, TestRateLimitedDrainStaysPaced (T-110) all PASS. Live: unverified account C -> POST media/create 403 ERROR_EMAIL_NOT_VERIFIED; /metrics has smem_media_download_inflight, smem_media_uploads_in_progress, smem_public_drains_in_progress (all 0 idle).
+  3) Mechanical: go build ./..., go vet ./..., go test -count=1 ./... all ok; go test -race -count=1 -tags integration ./... all 27 packages ok (own stack default DSN, media 125 s, notes 205 s, auth 247 s). Newman (postman CLI, each twice back to back, rate limits reset between): media 91 req/172 assertions 0 failed x2 (Setup folder register with accept_terms_version -> 200); public-media 42/92 0 failed x2. make image-smoke: 'image smoke test passed' (incl. register/login/yearbook, photo upload on read-only root).
+  4) e2e (scripts/e2e.sh on own stack, ports 18280/14273, db smem_test_e2e): 2 failed + 3 did not run, both the known T-117 ones: h2-gallery.spec.mjs register 400 (no accept_terms_version, line 32) and journey.spec.mjs step 9 'readFileSync is not defined'. Journey steps 1-8 (sign up, verify, build book, upload photos as a verified owner, notes) pass, so nothing from T-110 breaks e2e. Not a T-110 failure.
+  CI on the head: image, security, web pass; e2e red (same two known causes), go/go-integration were pending when I looked. No test files changed by me. Risk high: owner already approved merge (00:58Z); leader merges once CI is green except e2e (T-117).
+- 2026-10-22 01:18Z · leader · Merged PR #99 as de012f8 (owner approved 00:58Z; QA_PASS on e5e7010). The e2e check is red only for the known T-117 causes.
 
 ### T-111 — [E13] Versioned acceptance of the Terms and Privacy Policy (API)
 - **Status:** MERGED
@@ -4978,7 +4985,7 @@ Spec: .team/epics/E12-security-hardening/11-upload-abuse-followup.md (read it fr
 - **Branch:** task/t-111-e13-versioned-acceptance-of-the-terms-an
 - **PR:** https://github.com/danyaa666/smemories/pull/96
 - **Updated:** 2026-10-22 00:59Z by leader
-- **Comments-seen:** 5
+- **Comments-seen:** 7
 
 Spec: .team/epics/E13-legal/01-terms-acceptance-api.md (read it from the repo root). Decision D-35. Register requires the current version, a gate on signed-in endpoints until accepted, accept-terms endpoint, version stored on notes. Risk high: owner approves the merge.
 
@@ -5109,7 +5116,7 @@ QA of T-107 (2026-10-22): with 400 ms storage latency per object, a 100-thumbnai
 #### Comments
 
 ### T-117 — [E13] Fix develop e2e after the Terms merges (journey readFileSync import, h2-gallery register terms version)
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P1
 - **Type:** bug
 - **Milestone:** M2
@@ -5117,10 +5124,10 @@ QA of T-107 (2026-10-22): with 400 ms storage latency per object, a 100-thumbnai
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-117-e13-fix-develop-e2e-after-the-terms-merg
 - **PR:** —
-- **Updated:** 2026-10-22 01:08Z by leader
+- **Updated:** 2026-10-22 01:09Z by dev
 - **Comments-seen:** 0
 
 Spec: .team/epics/E13-legal/03-e2e-terms-fixups.md (read it from the main checkout). develop CI e2e is red since 78ccfa0 (#97 merge).

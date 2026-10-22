@@ -96,7 +96,10 @@ export function Photos({
         setUploads((u) => u.filter((x) => x.key !== key));
       } catch (err) {
         patch(key, { error: err, busy: false });
-        if (err instanceof ApiError && (err.status === 429 || err.code === "quota_exceeded")) {
+        if (
+          err instanceof ApiError &&
+          (err.status === 429 || err.code === "quota_exceeded" || err.code === "email_not_verified")
+        ) {
           blocked = err;
         }
       }

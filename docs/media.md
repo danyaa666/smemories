@@ -10,17 +10,19 @@
 | `POST /api/media/delete` | JSON `{id}`; idempotent. |
 | `GET /api/public-media/get-content?token=` | **Public** (no session, no cookie, no CORS), **binary** display variant only, behind a signed link token; see "Public photo links" below. |
 
-Errors are the v2 envelope (`ERROR_INVALID_IMAGE` 400, `ERROR_UNSUPPORTED_MEDIA_TYPE` 415, `ERROR_QUOTA_EXCEEDED` 409, `ERROR_TOO_LARGE` 413, `ERROR_RATE_LIMITED` 429, `ERROR_BUSY` 503, `ERROR_STORAGE_ERROR` 502, `ERROR_NOT_FOUND` 404, `ERROR_PARAM` 400).
+Errors are the v2 envelope (`ERROR_INVALID_IMAGE` 400, `ERROR_UNSUPPORTED_MEDIA_TYPE` 415, `ERROR_QUOTA_EXCEEDED` 409, `ERROR_TOO_LARGE` 413, `ERROR_EMAIL_NOT_VERIFIED` 403 (create), `ERROR_RATE_LIMITED` 429, `ERROR_BUSY` 503, `ERROR_STORAGE_ERROR` 502, `ERROR_NOT_FOUND` 404, `ERROR_PARAM` 400).
 
 - **Deadlines.** The server's own timeouts (15 s read, 30 s write, `httpx.NewServer`) are too short for a phone upload or a large download, so `create` and `get-content`
   carry a per-route timeout (`httpx.WithTimeout`: 2.5 min for create = 2 min to receive the body + 30 s to process, 2 min for get-content) and, in the same wrapper (`slowRoute`),
   move the connection's write deadline to the route timeout plus 10 s (and the read deadline of create to 2 min). A route timeout longer than `WriteTimeout` without that
   would be cut off by the server; `TestSlowRouteSurvivesServerWriteTimeout` proves it against a real server.
-- **Upload fairness (T-102).** `create` takes slots in this order, each refused before any body byte is read: (1) the **per-user cap**, at most 2 uploads in progress per internal user id
-  (`maxUploadsPerUser`), the third is `429 ERROR_RATE_LIMITED` with `Retry-After: 5`; (2) the **shared pool** of 4 x `SMEM_MEDIA_MAX_CONCURRENT` slots (8 by default; it bounds the memory of request
+- **Upload fairness (T-102, T-110).** `create` needs a **verified email** (`403 ERROR_EMAIL_NOT_VERIFIED`, the rule of the moderation endpoints, `docs/moderation.md`): registration is open, so without it
+  throwaway accounts could hold the pool. That check, and the three caps below in this order, are decided before any body byte is read: (1) the **per-user cap**, at most 2 uploads in progress per internal user id
+  (`maxUploadsPerUser`); (2) the **per-client cap**, at most 4 uploads in progress per client key (`maxUploadsPerClient`, `httpx.ClientIP`: the address, the /64 for IPv6), so several accounts behind one address
+  cannot fill the pool; both refusals are `429 ERROR_RATE_LIMITED` with `Retry-After: 5`; (3) the **shared pool** of 4 x `SMEM_MEDIA_MAX_CONCURRENT` slots (8 by default; it bounds the memory of request
   buffers, so it is taken before the body is read), a full pool is `503 ERROR_BUSY`. Then the body is read under `httpx.PhoneUploadPace`, the same pace as the public route: no byte for 10 s, or under 16 KiB/s
-  on average after a 15 s grace, or more than 2 min in total ends the upload with `408` and gives both slots back (a 10 MiB photo over 2 Mbit/s takes about 40 s and passes). The per-user count is an
-  in-process map released by `defer` on every path; with N API tasks one user can hold 2 x N uploads, which is still bounded by each task's own pool. `smem_media_uploads_in_progress` shows the pool.
+  on average after a 15 s grace, or more than 2 min in total ends the upload with `408` and gives every slot back (a 10 MiB photo over 2 Mbit/s takes about 40 s and passes). The per-user and per-client counts are
+  in-process maps released by `defer` on every path; with N API tasks one user can hold 2 x N uploads and one address 4 x N, which is still bounded by each task's own pool. `smem_media_uploads_in_progress` shows the pool.
 - **Photo downloads (T-107).** Both download routes **stream** the object from the store (`storage.Storage.Open`: a `HEAD` for the size, then a ranged `GET bytes=<position>-` on the first read), so a download holds
   one 32 KiB copy buffer, not the photo: 64 slow readers of an 8 MiB photo grow the heap by about 7 MiB, where whole-object buffering held 512 MiB (`TestSlowReadersDoNotHoldTheObjectInMemory` logs heap and RSS). `Content-Length`,
   `ETag`, `Range` (open, suffix and middle ranges: the store GET starts at the range start and is closed when the range is sent, so nothing before it is read; the connection of an early close is not reused), `If-None-Match`, `If-Range` and `HEAD` behave as before (`http.ServeContent` over a seekable stream; `HEAD` and 304 never fetch a body). Because the stream
@@ -87,7 +89,7 @@ A refused submission (`503 ERROR_BUSY`, 2 to 6 s random `Retry-After`) is answer
 the per-IP request limits, so a class that retries cannot lock itself out. A body must keep moving: no byte for 10 s, or less than 16 KiB/s on
 average after a 15 s grace period, or more than 120 s in total is dropped with `408`. The link is resolved first, from the query parameter `token`
 (T-034 order, kept by T-068): an unknown, malformed or revoked token is a `404` sent at once, without reading or spooling the body. The other rejections (full link, closed link,
-rate limit, bad text) are sent only after the rest of the body has been read (same limits), so a browser shows the answer instead of a connection reset. A request refused before its photos are processed (rate limit, closed or full link) gives its upload slot back **before** it drains the rest of the body (T-102): while draining it holds only a socket, never one of the `SMEM_PUBLIC_UPLOAD_MAX_CONNS` slots.
+rate limit, bad text) are sent only after the rest of the body has been read (same limits), so a browser shows the answer instead of a connection reset. A request refused before its photos are processed (rate limit, closed or full link) gives its upload slot back **before** it drains the rest of the body (T-102): while draining it holds only a socket, never one of the `SMEM_PUBLIC_UPLOAD_MAX_CONNS` slots. Those drains are bounded too (T-110): at most 16 rejected bodies per client key are drained at once (`drainsPerClient`, counted in `smem_public_drains_in_progress`); beyond that the server sends the error with `Connection: close` and does not read the rest, so a browser behind such an address may see a connection reset instead of the answer.
 
 **Disk sizing.** Worst case is `SMEM_PUBLIC_UPLOAD_MAX_CONNS` x 32 MiB = 1.5 GiB of temporary files (48 x 32 MiB), in practice far less. In production
 (T-022) the ephemeral storage of the task, or the volume behind `SMEM_UPLOAD_TMP_DIR`, must exceed that plus headroom. A process that is killed (or whose drain
