@@ -13,15 +13,14 @@
 | BACKLOG | 13 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-095, T-096, T-097, T-116 |
 | TODO | 3 | T-113, T-114, T-115 |
 | READY_FOR_QA | 2 | T-106, T-119 |
-| MERGED | 1 | T-109 |
-| DONE | 92 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-092, T-093, T-094, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-107, T-108, T-110, T-111, T-112, T-117, T-118 |
+| DONE | 93 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-092, T-093, T-094, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-107, T-108, T-109, T-110, T-111, T-112, T-117, T-118 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-109 ([E02] Flaky TestConcurrentResetHasOneWinner under CPU load)
+**Awaiting your review (MERGED):** nothing
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?); Q-051 (Approve merge of T-100 (canonical public ids, PR #93)?); Q-052 (Approve merge of T-111 (Terms acceptance API, PR #96; merges together with T-112)?); Q-053 (Approve merge of T-110 (upload abuse follow-up, PR #99)?); Q-054 (Approve merge of T-107 (bounded photo download memory, PR #98)?)
 
-_Board last written 2026-10-22 05:54Z_
+_Board last written 2026-10-22 06:39Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4961,7 +4960,7 @@ Spec: .team/epics/E06-go-live/11-concurrent-migrate-race.md. CI image job flake 
 - 2026-10-21 08:13Z · human · accepted by owner
 
 ### T-109 — [E02] Flaky TestConcurrentResetHasOneWinner under CPU load
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P3
 - **Type:** bug
 - **Milestone:** M2
@@ -4972,7 +4971,7 @@ Spec: .team/epics/E06-go-live/11-concurrent-migrate-race.md. CI image job flake 
 - **Assignee:** —
 - **Branch:** task/t-109-e02-flaky-testconcurrentresethasonewinne
 - **PR:** https://github.com/danyaa666/smemories/pull/104
-- **Updated:** 2026-10-22 05:54Z by leader
+- **Updated:** 2026-10-22 06:39Z by human
 - **Comments-seen:** 3
 
 QA of T-103 (2026-10-21): go-integration was red once on internal/auth TestConcurrentResetHasOneWinner; the same failure reproduces on develop b3878c2 under CPU load, so it is the test, not T-103. Find why (likely the hash-slot wait in the test env is shorter than the hashing under load), make the test deterministic (larger hashWait or a held slot released on cue, no sleeps), and show it green with go test -race -count=50 while the machine is loaded (e.g. a parallel go test ./... in the background). No production code change unless the test proves a real bug.
@@ -4986,6 +4985,7 @@ QA of T-103 (2026-10-21): go-integration was red once on internal/auth TestConcu
   4. Full internal/auth integration suite, go test -race -count=1 -timeout 30m -tags integration ./internal/auth/...: ok 117s. go vet and go vet -tags integration ./... ok, gofmt clean. CI on eb03f5d: e2e, go, go-integration, image, security, web all pass; PR mergeable.
   Non-blocking: other helpers that read newest mail after a background send (e.g. resend paths) rely on code() calling svc.Wait(), which it does; no other hazard found. All my load loops stopped (pgrep clean).
 - 2026-10-22 05:54Z · leader · Merged PR #104 as 11c594f (QA_PASS on eb03f5d, risk low, test-only).
+- 2026-10-22 06:39Z · human · accepted by owner
 
 ### T-110 — [E12] Owner uploads need a verified email and a per-client share; bound drains of rejected public bodies
 - **Status:** DONE
