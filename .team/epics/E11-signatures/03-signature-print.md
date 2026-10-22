@@ -30,3 +30,5 @@ QA probes: Vietnamese long names next to the signature, 2000-character note with
 From QA on T-095, to settle when this task switches signatures on:
 - Keep one Postman step for a template with signatures off, which must refuse a signature field.
 - Make the oversize-signature error code the same whatever the template state, or document why it differs.
+
+From QA on T-096 (cosmetic, fix while here): the pad quantises against the border-box rect (ink up to about 1.4 px off the pointer); the error alert sits flush against the Photos heading; the inbox signature is tight above the Approve and Hide buttons. Also carry the e2e step for the pad.

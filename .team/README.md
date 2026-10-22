@@ -13,15 +13,15 @@
 | BACKLOG | 8 | T-023, T-024, T-025, T-026, T-027, T-031, T-050, T-097 |
 | TODO | 2 | T-029, T-120 |
 | IN_PROGRESS | 1 | T-116 |
-| IN_QA | 1 | T-096 |
+| MERGED | 1 | T-096 |
 | DONE | 100 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-117, T-118, T-119 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** nothing
+**Awaiting your review (MERGED):** T-096 ([E11] Web: signature pad on the public form and the signature in the inbox)
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?); Q-051 (Approve merge of T-100 (canonical public ids, PR #93)?); Q-052 (Approve merge of T-111 (Terms acceptance API, PR #96; merges together with T-112)?); Q-053 (Approve merge of T-110 (upload abuse follow-up, PR #99)?); Q-054 (Approve merge of T-107 (bounded photo download memory, PR #98)?)
 
-_Board last written 2026-10-22 19:08Z_
+_Board last written 2026-10-22 19:15Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4532,7 +4532,7 @@ Spec: .team/epics/E11-signatures/01-signature-api.md. Next phase (after go-live,
 - 2026-10-22 17:43Z · human · accepted by owner
 
 ### T-096 — [E11] Web: signature pad on the public form and the signature in the inbox
-- **Status:** IN_QA
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1b
@@ -4540,11 +4540,11 @@ Spec: .team/epics/E11-signatures/01-signature-api.md. Next phase (after go-live,
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** —
 - **Branch:** task/t-096-e11-web-signature-pad-on-the-public-form
 - **PR:** https://github.com/danyaa666/smemories/pull/112
-- **Updated:** 2026-10-22 19:02Z by qa
-- **Comments-seen:** 3
+- **Updated:** 2026-10-22 19:15Z by leader
+- **Comments-seen:** 5
 
 Spec: .team/epics/E11-signatures/02-signature-pad-web.md. Next phase.
 
@@ -4552,6 +4552,16 @@ Spec: .team/epics/E11-signatures/02-signature-pad-web.md. Next phase.
 - 2026-10-22 14:43Z · leader · Leader: promoted; starts once T-095 merges. The spec was amended: thin to the 3072-byte cap.
 - 2026-10-22 19:01Z · dev · PR #112 head b5d5cb2, CI all green. Pad + inbox SVG + shared fixture (internal/signature/testdata/canonical.json, did not exist after T-095, created here; Go and web tests read it). E2E step not added: built-in templates keep signature off until T-097. Browser check done at 375 touch / 1280 mouse (Playwright, mocked API); QA: real finger on iOS/Android, stylus, rotate mid-stroke. Strings mine, vi to review: note.signature.hint/invalid/yours.
 - 2026-10-22 19:01Z · leader · Leader: the three new strings (hint, invalid, yours) are approved in en and vi. Server-only refusal of a tiny signature is accepted for now (fast fail, the pad stays). The e2e step moves to T-097.
+- 2026-10-22 19:15Z · qa · QA_PASS, PR #112 head b5d5cb2, CI all 6 jobs green.
+  Evidence (all mine; scratch copy of the PR with memory-book signature:true, built API+web, real Chromium via Playwright, local DB smem_test_e2e, nothing committed):
+  AC1 canonical/fixture: web vitest 452/452, go test ./internal/signature/... ok (TestSharedFixture reads internal/signature/testdata/canonical.json, same file as web/src/signature.test.ts). Pad JSON captured from real browser submits (mouse 360 B, dense 2798 B, touch 119 B, post-refusal 238 B) all pass Go Parse and re-serialise byte for byte; the real API returned 200 for each. Re-thin: 5 strokes x 700 raw points: eps 1.5/2/2.5 give 5356/4350/3591 B (over), eps 3.0 gives 2798 B = exactly what the browser sent. Noise stroke (700 random pts) stays 5322 B at eps 4.0: pad shows the 'too detailed' alert only then, drops that stroke, earlier stroke kept and sent.
+  AC2 components: tests present and pass; I also ran in browser: empty pad sends no signature part; Undo/Clear + aria-live 'Signature added/cleared' (en+vi); 400 ERROR_INVALID_SIGNATURE (mocked and real: a speck refused by the server) shows localised message, pad kept, Clear then resend works; receipt svg 'Your signature'/'Chu ky cua ban'.
+  Security: inbox SVG d matches ^[ML0-9 ]+$; tampered get-list answers (string numbers, floats, 1e21, 99999999999999999999, extra key, injection string with onload=, <script> text, null, negative, wrong w, string/array/nested/1400-coordinate stroke) render 0 svg, no unsafe HTML, 0 dialogs; control (valid) renders. No dangerouslySetInnerHTML added, no package.json/lock change, no data: img.
+  AC3 browser: 375 px, DPR 3, hasTouch+isMobile, CDP touch events: vertical swipes inside the canvas, scrollY unchanged (1132 -> 1132); swipe outside canvas scrolls (0 -> 256); canvas 343x137 css, backing store width = rect*3; rotate mid-stroke (portrait-landscape-portrait) gives a valid 3-stroke signature; 1280 mouse OK; no horizontal overflow on form, sent screen and inbox at 375/1280. Keyboard: 25 Tab presses never land on the canvas, Undo/Clear reachable and Enter works; group labelled 'Sign here (optional)' / 'Ky ten tai day (khong bat buoc)'; canvas aria-hidden; inbox svg role=img name 'Signature of X' / 'Chu ky cua X', height <= 56. Forced-colors + reduced-motion render fine. Screenshots in my scratchpad (not on board).
+  AC4: web lint, typecheck, lint:i18n, check:api green; make e2e green locally (5/5, with COMPOSE_PROJECT_NAME=awesomeproject1 from the worktree + copied .env, removed afterwards); CI green.
+  Non-blocking: (1) quantise uses the border-box rect but the canvas content box is 1.5 px smaller each side, so ink lands up to about 1.4 px off the pointer (0.4% at 375 px); harmless, could use clientLeft/clientWidth. (2) The 'too detailed'/'invalid' alert sits flush against the Photos heading, and the inbox signature sits tight above the Approve/Hide buttons (spacing only). (3) PR body mentions screenshots but none were checked in the repo; fine by me.
+  Owner, still needs a real device: iOS Safari and Android Chrome with a finger (scroll-vs-draw, 300 ms/edge-swipe behaviour, long-press callout), a stylus/palm rejection, rotating a real phone mid-stroke, pinch-zoom while signing. Also T-097 must carry the e2e step (template switch is off).
+- 2026-10-22 19:15Z · leader · Merged PR #112 as f0c074e (QA_PASS on b5d5cb2). Cosmetic leftovers (1.4 px ink offset from the border-box rect, alert and inbox spacing) go with T-097's visual pass. Owner device check is pending.
 
 ### T-097 — [E11] Print: signatures in memory-book and navy-classic
 - **Status:** BACKLOG
