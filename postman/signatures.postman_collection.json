@@ -2,7 +2,7 @@
   "info": {
     "name": "SMemories - signatures (E11)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Handwritten signatures on notes (T-095, epic E11, decision L-14): the optional `signature` part of `POST /api/public-collect/submit-note` (vector strokes, strict validation, re-serialised by the server), `data.signature` of `GET /api/public-collect/get`, and the `signature` of `GET /api/note/get-list` and `GET /api/book-data/get`. Run against an API started with SMEM_ENV=dev.\n\nAccounts: the verified account A of postman/notes.postman_collection.json (`newman-notes-a@example.com`): run that collection's Setup once and `make verify-newman-users`. Run from the postman/ directory (`newman run signatures.postman_collection.json --working-dir .`) in order: Edge cases reuse the link and yearbook of the Full flow and end by deleting the yearbook. Each run creates its own yearbook, so it can run twice back to back.\n\nThe signature switch is per template (`\"signature\": true` in the manifest). While no built-in template declares it (until T-096/T-097), `data.signature.enabled` is false: the collection then expects `ERROR_PARAM` for every signed submission and checks the nulls; as soon as a template enables it, the same run checks the round trip, canonical form, moderation and the validation table (`ERROR_INVALID_SIGNATURE`). The collection reads `enabled` from the lookup of its own link, so it passes in both states. The flow gives its yearbook the template in the variable `signatureTemplate` (default `memory-book`, which T-097 switches on)."
+    "description": "Handwritten signatures on notes (T-095, epic E11, decision L-14): the optional `signature` part of `POST /api/public-collect/submit-note` (vector strokes, strict validation, re-serialised by the server), `data.signature` of `GET /api/public-collect/get`, and the `signature` of `GET /api/note/get-list` and `GET /api/book-data/get`. Run against an API started with SMEM_ENV=dev.\n\nAccounts: the verified account A of postman/notes.postman_collection.json (`newman-notes-a@example.com`): run that collection's Setup once and `make verify-newman-users`. Run from the postman/ directory (`newman run signatures.postman_collection.json --working-dir .`) in order: Edge cases reuse the link and yearbook of the Full flow and end by deleting the yearbook. Each run creates its own yearbook, so it can run twice back to back.\n\nThe signature switch is per template (`\"signature\": true` in the manifest): `memory-book` and `navy-classic` declare it (T-097), `classic` and `modern` do not. The flow gives its yearbook the template in the variable `signatureTemplate` (default `memory-book`) and checks the round trip, canonical form, moderation and the validation table (`ERROR_INVALID_SIGNATURE`). At the end of Edge cases the book is switched to `classic`: the lookup says `enabled: false`, a valid signature is `ERROR_PARAM` and nothing is stored. An oversize (over 4 KiB) signature is `ERROR_INVALID_SIGNATURE` whatever the template: it is refused while the body is read, before the book (and so its template) is looked up."
   },
   "variable": [
     {
@@ -36,10 +36,6 @@
     {
       "key": "linkToken",
       "value": ""
-    },
-    {
-      "key": "sigEnabled",
-      "value": "false"
     },
     {
       "key": "signedId",
@@ -206,7 +202,7 @@
           ]
         },
         {
-          "name": "2b. A picks the template named by the variable signatureTemplate (memory-book; it declares the switch once T-097 lands) - 200",
+          "name": "2b. A picks the template named by the variable signatureTemplate (memory-book, which declares the signature switch) - 200",
           "request": {
             "method": "POST",
             "header": [
@@ -335,16 +331,15 @@
                 "exec": [
                   "pm.test('status 200', () => pm.response.to.have.status(200));",
                   "const s = pm.response.json().data.signature;",
-                  "pm.test('signature info', () => { pm.expect(Object.keys(s).sort()).to.eql(['enabled','h','max_points','max_strokes','w']); pm.expect(s.enabled).to.be.a('boolean'); pm.expect([s.w, s.h, s.max_strokes, s.max_points]).to.eql([1000, 400, 12, 600]); });",
-                  "// Until a built-in template declares \"signature\": true (T-096 / T-097) the switch is false and the signed steps below expect the refusal.",
-                  "pm.collectionVariables.set('sigEnabled', String(s.enabled));"
+                  "pm.test('signature info', () => { pm.expect(Object.keys(s).sort()).to.eql(['enabled','h','max_points','max_strokes','w']); pm.expect([s.w, s.h, s.max_strokes, s.max_points]).to.eql([1000, 400, 12, 600]); });",
+                  "pm.test('memory-book offers the pad', () => pm.expect(s.enabled).to.eql(true));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "5. Friend signs (odd spacing and key order) - 200 when the template enables signatures, else 400 ERROR_PARAM",
+          "name": "5. Friend signs (odd spacing and key order) - 200",
           "request": {
             "method": "POST",
             "header": [
@@ -392,8 +387,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "const on = pm.collectionVariables.get('sigEnabled') === 'true';",
-                  "pm.test(on ? 'stored' : 'refused: the template has no signature switch', () => { if (on) { pm.response.to.have.status(200); pm.collectionVariables.set('signedId', pm.response.json().data.id); } else { pm.response.to.have.status(400); pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'); pm.collectionVariables.set('signedId', ''); } });"
+                  "pm.test('stored', () => { pm.response.to.have.status(200); pm.collectionVariables.set('signedId', pm.response.json().data.id); });"
                 ]
               }
             }
@@ -823,7 +817,7 @@
           ]
         },
         {
-          "name": "Submit: an empty signature part - 400 ERROR_INVALID_SIGNATURE (ERROR_PARAM while the template does not enable signatures)",
+          "name": "Submit: an empty signature part - 400 ERROR_INVALID_SIGNATURE",
           "request": {
             "method": "POST",
             "header": [
@@ -872,15 +866,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "const want = pm.collectionVariables.get('sigEnabled') === 'true' ? 'ERROR_INVALID_SIGNATURE' : 'ERROR_PARAM';",
-                  "pm.test('the rule is named, the content is not echoed', () => { const b = pm.response.json(); pm.expect(b.status).to.eql(want); pm.expect(JSON.stringify(b)).to.not.include('SECRET'); });"
+                  "pm.test('the rule is named, the content is not echoed', () => { const b = pm.response.json(); pm.expect(b.status).to.eql('ERROR_INVALID_SIGNATURE'); pm.expect(JSON.stringify(b)).to.not.include('SECRET'); });"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Submit: a float - 400 ERROR_INVALID_SIGNATURE (ERROR_PARAM while the template does not enable signatures)",
+          "name": "Submit: a float - 400 ERROR_INVALID_SIGNATURE",
           "request": {
             "method": "POST",
             "header": [
@@ -929,15 +922,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "const want = pm.collectionVariables.get('sigEnabled') === 'true' ? 'ERROR_INVALID_SIGNATURE' : 'ERROR_PARAM';",
-                  "pm.test('the rule is named, the content is not echoed', () => { const b = pm.response.json(); pm.expect(b.status).to.eql(want); pm.expect(JSON.stringify(b)).to.not.include('SECRET'); });"
+                  "pm.test('the rule is named, the content is not echoed', () => { const b = pm.response.json(); pm.expect(b.status).to.eql('ERROR_INVALID_SIGNATURE'); pm.expect(JSON.stringify(b)).to.not.include('SECRET'); });"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Submit: an extra key - 400 ERROR_INVALID_SIGNATURE (ERROR_PARAM while the template does not enable signatures)",
+          "name": "Submit: an extra key - 400 ERROR_INVALID_SIGNATURE",
           "request": {
             "method": "POST",
             "header": [
@@ -986,15 +978,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "const want = pm.collectionVariables.get('sigEnabled') === 'true' ? 'ERROR_INVALID_SIGNATURE' : 'ERROR_PARAM';",
-                  "pm.test('the rule is named, the content is not echoed', () => { const b = pm.response.json(); pm.expect(b.status).to.eql(want); pm.expect(JSON.stringify(b)).to.not.include('SECRET'); });"
+                  "pm.test('the rule is named, the content is not echoed', () => { const b = pm.response.json(); pm.expect(b.status).to.eql('ERROR_INVALID_SIGNATURE'); pm.expect(JSON.stringify(b)).to.not.include('SECRET'); });"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Submit: a duplicate key - 400 ERROR_INVALID_SIGNATURE (ERROR_PARAM while the template does not enable signatures)",
+          "name": "Submit: a duplicate key - 400 ERROR_INVALID_SIGNATURE",
           "request": {
             "method": "POST",
             "header": [
@@ -1043,15 +1034,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "const want = pm.collectionVariables.get('sigEnabled') === 'true' ? 'ERROR_INVALID_SIGNATURE' : 'ERROR_PARAM';",
-                  "pm.test('the rule is named, the content is not echoed', () => { const b = pm.response.json(); pm.expect(b.status).to.eql(want); pm.expect(JSON.stringify(b)).to.not.include('SECRET'); });"
+                  "pm.test('the rule is named, the content is not echoed', () => { const b = pm.response.json(); pm.expect(b.status).to.eql('ERROR_INVALID_SIGNATURE'); pm.expect(JSON.stringify(b)).to.not.include('SECRET'); });"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Submit: a wrong size of drawing space - 400 ERROR_INVALID_SIGNATURE (ERROR_PARAM while the template does not enable signatures)",
+          "name": "Submit: a wrong size of drawing space - 400 ERROR_INVALID_SIGNATURE",
           "request": {
             "method": "POST",
             "header": [
@@ -1100,15 +1090,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "const want = pm.collectionVariables.get('sigEnabled') === 'true' ? 'ERROR_INVALID_SIGNATURE' : 'ERROR_PARAM';",
-                  "pm.test('the rule is named, the content is not echoed', () => { const b = pm.response.json(); pm.expect(b.status).to.eql(want); pm.expect(JSON.stringify(b)).to.not.include('SECRET'); });"
+                  "pm.test('the rule is named, the content is not echoed', () => { const b = pm.response.json(); pm.expect(b.status).to.eql('ERROR_INVALID_SIGNATURE'); pm.expect(JSON.stringify(b)).to.not.include('SECRET'); });"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Submit: a negative number - 400 ERROR_INVALID_SIGNATURE (ERROR_PARAM while the template does not enable signatures)",
+          "name": "Submit: a negative number - 400 ERROR_INVALID_SIGNATURE",
           "request": {
             "method": "POST",
             "header": [
@@ -1157,15 +1146,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "const want = pm.collectionVariables.get('sigEnabled') === 'true' ? 'ERROR_INVALID_SIGNATURE' : 'ERROR_PARAM';",
-                  "pm.test('the rule is named, the content is not echoed', () => { const b = pm.response.json(); pm.expect(b.status).to.eql(want); pm.expect(JSON.stringify(b)).to.not.include('SECRET'); });"
+                  "pm.test('the rule is named, the content is not echoed', () => { const b = pm.response.json(); pm.expect(b.status).to.eql('ERROR_INVALID_SIGNATURE'); pm.expect(JSON.stringify(b)).to.not.include('SECRET'); });"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Submit: a coordinate out of range - 400 ERROR_INVALID_SIGNATURE (ERROR_PARAM while the template does not enable signatures)",
+          "name": "Submit: a coordinate out of range - 400 ERROR_INVALID_SIGNATURE",
           "request": {
             "method": "POST",
             "header": [
@@ -1214,15 +1202,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "const want = pm.collectionVariables.get('sigEnabled') === 'true' ? 'ERROR_INVALID_SIGNATURE' : 'ERROR_PARAM';",
-                  "pm.test('the rule is named, the content is not echoed', () => { const b = pm.response.json(); pm.expect(b.status).to.eql(want); pm.expect(JSON.stringify(b)).to.not.include('SECRET'); });"
+                  "pm.test('the rule is named, the content is not echoed', () => { const b = pm.response.json(); pm.expect(b.status).to.eql('ERROR_INVALID_SIGNATURE'); pm.expect(JSON.stringify(b)).to.not.include('SECRET'); });"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Submit: a stroke of one point - 400 ERROR_INVALID_SIGNATURE (ERROR_PARAM while the template does not enable signatures)",
+          "name": "Submit: a stroke of one point - 400 ERROR_INVALID_SIGNATURE",
           "request": {
             "method": "POST",
             "header": [
@@ -1271,15 +1258,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "const want = pm.collectionVariables.get('sigEnabled') === 'true' ? 'ERROR_INVALID_SIGNATURE' : 'ERROR_PARAM';",
-                  "pm.test('the rule is named, the content is not echoed', () => { const b = pm.response.json(); pm.expect(b.status).to.eql(want); pm.expect(JSON.stringify(b)).to.not.include('SECRET'); });"
+                  "pm.test('the rule is named, the content is not echoed', () => { const b = pm.response.json(); pm.expect(b.status).to.eql('ERROR_INVALID_SIGNATURE'); pm.expect(JSON.stringify(b)).to.not.include('SECRET'); });"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Submit: an odd number of coordinates - 400 ERROR_INVALID_SIGNATURE (ERROR_PARAM while the template does not enable signatures)",
+          "name": "Submit: an odd number of coordinates - 400 ERROR_INVALID_SIGNATURE",
           "request": {
             "method": "POST",
             "header": [
@@ -1328,15 +1314,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "const want = pm.collectionVariables.get('sigEnabled') === 'true' ? 'ERROR_INVALID_SIGNATURE' : 'ERROR_PARAM';",
-                  "pm.test('the rule is named, the content is not echoed', () => { const b = pm.response.json(); pm.expect(b.status).to.eql(want); pm.expect(JSON.stringify(b)).to.not.include('SECRET'); });"
+                  "pm.test('the rule is named, the content is not echoed', () => { const b = pm.response.json(); pm.expect(b.status).to.eql('ERROR_INVALID_SIGNATURE'); pm.expect(JSON.stringify(b)).to.not.include('SECRET'); });"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Submit: no strokes - 400 ERROR_INVALID_SIGNATURE (ERROR_PARAM while the template does not enable signatures)",
+          "name": "Submit: no strokes - 400 ERROR_INVALID_SIGNATURE",
           "request": {
             "method": "POST",
             "header": [
@@ -1385,15 +1370,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "const want = pm.collectionVariables.get('sigEnabled') === 'true' ? 'ERROR_INVALID_SIGNATURE' : 'ERROR_PARAM';",
-                  "pm.test('the rule is named, the content is not echoed', () => { const b = pm.response.json(); pm.expect(b.status).to.eql(want); pm.expect(JSON.stringify(b)).to.not.include('SECRET'); });"
+                  "pm.test('the rule is named, the content is not echoed', () => { const b = pm.response.json(); pm.expect(b.status).to.eql('ERROR_INVALID_SIGNATURE'); pm.expect(JSON.stringify(b)).to.not.include('SECRET'); });"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Submit: 13 strokes - 400 ERROR_INVALID_SIGNATURE (ERROR_PARAM while the template does not enable signatures)",
+          "name": "Submit: 13 strokes - 400 ERROR_INVALID_SIGNATURE",
           "request": {
             "method": "POST",
             "header": [
@@ -1442,15 +1426,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "const want = pm.collectionVariables.get('sigEnabled') === 'true' ? 'ERROR_INVALID_SIGNATURE' : 'ERROR_PARAM';",
-                  "pm.test('the rule is named, the content is not echoed', () => { const b = pm.response.json(); pm.expect(b.status).to.eql(want); pm.expect(JSON.stringify(b)).to.not.include('SECRET'); });"
+                  "pm.test('the rule is named, the content is not echoed', () => { const b = pm.response.json(); pm.expect(b.status).to.eql('ERROR_INVALID_SIGNATURE'); pm.expect(JSON.stringify(b)).to.not.include('SECRET'); });"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Submit: a speck - 400 ERROR_INVALID_SIGNATURE (ERROR_PARAM while the template does not enable signatures)",
+          "name": "Submit: a speck - 400 ERROR_INVALID_SIGNATURE",
           "request": {
             "method": "POST",
             "header": [
@@ -1499,15 +1482,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "const want = pm.collectionVariables.get('sigEnabled') === 'true' ? 'ERROR_INVALID_SIGNATURE' : 'ERROR_PARAM';",
-                  "pm.test('the rule is named, the content is not echoed', () => { const b = pm.response.json(); pm.expect(b.status).to.eql(want); pm.expect(JSON.stringify(b)).to.not.include('SECRET'); });"
+                  "pm.test('the rule is named, the content is not echoed', () => { const b = pm.response.json(); pm.expect(b.status).to.eql('ERROR_INVALID_SIGNATURE'); pm.expect(JSON.stringify(b)).to.not.include('SECRET'); });"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Submit: markup instead of strokes - 400 ERROR_INVALID_SIGNATURE (ERROR_PARAM while the template does not enable signatures)",
+          "name": "Submit: markup instead of strokes - 400 ERROR_INVALID_SIGNATURE",
           "request": {
             "method": "POST",
             "header": [
@@ -1556,15 +1538,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "const want = pm.collectionVariables.get('sigEnabled') === 'true' ? 'ERROR_INVALID_SIGNATURE' : 'ERROR_PARAM';",
-                  "pm.test('the rule is named, the content is not echoed', () => { const b = pm.response.json(); pm.expect(b.status).to.eql(want); pm.expect(JSON.stringify(b)).to.not.include('SECRET'); });"
+                  "pm.test('the rule is named, the content is not echoed', () => { const b = pm.response.json(); pm.expect(b.status).to.eql('ERROR_INVALID_SIGNATURE'); pm.expect(JSON.stringify(b)).to.not.include('SECRET'); });"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Submit: a string where a number belongs - 400 ERROR_INVALID_SIGNATURE (ERROR_PARAM while the template does not enable signatures)",
+          "name": "Submit: a string where a number belongs - 400 ERROR_INVALID_SIGNATURE",
           "request": {
             "method": "POST",
             "header": [
@@ -1613,8 +1594,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));",
-                  "const want = pm.collectionVariables.get('sigEnabled') === 'true' ? 'ERROR_INVALID_SIGNATURE' : 'ERROR_PARAM';",
-                  "pm.test('the rule is named, the content is not echoed', () => { const b = pm.response.json(); pm.expect(b.status).to.eql(want); pm.expect(JSON.stringify(b)).to.not.include('SECRET'); });"
+                  "pm.test('the rule is named, the content is not echoed', () => { const b = pm.response.json(); pm.expect(b.status).to.eql('ERROR_INVALID_SIGNATURE'); pm.expect(JSON.stringify(b)).to.not.include('SECRET'); });"
                 ]
               }
             }
@@ -1795,7 +1775,252 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('two notes', () => pm.expect(pm.response.json().data.counts.all).to.eql(pm.collectionVariables.get('signedId') ? 2 : 1));"
+                  "pm.test('two notes', () => pm.expect(pm.response.json().data.counts.all).to.eql(2));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Template classic has no signature switch: A switches the book to it - 200",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/yearbook/update",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "yearbook",
+                "update"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{bookId}}\",\"template_id\":\"classic\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Template classic: the lookup says the pad is not offered (enabled false, limits still fixed)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-collect/get?token={{linkToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-collect",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const s = pm.response.json().data.signature;",
+                  "pm.test('the pad is not offered', () => { pm.expect(s.enabled).to.eql(false); pm.expect([s.w, s.h, s.max_strokes, s.max_points]).to.eql([1000, 400, 12, 600]); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Template classic: a valid signature is refused - 400 ERROR_PARAM, nothing is stored",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{linkToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "{\"name\":\"Linh\",\"message\":\"Nhớ các bạn nhiều\"}",
+                  "type": "text"
+                },
+                {
+                  "key": "signature",
+                  "value": " { \"s\" : [[ 120 , 260 ,\n 300, 120 , 480 ,280 ], [500,260,  880 ,240]] , \"h\":400,\"v\":1, \"w\":1000 } ",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('ERROR_PARAM: this book does not take signatures', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Template classic: a signature over 4 KiB is still 400 ERROR_INVALID_SIGNATURE (refused while the body is read, before the book is looked up)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{linkToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "{\"name\":\"Linh\",\"message\":\"Nhớ các bạn nhiều\"}",
+                  "type": "text"
+                },
+                {
+                  "key": "signature",
+                  "value": "{\"v\":1,\"w\":1000,\"h\":400,\"s\":[[120,260,300,120,480,280],[500,260,880,240]]}                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        ",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code ERROR_INVALID_SIGNATURE', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_SIGNATURE'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Template classic: still only the two notes of the flow",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/note/get-list?yearbook_id={{bookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "note",
+                "get-list"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('two notes', () => pm.expect(pm.response.json().data.counts.all).to.eql(2));"
                 ]
               }
             }

@@ -48,6 +48,8 @@ when nothing of the title is left. Only `[a-z0-9-.]`.
 - One query for the notes and one for their photo links (plus the book and its profile, plus one `COUNT` at the cap): no N+1, proven by a query-count test.
 - 30 calls per 10 minutes per user (limiter `book_export`, [redis.md](redis.md), fails open): `ERROR_RATE_LIMITED` with `Retry-After`.
 
+- Signatures are not exported: the plain-text export lists no signature (they are drawings; they appear only in the printed book).
+
 ## Privacy
 
 Every photo is a **permanent public link** made with the T-092 signer: `<SMEM_PUBLIC_BASE_URL>/api/public-media/get-content?token=...`. Anyone holding

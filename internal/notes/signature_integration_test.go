@@ -48,6 +48,10 @@ func TestSignatureNeedsTheTemplateSwitch(t *testing.T) {
 		t.Fatalf("signature info = %v, want %v", info, want)
 	}
 	e.post(l.token, answers("Linh", "hi"), sigPart(canonSig)).status(400, "ERROR_PARAM")
+	// An oversize part is refused while the body is read, before the book (and its template) is looked up, so its code does not
+	// depend on the template: documented in docs/note-fields.md and api/openapi.yaml (T-097).
+	big := canonSig + strings.Repeat(" ", signature.MaxInput)
+	e.post(l.token, answers("Linh", "hi"), sigPart(big)).status(400, "ERROR_INVALID_SIGNATURE")
 	if n := e.count(`SELECT COUNT(*) FROM note_tab`); n != 0 {
 		t.Fatalf("%d notes stored", n)
 	}

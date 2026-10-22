@@ -55,7 +55,7 @@ export function SignaturePad({ limits, disabled, onChange }: Props) {
     if (!c || !ctx) return;
     const r = c.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
-    const w = Math.round(r.width * dpr);
+    const w = Math.round((r.width - 2 * c.clientLeft) * dpr);
     if (w && c.width !== w) {
       c.width = w;
       c.height = Math.round((w * H) / W);
@@ -94,10 +94,16 @@ export function SignaturePad({ limits, disabled, onChange }: Props) {
     onChange(next.length ? fit(next, limits) : null);
   };
 
+  // The drawing space maps to the canvas's content box (inside its border), which is where the ink is painted.
   const at = (e: PointerEvent<HTMLCanvasElement>): [number, number] | null => {
-    const r = e.currentTarget.getBoundingClientRect();
-    return r.width && r.height
-      ? [quantise(e.clientX, r.left, r.width, W), quantise(e.clientY, r.top, r.height, H)]
+    const c = e.currentTarget;
+    const r = c.getBoundingClientRect();
+    const left = r.left + c.clientLeft;
+    const top = r.top + c.clientTop;
+    const width = r.width - 2 * c.clientLeft;
+    const height = r.height - 2 * c.clientTop;
+    return width > 0 && height > 0
+      ? [quantise(e.clientX, left, width, W), quantise(e.clientY, top, height, H)]
       : null;
   };
 

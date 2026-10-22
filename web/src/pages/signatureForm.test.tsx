@@ -171,6 +171,24 @@ describe("signature pad on the public form", () => {
     expect(screen.getByRole("button", { name: "Clear" })).toBeDisabled(); // a fresh pad
   });
 
+  it("maps the drawing space to the canvas's content box, inside its border (T-096 QA)", async () => {
+    load(info);
+    renderApp("/c/abc");
+    await screen.findByLabelText(/Your name/);
+    for (const k of ["clientLeft", "clientTop"]) Object.defineProperty(canvas(), k, { value: 2 }); // a 2 px border: the content box is 496 x 196 at (2, 2)
+    stroke([
+      [2, 2],
+      [250, 100],
+      [498, 2],
+    ]);
+    const u = userEvent.setup({ applyAccept: false });
+    await fill(u);
+    await u.click(sendBtn());
+    expect(FakeXHR.sent[0]!.form!.get("signature")).toBe(
+      '{"v":1,"w":1000,"h":400,"s":[[0,0,500,200,1000,0]]}',
+    );
+  });
+
   it("undoes the last stroke, then clears, and announces it", async () => {
     load(info);
     renderApp("/c/abc");
@@ -292,6 +310,7 @@ describe("signature pad on the public form", () => {
       await screen.findByText("We couldn't use this signature. Clear it and sign again."),
     ).toBeInTheDocument();
     expect(screen.queryByText(/too small/)).toBeNull(); // the server's rule text is not shown
+    expect(screen.getByRole("alert", { name: "" })).toHaveClass("sig-error"); // spaced from the Photos heading below
     expect(screen.getByRole("button", { name: "Clear" })).toBeEnabled();
     await u.click(screen.getByRole("button", { name: "Clear" }));
     expect(screen.queryByText(/couldn't use this signature/)).toBeNull();

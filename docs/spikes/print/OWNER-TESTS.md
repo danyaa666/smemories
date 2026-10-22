@@ -22,6 +22,7 @@ Press "Print or save as PDF" (it is enabled once the fonts and photos are loaded
 - photo sharpness (zoom the PDF to 400 %) and file size
 - seconds from the click to the preview, and whether the tab survives
 - whether the Vietnamese text can be selected and pasted
+- a signed note (E11, T-097; sign a note on the friend page, approve it, use `memory-book` or `navy-classic`): look at the signature on paper (or in the PDF): it is dark ink, sharp, does not touch the message text, and is still there with "Background graphics" off
 
 ## Steps
 

@@ -9,7 +9,7 @@ import path from "node:path";
 import { after, before, describe, test } from "node:test";
 import { chromium } from "playwright";
 import { makeBook, photoId } from "./fixture.mjs";
-import { BASE, fitBoxes, inspect, open, savePdf, serveBook, startServer, text, words } from "./lib.mjs";
+import { BASE, fitBoxes, inkIn, inspect, open, raster, savePdf, serveBook, signatureBoxes, startServer, text, words } from "./lib.mjs";
 
 const PT = { A5: [419.53, 595.28], A4: [595.28, 841.89], Letter: [612, 792] }; // exact sizes in points
 const tmp = mkdtempSync(path.join(os.tmpdir(), "print-check-"));
@@ -348,6 +348,70 @@ for (const template of ["navy-classic", "memory-book", "basic"]) {
         }
       });
     }
+  }
+}
+
+// Signatures in the two designed templates (T-097): a maximal, a tiny, no and a normal signature in turn, and the 2000-character note with a maximal one.
+// In the print layout the signature box never meets a text box, the PDF keeps its page count and size, the message text is still extractable and none of
+// its words lies in the signature box, the page has ink inside the box (also with "background graphics" off), and the box has the size the spec gives.
+const MM = { A5: [148, 210], A4: [210, 297], Letter: [215.9, 279.4] };
+const NOTES_PER_PAGE = { "memory-book": 1, "navy-classic": 4 };
+const SIG_MM = { "memory-book": [40, 16], "navy-classic": [24, 9] }; // at most, on A5; the design px scale with the page width like the other measures
+for (const template of ["memory-book", "navy-classic"]) {
+  for (const size of ["A5", "A4", "Letter"]) {
+    test(`${template} ${size}: signatures do not change the page count, never overlap text and print as ink`, async () => {
+      const notes = 8;
+      const book = makeBook({ size, notes, template, longNote: 4, signatures: true });
+      const page = await browser.newPage();
+      await serveBook(page, book);
+      await open(page);
+      // The two longest messages (1300 and 2000 characters) may stay cut off at the font floor, as they can without a signature (the print screen
+      // lists them); a name or any other line must not be.
+      const cut = await page.locator("[data-fit=overflow]").evaluateAll((es) => es.map((e) => e.className));
+      assert.ok(cut.every((c) => /\b(mb-lines|nc-msg)\b/.test(c)), `only messages may be cut off, got ${cut.join(" | ")}`);
+      const sheets = await signatureBoxes(page);
+      const file = path.join(tmp, `sig-${template}-${size}.pdf`);
+      await savePdf(page, file);
+      const noBg = path.join(tmp, `sig-${template}-${size}-nobg.pdf`);
+      await page.pdf({ path: noBg, preferCSSPageSize: true, printBackground: false });
+      await page.close();
+
+      const info = inspect(file);
+      assert.equal(info.pages, 3 + Math.ceil(notes / NOTES_PER_PAGE[template]), "the signatures add no page");
+      for (const [i, want] of PT[size].entries()) assert.ok(Math.abs(info.sizePt[i] - want) < 1, `${size} page size ${info.sizePt} vs ${PT[size]}`);
+      assert.equal(sheets.length, info.pages);
+      const signed = sheets.flatMap((s, p) => s.sigs.map((sig) => ({ p, sig, texts: s.texts })));
+      assert.equal(signed.length, book.notes.filter((n) => n.signature).length, "one drawn signature per signed note");
+      assert.equal(signed.length, 6, "3 of every 4 fixture notes are signed");
+
+      const pdfWords = words(file);
+      const [wmm, hmm] = MM[size];
+      for (const { p, sig, texts } of signed) {
+        // the size: the template's box (scaled with the page width), never larger than the spec's maximum on A5 scaled to this page
+        const wm = (sig.x1 - sig.x0) * wmm, hm = (sig.y1 - sig.y0) * hmm;
+        assert.ok(Math.abs(wm / hm - 2.5) < 0.05, `the box keeps the 5:2 drawing space, got ${wm.toFixed(1)} x ${hm.toFixed(1)} mm`);
+        const scale = wmm / MM.A5[0];
+        assert.ok(wm <= SIG_MM[template][0] * scale + 0.5 && hm <= SIG_MM[template][1] * scale + 0.5, `page ${p + 1}: ${wm.toFixed(1)} x ${hm.toFixed(1)} mm exceeds the maximum of ${SIG_MM[template].join(" x ")} mm on A5 scaled to ${size}`);
+        assert.ok(sig.x0 >= 0 && sig.y0 >= 0 && sig.x1 <= 1 && sig.y1 <= 1, "inside its page");
+        for (const t of texts) {
+          const apart = t.x1 <= sig.x0 + 0.001 || t.x0 >= sig.x1 - 0.001 || t.y1 <= sig.y0 + 0.001 || t.y0 >= sig.y1 - 0.001;
+          assert.ok(apart, `page ${p + 1}: the text box "${t.text.slice(0, 20)}" overlaps the signature box`);
+        }
+        // the words of the PDF
+        const { w, h, words: ws } = pdfWords[p];
+        for (const x of ws) {
+          const cx = (x.x0 + x.x1) / 2 / w, cy = (x.y0 + x.y1) / 2 / h;
+          assert.ok(!(cx > sig.x0 && cx < sig.x1 && cy > sig.y0 && cy < sig.y1), `page ${p + 1}: the word "${x.t}" lies in the signature box`);
+        }
+        // ink: the page has dark pixels inside the box, with backgrounds and without
+        assert.ok(inkIn(raster(file, p + 1), sig) >= 3, `page ${p + 1}: no ink in the signature box`);
+        assert.ok(inkIn(raster(noBg, p + 1), sig) >= 3, `page ${p + 1}: no ink in the signature box with background graphics off`);
+      }
+      // the maximal signature on the 2000-character note (note 5: the 5th note is signed with the maximal one, the 1st of its cycle)
+      const r = text(file);
+      for (const s of ["Nguyễn Thị Hồng Ánh", "Chúc bạn thi đỗ", "Mình nhớ những buổi"]) assert.ok(r.includes(s), `extracted text contains "${s}"`);
+      assert.ok(r.includes("😄"), "emoji are text");
+    });
   }
 }
 

@@ -301,6 +301,25 @@
   line-height: 16px;
   color: #1b2a4a;
 }
+/* A drawn signature (T-097): at the right end of the name line, at most 24 x 9 mm on A5 (125 x 50 design px; 2.5:1 like the drawing).
+   It fits the 58 px of the note's name block (6 padding + 50), so a signed note is as tall as an unsigned one. Ink only (navy). */
+.nc-signed {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+.nc-signed-name {
+  flex: 1 1 0;
+  min-width: 0;
+  margin-top: 0;
+}
+.nc-sig {
+  display: block;
+  flex: none;
+  width: 125px;
+  height: 50px;
+  color: #1b2a4a;
+}
 .nc-farewell {
   position: absolute;
   left: 80px;

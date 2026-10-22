@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import type { BookData, BookNote } from "../../api/book";
+import { BookSignature, hasSignature } from "../BookSignature";
 import { FitText } from "../fit";
 import { Photo, Sheet, useBookEnv } from "../env";
 import { designHeight } from "../sizes";
@@ -52,6 +53,8 @@ function Icon({
 
 /** A row of boxes keeps a minimum height (its basis in CSS) and shares what is left in proportion to its longest text: a 2000-character message gets the room, a one-line answer stays small. */
 const rowWeight = (chars: number) => 0.25 + chars / 200;
+/** A signed message card keeps room for its signature (88 px + 4 gap, see .mb-sig-foot) on top of the usual 104 px minimum. */
+const MESSAGE_SIGNED_BASIS = 196;
 
 /**
  * The dotted paper is one picture (memory-dots.png), not the canvas's tiled gradient: Chromium prints a tiled gradient as a
@@ -122,6 +125,7 @@ function Ruled({
   iconColor,
   grow = 1,
   side,
+  foot,
   children,
 }: {
   fitKey: string;
@@ -131,6 +135,8 @@ function Ruled({
   iconColor: string;
   grow?: number;
   side?: ReactNode;
+  /** Below the text, inside the card (the friend's signature): the text box shrinks by its height. */
+  foot?: ReactNode;
   children: string;
 }) {
   return (
@@ -145,6 +151,7 @@ function Ruled({
         </FitText>
         {side}
       </div>
+      {foot}
     </div>
   );
 }
@@ -400,6 +407,7 @@ function FriendPage({ note, number, data }: { note: BookNote; number: number; da
     },
   ].filter((r) => r.nodes.some(Boolean));
   const extra = note.photo_ids.slice(1, 3);
+  const signed = hasSignature(note.signature);
   return (
     <Page label="notes" bg="#FFFBF6">
       <div className="mb-flow">
@@ -453,13 +461,30 @@ function FriendPage({ note, number, data }: { note: BookNote; number: number; da
             </div>
           ))}
           {a.message && (
-            <div className="mb-row" style={{ flexGrow: rowWeight(a.message.length) }}>
+            <div
+              className="mb-row"
+              style={{
+                flexGrow: rowWeight(a.message.length),
+                ...(signed && { flexBasis: MESSAGE_SIGNED_BASIS }),
+              }}
+            >
               <Ruled
                 fitKey={key("message")}
                 title={t("bookPages.fields.message")}
                 bg="#E6DEFA"
                 icon="heart"
                 iconColor="#D9668C"
+                foot={
+                  signed && (
+                    <div className="mb-sig-foot">
+                      <BookSignature
+                        value={note.signature}
+                        label={t("note.signature.of", { name: a.name ?? "" })}
+                        className="mb-sig"
+                      />
+                    </div>
+                  )
+                }
                 side={
                   extra.length > 0 && (
                     <div className="mb-side">

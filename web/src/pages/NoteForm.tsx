@@ -391,7 +391,7 @@ function NoteFormBody({
             }}
           />
           {sigFail && (
-            <p role="alert" className="field-error">
+            <p role="alert" className="field-error sig-error">
               {t("note.signature.invalid")}
             </p>
           )}

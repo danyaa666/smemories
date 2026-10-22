@@ -1766,7 +1766,8 @@ paths:
         minimum extent) and **re-serialised by the server; the client's string is never stored**. It is validated right after the text and before
         any photo is processed; a bad one is `ERROR_INVALID_SIGNATURE` whose message names the rule, never the content, and nothing is stored.
         A second `signature` part, or one sent to a book whose template does not enable signatures (`signature.enabled` false in the lookup), is
-        `ERROR_PARAM`. The signature is part of the note: pending until the owner approves it, hidden and deleted with it. Only positions are
+        `ERROR_PARAM`. A `signature` part over 4 KiB is `ERROR_INVALID_SIGNATURE` whatever the template: it is refused while the body is read,
+        before the book (and so its template) is looked up. The signature is part of the note: pending until the owner approves it, hidden and deleted with it. Only positions are
         kept (no timing, pressure, pointer or device data).
       x-auth: public
       x-error-codes:
