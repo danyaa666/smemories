@@ -13,16 +13,15 @@
 | BACKLOG | 7 | T-023, T-024, T-025, T-026, T-027, T-031, T-050 |
 | TODO | 1 | T-029 |
 | IN_PROGRESS | 1 | T-097 |
-| IN_QA | 1 | T-120 |
-| MERGED | 2 | T-096, T-116 |
+| MERGED | 3 | T-096, T-116, T-120 |
 | DONE | 100 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-117, T-118, T-119 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-096 ([E11] Web: signature pad on the public form and the signature in the inbox); T-116 ([E12] Web: limit concurrent photo requests on gallery pages (follow-up to T-107))
+**Awaiting your review (MERGED):** T-096 ([E11] Web: signature pad on the public form and the signature in the inbox); T-116 ([E12] Web: limit concurrent photo requests on gallery pages (follow-up to T-107)); T-120 ([E06] CI: bound and cache the e2e Chromium install (two hangs on 2026-10-22))
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-055 (What should the team build after E11 signatures: go-live (M2) or the class yearbook (M3)?)
 
-_Board last written 2026-10-22 19:51Z_
+_Board last written 2026-10-22 19:55Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -5403,7 +5402,7 @@ Spec: .team/epics/E12-security-hardening/12-openapi-session-ceiling.md (read it 
 - 2026-10-22 08:53Z · human · accepted by owner
 
 ### T-120 — [E06] CI: bound and cache the e2e Chromium install (two hangs on 2026-10-22)
-- **Status:** IN_QA
+- **Status:** MERGED
 - **Priority:** P3
 - **Type:** ci
 - **Milestone:** M2
@@ -5411,17 +5410,30 @@ Spec: .team/epics/E12-security-hardening/12-openapi-session-ceiling.md (read it 
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** —
 - **Branch:** task/t-120-e06-ci-bound-and-cache-the-e2e-chromium-install
 - **PR:** https://github.com/danyaa666/smemories/pull/114
-- **Updated:** 2026-10-22 19:47Z by qa
-- **Comments-seen:** 2
+- **Updated:** 2026-10-22 19:55Z by leader
+- **Comments-seen:** 4
 
 Spec: .team/epics/E06-go-live/13-ci-e2e-chromium-install.md (read it from the main checkout).
 
 #### Comments
 - 2026-10-22 19:21Z · leader · Leader: raised to P2. The third Chromium install hang (PR #113) needed a manual rerun.
 - 2026-10-22 19:37Z · dev · PR #114 head e106a96. ci.yml only: actions/cache keyed on OS + resolved @playwright/test version; hit -> install-deps only; step timeout-minutes 6, 150 s per attempt, one retry. Install step 14 s (miss) -> 8 s (hit); all checks green on head. Verify: e2e log shows 'Cache hit for: playwright-Linux-1.64.0' and 'install-deps chromium'. Real hang recovery cannot be forced in CI.
+- 2026-10-22 19:55Z · qa · QA_PASS on PR #114 head e106a96 (ci.yml only, +20/-4). Evidence:
+  AC1 (miss then hit, durations): run 39839489798 e2e log 'Cache not found for input keys: playwright-Linux-1.64.0', 'playwright install --with-deps chromium: 1 attempt(s), 14 s, cache-hit=false', post step 'Cache saved with key: playwright-Linux-1.64.0'. Run 39840106076 (head e106a96): 'Cache hit for: playwright-Linux-1.64.0' (280 MB), 'playwright install-deps chromium: 1 attempt(s), 8 s, cache-hit=true', 'not saving cache'. Both durations are in the PR body. Note: the miss run was on the previous head b8d6463 and the workflow was cancelled afterwards (go and go-integration), but e2e itself was success.
+  AC2 (green + timeout): gh pr checks 114 on e106a96: e2e, go, go-integration, image, security, web all pass. Step has timeout-minutes: 6 and per-attempt timeout -k 5 150.
+  Diff review: all actions pinned by 40-char SHA, actions/cache SHA 55cc8345 identical to the other use; version from require('@playwright/test/package.json') = 1.64.0, matches lock file and the exact pin in package.json (no latest); key playwright-<os>-<version> changes with Playwright; on miss the browser is installed and the post step saves it (only on job success). Corrupt/partial cache: install-deps does not check the browser, but chromium launch then fails in the tests; retries 0 and the only test.skip depends on E2E_BASE_URL/OTP env, not on the browser, so it fails loudly, never skips.
+  Retry logic proven locally (the exact run block extracted from the PR head, bash -e, GNU timeout from debian:stable-slim container, fake npx on PATH; macOS has no timeout): 
+   - ok: exit 0, 1 attempt.
+   - fail once then ok: warning on attempt 1, exit 0 after attempt 2 (also with CACHE_HIT=true, using install-deps).
+   - hang forever (sleep 1000) on both attempts: exit 1, elapsed 300.019 s (2 x 150 s), two ::warning lines, no leftover sleep process.
+   - hang once then ok: elapsed 150.016 s, exit 0, 'cache-hit=true 2 attempt(s)'.
+   - hang via a child process (sleep in background + wait): exit 1, 300.011 s, no leftover process.
+   Worst case 300 s fits the 360 s step timeout. Containers all exited; nothing left running.
+  Non-blocking: (1) timeout-minutes is 6, not the 'for example 4' in the spec; correct given 2 x 150 s + kills. (2) a hit run only reinstalls OS deps, so a hang in apt (install-deps) is also bounded and retried. (3) Real hang recovery cannot be forced in CI, as dev said; covered by the local proof.
+- 2026-10-22 19:55Z · leader · Merged PR #114 as f4f2bba (QA_PASS on e106a96). Cache hit 8 s vs miss 14 s; a hung attempt is cut at 150 s and retried once (QA proved it in a container).
 
 <!-- tasks:end -->
 
