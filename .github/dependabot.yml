@@ -18,6 +18,23 @@ updates:
     groups:
       web-dependencies:
         patterns: ["*"]
+  # Exact-pinned tool projects (Playwright, print checks) would otherwise never get update pull requests.
+  - package-ecosystem: npm
+    directory: /tools/e2e
+    target-branch: develop
+    schedule:
+      interval: weekly
+    groups:
+      e2e-dependencies:
+        patterns: ["*"]
+  - package-ecosystem: npm
+    directory: /tools/print-check
+    target-branch: develop
+    schedule:
+      interval: weekly
+    groups:
+      print-check-dependencies:
+        patterns: ["*"]
   - package-ecosystem: github-actions
     directory: /
     target-branch: develop

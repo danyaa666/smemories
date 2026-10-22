@@ -225,8 +225,12 @@ func (h *Handler) googleCallback(w http.ResponseWriter, r *http.Request) {
 		reject(code, err)
 		return
 	}
-	u, sess, err := h.svc.SignInGoogle(r.Context(), r.UserAgent(), cookieToken(r), id)
+	u, sess, err := h.svc.SignInGoogle(r.Context(), r.UserAgent(), h.cookieToken(r), id)
 	if err != nil {
+		if apperr.Is(err, apperr.Forbidden) {
+			reject(apperr.Forbidden.Name, err)
+			return
+		}
 		reject(errOIDCFailed, err)
 		return
 	}
@@ -256,7 +260,7 @@ func (g *googleFlow) identity(ctx context.Context, code string, st oidcState) (*
 	if raw == "" {
 		return nil, errOIDCFailed, apperr.New(apperr.Internal, "no id_token")
 	}
-	idt, err := p.Verifier(&oidc.Config{ClientID: g.cfg.ClientID}).Verify(ctx, raw) // signature, iss, aud, exp
+	idt, err := p.Verifier(&oidc.Config{ClientID: g.cfg.ClientID, SupportedSigningAlgs: []string{oidc.RS256}}).Verify(ctx, raw) // signature, iss, aud, exp
 	if err != nil {
 		return nil, errOIDCFailed, err
 	}
@@ -330,12 +334,10 @@ func (s *Service) SignInGoogle(ctx context.Context, userAgent, oldToken string, 
 		return nil, nil, apperr.New(apperr.Internal, "auth: google identity without usable subject or email")
 	}
 	now := s.now().UTC()
+	// Never derive the name from the email address: public-collect/get shows it to anyone holding a link.
 	name, ok := cleanDisplayName(id.Name)
 	if !ok {
-		local, _, _ := strings.Cut(id.Email, "@")
-		if name, ok = cleanDisplayName(local); !ok {
-			name = "Student"
-		}
+		name = "Student"
 	}
 	locale := "en"
 	if strings.HasPrefix(strings.ToLower(id.Locale), "vi") {
