@@ -20,7 +20,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?); Q-051 (Approve merge of T-100 (canonical public ids, PR #93)?); Q-052 (Approve merge of T-111 (Terms acceptance API, PR #96; merges together with T-112)?); Q-053 (Approve merge of T-110 (upload abuse follow-up, PR #99)?); Q-054 (Approve merge of T-107 (bounded photo download memory, PR #98)?)
 
-_Board last written 2026-10-22 06:39Z_
+_Board last written 2026-10-22 08:42Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4649,7 +4649,7 @@ Spec: `.team/epics/E12-security-hardening/03-canonical-public-ids.md`. Audit M3:
 - **Branch:** task/t-101-e12-small-hardening-readyz-cache-generic
 - **PR:** https://github.com/danyaa666/smemories/pull/102
 - **Updated:** 2026-10-22 05:34Z by human
-- **Comments-seen:** 4
+- **Comments-seen:** 5
 
 Spec: `.team/epics/E12-security-hardening/04-readyz-greeting-session-lifetime.md`. Audit L1, L2, L3: cache /readyz for 2 s, drop the unverified display name from the code emails, add a 90-day absolute session lifetime. Risk high: auth and sessions.
 
@@ -4817,7 +4817,7 @@ Spec: .team/epics/E12-security-hardening/08-media-processing-robustness.md (read
 - **Branch:** task/t-105-e12-note-links-capped-and-paged-contribu
 - **PR:** https://github.com/danyaa666/smemories/pull/103
 - **Updated:** 2026-10-22 05:34Z by human
-- **Comments-seen:** 4
+- **Comments-seen:** 5
 
 Spec: .team/epics/E12-security-hardening/09-links-and-contributor-quota.md (read it from the repo root). Source: audit run 1, docs/security-audit-skill-2026-10-20/ (PR #86). Risk high: owner approves the merge.
 
@@ -4972,7 +4972,7 @@ Spec: .team/epics/E06-go-live/11-concurrent-migrate-race.md. CI image job flake 
 - **Branch:** task/t-109-e02-flaky-testconcurrentresethasonewinne
 - **PR:** https://github.com/danyaa666/smemories/pull/104
 - **Updated:** 2026-10-22 06:39Z by human
-- **Comments-seen:** 3
+- **Comments-seen:** 4
 
 QA of T-103 (2026-10-21): go-integration was red once on internal/auth TestConcurrentResetHasOneWinner; the same failure reproduces on develop b3878c2 under CPU load, so it is the test, not T-103. Find why (likely the hash-slot wait in the test env is shorter than the hashing under load), make the test deterministic (larger hashWait or a held slot released on cue, no sleeps), and show it green with go test -race -count=50 while the machine is loaded (e.g. a parallel go test ./... in the background). No production code change unless the test proves a real bug.
 
