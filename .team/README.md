@@ -12,16 +12,16 @@
 |---|---:|---|
 | BACKLOG | 11 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-096, T-097 |
 | TODO | 2 | T-115, T-116 |
-| READY_FOR_QA | 1 | T-114 |
-| QA_FAIL | 1 | T-095 |
+| IN_PROGRESS | 1 | T-095 |
+| MERGED | 1 | T-114 |
 | DONE | 96 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-092, T-093, T-094, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-117, T-118, T-119 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** nothing
+**Awaiting your review (MERGED):** T-114 ([E03] Web: a malformed yearbook id in the URL shows 'book not found')
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?); Q-051 (Approve merge of T-100 (canonical public ids, PR #93)?); Q-052 (Approve merge of T-111 (Terms acceptance API, PR #96; merges together with T-112)?); Q-053 (Approve merge of T-110 (upload abuse follow-up, PR #99)?); Q-054 (Approve merge of T-107 (bounded photo download memory, PR #98)?)
 
-_Board last written 2026-10-22 14:07Z_
+_Board last written 2026-10-22 14:19Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4469,7 +4469,7 @@ Spec: .team/epics/E05-templates-export/16-book-text-export-web.md. Download and 
 - 2026-10-21 13:52Z · human · accepted by owner
 
 ### T-095 — [E11] Signature storage, validation and API
-- **Status:** QA_FAIL
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1b
@@ -4477,10 +4477,10 @@ Spec: .team/epics/E05-templates-export/16-book-text-export-web.md. Download and 
 - **Risk:** high
 - **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** dev
 - **Branch:** task/t-095-e11-signature-storage-validation-and-api
 - **PR:** https://github.com/danyaa666/smemories/pull/108
-- **Updated:** 2026-10-22 14:02Z by qa
+- **Updated:** 2026-10-22 14:07Z by dev
 - **Comments-seen:** 6
 
 Spec: .team/epics/E11-signatures/01-signature-api.md. Next phase (after go-live, D-31). Vector strokes (L-14), template switch, public submit field, inbox and book-data reads. Risk high: public input.
@@ -5169,7 +5169,7 @@ QA of T-104 (2026-10-21): a lossy WebP with an ALPH chunk (compression 1) decode
 - 2026-10-22 09:33Z · human · accepted by owner
 
 ### T-114 — [E03] Web: a malformed yearbook id in the URL shows 'book not found'
-- **Status:** READY_FOR_QA
+- **Status:** MERGED
 - **Priority:** P3
 - **Type:** bug
 - **Milestone:** M2
@@ -5180,13 +5180,21 @@ QA of T-104 (2026-10-21): a lossy WebP with an ALPH chunk (compression 1) decode
 - **Assignee:** —
 - **Branch:** task/t-114-e03-web-a-malformed-yearbook-id-in-the-u
 - **PR:** 109
-- **Updated:** 2026-10-22 14:07Z by dev
-- **Comments-seen:** 1
+- **Updated:** 2026-10-22 14:19Z by leader
+- **Comments-seen:** 3
 
 QA of T-100 (2026-10-21): since T-100 a non-canonical id answers 400 ERROR_PARAM instead of 404, and web/src/pages/YearbookEdit.tsx (line ~39) only shows 'book not found' for 404, so a hand-typed or lower-cased URL shows the generic invalid-request text. Treat ERROR_PARAM on the yearbook id like not found on every page that takes :id from the URL (edit, notes, note links, book); component tests for 404 and 400. No API change.
 
 #### Comments
 - 2026-10-22 14:07Z · dev · YearbookLayout (shared by edit, notes, note-links, book/export) renders the existing books.notFound message + back link when yearbook/get answers 404 or 400 invalid_body (isBookGone in auth/errors.ts); YearbookEdit's own 404 branch removed. 8 vitest cases (404/400 x 4 routes), vi text, 500 stays generic. Public note form uses a token, not a yearbook id: unchanged. CI green (e2e needed one rerun: Install Chromium step hung to the 10 min limit). Head c422ddf.
+- 2026-10-22 14:19Z · qa · PR #109 head c422ddf; CI green (e2e, go, go-integration, image, security, web). Evidence (own runs): 
+  AC1 browser (Playwright/Chromium vs local build of the head + local API, en and vi): lower-cased own id, garbage id 'not-an-id', unknown valid ULID, deleted book, foreign book, each on /yearbooks/:id, /notes, /note-links, /book (print/export lives under /book) = 40 cases, all show 'This yearbook does not exist.' / 'Kỷ yếu này không tồn tại.' with the Back-to-my-yearbooks link (href /yearbooks), no generic error; back link navigates to /yearbooks.
+  AC2 mocked yearbook/get on edit screen: 500 -> 'Something went wrong' + Try again; 400 ERROR_INVALID_MEDIA, 429 -> their own texts + Try again (not not-found); 404 and 400 ERROR_PARAM -> not found, no retry button. Own valid id renders all 4 screens normally. Foreign id (user B's book as user A) -> not found on all 4 routes, same as before.
+  AC3 YearbookEdit branch removal: deleted-book and foreign-book on edit route covered by the browser run above; non-404 errors on edit keep message + retry + back link.
+  AC4 revert (scratch copy, YearbookLayout.tsx and YearbookEdit.tsx from HEAD~1): YearbookLayout.test.tsx 8 failed | 8 passed (the 8 new cases; 500 case passes as it should).
+  AC5 npm test 389 passed; npm run lint clean; npm run build ok; lint:i18n ok; make e2e (COMPOSE_PROJECT_NAME=awesomeproject1, from the task worktree) 5 passed incl. M1 journey.
+  Non-blocking: in /notes, /note-links, /book a non-gone error from yearbook/get (500) lets the screen render as before (layout only intercepts gone). Background API/preview processes stopped; temp .env copy removed from the worktree.
+- 2026-10-22 14:19Z · leader · Merged PR #109 as 73d6087 (QA_PASS on c422ddf, risk low; 40 browser cases en/vi).
 
 ### T-115 — [E05] Export dialogs return focus to their button; e2e traces drop photo-link URLs
 - **Status:** TODO
