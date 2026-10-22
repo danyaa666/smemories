@@ -10,6 +10,7 @@ The API sends two kinds of mail, both a 6-digit code the student types (no links
 - `mailer.New(cfg, logger)` is the only place that picks the implementation from `SMEM_MAIL_PROVIDER` (`log` or `ses`). Settings: [production-config.md](production-config.md#email-amazon-ses).
 - Every message has a plain-text and an HTML part (multipart/alternative), UTF-8. The HTML is small (about 1.3 KB), has one `h1`, a `lang` attribute, no remote resource and no link
   (`internal/auth/emails/`; golden files in `internal/auth/testdata/emails/`, open the `.html` ones in a browser to see them; `go test ./internal/auth -run Golden -update` rewrites them).
+- The greeting is generic (`Hello,` / `Xin chào,`): the display name is typed before the address is proven, so it never appears in a code email (audit L2, T-101).
 - SES client: region and credentials from the AWS default chain (`AWS_REGION`, the ECS task role), dial 3 s, TLS 5 s, response headers 15 s, the whole call 30 s, at most 3 attempts with a
   backoff capped at 2 s. The caller's own deadline (10 s) wins when shorter.
 

@@ -45,16 +45,16 @@ var (
 
 // renderEmail fills the subject, the plain-text body and the HTML body of the code email in the user's language (English when
 // the locale is unknown). purpose is purposeVerify or purposeReset; minutes is the code's lifetime. The text and the HTML are
-// built from the same sentences, so they never disagree.
-func renderEmail(locale, purpose, name, code string, minutes int) (subject, text, html string, err error) {
+// built from the same sentences, so they never disagree. The greeting is generic on purpose: the display name is typed by whoever
+// registered, before the address is proven, so it must not reach someone else's inbox (audit L2).
+func renderEmail(locale, purpose, code string, minutes int) (subject, text, html string, err error) {
 	if emailTmpl.Lookup(locale+"."+purpose+".subject") == nil {
 		locale = "en"
 	}
 	data := struct {
-		Name       string
 		Minutes    int
 		Lang, Code string
-	}{name, minutes, locale, code}
+	}{minutes, locale, code}
 	part := map[string]string{}
 	for _, p := range []string{"subject", "hello", "intro", "how", "ignore"} {
 		var b bytes.Buffer
@@ -78,7 +78,7 @@ func (s *Service) prepareCode(ctx context.Context, u *User, purpose string) (mai
 	if err != nil {
 		return mailer.Message{}, err
 	}
-	subject, text, html, err := renderEmail(u.Locale, purpose, u.DisplayName, code, int(codeTTL(purpose)/time.Minute))
+	subject, text, html, err := renderEmail(u.Locale, purpose, code, int(codeTTL(purpose)/time.Minute))
 	if err != nil {
 		return mailer.Message{}, apperr.Wrap(apperr.Internal, err, "render "+purpose+" email")
 	}

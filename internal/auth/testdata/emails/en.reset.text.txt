@@ -1,4 +1,4 @@
-Hi Alice <Smith>,
+Hello,
 
 Someone asked to reset the password of your SMemories account. Your reset code is:
 
