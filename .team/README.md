@@ -11,8 +11,9 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 11 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-096, T-097 |
-| TODO | 3 | T-114, T-115, T-116 |
-| READY_FOR_QA | 1 | T-095 |
+| TODO | 2 | T-115, T-116 |
+| IN_PROGRESS | 1 | T-114 |
+| QA_FAIL | 1 | T-095 |
 | DONE | 96 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-092, T-093, T-094, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-117, T-118, T-119 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
@@ -20,7 +21,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?); Q-051 (Approve merge of T-100 (canonical public ids, PR #93)?); Q-052 (Approve merge of T-111 (Terms acceptance API, PR #96; merges together with T-112)?); Q-053 (Approve merge of T-110 (upload abuse follow-up, PR #99)?); Q-054 (Approve merge of T-107 (bounded photo download memory, PR #98)?)
 
-_Board last written 2026-10-22 09:44Z_
+_Board last written 2026-10-22 14:02Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4468,19 +4469,19 @@ Spec: .team/epics/E05-templates-export/16-book-text-export-web.md. Download and 
 - 2026-10-21 13:52Z · human · accepted by owner
 
 ### T-095 — [E11] Signature storage, validation and API
-- **Status:** READY_FOR_QA
+- **Status:** QA_FAIL
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1b
 - **Depends-on:** —
 - **Risk:** high
-- **Rework:** 0
+- **Rework:** 1
 - **Owner-approved:** —
 - **Assignee:** —
 - **Branch:** task/t-095-e11-signature-storage-validation-and-api
 - **PR:** https://github.com/danyaa666/smemories/pull/108
-- **Updated:** 2026-10-22 09:44Z by dev
-- **Comments-seen:** 4
+- **Updated:** 2026-10-22 14:02Z by qa
+- **Comments-seen:** 6
 
 Spec: .team/epics/E11-signatures/01-signature-api.md. Next phase (after go-live, D-31). Vector strokes (L-14), template switch, public submit field, inbox and book-data reads. Risk high: public input.
 
@@ -4489,6 +4490,26 @@ Spec: .team/epics/E11-signatures/01-signature-api.md. Next phase (after go-live,
 - 2026-10-22 09:44Z · dev · Findings: (1) the 3072-byte cap binds before 600 points (about 400 points with 3-digit coordinates; the pad in T-096 should thin to the byte budget). (2) No built-in template declares signature:true yet (T-097 flips memory-book/navy-classic per its spec), so enabled is false in real data until then; Postman reads enabled from the lookup and was also run green against a local build with memory-book enabled. If you want the switch on earlier, say so. (3) Book-data bound re-stated: measured 1,618,318 B for 300 maximal notes + 3 photo ids + maximal signature, documented 1.6 MiB. (4) Empty signature part is ERROR_INVALID_SIGNATURE, duplicate part is ERROR_PARAM. (5) Web: only two test fixtures got signature:null (generated type requires the key).
 - 2026-10-22 09:44Z · dev · PR #108 head b34ce29, CI green (go, go-integration, web, e2e, image, security). Verify: make lint test test-integration; newman postman/signatures.postman_collection.json (run twice; needs account A of notes collection verified); migration on a DB with notes; probes: fuzzed JSON, 1 MB body, duplicate signature field, hidden/pending note signature in every read path. Known gap: valid-signature paths run only with a template that declares the switch.
 - 2026-10-22 09:44Z · leader · Leader: keep the template signature switch off until T-097, as the spec says. T-096 spec amended: the pad thins to the 3072-byte canonical cap, not only to 600 points.
+- 2026-10-22 14:02Z · qa · QA_FAIL on head b34ce29 (I pushed a test-only commit cc52a62 on top: internal/signature/qa_test.go). One blocker-class finding, everything else passes.
+  
+  1. [major] Stale Postman collections: the PR adds data.signature to public-collect/get, signature to note/get-list items and book-data notes, but did not update postman/notes.postman_collection.json nor postman/notes-moderation.postman_collection.json. AC4 + definition of done say Postman follows the API, and a collection that fails on its own epic's endpoints is stale. Repro: fresh scratch DB, migrate up, API on the PR build (SMEM_ENV=dev), run notes Setup, mark newman-notes-a/b verified, clear limits, then from postman/: 'postman collection run notes.postman_collection.json --env-var baseUrl=http://127.0.0.1:PORT --working-dir .' -> 1 failed of 157: 'Full flow / 6. Public lookup, no cookie' assertion 'body' (expected object with 6 keys to deep-equal one with 5: the new signature key). 'postman collection run notes-moderation.postman_collection.json ...' -> 2 failed of 164: 'Full flow / 10. A lists all' assertion 'item shape' (keys now include signature) and '18a. Book data' assertion 'shape' (notes keys now answers,id,photo_ids,signature). Same two collections on a develop build: 0 failed (157/157, 164/164). Fix: add signature to the expected key sets/bodies in those three steps (expect null for notes without a signature). Suspected area: postman/*.json only.
+  
+  Non-blocking observations
+  a. The signatures collection never exercises a template that does NOT enable signatures once T-097 flips memory-book (it uses the lookup's enabled flag and one template). AC4 asks for 'disabled template'; add a step on template classic (ERROR_PARAM) so it stays covered after T-097.
+  b. Column is CHARACTER SET ascii, while db-conventions says utf8mb4 default; fine for integer-only JSON, but worth one line in docs/db-conventions or the migration comment as a deliberate exception.
+  c. Oversize (>4 KiB) signature to a book whose template is off answers ERROR_INVALID_SIGNATURE (rejected in scan) while a small one answers ERROR_PARAM; harmless.
+  
+  Evidence (all mine)
+  - CI on b34ce29: e2e, go, go-integration, image, security, web all pass. go build, go vet (+ -tags integration), golangci-lint 0 issues, gofmt clean, go test -race ./... ok, go test -race -count=1 -tags integration ./... ok (notes 238s, db 166s, all ok), web: npm ci, 379 tests, lint, prettier, typecheck, lint:i18n, check:api ok; e2e (scripts/e2e.sh on a scratch DB, ports 18190/14190): 5 passed incl. M1 journey.
+  - AC1 validator: existing table tests pass; FuzzParse 90 s (12.2M execs) and my FuzzCanonicalAlphabet 90 s (5.6M execs, asserts canonical output matches only the v/w/h/s digits-and-brackets alphabet): no finding. Unicode/escape table (BOM, full-width and Arabic-Indic digits, U+2028, NUL, invalid UTF-8 key, escaped duplicate key, __proto__, -0): all rejected or normalised to canonical.
+  - Live HTTP probes against a local build with memory-book switched on (scratch copy, not committed): floats 1.0/500.0/1e2, negative, out of range, odd count, 1-point, 13 strokes, duplicate key, extra key, markup, empty, null s, 3000-deep nesting, NUL, BOM, NBSP, zero-width space, 4097 bytes, 1 MB field: all 400 ERROR_INVALID_SIGNATURE, message names the rule only (no echo, nothing in the API log). Canonical 3072 bytes accepted, 3080 rejected. Duplicate signature part (also with a 1 MB second one): 400 ERROR_PARAM. Signature without answers: ERROR_PARAM. Bad text + bad signature: ERROR_MISSING_ANSWER (text wins). Honeypot first or last: 200 silent. Stored strings are canonical (odd spacing, key order, escaped key all normalised).
+  - Ordering: after 20+ invalid submissions Redis submit_ip_hour and submit_collection_hour zsets hold exactly 5 entries (the 5 accepted notes); the invalid ones cost no submit token (only the existing public_all per-request count). Integration test also asserts zero objects written when the signature is invalid with a photo attached.
+  - Reads: approved/pending/hidden sets: book-data returns approved only; inbox returns every status with the signature (owner view, documented). Tampered DB values: non-canonical-but-valid reads back canonical, '<script>' value reads null, no raw output in either endpoint. The only two note_tab readers are get-list and book-data (grep).
+  - Migration 20261022120000: on 200k existing notes it applied in 19 ms (ALGORITHM=INSTANT, 200000 rows kept, all NULL); down/up round trip keeps all rows; 4 concurrent 'migrate up' on an empty DB: all rc=0, exactly one applied (T-108 lock holds). Lock order unchanged (no new locks).
+  - AC3: TestMaximalBookIsUnderTheBound and TestQueryCountAndCap pass (1,618,318 B, bound 1.6 MiB, 4/5 queries unchanged).
+  - Postman: signatures collection run twice back to back on the switch-on build: 61/61 and 61/61 (enabled path, round trip, canonical, moderation, validation table); on the PR build as shipped (switch off): 59/59 twice. notes + notes-moderation: see finding 1.
+  Cleanup done: API process stopped, scratch DBs smem_test_qa95* dropped, Redis db 5 flushed.
+- 2026-10-22 14:02Z · leader · Leader: rework scope = QA's one blocker only. Add `signature` to the expected keys in postman/notes (step 6 public lookup) and postman/notes-moderation (step 10 item shape, step 18a book-data shape): null for notes without one. Run both collections twice, plus signatures. Merge origin/develop first if the PR conflicts (no rebase, no force-push). The ascii charset is now a documented exception in docs/db-conventions.md (leader). The other non-blocking notes wait for T-097.
 
 ### T-096 — [E11] Web: signature pad on the public form and the signature in the inbox
 - **Status:** BACKLOG
@@ -5148,7 +5169,7 @@ QA of T-104 (2026-10-21): a lossy WebP with an ALPH chunk (compression 1) decode
 - 2026-10-22 09:33Z · human · accepted by owner
 
 ### T-114 — [E03] Web: a malformed yearbook id in the URL shows 'book not found'
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P3
 - **Type:** bug
 - **Milestone:** M2
@@ -5156,10 +5177,10 @@ QA of T-104 (2026-10-21): a lossy WebP with an ALPH chunk (compression 1) decode
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-114-e03-web-a-malformed-yearbook-id-in-the-u
 - **PR:** —
-- **Updated:** 2026-10-21 13:11Z by leader
+- **Updated:** 2026-10-22 13:43Z by dev
 - **Comments-seen:** 0
 
 QA of T-100 (2026-10-21): since T-100 a non-canonical id answers 400 ERROR_PARAM instead of 404, and web/src/pages/YearbookEdit.tsx (line ~39) only shows 'book not found' for 404, so a hand-typed or lower-cased URL shows the generic invalid-request text. Treat ERROR_PARAM on the yearbook id like not found on every page that takes :id from the URL (edit, notes, note links, book); component tests for 404 and 400. No API change.
