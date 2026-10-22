@@ -16,6 +16,9 @@ const PHOTO = (n) => path.join(HERE, "../print-check/fixtures", `photo-${String(
 const BASE = process.env.E2E_BASE_URL;
 const OTP = process.env.SMEM_DEV_FIXED_OTP; // DEV-SHORTCUT(otp): the API of this run was started with it (scripts/e2e.sh)
 const STEP_MS = 60_000; // hard limit of one step
+// T-111: register needs the version of the Terms the form showed. The sign-up form has no checkbox until T-112, so the journey adds the
+// field to the register request itself; the version is read from the one constant the API uses (internal/legal/legal.go).
+const TERMS_VERSION = /CurrentVersion = "([^"]+)"/.exec(readFileSync(path.join(HERE, "../../internal/legal/legal.go"), "utf8"))[1];
 
 // Unique per run: nothing from an earlier run can be mistaken for this one.
 const RUN = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -81,6 +84,10 @@ test("M1 journey: sign up, build a book, collect notes, print the PDF", async ({
     await owner.getByLabel("Your name").fill(OWNER.name);
     await owner.getByLabel("Email").fill(OWNER.email);
     await owner.getByLabel("Password", { exact: true }).fill(OWNER.password);
+    await owner.route("**/api/auth/register", (route) => {
+      const body = JSON.parse(route.request().postData() ?? "{}");
+      return route.continue({ postData: JSON.stringify({ ...body, accept_terms_version: TERMS_VERSION }) });
+    });
     const registered = owner.waitForResponse((r) => r.url().includes("/api/auth/register") && r.request().method() === "POST");
     await owner.getByRole("button", { name: "Create account" }).click();
     if ((await registered).status() === 429) {

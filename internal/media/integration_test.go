@@ -24,6 +24,7 @@ import (
 	"github.com/danyaa666/smemories/internal/auth"
 	"github.com/danyaa666/smemories/internal/db/dbtest"
 	"github.com/danyaa666/smemories/internal/httpx"
+	"github.com/danyaa666/smemories/internal/legal"
 	"github.com/danyaa666/smemories/internal/mailer"
 	"github.com/danyaa666/smemories/internal/medialink"
 	"github.com/danyaa666/smemories/internal/metrics"
@@ -225,7 +226,7 @@ type user struct{ cookie string }
 
 func (e *env) register(email string) user {
 	e.t.Helper()
-	b, _ := json.Marshal(map[string]string{"email": email, "password": testPW, "display_name": "Tester"})
+	b, _ := json.Marshal(map[string]string{"email": email, "password": testPW, "display_name": "Tester", "accept_terms_version": legal.CurrentVersion})
 	rec := httptest.NewRecorder()
 	r := httptest.NewRequest("POST", "/api/auth/register", bytes.NewReader(b))
 	r.Header.Set("Content-Type", "application/json")
