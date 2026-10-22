@@ -14,3 +14,6 @@ Add Redis alarms: memory use above 70%, evictions above zero (should be impossib
 
 #### Leader note (2026-10-15, from T-073)
 The API can serve Prometheus metrics on a second listener (`SMEM_METRICS_ADDR`, default off, see `docs/observability.md`). It has **no authentication by design**: in production bind it to a private interface or the task's loopback and scrape it from inside the VPC only; never expose it through the load balancer or CloudFront. The alarm queries are listed in `docs/observability.md`.
+
+#### Leader note (2026-10-22, from T-091)
+Alarm on the ERROR log line `mailer: send failed` with `class=config` (see `docs/email.md`). It covers background and request-path code-email failures caused by provider configuration, for example a revoked key or an unverified sender, which retrying cannot fix. Page on the first one, not on a rate.
