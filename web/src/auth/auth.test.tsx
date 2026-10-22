@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, onTestFinished, vi } from "vitest";
 import i18n from "../i18n";
 import { err, mockApi, ok, renderApp, user } from "../test/api";
+import { TERMS_VERSION } from "../legal/legal";
 import { safePath } from "./errors";
 
 const signedOut = err(401, "unauthenticated");
@@ -147,6 +148,7 @@ describe("register", () => {
     await fill("Your name", "Lan");
     await fill("Email", "lan@example.com");
     await fill("Password", "short");
+    await userEvent.click(screen.getByRole("checkbox"));
     await userEvent.click(screen.getByRole("button", { name: "Create account" }));
     const pw = await screen.findByLabelText("Password");
     await waitFor(() => expect(pw).toHaveAttribute("aria-invalid", "true"));
@@ -167,6 +169,7 @@ describe("register", () => {
     await fill("Your name", "Lan Nguyễn");
     await fill("Email", "lan@example.com");
     await fill("Password", "correct horse");
+    await userEvent.click(screen.getByRole("checkbox"));
     await userEvent.click(screen.getByRole("button", { name: "Create account" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("already registered");
     taken = false;
@@ -177,6 +180,7 @@ describe("register", () => {
       password: "correct horse",
       display_name: "Lan Nguyễn",
       locale: "en",
+      accept_terms_version: TERMS_VERSION,
     });
   });
 
@@ -187,6 +191,7 @@ describe("register", () => {
     await userEvent.type(await screen.findByLabelText("Tên của bạn"), "Lan");
     await userEvent.type(screen.getByLabelText("Email"), "lan@example.com");
     await userEvent.type(screen.getByLabelText("Mật khẩu"), "correct horse");
+    await userEvent.click(screen.getByRole("checkbox"));
     await userEvent.click(screen.getByRole("button", { name: "Tạo tài khoản" }));
     await waitFor(() => expect(calls.some((c) => c.path === "/auth/register")).toBe(true));
     expect(calls.find((c) => c.path === "/auth/register")?.body).toMatchObject({ locale: "vi" });

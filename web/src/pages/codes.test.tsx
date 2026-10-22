@@ -216,6 +216,7 @@ describe("resend the verification code", () => {
     await userEvent.type(await screen.findByLabelText("Your name"), "Lan");
     await userEvent.type(screen.getByLabelText("Email"), "lan@example.com");
     await userEvent.type(screen.getByLabelText("Password"), "correct horse");
+    await userEvent.click(screen.getByRole("checkbox"));
     await userEvent.click(screen.getByRole("button", { name: "Create account" }));
     expect(await screen.findByText(/sent a 6-digit code to lan@example.com/)).toBeInTheDocument();
     expect(where()).toBe("/verify-email");

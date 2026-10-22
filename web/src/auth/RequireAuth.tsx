@@ -30,5 +30,9 @@ export function RequireAuth() {
     );
   }
   if (!user) return <Navigate to="/login" replace state={{ from: pathname + search }} />;
+  // The API refuses everything but get-me, accept-terms and sign-out until the current Terms are accepted (D-35).
+  if (user.terms?.required && pathname !== "/accept-terms") {
+    return <Navigate to="/accept-terms" replace state={{ from: pathname + search }} />;
+  }
   return <Outlet />;
 }

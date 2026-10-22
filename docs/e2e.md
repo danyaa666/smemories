@@ -7,7 +7,8 @@ media, link, public form, moderation, book data, renderer, PDF, text export and 
 
 ## The journey (each is a `test.step`, so a failure names its step)
 
-1. Register, verify with the fixed development code (`DEV-SHORTCUT(otp)`), see the `user-xxxxxxxx` chip on the yearbooks page.
+1. Register (the required Terms checkbox is ticked), verify with the fixed development code (`DEV-SHORTCUT(otp)`), see the `user-xxxxxxxx` chip on the yearbooks page.
+   Then (1b) get-me is made to say the accepted Terms are old: the user is sent to `/accept-terms`, accepts (real `accept-terms` call) and continues to the yearbooks.
 2. Create a yearbook (Vietnamese title, language `vi`, A5), fill the profile, upload a cover photo.
 3. Pick the `memory-book` template and see the preview change.
 4. Create a note link and read it once.

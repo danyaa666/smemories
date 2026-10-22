@@ -5,7 +5,7 @@
 //
 // The link token is a bearer secret: it is only ever in `link`, never logged, and every error leaving a step is scrubbed of it.
 import { expect, request, test } from "@playwright/test";
-import { mkdtempSync, readFileSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -16,10 +16,6 @@ const PHOTO = (n) => path.join(HERE, "../print-check/fixtures", `photo-${String(
 const BASE = process.env.E2E_BASE_URL;
 const OTP = process.env.SMEM_DEV_FIXED_OTP; // DEV-SHORTCUT(otp): the API of this run was started with it (scripts/e2e.sh)
 const STEP_MS = 60_000; // hard limit of one step
-// T-111: register needs the version of the Terms the form showed. The sign-up form has no checkbox until T-112, so the journey adds the
-// field to the register request itself; the version is read from the one constant the API uses (internal/legal/legal.go).
-const TERMS_VERSION = /CurrentVersion = "([^"]+)"/.exec(readFileSync(path.join(HERE, "../../internal/legal/legal.go"), "utf8"))[1];
-
 // Unique per run: nothing from an earlier run can be mistaken for this one.
 const RUN = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 const OWNER = { name: "Phạm Thị Thu Hà", email: `e2e-${RUN}@example.com`, password: `Mật-khẩu-${RUN}-9` };
@@ -84,10 +80,8 @@ test("M1 journey: sign up, build a book, collect notes, print the PDF", async ({
     await owner.getByLabel("Your name").fill(OWNER.name);
     await owner.getByLabel("Email").fill(OWNER.email);
     await owner.getByLabel("Password", { exact: true }).fill(OWNER.password);
-    await owner.route("**/api/auth/register", (route) => {
-      const body = JSON.parse(route.request().postData() ?? "{}");
-      return route.continue({ postData: JSON.stringify({ ...body, accept_terms_version: TERMS_VERSION }) });
-    });
+    await expect(owner.getByRole("button", { name: "Create account" })).toBeDisabled(); // until the Terms box is ticked
+    await owner.getByLabel("I agree to the Terms of Use and the Privacy Policy").check();
     const registered = owner.waitForResponse((r) => r.url().includes("/api/auth/register") && r.request().method() === "POST");
     await owner.getByRole("button", { name: "Create account" }).click();
     if ((await registered).status() === 429) {
@@ -100,6 +94,32 @@ test("M1 journey: sign up, build a book, collect notes, print the PDF", async ({
     await owner.getByRole("link", { name: "My yearbooks" }).click();
     await expect(owner.getByRole("heading", { name: "My yearbooks" })).toBeVisible();
     await expect(owner.locator(".user-chip-name span").last()).toHaveText(/^user-[0-9a-z]{8}$/);
+  });
+
+  await step("1b. an existing user whose accepted Terms are old is sent to the accept screen and continues after accepting", async () => {
+    // The old version is simulated at the browser: get-me answers terms.required until the real accept-terms call has succeeded (the
+    // gate itself, 403 ERROR_TERMS_REQUIRED, is covered by the API integration tests of T-111).
+    let accepted = false;
+    await owner.route("**/api/user/get-me", async (route) => {
+      if (accepted) return route.continue();
+      const res = await route.fetch();
+      const json = await res.json();
+      json.data.terms = { ...json.data.terms, accepted_version: "2020-01-01", required: true };
+      return route.fulfill({ response: res, json });
+    });
+    await owner.goto("/yearbooks");
+    await expect(owner.getByRole("heading", { name: "Our terms have changed" })).toBeVisible();
+    await expect(owner).toHaveURL(/\/accept-terms$/);
+    const accept = owner.getByRole("button", { name: "Accept and continue" });
+    await expect(accept).toBeDisabled();
+    await owner.getByLabel("I agree to the Terms of Use and the Privacy Policy").check();
+    accepted = true;
+    const done = owner.waitForResponse((r) => r.url().includes("/api/user/accept-terms") && r.request().method() === "POST");
+    await accept.click();
+    expect((await done).ok()).toBe(true);
+    await expect(owner.getByRole("heading", { name: "My yearbooks" })).toBeVisible();
+    await expect(owner).toHaveURL(/\/yearbooks$/);
+    await owner.unroute("**/api/user/get-me");
   });
 
   await step("2. create the yearbook, fill the profile, upload the cover photo", async () => {
@@ -161,6 +181,7 @@ test("M1 journey: sign up, build a book, collect notes, print the PDF", async ({
   await step("5. a friend opens the link in an anonymous browser and sends a note with a photo", async () => {
     await friend.goto(link);
     await expect(friend.getByRole("heading", { name: TITLE })).toBeVisible();
+    await expect(friend.getByText("By sending, you agree to the Terms of Use and the Privacy Policy.")).toBeVisible();
     await send(0, 2);
   });
 

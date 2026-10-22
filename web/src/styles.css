@@ -281,7 +281,12 @@ a:hover {
 }
 
 .shell-narrow main {
-  padding-bottom: calc(72px + env(safe-area-inset-bottom));
+  padding-bottom: var(--space-4);
+}
+
+/* The links to the legal texts sit under the page, clear of the fixed tab bar. */
+.shell-footer {
+  padding: var(--space-2) var(--gutter) calc(72px + env(safe-area-inset-bottom));
 }
 
 .tabbar {
@@ -389,4 +394,61 @@ form + .btn {
 .shell main > section,
 .shell main > h1 + section {
   margin-top: var(--space-8);
+}
+
+/* ── Terms and Privacy (E13) ──────────────────── */
+.site-footer {
+  padding: var(--space-4) var(--gutter) var(--space-6);
+  border-top: 1px solid var(--color-line);
+}
+
+.legal-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  font-size: var(--text-small);
+}
+
+.legal-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap-min);
+}
+
+.legal-doc h1 {
+  margin-top: var(--space-4);
+}
+
+.legal-doc h2 {
+  margin-top: var(--space-6);
+}
+
+.legal-doc ul {
+  padding-left: var(--space-5);
+}
+
+.legal-doc li {
+  margin-bottom: var(--space-1);
+}
+
+/* The required checkbox of the sign-up and accept screens: a 44 px tap target, the whole sentence is the label. */
+.legal-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.legal-consent input {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin: var(--space-1) 0 0;
+  accent-color: var(--color-primary);
+}
+
+.legal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }

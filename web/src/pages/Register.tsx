@@ -4,6 +4,8 @@ import { useTranslation } from "react-i18next";
 import { Link, Navigate } from "react-router-dom";
 import { register } from "../api/auth";
 import { GoogleButton } from "../components/GoogleButton";
+import { LegalConsent } from "../components/LegalConsent";
+import { TERMS_VERSION } from "../legal/legal";
 import { TextField } from "../components/TextField";
 import { fieldError, formError } from "../auth/errors";
 import { ME_KEY, useMe } from "../auth/useMe";
@@ -16,9 +18,16 @@ export function Register() {
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [agreed, setAgreed] = useState(false);
   const m = useMutation({
     mutationFn: () =>
-      register(email, password, displayName, i18n.resolvedLanguage === "vi" ? "vi" : "en"),
+      register(
+        email,
+        password,
+        displayName,
+        i18n.resolvedLanguage === "vi" ? "vi" : "en",
+        TERMS_VERSION,
+      ),
     onSuccess: (u) => qc.setQueryData(ME_KEY, u),
   });
   if (user) {
@@ -62,12 +71,13 @@ export function Register() {
           hint={t("fields.passwordHint")}
           error={fieldError(t, m.error, "password")}
         />
+        <LegalConsent checked={agreed} onChange={setAgreed} />
         {error && (
           <p role="alert" className="error">
             {error}
           </p>
         )}
-        <Button type="submit" variant="primary" busy={m.isPending}>
+        <Button type="submit" variant="primary" busy={m.isPending} disabled={!agreed}>
           {m.isPending ? t("auth.working") : t("register.submit")}
         </Button>
       </form>

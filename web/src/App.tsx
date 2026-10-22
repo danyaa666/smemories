@@ -5,6 +5,9 @@ import { RequireAuth } from "./auth/RequireAuth";
 import { AuthNav } from "./components/AuthNav";
 import { LanguageSwitcher } from "./components/LanguageSwitcher";
 import { YearbookLayout } from "./components/YearbookLayout";
+import { LegalLinks } from "./components/LegalConsent";
+import { LegalPage } from "./legal/LegalPage";
+import { AcceptTerms } from "./pages/AcceptTerms";
 import { Account } from "./pages/Account";
 import { ForgotPassword } from "./pages/ForgotPassword";
 import { Login } from "./pages/Login";
@@ -33,8 +36,11 @@ export function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/terms" element={<LegalPage doc="terms" />} />
+        <Route path="/privacy" element={<LegalPage doc="privacy" />} />
         <Route element={<RequireAuth />}>
           <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route path="/accept-terms" element={<AcceptTerms />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Route>
@@ -73,6 +79,9 @@ function PublicLayout() {
       <main className="plain-main">
         <Outlet />
       </main>
+      <footer className="site-footer">
+        <LegalLinks />
+      </footer>
     </>
   );
 }
