@@ -676,6 +676,92 @@ func TestQuotas(t *testing.T) {
 	e.upload(u, book2, "a.jpg", "image/jpeg", photo(t)).status(200, "")
 }
 
+// fillMedia inserts n rows of an uploader kind straight into the table, each with these sizes (a real upload takes far too long
+// to reach a quota of hundreds of photos).
+func (e *env) fillMedia(book, kind string, n, bytes, thumb, print int) {
+	e.t.Helper()
+	base := e.count(`SELECT COUNT(*) FROM media_tab`)
+	for i := range n {
+		if _, err := e.db.Exec(`INSERT INTO media_tab (public_id, yearbook_id, uploader_kind, object_key, thumb_key, content_type, bytes, thumb_bytes, print_bytes, width, height, sha256, created_at, updated_at)
+			SELECT ?, id, ?, 'k', 't', 'image/jpeg', ?, ?, ?, 1, 1, '', 1, 1 FROM yearbook_tab WHERE public_id = ?`,
+			fmt.Sprintf("FILL%022d", base+i), kind, bytes, thumb, print, book); err != nil {
+			e.t.Fatal(err)
+		}
+	}
+}
+
+// T-105: the owner's byte quota counts every stored variant, and an upload records the sizes it counts.
+func TestOwnerQuotaCountsEveryVariant(t *testing.T) {
+	e := newEnv(t)
+	u := e.register("a@example.com")
+	book := e.newBook(u)
+	const limit = 500 << 20
+	e.fillMedia(book, KindOwner, 1, 1, limit-1000, 0) // display alone is tiny; the thumb fills the quota
+	e.upload(u, book, "a.jpg", "image/jpeg", photo(t)).status(409, "ERROR_QUOTA_EXCEEDED")
+	e.fillMedia(book, KindOwner, 1, 1, 0, limit-1000) // ... and so does the print
+	if _, err := e.db.Exec(`UPDATE media_tab SET thumb_bytes = 0 WHERE thumb_bytes > 1000000`); err != nil {
+		t.Fatal(err)
+	}
+	e.upload(u, book, "a.jpg", "image/jpeg", photo(t)).status(409, "ERROR_QUOTA_EXCEEDED")
+	if _, err := e.db.Exec(`UPDATE media_tab SET print_bytes = 0 WHERE print_bytes > 1000000`); err != nil {
+		t.Fatal(err)
+	}
+	e.upload(u, book, "a.jpg", "image/jpeg", photo(t)).status(200, "")
+	if e.count(`SELECT COUNT(*) FROM media_tab WHERE thumb_bytes > 0 AND print_bytes > 0 AND bytes > 0 AND id = (SELECT MAX(id) FROM (SELECT id FROM media_tab) x)`) != 1 {
+		t.Fatal("the upload did not record its thumb and print sizes")
+	}
+}
+
+// T-105 AC2: photos sent through a link have a quota of their own (600 photos, 1 GiB, all variants) and never take room from the owner.
+func TestContributorQuotaIsSeparate(t *testing.T) {
+	e := newEnv(t)
+	u := e.register("a@example.com")
+	book := e.newBook(u)
+	var row uint64
+	if err := e.db.QueryRow(`SELECT id FROM yearbook_tab WHERE public_id = ?`, book).Scan(&row); err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	data := photo(t)
+
+	// The owner is one photo short of the 200 and of the byte limit; a link holder sends photos: the owner's room does not change.
+	e.fillMedia(book, KindOwner, maxPerYearbook-1, 1, 0, 0)
+	e.fillMedia(book, KindContributor, 3, 100, 100, 100)
+	for range 3 {
+		if m, err := e.svc.UploadContributor(ctx, row, data); err != nil {
+			t.Fatalf("contributor upload: %v", err)
+		} else if m.ThumbBytes == 0 || m.PrintBytes == 0 {
+			t.Fatalf("variant sizes not recorded: %+v", m)
+		}
+	}
+	e.upload(u, book, "a.jpg", "image/jpeg", photo(t)).status(200, "") // the owner's 200th photo still fits
+	e.upload(u, book, "a.jpg", "image/jpeg", photo(t)).status(409, "ERROR_QUOTA_EXCEEDED")
+
+	// The owner's photos do not take the contributors' room either.
+	if _, err := e.svc.UploadContributor(ctx, row, data); err != nil {
+		t.Fatalf("a full owner quota blocked a contributor: %v", err)
+	}
+
+	// 600 contributor photos: the 601st is refused with the friend's message; the owner is unaffected.
+	have := e.count(`SELECT COUNT(*) FROM media_tab WHERE uploader_kind = 'contributor'`)
+	e.fillMedia(book, KindContributor, maxContributorPhotos-have, 1, 0, 0)
+	if _, err := e.svc.UploadContributor(ctx, row, data); !errors.Is(err, ErrContributorQuota) {
+		t.Fatalf("601st contributor photo: %v, want ErrContributorQuota", err)
+	}
+	if e.count(`SELECT COUNT(*) FROM media_tab WHERE uploader_kind = 'contributor'`) != maxContributorPhotos || e.st.count(yearbookPrefix(book)) != 5*3 /* 5 photos x 3 variants */ {
+		t.Fatal("a refused contributor photo left a row or objects")
+	}
+
+	// Bytes: one big row leaves less room than a photo needs.
+	if _, err := e.db.Exec(`DELETE FROM media_tab WHERE uploader_kind = 'contributor' AND bytes = 1`); err != nil {
+		t.Fatal(err)
+	}
+	e.fillMedia(book, KindContributor, 1, 0, maxContributorBytes-1000, 0)
+	if _, err := e.svc.UploadContributor(ctx, row, data); !errors.Is(err, ErrContributorQuota) {
+		t.Fatalf("over the contributor bytes: %v, want ErrContributorQuota", err)
+	}
+}
+
 func TestRateLimit(t *testing.T) {
 	e := newEnv(t)
 	e.svc.limiter = e.lim.Open("media_upload", 3, time.Minute)

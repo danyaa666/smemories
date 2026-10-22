@@ -1111,7 +1111,7 @@ paths:
         `deadline_at` is optional, Unix ms, in the future and at most one year ahead (`ERROR_INVALID_DEADLINE`); `null` or
         absent means no deadline. Unknown fields, a missing `yearbook_id` and values of the wrong type are `ERROR_PARAM`.
         Needs a verified email (`ERROR_EMAIL_NOT_VERIFIED`). A missing yearbook and one owned by someone else both answer
-        `ERROR_NOT_FOUND`. At most 5 active (not revoked) links per yearbook (`ERROR_LIMIT_REACHED`). A request with the
+        `ERROR_NOT_FOUND`. At most 5 active (not revoked) links and at most 50 links in all, revoked ones included, per yearbook (`ERROR_LIMIT_REACHED`). A request with the
         session cookie must come from an allowed Origin. Not idempotent: retrying after a lost answer may create a second link.
       x-auth: required
       x-error-codes:
@@ -1119,7 +1119,7 @@ paths:
         - {code: ERROR_EMAIL_NOT_VERIFIED, description: The owner's email address is not verified yet.}
         - {code: ERROR_INVALID_LABEL, description: The label is longer than 60 characters or contains control or format characters.}
         - {code: ERROR_INVALID_DEADLINE, description: "`deadline_at` is not in the future or is more than one year ahead."}
-        - {code: ERROR_LIMIT_REACHED, description: The yearbook already has 5 active links.}
+        - {code: ERROR_LIMIT_REACHED, description: "The yearbook already has 5 active links, or 50 links in all (revoked ones count)."}
         - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
         - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
         - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
@@ -1162,8 +1162,11 @@ paths:
       summary: List a yearbook's collection links
       description: >-
         Called by the signed-in owner to show the links of a yearbook, newest first, revoked ones included (`revoked_at` set).
-        Never contains a token or a token hash. `note_count` counts the link's notes in any status. At most 5 links are active, but
-        revoked ones stay, so the list is returned whole: `next_id` is always the empty string and there is no `limit` yet.
+        Never contains a token or a token hash. `note_count` counts the link's notes in any status. A yearbook has at most 50 links,
+        revoked ones included (`note-collection/create` answers `ERROR_LIMIT_REACHED` for the 51st), so the list is paged: `limit`
+        defaults to 50, at most 100 (`ERROR_PARAM` otherwise), and `next_id` is the opaque cursor of the previous page, bound to this
+        yearbook (a malformed, tampered or foreign one is `ERROR_PARAM`) and `""` on the last page. The cursor is a position, so
+        links created between two requests never shift a page.
         A missing `yearbook_id` is `ERROR_PARAM`; a missing yearbook and one owned by someone else both answer `ERROR_NOT_FOUND`.
       x-auth: required
       x-error-codes:
@@ -1173,9 +1176,11 @@ paths:
         - sessionCookie: []
       parameters:
         - {name: yearbook_id, in: query, required: true, schema: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$'}, description: Yearbook ULID.}
+        - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100, default: 50}, description: Page size.}
+        - {name: next_id, in: query, required: false, schema: {type: string}, description: "Opaque cursor from the previous page's `next_id`; omit for the first page."}
       responses:
         "200":
-          description: The links.
+          description: One page of the links.
           content:
             application/json:
               schema: {$ref: "#/components/schemas/NoteCollectionListResponse"}

@@ -26,6 +26,9 @@ var (
 	ErrNotFound = apperr.New(apperr.NotFound, "not found")
 	// ErrQuota: the yearbook or the user is at a storage limit.
 	ErrQuota = apperr.New(CodeQuotaExceeded, "storage quota reached")
+	// ErrContributorQuota: the yearbook's room for photos sent through links is used up (T-105). Same code as ErrQuota; the
+	// message is one a friend without an account understands.
+	ErrContributorQuota = apperr.New(CodeQuotaExceeded, "this yearbook cannot take more photos right now, send your note without photos")
 	// ErrUnsupported: the content is not a JPEG, PNG or WebP image (decided by sniffing, never by name or Content-Type).
 	ErrUnsupported = apperr.New(CodeUnsupportedMediaType, "only JPEG, PNG and WebP images are accepted")
 	// ErrInvalidImage: the content looks like a supported image but is corrupt or too large to process safely.

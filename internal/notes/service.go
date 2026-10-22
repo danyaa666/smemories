@@ -47,7 +47,7 @@ var plainID = regexp.MustCompile(`^[a-z_]{1,40}$`)
 // store is what the service needs from its adapter (declared here, on the consumer side).
 type store interface {
 	create(ctx context.Context, ownerID uint64, bookID string, c *Collection, hash [32]byte) error
-	list(ctx context.Context, ownerID uint64, bookID string) ([]*Collection, error)
+	list(ctx context.Context, ownerID uint64, bookID string, after *notePos, limit int) ([]*Collection, error)
 	revoke(ctx context.Context, ownerID uint64, id string, now int64) error
 	lookup(ctx context.Context, hash [32]byte) (*Public, error)
 	noteCount(ctx context.Context, collectionID uint64) (int, error)
@@ -151,12 +151,30 @@ func (s *Service) CreateCollection(ctx context.Context, ownerID uint64, emailVer
 	return &Created{Collection: c, Token: token}, nil
 }
 
-// ListCollections returns the book's links, newest first, revoked ones included. ponytail: unpaged (at most five are active); add a cursor if the revoked ones pile up.
-func (s *Service) ListCollections(ctx context.Context, ownerID uint64, yearbookID string) ([]*Collection, error) {
+// ListCollections returns one page of the book's links, newest first, revoked ones included, and the sealed position of the next
+// page ("" on the last). The position is a keyset (created_at, id), so links created meanwhile never shift a page.
+func (s *Service) ListCollections(ctx context.Context, ownerID uint64, yearbookID string, limit int, nextID string) ([]*Collection, string, error) {
 	if err := checkID(yearbookID, "yearbook_id"); err != nil {
-		return nil, err
+		return nil, "", err
 	}
-	return s.store.list(ctx, ownerID, yearbookID)
+	scope := "note-collection/get-list:" + yearbookID
+	var after *notePos
+	if nextID != "" {
+		var err error
+		if after, err = openPos(s.tokens, scope, "", nextID); err != nil {
+			return nil, "", err
+		}
+	}
+	cs, err := s.store.list(ctx, ownerID, yearbookID, after, limit+1) // one extra row says whether another page exists
+	if err != nil {
+		return nil, "", err
+	}
+	if len(cs) <= limit {
+		return cs, "", nil
+	}
+	cs = cs[:limit]
+	last := cs[limit-1]
+	return cs, sealPos(s.tokens, scope, "", &notePos{createdAt: last.CreatedAt, rowID: last.rowID}), nil
 }
 
 // RevokeCollection stops a link at once; revoking it again succeeds.
@@ -332,6 +350,8 @@ func mediaError(err error) error {
 		return apperr.Wrap(CodeUnsupportedMediaType, err, "only JPEG, PNG and WebP images are accepted")
 	case errors.Is(err, media.ErrInvalidImage):
 		return apperr.Wrap(CodeInvalidImage, err, "the image is corrupt or too large")
+	case errors.Is(err, media.ErrContributorQuota): // the friend is told in words they can act on: send the note without photos
+		return apperr.Wrap(CodeQuotaExceeded, err, "this yearbook cannot take more photos right now, send your note without photos")
 	case errors.Is(err, media.ErrQuota):
 		return apperr.Wrap(CodeQuotaExceeded, err, "storage quota reached")
 	case errors.Is(err, media.ErrBusy):

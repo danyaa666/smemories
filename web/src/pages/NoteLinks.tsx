@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
@@ -19,6 +19,7 @@ import { EmptyState } from "../components/ui/EmptyState";
 import { TextField } from "../components/ui/TextField";
 
 const MAX_ACTIVE = 5;
+const MAX_LINKS = 50;
 const LABEL_MAX = 60;
 const DAY_MS = 86_400_000;
 
@@ -40,9 +41,11 @@ export function NoteLinks() {
   const { t, i18n } = useTranslation();
   const qc = useQueryClient();
   const key = ["note-links", id] as const;
-  const list = useQuery({
+  const list = useInfiniteQuery({
     queryKey: key,
-    queryFn: () => listLinks(id),
+    queryFn: ({ pageParam }) => listLinks(id, pageParam),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last) => last.next_id || undefined,
     // a 4xx (not your book) is the answer; a network error or 5xx gets one more try
     retry: retryOnce,
   });
@@ -60,7 +63,7 @@ export function NoteLinks() {
   const [revoking, setRevoking] = useState<NoteCollection>();
   const [now] = useState(Date.now); // when the page opened: enough to tell open links from closed ones
 
-  const links = list.data?.items ?? [];
+  const links = list.data?.pages.flatMap((p) => p.items) ?? [];
   const active = links.filter((l) => !l.revoked_at).length;
 
   const create = useMutation({
@@ -99,10 +102,13 @@ export function NoteLinks() {
   const code = err instanceof ApiError ? err.code : "";
   const labelError = code === "invalid_label" ? errorText(t, err) : undefined;
   const dayError = code === "invalid_deadline" ? errorText(t, err) : undefined;
+  // limit_reached is the 5-open cap, or (T-105) the 50-in-all cap that revoked links count toward
   const formError =
     err && !labelError && !dayError
       ? code === "limit_reached"
-        ? t("links.limitReached", { max: MAX_ACTIVE })
+        ? active >= MAX_ACTIVE
+          ? t("links.limitReached", { max: MAX_ACTIVE })
+          : t("links.tooMany", { max: MAX_LINKS })
         : errorText(t, err)
       : undefined;
 
@@ -239,6 +245,16 @@ export function NoteLinks() {
             );
           })}
         </ul>
+      )}
+      {list.hasNextPage && (
+        <Button busy={list.isFetchingNextPage} onClick={() => void list.fetchNextPage()}>
+          {t("links.more")}
+        </Button>
+      )}
+      {list.isFetchNextPageError && (
+        <p role="alert" className="error">
+          {errorText(t, list.error)}
+        </p>
       )}
       {revoking && (
         <Dialog

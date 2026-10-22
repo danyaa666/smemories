@@ -9,6 +9,16 @@ code: `internal/notes/moderation*.go`; Postman: `postman/notes-moderation.postma
 | `POST /api/note/batch-update-status` | 1 to 100 notes to `pending`, `approved` or `hidden`, all or nothing; approving appends in the order given |
 | `POST /api/note/reorder` | the approved set in a new order; any other set is `ERROR_ORDER_STALE` (409) |
 | `POST /api/note/batch-delete` | 1 to 100 notes, their photo links, photo rows and objects; hard delete |
+| `GET /api/note-collection/get-list` | the book's collection links (T-105): one page (`limit` 50/100, `next_id`), newest first, revoked ones included |
+
+## Collection links (T-105)
+
+- **Cap.** At most **50 links per book, revoked ones included** (`maxLinks`), on top of the older cap of 5 active (not revoked) links. `note-collection/create` answers `409 ERROR_LIMIT_REACHED` for the 51st (or the 6th active one). A
+  revoked link cannot be deleted yet, so the 50 is permanent for the book; the check runs in the create transaction under the book row lock, so parallel creates cannot pass it (`TestLinkCap`, and `TestLimit` for the parallel creates against the 5-active cap).
+- **Paging.** `note-collection/get-list` is keyset-paged like the note list: `limit` 1..100 (default 50), `next_id` is the sealed `(created_at, id)` of the last link, bound to the book (`httpx.Cursors`, scope `note-collection/get-list:<book id>`),
+  `""` on the last page, a foreign or damaged token is `ERROR_PARAM`. Because the position is a key and not an offset, a link created between two requests never moves a page (`TestLinkListPaging`). With the cap at 50 the default page
+  holds every link; the web list still follows the "load more" pattern (`NoteLinks.tsx`).
+- **Photos sent through a link** do not count toward the owner's photo quota: see "Quotas" in [media.md](media.md).
 
 ## Rules
 

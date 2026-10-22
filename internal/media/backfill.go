@@ -82,7 +82,7 @@ func (s *Service) backfillOne(ctx context.Context, m *Media, dryRun bool, logger
 	if err := s.st.Put(ctx, key, contentTypeOf(m.ObjectKey), data); err != nil {
 		return false, storageFailed(err)
 	}
-	ok, err := s.store.setPrintKey(ctx, m.RowID, key, s.now().UnixMilli())
+	ok, err := s.store.setPrintKey(ctx, m.RowID, key, len(data), s.now().UnixMilli())
 	if err != nil || ok {
 		return ok, err
 	}

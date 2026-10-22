@@ -120,7 +120,13 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	cs, err := h.svc.ListCollections(r.Context(), u.InternalID, r.URL.Query().Get("yearbook_id"))
+	limit, err := httpx.ParseLimit(r, DefaultLinkListLimit, MaxLinkListLimit)
+	if err != nil {
+		h.fail(w, r, err)
+		return
+	}
+	q := r.URL.Query()
+	cs, next, err := h.svc.ListCollections(r.Context(), u.InternalID, q.Get("yearbook_id"), limit, q.Get("next_id"))
 	if err != nil {
 		h.fail(w, r, err)
 		return
@@ -129,7 +135,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	for i, c := range cs {
 		items[i] = collectionJSON{ID: c.ID, Label: c.Label, DeadlineAt: c.DeadlineAt, CreatedAt: c.CreatedAt, RevokedAt: c.RevokedAt, NoteCount: c.NoteCount}
 	}
-	httpx.OK(w, r, httpx.Page[collectionJSON]{Items: items}) // not paginated yet: the whole list is one page
+	httpx.OK(w, r, httpx.Page[collectionJSON]{Items: items, NextID: next})
 }
 
 func (h *Handler) revoke(w http.ResponseWriter, r *http.Request) {

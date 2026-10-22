@@ -57,9 +57,10 @@ export async function deleteNotes(yearbookId: string, ids: string[]): Promise<No
   return counts;
 }
 
-export const listLinks = (yearbookId: string) =>
+/** One page of a book's links, newest first (the server's default page size; a book has at most 50 links). */
+export const listLinks = (yearbookId: string, nextId?: string) =>
   request<S["NoteCollectionListResponse"]["data"]>(
-    `/note-collection/get-list?${q({ yearbook_id: yearbookId })}`,
+    `/note-collection/get-list?${q({ yearbook_id: yearbookId, next_id: nextId })}`,
   );
 
 export const createLink = (yearbookId: string, label: string, deadlineAt: number | null) =>
