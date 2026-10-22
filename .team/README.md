@@ -11,8 +11,9 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 8 | T-023, T-024, T-025, T-026, T-027, T-031, T-050, T-097 |
-| TODO | 3 | T-029, T-116, T-120 |
-| IN_PROGRESS | 1 | T-096 |
+| TODO | 2 | T-029, T-120 |
+| IN_PROGRESS | 1 | T-116 |
+| IN_QA | 1 | T-096 |
 | MERGED | 1 | T-115 |
 | DONE | 99 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-117, T-118, T-119 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
@@ -21,7 +22,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?); Q-051 (Approve merge of T-100 (canonical public ids, PR #93)?); Q-052 (Approve merge of T-111 (Terms acceptance API, PR #96; merges together with T-112)?); Q-053 (Approve merge of T-110 (upload abuse follow-up, PR #99)?); Q-054 (Approve merge of T-107 (bounded photo download memory, PR #98)?)
 
-_Board last written 2026-10-22 18:46Z_
+_Board last written 2026-10-22 19:02Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -1832,7 +1833,7 @@ Small follow-ups found in the T-001 review and QA.
 - **Branch:** —
 - **PR:** —
 - **Updated:** 2026-10-22 14:43Z by leader
-- **Comments-seen:** 2
+- **Comments-seen:** 3
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/07-replace-the-frozen-minio-dev-image-with-a.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1843,6 +1844,7 @@ MinIO no longer publishes container images (Docker Hub and Quay pulls fail), so 
 #### Comments
 - 2026-10-07 03:16Z · leader · QA note: bitnamilegacy/minio works (arm64 native) but is AGPL-3.0, unsupported by Broadcom, gets no CVE fixes, and the Docker Hub namespace can vanish. Fine for dev-only and loopback-only use. Until this task runs, pin the image by digest in docker-compose.yml and the T-009 CI service so a vanished tag cannot silently change what we run.
 - 2026-10-22 14:43Z · leader · Leader: promoted to refill the pipeline; dependency health of the dev stack. Never touch the main checkout's compose volumes.
+- 2026-10-22 19:02Z · leader · Leader: the spec is now written: .team/epics/E01-foundation/T-029-replace-frozen-minio.md (read it from the main checkout). The candidate is chosen by test (SeaweedFS, then versitygw); never touch the old minio-data volumes.
 
 ### T-030 — [E01] T-002 follow-ups: isolate compose stacks, fail fast on auth errors, test-DB grants
 - **Status:** DONE
@@ -4531,7 +4533,7 @@ Spec: .team/epics/E11-signatures/01-signature-api.md. Next phase (after go-live,
 - 2026-10-22 17:43Z · human · accepted by owner
 
 ### T-096 — [E11] Web: signature pad on the public form and the signature in the inbox
-- **Status:** IN_PROGRESS
+- **Status:** IN_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1b
@@ -4539,16 +4541,18 @@ Spec: .team/epics/E11-signatures/01-signature-api.md. Next phase (after go-live,
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** qa
 - **Branch:** task/t-096-e11-web-signature-pad-on-the-public-form
-- **PR:** —
-- **Updated:** 2026-10-22 18:42Z by dev
-- **Comments-seen:** 1
+- **PR:** https://github.com/danyaa666/smemories/pull/112
+- **Updated:** 2026-10-22 19:02Z by qa
+- **Comments-seen:** 3
 
 Spec: .team/epics/E11-signatures/02-signature-pad-web.md. Next phase.
 
 #### Comments
 - 2026-10-22 14:43Z · leader · Leader: promoted; starts once T-095 merges. The spec was amended: thin to the 3072-byte cap.
+- 2026-10-22 19:01Z · dev · PR #112 head b5d5cb2, CI all green. Pad + inbox SVG + shared fixture (internal/signature/testdata/canonical.json, did not exist after T-095, created here; Go and web tests read it). E2E step not added: built-in templates keep signature off until T-097. Browser check done at 375 touch / 1280 mouse (Playwright, mocked API); QA: real finger on iOS/Android, stylus, rotate mid-stroke. Strings mine, vi to review: note.signature.hint/invalid/yours.
+- 2026-10-22 19:01Z · leader · Leader: the three new strings (hint, invalid, yours) are approved in en and vi. Server-only refusal of a tiny signature is accepted for now (fast fail, the pad stays). The e2e step moves to T-097.
 
 ### T-097 — [E11] Print: signatures in memory-book and navy-classic
 - **Status:** BACKLOG
@@ -5254,7 +5258,7 @@ QA of T-094 (2026-10-21): after Continue in the public-link warning and after co
 - 2026-10-22 18:46Z · leader · Merged PR #110 as 834a467 (QA_PASS on b812b56, risk low). Leader added /tools/e2e/.playwright-cli/ to .gitignore.
 
 ### T-116 — [E12] Web: limit concurrent photo requests on gallery pages (follow-up to T-107)
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P3
 - **Type:** feature
 - **Milestone:** M2
@@ -5262,10 +5266,10 @@ QA of T-094 (2026-10-21): after Continue in the public-link warning and after co
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-116-e12-web-limit-concurrent-photo-requests-
 - **PR:** —
-- **Updated:** 2026-10-22 09:08Z by leader
+- **Updated:** 2026-10-22 19:02Z by dev
 - **Comments-seen:** 1
 
 QA of T-107 (2026-10-22): with 400 ms storage latency per object, a 100-thumbnail HTTP/2 burst gets 64 x 200 and 36 x 429, and <img> does not retry. If real S3 latency in the go-live phase shows this, load gallery images through a small client-side queue (at most 16 in flight, retry a 429 after Retry-After) instead of raising the server cap. Measure first on the deployed stack.
