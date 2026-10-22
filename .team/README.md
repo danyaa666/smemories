@@ -11,17 +11,17 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 7 | T-023, T-024, T-025, T-026, T-027, T-031, T-050 |
-| TODO | 3 | T-029, T-097, T-120 |
-| READY_FOR_QA | 1 | T-116 |
-| MERGED | 1 | T-096 |
+| TODO | 1 | T-029 |
+| IN_PROGRESS | 1 | T-097 |
+| MERGED | 3 | T-096, T-116, T-120 |
 | DONE | 100 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-117, T-118, T-119 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-096 ([E11] Web: signature pad on the public form and the signature in the inbox)
+**Awaiting your review (MERGED):** T-096 ([E11] Web: signature pad on the public form and the signature in the inbox); T-116 ([E12] Web: limit concurrent photo requests on gallery pages (follow-up to T-107)); T-120 ([E06] CI: bound and cache the e2e Chromium install (two hangs on 2026-10-22))
 
-**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?); Q-051 (Approve merge of T-100 (canonical public ids, PR #93)?); Q-052 (Approve merge of T-111 (Terms acceptance API, PR #96; merges together with T-112)?); Q-053 (Approve merge of T-110 (upload abuse follow-up, PR #99)?); Q-054 (Approve merge of T-107 (bounded photo download memory, PR #98)?)
+**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-055 (What should the team build after E11 signatures: go-live (M2) or the class yearbook (M3)?)
 
-_Board last written 2026-10-22 19:21Z_
+_Board last written 2026-10-22 19:55Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -506,7 +506,7 @@ Blocked meanwhile: nothing; do it before T-023 deploys from main.
 Security audit finding L6. GitHub says Dependabot alerts are disabled and security updates are disabled for danyaa666/smemories (secret scanning and push protection are already on, and dependabot.yml still opens weekly version PRs). CI govulncheck fails the build on a reachable Go vulnerability and npm audit only warns, so today nobody is told when a dependency gets an advisory between weekly PRs. Turning both on costs nothing and sends advisories to you and opens fix PRs against develop. I did not change the setting: it is a repository setting and yours to switch. Blocked meanwhile: nothing.
 
 ### Q-044 — Approve merge of T-092 (public photo links API, PR #85)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-20 18:15Z
 - **Blocks:** T-092
 - **Recommendation:** approve
@@ -515,7 +515,7 @@ Security audit finding L6. GitHub says Dependabot alerts are disabled and securi
 QA_PASS and leader review OK on b061020. Adds the permanent public photo links you chose (D-32): signed 128-bit token, GET /api/public-media/get-content, POST /api/yearbook/revoke-photo-links, SMEM_MEDIA_LINK_SECRET (prod refuses to start without it), migration adding yearbook_tab.link_epoch. The only red CI job (image) is a pre-existing flaky migrate race also seen on develop; T-108 fixes it. Reply 'team approve T-092' to approve.
 
 ### Q-045 — Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-20 21:59Z
 - **Blocks:** T-098
 - **Recommendation:** approve
@@ -524,7 +524,7 @@ QA_PASS and leader review OK on b061020. Adds the permanent public photo links y
 QA_PASS and leader review OK on 33737ef, CI green. Rate limits now group IPv6 clients by /64, a new per-account limit stops password guessing after 50 failures in 15 minutes (fail closed), a successful password reset clears that counter, and a WARN appears if the proxy header is trusted from a public peer. Reply 'team approve T-098'.
 
 ### Q-046 — Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-20 22:43Z
 - **Blocks:** T-099
 - **Recommendation:** approve
@@ -533,7 +533,7 @@ QA_PASS and leader review OK on 33737ef, CI green. Rate limits now group IPv6 cl
 QA_PASS and leader review OK on 8e07f4f, CI green. All binaries now refuse to start without SMEM_ENV, and dev/test refuse non-local origins or base URLs, so a deployed environment cannot run with the public OTP key or the fixed code. Reply 'team approve T-099'.
 
 ### Q-047 — Approve merge of T-108 (concurrent migrate race fix, PR #91)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-21 03:02Z
 - **Blocks:** T-108
 - **Recommendation:** approve
@@ -542,7 +542,7 @@ QA_PASS and leader review OK on 8e07f4f, CI green. All binaries now refuse to st
 QA_PASS and leader review OK on d856c25, CI green. Takes the migration lock before goose creates its version table, which fixes the flaky CI image job seen on every PR. 9 lines of code plus a test that fails on the old code. Reply 'team approve T-108'.
 
 ### Q-048 — Approve merge of T-102 (upload slot fairness, PR #90)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-21 03:31Z
 - **Blocks:** T-102
 - **Recommendation:** approve
@@ -551,7 +551,7 @@ QA_PASS and leader review OK on d856c25, CI green. Takes the migration lock befo
 QA_PASS and leader review OK on d714aad, CI green. One account can no longer block everyone's photo uploads with slow uploads (2 in progress per user, slow bodies cut off with 408), and rejected public submissions free their slot early. Follow-up T-110 closes the remaining gap (several throwaway accounts) with a verified-email rule and a per-client cap. Reply 'team approve T-102'.
 
 ### Q-049 — Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-21 08:00Z
 - **Blocks:** T-103
 - **Recommendation:** approve
@@ -560,7 +560,7 @@ QA_PASS and leader review OK on d714aad, CI green. One account can no longer blo
 QA_PASS twice (before and after the develop merge) and leader review OK on b732c51, CI green. A login racing a password reset could create a session that survived the reset for 30 days; now every session carries the user's credential epoch and is refused once a reset or Google merge bumps it. Existing sessions keep working. Deploy: migration first, then the binary; rollback note added to docs/deploy.md. Reply 'team approve T-103'.
 
 ### Q-050 — Approve merge of T-104 (media processing robustness, PR #94)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-21 12:57Z
 - **Blocks:** T-104
 - **Recommendation:** approve
@@ -569,7 +569,7 @@ QA_PASS twice (before and after the develop merge) and leader review OK on b732c
 QA_PASS and leader review OK on 968b9d7, CI green. A crash inside image decoding, scaling or encoding (including the background print-size step) now answers 400 instead of taking the whole API down, the processing slot is always released, and decoded image sizes are re-checked. QA sent about 40 hostile files through the owner upload and the public form: all refused, server stayed up. Reply 'team approve T-104'.
 
 ### Q-051 — Approve merge of T-100 (canonical public ids, PR #93)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-21 13:11Z
 - **Blocks:** T-100
 - **Recommendation:** approve
@@ -578,7 +578,7 @@ QA_PASS and leader review OK on 968b9d7, CI green. A crash inside image decoding
 QA_PASS and leader review OK on 2210d38, CI green. Every id from the browser must be the canonical upper-case form (else 400 before any query), and photo storage paths and yearbook deletion use the stored id, so a lower-cased id can no longer leave photos behind in storage or reset the quota. QA probed ~250 bad spellings over 15 endpoints with no data touched. Reply 'team approve T-100'.
 
 ### Q-052 — Approve merge of T-111 (Terms acceptance API, PR #96; merges together with T-112)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-21 18:16Z
 - **Blocks:** T-111
 - **Recommendation:** approve
@@ -587,7 +587,7 @@ QA_PASS and leader review OK on 2210d38, CI green. Every id from the browser mus
 QA_PASS and leader review OK on e0a1ba6, CI green. Sign-up requires accepting the current Terms and Privacy version; every signed-in request is refused with ERROR_TERMS_REQUIRED until the user accepts (existing accounts and new Google accounts accept once on the new screen from T-112); notes record the version shown. Merges together with T-112 (#97, web pages and checkbox), which passed QA too. The texts stay marked DRAFT until you finalise them before go-live. Reply 'team approve T-111'.
 
 ### Q-053 — Approve merge of T-110 (upload abuse follow-up, PR #99)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-21 23:04Z
 - **Blocks:** T-110
 - **Recommendation:** approve
@@ -596,13 +596,27 @@ QA_PASS and leader review OK on e0a1ba6, CI green. Sign-up requires accepting th
 QA_PASS and leader review OK on d0c5ed8, CI green. Photo upload now needs a verified email, each network address may have at most 4 uploads in progress, and at most 16 rejected public submissions per address are drained (the rest are cut off). QA replayed the attack: a victim's uploads succeeded 23 of 23 times (before: 503 every time). Reply 'team approve T-110'.
 
 ### Q-054 — Approve merge of T-107 (bounded photo download memory, PR #98)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-21 23:24Z
 - **Blocks:** T-107
 - **Recommendation:** approve
 - **Answer:** _(pending)_
 
 QA_PASS and leader review OK on 70efad7, CI green. Photos are streamed instead of loaded whole: QA measured +5 MiB memory under 64 slow readers versus about +1 GB on today's develop; responses are byte-identical; a user or address can have at most 64 downloads at once (galleries of 100 thumbnails load over HTTP/2). Reply 'team approve T-107'.
+
+### Q-055 — What should the team build after E11 signatures: go-live (M2) or the class yearbook (M3)?
+- **Status:** OPEN
+- **Asked:** 2026-10-22 19:51Z
+- **Blocks:** T-023, T-026
+- **Recommendation:** A: go-live. It needs from you: domain name, AWS account and region (Singapore recommended), and the lean (about 95 USD/month) vs growth (about 160) choice from docs/cost-estimate.md. Meanwhile the team does what needs no account: T-050 prep notes, T-029, and a health sweep.
+- **Answer:** _(pending)_
+
+Context: E12 hardening is done; E11 signatures finish with T-097 (in progress). The ready pipeline is 3 (min 4).
+Options:
+A) Go-live (M2): T-023 IaC and deploy pipeline, T-024 observability, T-025 backups, T-031 edge hardening, T-050 remove dev shortcuts. Blocked on your inputs: domain, AWS account and region, cost tier, legal texts final (D-35), enforce_admins on main (D-33). Pro: real users. Cost: about 95-160 USD/month once live.
+B) Class yearbook (M3, E07: T-026, T-027): many profiles per book, classes, invites. Pro: a big product step; needs no AWS. Con: delays go-live; T-026 is risk high (roles and invites) and needs a PRD review.
+C) Both: the team does B while you prepare the A inputs, then switches to A when they arrive.
+Recommendation: A, with C as the fallback if the inputs take more than a few days.
 
 <!-- questions:end -->
 
@@ -4564,7 +4578,7 @@ Spec: .team/epics/E11-signatures/02-signature-pad-web.md. Next phase.
 - 2026-10-22 19:15Z · leader · Merged PR #112 as f0c074e (QA_PASS on b5d5cb2). Cosmetic leftovers (1.4 px ink offset from the border-box rect, alert and inbox spacing) go with T-097's visual pass. Owner device check is pending.
 
 ### T-097 — [E11] Print: signatures in memory-book and navy-classic
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1b
@@ -4572,10 +4586,10 @@ Spec: .team/epics/E11-signatures/02-signature-pad-web.md. Next phase.
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-097-e11-print-signatures-in-memory-book-and-
 - **PR:** —
-- **Updated:** 2026-10-22 19:16Z by leader
+- **Updated:** 2026-10-22 19:38Z by dev
 - **Comments-seen:** 1
 
 Spec: .team/epics/E11-signatures/03-signature-print.md. Next phase.
@@ -5269,7 +5283,7 @@ QA of T-094 (2026-10-21): after Continue in the public-link warning and after co
 - 2026-10-22 19:08Z · human · accepted by owner
 
 ### T-116 — [E12] Web: limit concurrent photo requests on gallery pages (follow-up to T-107)
-- **Status:** READY_FOR_QA
+- **Status:** MERGED
 - **Priority:** P3
 - **Type:** feature
 - **Milestone:** M2
@@ -5280,14 +5294,33 @@ QA of T-094 (2026-10-21): after Continue in the public-link warning and after co
 - **Assignee:** —
 - **Branch:** task/t-116-e12-web-limit-concurrent-photo-requests-
 - **PR:** https://github.com/danyaa666/smemories/pull/113
-- **Updated:** 2026-10-22 19:20Z by dev
-- **Comments-seen:** 2
+- **Updated:** 2026-10-22 19:47Z by leader
+- **Comments-seen:** 4
 
 QA of T-107 (2026-10-22): with 400 ms storage latency per object, a 100-thumbnail HTTP/2 burst gets 64 x 200 and 36 x 429, and <img> does not retry. If real S3 latency in the go-live phase shows this, load gallery images through a small client-side queue (at most 16 in flight, retry a 429 after Retry-After) instead of raising the server cap. Measure first on the deployed stack.
 
 #### Comments
 - 2026-10-22 09:08Z · leader · Leader: promoted to keep the pipeline at min_ready_tasks; T-107 is merged.
 - 2026-10-22 19:20Z · dev · Shared queue (16 in flight) in web/src/components/imageQueue.ts + QueuedImg.tsx; used by PhotoTile, NoteCard, Yearbooks cover, book Photo and the print preload. Verify: QueuedImg.test.tsx (100 photos peak 16; preload 100 settles only after all loaded/failed), print button still gated on photos.settled. Gaps: no Retry-After parsing (<img> cannot read headers), one fixed 1s retry; not measured on deployed stack. e2e first run hit a Chromium install timeout, rerun green.
+- 2026-10-22 19:46Z · qa · QA_PASS T-116, PR #113 head 6217030. CI green (e2e, go, go-integration, image, security, web). Evidence is mine, real Chromium against a local API + MinIO, behind a TLS edge (HTTP/2 and HTTP/1.1 by ALPN, 1 HTTP/1.1 request per stream to the API, 400 ms added latency per photo), 100 photos seeded through the API.
+  | AC | How verified | Result |
+  | 100 photos never more than 16 in flight | Gallery (/yearbooks/:id, Show more x2 = 100 tiles) and print page (34 notes x 3 photos = 100, book-data answer fabricated through route.fulfill). Counted with Playwright request/finished/failed events AND server-side at the proxy | h2: client peak 16, server peak 16, 100x200, 0x429, each photo requested once. develop baseline: peak 100 (gallery), 9 (print preload). HTTP/1.1: client peak 16, wire peak 6 (browser limit), 100x200. Latency 0 also 16. |
+  | Loads as it scrolls | 35 tiles near the viewport requested before any scroll, 0 for the rest, all 100 ok after scrolling | pass |
+  | Print button disabled until every photo settled | polled the button every 100 ms | disabled 24 polls (2.6 s), enabled only when finished+failed = 100 |
+  | Print shows every photo, none blank | Real page.pdf() (fires beforeprint/afterprint, seen in the page); 100 img.bk-photo, none ever scrolled into view (0 had src before print), all 100 have src and naturalWidth>0 after; pdfimages -list on the PDF: 12 pages, 100 image placements (develop: 100) | pass |
+  | Photo that fails: error state, does not block print | Print page, one photo forced 500: button still enables after all settle, banner "Photos that could not be loaded: 1", PDF 99 placements. Gallery, one photo forced 429 always: exactly 2 requests (first + one retry after ~1 s), broken-image state, alt kept, 0 further requests in the next 4 s (no loop); a photo that fails once recovers on the retry (naturalWidth 360) | pass |
+  | Leaks | Gallery with 8 s photo latency (16 slots busy), client-side move to Preview and print: 16 print-variant requests started within 1.5 s (slots freed on unmount). Five leave/return round trips: no stall, wire peak stays 16 (browser dedupes the same URLs). Unit test "gives the slot back" | pass |
+  | Accessibility / layout | alt kept ("Photo N" on tiles, "" on decorative as before); tile box 147x110 for all 40 sampled tiles with or without src; CLS 0 to 0.004, same as develop (0.004) | pass |
+  | Tests fail without the queue | Scratch copy with the product diff reverse-applied: QueuedImg.test.tsx cannot import. Mutations on a scratch copy: LIMIT=1000 fails the 100-photo test; no slot release on unmount fails 4 tests (unmount, 2 print tests, one-photo design); retry unlimited fails the retry test | pass |
+  | Mechanical | web: vitest 397/397, eslint+prettier, tsc+vite build, lint:i18n all OK. `make e2e` (own DB and ports): 5/5 incl. journey with PDF | pass |
+  Non-blocking observations:
+  1. When a slot is freed by unmount the browser does NOT abort the request (0 aborted): leaving a gallery with 16 in flight and opening the print page gave 32 on the wire for a moment. Per-page bound is 16; across fast route changes it can exceed it (server cap is 64).
+  2. The print preload tries each photo once (no retry). A single 429/5xx there counts as failed and raises the banner even though the on-page image would retry; under the 16 cap this is unlikely. Same as before the change.
+  3. Tiles waiting for a slot are blank while loading tiles show the alt text; cosmetic.
+  4. Tests assert against the imported LIMIT, not the literal 16; changing the constant is not caught by the unit tests.
+  5. Not measured against real S3 latency (dev's own gap). No Retry-After parsing, fixed 1 s retry.
+  Cleanup: API stopped, test DBs dropped, nothing of mine listening. Uploaded test photos remain in the local MinIO bucket smemories-dev (dev data only). Harness: scratchpad h/run.mjs (not committed).
+- 2026-10-22 19:47Z · leader · Merged PR #113 as b683b6b (QA_PASS on 6217030). The peak of 16 in flight was measured; it briefly reaches 32 on the wire across a route change, well under T-107's 64.
 
 ### T-117 — [E13] Fix develop e2e after the Terms merges (journey readFileSync import, h2-gallery register terms version)
 - **Status:** DONE
@@ -5369,7 +5402,7 @@ Spec: .team/epics/E12-security-hardening/12-openapi-session-ceiling.md (read it 
 - 2026-10-22 08:53Z · human · accepted by owner
 
 ### T-120 — [E06] CI: bound and cache the e2e Chromium install (two hangs on 2026-10-22)
-- **Status:** TODO
+- **Status:** MERGED
 - **Priority:** P3
 - **Type:** ci
 - **Milestone:** M2
@@ -5378,15 +5411,29 @@ Spec: .team/epics/E12-security-hardening/12-openapi-session-ceiling.md (read it 
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-22 15:38Z by leader
-- **Comments-seen:** 1
+- **Branch:** task/t-120-e06-ci-bound-and-cache-the-e2e-chromium-install
+- **PR:** https://github.com/danyaa666/smemories/pull/114
+- **Updated:** 2026-10-22 19:55Z by leader
+- **Comments-seen:** 4
 
 Spec: .team/epics/E06-go-live/13-ci-e2e-chromium-install.md (read it from the main checkout).
 
 #### Comments
 - 2026-10-22 19:21Z · leader · Leader: raised to P2. The third Chromium install hang (PR #113) needed a manual rerun.
+- 2026-10-22 19:37Z · dev · PR #114 head e106a96. ci.yml only: actions/cache keyed on OS + resolved @playwright/test version; hit -> install-deps only; step timeout-minutes 6, 150 s per attempt, one retry. Install step 14 s (miss) -> 8 s (hit); all checks green on head. Verify: e2e log shows 'Cache hit for: playwright-Linux-1.64.0' and 'install-deps chromium'. Real hang recovery cannot be forced in CI.
+- 2026-10-22 19:55Z · qa · QA_PASS on PR #114 head e106a96 (ci.yml only, +20/-4). Evidence:
+  AC1 (miss then hit, durations): run 39839489798 e2e log 'Cache not found for input keys: playwright-Linux-1.64.0', 'playwright install --with-deps chromium: 1 attempt(s), 14 s, cache-hit=false', post step 'Cache saved with key: playwright-Linux-1.64.0'. Run 39840106076 (head e106a96): 'Cache hit for: playwright-Linux-1.64.0' (280 MB), 'playwright install-deps chromium: 1 attempt(s), 8 s, cache-hit=true', 'not saving cache'. Both durations are in the PR body. Note: the miss run was on the previous head b8d6463 and the workflow was cancelled afterwards (go and go-integration), but e2e itself was success.
+  AC2 (green + timeout): gh pr checks 114 on e106a96: e2e, go, go-integration, image, security, web all pass. Step has timeout-minutes: 6 and per-attempt timeout -k 5 150.
+  Diff review: all actions pinned by 40-char SHA, actions/cache SHA 55cc8345 identical to the other use; version from require('@playwright/test/package.json') = 1.64.0, matches lock file and the exact pin in package.json (no latest); key playwright-<os>-<version> changes with Playwright; on miss the browser is installed and the post step saves it (only on job success). Corrupt/partial cache: install-deps does not check the browser, but chromium launch then fails in the tests; retries 0 and the only test.skip depends on E2E_BASE_URL/OTP env, not on the browser, so it fails loudly, never skips.
+  Retry logic proven locally (the exact run block extracted from the PR head, bash -e, GNU timeout from debian:stable-slim container, fake npx on PATH; macOS has no timeout): 
+   - ok: exit 0, 1 attempt.
+   - fail once then ok: warning on attempt 1, exit 0 after attempt 2 (also with CACHE_HIT=true, using install-deps).
+   - hang forever (sleep 1000) on both attempts: exit 1, elapsed 300.019 s (2 x 150 s), two ::warning lines, no leftover sleep process.
+   - hang once then ok: elapsed 150.016 s, exit 0, 'cache-hit=true 2 attempt(s)'.
+   - hang via a child process (sleep in background + wait): exit 1, 300.011 s, no leftover process.
+   Worst case 300 s fits the 360 s step timeout. Containers all exited; nothing left running.
+  Non-blocking: (1) timeout-minutes is 6, not the 'for example 4' in the spec; correct given 2 x 150 s + kills. (2) a hit run only reinstalls OS deps, so a hang in apt (install-deps) is also bounded and retried. (3) Real hang recovery cannot be forced in CI, as dev said; covered by the local proof.
+- 2026-10-22 19:55Z · leader · Merged PR #114 as f4f2bba (QA_PASS on e106a96). Cache hit 8 s vs miss 14 s; a hung attempt is cut at 150 s and retried once (QA proved it in a container).
 
 <!-- tasks:end -->
 

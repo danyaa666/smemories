@@ -220,13 +220,29 @@ jobs:
         working-directory: web
       - run: npm ci
         working-directory: tools/e2e
-      # The browser download is cached per Playwright version (pinned in tools/e2e/package.json, so the lock file keys it).
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      # T-120: the browser download is cached per resolved Playwright version. A hit installs only the OS packages
+      # (install-deps); a miss downloads the browser too. The install hung three times on 2026-10-22 (PRs #109, #111, #113),
+      # so each attempt is cut after 150 s and retried once, and the step has its own timeout.
+      - id: pw
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+        working-directory: tools/e2e
+      - id: pwcache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('tools/e2e/package-lock.json') }}
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
       - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+        timeout-minutes: 6
+        env:
+          CACHE_HIT: ${{ steps.pwcache.outputs.cache-hit }}
+        run: |
+          if [ "$CACHE_HIT" = "true" ]; then cmd="install-deps chromium"; else cmd="install --with-deps chromium"; fi
+          for attempt in 1 2; do
+            start=$SECONDS
+            if timeout -k 5 150 npx playwright $cmd; then echo "playwright $cmd: ${attempt} attempt(s), $((SECONDS - start)) s, cache-hit=${CACHE_HIT:-false}"; exit 0; fi
+            echo "::warning::playwright $cmd failed or timed out (attempt $attempt)"
+          done
+          exit 1
         working-directory: tools/e2e
       - run: npm run guard-test
         working-directory: tools/e2e

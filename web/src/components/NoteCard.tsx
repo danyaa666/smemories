@@ -10,6 +10,7 @@ import {
 import { useTranslation } from "react-i18next";
 import type { NoteItem } from "../api/notes";
 import { mediaUrl } from "../api/yearbooks";
+import { QueuedImg } from "./QueuedImg";
 import { Badge } from "./ui/Badge";
 import { SignatureView } from "./SignatureView";
 import { Button } from "./ui/Button";
@@ -226,7 +227,7 @@ export function NoteCard({ note, lang, selected, onSelect, onStatus, onDelete, o
                 rel="noopener noreferrer"
                 aria-label={t("inbox.openPhoto", { n: i + 1, name })}
               >
-                <img src={mediaUrl(p.id, "thumb")} alt="" loading="lazy" />
+                <QueuedImg src={mediaUrl(p.id, "thumb")} alt="" />
               </a>
             </li>
           ))}

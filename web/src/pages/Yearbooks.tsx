@@ -1,6 +1,7 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
+import { QueuedImg } from "../components/QueuedImg";
 import { listYearbooks, mediaUrl, type Yearbook } from "../api/yearbooks";
 import { errorText } from "../auth/errors";
 import { Button, buttonClass } from "../components/ui/Button";
@@ -12,7 +13,7 @@ function Card({ y, lang }: { y: Yearbook; lang: string }) {
   const meta = [y.school_name, y.class_name, y.graduation_year].filter(Boolean).join(" · ");
   return (
     <li className="card">
-      {y.cover_media_id && <img src={mediaUrl(y.cover_media_id)} alt="" loading="lazy" />}
+      {y.cover_media_id && <QueuedImg src={mediaUrl(y.cover_media_id)} alt="" />}
       <h2>
         <Link to={`/yearbooks/${y.id}`}>{y.title}</Link>
       </h2>
