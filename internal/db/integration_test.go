@@ -120,6 +120,7 @@ func TestReadyzAgainstRealDatabase(t *testing.T) {
 		t.Fatalf("got %d %s", rec.Code, rec.Body.String())
 	}
 	_ = d.Close() // a closed pool cannot ping
+	time.Sleep(httpx.ReadyCacheTTL + 100*time.Millisecond) // the 200 above is cached for ReadyCacheTTL
 	rec := get()
 	if rec.Code != http.StatusServiceUnavailable || !strings.Contains(rec.Body.String(), `"ERROR_NOT_READY"`) {
 		t.Fatalf("got %d %s", rec.Code, rec.Body.String())
