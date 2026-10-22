@@ -17,6 +17,8 @@ import (
 	"github.com/danyaa666/smemories/internal/media"
 	"github.com/danyaa666/smemories/internal/notefields"
 	"github.com/danyaa666/smemories/internal/ratelimit"
+	"github.com/danyaa666/smemories/internal/signature"
+	"github.com/danyaa666/smemories/internal/templates"
 	"github.com/danyaa666/smemories/internal/textx"
 	"github.com/danyaa666/smemories/internal/ulid"
 )
@@ -78,6 +80,8 @@ type Service struct {
 	purge      notePhotos        // photos of deleted notes
 	tokens     Tokens            // next_id tokens of the note list
 	moderation ratelimit.Limiter // moderation writes per user
+
+	signatureOn func(templateID string) bool // does the template accept a signature (templates.SignatureEnabled); a field only so tests can switch it
 }
 
 // NewService builds the service; now may be nil (time.Now). mediaSvc stores the photos of submissions; tokens seals the
@@ -86,7 +90,7 @@ func NewService(st *Store, mediaSvc *media.Service, tokens Tokens, limiters *rat
 	if now == nil {
 		now = time.Now
 	}
-	return &Service{store: st, media: mediaSvc, logger: logger, now: now,
+	return &Service{store: st, media: mediaSvc, logger: logger, now: now, signatureOn: templates.SignatureEnabled,
 		misses: limiters.Open("public_misses", missesPerWindow, publicWindow), all: limiters.Open("public_all", allPerWindow, publicWindow),
 		subIPHr: limiters.Open("submit_ip_hour", submitPerIPHour, time.Hour), subIPDay: limiters.Open("submit_ip_day", submitPerIPDay, day),
 		subColl: limiters.Open("submit_collection_hour", submitPerCollectionHour, time.Hour),
@@ -233,6 +237,15 @@ type Submission struct {
 	Answers []byte
 	Photos  []func() ([]byte, error)
 	Verify  func(ctx context.Context) error
+
+	// Signature is the raw client JSON of the optional signature (E11); HasSignature says the field was sent at all (an empty one is invalid).
+	Signature    []byte
+	HasSignature bool
+}
+
+// SignatureInfo is what the public form is told about signatures: enabled only when the book's template declares it.
+func (s *Service) SignatureInfo(p *Public) signature.Info {
+	return signature.NewInfo(s.signatureOn(p.TemplateID))
 }
 
 // CheckOpen reports ErrFull when the link p already holds maxNotes notes. The handler calls it right after Resolve,
@@ -255,6 +268,15 @@ func (s *Service) SubmitNote(ctx context.Context, p *Public, in *Submission) (st
 	clean, err := validateAnswers(p, in.Answers)
 	if err != nil {
 		return "", err
+	}
+	var sig []byte // the canonical form, the only thing that is stored
+	if in.HasSignature {
+		if !s.signatureOn(p.TemplateID) {
+			return "", apperr.New(apperr.Param, "this book does not take signatures")
+		}
+		if _, sig, err = signature.Parse(in.Signature); err != nil {
+			return "", err
+		}
 	}
 	if in.Verify != nil {
 		if err := in.Verify(ctx); err != nil {
@@ -293,7 +315,7 @@ func (s *Service) SubmitNote(ctx context.Context, p *Public, in *Submission) (st
 		return "", fail(apperr.Wrap(apperr.Internal, err, "encode answers"))
 	}
 	id := ulid.New(now)
-	if err := s.store.insertNote(ctx, &newNote{ID: id, Answers: answers, MediaRows: rows, CreatedAt: now.UnixMilli(), Collection: p.CollectionID, Yearbook: p.YearbookID}); err != nil {
+	if err := s.store.insertNote(ctx, &newNote{ID: id, Answers: answers, Signature: string(sig), MediaRows: rows, CreatedAt: now.UnixMilli(), Collection: p.CollectionID, Yearbook: p.YearbookID}); err != nil {
 		return "", fail(err)
 	}
 	return id, nil

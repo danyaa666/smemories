@@ -67,6 +67,9 @@ type Template struct {
 	Pages     []Page            `json:"pages"`
 	// NoteFields is the friend-page form of this template (1..9 catalogue ids); empty means notefields.Default().
 	NoteFields []notefields.FieldRef `json:"note_fields,omitempty"`
+	// Signature switches on the optional handwritten signature of a note (E11, T-095): the public form shows the pad and the API accepts one.
+	// Default false.
+	Signature bool `json:"signature,omitempty"`
 
 	assets fs.FS // where background assets are read from (the embedded folder, or a test fixture)
 }

@@ -1,0 +1,1853 @@
+{
+  "info": {
+    "name": "SMemories - signatures (E11)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Handwritten signatures on notes (T-095, epic E11, decision L-14): the optional `signature` part of `POST /api/public-collect/submit-note` (vector strokes, strict validation, re-serialised by the server), `data.signature` of `GET /api/public-collect/get`, and the `signature` of `GET /api/note/get-list` and `GET /api/book-data/get`. Run against an API started with SMEM_ENV=dev.\n\nAccounts: the verified account A of postman/notes.postman_collection.json (`newman-notes-a@example.com`): run that collection's Setup once and `make verify-newman-users`. Run from the postman/ directory (`newman run signatures.postman_collection.json --working-dir .`) in order: Edge cases reuse the link and yearbook of the Full flow and end by deleting the yearbook. Each run creates its own yearbook, so it can run twice back to back.\n\nThe signature switch is per template (`\"signature\": true` in the manifest). While no built-in template declares it (until T-096/T-097), `data.signature.enabled` is false: the collection then expects `ERROR_PARAM` for every signed submission and checks the nulls; as soon as a template enables it, the same run checks the round trip, canonical form, moderation and the validation table (`ERROR_INVALID_SIGNATURE`). The collection reads `enabled` from the lookup of its own link, so it passes in both states. The flow gives its yearbook the template in the variable `signatureTemplate` (default `memory-book`, which T-097 switches on)."
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "origin",
+      "value": "http://localhost:5173"
+    },
+    {
+      "key": "termsVersion",
+      "value": "2026-10-21"
+    },
+    {
+      "key": "emailA",
+      "value": "newman-notes-a@example.com"
+    },
+    {
+      "key": "password",
+      "value": "Fake-Newman-notes-pw-1"
+    },
+    {
+      "key": "tokenA",
+      "value": ""
+    },
+    {
+      "key": "bookId",
+      "value": ""
+    },
+    {
+      "key": "linkToken",
+      "value": ""
+    },
+    {
+      "key": "sigEnabled",
+      "value": "false"
+    },
+    {
+      "key": "signedId",
+      "value": ""
+    },
+    {
+      "key": "plainId",
+      "value": ""
+    },
+    {
+      "key": "signedIdList",
+      "value": ""
+    },
+    {
+      "key": "signatureTemplate",
+      "value": "memory-book"
+    }
+  ],
+  "item": [
+    {
+      "name": "Setup (once per database)",
+      "item": [
+        {
+          "name": "Register A (200; 409 or 429 when an earlier run already did)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{emailA}}\",\"password\":\"{{password}}\",\"display_name\":\"Newman Alice\",\"accept_terms_version\":\"{{termsVersion}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('created, or already there', () => pm.expect(pm.response.code).to.be.oneOf([200, 409, 429]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Full flow",
+      "item": [
+        {
+          "name": "1. Login A",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{emailA}}\",\"password\":\"{{password}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const m = /smem_session=([^;]+)/.exec(pm.response.headers.get('Set-Cookie') || '');",
+                  "pm.test('session cookie issued', () => pm.expect(m).to.not.be.null);",
+                  "pm.collectionVariables.set('tokenA', m ? m[1] : '');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. A creates a yearbook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/yearbook/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "yearbook",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"Newman signatures book\",\"language\":\"en\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('bookId', pm.response.json().data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2b. A picks the template named by the variable signatureTemplate (memory-book; it declares the switch once T-097 lands) - 200",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/yearbook/update",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "yearbook",
+                "update"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{bookId}}\",\"template_id\":\"{{signatureTemplate}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3. A creates a link",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/note-collection/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "note-collection",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"yearbook_id\":\"{{bookId}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const c = pm.response.json().data;",
+                  "pm.collectionVariables.set('linkToken', c.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4. Public lookup: the form says whether the pad is offered, with the fixed limits",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-collect/get?token={{linkToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-collect",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const s = pm.response.json().data.signature;",
+                  "pm.test('signature info', () => { pm.expect(Object.keys(s).sort()).to.eql(['enabled','h','max_points','max_strokes','w']); pm.expect(s.enabled).to.be.a('boolean'); pm.expect([s.w, s.h, s.max_strokes, s.max_points]).to.eql([1000, 400, 12, 600]); });",
+                  "// Until a built-in template declares \"signature\": true (T-096 / T-097) the switch is false and the signed steps below expect the refusal.",
+                  "pm.collectionVariables.set('sigEnabled', String(s.enabled));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5. Friend signs (odd spacing and key order) - 200 when the template enables signatures, else 400 ERROR_PARAM",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{linkToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "{\"name\":\"Linh\",\"message\":\"Nhớ các bạn nhiều\"}",
+                  "type": "text"
+                },
+                {
+                  "key": "signature",
+                  "value": " { \"s\" : [[ 120 , 260 ,\n 300, 120 , 480 ,280 ], [500,260,  880 ,240]] , \"h\":400,\"v\":1, \"w\":1000 } ",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const on = pm.collectionVariables.get('sigEnabled') === 'true';",
+                  "pm.test(on ? 'stored' : 'refused: the template has no signature switch', () => { if (on) { pm.response.to.have.status(200); pm.collectionVariables.set('signedId', pm.response.json().data.id); } else { pm.response.to.have.status(400); pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'); pm.collectionVariables.set('signedId', ''); } });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6. Friend sends a note without a signature - 200",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{linkToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "{\"name\":\"Mai\",\"message\":\"hi\"}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('plainId', pm.response.json().data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "7. A reads the inbox: the signature is the canonical object, the note without one has null",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/note/get-list?yearbook_id={{bookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "note",
+                "get-list"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const ints = (v) => Array.isArray(v) ? v.every(ints) : Number.isInteger(v);\nconst okSig = (s) => s === null || (Object.keys(s).join() === 'v,w,h,s' && s.v === 1 && s.w === 1000 && s.h === 400 && s.s.length >= 1 && s.s.length <= 12 && ints(s.s));",
+                  "const items = pm.response.json().data.items;",
+                  "pm.test('every item has signature, integers only', () => items.forEach(i => { pm.expect(i).to.have.property('signature'); pm.expect(okSig(i.signature)).to.eql(true); }));",
+                  "pm.test('the unsigned note has null', () => pm.expect(items.find(i => i.id === pm.collectionVariables.get('plainId')).signature).to.eql(null));",
+                  "const id = pm.collectionVariables.get('signedId');",
+                  "if (id) pm.test('the signed note comes back canonical', () => pm.expect(items.find(i => i.id === id).signature).to.eql({\"v\":1,\"w\":1000,\"h\":400,\"s\":[[120,260,300,120,480,280],[500,260,880,240]]}));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "8. A approves both notes - 200",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/note/batch-update-status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "note",
+                "batch-update-status"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"yearbook_id\":\"{{bookId}}\",\"ids\":[\"{{plainId}}\"{{signedIdList}}],\"status\":\"approved\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "9. Book data: the approved notes carry the signature (integers only), same shape for every note",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/book-data/get?yearbook_id={{bookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "book-data",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const ints = (v) => Array.isArray(v) ? v.every(ints) : Number.isInteger(v);\nconst okSig = (s) => s === null || (Object.keys(s).join() === 'v,w,h,s' && s.v === 1 && s.w === 1000 && s.h === 400 && s.s.length >= 1 && s.s.length <= 12 && ints(s.s));",
+                  "const notes = pm.response.json().data.notes;",
+                  "pm.test('every note has signature, integers only', () => notes.forEach(n => { pm.expect(n).to.have.property('signature'); pm.expect(okSig(n.signature)).to.eql(true); }));",
+                  "const id = pm.collectionVariables.get('signedId');",
+                  "if (id) pm.test('round trip', () => pm.expect(notes.find(n => n.id === id).signature).to.eql({\"v\":1,\"w\":1000,\"h\":400,\"s\":[[120,260,300,120,480,280],[500,260,880,240]]}));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10. A hides both notes - 200",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/note/batch-update-status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "note",
+                "batch-update-status"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"yearbook_id\":\"{{bookId}}\",\"ids\":[\"{{plainId}}\"{{signedIdList}}],\"status\":\"hidden\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "11. Book data after hiding: no notes, so no signature leaks",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/book-data/get?yearbook_id={{bookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "book-data",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('no notes', () => pm.expect(pm.response.json().data.notes).to.eql([]));",
+                  "pm.test('no stroke data in the body', () => pm.expect(pm.response.text()).to.not.include('\"s\":[['));"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Before every request of the flow: ', \"<signedId>\"' when the signed note exists, else nothing (the id list of the status calls).",
+              "const s = pm.collectionVariables.get('signedId');",
+              "pm.collectionVariables.set('signedIdList', s ? ', \"' + s + '\"' : '');"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Edge cases",
+      "item": [
+        {
+          "name": "Submit: duplicate signature part - 400 ERROR_PARAM",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{linkToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "{\"name\":\"Linh\",\"message\":\"Nhớ các bạn nhiều\"}",
+                  "type": "text"
+                },
+                {
+                  "key": "signature",
+                  "value": "{\"v\":1,\"w\":1000,\"h\":400,\"s\":[[120,260,300,120,480,280],[500,260,880,240]]}",
+                  "type": "text"
+                },
+                {
+                  "key": "signature",
+                  "value": "{\"v\":1,\"w\":1000,\"h\":400,\"s\":[[120,260,300,120,480,280],[500,260,880,240]]}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit: a signature over 4 KiB - 400 ERROR_INVALID_SIGNATURE",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{linkToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "{\"name\":\"Linh\",\"message\":\"Nhớ các bạn nhiều\"}",
+                  "type": "text"
+                },
+                {
+                  "key": "signature",
+                  "value": "{\"v\":1,\"w\":1000,\"h\":400,\"s\":[[120,260,300,120,480,280],[500,260,880,240]]}                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        ",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code ERROR_INVALID_SIGNATURE', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_SIGNATURE'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit: an empty signature part - 400 ERROR_INVALID_SIGNATURE (ERROR_PARAM while the template does not enable signatures)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{linkToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "{\"name\":\"Linh\",\"message\":\"Nhớ các bạn nhiều\"}",
+                  "type": "text"
+                },
+                {
+                  "key": "signature",
+                  "value": "",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "const want = pm.collectionVariables.get('sigEnabled') === 'true' ? 'ERROR_INVALID_SIGNATURE' : 'ERROR_PARAM';",
+                  "pm.test('the rule is named, the content is not echoed', () => { const b = pm.response.json(); pm.expect(b.status).to.eql(want); pm.expect(JSON.stringify(b)).to.not.include('SECRET'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit: a float - 400 ERROR_INVALID_SIGNATURE (ERROR_PARAM while the template does not enable signatures)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{linkToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "{\"name\":\"Linh\",\"message\":\"Nhớ các bạn nhiều\"}",
+                  "type": "text"
+                },
+                {
+                  "key": "signature",
+                  "value": "{\"v\":1,\"w\":1000,\"h\":400,\"s\":[[120,260,300.5,120]]}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "const want = pm.collectionVariables.get('sigEnabled') === 'true' ? 'ERROR_INVALID_SIGNATURE' : 'ERROR_PARAM';",
+                  "pm.test('the rule is named, the content is not echoed', () => { const b = pm.response.json(); pm.expect(b.status).to.eql(want); pm.expect(JSON.stringify(b)).to.not.include('SECRET'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit: an extra key - 400 ERROR_INVALID_SIGNATURE (ERROR_PARAM while the template does not enable signatures)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{linkToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "{\"name\":\"Linh\",\"message\":\"Nhớ các bạn nhiều\"}",
+                  "type": "text"
+                },
+                {
+                  "key": "signature",
+                  "value": "{\"v\":1,\"w\":1000,\"h\":400,\"s\":[[120,260,300,120]],\"x\":\"SECRET\"}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "const want = pm.collectionVariables.get('sigEnabled') === 'true' ? 'ERROR_INVALID_SIGNATURE' : 'ERROR_PARAM';",
+                  "pm.test('the rule is named, the content is not echoed', () => { const b = pm.response.json(); pm.expect(b.status).to.eql(want); pm.expect(JSON.stringify(b)).to.not.include('SECRET'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit: a duplicate key - 400 ERROR_INVALID_SIGNATURE (ERROR_PARAM while the template does not enable signatures)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{linkToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "{\"name\":\"Linh\",\"message\":\"Nhớ các bạn nhiều\"}",
+                  "type": "text"
+                },
+                {
+                  "key": "signature",
+                  "value": "{\"v\":1,\"v\":1,\"w\":1000,\"h\":400,\"s\":[[120,260,300,120]]}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "const want = pm.collectionVariables.get('sigEnabled') === 'true' ? 'ERROR_INVALID_SIGNATURE' : 'ERROR_PARAM';",
+                  "pm.test('the rule is named, the content is not echoed', () => { const b = pm.response.json(); pm.expect(b.status).to.eql(want); pm.expect(JSON.stringify(b)).to.not.include('SECRET'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit: a wrong size of drawing space - 400 ERROR_INVALID_SIGNATURE (ERROR_PARAM while the template does not enable signatures)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{linkToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "{\"name\":\"Linh\",\"message\":\"Nhớ các bạn nhiều\"}",
+                  "type": "text"
+                },
+                {
+                  "key": "signature",
+                  "value": "{\"v\":1,\"w\":500,\"h\":400,\"s\":[[120,260,300,120]]}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "const want = pm.collectionVariables.get('sigEnabled') === 'true' ? 'ERROR_INVALID_SIGNATURE' : 'ERROR_PARAM';",
+                  "pm.test('the rule is named, the content is not echoed', () => { const b = pm.response.json(); pm.expect(b.status).to.eql(want); pm.expect(JSON.stringify(b)).to.not.include('SECRET'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit: a negative number - 400 ERROR_INVALID_SIGNATURE (ERROR_PARAM while the template does not enable signatures)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{linkToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "{\"name\":\"Linh\",\"message\":\"Nhớ các bạn nhiều\"}",
+                  "type": "text"
+                },
+                {
+                  "key": "signature",
+                  "value": "{\"v\":1,\"w\":1000,\"h\":400,\"s\":[[-1,260,300,120]]}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "const want = pm.collectionVariables.get('sigEnabled') === 'true' ? 'ERROR_INVALID_SIGNATURE' : 'ERROR_PARAM';",
+                  "pm.test('the rule is named, the content is not echoed', () => { const b = pm.response.json(); pm.expect(b.status).to.eql(want); pm.expect(JSON.stringify(b)).to.not.include('SECRET'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit: a coordinate out of range - 400 ERROR_INVALID_SIGNATURE (ERROR_PARAM while the template does not enable signatures)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{linkToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "{\"name\":\"Linh\",\"message\":\"Nhớ các bạn nhiều\"}",
+                  "type": "text"
+                },
+                {
+                  "key": "signature",
+                  "value": "{\"v\":1,\"w\":1000,\"h\":400,\"s\":[[120,260,1001,120]]}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "const want = pm.collectionVariables.get('sigEnabled') === 'true' ? 'ERROR_INVALID_SIGNATURE' : 'ERROR_PARAM';",
+                  "pm.test('the rule is named, the content is not echoed', () => { const b = pm.response.json(); pm.expect(b.status).to.eql(want); pm.expect(JSON.stringify(b)).to.not.include('SECRET'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit: a stroke of one point - 400 ERROR_INVALID_SIGNATURE (ERROR_PARAM while the template does not enable signatures)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{linkToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "{\"name\":\"Linh\",\"message\":\"Nhớ các bạn nhiều\"}",
+                  "type": "text"
+                },
+                {
+                  "key": "signature",
+                  "value": "{\"v\":1,\"w\":1000,\"h\":400,\"s\":[[120,260]]}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "const want = pm.collectionVariables.get('sigEnabled') === 'true' ? 'ERROR_INVALID_SIGNATURE' : 'ERROR_PARAM';",
+                  "pm.test('the rule is named, the content is not echoed', () => { const b = pm.response.json(); pm.expect(b.status).to.eql(want); pm.expect(JSON.stringify(b)).to.not.include('SECRET'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit: an odd number of coordinates - 400 ERROR_INVALID_SIGNATURE (ERROR_PARAM while the template does not enable signatures)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{linkToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "{\"name\":\"Linh\",\"message\":\"Nhớ các bạn nhiều\"}",
+                  "type": "text"
+                },
+                {
+                  "key": "signature",
+                  "value": "{\"v\":1,\"w\":1000,\"h\":400,\"s\":[[120,260,300,120,7]]}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "const want = pm.collectionVariables.get('sigEnabled') === 'true' ? 'ERROR_INVALID_SIGNATURE' : 'ERROR_PARAM';",
+                  "pm.test('the rule is named, the content is not echoed', () => { const b = pm.response.json(); pm.expect(b.status).to.eql(want); pm.expect(JSON.stringify(b)).to.not.include('SECRET'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit: no strokes - 400 ERROR_INVALID_SIGNATURE (ERROR_PARAM while the template does not enable signatures)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{linkToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "{\"name\":\"Linh\",\"message\":\"Nhớ các bạn nhiều\"}",
+                  "type": "text"
+                },
+                {
+                  "key": "signature",
+                  "value": "{\"v\":1,\"w\":1000,\"h\":400,\"s\":[]}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "const want = pm.collectionVariables.get('sigEnabled') === 'true' ? 'ERROR_INVALID_SIGNATURE' : 'ERROR_PARAM';",
+                  "pm.test('the rule is named, the content is not echoed', () => { const b = pm.response.json(); pm.expect(b.status).to.eql(want); pm.expect(JSON.stringify(b)).to.not.include('SECRET'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit: 13 strokes - 400 ERROR_INVALID_SIGNATURE (ERROR_PARAM while the template does not enable signatures)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{linkToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "{\"name\":\"Linh\",\"message\":\"Nhớ các bạn nhiều\"}",
+                  "type": "text"
+                },
+                {
+                  "key": "signature",
+                  "value": "{\"v\":1,\"w\":1000,\"h\":400,\"s\":[[0,0,500,300],[0,0,500,300],[0,0,500,300],[0,0,500,300],[0,0,500,300],[0,0,500,300],[0,0,500,300],[0,0,500,300],[0,0,500,300],[0,0,500,300],[0,0,500,300],[0,0,500,300],[0,0,500,300]]}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "const want = pm.collectionVariables.get('sigEnabled') === 'true' ? 'ERROR_INVALID_SIGNATURE' : 'ERROR_PARAM';",
+                  "pm.test('the rule is named, the content is not echoed', () => { const b = pm.response.json(); pm.expect(b.status).to.eql(want); pm.expect(JSON.stringify(b)).to.not.include('SECRET'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit: a speck - 400 ERROR_INVALID_SIGNATURE (ERROR_PARAM while the template does not enable signatures)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{linkToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "{\"name\":\"Linh\",\"message\":\"Nhớ các bạn nhiều\"}",
+                  "type": "text"
+                },
+                {
+                  "key": "signature",
+                  "value": "{\"v\":1,\"w\":1000,\"h\":400,\"s\":[[100,100,110,110]]}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "const want = pm.collectionVariables.get('sigEnabled') === 'true' ? 'ERROR_INVALID_SIGNATURE' : 'ERROR_PARAM';",
+                  "pm.test('the rule is named, the content is not echoed', () => { const b = pm.response.json(); pm.expect(b.status).to.eql(want); pm.expect(JSON.stringify(b)).to.not.include('SECRET'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit: markup instead of strokes - 400 ERROR_INVALID_SIGNATURE (ERROR_PARAM while the template does not enable signatures)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{linkToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "{\"name\":\"Linh\",\"message\":\"Nhớ các bạn nhiều\"}",
+                  "type": "text"
+                },
+                {
+                  "key": "signature",
+                  "value": "<svg onload=SECRET>",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "const want = pm.collectionVariables.get('sigEnabled') === 'true' ? 'ERROR_INVALID_SIGNATURE' : 'ERROR_PARAM';",
+                  "pm.test('the rule is named, the content is not echoed', () => { const b = pm.response.json(); pm.expect(b.status).to.eql(want); pm.expect(JSON.stringify(b)).to.not.include('SECRET'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit: a string where a number belongs - 400 ERROR_INVALID_SIGNATURE (ERROR_PARAM while the template does not enable signatures)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{linkToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "{\"name\":\"Linh\",\"message\":\"Nhớ các bạn nhiều\"}",
+                  "type": "text"
+                },
+                {
+                  "key": "signature",
+                  "value": "{\"v\":1,\"w\":1000,\"h\":400,\"s\":[[\"SECRET\",260,300,120]]}",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "const want = pm.collectionVariables.get('sigEnabled') === 'true' ? 'ERROR_INVALID_SIGNATURE' : 'ERROR_PARAM';",
+                  "pm.test('the rule is named, the content is not echoed', () => { const b = pm.response.json(); pm.expect(b.status).to.eql(want); pm.expect(JSON.stringify(b)).to.not.include('SECRET'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit: a bad signature does not hide a text error - 400 ERROR_MISSING_ANSWER",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{linkToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{linkToken}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "{\"name\":\"A\"}",
+                  "type": "text"
+                },
+                {
+                  "key": "signature",
+                  "value": "junk",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error code ERROR_MISSING_ANSWER', () => pm.expect(pm.response.json().status).to.eql('ERROR_MISSING_ANSWER'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Inbox without a session - 401",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/note/get-list?yearbook_id={{bookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "note",
+                "get-list"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Book data without a session - 401",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/book-data/get?yearbook_id={{bookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "book-data",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "After the failures only the two notes of the flow exist",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/note/get-list?yearbook_id={{bookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "note",
+                "get-list"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{bookId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('two notes', () => pm.expect(pm.response.json().data.counts.all).to.eql(pm.collectionVariables.get('signedId') ? 2 : 1));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Clean up: A deletes the yearbook - 200 (its notes and signatures go with it)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/yearbook/delete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "yearbook",
+                "delete"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{bookId}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

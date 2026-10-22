@@ -81,7 +81,7 @@ func (s *Store) listNotes(ctx context.Context, ownerID uint64, bookID, status st
 	if err != nil {
 		return nil, nil, err
 	}
-	q := `SELECT id, public_id, collection_id, answers, status, sort_order, created_at FROM note_tab WHERE yearbook_id = ?`
+	q := `SELECT id, public_id, collection_id, answers, signature_json, status, sort_order, created_at FROM note_tab WHERE yearbook_id = ?`
 	args := []any{book}
 	if status != "" {
 		q += ` AND status = ?`
@@ -112,14 +112,16 @@ func (s *Store) listNotes(ctx context.Context, ownerID uint64, bookID, status st
 	for rows.Next() {
 		n := &NoteItem{Photos: []PhotoRef{}}
 		var answers []byte
+		var sig sql.NullString
 		var order sql.NullInt64
-		if err := rows.Scan(&n.rowID, &n.ID, &n.coll, &answers, &n.Status, &order, &n.CreatedAt); err != nil {
+		if err := rows.Scan(&n.rowID, &n.ID, &n.coll, &answers, &sig, &n.Status, &order, &n.CreatedAt); err != nil {
 			return nil, nil, err
 		}
 		if !validStatus(n.Status) {
 			return nil, nil, apperr.New(apperr.Internal, "note with unknown status in the table")
 		}
 		n.Answers = answers
+		n.Signature = decodeSignature(sig)
 		if n.Status == StatusApproved && order.Valid {
 			p := int(order.Int64)
 			n.Position = &p

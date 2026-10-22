@@ -2,7 +2,10 @@ package notes
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+
+	"github.com/danyaa666/smemories/internal/signature"
 )
 
 // maxBookNotes bounds the notes of the book-data response: the reorder cap, so the book the renderer draws is the one the
@@ -15,6 +18,17 @@ type BookNote struct {
 	ID       string          `json:"id"`
 	Answers  json.RawMessage `json:"answers"`
 	PhotoIDs []string        `json:"photo_ids"` // media ids, fetched with media/get-content?variant=print
+	// Signature is the note's vector signature (E11), null = none. Only integers: it is parsed again on the way out.
+	Signature *signature.Signature `json:"signature"`
+}
+
+// decodeSignature turns the stored column into the value the API returns: nil for NULL and for a stored string that is not a valid
+// signature (a damaged row shows no signature rather than unchecked data).
+func decodeSignature(s sql.NullString) *signature.Signature {
+	if !s.Valid {
+		return nil
+	}
+	return signature.Decode(s.String)
 }
 
 // ApprovedNotes returns the approved notes of the owner's book in book order (at most the cap) and the real number of
@@ -52,7 +66,7 @@ func (s *Store) approvedNotes(ctx context.Context, ownerID uint64, bookID string
 
 func (s *Store) approvedPage(ctx context.Context, ownerID uint64, bookID string, limit int) ([]*BookNote, error) {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT n.id, n.public_id, n.answers FROM note_tab n JOIN yearbook_tab y ON y.id = n.yearbook_id
+		`SELECT n.id, n.public_id, n.answers, n.signature_json FROM note_tab n JOIN yearbook_tab y ON y.id = n.yearbook_id
 		 WHERE y.owner_id = ? AND y.public_id = ? AND n.status = ? ORDER BY n.sort_order, n.id LIMIT ?`,
 		ownerID, bookID, StatusApproved, limit)
 	if err != nil {
@@ -66,10 +80,12 @@ func (s *Store) approvedPage(ctx context.Context, ownerID uint64, bookID string,
 		n := &BookNote{PhotoIDs: []string{}}
 		var row uint64
 		var answers []byte
-		if err := rows.Scan(&row, &n.ID, &answers); err != nil {
+		var sig sql.NullString
+		if err := rows.Scan(&row, &n.ID, &answers, &sig); err != nil {
 			return nil, err
 		}
 		n.Answers = answers
+		n.Signature = decodeSignature(sig)
 		out = append(out, n)
 		byRow[row] = n
 		noteIDs = append(noteIDs, row)

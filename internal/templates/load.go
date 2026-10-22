@@ -115,6 +115,12 @@ func NoteFields(templateID string) (refs []notefields.FieldRef, ok bool) {
 	return t.noteFields(), true
 }
 
+// SignatureEnabled reports whether the built-in template declares "signature": true. It is false for an unknown id.
+func SignatureEnabled(templateID string) bool {
+	t, ok := registry[templateID]
+	return ok && t.Signature
+}
+
 // Get returns a built-in template by id. The result is shared: do not modify it.
 func Get(id string) (*Template, bool) {
 	t, ok := registry[id]

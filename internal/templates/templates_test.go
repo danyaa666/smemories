@@ -264,6 +264,36 @@ func TestNoteFields(t *testing.T) {
 	}
 }
 
+// The optional "signature" switch (T-095): false by default, true when declared, only a boolean is accepted, and an unknown or built-in
+// template that does not declare it reports false.
+func TestSignatureSwitch(t *testing.T) {
+	tt, err := Parse(mutate(t, func(r map[string]any) {}))
+	if err != nil || tt.Signature {
+		t.Fatalf("default: %v, signature %v", err, tt != nil && tt.Signature)
+	}
+	tt, err = Parse(mutate(t, func(r map[string]any) { r["signature"] = true }))
+	if err != nil || !tt.Signature {
+		t.Fatalf("declared: %v", err)
+	}
+	html := `{"id":"x","renderer":"html","name":{"en":"X","vi":"X"},"page_sizes":["A5"],"signature":true}`
+	if tt, err := Parse([]byte(html)); err != nil || !tt.Signature {
+		t.Fatalf("html manifest: %v", err)
+	}
+	for _, bad := range []any{"yes", 1, []any{}} {
+		if _, err := Parse(mutate(t, func(r map[string]any) { r["signature"] = bad })); err == nil {
+			t.Errorf("signature %v accepted", bad)
+		}
+	}
+	for _, i := range List() {
+		if SignatureEnabled(i.ID) != registry[i.ID].Signature {
+			t.Errorf("SignatureEnabled(%q) disagrees with the manifest", i.ID)
+		}
+	}
+	if SignatureEnabled("nope") {
+		t.Error("an unknown template enables signatures")
+	}
+}
+
 func TestNoteFieldsCustomAndDefault(t *testing.T) {
 	custom := mutate(t, func(r map[string]any) {
 		r["note_fields"] = []any{map[string]any{"id": "name", "required": true}, map[string]any{"id": "how_we_met"}, map[string]any{"id": "message", "required": true}}

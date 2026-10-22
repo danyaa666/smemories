@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/danyaa666/smemories/internal/apperr"
+	"github.com/danyaa666/smemories/internal/signature"
 	"github.com/danyaa666/smemories/internal/ulid"
 )
 
@@ -45,13 +46,14 @@ type PhotoRef struct {
 
 // NoteItem is one note as the owner's list shows it. Answers are stored as they were validated; the display name is answers.name.
 type NoteItem struct {
-	ID        string          `json:"id"`
-	Status    string          `json:"status"`
-	Answers   json.RawMessage `json:"answers"`
-	Photos    []PhotoRef      `json:"photos"`
-	LinkLabel string          `json:"link_label"`
-	CreatedAt int64           `json:"created_at"` // Unix ms
-	Position  *int            `json:"position"`   // 1-based place in the book, approved notes only
+	ID        string               `json:"id"`
+	Status    string               `json:"status"`
+	Answers   json.RawMessage      `json:"answers"`
+	Signature *signature.Signature `json:"signature"` // vector strokes (E11), null = none
+	Photos    []PhotoRef           `json:"photos"`
+	LinkLabel string               `json:"link_label"`
+	CreatedAt int64                `json:"created_at"` // Unix ms
+	Position  *int                 `json:"position"`   // 1-based place in the book, approved notes only
 
 	rowID uint64 // internal id: the keyset position, never leaves the package
 	coll  uint64 // internal collection id, for link_label

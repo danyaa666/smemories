@@ -76,6 +76,11 @@ other value is rejected.
   [note-fields.md](note-fields.md)); a field the template no longer asks for is simply not shown or printed, and a
   new field is empty for older notes.
 
+`signature` (optional boolean, default `false`; E11, T-095) switches on the handwritten signature of a note: only a template that says
+`"signature": true` makes `public-collect/get` report `signature.enabled`, shows the pad on the friend page and lets `submit-note` accept a
+`signature` field (otherwise `ERROR_PARAM`). Any other value than a boolean fails validation. `templates.SignatureEnabled(id)` reads it (false for an
+unknown id). Format and limits: the section "Signature" of [note-fields.md](note-fields.md). The built-in manifests turn it on in T-097 (print) and T-096 (web).
+
 `"renderer": "html"` (default `"go"`) marks a template drawn by the web app. Its manifest has only `id`, `name`
 (`en` and `vi`), `page_sizes` (any of `A5`, `A4`, `Letter`; no aspect-ratio rule) and `note_fields`: no `pages`, `unit`,
 `reference` or `theme` (the validator rejects them). `templates.List()` returns Go and html templates, with a

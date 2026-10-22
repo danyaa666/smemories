@@ -12,6 +12,7 @@ import (
 	"github.com/danyaa666/smemories/internal/auth"
 	"github.com/danyaa666/smemories/internal/httpx"
 	"github.com/danyaa666/smemories/internal/notefields"
+	"github.com/danyaa666/smemories/internal/signature"
 )
 
 const (
@@ -160,6 +161,7 @@ type lookupJSON struct {
 	DeadlineAt *int64                 `json:"deadline_at"`
 	Open       bool                   `json:"open"`
 	Fields     []notefields.FieldInfo `json:"fields"`
+	Signature  signature.Info         `json:"signature"`
 }
 
 type titleJSON struct {
@@ -176,7 +178,7 @@ func (h *Handler) lookup(w http.ResponseWriter, r *http.Request) {
 		h.fail(w, r, err)
 		return
 	}
-	httpx.OK(w, r, &lookupJSON{titleJSON{p.Title}, ownerJSON{p.DisplayName}, p.DeadlineAt, true, fields})
+	httpx.OK(w, r, &lookupJSON{titleJSON{p.Title}, ownerJSON{p.DisplayName}, p.DeadlineAt, true, fields, h.svc.SignatureInfo(p)})
 }
 
 // fail answers err. A request whose client went away gets 499 and a debug line; a *RetryAfterError sets Retry-After; the
