@@ -328,6 +328,7 @@ describe("photos", () => {
     [400, "invalid_image", {}, "could not be read", "Không đọc được"],
     [409, "quota_exceeded", {}, "photo limit", "giới hạn ảnh"],
     [429, "rate_limited", { "Retry-After": "120" }, "Try again in 2 min", "thử lại sau 2 phút"],
+    [403, "email_not_verified", {}, "Verify your email address first", "xác minh địa chỉ email"], // T-110: photo uploads need a verified email
   ])("explains %i %s in the user's language", async (status, code, headers, en, vi) => {
     const { input } = await openEditor();
     await userEvent.upload(input, png());

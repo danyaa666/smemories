@@ -20,7 +20,12 @@ var testPace = httpx.BodyPace{Idle: time.Second, Total: 20 * time.Second, MinRat
 
 func (e *env) serve() *httptest.Server {
 	e.mh.pace = testPace
-	srv := httptest.NewServer(e.h)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if ip := r.Header.Get("X-Test-IP"); ip != "" { // one test can play many addresses
+			r.RemoteAddr = ip + ":4000"
+		}
+		e.h.ServeHTTP(w, r)
+	}))
 	e.t.Cleanup(func() { srv.CloseClientConnections(); srv.Close() })
 	return srv
 }
@@ -34,8 +39,8 @@ func (e *env) drip(srv *httptest.Server, u user, book string) func() (int, http.
 		e.t.Fatal(err)
 	}
 	e.t.Cleanup(func() { _ = conn.Close() })
-	fmt.Fprintf(conn, "POST /api/media/create HTTP/1.1\r\nHost: x\r\nCookie: %s=%s\r\nOrigin: %s\r\nContent-Type: multipart/form-data; boundary=B\r\nContent-Length: %d\r\n\r\n",
-		auth.CookieName, u.cookie, origin, 1<<20)
+	fmt.Fprintf(conn, "POST /api/media/create HTTP/1.1\r\nHost: x\r\nCookie: %s=%s\r\nOrigin: %s\r\nX-Test-IP: %s\r\nContent-Type: multipart/form-data; boundary=B\r\nContent-Length: %d\r\n\r\n",
+		auth.CookieName, u.cookie, origin, u.ip, 1<<20)
 	fmt.Fprintf(conn, "--B\r\nContent-Disposition: form-data; name=\"yearbook_id\"\r\n\r\n%s", book[:5])
 	stop := make(chan struct{})
 	e.t.Cleanup(func() { close(stop) })
@@ -65,7 +70,7 @@ func (e *env) drip(srv *httptest.Server, u user, book string) func() (int, http.
 func (e *env) idle() bool {
 	e.mh.userMu.Lock()
 	defer e.mh.userMu.Unlock()
-	return e.mh.UploadsInProgress() == 0 && len(e.mh.perUser) == 0
+	return e.mh.UploadsInProgress() == 0 && len(e.mh.perUser) == 0 && len(e.mh.perClient) == 0
 }
 
 func (e *env) waitIdle() {
@@ -91,6 +96,7 @@ func (e *env) realUpload(srv *httptest.Server, u user, book string) answer {
 	req, _ := http.NewRequest("POST", srv.URL+"/api/media/create", body)
 	req.Header.Set("Content-Type", ct)
 	req.Header.Set("Origin", origin)
+	req.Header.Set("X-Test-IP", u.ip)
 	req.AddCookie(&http.Cookie{Name: auth.CookieName, Value: u.cookie})
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -139,6 +145,7 @@ func TestPerUserUploadCap(t *testing.T) {
 // upload whose body arrives in slow pieces, but keeps moving, still succeeds.
 func TestSlowUploadsDoNotStarveOthersForLong(t *testing.T) {
 	e := newEnv(t)
+	e.mh.clientCap = 100 // this test is about the shared pool: its eight users must not meet the per-address share
 	srv := e.serve()
 	var drips []func() (int, http.Header)
 	for i := range cap(e.mh.inflight) {
@@ -169,8 +176,8 @@ func TestSlowUploadsDoNotStarveOthersForLong(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = conn.Close() })
-	fmt.Fprintf(conn, "POST /api/media/create HTTP/1.1\r\nHost: x\r\nCookie: %s=%s\r\nOrigin: %s\r\nContent-Type: %s\r\nContent-Length: %d\r\n\r\n",
-		auth.CookieName, ninth.cookie, origin, ct, body.Len())
+	fmt.Fprintf(conn, "POST /api/media/create HTTP/1.1\r\nHost: x\r\nCookie: %s=%s\r\nOrigin: %s\r\nX-Test-IP: %s\r\nContent-Type: %s\r\nContent-Length: %d\r\n\r\n",
+		auth.CookieName, ninth.cookie, origin, ninth.ip, ct, body.Len())
 	all := body.Bytes()
 	for i := range 4 {
 		lo, hi := len(all)*i/4, len(all)*(i+1)/4
@@ -185,5 +192,65 @@ func TestSlowUploadsDoNotStarveOthersForLong(t *testing.T) {
 	_ = got.Body.Close()
 	if got.StatusCode != 200 {
 		t.Fatalf("slow but steady upload: %d", got.StatusCode)
+	}
+}
+
+// T-110 AC1: an unverified account is 403 ERROR_EMAIL_NOT_VERIFIED on media/create, with no slot taken and no body read (the
+// answer comes while the client is still silent); a verified one uploads.
+func TestUnverifiedAccountCannotUpload(t *testing.T) {
+	e := newEnv(t)
+	srv := e.serve()
+	v, un := e.register("ver-v@example.com"), e.registerUnverified("ver-un@example.com")
+	book, unBook := e.newBook(v), e.newBook(un)
+	d := e.drip(srv, un, unBook) // promises 1 MiB, sends a few bytes and keeps dripping
+	if code, _ := d(); code != 403 {
+		t.Fatalf("unverified, dripping: %d, want 403", code)
+	}
+	if e.mh.UploadsInProgress() != 0 || len(e.mh.perUser) != 0 || len(e.mh.perClient) != 0 {
+		t.Fatal("a slot was taken for an unverified account")
+	}
+	e.upload(un, unBook, "a.jpg", "image/jpeg", photo(t)).status(403, "ERROR_EMAIL_NOT_VERIFIED")
+	if got := e.realUpload(srv, v, book); got.StatusCode != 200 {
+		t.Fatalf("verified: %d", got.StatusCode)
+	}
+}
+
+// T-110 AC2: two accounts with two drips each fill one address's share of four; the next upload from that address is 429 with
+// Retry-After 5 (before its body), a victim from another address uploads, and the drippers end in 408 and give everything back.
+func TestPerClientUploadShare(t *testing.T) {
+	e := newEnv(t)
+	srv := e.serve()
+	const attacker, other = "10.1.0.1", "10.1.0.2"
+	a, b, c := e.register("share-a@example.com").from(attacker), e.register("share-b@example.com").from(attacker), e.register("share-c@example.com").from(attacker)
+	victim := e.register("share-v@example.com").from(other)
+	bookA, bookB, bookC, bookV := e.newBook(a), e.newBook(b), e.newBook(c), e.newBook(victim)
+
+	var drips []func() (int, http.Header)
+	for _, d := range []struct {
+		u    user
+		book string
+	}{{a, bookA}, {a, bookA}, {b, bookB}, {b, bookB}} {
+		drips = append(drips, e.drip(srv, d.u, d.book))
+	}
+	deadline := time.Now().Add(5 * time.Second)
+	for e.mh.UploadsInProgress() != maxUploadsPerClient && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+	}
+	start := time.Now()
+	res := e.realUpload(srv, c, bookC) // a third account of the same address: its own cap is empty, the address share is full
+	if res.StatusCode != 429 || res.Header.Get("Retry-After") != "5" || time.Since(start) > time.Second {
+		t.Fatalf("fifth from one address: %d Retry-After=%q after %v", res.StatusCode, res.Header.Get("Retry-After"), time.Since(start))
+	}
+	if got := e.realUpload(srv, victim, bookV); got.StatusCode != 200 {
+		t.Fatalf("victim from another address: %d", got.StatusCode)
+	}
+	for i, d := range drips {
+		if code, _ := d(); code != 408 {
+			t.Fatalf("dripper %d: %d, want 408", i, code)
+		}
+	}
+	e.waitIdle()
+	if got := e.realUpload(srv, c, bookC); got.StatusCode != 200 { // the share is released
+		t.Fatalf("after the drippers: %d", got.StatusCode)
 	}
 }

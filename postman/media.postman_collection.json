@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "SMemories - media",
-    "description": "Photo upload, list, download and delete (T-009, T-046), on the v2 contract since T-069 (`/api/media/create`, `/api/media/get-list`, `/api/media/get-content`, `/api/media/delete`; `{status,data}` envelope, `ERROR_*` codes, Unix ms timestamps; `get-content` is binary on success and the error envelope on failure). Accounts and yearbooks still use the v1 routes until their own tasks. Run from the postman/ directory (newman run media.postman_collection.json --working-dir .) against an API started with SMEM_ENV=dev and a reachable MinIO (make up). Each run registers 2 users (limit 5 per hour per IP; run `make reset-limits` or raise SMEM_RATE_REGISTER_PER_HOUR before a third run in the hour). Run the whole collection in order: Edge cases reuses the two users of the Full flow. Not covered here because a collection cannot generate files: the 11 MiB size cap (413), quotas and the upload rate limit; the Go integration tests cover them.",
+    "description": "Photo upload, list, download and delete (T-009, T-046), on the v2 contract since T-069 (`/api/media/create`, `/api/media/get-list`, `/api/media/get-content`, `/api/media/delete`; `{status,data}` envelope, `ERROR_*` codes, Unix ms timestamps; `get-content` is binary on success and the error envelope on failure). Accounts and yearbooks still use the v1 routes until their own tasks. Run from the postman/ directory (newman run media.postman_collection.json --working-dir .) against an API started with SMEM_ENV=dev and a reachable MinIO (make up). Run the whole collection in order: Edge cases reuses the two users of the Full flow. Not covered here because a collection cannot generate files: the 11 MiB size cap (413), quotas and the upload rate limit; the Go integration tests cover them. Accounts: the owner endpoints need a verified email (T-110: `POST /api/media/create` answers 403 `ERROR_EMAIL_NOT_VERIFIED` without it), and the dev mail is only printed to the API's stdout, which Newman cannot read. So the collection uses the three fixed accounts of notes.postman_collection.json (A and B verified, C never verified): run `newman run <this file> --folder \"Setup (once per database)\" --working-dir .` once, then `make verify-newman-users` (marks A and B verified in the dev database), and after that run the whole collection as often as you like; the Full flow only logs in. ",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -19,15 +19,15 @@
     },
     {
       "key": "emailA",
-      "value": ""
+      "value": "newman-notes-a@example.com"
     },
     {
       "key": "emailB",
-      "value": ""
+      "value": "newman-notes-b@example.com"
     },
     {
       "key": "password",
-      "value": ""
+      "value": "Fake-Newman-notes-pw-1"
     },
     {
       "key": "tokenA",
@@ -64,38 +64,25 @@
     {
       "key": "mediaCursor",
       "value": ""
+    },
+    {
+      "key": "emailC",
+      "value": "newman-notes-c@example.com"
+    },
+    {
+      "key": "tokenC",
+      "value": ""
     }
   ],
   "item": [
     {
-      "name": "Full flow",
-      "event": [
-        {
-          "listen": "prerequest",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "// Runs before every request in the folder; generate only before the first one so the whole flow shares one pair of accounts.",
-              "if (pm.info.requestName.startsWith('1. ')) {",
-              "  const n = Date.now() + '-' + Math.floor(Math.random() * 1e6);",
-              "  pm.collectionVariables.set('emailA', 'newman-media-a-' + n + '@example.com');",
-              "  pm.collectionVariables.set('emailB', 'newman-media-b-' + n + '@example.com');",
-              "  pm.collectionVariables.set('password', 'Fake-Newman-pw-' + n);",
-              "}"
-            ]
-          }
-        }
-      ],
+      "name": "Setup (once per database)",
       "item": [
         {
-          "name": "1. Register user A",
+          "name": "Register A (verified later; 200, or 409/429 when an earlier run already did)",
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Cookie",
-                "value": "smem_session="
-              },
               {
                 "key": "Origin",
                 "value": "{{origin}}"
@@ -118,7 +105,142 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"email\":\"{{emailA}}\",\"password\":\"{{password}}\",\"display_name\":\"Newman A\",\"accept_terms_version\":\"{{termsVersion}}\"}"
+              "raw": "{\"email\":\"{{emailA}}\",\"password\":\"{{password}}\",\"display_name\":\"Newman Alice \\u0110\\u1eb7ng\",\"accept_terms_version\":\"{{termsVersion}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('created, or already there', () => pm.expect(pm.response.code).to.be.oneOf([200, 409, 429]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register B (verified later; 200, or 409/429 when an earlier run already did)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{emailB}}\",\"password\":\"{{password}}\",\"display_name\":\"Newman Bob\",\"accept_terms_version\":\"{{termsVersion}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('created, or already there', () => pm.expect(pm.response.code).to.be.oneOf([200, 409, 429]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register C (stays unverified; 200, or 409/429 when an earlier run already did)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{emailC}}\",\"password\":\"{{password}}\",\"display_name\":\"Newman Carol\",\"accept_terms_version\":\"{{termsVersion}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('created, or already there', () => pm.expect(pm.response.code).to.be.oneOf([200, 409, 429]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Full flow",
+      "item": [
+        {
+          "name": "1. Login A",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{emailA}}\",\"password\":\"{{password}}\"}"
             }
           },
           "event": [
@@ -137,7 +259,7 @@
           ]
         },
         {
-          "name": "2. Register user B",
+          "name": "2. Login B",
           "request": {
             "method": "POST",
             "header": [
@@ -155,19 +277,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/auth/register",
+              "raw": "{{baseUrl}}/api/auth/login",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
                 "auth",
-                "register"
+                "login"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"email\":\"{{emailB}}\",\"password\":\"{{password}}\",\"display_name\":\"Newman B\",\"accept_terms_version\":\"{{termsVersion}}\"}"
+              "raw": "{\"email\":\"{{emailB}}\",\"password\":\"{{password}}\"}"
             }
           },
           "event": [
@@ -1794,6 +1916,109 @@
                 "exec": [
                   "pm.test('status 200', () => pm.response.to.have.status(200));",
                   "pm.collectionVariables.set('mediaIdB', pm.response.json().data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E3b. Login C (never verified)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{emailC}}\",\"password\":\"{{password}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const m = /smem_session=([^;]+)/.exec(pm.response.headers.get('Set-Cookie') || '');",
+                  "pm.test('session cookie issued', () => pm.expect(m).to.not.be.null);",
+                  "pm.collectionVariables.set('tokenC', m ? m[1] : '');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E3c. Upload by an account with an unverified email - 403 ERROR_EMAIL_NOT_VERIFIED (no slot, no body read)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenC}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/media/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "media",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "yearbook_id",
+                  "type": "text",
+                  "value": "{{bookId}}"
+                },
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "fixtures/media/photo-gps.jpg"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 403', () => pm.response.to.have.status(403));",
+                  "pm.test('error ERROR_EMAIL_NOT_VERIFIED', () => pm.expect(pm.response.json().status).to.eql('ERROR_EMAIL_NOT_VERIFIED'));"
                 ]
               }
             }
