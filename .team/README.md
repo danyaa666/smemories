@@ -10,10 +10,10 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 13 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-095, T-096, T-097, T-116 |
-| TODO | 2 | T-114, T-115 |
-| IN_PROGRESS | 1 | T-113 |
-| CHANGES_REQUESTED | 1 | T-106 |
+| BACKLOG | 11 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-096, T-097 |
+| TODO | 4 | T-095, T-114, T-115, T-116 |
+| IN_PROGRESS | 1 | T-106 |
+| IN_QA | 1 | T-113 |
 | DONE | 94 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-092, T-093, T-094, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-107, T-108, T-109, T-110, T-111, T-112, T-117, T-118, T-119 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
@@ -21,7 +21,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?); Q-051 (Approve merge of T-100 (canonical public ids, PR #93)?); Q-052 (Approve merge of T-111 (Terms acceptance API, PR #96; merges together with T-112)?); Q-053 (Approve merge of T-110 (upload abuse follow-up, PR #99)?); Q-054 (Approve merge of T-107 (bounded photo download memory, PR #98)?)
 
-_Board last written 2026-10-22 08:53Z_
+_Board last written 2026-10-22 09:08Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4469,7 +4469,7 @@ Spec: .team/epics/E05-templates-export/16-book-text-export-web.md. Download and 
 - 2026-10-21 13:52Z · human · accepted by owner
 
 ### T-095 — [E11] Signature storage, validation and API
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1b
@@ -4480,12 +4480,13 @@ Spec: .team/epics/E05-templates-export/16-book-text-export-web.md. Download and 
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-19 04:19Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-22 09:08Z by leader
+- **Comments-seen:** 1
 
 Spec: .team/epics/E11-signatures/01-signature-api.md. Next phase (after go-live, D-31). Vector strokes (L-14), template switch, public submit field, inbox and book-data reads. Risk high: public input.
 
 #### Comments
+- 2026-10-22 09:08Z · leader · Leader: promoted, the first task of E11 signatures (owner asked for it as the next phase). T-096 and T-097 follow once it merges.
 
 ### T-096 — [E11] Web: signature pad on the public form and the signature in the inbox
 - **Status:** BACKLOG
@@ -4837,7 +4838,7 @@ Spec: .team/epics/E12-security-hardening/09-links-and-contributor-quota.md (read
 - 2026-10-22 05:34Z · human · accepted by owner
 
 ### T-106 — [E12] Auth and repository hygiene from audit run 1
-- **Status:** CHANGES_REQUESTED
+- **Status:** IN_PROGRESS
 - **Priority:** P3
 - **Type:** security
 - **Milestone:** M2
@@ -4845,10 +4846,10 @@ Spec: .team/epics/E12-security-hardening/09-links-and-contributor-quota.md (read
 - **Risk:** high
 - **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** dev
 - **Branch:** task/t-106-e12-auth-and-repository-hygiene-from-aud
 - **PR:** https://github.com/danyaa666/smemories/pull/106
-- **Updated:** 2026-10-22 08:44Z by leader
+- **Updated:** 2026-10-22 08:59Z by dev
 - **Comments-seen:** 2
 
 Spec: .team/epics/E12-security-hardening/10-auth-and-repo-hygiene.md (read it from the repo root). Source: audit run 1, docs/security-audit-skill-2026-10-20/ (PR #86). Risk high: owner approves the merge.
@@ -5101,7 +5102,7 @@ Spec: .team/epics/E13-legal/02-legal-pages-web.md. Pages from docs/legal (draft 
 - 2026-10-22 02:05Z · human · accepted by owner
 
 ### T-113 — [E12] Media memory estimate for lossy WebP with alpha (ALPH) is too low
-- **Status:** IN_PROGRESS
+- **Status:** IN_QA
 - **Priority:** P3
 - **Type:** bug
 - **Milestone:** M2
@@ -5109,15 +5110,17 @@ Spec: .team/epics/E13-legal/02-legal-pages-web.md. Pages from docs/legal (draft 
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** qa
 - **Branch:** task/t-113-e12-media-memory-estimate-for-lossy-webp
-- **PR:** —
-- **Updated:** 2026-10-22 08:42Z by dev
-- **Comments-seen:** 0
+- **PR:** https://github.com/danyaa666/smemories/pull/107
+- **Updated:** 2026-10-22 08:59Z by qa
+- **Comments-seen:** 2
 
 QA of T-104 (2026-10-21): a lossy WebP with an ALPH chunk (compression 1) decodes to a transient NRGBA at about 4 bytes per pixel, while the decode-memory estimate in internal/media assumes about 2.5; a valid 5000x5000 file can peak near 160 MB against an estimated 62 MB, so the processing-slot and SMEM_MEMORY_LIMIT_MIB sizing (docs/media.md) is optimistic. Fix the estimate per format (WebP with alpha uses 4 B/px, or the real decoder output size), add a test with a WebP-with-alpha fixture that measures the peak (testing.AllocsPerRun or runtime.MemStats around one decode), update the numbers in docs/media.md. No behaviour change for JPEG and PNG.
 
 #### Comments
+- 2026-10-22 08:58Z · dev · PR 107 head 0d04639, CI green. decodedBytes: lossy WebP with ALPH = 8.75 B/px (real 8.53 measured with MemStats; was 2.5). Fixture testdata/alpha-lossy-2048.webp; tests TestDecodedBytesBoundsALossyWebPWithAlpha, TestWithinLimitsLossyWebPWithAlpha. Alpha WebP above ~3800x3800 now refused. docs/media.md updated.
+- 2026-10-22 08:58Z · leader · Leader: the new alpha-WebP cutoff (about 3800x3800, 14 MP, down from 25 MP) is accepted. Phone photos are JPEG or HEIC; alpha WebP is mostly graphics. QA: check the numbers and the cut-off error, not the product choice.
 
 ### T-114 — [E03] Web: a malformed yearbook id in the URL shows 'book not found'
 - **Status:** TODO
@@ -5158,7 +5161,7 @@ QA of T-094 (2026-10-21): after Continue in the public-link warning and after co
 #### Comments
 
 ### T-116 — [E12] Web: limit concurrent photo requests on gallery pages (follow-up to T-107)
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P3
 - **Type:** feature
 - **Milestone:** M2
@@ -5169,12 +5172,13 @@ QA of T-094 (2026-10-21): after Continue in the public-link warning and after co
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-21 23:24Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-22 09:08Z by leader
+- **Comments-seen:** 1
 
 QA of T-107 (2026-10-22): with 400 ms storage latency per object, a 100-thumbnail HTTP/2 burst gets 64 x 200 and 36 x 429, and <img> does not retry. If real S3 latency in the go-live phase shows this, load gallery images through a small client-side queue (at most 16 in flight, retry a 429 after Retry-After) instead of raising the server cap. Measure first on the deployed stack.
 
 #### Comments
+- 2026-10-22 09:08Z · leader · Leader: promoted to keep the pipeline at min_ready_tasks; T-107 is merged.
 
 ### T-117 — [E13] Fix develop e2e after the Terms merges (journey readFileSync import, h2-gallery register terms version)
 - **Status:** DONE
@@ -5245,7 +5249,7 @@ Spec: .team/epics/E06-go-live/12-go-1-26-10-base-image.md (read it from the main
 - **Branch:** task/t-119-e12-openapi-document-the-90-day-absolute
 - **PR:** 105
 - **Updated:** 2026-10-22 08:53Z by human
-- **Comments-seen:** 3
+- **Comments-seen:** 4
 
 Spec: .team/epics/E12-security-hardening/12-openapi-session-ceiling.md (read it from the main checkout).
 
