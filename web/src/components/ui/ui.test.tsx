@@ -224,6 +224,30 @@ describe("Dialog", () => {
     expect(screen.getByRole("button", { name: "Elsewhere" })).toHaveFocus();
   });
 
+  it("leaves no timer, observer or focusin listener behind after the 30 s cap when the opener never re-enables (QA T-115)", async () => {
+    const removed = vi.spyOn(document, "removeEventListener");
+    const added = vi.spyOn(document, "addEventListener");
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const finish: { current?: () => void } = {};
+      render(<BusyHarness finish={finish} />);
+      await userEvent.click(screen.getByRole("button", { name: "Export" }));
+      await userEvent.click(screen.getByRole("button", { name: "Go" }));
+      expect(vi.getTimerCount()).toBe(1); // the give-up timer
+      expect(added.mock.calls.filter(([t]) => t === "focusin")).toHaveLength(1);
+      act(() => void vi.advanceTimersByTime(30_001));
+      expect(vi.getTimerCount()).toBe(0);
+      expect(removed.mock.calls.filter(([t]) => t === "focusin")).toHaveLength(1);
+      act(() => finish.current?.()); // enabling it after the cap must not steal focus
+      await Promise.resolve();
+      expect(screen.getByRole("button", { name: "Export" })).not.toHaveFocus();
+    } finally {
+      vi.useRealTimers();
+      removed.mockRestore();
+      added.mockRestore();
+    }
+  });
+
   it("returns focus to the opener when a click outside the box closes the dialog", async () => {
     render(<Harness />);
     const opener = screen.getByRole("button", { name: "Delete book" });
