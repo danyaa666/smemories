@@ -10,6 +10,7 @@ import (
 
 const (
 	maxActive = 5   // not-revoked collections per yearbook
+	maxLinks  = 50  // collections per yearbook, revoked ones included (T-105)
 	maxNotes  = 300 // notes per collection, in any status
 )
 
@@ -27,7 +28,8 @@ type Collection struct {
 	DeadlineAt *int64
 	CreatedAt  int64
 	RevokedAt  *int64
-	NoteCount  int // notes in any status
+	NoteCount  int    // notes in any status
+	rowID      uint64 // the database id, the second part of the list cursor; never leaves the package
 }
 
 // Store persists collections. Every owner query is scoped by yearbook_tab.owner_id: a row is never fetched by id and compared afterwards.
@@ -53,11 +55,14 @@ func (s *Store) create(ctx context.Context, ownerID uint64, bookID string, c *Co
 	if err != nil {
 		return err
 	}
-	var n int
-	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM note_collection_tab WHERE yearbook_id = ? AND revoked_at IS NULL`, id).Scan(&n); err != nil {
+	var n, revoked int
+	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*), COUNT(revoked_at) FROM note_collection_tab WHERE yearbook_id = ?`, id).Scan(&n, &revoked); err != nil {
 		return err
 	}
-	if n >= maxActive {
+	if n >= maxLinks {
+		return ErrTooManyLinks
+	}
+	if n-revoked >= maxActive {
 		return ErrLimitReached
 	}
 	if _, err := tx.ExecContext(ctx,
@@ -68,19 +73,21 @@ func (s *Store) create(ctx context.Context, ownerID uint64, bookID string, c *Co
 	return tx.Commit()
 }
 
-// list returns the book's collections, newest first. ponytail: unpaged; revoked links stay in the list, add a cursor if that gets long.
-func (s *Store) list(ctx context.Context, ownerID uint64, bookID string) ([]*Collection, error) {
-	var id uint64
-	err := s.db.QueryRowContext(ctx, `SELECT id FROM yearbook_tab WHERE owner_id = ? AND public_id = ?`, ownerID, bookID).Scan(&id)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrNotFound
-	}
+// list returns up to limit of the book's collections, newest first (created_at, id descending), that come after the position
+// (nil = first page). The (yearbook_id, created_at) index carries the primary key, so the read is an index range scan.
+func (s *Store) list(ctx context.Context, ownerID uint64, bookID string, after *notePos, limit int) ([]*Collection, error) {
+	id, err := s.ownedBook(ctx, ownerID, bookID)
 	if err != nil {
 		return nil, err
 	}
-	rows, err := s.db.QueryContext(ctx,
-		`SELECT c.public_id, c.label, c.deadline_at, c.created_at, c.revoked_at, (SELECT COUNT(*) FROM note_tab n WHERE n.collection_id = c.id)
-		 FROM note_collection_tab c WHERE c.yearbook_id = ? ORDER BY c.created_at DESC, c.id DESC`, id)
+	q := `SELECT c.id, c.public_id, c.label, c.deadline_at, c.created_at, c.revoked_at, (SELECT COUNT(*) FROM note_tab n WHERE n.collection_id = c.id)
+		 FROM note_collection_tab c WHERE c.yearbook_id = ?`
+	args := []any{id}
+	if after != nil {
+		q += ` AND (c.created_at < ? OR (c.created_at = ? AND c.id < ?))`
+		args = append(args, after.createdAt, after.createdAt, after.rowID)
+	}
+	rows, err := s.db.QueryContext(ctx, q+` ORDER BY c.created_at DESC, c.id DESC LIMIT ?`, append(args, limit)...)
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +96,7 @@ func (s *Store) list(ctx context.Context, ownerID uint64, bookID string) ([]*Col
 	for rows.Next() {
 		c := &Collection{}
 		var deadline, revoked sql.NullInt64
-		if err := rows.Scan(&c.ID, &c.Label, &deadline, &c.CreatedAt, &revoked, &c.NoteCount); err != nil {
+		if err := rows.Scan(&c.rowID, &c.ID, &c.Label, &deadline, &c.CreatedAt, &revoked, &c.NoteCount); err != nil {
 			return nil, err
 		}
 		c.DeadlineAt, c.RevokedAt = ms(deadline), ms(revoked)

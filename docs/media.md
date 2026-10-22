@@ -43,6 +43,21 @@ Every upload is decoded, scaled to at most 3000 px (print 1800 px, thumbnail 480
 `internal/media/image.go`. Decoding is the memory risk: a few hundred KB of PNG can claim a 49 megapixel
 canvas. The limits below make the worst case a number we chose.
 
+## Quotas (T-105)
+
+Both quotas count **every variant a photo stores** (display, thumb and print: `media_tab.bytes + thumb_bytes + print_bytes`; a photo uploaded before T-105 has 0 for the two new columns until the print backfill fills `print_bytes`).
+`ERROR_QUOTA_EXCEEDED` (409) is the answer for either.
+
+| Quota | Counts | Limit | Constants |
+|---|---|---|---|
+| Owner | photos the owner uploads (`uploader_kind = 'owner'`) | 200 photos per yearbook, 500 MiB per user across yearbooks | `maxPerYearbook`, `maxBytesPerUser` |
+| Contributor | photos friends send through a link (`uploader_kind = 'contributor'`) | 600 photos and 1 GiB per yearbook | `maxContributorPhotos`, `maxContributorBytes` |
+
+The two never count toward each other: someone who holds a leaked link can fill the contributor quota with junk but cannot take away one photo of the owner's room (`TestContributorQuotaIsSeparate`), and a full owner quota does not stop
+friends from sending photos. Over the contributor quota the public submit answers `409 ERROR_QUOTA_EXCEEDED` with the message "this yearbook cannot take more photos right now, send your note without photos" (`media.ErrContributorQuota`); the same
+note without photos is accepted (`TestSubmitLimits`). Both are checked early (cheap, before decoding) and again in the insert transaction under the owner's user-row lock, so parallel uploads cannot slip past. The owner can see and delete
+contributor photos in the gallery (`uploader=contributor`), and moderation delete frees the room.
+
 ## Limits (all checked from the header, before any pixel buffer exists; failure is `400 invalid_image`)
 
 | Limit | Value | Why |

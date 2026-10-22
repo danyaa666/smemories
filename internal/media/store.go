@@ -9,10 +9,17 @@ import (
 	"github.com/danyaa666/smemories/internal/apperr"
 )
 
-// Quotas (AC6).
+// Quotas (AC6, T-105). Bytes are those of every stored variant (display, thumb, print).
+//
+// The owner's quota counts the owner's own uploads: at most maxPerYearbook photos per yearbook and maxBytesPerUser bytes across
+// the owner's yearbooks. Photos sent through a collection link have a quota of their own per yearbook, so a leaked link cannot
+// use up the owner's room.
 const (
 	maxPerYearbook  = 200
 	maxBytesPerUser = 500 << 20
+
+	maxContributorPhotos = 600
+	maxContributorBytes  = 1 << 30
 )
 
 // Values of uploader_kind (VARCHAR column, no ENUM; validated here).
@@ -28,7 +35,9 @@ type Media struct {
 	ThumbKey    string
 	PrintKey    string // empty until the backfill has created it (T-057)
 	ContentType string
-	Bytes       int
+	Bytes       int // of the display object
+	ThumbBytes  int
+	PrintBytes  int
 	Width       int
 	Height      int
 	SHA256      string
@@ -63,15 +72,32 @@ func (s *Store) ownedYearbook(ctx context.Context, ownerID uint64, publicID stri
 	return id, stored, nil
 }
 
-// checkQuota fails with ErrQuota when adding one more photo of size add would pass a limit.
-func checkQuota(ctx context.Context, q rowQuerier, ownerID, yearbookID uint64, add int) error {
+// variantBytes is the sum of the stored sizes of a photo's variants, as SQL.
+const variantBytes = `(bytes + thumb_bytes + print_bytes)`
+
+// checkQuota fails with ErrQuota (owner photos) or ErrContributorQuota (photos sent through a link) when adding one more photo
+// of kind and total size add would pass that kind's limit. The two kinds never count toward each other's quota.
+func checkQuota(ctx context.Context, q rowQuerier, ownerID, yearbookID uint64, kind string, add int) error {
+	if kind == KindContributor {
+		var n int
+		var used int64
+		if err := q.QueryRowContext(ctx, `SELECT COUNT(*), COALESCE(SUM`+variantBytes+`, 0) FROM media_tab WHERE yearbook_id = ? AND uploader_kind = ?`,
+			yearbookID, KindContributor).Scan(&n, &used); err != nil {
+			return dbError(err, "sum contributor photos")
+		}
+		if n >= maxContributorPhotos || used+int64(add) > maxContributorBytes {
+			return ErrContributorQuota
+		}
+		return nil
+	}
 	var n int
-	if err := q.QueryRowContext(ctx, `SELECT COUNT(*) FROM media_tab WHERE yearbook_id = ?`, yearbookID).Scan(&n); err != nil {
+	if err := q.QueryRowContext(ctx, `SELECT COUNT(*) FROM media_tab WHERE yearbook_id = ? AND uploader_kind = ?`, yearbookID, KindOwner).Scan(&n); err != nil {
 		return dbError(err, "count photos")
 	}
 	var used int64
 	if err := q.QueryRowContext(ctx,
-		`SELECT COALESCE(SUM(m.bytes), 0) FROM media_tab m JOIN yearbook_tab y ON y.id = m.yearbook_id WHERE y.owner_id = ?`, ownerID).Scan(&used); err != nil {
+		`SELECT COALESCE(SUM(m.bytes + m.thumb_bytes + m.print_bytes), 0) FROM media_tab m JOIN yearbook_tab y ON y.id = m.yearbook_id
+		 WHERE y.owner_id = ? AND m.uploader_kind = ?`, ownerID, KindOwner).Scan(&used); err != nil {
 		return dbError(err, "sum photo bytes")
 	}
 	if n >= maxPerYearbook || used+int64(add) > maxBytesPerUser {
@@ -102,13 +128,13 @@ func (s *Store) insert(ctx context.Context, ownerID, yearbookID uint64, kind str
 	if err != nil {
 		return nil, dbError(err, "lock yearbook")
 	}
-	if err := checkQuota(ctx, tx, ownerID, yearbookID, m.Bytes); err != nil {
+	if err := checkQuota(ctx, tx, ownerID, yearbookID, kind, m.Bytes+m.ThumbBytes+m.PrintBytes); err != nil {
 		return nil, err
 	}
 	res, err := tx.ExecContext(ctx,
-		`INSERT INTO media_tab (public_id, yearbook_id, uploader_kind, object_key, thumb_key, print_key, content_type, bytes, width, height, sha256, created_at, updated_at)
-		 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-		m.ID, yearbookID, kind, m.ObjectKey, m.ThumbKey, m.PrintKey, m.ContentType, m.Bytes, m.Width, m.Height, m.SHA256, m.CreatedAt, m.CreatedAt)
+		`INSERT INTO media_tab (public_id, yearbook_id, uploader_kind, object_key, thumb_key, print_key, content_type, bytes, thumb_bytes, print_bytes, width, height, sha256, created_at, updated_at)
+		 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+		m.ID, yearbookID, kind, m.ObjectKey, m.ThumbKey, m.PrintKey, m.ContentType, m.Bytes, m.ThumbBytes, m.PrintBytes, m.Width, m.Height, m.SHA256, m.CreatedAt, m.CreatedAt)
 	if err != nil {
 		return nil, dbError(err, "insert photo")
 	}
@@ -321,10 +347,10 @@ func (s *Store) withoutPrint(ctx context.Context, after int64, limit int) ([]Med
 	return out, rows.Err()
 }
 
-// setPrintKey records the print object of a photo at nowMs; false when the photo was deleted or already has one.
+// setPrintKey records the print object of a photo and its size at nowMs; false when the photo was deleted or already has one.
 // One statement on one row, so it takes no lock that could be part of a cycle.
-func (s *Store) setPrintKey(ctx context.Context, rowID int64, key string, nowMs int64) (bool, error) {
-	res, err := s.db.ExecContext(ctx, `UPDATE media_tab SET print_key = ?, updated_at = ? WHERE id = ? AND print_key IS NULL`, key, nowMs, rowID)
+func (s *Store) setPrintKey(ctx context.Context, rowID int64, key string, size int, nowMs int64) (bool, error) {
+	res, err := s.db.ExecContext(ctx, `UPDATE media_tab SET print_key = ?, print_bytes = ?, updated_at = ? WHERE id = ? AND print_key IS NULL`, key, size, nowMs, rowID)
 	if err != nil {
 		return false, err
 	}

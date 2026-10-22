@@ -93,7 +93,7 @@ func TestBackfillPrint(t *testing.T) {
 	broken := e.upload(u, book, "d.jpg", "image/jpeg", bigPhoto(t)).status(200, "").mediaID()
 
 	// Make them look like photos from before T-057: no print object, no print_key.
-	if _, err := e.db.Exec(`UPDATE media_tab SET print_key = NULL`); err != nil {
+	if _, err := e.db.Exec(`UPDATE media_tab SET print_key = NULL, print_bytes = 0`); err != nil {
 		t.Fatal(err)
 	}
 	_ = e.st.Delete(context.Background(), yearbookPrefix(book)+a+"-print.jpg", yearbookPrefix(book)+b+"-print.png",
@@ -117,6 +117,9 @@ func TestBackfillPrint(t *testing.T) {
 	st, err = e.svc.Backfill(context.Background(), 2, 1, false, log)
 	if err != nil || st != (BackfillStats{Created: 3, Failed: 1}) {
 		t.Fatalf("run 1: %+v %v", st, err)
+	}
+	if e.count(`SELECT COUNT(*) FROM media_tab WHERE print_key IS NOT NULL AND print_bytes > 0`) != 3 { // T-105: the quota counts it
+		t.Fatal("the backfill did not record the print sizes")
 	}
 	objects := e.st.count(yearbookPrefix(book))
 	st, err = e.svc.Backfill(context.Background(), 2, 1, false, log)

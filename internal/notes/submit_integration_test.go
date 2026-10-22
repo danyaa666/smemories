@@ -490,21 +490,31 @@ func TestSubmitLimits(t *testing.T) {
 	_, other := e.newLink(l.owner, l.book, `{}`)
 	e.post(other, answers("A", "m")).status(200, "")
 
-	// the yearbook's media quota (200 photos) counts contributor photos
+	// T-105: photos sent through a link have a quota of their own (600 per book) and do not count toward the owner's 200 ...
 	e2 := newEnv(t)
 	l2 := e2.newOpenLink()
 	var yb uint64
 	if err := e2.db.QueryRow(`SELECT id FROM yearbook_tab WHERE public_id = ?`, l2.book).Scan(&yb); err != nil {
 		t.Fatal(err)
 	}
-	for range 200 {
-		if _, err := e2.db.Exec(`INSERT INTO media_tab (public_id, yearbook_id, uploader_kind, object_key, thumb_key, content_type, bytes, width, height, sha256, created_at, updated_at)
-			VALUES (?,?,'owner','k','t','image/jpeg',1,1,1,'x',?,?)`, ulid.New(e2.now()), yb, e2.now().UnixMilli(), e2.now().UnixMilli()); err != nil {
-			t.Fatal(err)
+	fill := func(kind string, n int) {
+		for range n {
+			if _, err := e2.db.Exec(`INSERT INTO media_tab (public_id, yearbook_id, uploader_kind, object_key, thumb_key, content_type, bytes, width, height, sha256, created_at, updated_at)
+				VALUES (?,?,?,'k','t','image/jpeg',1,1,1,'x',?,?)`, ulid.New(e2.now()), yb, kind, e2.now().UnixMilli(), e2.now().UnixMilli()); err != nil {
+				t.Fatal(err)
+			}
 		}
 	}
-	e2.post(l2.token, answers("A", "m"), photoPart(jpegOf(t, 1))).status(409, "ERROR_QUOTA_EXCEEDED")
-	if e2.noteCount() != 0 || e2.st.count() != 0 || e2.count(`SELECT COUNT(*) FROM media_tab`) != 200 {
+	fill("owner", 200)
+	e2.post(l2.token, answers("A", "m"), photoPart(jpegOf(t, 1))).status(200, "") // the owner's full quota does not block a friend
+	// ... and a full contributor quota refuses the photo with a message for the friend, while the text alone still goes through.
+	fill("contributor", 600-e2.count(`SELECT COUNT(*) FROM media_tab WHERE uploader_kind = 'contributor'`))
+	notes, rows := e2.noteCount(), e2.count(`SELECT COUNT(*) FROM media_tab`)
+	rec := e2.post(l2.token, answers("A", "m"), photoPart(jpegOf(t, 1))).status(409, "ERROR_QUOTA_EXCEEDED")
+	if !strings.Contains(rec.Body.String(), "without photos") {
+		t.Fatalf("the friend is not told to send the note without photos: %s", rec.Body.String())
+	}
+	if e2.noteCount() != notes || e2.count(`SELECT COUNT(*) FROM media_tab`) != rows {
 		t.Fatal("quota failure kept something")
 	}
 	e2.post(l2.token, answers("A", "m")).status(200, "") // text-only still fits

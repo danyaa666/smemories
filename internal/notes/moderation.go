@@ -15,6 +15,8 @@ import (
 const (
 	DefaultNoteListLimit = 50
 	MaxNoteListLimit     = 100
+	DefaultLinkListLimit = 50 // note-collection/get-list (T-105)
+	MaxLinkListLimit     = 100
 	maxBatchIDs          = 100 // ids in a batch-update-status or batch-delete
 	maxReorderIDs        = maxNotes
 	moderationPerMinute  = 120 // moderation writes per user

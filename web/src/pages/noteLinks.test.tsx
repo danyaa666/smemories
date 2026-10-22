@@ -128,7 +128,25 @@ describe("note links", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Create link" }));
     expect(await screen.findByText(/The name can have at most 60/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Create link" }));
-    expect(await screen.findByText(/at most 5 open links/)).toBeInTheDocument();
+    // fewer than five open links, so the refusal is the cap on all links, revoked ones included (T-105)
+    expect(await screen.findByText(/at most 50 links in all/)).toBeInTheDocument();
+  });
+
+  it("loads the next page of links on request", async () => {
+    const calls = mockApi({
+      "GET /user/get-me": () => ok(user()),
+      [`GET /note-collection/get-list?yearbook_id=${BOOK}`]: () =>
+        ok({ items: [link(1), link(2)], next_id: "CUR1" }),
+      [`GET /note-collection/get-list?yearbook_id=${BOOK}&next_id=CUR1`]: () =>
+        ok({ items: [link(3)], next_id: "" }),
+    });
+    open();
+    expect(await screen.findAllByRole("listitem")).toHaveLength(2);
+    await userEvent.click(screen.getByRole("button", { name: "Show more links" }));
+    expect(await screen.findByText("Link 3", { selector: "strong" })).toBeInTheDocument();
+    expect(screen.getAllByRole("listitem")).toHaveLength(3);
+    expect(screen.queryByRole("button", { name: "Show more links" })).not.toBeInTheDocument();
+    expect(calls.filter((c) => c.path.startsWith("/note-collection/get-list"))).toHaveLength(2);
   });
 
   it("stops offering new links at five open ones", async () => {

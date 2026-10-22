@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/danyaa666/smemories/internal/apperr"
+	"github.com/danyaa666/smemories/internal/httpx"
 	"github.com/danyaa666/smemories/internal/media"
 	"github.com/danyaa666/smemories/internal/ratelimit"
 )
@@ -42,11 +43,11 @@ func (f *fakeStore) create(_ context.Context, ownerID uint64, bookID string, c *
 	return nil
 }
 
-func (f *fakeStore) list(_ context.Context, ownerID uint64, bookID string) ([]*Collection, error) {
+func (f *fakeStore) list(_ context.Context, ownerID uint64, bookID string, _ *notePos, limit int) ([]*Collection, error) {
 	if o, ok := f.owners[bookID]; !ok || o != ownerID {
 		return nil, ErrNotFound
 	}
-	return f.created, nil
+	return f.created[:min(limit, len(f.created))], nil
 }
 
 func (f *fakeStore) revoke(_ context.Context, ownerID uint64, id string, now int64) error {
@@ -121,7 +122,7 @@ func newFixture() *fixture {
 	f.svc = &Service{store: f.st, media: f.photos, logger: slog.New(slog.DiscardHandler), now: clock,
 		misses: ratelimit.NewMemory(missesPerWindow, publicWindow, clock), all: ratelimit.NewMemory(allPerWindow, publicWindow, clock),
 		subIPHr: ratelimit.NewMemory(submitPerIPHour, time.Hour, clock), subIPDay: ratelimit.NewMemory(submitPerIPDay, 24*time.Hour, clock),
-		subColl: ratelimit.NewMemory(submitPerCollectionHour, time.Hour, clock)}
+		subColl: ratelimit.NewMemory(submitPerCollectionHour, time.Hour, clock), tokens: httpx.NewCursors([]byte("unit-test-key"))}
 	return f
 }
 
@@ -245,9 +246,9 @@ func TestRevokeAndListOwnership(t *testing.T) {
 	if err := f.svc.RevokeCollection(ctx, 1, c.ID); err != nil || f.st.revoked[c.ID] != first {
 		t.Fatalf("revoking again must succeed and keep the first time: %v", err)
 	}
-	_, err := f.svc.ListCollections(ctx, 2, book1)
+	_, _, err := f.svc.ListCollections(ctx, 2, book1, 50, "")
 	wantCode(t, err, apperr.NotFound)
-	_, err = f.svc.ListCollections(ctx, 1, "")
+	_, _, err = f.svc.ListCollections(ctx, 1, "", 50, "")
 	wantCode(t, err, apperr.Param)
 }
 
@@ -317,6 +318,12 @@ func TestSubmitNotePhotoFailures(t *testing.T) {
 	f.photos.failAt, f.photos.err = 1, media.ErrQuota
 	_, err = f.svc.SubmitNote(context.Background(), p, in())
 	wantCode(t, err, CodeQuotaExceeded)
+	f.photos.calls, f.photos.err = 0, media.ErrContributorQuota // T-105: same code, a message the friend can act on
+	_, err = f.svc.SubmitNote(context.Background(), p, in())
+	wantCode(t, err, CodeQuotaExceeded)
+	if !strings.Contains(apperr.Message(err), "without photos") {
+		t.Fatalf("message %q does not tell the friend to send the note without photos", apperr.Message(err))
+	}
 	f.photos.calls, f.photos.err = 0, media.ErrUnsupported
 	_, err = f.svc.SubmitNote(context.Background(), p, in())
 	wantCode(t, err, CodeUnsupportedMediaType)
@@ -383,7 +390,7 @@ func TestCollectionsRefuseNonCanonicalIDs(t *testing.T) {
 	for _, bad := range []string{strings.ToLower(book1), book1[:25], book1 + "A", " " + book1[1:], book1[:25] + "I"} {
 		_, err := f.svc.CreateCollection(ctx, 1, true, &CreateInput{YearbookID: bad})
 		wantCode(t, err, apperr.Param)
-		_, err = f.svc.ListCollections(ctx, 1, bad)
+		_, _, err = f.svc.ListCollections(ctx, 1, bad, 50, "")
 		wantCode(t, err, apperr.Param)
 		wantCode(t, f.svc.RevokeCollection(ctx, 1, bad), apperr.Param)
 		wantCode(t, f.svc.RevokeCollection(ctx, 1, strings.ToLower(c.ID)), apperr.Param)

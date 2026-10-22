@@ -122,7 +122,7 @@ func (s *Service) Upload(ctx context.Context, ownerID uint64, yearbookID string,
 }
 
 // UploadContributor stores a photo sent through a collection link (T-034) in the yearbook with internal
-// id yearbookRow. It counts toward the owner's quotas like any photo, takes a processing slot like
+// id yearbookRow. It counts toward the yearbook's contributor quota (600 photos, 1 GiB), never the owner's, takes a processing slot like
 // Upload but waits a bounded time (10 s) for it (ErrBusy), and has no per-user rate limit: the caller
 // limits the public endpoint. On success the caller owns the photo: call Discard if the submission fails later.
 func (s *Service) UploadContributor(ctx context.Context, yearbookRow uint64, data []byte) (*Media, error) {
@@ -142,7 +142,7 @@ func (s *Service) UploadContributorFrom(ctx context.Context, yearbookRow uint64,
 // save is the shared pipeline: quota pre-check, processing slot, load, process, put objects, insert the row.
 // slotWait 0 waits for a slot until ctx ends.
 func (s *Service) save(ctx context.Context, ownerID, yb uint64, yearbookID, kind string, load func() ([]byte, error), slotWait time.Duration) (*Media, error) {
-	if err := checkQuota(ctx, s.store.db, ownerID, yb, 0); err != nil { // cheap early exit; insert re-checks under a lock
+	if err := checkQuota(ctx, s.store.db, ownerID, yb, kind, 0); err != nil { // cheap early exit; insert re-checks under a lock
 		return nil, err
 	}
 	p, err := s.processPhoto(ctx, load, slotWait)
@@ -153,7 +153,7 @@ func (s *Service) save(ctx context.Context, ownerID, yb uint64, yearbookID, kind
 	id := ulid.New(s.now())
 	sum := sha256.Sum256(p.display)
 	m := &Media{ID: id, ObjectKey: yearbookPrefix(yearbookID) + id + "." + p.ext, ThumbKey: yearbookPrefix(yearbookID) + id + "-thumb.jpg",
-		PrintKey: printKey(yearbookPrefix(yearbookID) + id + "." + p.ext), ContentType: p.contentType, Bytes: len(p.display), Width: p.width, Height: p.height, SHA256: hex.EncodeToString(sum[:]), CreatedAt: s.now().UnixMilli()}
+		PrintKey: printKey(yearbookPrefix(yearbookID) + id + "." + p.ext), ContentType: p.contentType, Bytes: len(p.display), ThumbBytes: len(p.thumb), PrintBytes: len(p.print), Width: p.width, Height: p.height, SHA256: hex.EncodeToString(sum[:]), CreatedAt: s.now().UnixMilli()}
 
 	if err := s.st.Put(ctx, m.ObjectKey, m.ContentType, p.display); err != nil {
 		return nil, storageFailed(err)

@@ -382,6 +382,8 @@
     "deadlineHelp": "Sau ngày này liên kết sẽ ngừng hoạt động. Để trống nếu không giới hạn.",
     "create": "Tạo liên kết",
     "limitReached": "Bạn chỉ có thể có tối đa {{max}} liên kết đang mở. Hãy thu hồi một liên kết để có chỗ.",
+    "tooMany": "Bạn chỉ có thể có tối đa {{max}} liên kết, tính cả liên kết đã thu hồi. Hiện chưa thể xóa liên kết đã thu hồi.",
+    "more": "Xem thêm liên kết",
     "existing": "Các liên kết của bạn",
     "loadError": "Không tải được các liên kết",
     "none": "Chưa có liên kết nào.",

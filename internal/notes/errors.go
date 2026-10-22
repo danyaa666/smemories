@@ -31,6 +31,8 @@ var (
 	// ErrNotFound covers a missing collection or yearbook and one owned by someone else: callers cannot tell them apart.
 	ErrNotFound     = apperr.New(apperr.NotFound, "not found")
 	ErrLimitReached = apperr.New(CodeLimitReached, "at most "+strconv.Itoa(maxActive)+" active links per yearbook")
+	// ErrTooManyLinks: the book already has maxLinks links, revoked ones included (T-105).
+	ErrTooManyLinks = apperr.New(CodeLimitReached, "at most "+strconv.Itoa(maxLinks)+" links per yearbook, revoked ones included")
 	// ErrFull: the collection already holds maxNotes notes.
 	ErrFull = apperr.New(CodeCollectionFull, "this link has reached its limit of notes")
 	// ErrClosed: the collection's deadline has passed.

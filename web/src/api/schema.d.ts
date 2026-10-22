@@ -509,7 +509,7 @@ export interface paths {
         put?: never;
         /**
          * Create a collection link for a yearbook
-         * @description Called by the signed-in owner of a yearbook (the web app's "share" screen). Creates a private link friends can use to leave notes. The body is a JSON object with the `yearbook_id` and optional options. The response carries the link `token` once; only its SHA-256 is stored and it can never be shown again (revoke the link and create a new one instead). The token is a bearer secret of 192 random bits (32 base64url characters); the web link is `<app>/c/<token>`. `label` is optional, at most 60 characters, NFC and trimmed (`ERROR_INVALID_LABEL` for control or format characters). `deadline_at` is optional, Unix ms, in the future and at most one year ahead (`ERROR_INVALID_DEADLINE`); `null` or absent means no deadline. Unknown fields, a missing `yearbook_id` and values of the wrong type are `ERROR_PARAM`. Needs a verified email (`ERROR_EMAIL_NOT_VERIFIED`). A missing yearbook and one owned by someone else both answer `ERROR_NOT_FOUND`. At most 5 active (not revoked) links per yearbook (`ERROR_LIMIT_REACHED`). A request with the session cookie must come from an allowed Origin. Not idempotent: retrying after a lost answer may create a second link.
+         * @description Called by the signed-in owner of a yearbook (the web app's "share" screen). Creates a private link friends can use to leave notes. The body is a JSON object with the `yearbook_id` and optional options. The response carries the link `token` once; only its SHA-256 is stored and it can never be shown again (revoke the link and create a new one instead). The token is a bearer secret of 192 random bits (32 base64url characters); the web link is `<app>/c/<token>`. `label` is optional, at most 60 characters, NFC and trimmed (`ERROR_INVALID_LABEL` for control or format characters). `deadline_at` is optional, Unix ms, in the future and at most one year ahead (`ERROR_INVALID_DEADLINE`); `null` or absent means no deadline. Unknown fields, a missing `yearbook_id` and values of the wrong type are `ERROR_PARAM`. Needs a verified email (`ERROR_EMAIL_NOT_VERIFIED`). A missing yearbook and one owned by someone else both answer `ERROR_NOT_FOUND`. At most 5 active (not revoked) links and at most 50 links in all, revoked ones included, per yearbook (`ERROR_LIMIT_REACHED`). A request with the session cookie must come from an allowed Origin. Not idempotent: retrying after a lost answer may create a second link.
          */
         post: operations["createNoteCollection"];
         delete?: never;
@@ -527,7 +527,7 @@ export interface paths {
         };
         /**
          * List a yearbook's collection links
-         * @description Called by the signed-in owner to show the links of a yearbook, newest first, revoked ones included (`revoked_at` set). Never contains a token or a token hash. `note_count` counts the link's notes in any status. At most 5 links are active, but revoked ones stay, so the list is returned whole: `next_id` is always the empty string and there is no `limit` yet. A missing `yearbook_id` is `ERROR_PARAM`; a missing yearbook and one owned by someone else both answer `ERROR_NOT_FOUND`.
+         * @description Called by the signed-in owner to show the links of a yearbook, newest first, revoked ones included (`revoked_at` set). Never contains a token or a token hash. `note_count` counts the link's notes in any status. A yearbook has at most 50 links, revoked ones included (`note-collection/create` answers `ERROR_LIMIT_REACHED` for the 51st), so the list is paged: `limit` defaults to 50, at most 100 (`ERROR_PARAM` otherwise), and `next_id` is the opaque cursor of the previous page, bound to this yearbook (a malformed, tampered or foreign one is `ERROR_PARAM`) and `""` on the last page. The cursor is a position, so links created between two requests never shift a page. A missing `yearbook_id` is `ERROR_PARAM`; a missing yearbook and one owned by someone else both answer `ERROR_NOT_FOUND`.
          */
         get: operations["listNoteCollections"];
         put?: never;
@@ -2579,6 +2579,10 @@ export interface operations {
             query: {
                 /** @description Yearbook ULID. */
                 yearbook_id: string;
+                /** @description Page size. */
+                limit?: number;
+                /** @description Opaque cursor from the previous page's `next_id`; omit for the first page. */
+                next_id?: string;
             };
             header?: never;
             path?: never;
@@ -2586,7 +2590,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The links. */
+            /** @description One page of the links. */
             200: {
                 headers: {
                     [name: string]: unknown;

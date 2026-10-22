@@ -382,6 +382,8 @@
     "deadlineHelp": "After this day the link stops working. Leave it empty for no deadline.",
     "create": "Create link",
     "limitReached": "You can have at most {{max}} open links. Revoke one to make room.",
+    "tooMany": "You can have at most {{max}} links in all, revoked ones included. Revoked links cannot be removed yet.",
+    "more": "Show more links",
     "existing": "Your links",
     "loadError": "We couldn't load your links",
     "none": "No links yet.",
