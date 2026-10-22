@@ -21,7 +21,7 @@ const (
 )
 
 // retryDelays are the waits before the first and the second retry of a background send (at most two retries, only for
-// mailer.ErrUnavailable; a refusal is final).
+// mailer.ErrUnavailable; a refusal is final, and so is mailer.ClassConfig: a misconfiguration does not fix itself in seconds).
 var retryDelays = []time.Duration{2 * time.Second, 5 * time.Second}
 
 // Mail is what the service needs to send the verification and reset code emails.
@@ -105,12 +105,12 @@ func (s *Service) sendCode(ctx context.Context, u *User, purpose string) error {
 	return s.deliver(ctx, m, purpose)
 }
 
-// deliverWithRetry is deliver, repeated after each of retryDelays while the provider is unavailable (a refusal or an unknown
-// failure is final). The same message, and so the same code, goes out every time.
+// deliverWithRetry is deliver, repeated after each of retryDelays while the provider is unavailable (a refusal, an unknown
+// failure or a failure of class config is final). The same message, and so the same code, goes out every time.
 func (s *Service) deliverWithRetry(ctx context.Context, m mailer.Message, purpose string) error {
 	err := s.deliver(ctx, m, purpose)
 	for _, wait := range retryDelays {
-		if !errors.Is(err, mailer.ErrUnavailable) {
+		if !errors.Is(err, mailer.ErrUnavailable) || mailer.Class(err) == mailer.ClassConfig {
 			return err
 		}
 		select {

@@ -37,17 +37,28 @@ TMP="$(mktemp -d)"
 rand() { od -An -N24 -tx1 /dev/urandom | tr -d ' \n'; }
 DB_PW="$(rand)"; ROOT_PW="$(rand)"; S3_USER="smokeminio"; S3_PW="$(rand)"; OTP_KEY="$(rand)$(rand)"; LINK_KEY="$(rand)"   # LINK_KEY: 48 hex characters read as base64 are 36 bytes, over the 32 SMEM_MEDIA_LINK_SECRET needs
 
+exec 4>&2   # the trap can fire inside bounded's `2>/dev/null` braces: the timeout message goes to this saved stderr
 cleanup() {
   [ -z "${WATCHDOG:-}" ] || kill "$WATCHDOG" 2>/dev/null || true
   local ids
   ids="$(docker ps -aq --filter "label=smem-smoke=$RUN" 2>/dev/null || true)"
   [ -z "$ids" ] || docker rm -f $ids >/dev/null 2>&1 || true
   docker network rm "$RUN" >/dev/null 2>&1 || true
-  [ ! -e "$TMP/overall-timeout" ] || echo "SMOKE FAIL: the whole run took longer than ${SMOKE_TIMEOUT}s" >&2
+  kill_children $$ 2>/dev/null || true   # whatever is still running (a stuck docker run, a sleep): nothing may keep our output pipe open
+  [ ! -e "$TMP/overall-timeout" ] || echo "SMOKE FAIL: the whole run took longer than ${SMOKE_TIMEOUT}s (last step that passed: ${STEP:-none})" >&4
   rm -rf "$TMP"
 }
+# kill_children PID: TERM to every descendant of PID (not PID itself, not the caller), deepest first.
+kill_children() {
+  local c
+  for c in $(pgrep -P "$1" 2>/dev/null || true); do
+    [ "$c" != "${BASHPID:-}" ] || continue
+    kill_children "$c"
+    kill "$c" 2>/dev/null || true
+  done
+}
 trap cleanup EXIT
-trap 'exit 143' TERM
+trap '[ ! -e "$TMP/overall-timeout" ] || exit 1; exit 143' TERM   # the overall timeout is a failure (1); a TERM from outside stays 143
 
 # timer SECONDS COMMAND...: after SECONDS runs the command, in the background (pid in $TIMER). kill "$TIMER" stops it and its sleep, and the
 # timer holds none of our output pipes open, so a `$(...)` around it never waits for it.
@@ -71,11 +82,12 @@ bounded() {
   [ ! -e "$flag" ] || { rm -f "$flag"; return 124; }
   return "$rc"
 }
-overall_expired() { : >"$TMP/overall-timeout"; kill -TERM $$; }
+# Runs in the watchdog: bash defers its TERM trap until the foreground command ends, so the stuck children are killed here, by PID.
+overall_expired() { : >"$TMP/overall-timeout"; kill -TERM $$; kill_children $$; }
 timer "$SMOKE_TIMEOUT" overall_expired; WATCHDOG=$TIMER
 
 fail() { echo "SMOKE FAIL: $*" >&2; docker logs --tail 25 "$RUN-api" >&2 2>/dev/null || true; exit 1; }
-ok() { echo "ok - $*"; }
+ok() { STEP="$*"; echo "ok - $*"; }
 run() { docker run --label "smem-smoke=$RUN" "$@"; }   # detached services and the API
 task() { bounded "$TASK_TIMEOUT" docker run --label "smem-smoke=$RUN" "$@"; }   # foreground one-off tasks: bounded
 

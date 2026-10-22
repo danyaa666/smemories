@@ -76,6 +76,8 @@ in every environment.
   the API refusing an un-migrated database, two concurrent `smemories-migrate up`, `status`, `version`, `down` refused in prod, `smemories-media-backfill --dry-run`; the prod refusals (dev OTP shortcut, missing or short
   `SMEM_OTP_KEY` and `SMEM_MEDIA_LINK_SECRET`, no secret echoed); the API refusing to start without `SMEM_ENV` and with `SMEM_ENV=test` plus a public base URL or origin (T-099: the image sets no `SMEM_ENV`, every task definition must); a read-only root without the spool; the API under `--read-only --user 65532 --cap-drop ALL` (health,
   register, login, yearbook create, photo upload); SIGTERM during a slow request (readyz 503 while draining, the request completes, exit 0).
+  When `SMOKE_TIMEOUT` expires the script kills its children, prints `SMOKE FAIL: the whole run took longer than Ns (last step that passed: ...)` and exits 1;
+  `make image-smoke-selftest` forces that with a fake `docker` (T-091, no Docker needed; CI runs it before the smoke test).
 - Section 3 of the script also proves that a prod start refuses plaintext database and Redis (the script sets `SMEM_DB_ALLOW_INSECURE` and `SMEM_REDIS_ALLOW_INSECURE`
   for its private network only), http origins, a missing memory limit, a public metrics address and a missing bucket.
 - The API part runs with `SMEM_ENV=test`, local origins (`http://localhost:5173`: dev and test are local-only) and the log mailer, which refuses `prod`; production uses Amazon SES (`SMEM_MAIL_PROVIDER=ses`, [email.md](email.md)),

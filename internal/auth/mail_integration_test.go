@@ -139,6 +139,7 @@ func TestBackgroundRetryPolicy(t *testing.T) {
 		{"recovers on the second try", []error{unavailable, nil}, 2, ""},
 		{"recovers on the third try", []error{unavailable, unavailable, nil}, 3, ""},
 		{"gives up after two retries", []error{unavailable}, 3, "unavailable"},
+		{"a misconfiguration is not retried", []error{mailer.ConfigError("account paused", nil)}, 1, "config"},
 		{"a refusal is not retried", []error{mailer.ErrRejected}, 1, "rejected"},
 		{"an unknown failure is not retried", []error{apperr.New(apperr.Internal, "boom")}, 1, "other"},
 	} {
