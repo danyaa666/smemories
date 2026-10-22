@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link, NavLink, Outlet, useMatch } from "react-router-dom";
 import { getYearbook } from "../api/yearbooks";
-import { errorText } from "../auth/errors";
+import { errorText, isBookGone } from "../auth/errors";
 import { useMe } from "../auth/useMe";
 import { useNoteCounts } from "./useNoteCounts";
 import { LanguageSwitcher } from "./LanguageSwitcher";
@@ -54,6 +54,21 @@ export const NAV_ITEMS: NavItem[] = [
   },
 ];
 
+/** Every /yearbooks/:id screen shows this when the book is missing, not the caller's, or the id is malformed. */
+function BookNotFound() {
+  const { t } = useTranslation();
+  return (
+    <>
+      <p role="alert" className="error">
+        {t("books.notFound")}
+      </p>
+      <p>
+        <Link to="/yearbooks">{t("books.back")}</Link>
+      </p>
+    </>
+  );
+}
+
 /** The signed-in shell: a 256 px sidebar from 960 px up, a bottom tab bar below. Only one of them is in the page. */
 export function YearbookLayout({ items = NAV_ITEMS }: { items?: NavItem[] }) {
   const { t } = useTranslation();
@@ -67,6 +82,7 @@ export function YearbookLayout({ items = NAV_ITEMS }: { items?: NavItem[] }) {
     queryFn: () => getYearbook(bookId ?? ""),
     enabled: bookId !== undefined,
   });
+  const gone = isBookGone(book.error);
   const pending = useNoteCounts(bookId).data?.pending;
   const links = items.flatMap((i) => {
     const to = i.to(bookId);
@@ -104,9 +120,7 @@ export function YearbookLayout({ items = NAV_ITEMS }: { items?: NavItem[] }) {
           {chip}
           <LanguageSwitcher />
         </header>
-        <main>
-          <Outlet />
-        </main>
+        <main>{gone ? <BookNotFound /> : <Outlet />}</main>
         <footer className="shell-footer">
           <LegalLinks />
         </footer>
@@ -155,9 +169,7 @@ export function YearbookLayout({ items = NAV_ITEMS }: { items?: NavItem[] }) {
           <LegalLinks />
         </div>
       </aside>
-      <main>
-        <Outlet />
-      </main>
+      <main>{gone ? <BookNotFound /> : <Outlet />}</main>
     </div>
   );
 }
