@@ -166,7 +166,7 @@ func (e *env) do(r req) *httptest.ResponseRecorder {
 		hr.Header.Set("Content-Type", ct)
 	}
 	if r.cookie != "" {
-		hr.AddCookie(&http.Cookie{Name: CookieName, Value: r.cookie})
+		hr.AddCookie(&http.Cookie{Name: cookieName(e.ah.cfg.SecureCookie), Value: r.cookie})
 	}
 	if r.oidc != "" {
 		hr.AddCookie(&http.Cookie{Name: oidcCookie, Value: r.oidc})
@@ -207,7 +207,7 @@ func (e *env) login(email, pw, remote string) *httptest.ResponseRecorder {
 func sessionCookie(t *testing.T, rec *httptest.ResponseRecorder) *http.Cookie {
 	t.Helper()
 	for _, c := range rec.Result().Cookies() {
-		if c.Name == CookieName {
+		if c.Name == CookieName || c.Name == HostCookieName {
 			return c
 		}
 	}
@@ -317,7 +317,7 @@ func TestSessionTokenAndCookieFlags(t *testing.T) {
 	for _, secure := range []bool{false, true} {
 		e := newEnv(t, opts{secure: secure})
 		c := sessionCookie(t, e.register(testMail, testPW, "Alice"))
-		if !c.HttpOnly || c.SameSite != http.SameSiteLaxMode || c.Path != "/" || c.MaxAge != 30*24*3600 || c.Secure != secure {
+		if !c.HttpOnly || c.SameSite != http.SameSiteLaxMode || c.Path != "/" || c.MaxAge != 30*24*3600 || c.Secure != secure || c.Name != map[bool]string{false: "smem_session", true: "__Host-smem_session"}[secure] {
 			t.Fatalf("secure=%v: bad cookie attributes %+v", secure, c)
 		}
 		if !regexp.MustCompile(`^[A-Za-z0-9_-]{43}$`).MatchString(c.Value) { // 32 bytes, base64url, no padding
@@ -330,6 +330,16 @@ func TestSessionTokenAndCookieFlags(t *testing.T) {
 		}
 		if n, err := e.rc.Client().Exists(ctx, e.rc.Key("sess", c.Value)).Result(); err != nil || n != 0 {
 			t.Fatalf("raw token must not be stored: %d, %v", n, err)
+		}
+		if secure { // __Host- needs Secure, Path=/ and no Domain; the dev name must not open a session here
+			if c.Domain != "" || c.Name != HostCookieName {
+				t.Fatalf("__Host- cookie: %+v", c)
+			}
+			hr := httptest.NewRequest("GET", "/api/user/get-me", nil)
+			hr.AddCookie(&http.Cookie{Name: CookieName, Value: c.Value})
+			rec := httptest.NewRecorder()
+			e.h.ServeHTTP(rec, hr)
+			want(t, rec, 401, "ERROR_UNAUTHORIZED")
 		}
 		raw := e.do(req{method: "GET", path: "/api/user/get-me", cookie: c.Value})
 		if raw.Code != 200 {

@@ -207,7 +207,7 @@ export interface paths {
         };
         /**
          * Google redirects the browser here after sign-in
-         * @description Called by Google through the browser, never by our web code; there is no JSON body. Only exists when Google sign-in is enabled (else `ERROR_NOT_FOUND`, 404). The redirect URI registered in the Google console is `<PUBLIC_BASE_URL>/api/auth/google-callback`. Success signs the user in (new `smem_session` cookie; a session cookie sent with the request is revoked) and redirects (302) to the `return_to` given at start. Linking: a known Google account signs in; the same verified email on a local account links to it; the same email on a local account that never verified it first loses its password and sessions, is marked verified and linked (pre-hijacking defence); an unknown email creates a password-less account. Every failure is `302 /login?error=<code>` and creates nothing: `oidc_state` (cookie missing, altered or expired, or `state` differs), `oidc_denied` (the provider reported an error), `oidc_failed` (code exchange or ID-token check failed, or no usable email), `email_unverified` (Google did not mark the email verified). Provider details are only logged. 30 per 15 minutes per IP (`ERROR_RATE_LIMITED`).
+         * @description Called by Google through the browser, never by our web code; there is no JSON body. Only exists when Google sign-in is enabled (else `ERROR_NOT_FOUND`, 404). The redirect URI registered in the Google console is `<PUBLIC_BASE_URL>/api/auth/google-callback`. Success signs the user in (new session cookie; a session cookie sent with the request is revoked) and redirects (302) to the `return_to` given at start. Linking: a known Google account signs in; the same verified email on a local account links to it; the same email on a local account that never verified it first loses its password and sessions, is marked verified and linked (pre-hijacking defence); an unknown email creates a password-less account. Every failure is `302 /login?error=<code>` and creates nothing: `oidc_state` (cookie missing, altered or expired, or `state` differs), `oidc_denied` (the provider reported an error), `oidc_failed` (code exchange or ID-token check failed, or no usable email), `email_unverified` (Google did not mark the email verified), `ERROR_FORBIDDEN` (the account with this email is already linked to a different Google account; nothing is changed, T-106; the web shows its generic message). The ID token must be signed with RS256. Provider details are only logged. 30 per 15 minutes per IP (`ERROR_RATE_LIMITED`).
          */
         get: operations["googleCallback"];
         put?: never;
@@ -1786,7 +1786,7 @@ export interface components {
     parameters: never;
     requestBodies: never;
     headers: {
-        /** @description `smem_session=<32 random bytes, base64url>; Path=/; Max-Age=2592000; HttpOnly; SameSite=Lax` (plus `Secure` unless SMEM_ENV=dev). `Max-Age` is 30 days at sign-in; a slide re-sends the cookie with the shorter of 30 days and the time left to the 90-day absolute ceiling (from sign-in). Only the token's SHA-256 is stored server-side. */
+        /** @description `<name>=<32 random bytes, base64url>; Path=/; Max-Age=2592000; HttpOnly; SameSite=Lax` with name `__Host-smem_session` (plus `Secure`), or `smem_session` without `Secure` when SMEM_ENV=dev. `Max-Age` is 30 days at sign-in; a slide re-sends the cookie with the shorter of 30 days and the time left to the 90-day absolute ceiling (from sign-in). Only the token's SHA-256 is stored server-side. */
         SessionCookie: string;
     };
     pathItems: never;
@@ -1937,7 +1937,7 @@ export interface operations {
             /** @description Signed out; the cookie is cleared. */
             200: {
                 headers: {
-                    /** @description smem_session with an empty value and a negative Max-Age. */
+                    /** @description The session cookie (`__Host-smem_session`, or `smem_session` when SMEM_ENV=dev) with an empty value and a negative Max-Age. */
                     "Set-Cookie"?: string;
                     [name: string]: unknown;
                 };
@@ -2119,7 +2119,7 @@ export interface operations {
                 headers: {
                     /** @description The `return_to` path, or `/login?error=<code>`. */
                     Location?: string;
-                    /** @description `smem_session` on success; `smem_oidc` is always cleared. */
+                    /** @description The session cookie (`__Host-smem_session`, or `smem_session` when SMEM_ENV=dev) on success; `smem_oidc` is always cleared. */
                     "Set-Cookie"?: string;
                     [name: string]: unknown;
                 };

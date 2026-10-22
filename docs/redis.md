@@ -59,6 +59,10 @@ Two lifetimes (T-101, audit L3): `SessionTTL` is 30 days **sliding**; `SessionMa
 `Authenticate` answers 401 once `created_at + 90 days` has passed however recently the session was used, and a slide sets the Redis `PEXPIRE` and the
 cookie `Expires`/`Max-Age` to `min(30 days, ceiling - now)`. A user active for 90 days signs in again once.
 
+Cookie name (T-106): `__Host-smem_session` everywhere except `SMEM_ENV=dev`, where it is `smem_session` (plain http, so no `Secure`, which `__Host-` requires).
+The prefix makes browsers refuse a copy that has a `Domain` or lacks `Secure` and `Path=/`, so a sibling subdomain cannot plant or shadow a session cookie.
+The server reads only the name it sets; a `smem_session` cookie sent to a Secure deployment does not authenticate anything.
+
 Redis down (or refusing writes): every request that carries a cookie answers `503 session_store_unavailable` with
 `Retry-After: 5` (never "anonymous", never a made-up session); login and register answer the same after the account rules
 ran (register rolls the new account back); endpoints without a session keep working. The failure is logged once per 30 s.

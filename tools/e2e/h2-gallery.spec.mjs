@@ -23,6 +23,7 @@ const RUN = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}
 let server;
 let origin = "";
 let session = "";
+let cookieName = "__Host-smem_session"; // T-106: Secure environments (SMEM_ENV=test here) use the __Host- name; dev uses smem_session
 let photoId = "";
 let bookId = "";
 
@@ -32,9 +33,11 @@ test.beforeAll(async () => {
   const api = await request.newContext({ baseURL: API.origin, extraHTTPHeaders: { Origin: BASE } });
   const reg = await api.post("/api/auth/register", { data: { email: `h2-${RUN}@example.com`, password: `Mật-khẩu-${RUN}-9`, display_name: "H2 gallery", accept_terms_version: TERMS_VERSION } });
   expect(reg.status(), "register (429: run `make reset-limits SMEM_ENV=test`)").toBe(200);
-  session = /smem_session=([^;]+)/.exec(reg.headers()["set-cookie"] ?? "")?.[1] ?? "";
+  const m = /((?:__Host-)?smem_session)=([^;]+)/.exec(reg.headers()["set-cookie"] ?? "");
+  cookieName = m?.[1] ?? cookieName;
+  session = m?.[2] ?? "";
   expect(session).not.toBe("");
-  const auth = { Cookie: `smem_session=${session}` };
+  const auth = { Cookie: `${cookieName}=${session}` };
   expect((await api.post("/api/auth/verify-email", { headers: auth, data: { code: OTP } })).status()).toBe(200);
   const book = await (await api.post("/api/yearbook/create", { headers: auth, data: { title: `h2 ${RUN}`, language: "en" } })).json();
   bookId = book.data.id;
@@ -78,7 +81,7 @@ test.beforeAll(async () => {
 test.afterAll(async () => {
   if (bookId) {
     // The yearbook and its photo go; the account stays (there is no endpoint to delete it). Never fails the run.
-    const api = await request.newContext({ baseURL: API.origin, extraHTTPHeaders: { Origin: BASE, Cookie: `smem_session=${session}` } });
+    const api = await request.newContext({ baseURL: API.origin, extraHTTPHeaders: { Origin: BASE, Cookie: `${cookieName}=${session}` } });
     await api.post("/api/yearbook/delete", { data: { id: bookId } }).catch(() => {});
     await api.dispose();
   }
@@ -93,7 +96,7 @@ for (const [proto, args] of [["h2", []], ["http/1.1", ["--disable-http2"]]]) {
       const browser = await chromium.launch({ args });
       try {
         const context = await browser.newContext({ ignoreHTTPSErrors: true });
-        await context.addCookies([{ name: "smem_session", value: session, url: origin, secure: true, httpOnly: true }]);
+        await context.addCookies([{ name: cookieName, value: session, url: origin, secure: true, httpOnly: true }]);
         const page = await context.newPage();
         const statuses = [];
         page.on("response", (r) => r.url().includes("/api/media/get-content") && statuses.push(r.status()));

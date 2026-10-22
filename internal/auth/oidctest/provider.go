@@ -9,6 +9,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
+	_ "crypto/sha512" // registers SHA-384 for the RS384 test token
 	"crypto/subtle"
 	"encoding/base64"
 	"encoding/json"
@@ -62,6 +63,7 @@ type Claims struct {
 	ExpiresIn    time.Duration // default +1h; negative = already expired
 	Nonce        *string       // overrides the nonce taken from the authorization request
 	OmitIDToken  bool
+	RS384        bool // header alg RS384, signed with the good key: a valid signature of an algorithm the relying party did not allow
 }
 
 type grant struct {
@@ -203,15 +205,20 @@ func (p *Provider) idToken(g grant) string {
 		"iss": iss, "aud": aud, "sub": c.Sub, "iat": now.Unix(), "exp": now.Add(exp).Unix(), "nonce": nonce,
 		"email": c.Email, "email_verified": c.EmailVerified, "name": c.Name, "locale": c.Locale,
 	}
-	hdr, _ := json.Marshal(map[string]string{"alg": "RS256", "typ": "JWT", "kid": kid})
+	alg, hash := "RS256", crypto.SHA256
+	if c.RS384 {
+		alg, hash = "RS384", crypto.SHA384
+	}
+	hdr, _ := json.Marshal(map[string]string{"alg": alg, "typ": "JWT", "kid": kid})
 	body, _ := json.Marshal(claims)
 	signing := b64(hdr) + "." + b64(body)
 	key := good
 	if c.BadSignature {
 		key = other
 	}
-	h := sha256.Sum256([]byte(signing))
-	sig, err := rsa.SignPKCS1v15(rand.Reader, key, crypto.SHA256, h[:])
+	hh := hash.New()
+	hh.Write([]byte(signing))
+	sig, err := rsa.SignPKCS1v15(rand.Reader, key, hash, hh.Sum(nil))
 	if err != nil {
 		p.t.Fatal(err)
 	}

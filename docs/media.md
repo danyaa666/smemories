@@ -70,9 +70,11 @@ contributor photos in the gallery (`uploader=contributor`), and moderation delet
 | `SMEM_MEMORY_LIMIT_MIB` | 0 (unset) | soft Go memory limit (`debug.SetMemoryLimit`); in a container use about 75% of the task memory |
 
 Estimated decoded size is width x height x bytes per pixel: 8 for 16-bit RGBA, 4 for 8-bit RGBA, 2 for 16-bit gray, 1 for 8-bit gray or
-palette, 2.5 for lossy WebP. A JPEG's colour model is always YCbCr, so the subsampling is read from its SOF segment (1.5 for 4:2:0, 3 for 4:4:4),
+palette, 2.5 for lossy WebP and 8.75 for lossy WebP with an ALPH chunk (T-113: `golang.org/x/image/webp` decodes the alpha through `vp8l`, which builds a
+transient NRGBA of 4 bytes per pixel plus up to 2 bytes per pixel of packed palette indices, on top of the 1.5 of the frame and the 1 of the alpha plane;
+measured 8.5, 203 MiB for 5000 x 5000, against the 2.5 that was assumed before). A JPEG's colour model is always YCbCr, so the subsampling is read from its SOF segment (1.5 for 4:2:0, 3 for 4:4:4),
 and a progressive JPEG counts five times that, because the Go decoder keeps 4 bytes of coefficients per sample until the last scan. A JPEG
-whose SOF cannot be read counts as progressive 4:4:4. Largest accepted: 4096 x 4096 16-bit PNG, 5000 x 5000 8-bit PNG or WebP,
+whose SOF cannot be read counts as progressive 4:4:4. Largest accepted: 4096 x 4096 16-bit PNG, 5000 x 5000 8-bit PNG or lossy or lossless WebP without alpha, about 3800 x 3800 lossy WebP with alpha,
 10000 x 5000 baseline 4:2:0 JPEG, 6000 x 7456 baseline 4:4:4 JPEG, about 18 MP progressive 4:2:0 JPEG.
 
 ## Before and after decode, and panics (T-104)
@@ -187,10 +189,15 @@ at the worst input it accepted (7000 x 7000 or 10000 x 5000), "after" is the lar
 | PNG, 16-bit RGBA, 49 MP / 4096 x 4096 | 1166 MB | 490 MB |
 | PNG, 8-bit RGBA, 49 MP / 5000 x 5000 | 971 MB | 445 MB |
 | WebP lossless, 49 MP / 25 MP | 1004 MB | 444 MB |
-| WebP lossy with alpha, 25 MP | 883 MB (49 MP) | 371 MB |
+| WebP lossy with alpha, 25 MP | 883 MB (49 MP) | 371 MB (T-104; see the T-113 note below) |
 | JPEG baseline 4:2:0, 50 MP | 642 MB | 391 MB |
 | JPEG baseline 4:4:4, 50 MP / 35 MP | 706 MB | 444 MB |
 | JPEG progressive 4:4:4, 50 MP / 8.7 MP | 1296 MB | 276 MB |
+
+T-113: the 371 MB row was measured with a WebP whose alpha is not palette-coded. A lossy WebP with a method-1 ALPH chunk whose alpha has 5 to 16 levels
+decodes with 8.5 bytes per pixel (`TestDecodedBytesBoundsALossyWebPWithAlpha`), 203 MiB of allocation for the decode alone at 5000 x 5000,
+against an estimate of 59 MiB; the estimate is now 8.75 bytes per pixel, so that size is refused and 3800 x 3800 is the largest accepted (peak heap in use
+262 MiB for the whole `process`, measured with `TestMeasurePeak`).
 
 Four uploads at once with the default concurrency of 2: 4 x 16-bit PNG 4096 x 4096 peak at 970 MB (925 MiB), a mix of the four largest
 formats peaks at 918 MB, both under the 1.2 GiB target (a 2 GiB task keeps headroom). The 4-parallel run with a concurrency of 4, as it was

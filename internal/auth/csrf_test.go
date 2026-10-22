@@ -157,3 +157,17 @@ func TestGuardMultipart(t *testing.T) {
 		}
 	}
 }
+
+// T-106: the __Host- session cookie triggers the origin check as well as the dev name does.
+func TestGuardChecksHostCookie(t *testing.T) {
+	for origin, want := range map[string]int{"https://app.example.com": 204, "https://evil.example.com": 403} {
+		r := httptest.NewRequest("POST", "/api/x", nil)
+		r.Header.Set("Origin", origin)
+		r.AddCookie(&http.Cookie{Name: HostCookieName, Value: "t"})
+		rec := httptest.NewRecorder()
+		guarded().ServeHTTP(rec, r)
+		if rec.Code != want {
+			t.Errorf("origin %s: %d, want %d", origin, rec.Code, want)
+		}
+	}
+}

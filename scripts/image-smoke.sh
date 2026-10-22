@@ -290,7 +290,7 @@ curl -fsS -m 60 -D "$TMP/h.txt" -o /dev/null -X POST "$BASE/api/auth/login" -H "
   -d "{\"email\":\"$EMAIL\",\"password\":\"$PW\"}" || fail "login failed"
 # The photo upload below needs a verified email (T-110); the log mailer only prints the code, so mark this account verified in the smoke database.
 docker exec -e MYSQL_PWD="$ROOT_PW" "$RUN-mysql" mysql -uroot smemories -e "UPDATE user_tab SET email_verified_at = UNIX_TIMESTAMP(NOW(3)) * 1000 WHERE email = '$EMAIL'" || fail "could not mark the smoke account verified"
-COOKIE="$(tr -d '\r' <"$TMP/h.txt" | sed -n 's/^[Ss]et-[Cc]ookie: \(smem_session=[^;]*\).*/\1/p' | head -1)"
+COOKIE="$(tr -d '\r' <"$TMP/h.txt" | sed -n 's/^[Ss]et-[Cc]ookie: \(\(__Host-\)\{0,1\}smem_session=[^;]*\).*/\1/p' | head -1)"
 [ -n "$COOKIE" ] || fail "login set no session cookie"
 BOOK="$(curl -fsS -m 60 -X POST "$BASE/api/yearbook/create" -H "Origin: $ORIGIN" -H "Cookie: $COOKIE" -H 'Content-Type: application/json' \
   -d '{"title":"Smoke 12A","language":"en"}' | json data.id)" || fail "yearbook create failed"

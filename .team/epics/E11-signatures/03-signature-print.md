@@ -26,3 +26,7 @@ The printed book shows each approved note's signature next to or under the frien
 
 #### Test plan
 QA probes: Vietnamese long names next to the signature, 2000-character note with signature, A5/A4/Letter, Chrome and Edge print to PDF, a signature at the edge of the box, 0 and 40 notes, backgrounds off in the print dialog (ink only).
+
+From QA on T-095, to settle when this task switches signatures on:
+- Keep one Postman step for a template with signatures off, which must refuse a signature field.
+- Make the oversize-signature error code the same whatever the template state, or document why it differs.

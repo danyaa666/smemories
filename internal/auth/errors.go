@@ -48,6 +48,7 @@ var (
 	errTermsAtRegister    = apperr.New(CodeTermsRequiredAtRegister, "accept_terms_version must be the current Terms version")
 	errInvalidEmail       = apperr.New(CodeInvalidEmail, "email is not valid")
 	errWeakPassword       = apperr.New(CodeWeakPassword, "password must be 10-128 characters and differ from the email")
+	errSecondSubject      = apperr.New(apperr.Forbidden, "this account is already linked to another Google account")
 	errInvalidDisplayName = apperr.New(CodeInvalidDisplayName, "display name must be 1-100 characters without control characters")
 	ErrUsernameTaken      = apperr.New(CodeUsernameTaken, "username is already taken")
 	errInvalidUsername    = apperr.New(CodeInvalidUsername, "username must be 3-30 characters: a-z, 0-9, dot, underscore, hyphen; start and end with a letter or digit; no two specials in a row")

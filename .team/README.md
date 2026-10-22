@@ -11,17 +11,17 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 11 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-096, T-097 |
-| TODO | 4 | T-095, T-114, T-115, T-116 |
-| IN_PROGRESS | 1 | T-106 |
-| IN_QA | 1 | T-113 |
-| DONE | 94 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-092, T-093, T-094, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-107, T-108, T-109, T-110, T-111, T-112, T-117, T-118, T-119 |
+| TODO | 2 | T-115, T-116 |
+| READY_FOR_QA | 1 | T-114 |
+| QA_FAIL | 1 | T-095 |
+| DONE | 96 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-092, T-093, T-094, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-117, T-118, T-119 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
 **Awaiting your review (MERGED):** nothing
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?); Q-051 (Approve merge of T-100 (canonical public ids, PR #93)?); Q-052 (Approve merge of T-111 (Terms acceptance API, PR #96; merges together with T-112)?); Q-053 (Approve merge of T-110 (upload abuse follow-up, PR #99)?); Q-054 (Approve merge of T-107 (bounded photo download memory, PR #98)?)
 
-_Board last written 2026-10-22 09:08Z_
+_Board last written 2026-10-22 14:07Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4469,24 +4469,47 @@ Spec: .team/epics/E05-templates-export/16-book-text-export-web.md. Download and 
 - 2026-10-21 13:52Z · human · accepted by owner
 
 ### T-095 — [E11] Signature storage, validation and API
-- **Status:** TODO
+- **Status:** QA_FAIL
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1b
 - **Depends-on:** —
 - **Risk:** high
-- **Rework:** 0
+- **Rework:** 1
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-22 09:08Z by leader
-- **Comments-seen:** 1
+- **Branch:** task/t-095-e11-signature-storage-validation-and-api
+- **PR:** https://github.com/danyaa666/smemories/pull/108
+- **Updated:** 2026-10-22 14:02Z by qa
+- **Comments-seen:** 6
 
 Spec: .team/epics/E11-signatures/01-signature-api.md. Next phase (after go-live, D-31). Vector strokes (L-14), template switch, public submit field, inbox and book-data reads. Risk high: public input.
 
 #### Comments
 - 2026-10-22 09:08Z · leader · Leader: promoted, the first task of E11 signatures (owner asked for it as the next phase). T-096 and T-097 follow once it merges.
+- 2026-10-22 09:44Z · dev · Findings: (1) the 3072-byte cap binds before 600 points (about 400 points with 3-digit coordinates; the pad in T-096 should thin to the byte budget). (2) No built-in template declares signature:true yet (T-097 flips memory-book/navy-classic per its spec), so enabled is false in real data until then; Postman reads enabled from the lookup and was also run green against a local build with memory-book enabled. If you want the switch on earlier, say so. (3) Book-data bound re-stated: measured 1,618,318 B for 300 maximal notes + 3 photo ids + maximal signature, documented 1.6 MiB. (4) Empty signature part is ERROR_INVALID_SIGNATURE, duplicate part is ERROR_PARAM. (5) Web: only two test fixtures got signature:null (generated type requires the key).
+- 2026-10-22 09:44Z · dev · PR #108 head b34ce29, CI green (go, go-integration, web, e2e, image, security). Verify: make lint test test-integration; newman postman/signatures.postman_collection.json (run twice; needs account A of notes collection verified); migration on a DB with notes; probes: fuzzed JSON, 1 MB body, duplicate signature field, hidden/pending note signature in every read path. Known gap: valid-signature paths run only with a template that declares the switch.
+- 2026-10-22 09:44Z · leader · Leader: keep the template signature switch off until T-097, as the spec says. T-096 spec amended: the pad thins to the 3072-byte canonical cap, not only to 600 points.
+- 2026-10-22 14:02Z · qa · QA_FAIL on head b34ce29 (I pushed a test-only commit cc52a62 on top: internal/signature/qa_test.go). One blocker-class finding, everything else passes.
+  
+  1. [major] Stale Postman collections: the PR adds data.signature to public-collect/get, signature to note/get-list items and book-data notes, but did not update postman/notes.postman_collection.json nor postman/notes-moderation.postman_collection.json. AC4 + definition of done say Postman follows the API, and a collection that fails on its own epic's endpoints is stale. Repro: fresh scratch DB, migrate up, API on the PR build (SMEM_ENV=dev), run notes Setup, mark newman-notes-a/b verified, clear limits, then from postman/: 'postman collection run notes.postman_collection.json --env-var baseUrl=http://127.0.0.1:PORT --working-dir .' -> 1 failed of 157: 'Full flow / 6. Public lookup, no cookie' assertion 'body' (expected object with 6 keys to deep-equal one with 5: the new signature key). 'postman collection run notes-moderation.postman_collection.json ...' -> 2 failed of 164: 'Full flow / 10. A lists all' assertion 'item shape' (keys now include signature) and '18a. Book data' assertion 'shape' (notes keys now answers,id,photo_ids,signature). Same two collections on a develop build: 0 failed (157/157, 164/164). Fix: add signature to the expected key sets/bodies in those three steps (expect null for notes without a signature). Suspected area: postman/*.json only.
+  
+  Non-blocking observations
+  a. The signatures collection never exercises a template that does NOT enable signatures once T-097 flips memory-book (it uses the lookup's enabled flag and one template). AC4 asks for 'disabled template'; add a step on template classic (ERROR_PARAM) so it stays covered after T-097.
+  b. Column is CHARACTER SET ascii, while db-conventions says utf8mb4 default; fine for integer-only JSON, but worth one line in docs/db-conventions or the migration comment as a deliberate exception.
+  c. Oversize (>4 KiB) signature to a book whose template is off answers ERROR_INVALID_SIGNATURE (rejected in scan) while a small one answers ERROR_PARAM; harmless.
+  
+  Evidence (all mine)
+  - CI on b34ce29: e2e, go, go-integration, image, security, web all pass. go build, go vet (+ -tags integration), golangci-lint 0 issues, gofmt clean, go test -race ./... ok, go test -race -count=1 -tags integration ./... ok (notes 238s, db 166s, all ok), web: npm ci, 379 tests, lint, prettier, typecheck, lint:i18n, check:api ok; e2e (scripts/e2e.sh on a scratch DB, ports 18190/14190): 5 passed incl. M1 journey.
+  - AC1 validator: existing table tests pass; FuzzParse 90 s (12.2M execs) and my FuzzCanonicalAlphabet 90 s (5.6M execs, asserts canonical output matches only the v/w/h/s digits-and-brackets alphabet): no finding. Unicode/escape table (BOM, full-width and Arabic-Indic digits, U+2028, NUL, invalid UTF-8 key, escaped duplicate key, __proto__, -0): all rejected or normalised to canonical.
+  - Live HTTP probes against a local build with memory-book switched on (scratch copy, not committed): floats 1.0/500.0/1e2, negative, out of range, odd count, 1-point, 13 strokes, duplicate key, extra key, markup, empty, null s, 3000-deep nesting, NUL, BOM, NBSP, zero-width space, 4097 bytes, 1 MB field: all 400 ERROR_INVALID_SIGNATURE, message names the rule only (no echo, nothing in the API log). Canonical 3072 bytes accepted, 3080 rejected. Duplicate signature part (also with a 1 MB second one): 400 ERROR_PARAM. Signature without answers: ERROR_PARAM. Bad text + bad signature: ERROR_MISSING_ANSWER (text wins). Honeypot first or last: 200 silent. Stored strings are canonical (odd spacing, key order, escaped key all normalised).
+  - Ordering: after 20+ invalid submissions Redis submit_ip_hour and submit_collection_hour zsets hold exactly 5 entries (the 5 accepted notes); the invalid ones cost no submit token (only the existing public_all per-request count). Integration test also asserts zero objects written when the signature is invalid with a photo attached.
+  - Reads: approved/pending/hidden sets: book-data returns approved only; inbox returns every status with the signature (owner view, documented). Tampered DB values: non-canonical-but-valid reads back canonical, '<script>' value reads null, no raw output in either endpoint. The only two note_tab readers are get-list and book-data (grep).
+  - Migration 20261022120000: on 200k existing notes it applied in 19 ms (ALGORITHM=INSTANT, 200000 rows kept, all NULL); down/up round trip keeps all rows; 4 concurrent 'migrate up' on an empty DB: all rc=0, exactly one applied (T-108 lock holds). Lock order unchanged (no new locks).
+  - AC3: TestMaximalBookIsUnderTheBound and TestQueryCountAndCap pass (1,618,318 B, bound 1.6 MiB, 4/5 queries unchanged).
+  - Postman: signatures collection run twice back to back on the switch-on build: 61/61 and 61/61 (enabled path, round trip, canonical, moderation, validation table); on the PR build as shipped (switch off): 59/59 twice. notes + notes-moderation: see finding 1.
+  Cleanup done: API process stopped, scratch DBs smem_test_qa95* dropped, Redis db 5 flushed.
+- 2026-10-22 14:02Z · leader · Leader: rework scope = QA's one blocker only. Add `signature` to the expected keys in postman/notes (step 6 public lookup) and postman/notes-moderation (step 10 item shape, step 18a book-data shape): null for notes without one. Run both collections twice, plus signatures. Merge origin/develop first if the PR conflicts (no rebase, no force-push). The ascii charset is now a documented exception in docs/db-conventions.md (leader). The other non-blocking notes wait for T-097.
 
 ### T-096 — [E11] Web: signature pad on the public form and the signature in the inbox
 - **Status:** BACKLOG
@@ -4838,25 +4861,38 @@ Spec: .team/epics/E12-security-hardening/09-links-and-contributor-quota.md (read
 - 2026-10-22 05:34Z · human · accepted by owner
 
 ### T-106 — [E12] Auth and repository hygiene from audit run 1
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Priority:** P3
 - **Type:** security
 - **Milestone:** M2
 - **Depends-on:** —
 - **Risk:** high
 - **Rework:** 1
-- **Owner-approved:** —
-- **Assignee:** dev
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-106-e12-auth-and-repository-hygiene-from-aud
 - **PR:** https://github.com/danyaa666/smemories/pull/106
-- **Updated:** 2026-10-22 08:59Z by dev
-- **Comments-seen:** 2
+- **Updated:** 2026-10-22 09:33Z by human
+- **Comments-seen:** 8
 
 Spec: .team/epics/E12-security-hardening/10-auth-and-repo-hygiene.md (read it from the repo root). Source: audit run 1, docs/security-audit-skill-2026-10-20/ (PR #86). Risk high: owner approves the merge.
 
 #### Comments
 - 2026-10-22 05:48Z · dev · PR #106 head 8b5726c, CI green (go, go-integration, web, e2e, image, security). Verify: __Host-smem_session in secure envs / smem_session in dev (TestSessionTokenAndCookieFlags), second Google subject refused (TestGoogleRefusesSecondSubject), RS384 token refused, Google name fallback is Student not email local part (only email-derived path), guard.mjs DSN host tests, gitignore/dependabot. RS256 pin equals go-oidc default (test locks it). Existing display_name rows not rewritten. Postman changed only in description (runs vs dev); make e2e proven by CI only.
 - 2026-10-22 08:44Z · leader · Not reviewed yet: PR #106 now conflicts with develop after T-119 (#105, b483ca7) merged. Both edit api/openapi.yaml and web/src/api/schema.d.ts. Merge origin/develop into the branch: keep T-119's 90-day ceiling text AND T-106's __Host- cookie name in every session/cookie description, regenerate schema.d.ts with npm run gen:api (never hand-merge it), run npm run check:api, push. No rebase, no force-push, no other changes. QA verifies after that.
+- 2026-10-22 09:13Z · dev · Merged origin/develop (T-119 b483ca7) in merge commit 9fb03c1, PR head 9fb03c1, MERGEABLE, CI all green (go, go-integration, web, e2e, image, security). openapi.yaml: securityScheme and SessionCookie header carry both the T-119 30-day sliding/90-day ceiling/401 text and the __Host-smem_session (smem_session in dev) name; also named the cookie in the sign-out and google-callback Set-Cookie descriptions. schema.d.ts regenerated with npm run gen:api (not hand-merged); check:api and lint pass. go test ./... and go test -tags integration ./internal/auth/... pass. No .team files in the PR diff.
+- 2026-10-22 09:13Z · dev · Conflict resolved by merge 9fb03c1; verify the openapi cookie descriptions and that schema.d.ts equals gen:api output.
+- 2026-10-22 09:21Z · qa · QA_PASS on head 9fb03c1 (CI all green: e2e, go, go-integration, image, security, web). Evidence I produced:
+  1 Cookie: live API probes (own binary, SMEM_ENV=test and =dev). test: Set-Cookie __Host-smem_session ... Path=/; HttpOnly; Secure; SameSite=Lax, no Domain; dev: smem_session without Secure. Own name get-me 200; the other name 401 in both envs (server reads only the name it sets). CSRF guard: bad Origin + either name -> 403. Logout with only the wrong name leaves the session valid; logout with own name clears that same name (Max-Age=0) and get-me then 401. No other Go/web code reads the name (grep); image-smoke sed regex extracts __Host-smem_session and smem_session, not other_smem_session. TestSessionTokenAndCookieFlags, TestGuardChecksHostCookie pass.
+  2 OIDC: go test -race -count=1 -tags integration ./internal/auth/... ok (151 s) incl. TestGoogleRefusesSecondSubject (302 /login?error=ERROR_FORBIDDEN, 1 identity, 1 user, no cookie, old session still 200, first subject still signs in), RS384 case in TestGoogleCallbackRejections -> oidc_failed (SupportedSigningAlgs RS256 in google.go), and the existing pre-hijacking tests. Refusal check sits in googleUserTx before any UPDATE/INSERT.
+  3 Owner name: no Cut on email remains (grep); TestGoogleNameAndLocaleFallbacks expects Student for empty/blank/control/too-long names.
+  4 Repo: git check-ignore ignores .tfstate, .tfstate.backup, .tfvars, .p12, .pem; dependabot has npm /tools/e2e and /tools/print-check (both package.json exist). guard.mjs probe: public 8.8.8.8, 172.32.x, 2001:db8::1, DNS names, 127.0.0.1.evil.com, 0.0.0.0, 169.254.169.254 refused; 10/8, 172.16/12, 192.168/16, 127.0.0.1, localhost, [::1], [fd00::1], unix socket and no-address allowed; E2E_ALLOW_REMOTE=1 does not override. npm run guard-test 5/5.
+  5 openapi: securityScheme, SessionCookie header, sign-out and google-callback Set-Cookie all carry the cookie name; 30-day sliding/90-day ceiling/401 text intact; npm run gen:api -> schema.d.ts byte-identical, check:api 'api schema ok'.
+  6 Mechanical: go build, go vet (and -tags integration), gofmt, golangci-lint 0 issues, go test ./... and go test -race ./... green, web vitest + lint + prettier green. make e2e (from worktree, smem_test_e2e): 5/5 passed incl. M1 journey. Postman auth collection against my own SMEM_ENV=dev API (Google enabled with fake creds): 118 requests / 252 assertions, 0 failed, run twice back to back. Processes I started are stopped; temp .env copy removed.
+  Non-blocking: (a) openapi apiKey securityScheme name stays smem_session (one value only; description explains __Host-). (b) The other Postman collections hardcode smem_session; fine because they target SMEM_ENV=dev. (c) Existing display_name rows derived from emails are not rewritten (dev stated this).
+- 2026-10-22 09:23Z · human · owner approved merge
+- 2026-10-22 09:23Z · leader · Merged PR #106 as 56b732b (owner approved; QA_PASS; CI 6/6 green on 9fb03c1). __Host- cookie outside dev: existing non-dev sessions sign in again once.
+- 2026-10-22 09:33Z · human · accepted by owner
 
 ### T-107 — [E12] Bound the memory of photo downloads (get-content and public-media)
 - **Status:** DONE
@@ -5102,28 +5138,38 @@ Spec: .team/epics/E13-legal/02-legal-pages-web.md. Pages from docs/legal (draft 
 - 2026-10-22 02:05Z · human · accepted by owner
 
 ### T-113 — [E12] Media memory estimate for lossy WebP with alpha (ALPH) is too low
-- **Status:** IN_QA
+- **Status:** DONE
 - **Priority:** P3
 - **Type:** bug
 - **Milestone:** M2
 - **Depends-on:** —
 - **Risk:** high
 - **Rework:** 0
-- **Owner-approved:** —
-- **Assignee:** qa
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-113-e12-media-memory-estimate-for-lossy-webp
 - **PR:** https://github.com/danyaa666/smemories/pull/107
-- **Updated:** 2026-10-22 08:59Z by qa
-- **Comments-seen:** 2
+- **Updated:** 2026-10-22 09:33Z by human
+- **Comments-seen:** 6
 
 QA of T-104 (2026-10-21): a lossy WebP with an ALPH chunk (compression 1) decodes to a transient NRGBA at about 4 bytes per pixel, while the decode-memory estimate in internal/media assumes about 2.5; a valid 5000x5000 file can peak near 160 MB against an estimated 62 MB, so the processing-slot and SMEM_MEMORY_LIMIT_MIB sizing (docs/media.md) is optimistic. Fix the estimate per format (WebP with alpha uses 4 B/px, or the real decoder output size), add a test with a WebP-with-alpha fixture that measures the peak (testing.AllocsPerRun or runtime.MemStats around one decode), update the numbers in docs/media.md. No behaviour change for JPEG and PNG.
 
 #### Comments
 - 2026-10-22 08:58Z · dev · PR 107 head 0d04639, CI green. decodedBytes: lossy WebP with ALPH = 8.75 B/px (real 8.53 measured with MemStats; was 2.5). Fixture testdata/alpha-lossy-2048.webp; tests TestDecodedBytesBoundsALossyWebPWithAlpha, TestWithinLimitsLossyWebPWithAlpha. Alpha WebP above ~3800x3800 now refused. docs/media.md updated.
 - 2026-10-22 08:58Z · leader · Leader: the new alpha-WebP cutoff (about 3800x3800, 14 MP, down from 25 MP) is accepted. Phone photos are JPEG or HEIC; alpha WebP is mostly graphics. QA: check the numbers and the cut-off error, not the product choice.
+- 2026-10-22 09:10Z · qa · QA_PASS on PR 107 head 0d04639 (CI green: e2e, go, go-integration, image, security, web). I added one test-only commit 6d7a2a0 (internal/media/webp_alph_test.go), so the PR head is now 6d7a2a0.
+  AC1 decodedBytes: diff touches only the lossy-WebP branch; ALPH gives px*35/4 = 8.75 B/px, plain lossy stays 2.5 (TestWithinLimitsLossyWebPWithAlpha 'plain 5000' allowed), lossless/JPEG/PNG branches are untouched in the diff and their existing tests pass. webpHasALPH: my TestWebpHasALPHCases has 14 cases (nil, short, header only, ALPH first, after an odd chunk, no ALPH, ALPH hidden in an EXIF payload = false, truncated header, length longer than data, 0xffffffff length, odd length without pad, zero-length chunks). All pass. FuzzWebpHasALPH (which also runs webpOrientation) ran 45 s, 2.96M execs, no panic. Also read x/image v0.46 webp/decode.go: it only decodes ALPH when the VP8X alpha flag is set (otherwise errInvalidFormat), so a missing flag cannot give a bigger decode than the estimate.
+  AC2 measurement: 56 cwebp variants at 2048x2048 (2, 4, 5, 16, 17 levels, gradient, noise, noise16; alpha_method 0/1; filter none/fast/best; alpha_q 100 and 40). Real TotalAlloc per pixel is 2.52 to 8.53, estimate 8.75, none UNDER. Worst case (5 to 16 levels, method 1) is 8.53. Scratch 5000x5000 (l16, noise16, gradient, method 1): 8.53, 8.53, 6.53 B/px, all under 8.75. The committed fixture: 35,763,160 B allocated against 36,700,160 estimated. Mutation: in a git-archive copy I changed the ALPH branch back to px*5/2: TestDecodedBytesBoundsALossyWebPWithAlpha FAILS (estimate 10,485,760 below 35,763,160 allocated) and TestWithinLimitsLossyWebPWithAlpha FAILS (alpha 4000 and 5000 allowed).
+  AC3 behaviour, real API built from the PR head, own database smem_test_qa113, fixtures made with cwebp -alpha_method 1 -alpha_filter fast, noise16 alpha (worst case): 3920x3920 (7.7 MB) POST /api/media/create answers 400 ERROR_INVALID_IMAGE 'the image is corrupt or too large' in 10 ms. smem_media_processing_slots_in_use, smem_media_uploads_in_progress and smem_media_process_panics_total are all 0 before and after; no new objects in the bucket (the book prefix has 0 objects); three parallel over-size uploads gave 429/400/400 and the gauges stayed 0. 3900x3900 (est 126.9 MiB of 128) answers 200 (PNG 3000x3000, 19 MB), 2.7 s, sampled heap in use peak 247 MiB, gauge in_use went 1 then 0; the 3 objects it created are removed by media/delete. TestMeasurePeak: 3900x3900 267 MiB, 3800x3800 269 MiB heap in use (3 runs, 282 MiB Go-held).
+  AC4 go build, go vet ./..., go test ./... all ok; go test -race -count=1 -tags integration ./internal/media ok (84 s). Media Postman collection (postman collection run postman/media.postman_collection.json --working-dir postman), run twice back to back: 91 requests, 172/172 assertions both times. docs/media.md matches the code: 8.75 B/px, 2.5 for plain, the 4000x4000 refusal (133.5 MiB over the 128 cap), 203 MiB for the 5000x5000 decode (5000^2 x 8.53), 59 MiB old estimate.
+  Non-blocking: (1) docs/media.md says the whole process peaks at 262 MiB at 3800x3800; with worst-case alpha I measure 269 MiB (3 runs), about 3% higher; suggest 'about 270 MiB'. (2) The real cutoff is a bit above the documented 'about 3800': a 3900x3900 file passes and 3920x3920 is refused (limit 15.34 MP, side about 3916); 'about 3800' is the safe side. (3) webpHasALPH computes i+8+n with int; on a 32-bit build a length near 0x7fffffff would overflow (same pattern as webpOrientation); irrelevant for the 64-bit targets.
+  Cleanup: API process I started is stopped, scratch DB dropped, test yearbook deleted, large scratch images deleted. Nothing in .team or product code changed.
+- 2026-10-22 09:19Z · human · owner approved merge
+- 2026-10-22 09:21Z · leader · Merged PR #107 as df67daa (owner approved; QA_PASS; CI 6/6 green on 6d7a2a0). Alpha WebP cutoff about 3916 px (documented about 3800).
+- 2026-10-22 09:33Z · human · accepted by owner
 
 ### T-114 — [E03] Web: a malformed yearbook id in the URL shows 'book not found'
-- **Status:** TODO
+- **Status:** READY_FOR_QA
 - **Priority:** P3
 - **Type:** bug
 - **Milestone:** M2
@@ -5132,14 +5178,15 @@ QA of T-104 (2026-10-21): a lossy WebP with an ALPH chunk (compression 1) decode
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-21 13:11Z by leader
-- **Comments-seen:** 0
+- **Branch:** task/t-114-e03-web-a-malformed-yearbook-id-in-the-u
+- **PR:** 109
+- **Updated:** 2026-10-22 14:07Z by dev
+- **Comments-seen:** 1
 
 QA of T-100 (2026-10-21): since T-100 a non-canonical id answers 400 ERROR_PARAM instead of 404, and web/src/pages/YearbookEdit.tsx (line ~39) only shows 'book not found' for 404, so a hand-typed or lower-cased URL shows the generic invalid-request text. Treat ERROR_PARAM on the yearbook id like not found on every page that takes :id from the URL (edit, notes, note links, book); component tests for 404 and 400. No API change.
 
 #### Comments
+- 2026-10-22 14:07Z · dev · YearbookLayout (shared by edit, notes, note-links, book/export) renders the existing books.notFound message + back link when yearbook/get answers 404 or 400 invalid_body (isBookGone in auth/errors.ts); YearbookEdit's own 404 branch removed. 8 vitest cases (404/400 x 4 routes), vi text, 500 stays generic. Public note form uses a token, not a yearbook id: unchanged. CI green (e2e needed one rerun: Install Chromium step hung to the 10 min limit). Head c422ddf.
 
 ### T-115 — [E05] Export dialogs return focus to their button; e2e traces drop photo-link URLs
 - **Status:** TODO

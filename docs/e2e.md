@@ -53,8 +53,9 @@ direct `npx playwright test`:
 
 - `E2E_BASE_URL` must have the host `localhost`, `127.0.0.1` or `::1`. Override on purpose with `E2E_ALLOW_REMOTE=1` (this check only).
 - `SMEM_DB_DSN` must name a database starting with `smem_e2e` or `smem_test` (CI uses `smem_e2e`). There is no override.
+- The host in `SMEM_DB_DSN` must be loopback (`127.0.0.0/8`, `localhost`, `::1`), a private address (`10/8`, `172.16/12`, `192.168/16`, `fc00::/7`) or a unix socket; a DNS name is refused because it can point anywhere. There is no override (T-106).
 
-`cd tools/e2e && npm run guard-test` proves both refusals (it runs in `make e2e` and in the `e2e` job).
+`cd tools/e2e && npm run guard-test` proves the refusals (it runs in `make e2e` and in the `e2e` job).
 
 **Registration is limited to 5 per hour per address.** Run directly (`scripts/e2e.sh`, not `make e2e`, which resets the limits) after five
 runs, step 1 fails with `registration is rate limited ...`: run `make reset-limits SMEM_ENV=test`, or point `SMEM_REDIS_URL` at a fresh

@@ -266,6 +266,16 @@ func (s *Store) googleUserTx(ctx context.Context, id *GoogleIdentity, want *User
 	}
 
 	u, err = scanUser(tx.QueryRowContext(ctx, `SELECT `+userCols+` FROM user_tab u WHERE u.email = ? FOR UPDATE`, id.Email))
+	if err == nil {
+		// One Google subject per account: a second one (a recycled address) is refused before anything is changed.
+		var linked bool
+		if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM user_identity_tab WHERE user_id = ? AND provider = 'google')`, u.InternalID).Scan(&linked); err != nil {
+			return nil, false, err
+		}
+		if linked {
+			return nil, false, errSecondSubject
+		}
+	}
 	switch {
 	case err == nil && !u.EmailVerified:
 		// Pre-hijacking defence: whoever registered this address never proved they own it, so their password and sessions go

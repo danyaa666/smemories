@@ -9,8 +9,28 @@ import (
 	"github.com/danyaa666/smemories/internal/httpx"
 )
 
-// CookieName is the session cookie.
-const CookieName = "smem_session"
+// CookieName is the session cookie in dev (plain http, so no Secure and no __Host- prefix).
+// HostCookieName is the one used everywhere else: the __Host- prefix makes browsers accept it only
+// with Secure, Path=/ and no Domain, so a sibling subdomain cannot plant or shadow it.
+const (
+	CookieName     = "smem_session"
+	HostCookieName = "__Host-smem_session"
+)
+
+// cookieName is the session cookie's name for a handler that sets Secure cookies or not.
+func cookieName(secure bool) string {
+	if secure {
+		return HostCookieName
+	}
+	return CookieName
+}
+
+// hasSessionCookie reports whether the request carries a session cookie under either name.
+func hasSessionCookie(r *http.Request) bool {
+	_, e1 := r.Cookie(CookieName)
+	_, e2 := r.Cookie(HostCookieName)
+	return e1 == nil || e2 == nil
+}
 
 // Guard protects every state-changing request (POST, PUT, PATCH, DELETE):
 //   - one that carries the session cookie must come from an allowed origin (Origin, or
@@ -36,7 +56,7 @@ func guard(allowed []string, bodyType string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete:
-			if _, err := r.Cookie(CookieName); err == nil && !set[requestOrigin(r)] {
+			if hasSessionCookie(r) && !set[requestOrigin(r)] {
 				httpx.WriteError(w, r, http.StatusForbidden, "ERROR_CSRF_ORIGIN_MISMATCH", "origin not allowed")
 				return
 			}

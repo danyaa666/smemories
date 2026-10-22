@@ -21,7 +21,7 @@ import (
 // HandlerConfig is passed by value on purpose: start-up settings, read once.
 type HandlerConfig struct {
 	AllowedOrigins []string // for Guard
-	SecureCookie   bool     // false only when SMEM_ENV=dev (plain http://localhost)
+	SecureCookie   bool     // false only when SMEM_ENV=dev (plain http://localhost); true also selects the __Host- cookie name
 	TrustProxy     bool     // SMEM_TRUST_PROXY: client IP = last X-Forwarded-For hop
 }
 
@@ -99,7 +99,7 @@ func (h *Handler) requireSession(next http.Handler) http.Handler {
 
 func (h *Handler) requireUser(next http.Handler, needTerms bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		u, refreshed, err := h.svc.Authenticate(r.Context(), cookieToken(r))
+		u, refreshed, err := h.svc.Authenticate(r.Context(), h.cookieToken(r))
 		if err != nil {
 			h.fail(w, r, err)
 			return
@@ -151,7 +151,7 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &in) {
 		return
 	}
-	u, sess, err := h.svc.Login(r.Context(), h.clientIP(r), r.UserAgent(), in.Email, in.Password, cookieToken(r))
+	u, sess, err := h.svc.Login(r.Context(), h.clientIP(r), r.UserAgent(), in.Email, in.Password, h.cookieToken(r))
 	if err != nil {
 		h.fail(w, r, err)
 		return
@@ -161,7 +161,7 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
-	if err := h.svc.Logout(r.Context(), cookieToken(r)); err != nil {
+	if err := h.svc.Logout(r.Context(), h.cookieToken(r)); err != nil {
 		h.fail(w, r, err)
 		return
 	}
@@ -340,8 +340,8 @@ const (
 	retryMail  = "30"
 )
 
-func cookieToken(r *http.Request) string {
-	c, err := r.Cookie(CookieName)
+func (h *Handler) cookieToken(r *http.Request) string {
+	c, err := r.Cookie(cookieName(h.cfg.SecureCookie))
 	if err != nil {
 		return ""
 	}
@@ -354,7 +354,7 @@ func (h *Handler) setCookie(w http.ResponseWriter, s *Session) {
 
 func (h *Handler) cookie(w http.ResponseWriter, value string, maxAge int, expires time.Time) {
 	http.SetCookie(w, &http.Cookie{
-		Name: CookieName, Value: value, Path: "/", MaxAge: maxAge, Expires: expires,
+		Name: cookieName(h.cfg.SecureCookie), Value: value, Path: "/", MaxAge: maxAge, Expires: expires,
 		HttpOnly: true, Secure: h.cfg.SecureCookie, SameSite: http.SameSiteLaxMode,
 	})
 }
