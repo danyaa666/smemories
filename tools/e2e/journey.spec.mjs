@@ -5,7 +5,7 @@
 //
 // The link token is a bearer secret: it is only ever in `link`, never logged, and every error leaving a step is scrubbed of it.
 import { expect, request, test } from "@playwright/test";
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
