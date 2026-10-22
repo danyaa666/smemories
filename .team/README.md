@@ -12,7 +12,7 @@
 |---|---:|---|
 | BACKLOG | 11 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-096, T-097 |
 | TODO | 3 | T-114, T-115, T-116 |
-| IN_PROGRESS | 1 | T-095 |
+| READY_FOR_QA | 1 | T-095 |
 | DONE | 96 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-092, T-093, T-094, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-117, T-118, T-119 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
@@ -20,7 +20,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?); Q-051 (Approve merge of T-100 (canonical public ids, PR #93)?); Q-052 (Approve merge of T-111 (Terms acceptance API, PR #96; merges together with T-112)?); Q-053 (Approve merge of T-110 (upload abuse follow-up, PR #99)?); Q-054 (Approve merge of T-107 (bounded photo download memory, PR #98)?)
 
-_Board last written 2026-10-22 09:33Z_
+_Board last written 2026-10-22 09:44Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4468,7 +4468,7 @@ Spec: .team/epics/E05-templates-export/16-book-text-export-web.md. Download and 
 - 2026-10-21 13:52Z · human · accepted by owner
 
 ### T-095 — [E11] Signature storage, validation and API
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1b
@@ -4476,16 +4476,19 @@ Spec: .team/epics/E05-templates-export/16-book-text-export-web.md. Download and 
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-095-e11-signature-storage-validation-and-api
-- **PR:** —
-- **Updated:** 2026-10-22 09:13Z by dev
-- **Comments-seen:** 1
+- **PR:** https://github.com/danyaa666/smemories/pull/108
+- **Updated:** 2026-10-22 09:44Z by dev
+- **Comments-seen:** 4
 
 Spec: .team/epics/E11-signatures/01-signature-api.md. Next phase (after go-live, D-31). Vector strokes (L-14), template switch, public submit field, inbox and book-data reads. Risk high: public input.
 
 #### Comments
 - 2026-10-22 09:08Z · leader · Leader: promoted, the first task of E11 signatures (owner asked for it as the next phase). T-096 and T-097 follow once it merges.
+- 2026-10-22 09:44Z · dev · Findings: (1) the 3072-byte cap binds before 600 points (about 400 points with 3-digit coordinates; the pad in T-096 should thin to the byte budget). (2) No built-in template declares signature:true yet (T-097 flips memory-book/navy-classic per its spec), so enabled is false in real data until then; Postman reads enabled from the lookup and was also run green against a local build with memory-book enabled. If you want the switch on earlier, say so. (3) Book-data bound re-stated: measured 1,618,318 B for 300 maximal notes + 3 photo ids + maximal signature, documented 1.6 MiB. (4) Empty signature part is ERROR_INVALID_SIGNATURE, duplicate part is ERROR_PARAM. (5) Web: only two test fixtures got signature:null (generated type requires the key).
+- 2026-10-22 09:44Z · dev · PR #108 head b34ce29, CI green (go, go-integration, web, e2e, image, security). Verify: make lint test test-integration; newman postman/signatures.postman_collection.json (run twice; needs account A of notes collection verified); migration on a DB with notes; probes: fuzzed JSON, 1 MB body, duplicate signature field, hidden/pending note signature in every read path. Known gap: valid-signature paths run only with a template that declares the switch.
+- 2026-10-22 09:44Z · leader · Leader: keep the template signature switch off until T-097, as the spec says. T-096 spec amended: the pad thins to the 3072-byte canonical cap, not only to 600 points.
 
 ### T-096 — [E11] Web: signature pad on the public form and the signature in the inbox
 - **Status:** BACKLOG
@@ -4849,7 +4852,7 @@ Spec: .team/epics/E12-security-hardening/09-links-and-contributor-quota.md (read
 - **Branch:** task/t-106-e12-auth-and-repository-hygiene-from-aud
 - **PR:** https://github.com/danyaa666/smemories/pull/106
 - **Updated:** 2026-10-22 09:33Z by human
-- **Comments-seen:** 7
+- **Comments-seen:** 8
 
 Spec: .team/epics/E12-security-hardening/10-auth-and-repo-hygiene.md (read it from the repo root). Source: audit run 1, docs/security-audit-skill-2026-10-20/ (PR #86). Risk high: owner approves the merge.
 
@@ -5126,7 +5129,7 @@ Spec: .team/epics/E13-legal/02-legal-pages-web.md. Pages from docs/legal (draft 
 - **Branch:** task/t-113-e12-media-memory-estimate-for-lossy-webp
 - **PR:** https://github.com/danyaa666/smemories/pull/107
 - **Updated:** 2026-10-22 09:33Z by human
-- **Comments-seen:** 5
+- **Comments-seen:** 6
 
 QA of T-104 (2026-10-21): a lossy WebP with an ALPH chunk (compression 1) decodes to a transient NRGBA at about 4 bytes per pixel, while the decode-memory estimate in internal/media assumes about 2.5; a valid 5000x5000 file can peak near 160 MB against an estimated 62 MB, so the processing-slot and SMEM_MEMORY_LIMIT_MIB sizing (docs/media.md) is optimistic. Fix the estimate per format (WebP with alpha uses 4 B/px, or the real decoder output size), add a test with a WebP-with-alpha fixture that measures the peak (testing.AllocsPerRun or runtime.MemStats around one decode), update the numbers in docs/media.md. No behaviour change for JPEG and PNG.
 
