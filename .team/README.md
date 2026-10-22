@@ -13,16 +13,16 @@
 | BACKLOG | 7 | T-023, T-024, T-025, T-026, T-027, T-031, T-050 |
 | TODO | 1 | T-029 |
 | IN_PROGRESS | 1 | T-097 |
-| READY_FOR_QA | 1 | T-120 |
+| IN_QA | 1 | T-120 |
 | MERGED | 2 | T-096, T-116 |
 | DONE | 100 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-117, T-118, T-119 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
 **Awaiting your review (MERGED):** T-096 ([E11] Web: signature pad on the public form and the signature in the inbox); T-116 ([E12] Web: limit concurrent photo requests on gallery pages (follow-up to T-107))
 
-**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?); Q-051 (Approve merge of T-100 (canonical public ids, PR #93)?); Q-052 (Approve merge of T-111 (Terms acceptance API, PR #96; merges together with T-112)?); Q-053 (Approve merge of T-110 (upload abuse follow-up, PR #99)?); Q-054 (Approve merge of T-107 (bounded photo download memory, PR #98)?)
+**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-055 (What should the team build after E11 signatures: go-live (M2) or the class yearbook (M3)?)
 
-_Board last written 2026-10-22 19:47Z_
+_Board last written 2026-10-22 19:51Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -507,7 +507,7 @@ Blocked meanwhile: nothing; do it before T-023 deploys from main.
 Security audit finding L6. GitHub says Dependabot alerts are disabled and security updates are disabled for danyaa666/smemories (secret scanning and push protection are already on, and dependabot.yml still opens weekly version PRs). CI govulncheck fails the build on a reachable Go vulnerability and npm audit only warns, so today nobody is told when a dependency gets an advisory between weekly PRs. Turning both on costs nothing and sends advisories to you and opens fix PRs against develop. I did not change the setting: it is a repository setting and yours to switch. Blocked meanwhile: nothing.
 
 ### Q-044 — Approve merge of T-092 (public photo links API, PR #85)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-20 18:15Z
 - **Blocks:** T-092
 - **Recommendation:** approve
@@ -516,7 +516,7 @@ Security audit finding L6. GitHub says Dependabot alerts are disabled and securi
 QA_PASS and leader review OK on b061020. Adds the permanent public photo links you chose (D-32): signed 128-bit token, GET /api/public-media/get-content, POST /api/yearbook/revoke-photo-links, SMEM_MEDIA_LINK_SECRET (prod refuses to start without it), migration adding yearbook_tab.link_epoch. The only red CI job (image) is a pre-existing flaky migrate race also seen on develop; T-108 fixes it. Reply 'team approve T-092' to approve.
 
 ### Q-045 — Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-20 21:59Z
 - **Blocks:** T-098
 - **Recommendation:** approve
@@ -525,7 +525,7 @@ QA_PASS and leader review OK on b061020. Adds the permanent public photo links y
 QA_PASS and leader review OK on 33737ef, CI green. Rate limits now group IPv6 clients by /64, a new per-account limit stops password guessing after 50 failures in 15 minutes (fail closed), a successful password reset clears that counter, and a WARN appears if the proxy header is trusted from a public peer. Reply 'team approve T-098'.
 
 ### Q-046 — Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-20 22:43Z
 - **Blocks:** T-099
 - **Recommendation:** approve
@@ -534,7 +534,7 @@ QA_PASS and leader review OK on 33737ef, CI green. Rate limits now group IPv6 cl
 QA_PASS and leader review OK on 8e07f4f, CI green. All binaries now refuse to start without SMEM_ENV, and dev/test refuse non-local origins or base URLs, so a deployed environment cannot run with the public OTP key or the fixed code. Reply 'team approve T-099'.
 
 ### Q-047 — Approve merge of T-108 (concurrent migrate race fix, PR #91)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-21 03:02Z
 - **Blocks:** T-108
 - **Recommendation:** approve
@@ -543,7 +543,7 @@ QA_PASS and leader review OK on 8e07f4f, CI green. All binaries now refuse to st
 QA_PASS and leader review OK on d856c25, CI green. Takes the migration lock before goose creates its version table, which fixes the flaky CI image job seen on every PR. 9 lines of code plus a test that fails on the old code. Reply 'team approve T-108'.
 
 ### Q-048 — Approve merge of T-102 (upload slot fairness, PR #90)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-21 03:31Z
 - **Blocks:** T-102
 - **Recommendation:** approve
@@ -552,7 +552,7 @@ QA_PASS and leader review OK on d856c25, CI green. Takes the migration lock befo
 QA_PASS and leader review OK on d714aad, CI green. One account can no longer block everyone's photo uploads with slow uploads (2 in progress per user, slow bodies cut off with 408), and rejected public submissions free their slot early. Follow-up T-110 closes the remaining gap (several throwaway accounts) with a verified-email rule and a per-client cap. Reply 'team approve T-102'.
 
 ### Q-049 — Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-21 08:00Z
 - **Blocks:** T-103
 - **Recommendation:** approve
@@ -561,7 +561,7 @@ QA_PASS and leader review OK on d714aad, CI green. One account can no longer blo
 QA_PASS twice (before and after the develop merge) and leader review OK on b732c51, CI green. A login racing a password reset could create a session that survived the reset for 30 days; now every session carries the user's credential epoch and is refused once a reset or Google merge bumps it. Existing sessions keep working. Deploy: migration first, then the binary; rollback note added to docs/deploy.md. Reply 'team approve T-103'.
 
 ### Q-050 — Approve merge of T-104 (media processing robustness, PR #94)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-21 12:57Z
 - **Blocks:** T-104
 - **Recommendation:** approve
@@ -570,7 +570,7 @@ QA_PASS twice (before and after the develop merge) and leader review OK on b732c
 QA_PASS and leader review OK on 968b9d7, CI green. A crash inside image decoding, scaling or encoding (including the background print-size step) now answers 400 instead of taking the whole API down, the processing slot is always released, and decoded image sizes are re-checked. QA sent about 40 hostile files through the owner upload and the public form: all refused, server stayed up. Reply 'team approve T-104'.
 
 ### Q-051 — Approve merge of T-100 (canonical public ids, PR #93)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-21 13:11Z
 - **Blocks:** T-100
 - **Recommendation:** approve
@@ -579,7 +579,7 @@ QA_PASS and leader review OK on 968b9d7, CI green. A crash inside image decoding
 QA_PASS and leader review OK on 2210d38, CI green. Every id from the browser must be the canonical upper-case form (else 400 before any query), and photo storage paths and yearbook deletion use the stored id, so a lower-cased id can no longer leave photos behind in storage or reset the quota. QA probed ~250 bad spellings over 15 endpoints with no data touched. Reply 'team approve T-100'.
 
 ### Q-052 — Approve merge of T-111 (Terms acceptance API, PR #96; merges together with T-112)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-21 18:16Z
 - **Blocks:** T-111
 - **Recommendation:** approve
@@ -588,7 +588,7 @@ QA_PASS and leader review OK on 2210d38, CI green. Every id from the browser mus
 QA_PASS and leader review OK on e0a1ba6, CI green. Sign-up requires accepting the current Terms and Privacy version; every signed-in request is refused with ERROR_TERMS_REQUIRED until the user accepts (existing accounts and new Google accounts accept once on the new screen from T-112); notes record the version shown. Merges together with T-112 (#97, web pages and checkbox), which passed QA too. The texts stay marked DRAFT until you finalise them before go-live. Reply 'team approve T-111'.
 
 ### Q-053 — Approve merge of T-110 (upload abuse follow-up, PR #99)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-21 23:04Z
 - **Blocks:** T-110
 - **Recommendation:** approve
@@ -597,13 +597,27 @@ QA_PASS and leader review OK on e0a1ba6, CI green. Sign-up requires accepting th
 QA_PASS and leader review OK on d0c5ed8, CI green. Photo upload now needs a verified email, each network address may have at most 4 uploads in progress, and at most 16 rejected public submissions per address are drained (the rest are cut off). QA replayed the attack: a victim's uploads succeeded 23 of 23 times (before: 503 every time). Reply 'team approve T-110'.
 
 ### Q-054 — Approve merge of T-107 (bounded photo download memory, PR #98)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-21 23:24Z
 - **Blocks:** T-107
 - **Recommendation:** approve
 - **Answer:** _(pending)_
 
 QA_PASS and leader review OK on 70efad7, CI green. Photos are streamed instead of loaded whole: QA measured +5 MiB memory under 64 slow readers versus about +1 GB on today's develop; responses are byte-identical; a user or address can have at most 64 downloads at once (galleries of 100 thumbnails load over HTTP/2). Reply 'team approve T-107'.
+
+### Q-055 — What should the team build after E11 signatures: go-live (M2) or the class yearbook (M3)?
+- **Status:** OPEN
+- **Asked:** 2026-10-22 19:51Z
+- **Blocks:** T-023, T-026
+- **Recommendation:** A: go-live. It needs from you: domain name, AWS account and region (Singapore recommended), and the lean (about 95 USD/month) vs growth (about 160) choice from docs/cost-estimate.md. Meanwhile the team does what needs no account: T-050 prep notes, T-029, and a health sweep.
+- **Answer:** _(pending)_
+
+Context: E12 hardening is done; E11 signatures finish with T-097 (in progress). The ready pipeline is 3 (min 4).
+Options:
+A) Go-live (M2): T-023 IaC and deploy pipeline, T-024 observability, T-025 backups, T-031 edge hardening, T-050 remove dev shortcuts. Blocked on your inputs: domain, AWS account and region, cost tier, legal texts final (D-35), enforce_admins on main (D-33). Pro: real users. Cost: about 95-160 USD/month once live.
+B) Class yearbook (M3, E07: T-026, T-027): many profiles per book, classes, invites. Pro: a big product step; needs no AWS. Con: delays go-live; T-026 is risk high (roles and invites) and needs a PRD review.
+C) Both: the team does B while you prepare the A inputs, then switches to A when they arrive.
+Recommendation: A, with C as the fallback if the inputs take more than a few days.
 
 <!-- questions:end -->
 
@@ -5389,7 +5403,7 @@ Spec: .team/epics/E12-security-hardening/12-openapi-session-ceiling.md (read it 
 - 2026-10-22 08:53Z · human · accepted by owner
 
 ### T-120 — [E06] CI: bound and cache the e2e Chromium install (two hangs on 2026-10-22)
-- **Status:** READY_FOR_QA
+- **Status:** IN_QA
 - **Priority:** P3
 - **Type:** ci
 - **Milestone:** M2
@@ -5397,10 +5411,10 @@ Spec: .team/epics/E12-security-hardening/12-openapi-session-ceiling.md (read it 
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** qa
 - **Branch:** task/t-120-e06-ci-bound-and-cache-the-e2e-chromium-install
 - **PR:** https://github.com/danyaa666/smemories/pull/114
-- **Updated:** 2026-10-22 19:37Z by dev
+- **Updated:** 2026-10-22 19:47Z by qa
 - **Comments-seen:** 2
 
 Spec: .team/epics/E06-go-live/13-ci-e2e-chromium-install.md (read it from the main checkout).
