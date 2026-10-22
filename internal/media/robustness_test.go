@@ -215,3 +215,66 @@ func TestProcessPhotoGivesTheSlotBackWhenTheWaitFails(t *testing.T) {
 		t.Errorf("slots in use = %d, want 1", n)
 	}
 }
+
+// T-113. alpha-lossy-2048.webp (8.7 KB, made with `cwebp -q 80 -alpha_q 100 -alpha_method 1 -exact` from a 2048 x 2048 RGBA PNG with a flat
+// colour and 5 alpha levels in 32 px bands) is a lossy WebP with an ALPH chunk compressed with method 1. golang.org/x/image/webp decodes that alpha
+// through vp8l, which builds a whole NRGBA (4 bytes per pixel) just to read its green channel, plus the packed palette indices (2 bytes per pixel
+// for 5 to 16 levels, the worst case), on top of the VP8 frame (1.5) and the alpha plane (1).
+// decodedBytes must bound what one image.Decode allocates; this fails if the estimate for lossy WebP drops back to 2.5 bytes per pixel.
+func TestDecodedBytesBoundsALossyWebPWithAlpha(t *testing.T) {
+	data, err := os.ReadFile("testdata/alpha-lossy-2048.webp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg, format, err := image.DecodeConfig(bytes.NewReader(data))
+	if err != nil || format != "webp" || cfg.Width != 2048 || cfg.Height != 2048 {
+		t.Fatalf("DecodeConfig = %v, %q, %v; want 2048 x 2048 webp", cfg, format, err)
+	}
+	var before, after runtime.MemStats
+	runtime.GC()
+	runtime.ReadMemStats(&before)
+	img, _, err := image.Decode(bytes.NewReader(data))
+	runtime.ReadMemStats(&after)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := img.(*image.NYCbCrA); !ok {
+		t.Fatalf("decoded %T, want *image.NYCbCrA (the fixture must keep its ALPH chunk)", img)
+	}
+	alloc, est := int(after.TotalAlloc-before.TotalAlloc), decodedBytes(data, cfg, format)
+	t.Logf("2048 x 2048 lossy WebP with ALPH: decode allocated %d bytes (%.2f per pixel), estimate %d bytes (%.2f per pixel)",
+		alloc, float64(alloc)/(2048*2048), est, float64(est)/(2048*2048))
+	if est < alloc {
+		t.Errorf("estimate %d bytes is below the %d bytes one decode allocated", est, alloc)
+	}
+	runtime.KeepAlive(img)
+}
+
+// The same estimate decides what is accepted: a 4000 x 4000 lossy WebP with alpha (140 MB estimated) is over the 128 MiB cap, 3800 x 3800 is not,
+// and a lossy WebP without an ALPH chunk keeps its 2.5 bytes per pixel.
+func TestWithinLimitsLossyWebPWithAlpha(t *testing.T) {
+	alpha, err := os.ReadFile("testdata/alpha-lossy-2048.webp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	plain, err := os.ReadFile("testdata/rot6.webp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg := func(w int) image.Config { return image.Config{ColorModel: color.YCbCrModel, Width: w, Height: w} }
+	for _, tc := range []struct {
+		name string
+		data []byte
+		side int
+		want bool
+	}{
+		{"alpha 3800", alpha, 3800, true},
+		{"alpha 4000", alpha, 4000, false},
+		{"alpha 5000", alpha, 5000, false},
+		{"plain 5000", plain, 5000, true},
+	} {
+		if got := withinLimits(tc.data, cfg(tc.side), "webp"); got != tc.want {
+			t.Errorf("%s: allowed = %v, want %v", tc.name, got, tc.want)
+		}
+	}
+}
