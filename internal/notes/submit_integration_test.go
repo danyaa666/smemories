@@ -632,7 +632,7 @@ func TestSubmitPrivacy(t *testing.T) {
 		cols = append(cols, c)
 	}
 	_ = rows.Close()
-	if got := strings.Join(cols, ","); got != "id,public_id,collection_id,yearbook_id,answers,status,sort_order,created_at,updated_at,terms_version" { // terms_version: the Terms version shown with the note (T-111), no client data
+	if got := strings.Join(cols, ","); got != "id,public_id,collection_id,yearbook_id,answers,status,sort_order,created_at,updated_at,terms_version,signature_json" { // terms_version: the Terms version shown with the note (T-111); signature_json: the vector signature (T-095, positions only); no client data
 		t.Fatalf("notes columns: %s", got)
 	}
 	// the stored text does not hold the address or agent either

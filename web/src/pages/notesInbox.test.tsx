@@ -13,6 +13,7 @@ const note = (n: number, status: NoteStatus, over: Partial<NoteItem> = {}): Note
   id: nid(n),
   status,
   answers: { name: `Friend ${n}`, relationship: "classmate", message: `Message ${n}` },
+  signature: null,
   photos: [],
   link_label: "",
   created_at: Date.now() - 2 * 3600_000,

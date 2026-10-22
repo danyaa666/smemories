@@ -26,6 +26,7 @@ import (
 	"github.com/danyaa666/smemories/internal/notes"
 	"github.com/danyaa666/smemories/internal/ratelimit"
 	"github.com/danyaa666/smemories/internal/redis/redistest"
+	"github.com/danyaa666/smemories/internal/signature"
 	"github.com/danyaa666/smemories/internal/ulid"
 	"github.com/danyaa666/smemories/internal/yearbook"
 )
@@ -288,7 +289,7 @@ func TestOwnerGetsApprovedNotesInBookOrder(t *testing.T) {
 	if keys := mapKeys(d); !slices.Equal(keys, []string{"approved_total", "note_count", "notes", "profile", "truncated", "yearbook"}) {
 		t.Fatalf("data keys %v", keys)
 	}
-	if keys := mapKeys(d["notes"].([]any)[0].(map[string]any)); !slices.Equal(keys, []string{"answers", "id", "photo_ids"}) {
+	if keys := mapKeys(d["notes"].([]any)[0].(map[string]any)); !slices.Equal(keys, []string{"answers", "id", "photo_ids", "signature"}) {
 		t.Fatalf("note keys %v", keys)
 	}
 	if answers := d["notes"].([]any)[1].(map[string]any)["answers"].(map[string]any); answers["message"] != "hi 😀" {
@@ -444,17 +445,94 @@ func TestTruncatedFlag(t *testing.T) {
 	check(301, true)
 }
 
-// AC2: 300 notes with the longest answers of the built-in templates (name, relationship, message at their maximum) and 3
-// photos each stay under 1 MiB.
-func TestMaximalBookIsUnderOneMiB(t *testing.T) {
+func rawOf(strokes [][]int32) []byte {
+	raw, _ := json.Marshal(&signature.Signature{V: signature.Version, W: signature.Width, H: signature.Height, S: strokes})
+	return raw
+}
+
+// maximalSignature is the largest signature the format accepts: points are added round-robin to the 12 strokes, with 3-digit
+// coordinates, until the next point would pass the byte limit.
+func maximalSignature(t *testing.T) (*signature.Signature, string) {
+	t.Helper()
+	strokes := make([][]int32, signature.MaxStrokes)
+	for i := range strokes {
+		strokes[i] = []int32{100, 100, 900, 300}
+	}
+	var best *signature.Signature
+	var canon []byte
+	if _, c, err := signature.Parse(rawOf(strokes)); err == nil {
+		canon = c
+	}
+	for n := 0; ; n++ {
+		strokes[n%signature.MaxStrokes] = append(strokes[n%signature.MaxStrokes], int32(900-n%7), int32(399-n%5))
+		sig, c, err := signature.Parse(rawOf(strokes))
+		if err != nil {
+			break
+		}
+		best, canon = sig, c
+	}
+	return best, string(canon)
+}
+
+// T-095 AC2/AC3: the signature of an approved note is in book-data as the object, unchanged; a note without one carries null; pending and
+// hidden notes (and so their signatures) never appear; a damaged stored value reads as null, never as unchecked data.
+func TestBookDataSignature(t *testing.T) {
+	e := newEnv(t)
+	alice := e.register("alice@example.com", true)
+	b := e.book(alice, "Sign")
+	const canon = `{"v":1,"w":1000,"h":400,"s":[[10,20,500,300],[5,5,900,100]]}`
+	with := e.note(b, "approved", 1, `{"name":"With"}`)
+	without := e.note(b, "approved", 2, `{"name":"Without"}`)
+	pending := e.note(b, "pending", -1, `{"name":"Pending"}`)
+	hidden := e.note(b, "hidden", -1, `{"name":"Hidden"}`)
+	damaged := e.note(b, "approved", 3, `{"name":"Damaged"}`)
+	for pub, v := range map[string]string{with: canon, pending: canon, hidden: canon, damaged: `{"v":1,"w":1000,"h":400,"s":[["<script>",0,500,0]]}`} {
+		e.exec(`UPDATE note_tab SET signature_json = ? WHERE public_id = ?`, v, pub)
+	}
+	r := e.get(e.h, alice, "?yearbook_id="+b.public).status(200, "OK")
+	if strings.Contains(r.Body.String(), "script") {
+		t.Fatalf("a damaged value leaked: %s", r.Body.String())
+	}
+	got := map[string]any{}
+	for _, n := range r.data()["notes"].([]any) {
+		m := n.(map[string]any)
+		v, ok := m["signature"]
+		if !ok {
+			t.Fatalf("note %v has no signature key", m["id"])
+		}
+		got[m["id"].(string)] = v
+	}
+	var want any
+	_ = json.Unmarshal([]byte(canon), &want)
+	if len(got) != 3 || fmt.Sprint(got[with]) != fmt.Sprint(want) || got[without] != nil || got[damaged] != nil {
+		t.Fatalf("signatures = %v", got)
+	}
+	if _, ok := got[pending]; ok {
+		t.Fatal("a pending note appeared")
+	}
+	if _, ok := got[hidden]; ok {
+		t.Fatal("a hidden note appeared")
+	}
+}
+
+// bookDataBound is the documented bound of the book-data response for the maximal book (T-095 rounded the measured size up): 300 notes
+// of maximal answers, 3 photos and a maximal signature each. docs/moderation.md and api/openapi.yaml state the same number.
+const bookDataBound = 1 << 20 * 16 / 10 // 1.6 MiB; measured 1 618 318 bytes (1.54 MiB)
+
+// AC2 (T-056) and T-095 AC3: 300 notes with the longest answers of the built-in templates (name, relationship, message at their
+// maximum), 3 photos and a maximal signature each stay under the documented bound.
+func TestMaximalBookIsUnderTheBound(t *testing.T) {
 	e := newEnv(t)
 	alice := e.register("alice@example.com", true)
 	b := e.book(alice, "Max")
 	answers, _ := json.Marshal(map[string]string{"name": strings.Repeat("N", 60), "relationship": strings.Repeat("r", 60), "message": strings.Repeat("m", 2000)})
 	e.bulk(b, 1, 300, 3, string(answers))
+	before := e.get(e.h, alice, "?yearbook_id="+b.public).status(200, "OK").Body.Len()
+	_, canon := maximalSignature(t)
+	e.exec(`UPDATE note_tab SET signature_json = ? WHERE yearbook_id = ?`, canon, b.row)
 	r := e.get(e.h, alice, "?yearbook_id="+b.public).status(200, "OK")
-	t.Logf("300 maximal notes: %d bytes", r.Body.Len())
-	if r.Body.Len() >= 1<<20 {
-		t.Fatalf("response is %d bytes, want under 1 MiB", r.Body.Len())
+	t.Logf("300 maximal notes: %d bytes without signatures, %d with (signature %d bytes each)", before, r.Body.Len(), len(canon))
+	if r.Body.Len() >= bookDataBound {
+		t.Fatalf("response is %d bytes, want under %d", r.Body.Len(), bookDataBound)
 	}
 }

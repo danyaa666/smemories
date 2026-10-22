@@ -11,6 +11,7 @@ const PHOTO = (n: number) => `01J9Z3K6V8Q4M7N2P5R8T${String(n).padStart(5, "0")}
 const note = (i: number, over: Partial<BookData["notes"][number]> = {}) => ({
   id: `01J9Z3K6V8Q4M7N2P5R8N${String(i).padStart(5, "0")}`,
   answers: { name: `Bạn ${i}`, relationship: "Bạn cùng lớp", message: `Chúc mừng 😄 số ${i}` },
+  signature: null as BookData["notes"][number]["signature"],
   photo_ids: [] as string[],
   ...over,
 });

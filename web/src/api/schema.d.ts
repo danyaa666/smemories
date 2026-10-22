@@ -567,7 +567,7 @@ export interface paths {
         };
         /**
          * List a yearbook's notes for moderation
-         * @description Called by the signed-in owner's inbox. Returns one page of the notes of a yearbook and, in `counts`, the number of notes of the whole book per status (for the tabs and the header), whatever the filter. `status` is optional: `pending` (not looked at yet), `approved` (in the book) or `hidden`; omitted means all. `status=approved` is in book order (`position` 1, 2, 3 ...); every other value is newest first. `limit` defaults to 50, at most 100 (`ERROR_PARAM` above). `next_id` is the opaque cursor of the previous page, bound to this yearbook and this `status`; a malformed, tampered or foreign one is `ERROR_PARAM`. Items carry the answers as stored (the display name is `answers.name`, the client falls back to "Anonymous"), photo ids only (content through `media/get-content`), the label of the link the note arrived through, and no token. Needs a verified email (`ERROR_EMAIL_NOT_VERIFIED`). A missing yearbook and one owned by someone else both answer `ERROR_NOT_FOUND`. Safe to repeat.
+         * @description Called by the signed-in owner's inbox. Returns one page of the notes of a yearbook and, in `counts`, the number of notes of the whole book per status (for the tabs and the header), whatever the filter. `status` is optional: `pending` (not looked at yet), `approved` (in the book) or `hidden`; omitted means all. `status=approved` is in book order (`position` 1, 2, 3 ...); every other value is newest first. `limit` defaults to 50, at most 100 (`ERROR_PARAM` above). `next_id` is the opaque cursor of the previous page, bound to this yearbook and this `status`; a malformed, tampered or foreign one is `ERROR_PARAM`. Items carry the answers as stored (the display name is `answers.name`, the client falls back to "Anonymous"), the handwritten `signature` (vector strokes, or null; integers only, draw it as an SVG path) in every status, photo ids only (content through `media/get-content`), the label of the link the note arrived through, and no token. Needs a verified email (`ERROR_EMAIL_NOT_VERIFIED`). A missing yearbook and one owned by someone else both answer `ERROR_NOT_FOUND`. Safe to repeat.
          */
         get: operations["listNotes"];
         put?: never;
@@ -647,7 +647,7 @@ export interface paths {
         };
         /**
          * Read the whole book for the browser renderer
-         * @description Called by the signed-in owner's book screens (preview and print) to draw the book from one request (decision D-24): the yearbook, the owner's profile and the approved notes, nothing else. Notes are in book order (the order of `GET /api/note/get-list?status=approved`); pending and hidden notes never appear. At most 300 notes with at most 3 photos each. A book with more approved notes is cut after the 300th in book order, never silently: `truncated` (always present) is true and `approved_total` is the real number of approved notes, while `note_count` stays the number returned. The renderer must show a visible warning when `truncated` is true. The answer is about 690 KB for 300 notes with 3 photos and the longest answers of the built-in templates; the API does not compress it. Media are public ids; the bytes come from `GET /api/media/get-content?id=&variant=print`. The answers are stored text: render them escaped, never as HTML. No storage key, hash, email, birthday or internal id is part of the answer. `yearbook_id` must be a canonical ULID (26 upper-case characters), else `ERROR_PARAM`. Needs a verified email (`ERROR_EMAIL_NOT_VERIFIED`, as the note list). A missing yearbook and one owned by someone else both answer `ERROR_NOT_FOUND`. Safe to repeat.
+         * @description Called by the signed-in owner's book screens (preview and print) to draw the book from one request (decision D-24): the yearbook, the owner's profile and the approved notes, nothing else. Notes are in book order (the order of `GET /api/note/get-list?status=approved`); pending and hidden notes never appear. At most 300 notes with at most 3 photos each. A book with more approved notes is cut after the 300th in book order, never silently: `truncated` (always present) is true and `approved_total` is the real number of approved notes, while `note_count` stays the number returned. The renderer must show a visible warning when `truncated` is true. Each note carries `signature` (the vector strokes, or null; integers only, draw it as an SVG path, never as markup). The answer is about 1.62 MB (1 618 318 bytes measured, documented bound 1.6 MiB) for 300 notes with 3 photos, the longest answers of the built-in templates and a maximal 3070-byte signature each (about 700 KB without signatures); the API does not compress it. Media are public ids; the bytes come from `GET /api/media/get-content?id=&variant=print`. The answers are stored text: render them escaped, never as HTML. No storage key, hash, email, birthday or internal id is part of the answer. `yearbook_id` must be a canonical ULID (26 upper-case characters), else `ERROR_PARAM`. Needs a verified email (`ERROR_EMAIL_NOT_VERIFIED`, as the note list). A missing yearbook and one owned by someone else both answer `ERROR_NOT_FOUND`. Safe to repeat.
          */
         get: operations["getBookData"];
         put?: never;
@@ -747,7 +747,7 @@ export interface paths {
         };
         /**
          * Look up a collection link (public)
-         * @description Called by the public note form (a friend's browser) when the page opens. No session is needed and none is read; no cookie is set and no CORS headers are sent. An unknown, malformed, missing or revoked `token` all answer the same `ERROR_NOT_FOUND`. Once the deadline has passed the answer is `ERROR_COLLECTION_CLOSED`. The answer also carries `fields`, the questions of the note form in order, so the page can render the form. Only requests that miss (unknown, malformed or revoked token) count against the tight limit of 60 per client IP per 15 minutes, so a class behind one address can open the same link; all requests together are capped at 600 per client IP per 15 minutes (`ERROR_RATE_LIMITED`, with `Retry-After`: wait that many seconds). The token is a credential in the URL: the access log records the route only, never the query string.
+         * @description Called by the public note form (a friend's browser) when the page opens. No session is needed and none is read; no cookie is set and no CORS headers are sent. An unknown, malformed, missing or revoked `token` all answer the same `ERROR_NOT_FOUND`. Once the deadline has passed the answer is `ERROR_COLLECTION_CLOSED`. The answer also carries `fields`, the questions of the note form in order, so the page can render the form. Only requests that miss (unknown, malformed or revoked token) count against the tight limit of 60 per client IP per 15 minutes, so a class behind one address can open the same link; all requests together are capped at 600 per client IP per 15 minutes (`ERROR_RATE_LIMITED`, with `Retry-After`: wait that many seconds). The token is a credential in the URL: the access log records the route only, never the query string. `signature` tells the page whether to show the signature pad (`enabled`, true only when the book's template declares it) and the limits of the drawing space.
          */
         get: operations["getPublicCollect"];
         put?: never;
@@ -773,7 +773,9 @@ export interface paths {
          *
          *     Answers are validated against the set of fields in force at submission time (text rules of `docs/note-fields.md`: NFC, trimmed, control and format characters rejected except ZWJ and variation selectors, limits in characters). Each photo goes through the same pipeline as owner uploads (content sniffing, decode limits, metadata stripped, display, print and thumbnail versions); a rejected photo rejects the whole submission and nothing is stored. Photos are processed one at a time, each waiting up to 10 seconds for a free image-processing slot. A submission is refused at once, before any byte of the body is read, with `ERROR_BUSY` and a `Retry-After` of 2 to 6 seconds (random) when the server already has `SMEM_PUBLIC_UPLOAD_MAX_CONNS` uploads in progress or the client IP has `SMEM_PUBLIC_UPLOAD_CONCURRENT_PER_IP`; `ERROR_BUSY` is also the answer when no processing slot frees up in 10 seconds. A `503` costs the client nothing against the request limits below. The server does not read the body of an immediate `503`, so a client that is still uploading may see the connection reset instead of the answer: treat a network error exactly like `503` and retry with the same data. Retrying after any other failure may store a second note; a success is final.
          *
-         *     Limits: request body 32 MiB, each photo `SMEM_MEDIA_MAX_BYTES` (default 10 MiB), `answers` 16 KiB, 300 notes per link in any status, the yearbook's photo quota. Submissions that passed text validation are counted per client IP (100 per hour, 300 per day) and per link (60 per hour): `ERROR_RATE_LIMITED` with `Retry-After`. A non-empty `website` field is a honeypot: the answer is a normal success and nothing is stored.
+         *     Limits: request body 32 MiB, each photo `SMEM_MEDIA_MAX_BYTES` (default 10 MiB), `answers` 16 KiB, `signature` 4 KiB, 300 notes per link in any status, the yearbook's photo quota. Submissions that passed text validation are counted per client IP (100 per hour, 300 per day) and per link (60 per hour): `ERROR_RATE_LIMITED` with `Retry-After`. A non-empty `website` field is a honeypot: the answer is a normal success and nothing is stored.
+         *
+         *     An optional `signature` part carries a handwritten signature as vector strokes (decision L-14; format in the `Signature` schema and `docs/note-fields.md`). It is read up to 4 KiB, parsed strictly (integers only, limits of strokes, points, coordinates, size and a minimum extent) and **re-serialised by the server; the client's string is never stored**. It is validated right after the text and before any photo is processed; a bad one is `ERROR_INVALID_SIGNATURE` whose message names the rule, never the content, and nothing is stored. A second `signature` part, or one sent to a book whose template does not enable signatures (`signature.enabled` false in the lookup), is `ERROR_PARAM`. The signature is part of the note: pending until the owner approves it, hidden and deleted with it. Only positions are kept (no timing, pressure, pointer or device data).
          */
         post: operations["submitPublicCollectNote"];
         delete?: never;
@@ -1274,6 +1276,51 @@ export interface components {
                 counts: components["schemas"]["NoteCounts"];
             };
         };
+        /** @description A friend's handwritten signature as vector strokes (format v1, decision L-14). The server stores and returns only this canonical form: integers, no timing, pressure or device data. Draw it as an SVG path built from these numbers; never as markup or an image. */
+        Signature: {
+            /**
+             * @description Format version; always 1.
+             * @constant
+             */
+            v: 1;
+            /**
+             * @description Width of the drawing space; always 1000.
+             * @constant
+             */
+            w: 1000;
+            /**
+             * @description Height of the drawing space; always 400.
+             * @constant
+             */
+            h: 400;
+            /** @description The strokes, in drawing order: 1 to 12 strokes, at most 600 points in total, at most 3072 bytes as canonical JSON. Each stroke is a flat list `[x0, y0, x1, y1, ...]` of at least 2 points (4 numbers, an even count); `0 <= x <= 1000`, `0 <= y <= 400`. */
+            s: number[][];
+        };
+        /** @description What the note form needs to offer the signature pad. */
+        SignatureInfo: {
+            /** @description True when the book's template declares `signature: true`; only then does `submit-note` accept a `signature` (otherwise `ERROR_PARAM`). */
+            enabled: boolean;
+            /**
+             * @description Width of the drawing space.
+             * @constant
+             */
+            w: 1000;
+            /**
+             * @description Height of the drawing space.
+             * @constant
+             */
+            h: 400;
+            /**
+             * @description Most strokes a signature may have.
+             * @constant
+             */
+            max_strokes: 12;
+            /**
+             * @description Most points in all strokes together (the 3072-byte limit usually binds first).
+             * @constant
+             */
+            max_points: 600;
+        };
         /** @description One note as the owner sees it. */
         NoteItem: {
             /** @description The note's public id, a ULID. */
@@ -1287,6 +1334,8 @@ export interface components {
             answers: {
                 [key: string]: string;
             };
+            /** @description The note's handwritten signature, or null when the friend did not sign. It follows the note's status. */
+            signature: components["schemas"]["Signature"] | null;
             /** @description The note's photos in order (at most 3). Content is read with `GET /api/media/get-content?id=`. */
             photos: {
                 /** @description The photo's public id, a ULID. */
@@ -1375,6 +1424,8 @@ export interface components {
                     answers: {
                         [key: string]: string;
                     };
+                    /** @description The note's handwritten signature, or null when the friend did not sign. Integers only. */
+                    signature: components["schemas"]["Signature"] | null;
                     /** @description Public ids of the note's photos in order, at most 3; empty when it has none. Content is read with `GET /api/media/get-content?id=&variant=print`. */
                     photo_ids: string[];
                 }[];
@@ -1510,6 +1561,7 @@ export interface components {
             open: true;
             /** @description The questions of the note form, in order. */
             fields: components["schemas"]["NoteField"][];
+            signature: components["schemas"]["SignatureInfo"];
         };
         /** @description One question of the note form. */
         NoteField: {
@@ -1545,6 +1597,11 @@ export interface components {
             answers: string;
             /** @description Optional. Up to three JPEG, PNG or WebP images (the content decides, not the name or Content-Type). */
             photos?: string[];
+            /**
+             * @description Optional. The handwritten signature as JSON `{"v":1,"w":1000,"h":400,"s":[[x0,y0,x1,y1,...],...]}`, at most 4 KiB read (larger is `ERROR_INVALID_SIGNATURE`), sent once. Integers only, 1 to 12 strokes of at least 2 points, at most 600 points in all, every coordinate `0 <= x <= 1000`, `0 <= y <= 400`, at most 3072 bytes once the server has re-serialised it, and a bounding box at least 5 % of the width or 5 % of the height. An empty value is invalid: leave the part out to send no signature. Accepted only when `signature.enabled` of the lookup is true (otherwise `ERROR_PARAM`).
+             * @example {"v":1,"w":1000,"h":400,"s":[[120,260,300,120,480,280],[500,260,880,240]]}
+             */
+            signature?: string;
             /** @description Honeypot. Leave empty; a non-empty value makes the answer a fake success. */
             website?: string;
         };

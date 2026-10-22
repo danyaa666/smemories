@@ -1249,7 +1249,7 @@ paths:
         1, 2, 3 ...); every other value is newest first. `limit` defaults to 50, at most 100 (`ERROR_PARAM` above). `next_id` is
         the opaque cursor of the previous page, bound to this yearbook and this `status`; a malformed, tampered or foreign one is
         `ERROR_PARAM`. Items carry the answers as stored (the display name is `answers.name`, the client falls back to
-        "Anonymous"), photo ids only (content through `media/get-content`), the label of the link the note arrived through, and
+        "Anonymous"), the handwritten `signature` (vector strokes, or null; integers only, draw it as an SVG path) in every status, photo ids only (content through `media/get-content`), the label of the link the note arrived through, and
         no token. Needs a verified email (`ERROR_EMAIL_NOT_VERIFIED`). A missing yearbook and one owned by someone else both
         answer `ERROR_NOT_FOUND`. Safe to repeat.
       x-auth: required
@@ -1276,7 +1276,7 @@ paths:
                     status: OK
                     data:
                       items:
-                        - {id: 01K7QB1B2C3D4E5F6G7H8J9K0M, status: approved, answers: {name: Minh Khoa, relationship: Classmate, message: Thanks for everything}, photos: [{id: 01K7QC1B2C3D4E5F6G7H8J9K0M}], link_label: Cafe friends, created_at: 1760000100000, position: 1}
+                        - {id: 01K7QB1B2C3D4E5F6G7H8J9K0M, status: approved, answers: {name: Minh Khoa, relationship: Classmate, message: Thanks for everything}, signature: {v: 1, w: 1000, h: 400, s: [[120, 260, 300, 120, 480, 280]]}, photos: [{id: 01K7QC1B2C3D4E5F6G7H8J9K0M}], link_label: Cafe friends, created_at: 1760000100000, position: 1}
                       next_id: ""
                       counts: {all: 5, pending: 1, approved: 3, hidden: 1}
         "400": {$ref: "#/components/responses/ApiBadRequest"}
@@ -1450,8 +1450,9 @@ paths:
         `GET /api/note/get-list?status=approved`); pending and hidden notes never appear. At most 300 notes with at most 3 photos
         each. A book with more approved notes is cut after the 300th in book order, never silently: `truncated` (always present) is true
         and `approved_total` is the real number of approved notes, while `note_count` stays the number returned. The renderer must
-        show a visible warning when `truncated` is true. The answer is about 690 KB for 300 notes with 3 photos and the longest
-        answers of the built-in templates; the API does not compress it. Media are public ids;
+        show a visible warning when `truncated` is true. Each note carries `signature` (the vector strokes, or null; integers only, draw it as an SVG
+        path, never as markup). The answer is about 1.62 MB (1 618 318 bytes measured, documented bound 1.6 MiB) for 300 notes with 3 photos, the longest
+        answers of the built-in templates and a maximal 3070-byte signature each (about 700 KB without signatures); the API does not compress it. Media are public ids;
         the bytes come from `GET /api/media/get-content?id=&variant=print`. The answers are stored text: render them escaped,
         never as HTML. No storage key, hash, email, birthday or internal id is part of the answer. `yearbook_id` must be a
         canonical ULID (26 upper-case characters), else `ERROR_PARAM`. Needs a verified email (`ERROR_EMAIL_NOT_VERIFIED`, as the
@@ -1479,7 +1480,7 @@ paths:
                       yearbook: {title: "Lớp 12A1 - Trường THPT Chu Văn An", school_name: "THPT Chu Văn An", class_name: 12A1, graduation_year: 2026, motto: "Học, học nữa, học mãi", language: vi, page_size: A5, template_id: classic, cover_media_id: 01K7QC0B2C3D4E5F6G7H8J9K0M}
                       profile: {full_name: "Nguyễn Thị Hồng", nickname: Hồng, quote: "", hobbies: "", future_plans: "", photo_media_id: null}
                       notes:
-                        - {id: 01K7QB1B2C3D4E5F6G7H8J9K0M, answers: {name: Minh Khoa, relationship: Classmate, message: Thanks for everything}, photo_ids: [01K7QC1B2C3D4E5F6G7H8J9K0M]}
+                        - {id: 01K7QB1B2C3D4E5F6G7H8J9K0M, answers: {name: Minh Khoa, relationship: Classmate, message: Thanks for everything}, signature: {v: 1, w: 1000, h: 400, s: [[120, 260, 300, 120, 480, 280]]}, photo_ids: [01K7QC1B2C3D4E5F6G7H8J9K0M]}
                       note_count: 1
                       approved_total: 1
                       truncated: false
@@ -1690,7 +1691,8 @@ paths:
         note form in order, so the page can render the form. Only requests that miss (unknown, malformed or revoked token) count
         against the tight limit of 60 per client IP per 15 minutes, so a class behind one address can open the same link; all requests
         together are capped at 600 per client IP per 15 minutes (`ERROR_RATE_LIMITED`, with `Retry-After`: wait that many seconds).
-        The token is a credential in the URL: the access log records the route only, never the query string.
+        The token is a credential in the URL: the access log records the route only, never the query string. `signature` tells the page whether to
+        show the signature pad (`enabled`, true only when the book's template declares it) and the limits of the drawing space.
       x-auth: public
       x-error-codes:
         - {code: ERROR_NOT_FOUND, description: "The token is missing, malformed, unknown or revoked; the four cannot be told apart."}
@@ -1716,6 +1718,7 @@ paths:
                       open: true
                       fields:
                         - {id: name, kind: short_text, label: {en: Your name, vi: Tên của bạn}, hint: {en: "", vi: ""}, required: true, max_length: 60}
+                      signature: {enabled: true, w: 1000, h: 400, max_strokes: 12, max_points: 600}
         "404": {$ref: "#/components/responses/ApiNotFound"}
         "410": {$ref: "#/components/responses/ApiGone"}
         "429": {$ref: "#/components/responses/ApiRateLimited"}
@@ -1752,10 +1755,19 @@ paths:
         like `503` and retry with the same data. Retrying after any other failure may store a second note; a success is final.
 
 
-        Limits: request body 32 MiB, each photo `SMEM_MEDIA_MAX_BYTES` (default 10 MiB), `answers` 16 KiB, 300 notes per link in any status,
+        Limits: request body 32 MiB, each photo `SMEM_MEDIA_MAX_BYTES` (default 10 MiB), `answers` 16 KiB, `signature` 4 KiB, 300 notes per link in any status,
         the yearbook's photo quota. Submissions that passed text validation are counted per client IP (100 per hour, 300 per day) and per
         link (60 per hour): `ERROR_RATE_LIMITED` with `Retry-After`. A non-empty `website` field is a honeypot: the answer is a normal
         success and nothing is stored.
+
+
+        An optional `signature` part carries a handwritten signature as vector strokes (decision L-14; format in the `Signature` schema and
+        `docs/note-fields.md`). It is read up to 4 KiB, parsed strictly (integers only, limits of strokes, points, coordinates, size and a
+        minimum extent) and **re-serialised by the server; the client's string is never stored**. It is validated right after the text and before
+        any photo is processed; a bad one is `ERROR_INVALID_SIGNATURE` whose message names the rule, never the content, and nothing is stored.
+        A second `signature` part, or one sent to a book whose template does not enable signatures (`signature.enabled` false in the lookup), is
+        `ERROR_PARAM`. The signature is part of the note: pending until the owner approves it, hidden and deleted with it. Only positions are
+        kept (no timing, pressure, pointer or device data).
       x-auth: public
       x-error-codes:
         - {code: ERROR_NOT_FOUND, description: "The token is missing, malformed, unknown or revoked; the four cannot be told apart."}
@@ -1763,6 +1775,7 @@ paths:
         - {code: ERROR_COLLECTION_FULL, description: The link already holds 300 notes.}
         - {code: ERROR_MISSING_ANSWER, description: "A required field is missing or blank; the message names the field id, never the value."}
         - {code: ERROR_INVALID_ANSWER, description: "An answer breaks the text rules or the field's length limit; the message names the field id, never the value."}
+        - {code: ERROR_INVALID_SIGNATURE, description: "The signature part breaks the format (not the exact v1 JSON, a float, an out-of-range or negative number, an extra or duplicate key, a stroke with fewer than 2 points, more than 12 strokes, 600 points or 3072 bytes, a speck, more than 4 KiB sent, or an empty part); the message names the rule, never the content."}
         - {code: ERROR_TOO_MANY_PHOTOS, description: More than three photos were sent.}
         - {code: ERROR_INVALID_IMAGE, description: "A photo is corrupt, over 12000 px on a side, over 50 megapixels for JPEG or 25 megapixels for PNG and WebP, or its estimated decoded size is over 128 MiB."}
         - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: The request is not multipart/form-data, or a photo is not a JPEG, PNG or WebP image.}
@@ -1784,6 +1797,8 @@ paths:
             examples:
               textOnly:
                 value: {answers: '{"name":"Linh","message":"Nhớ các bạn nhiều 🎓"}'}
+              withSignature:
+                value: {answers: '{"name":"Linh","message":"Nhớ các bạn nhiều 🎓"}', signature: '{"v":1,"w":1000,"h":400,"s":[[120,260,300,120,480,280],[500,260,880,240]]}'}
       responses:
         "200":
           description: Stored as pending.
@@ -2327,10 +2342,41 @@ components:
           required: [counts]
           properties:
             counts: {$ref: "#/components/schemas/NoteCounts"}
+    Signature:
+      type: object
+      description: >-
+        A friend's handwritten signature as vector strokes (format v1, decision L-14). The server stores and returns only this canonical form:
+        integers, no timing, pressure or device data. Draw it as an SVG path built from these numbers; never as markup or an image.
+      required: [v, w, h, s]
+      properties:
+        v: {type: integer, const: 1, description: Format version; always 1.}
+        w: {type: integer, const: 1000, description: Width of the drawing space; always 1000.}
+        h: {type: integer, const: 400, description: Height of the drawing space; always 400.}
+        s:
+          type: array
+          description: >-
+            The strokes, in drawing order: 1 to 12 strokes, at most 600 points in total, at most 3072 bytes as canonical JSON. Each stroke is a flat list
+            `[x0, y0, x1, y1, ...]` of at least 2 points (4 numbers, an even count); `0 <= x <= 1000`, `0 <= y <= 400`.
+          minItems: 1
+          maxItems: 12
+          items:
+            type: array
+            minItems: 4
+            items: {type: integer, minimum: 0, maximum: 1000}
+    SignatureInfo:
+      type: object
+      description: What the note form needs to offer the signature pad.
+      required: [enabled, w, h, max_strokes, max_points]
+      properties:
+        enabled: {type: boolean, description: "True when the book's template declares `signature: true`; only then does `submit-note` accept a `signature` (otherwise `ERROR_PARAM`)."}
+        w: {type: integer, const: 1000, description: Width of the drawing space.}
+        h: {type: integer, const: 400, description: Height of the drawing space.}
+        max_strokes: {type: integer, const: 12, description: Most strokes a signature may have.}
+        max_points: {type: integer, const: 600, description: Most points in all strokes together (the 3072-byte limit usually binds first).}
     NoteItem:
       type: object
       description: One note as the owner sees it.
-      required: [id, status, answers, photos, link_label, created_at, position]
+      required: [id, status, answers, signature, photos, link_label, created_at, position]
       properties:
         id: {type: string, description: "The note's public id, a ULID."}
         status: {type: string, enum: [pending, approved, hidden], description: "`pending` not looked at yet, `approved` in the book, `hidden` kept out of it."}
@@ -2338,6 +2384,11 @@ components:
           type: object
           description: The friend's answers as stored, field id to text (`name`, `relationship`, `message`, ...; docs/note-fields.md). The display name is `answers.name`; the client shows "Anonymous" when it is missing.
           additionalProperties: {type: string}
+        signature:
+          description: The note's handwritten signature, or null when the friend did not sign. It follows the note's status.
+          oneOf:
+            - {$ref: "#/components/schemas/Signature"}
+            - {type: "null"}
         photos:
           type: array
           description: The note's photos in order (at most 3). Content is read with `GET /api/media/get-content?id=`.
@@ -2406,13 +2457,18 @@ components:
               maxItems: 300
               items:
                 type: object
-                required: [id, answers, photo_ids]
+                required: [id, answers, signature, photo_ids]
                 properties:
                   id: {type: string, description: "The note's public id, a ULID."}
                   answers:
                     type: object
                     description: The friend's answers as stored, field id to text (docs/note-fields.md). Plain text; never render it as HTML.
                     additionalProperties: {type: string}
+                  signature:
+                    description: The note's handwritten signature, or null when the friend did not sign. Integers only.
+                    oneOf:
+                      - {$ref: "#/components/schemas/Signature"}
+                      - {type: "null"}
                   photo_ids:
                     type: array
                     description: Public ids of the note's photos in order, at most 3; empty when it has none. Content is read with `GET /api/media/get-content?id=&variant=print`.
@@ -2526,7 +2582,7 @@ components:
     PublicCollect:
       type: object
       description: What a visitor with a valid link may learn.
-      required: [yearbook, owner, deadline_at, open, fields]
+      required: [yearbook, owner, deadline_at, open, fields, signature]
       properties:
         yearbook:
           type: object
@@ -2546,6 +2602,7 @@ components:
           type: array
           description: The questions of the note form, in order.
           items: {$ref: "#/components/schemas/NoteField"}
+        signature: {$ref: "#/components/schemas/SignatureInfo"}
     NoteField:
       type: object
       description: One question of the note form.
@@ -2579,6 +2636,14 @@ components:
           maxItems: 3
           items: {type: string, format: binary}
           description: Optional. Up to three JPEG, PNG or WebP images (the content decides, not the name or Content-Type).
+        signature:
+          type: string
+          description: >-
+            Optional. The handwritten signature as JSON `{"v":1,"w":1000,"h":400,"s":[[x0,y0,x1,y1,...],...]}`, at most 4 KiB read (larger is `ERROR_INVALID_SIGNATURE`),
+            sent once. Integers only, 1 to 12 strokes of at least 2 points, at most 600 points in all, every coordinate `0 <= x <= 1000`, `0 <= y <= 400`, at most 3072 bytes
+            once the server has re-serialised it, and a bounding box at least 5 % of the width or 5 % of the height. An empty value is invalid: leave the part out to send no
+            signature. Accepted only when `signature.enabled` of the lookup is true (otherwise `ERROR_PARAM`).
+          examples: ['{"v":1,"w":1000,"h":400,"s":[[120,260,300,120,480,280],[500,260,880,240]]}']
         website: {type: string, description: Honeypot. Leave empty; a non-empty value makes the answer a fake success.}
     PublicCollectSubmitNoteResponse:
       type: object

@@ -195,6 +195,7 @@ func (s *Store) noteCount(ctx context.Context, collectionID uint64) (int, error)
 type newNote struct {
 	ID         string
 	Answers    []byte
+	Signature  string  // canonical signature JSON, "" = none (stored as NULL)
 	MediaRows  []int64 // internal ids of the photos, in order
 	CreatedAt  int64   // Unix ms
 	Collection uint64
@@ -235,8 +236,12 @@ func (s *Store) insertNote(ctx context.Context, n *newNote) error {
 	if count >= maxNotes {
 		return ErrFull
 	}
-	res, err := tx.ExecContext(ctx, `INSERT INTO note_tab (public_id, collection_id, yearbook_id, answers, status, terms_version, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?)`,
-		n.ID, n.Collection, n.Yearbook, string(n.Answers), StatusPending, legal.CurrentVersion, n.CreatedAt, n.CreatedAt)
+	var sig any // NULL when the note has no signature
+	if n.Signature != "" {
+		sig = n.Signature
+	}
+	res, err := tx.ExecContext(ctx, `INSERT INTO note_tab (public_id, collection_id, yearbook_id, answers, signature_json, status, terms_version, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?)`,
+		n.ID, n.Collection, n.Yearbook, string(n.Answers), sig, StatusPending, legal.CurrentVersion, n.CreatedAt, n.CreatedAt)
 	if err != nil {
 		return err
 	}

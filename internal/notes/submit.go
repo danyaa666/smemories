@@ -14,6 +14,7 @@ import (
 
 	"github.com/danyaa666/smemories/internal/apperr"
 	"github.com/danyaa666/smemories/internal/httpx"
+	"github.com/danyaa666/smemories/internal/signature"
 	"github.com/danyaa666/smemories/internal/ulid"
 )
 
@@ -21,7 +22,7 @@ const (
 	maxBody         = 32 << 20 // whole request
 	maxAnswersBytes = 16 << 10
 	maxPhotos       = 3
-	maxParts        = 12 // answers, website, photos and a few strays; more is hostile
+	maxParts        = 12 // answers, website, signature, photos and a few strays; more is hostile
 	maxHoneypot     = 1 << 10
 
 	// Slow phone uploads: the body is spooled to disk while it arrives, so a slow client costs a socket and some disk,
@@ -50,6 +51,8 @@ var submitPace = httpx.BodyPace{Idle: submitIdle, Total: submitTotal, MinRate: s
 type scan struct {
 	answers    []byte
 	hasAnswers bool
+	signature  []byte // the raw signature part, validated by the service
+	hasSig     bool
 	honeypot   bool
 	photos     []int // sequence numbers of the parts that hold a photo
 	photoFirst bool  // a photo came before the answers part
@@ -140,7 +143,7 @@ func (h *Handler) submit(w http.ResponseWriter, r *http.Request) {
 		h.fail(w, r, apperr.New(apperr.Param, "missing form field \"answers\""))
 		return
 	}
-	in := &Submission{IP: ip, Answers: sc.answers, Photos: make([]func() ([]byte, error), len(sc.photos)),
+	in := &Submission{IP: ip, Answers: sc.answers, Signature: sc.signature, HasSignature: sc.hasSig, Photos: make([]func() ([]byte, error), len(sc.photos)),
 		Verify: func(ctx context.Context) error { return h.verifier.Verify(ctx, r) }}
 	for i, n := range sc.photos {
 		in.Photos[i] = h.loadPhoto(f, size, params["boundary"], n)
@@ -211,6 +214,18 @@ func (h *Handler) scan(f *os.File, boundary string) (*scan, error) {
 			}
 			sc.answers, sc.hasAnswers = b, true
 			sc.photoFirst = len(sc.photos) > 0
+		case "signature":
+			b, err := io.ReadAll(io.LimitReader(part, signature.MaxInput+1))
+			if err != nil {
+				return nil, malformed
+			}
+			if sc.hasSig {
+				return nil, apperr.New(apperr.Param, "signature must be sent once")
+			}
+			if len(b) > signature.MaxInput {
+				return nil, apperr.New(signature.CodeInvalid, "signature: too large")
+			}
+			sc.signature, sc.hasSig = b, true
 		case "website":
 			b, err := io.ReadAll(io.LimitReader(part, maxHoneypot))
 			if err != nil {

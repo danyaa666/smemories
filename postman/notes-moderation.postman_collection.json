@@ -634,7 +634,7 @@
                   "pm.test('order', () => pm.expect(items).to.eql([pm.collectionVariables.get('n5'), pm.collectionVariables.get('n4'), pm.collectionVariables.get('n3'), pm.collectionVariables.get('n2'), pm.collectionVariables.get('n1')]));",
                   "const d = pm.response.json().data;",
                   "pm.test('counts', () => pm.expect(d.counts).to.eql({all: 5, pending: 5, approved: 0, hidden: 0}));",
-                  "pm.test('item shape', () => { const i = d.items[0]; pm.expect(Object.keys(i).sort()).to.eql(['answers','created_at','id','link_label','photos','position','status']); pm.expect(i.link_label).to.eql('Cafe'); pm.expect(i.answers.name).to.eql('N5'); pm.expect(i.position).to.eql(null); pm.expect(i.status).to.eql('pending'); });",
+                  "pm.test('item shape', () => { const i = d.items[0]; pm.expect(Object.keys(i).sort()).to.eql(['answers','created_at','id','link_label','photos','position','signature','status']); pm.expect(i.signature).to.eql(null); pm.expect(i.link_label).to.eql('Cafe'); pm.expect(i.answers.name).to.eql('N5'); pm.expect(i.position).to.eql(null); pm.expect(i.status).to.eql('pending'); });",
                   "pm.test('no object keys or tokens', () => pm.expect(pm.response.text()).to.not.match(/yearbooks\\/|object_key|token/));",
                   "pm.test('next_id empty', () => pm.expect(d.next_id).to.eql(''));"
                 ]
@@ -1082,7 +1082,7 @@
                   "pm.test('hidden and pending notes are not in the book', () => { const ids = d.notes.map(n => n.id); [v('n3'), v('n4'), v('n5')].forEach(x => pm.expect(ids).to.not.include(x)); });",
                   "pm.test('photo ids by note', () => pm.expect(d.notes.map(n => n.photo_ids)).to.eql([[v('photoId')], []]));",
                   "pm.test('answers as stored', () => pm.expect(d.notes[0].answers.name).to.eql('N2'));",
-                  "pm.test('shape', () => { pm.expect(Object.keys(d).sort()).to.eql(['approved_total', 'note_count', 'notes', 'profile', 'truncated', 'yearbook']); pm.expect(Object.keys(d.notes[0]).sort()).to.eql(['answers', 'id', 'photo_ids']); });",
+                  "pm.test('shape', () => { pm.expect(Object.keys(d).sort()).to.eql(['approved_total', 'note_count', 'notes', 'profile', 'truncated', 'yearbook']); pm.expect(Object.keys(d.notes[0]).sort()).to.eql(['answers', 'id', 'photo_ids', 'signature']); pm.expect(d.notes[0].signature).to.eql(null); });",
                   "pm.test('yearbook and profile', () => { pm.expect(d.yearbook.title).to.eql('Newman moderation'); pm.expect(d.yearbook.language).to.eql('en'); pm.expect(d.yearbook.page_size).to.eql('A5'); pm.expect(d.profile).to.have.property('full_name'); });",
                   "pm.test('nothing internal in the body', () => { const t = pm.response.text(); ['object_key', 'thumb_key', 'print_key', 'sha256', 'owner_id', 'token', 'birthday', pm.collectionVariables.get('emailA')].forEach(x => pm.expect(t).to.not.include(x)); });"
                 ]

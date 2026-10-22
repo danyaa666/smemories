@@ -37,6 +37,13 @@ code: `internal/notes/moderation*.go`; Postman: `postman/notes-moderation.postma
 - **The 300-note cap** of a link still counts hidden and pending notes (`TestHiddenNotesCountTowardTheCap`).
 - **Cursor.** `next_id` is sealed with the scope `note/get-list:<yearbook>:<status>`; a token of another list, yearbook or user is `ERROR_PARAM`.
 
+## Signatures (T-095)
+
+A note's optional handwritten signature (vector strokes, [note-fields.md](note-fields.md), section "Signature") is part of the note row, so it is moderated with
+the note: stored with the note as `pending`; returned to the owner as `signature` (the object, or `null`) by `note/get-list` in every status; returned by
+`book-data/get` for **approved** notes only; unchanged by approve, hide and reorder; deleted by `note/batch-delete` and by the yearbook delete. It is never
+logged. A damaged stored value reads as `null`.
+
 ## Performance
 
 The approved list reads `idx_yearbook_id_status_sort_order` (keyset on `sort_order`); the other lists filter on the same index and sort by `created_at, id` in
@@ -56,5 +63,6 @@ profile and the **approved** notes in book order (`sort_order`, then id: the ord
   notes is cut after the 300th in book order, never silently: `note_count` is the number returned, `approved_total` the real approved count and `truncated`
   (always present) is true when `approved_total` is more than `note_count` (`TestTruncatedFlag`: 299, 300, 301 notes). The renderer shows a warning then.
   The count is one extra query, run only when the 300 cap was reached. With the built-in templates' fields at their maximum length (name 60, relationship 60,
-  message 2000 characters, ASCII) and 3 photos per note the answer is about 690 KB (`TestMaximalBookIsUnderOneMiB`). Text that needs 2 or more bytes per
-  character, or a template that asks for all nine fields, can pass 1 MiB: the renderer must not assume it. The API does not compress the response (no gzip in the router), so that size goes over the wire.
+  message 2000 characters, ASCII) and 3 photos per note the answer is about 700 KB; with a maximal signature (3070 bytes) on every note it is **1 618 318 bytes**,
+  so the **documented bound is 1.6 MiB** (T-095, `TestMaximalBookIsUnderTheBound`; the query count does not change). Text that needs 2 or more bytes per
+  character, or a template that asks for all nine fields, can pass that bound: the renderer must not assume it. The API does not compress the response (no gzip in the router), so that size goes over the wire.
