@@ -108,6 +108,11 @@ func (e *env) verify(code, cookie string) *httptest.ResponseRecorder {
 }
 
 func (e *env) forgot(email, remote string) *httptest.ResponseRecorder {
+	if e.recorded {
+		// Mails are sent from background goroutines; without this the reset mail can overtake the registration mail still
+		// in flight, and code() (newest mail) would return the verification code instead of the reset code.
+		e.svc.Wait()
+	}
 	return e.do(req{method: "POST", path: "/api/auth/forgot-password", body: fmt.Sprintf(`{"email":%q}`, email), remote: remote})
 }
 
@@ -509,26 +514,29 @@ func TestConcurrentResetHasOneWinner(t *testing.T) {
 	want(t, e.forgot(testMail, ""), 200, "")
 	code := e.code(testMail)
 	var wg sync.WaitGroup
-	statuses := make(chan int, 8)
+	answers := make(chan string, 8)
 	for i := 0; i < 8; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			statuses <- e.reset(testMail, code, fmt.Sprintf("Concurrent-fake-pw-%d-xx", i)).Code
+			rec := e.reset(testMail, code, fmt.Sprintf("Concurrent-fake-pw-%d-xx", i))
+			answers <- fmt.Sprintf("%d %s", rec.Code, rec.Body.String())
 		}()
 	}
 	wg.Wait()
-	close(statuses)
+	close(answers)
+	var all []string
 	ok := 0
-	for c := range statuses {
-		if c == 200 {
+	for a := range answers {
+		all = append(all, a)
+		if strings.HasPrefix(a, "200 ") {
 			ok++
-		} else if c != 400 {
-			t.Fatalf("unexpected status %d", c)
+		} else if !strings.HasPrefix(a, "400 ") {
+			t.Errorf("unexpected answer %q", a)
 		}
 	}
 	if ok != 1 {
-		t.Fatalf("%d winners, want 1", ok)
+		t.Fatalf("%d winners, want 1; answers: %q", ok, all)
 	}
 }
 

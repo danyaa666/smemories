@@ -49,6 +49,8 @@ type env struct {
 	rc     *redis.Client
 	codes  *Codes
 	sess   *Sessions
+	// recorded: the recording mailer is in use (opts.mailer unset), so forgot can wait for earlier background mails.
+	recorded bool
 }
 
 type testClock struct {
@@ -125,7 +127,7 @@ func newEnv(t *testing.T, o opts) *env {
 			t.Fatal(err)
 		}
 	}
-	return &env{t: t, db: d, h: httpx.NewRouter(logger, ah.Routes), svc: svc, ah: ah, hasher: hasher, logs: logs, clock: clock, mail: rm, rc: rc, codes: codes, sess: sess}
+	return &env{t: t, db: d, h: httpx.NewRouter(logger, ah.Routes), svc: svc, ah: ah, hasher: hasher, logs: logs, clock: clock, mail: rm, rc: rc, codes: codes, sess: sess, recorded: o.mailer == nil}
 }
 
 type syncWriter struct {
