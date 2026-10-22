@@ -20,7 +20,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?); Q-051 (Approve merge of T-100 (canonical public ids, PR #93)?); Q-052 (Approve merge of T-111 (Terms acceptance API, PR #96; merges together with T-112)?); Q-053 (Approve merge of T-110 (upload abuse follow-up, PR #99)?); Q-054 (Approve merge of T-107 (bounded photo download memory, PR #98)?)
 
-_Board last written 2026-10-22 03:38Z_
+_Board last written 2026-10-22 03:42Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4821,7 +4821,7 @@ Spec: .team/epics/E12-security-hardening/10-auth-and-repo-hygiene.md (read it fr
 - **Branch:** task/t-107-e12-bound-the-memory-of-photo-downloads-
 - **PR:** https://github.com/danyaa666/smemories/pull/98
 - **Updated:** 2026-10-22 02:05Z by human
-- **Comments-seen:** 9
+- **Comments-seen:** 10
 
 Spec: .team/epics/E12-security-hardening/07-bounded-photo-download-memory.md (read it from the repo root). Source: audit run 1, docs/security-audit-skill-2026-10-20/ (PR #86). Risk high: owner approves the merge.
 
@@ -4944,7 +4944,7 @@ QA of T-103 (2026-10-21): go-integration was red once on internal/auth TestConcu
 - **Branch:** task/t-110-e12-owner-uploads-need-a-verified-email-
 - **PR:** 99
 - **Updated:** 2026-10-22 02:05Z by human
-- **Comments-seen:** 9
+- **Comments-seen:** 10
 
 Spec: .team/epics/E12-security-hardening/11-upload-abuse-followup.md (read it from the repo root). Source: QA of T-102. Risk high: owner approves the merge.
 
@@ -4986,7 +4986,7 @@ Spec: .team/epics/E12-security-hardening/11-upload-abuse-followup.md (read it fr
 - **Branch:** task/t-111-e13-versioned-acceptance-of-the-terms-an
 - **PR:** https://github.com/danyaa666/smemories/pull/96
 - **Updated:** 2026-10-22 02:05Z by human
-- **Comments-seen:** 7
+- **Comments-seen:** 8
 
 Spec: .team/epics/E13-legal/01-terms-acceptance-api.md (read it from the repo root). Decision D-35. Register requires the current version, a gate on signed-in endpoints until accepted, accept-terms endpoint, version stored on notes. Risk high: owner approves the merge.
 
@@ -5019,7 +5019,7 @@ Spec: .team/epics/E13-legal/01-terms-acceptance-api.md (read it from the repo ro
 - **Branch:** task/t-112-e13-web-terms-and-privacy-pages-sign-up-checkbox
 - **PR:** 97
 - **Updated:** 2026-10-22 02:05Z by human
-- **Comments-seen:** 10
+- **Comments-seen:** 11
 
 Spec: .team/epics/E13-legal/02-legal-pages-web.md. Pages from docs/legal (draft banner while DRAFT), required checkbox at sign-up, accept screen, footer links, notice on the public note form, e2e step.
 
