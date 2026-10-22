@@ -27,7 +27,7 @@ docker run --read-only --user 65532 --cap-drop ALL --security-opt no-new-privile
 - Nothing but the upload spool writes to disk. `SMEM_UPLOAD_TMP_DIR` must point at a writable mount (a tmpfs, or on Fargate a task volume);
   public submissions are spooled there while they arrive. Without a writable spool the API stops at start-up with
   `upload spool is not writable ... SMEM_UPLOAD_TMP_DIR` (exit 1), it does not fail on the first upload.
-- The listener is `SMEM_HTTP_ADDR` (default `:8080`); `/healthz` is liveness, `/readyz` (database and Redis) is readiness.
+- The listener is `SMEM_HTTP_ADDR` (default `:8080`); `/healthz` is liveness, `/readyz` (database and Redis, result cached for 2 s, the shutdown drain never cached) is readiness.
 - Size the container for image processing: 2 GiB minimum, `SMEM_MEMORY_LIMIT_MIB` about 80% of it (docs/media.md).
 
 ## Graceful shutdown

@@ -24,7 +24,7 @@ startup (5 s) and exits if it is unreachable, then logs `redis connected` with `
 
 `GET /readyz` answers 503 `ERROR_NOT_READY` when MySQL **or** Redis does not answer within 1 s, or when Redis refuses a write
 (readiness SETs `smem:<env>:probe:ready` with a 10 s expiry, so a full Redis with `noeviction` is not ready); the cause is
-logged, never put in the body. `GET /healthz` does not look at either. go-redis' own log lines go through slog
+logged, never put in the body. The result is cached for 2 s (concurrent probes share one check; a failure is cached for 2 s too), except the shutdown drain, which is checked on every request. `GET /healthz` does not look at either. go-redis' own log lines go through slog
 (`redis client: ...`, WARN) instead of raw stderr, and a failing `rediss://` connection names TLS in the startup error.
 
 `smemories-migrate` does not read `SMEM_REDIS_URL` or `SMEM_OTP_KEY` (the one-off migration task has no Redis access); only
@@ -37,7 +37,7 @@ one server in an emergency without colliding. Parts must come from hashes or num
 
 | Prefix | Owner | Content |
 |---|---|---|
-| `smem:<env>:sess:<h>` | T-052 | one hash per login session, `<h>` = hex sha256 of the cookie value (the raw token never reaches Redis): `user_id`, `created_at`, `last_seen_at` (unix ms), `user_agent`, `epoch` (the user's `auth_epoch` at login); `EXPIRE` = remaining lifetime (30 days, slid forward once half has passed) |
+| `smem:<env>:sess:<h>` | T-052 | one hash per login session, `<h>` = hex sha256 of the cookie value (the raw token never reaches Redis): `user_id`, `created_at`, `last_seen_at` (unix ms), `user_agent`, `epoch` (the user's `auth_epoch` at login); `EXPIRE` = remaining lifetime (30 days, slid forward once half has passed, never past `created_at` + 90 days) |
 | `smem:<env>:usess:<user id>` | T-052 | set of that user's `<h>` (for "delete every session of the user"); its expiry is pushed to the latest session expiry; a login also removes the user's expired members |
 | `smem:<env>:otp:<purpose>:<user id>` | T-048 | one hash per live email code (`verify` or `reset`): `h` HMAC of the code, `a` wrong attempts, `x` expiry (ms) |
 | `smem:<env>:rl:<limiter>:<key>` | T-053 | one sorted set per limited key (see Rate limiters); the key expires with the window |
@@ -54,6 +54,10 @@ session whose epoch differs. That is the guarantee, including against a login th
 session after it. Delete-all then runs **after** the commit as a clean-up; if Redis fails it is logged and the change stays. The scripts read the `sess:<h>` keys named
 by the index set, so Redis must be a single node (Valkey, or ElastiCache without cluster mode); cluster mode would need
 hash tags. Nothing is migrated: migration `0012` drops the `sessions` table and everybody signs in again once.
+
+Two lifetimes (T-101, audit L3): `SessionTTL` is 30 days **sliding**; `SessionMaxAge` is 90 days **absolute** from `created_at`, which a slide never changes.
+`Authenticate` answers 401 once `created_at + 90 days` has passed however recently the session was used, and a slide sets the Redis `PEXPIRE` and the
+cookie `Expires`/`Max-Age` to `min(30 days, ceiling - now)`. A user active for 90 days signs in again once.
 
 Redis down (or refusing writes): every request that carries a cookie answers `503 session_store_unavailable` with
 `Retry-After: 5` (never "anonymous", never a made-up session); login and register answer the same after the account rules

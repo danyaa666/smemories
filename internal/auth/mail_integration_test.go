@@ -4,12 +4,14 @@ package auth
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/danyaa666/smemories/internal/apperr"
+	"github.com/danyaa666/smemories/internal/legal"
 	"github.com/danyaa666/smemories/internal/mailer"
 )
 
@@ -195,8 +197,36 @@ func TestMessagesCarryTextAndHTML(t *testing.T) {
 	want(t, e.register(testMail, testPW, "Alice"), 200, "")
 	e.svc.Wait()
 	m := e.mail.all()[0]
-	if !strings.Contains(m.Text, "Alice") || !strings.Contains(m.HTML, "<h1") || !strings.Contains(m.HTML, codeRE.FindString(m.Text)) {
+	if !strings.Contains(m.HTML, "<h1") || !strings.Contains(m.HTML, codeRE.FindString(m.Text)) {
 		t.Fatalf("message: %+v", m)
+	}
+}
+
+// T-101 AC2 (audit L2): the display name is typed by whoever registers, before the address is proven, so neither the verification
+// nor the reset email may carry it, in any part and in either language.
+func TestCodeEmailsNeverCarryTheDisplayName(t *testing.T) {
+	const hostile = "Click evil.example"
+	for _, locale := range []string{"en", "vi"} {
+		e := newEnv(t, opts{})
+		body, _ := json.Marshal(map[string]string{"email": testMail, "password": testPW, "display_name": hostile, "locale": locale, "accept_terms_version": legal.CurrentVersion})
+		want(t, e.do(req{method: "POST", path: "/api/auth/register", body: string(body)}), 200, "")
+		e.svc.Wait()
+		want(t, e.forgot(testMail, ""), 200, "")
+		e.svc.Wait()
+		msgs := e.mail.all()
+		if len(msgs) != 2 {
+			t.Fatalf("%s: want a verification and a reset email, got %d", locale, len(msgs))
+		}
+		for i, m := range msgs {
+			for _, part := range []string{m.Subject, m.Text, m.HTML} {
+				if strings.Contains(part, "evil") || strings.Contains(part, "Click") {
+					t.Errorf("%s message %d carries the display name:\n%s", locale, i, part)
+				}
+			}
+			if codeRE.FindString(m.Text) == "" {
+				t.Errorf("%s message %d lost its code: %q", locale, i, m.Text)
+			}
+		}
 	}
 }
 

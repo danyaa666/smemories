@@ -80,7 +80,7 @@ func TestSessionLookupExpireExtendDelete(t *testing.T) {
 	e := newEnv(t, opts{})
 	ctx := context.Background()
 	now := time.Now().UTC()
-	if _, _, _, err := e.sess.Lookup(ctx, tokenHashOf("nobody")); !errors.Is(err, errNotFound) {
+	if _, _, _, _, err := e.sess.Lookup(ctx, tokenHashOf("nobody")); !errors.Is(err, errNotFound) {
 		t.Fatalf("unknown: %v", err)
 	}
 	if err := e.sess.Create(ctx, sessionRow("short", 1, now, 1500*time.Millisecond)); err != nil {
@@ -89,14 +89,14 @@ func TestSessionLookupExpireExtendDelete(t *testing.T) {
 	if err := e.sess.Create(ctx, sessionRow("long", 1, now, time.Hour)); err != nil {
 		t.Fatal(err)
 	}
-	uid, _, seen, err := e.sess.Lookup(ctx, tokenHashOf("short"))
-	if err != nil || uid != 1 || !seen.Equal(now.Truncate(time.Millisecond)) {
-		t.Fatalf("lookup: %d %v %v", uid, seen, err)
+	uid, _, created, seen, err := e.sess.Lookup(ctx, tokenHashOf("short"))
+	if err != nil || uid != 1 || !seen.Equal(now.Truncate(time.Millisecond)) || !created.Equal(now.Truncate(time.Millisecond)) {
+		t.Fatalf("lookup: %d created %v seen %v %v", uid, created, seen, err)
 	}
 	// T-079: poll until Redis expires it (generous bound) instead of one fixed sleep.
 	deadline := time.Now().Add(15 * time.Second)
 	for {
-		_, _, _, err := e.sess.Lookup(ctx, tokenHashOf("short"))
+		_, _, _, _, err := e.sess.Lookup(ctx, tokenHashOf("short"))
 		if errors.Is(err, errNotFound) {
 			break
 		}
@@ -111,8 +111,8 @@ func TestSessionLookupExpireExtendDelete(t *testing.T) {
 	if err != nil || !ok {
 		t.Fatalf("extend: %v %v", ok, err)
 	}
-	if _, _, seen, _ := e.sess.Lookup(ctx, tokenHashOf("long")); !seen.Equal(later.Truncate(time.Millisecond)) {
-		t.Fatalf("last_seen_at %v", seen)
+	if _, _, created, seen, _ := e.sess.Lookup(ctx, tokenHashOf("long")); !seen.Equal(later.Truncate(time.Millisecond)) || !created.Equal(now.Truncate(time.Millisecond)) {
+		t.Fatalf("last_seen_at %v, created_at %v (an extension must not move created_at)", seen, created)
 	}
 	if ttl := e.rc.Client().PTTL(ctx, e.rc.Key("sess", hex.EncodeToString(tokenHashOf("long")))).Val(); ttl <= 119*time.Minute {
 		t.Fatalf("extended TTL %v", ttl)
@@ -124,7 +124,7 @@ func TestSessionLookupExpireExtendDelete(t *testing.T) {
 	if err := e.sess.Delete(ctx, tokenHashOf("long")); err != nil { // twice is fine
 		t.Fatal(err)
 	}
-	if _, _, _, err := e.sess.Lookup(ctx, tokenHashOf("long")); !errors.Is(err, errNotFound) {
+	if _, _, _, _, err := e.sess.Lookup(ctx, tokenHashOf("long")); !errors.Is(err, errNotFound) {
 		t.Fatalf("deleted session found: %v", err)
 	}
 	if e.rc.Client().SIsMember(ctx, e.rc.Key("usess", "1"), hex.EncodeToString(tokenHashOf("long"))).Val() {
@@ -156,14 +156,14 @@ func TestSessionDeleteAll(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, tok := range []string{"a", "b", "c"} {
-		if _, _, _, err := e.sess.Lookup(ctx, tokenHashOf(tok)); !errors.Is(err, errNotFound) {
+		if _, _, _, _, err := e.sess.Lookup(ctx, tokenHashOf(tok)); !errors.Is(err, errNotFound) {
 			t.Fatalf("session %s survived: %v", tok, err)
 		}
 	}
 	if e.rc.Client().Exists(ctx, e.rc.Key("usess", "5")).Val() != 0 {
 		t.Fatal("index survived")
 	}
-	if _, _, _, err := e.sess.Lookup(ctx, tokenHashOf("other")); err != nil {
+	if _, _, _, _, err := e.sess.Lookup(ctx, tokenHashOf("other")); err != nil {
 		t.Fatalf("another user's session was removed: %v", err)
 	}
 	if err := e.sess.DeleteAll(ctx, 99); err != nil { // nobody: not an error
@@ -218,7 +218,7 @@ func TestSessionRefreshRacesNeverResurrect(t *testing.T) {
 			}
 		}()
 		wg.Wait()
-		if _, _, _, err := e.sess.Lookup(ctx, tokenHashOf(tok)); !errors.Is(err, errNotFound) {
+		if _, _, _, _, err := e.sess.Lookup(ctx, tokenHashOf(tok)); !errors.Is(err, errNotFound) {
 			t.Fatalf("round %d: session survived the logout: %v", i, err)
 		}
 	}

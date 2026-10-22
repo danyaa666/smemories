@@ -543,7 +543,7 @@ func TestEmailLocale(t *testing.T) {
 	e.svc.Wait()
 	msgs := e.mail.all()
 	got := msgs[len(msgs)-1]
-	if !strings.Contains(got.Subject, "Mã đặt lại mật khẩu") || !strings.Contains(got.Text, e.code(testMail)) || !strings.Contains(got.Text, "Hồng") || strings.Contains(got.Text, "http") {
+	if !strings.Contains(got.Subject, "Mã đặt lại mật khẩu") || !strings.Contains(got.Text, e.code(testMail)) || !strings.HasPrefix(got.Text, "Xin chào,") || strings.Contains(got.Text, "Hồng") || strings.Contains(got.Text, "http") {
 		t.Fatalf("not the Vietnamese reset code email: %+v", got)
 	}
 	if first := msgs[0]; !strings.Contains(first.Subject, "verification code") || !strings.Contains(first.Text, "30 minutes") {

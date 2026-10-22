@@ -349,7 +349,7 @@ func cookieToken(r *http.Request) string {
 }
 
 func (h *Handler) setCookie(w http.ResponseWriter, s *Session) {
-	h.cookie(w, s.Token, int(SessionTTL/time.Second), s.Expires)
+	h.cookie(w, s.Token, int(s.TTL/time.Second), s.Expires)
 }
 
 func (h *Handler) cookie(w http.ResponseWriter, value string, maxAge int, expires time.Time) {
