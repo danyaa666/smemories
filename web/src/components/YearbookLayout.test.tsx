@@ -3,7 +3,8 @@ import { render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { makeQueryClient } from "../queryClient";
-import { mockApi, renderApp, user } from "../test/api";
+import i18n from "../i18n";
+import { err, mockApi, renderApp, user } from "../test/api";
 import { YearbookLayout, type NavItem } from "./YearbookLayout";
 
 const ID = "01J9Z3K6V8Q4M7N2P5R8T0W1XZ";
@@ -156,5 +157,56 @@ describe("YearbookLayout", () => {
       </QueryClientProvider>,
     );
     expect(await screen.findByRole("link", { name: "My yearbooks 3" })).toBeInTheDocument();
+  });
+});
+
+describe("YearbookLayout: a missing or malformed book id", () => {
+  // 404: no such book; 400 ERROR_PARAM: the id is not canonical (lower-cased, hand-typed), since T-100
+  const answers = [
+    [404, "not_found"],
+    [400, "invalid_body"],
+  ] as const;
+  const screens = ["", "/notes", "/note-links", "/book"];
+
+  it.each(answers.flatMap(([status, code]) => screens.map((s) => [status, code, s] as const)))(
+    "%i %s on /yearbooks/:id%s shows 'book not found' and mounts no screen",
+    async (status, code, screen_) => {
+      viewport(1280);
+      const calls = mockApi({
+        "GET /user/get-me": Response.json({ status: "OK", data: user() }),
+        [`GET /yearbook/get?id=${ID}`]: err(status, code),
+      });
+      renderApp(`/yearbooks/${ID}${screen_}`);
+      expect(await screen.findByRole("alert")).toHaveTextContent("This yearbook does not exist.");
+      expect(screen.getByRole("link", { name: "Back to my yearbooks" })).toHaveAttribute(
+        "href",
+        "/yearbooks",
+      );
+      expect(screen.queryByText("Something went wrong. Please try again.")).not.toBeInTheDocument();
+      expect(calls.map((c) => c.path)).not.toContain("/note-collection/get-list");
+      expect(calls.map((c) => c.path)).not.toContain("/book/get-data");
+    },
+  );
+
+  it("says it in Vietnamese too", async () => {
+    viewport(1280);
+    await i18n.changeLanguage("vi");
+    mockApi({
+      "GET /user/get-me": Response.json({ status: "OK", data: user({ locale: "vi" }) }),
+      [`GET /yearbook/get?id=${ID}`]: err(400, "invalid_body"),
+    });
+    renderApp(`/yearbooks/${ID}`);
+    expect(await screen.findByRole("alert")).toHaveTextContent("Kỷ yếu này không tồn tại.");
+  });
+
+  it("keeps the generic error for a server failure", async () => {
+    viewport(1280);
+    mockApi({
+      "GET /user/get-me": Response.json({ status: "OK", data: user() }),
+      [`GET /yearbook/get?id=${ID}`]: err(500, "internal_error"),
+    });
+    renderApp(`/yearbooks/${ID}`);
+    expect(await screen.findByRole("alert")).toHaveTextContent("Something went wrong");
+    expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
   });
 });

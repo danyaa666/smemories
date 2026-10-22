@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ApiError } from "../api/client";
 import { deleteYearbook, getYearbook, updateYearbook, type Yearbook } from "../api/yearbooks";
 import { errorText } from "../auth/errors";
 import { BookForm } from "../components/BookForm";
@@ -36,17 +35,15 @@ export function YearbookEdit() {
 
   if (q.isPending) return <p role="status">{t("auth.loading")}</p>;
   if (q.isError) {
-    const gone = q.error instanceof ApiError && q.error.status === 404;
+    // a missing or malformed book id never gets here: YearbookLayout shows BookNotFound instead
     return (
       <>
         <p role="alert" className="error">
-          {gone ? t("books.notFound") : errorText(t, q.error)}
+          {errorText(t, q.error)}
         </p>
-        {!gone && (
-          <Button type="button" onClick={() => void q.refetch()}>
-            {t("auth.retry")}
-          </Button>
-        )}
+        <Button type="button" onClick={() => void q.refetch()}>
+          {t("auth.retry")}
+        </Button>
         <p>
           <Link to="/yearbooks">{t("books.back")}</Link>
         </p>

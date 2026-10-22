@@ -34,6 +34,10 @@ export function errorText(t: TFunction, e: unknown): string {
   return t(`errors.${e.code}`, { minutes, defaultValue: t("errors.generic") });
 }
 
+/** A missing book (404) or a malformed id in the URL (400 ERROR_PARAM since T-100): the same "book not found". */
+export const isBookGone = (e: unknown) =>
+  e instanceof ApiError && (e.status === 404 || (e.status === 400 && e.code === "invalid_body"));
+
 /** The message for `field` if `e` belongs to it. */
 export const fieldError = (t: TFunction, e: unknown, field: string) =>
   e instanceof ApiError && FIELD_OF[e.code] === field ? errorText(t, e) : undefined;
