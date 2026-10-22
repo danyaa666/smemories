@@ -12,15 +12,16 @@
 |---|---:|---|
 | BACKLOG | 13 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-095, T-096, T-097, T-116 |
 | TODO | 7 | T-101, T-105, T-106, T-109, T-113, T-114, T-115 |
-| QA_PASS | 4 | T-107, T-110, T-111, T-112 |
+| CHANGES_REQUESTED | 1 | T-110 |
+| MERGED | 3 | T-107, T-111, T-112 |
 | DONE | 84 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-092, T-093, T-094, T-098, T-099, T-100, T-102, T-103, T-104, T-108 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** nothing
+**Awaiting your review (MERGED):** T-107 ([E12] Bound the memory of photo downloads (get-content and public-media)); T-111 ([E13] Versioned acceptance of the Terms and Privacy Policy (API)); T-112 ([E13] Web: Terms and Privacy pages, sign-up checkbox, accept screen, friend-form notice)
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?); Q-051 (Approve merge of T-100 (canonical public ids, PR #93)?); Q-052 (Approve merge of T-111 (Terms acceptance API, PR #96; merges together with T-112)?); Q-053 (Approve merge of T-110 (upload abuse follow-up, PR #99)?); Q-054 (Approve merge of T-107 (bounded photo download memory, PR #98)?)
 
-_Board last written 2026-10-21 23:24Z_
+_Board last written 2026-10-22 00:59Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4809,18 +4810,18 @@ Spec: .team/epics/E12-security-hardening/10-auth-and-repo-hygiene.md (read it fr
 #### Comments
 
 ### T-107 — [E12] Bound the memory of photo downloads (get-content and public-media)
-- **Status:** QA_PASS
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
 - **Depends-on:** T-092
 - **Risk:** high
 - **Rework:** 1
-- **Owner-approved:** —
-- **Assignee:** leader
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-107-e12-bound-the-memory-of-photo-downloads-
 - **PR:** https://github.com/danyaa666/smemories/pull/98
-- **Updated:** 2026-10-21 23:24Z by qa
+- **Updated:** 2026-10-22 00:59Z by leader
 - **Comments-seen:** 7
 
 Spec: .team/epics/E12-security-hardening/07-bounded-photo-download-memory.md (read it from the repo root). Source: audit run 1, docs/security-audit-skill-2026-10-20/ (PR #86). Risk high: owner approves the merge.
@@ -4876,6 +4877,8 @@ Spec: .team/epics/E12-security-hardening/07-bounded-photo-download-memory.md (re
   4. Still no 429 request in the media / public-media Postman collections (covered by Go tests): fine.
   5. Cap and gauge are per process (N tasks = N x 64), documented.
 - 2026-10-21 23:24Z · leader · Leader review OK on 70efad7: streaming keeps memory flat (QA: +5/+10 MiB vs +866/+1072 MiB on develop), responses byte-identical to develop (314 requests), cap 64 with a bounded 500 ms grace, HTTP/2 galleries of 30 and 100 render. Known limit (QA): with slow storage (400 ms per object) a 100-image HTTP/2 burst still gets some 429s; the web gallery limiter in T-116 is the follow-up if real S3 latency shows it. Trial merge with #99 conflicts (adjacent additions in media/handler.go and docs/media.md): whichever merges second merges develop. Waiting for the owner's approval (risk high).
+- 2026-10-22 00:58Z · human · owner approved merge
+- 2026-10-22 00:59Z · leader · Merged PR #98 as 025d0dd (owner approved).
 
 ### T-108 — [E06] Concurrent smemories-migrate up on an empty database fails (missing zero version migration)
 - **Status:** DONE
@@ -4929,18 +4932,18 @@ QA of T-103 (2026-10-21): go-integration was red once on internal/auth TestConcu
 #### Comments
 
 ### T-110 — [E12] Owner uploads need a verified email and a per-client share; bound drains of rejected public bodies
-- **Status:** QA_PASS
+- **Status:** CHANGES_REQUESTED
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
 - **Depends-on:** T-102
 - **Risk:** high
-- **Rework:** 0
-- **Owner-approved:** —
-- **Assignee:** leader
+- **Rework:** 1
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-110-e12-owner-uploads-need-a-verified-email-
 - **PR:** https://github.com/danyaa666/smemories/pull/99
-- **Updated:** 2026-10-21 23:04Z by qa
+- **Updated:** 2026-10-22 00:59Z by leader
 - **Comments-seen:** 3
 
 Spec: .team/epics/E12-security-hardening/11-upload-abuse-followup.md (read it from the repo root). Source: QA of T-102. Risk high: owner approves the merge.
@@ -4957,20 +4960,22 @@ Spec: .team/epics/E12-security-hardening/11-upload-abuse-followup.md (read it fr
   Docs: docs/media.md, docs/observability.md (gauge), api/openapi.yaml (403 + 429 text), README, Postman updated and consistent with behaviour. No changes under .team/ in the PR.
   Non-blocking observations: a) RSS at 1500 simultaneous bodies from one address is still +30..48 MiB (burst of handlers/buffers, not retained sockets); only an LB/fd limit bounds that, same as before. b) Per-process counts (client cap 4 x N tasks), already documented. c) PR #98 (T-107) overlaps media/handler.go: dev merges develop after; I did not trial-merge it. d) The client key is the last X-Forwarded-For hop when SMEM_TRUST_PROXY=true; behind the ALB that must be set for the cap to key on real clients (existing behaviour of httpx.ClientIP). Risk high: owner approves the merge.
 - 2026-10-21 23:04Z · leader · Leader review OK on d0c5ed8 (based on QA's evidence and the spec): verified-email check before any slot or body read, per-client cap of 4 after the per-user cap, drains capped at 16 per key with Connection: close, gauge, docs, web message. QA_PASS with the attack replay (victim 23/23 OK, was 503 every time), real image-smoke, Postman and e2e. Note for T-023: SMEM_TRUST_PROXY=true behind the ALB is required for per-client keys. Overlaps PR #98 (T-107) in media/handler.go: whichever merges second merges develop. Waiting for the owner's approval (risk high).
+- 2026-10-22 00:58Z · human · owner approved merge
+- 2026-10-22 00:59Z · leader · Owner approved, but PR #99 now conflicts with develop after #98 (T-107) merged (internal/media/handler.go, docs/media.md: adjacent additions). Merge origin/develop into the branch, keep both sides, re-run go test + integration, push. No rebase, no force-push. No other changes.
 
 ### T-111 — [E13] Versioned acceptance of the Terms and Privacy Policy (API)
-- **Status:** QA_PASS
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M2
 - **Depends-on:** —
 - **Risk:** high
 - **Rework:** 0
-- **Owner-approved:** —
-- **Assignee:** leader
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-111-e13-versioned-acceptance-of-the-terms-an
 - **PR:** https://github.com/danyaa666/smemories/pull/96
-- **Updated:** 2026-10-21 18:15Z by qa
+- **Updated:** 2026-10-22 00:59Z by leader
 - **Comments-seen:** 5
 
 Spec: .team/epics/E13-legal/01-terms-acceptance-api.md (read it from the repo root). Decision D-35. Register requires the current version, a gate on signed-in endpoints until accepted, accept-terms endpoint, version stored on notes. Risk high: owner approves the merge.
@@ -4987,9 +4992,11 @@ Spec: .team/epics/E13-legal/01-terms-acceptance-api.md (read it from the repo ro
   Postman: auth collection, Terms gate two-step flow works as described (G1 setup, make newman-unaccept-terms, termsGate=1: G3/G4 403 ERROR_TERMS_REQUIRED, G5 get-me required, G6 accept, G7 200: 12/12 assertions). Full auth collection run twice back to back: 252 assertions, only the 20 in the 'Google sign-in' folder fail (no SMEM_GOOGLE_* configured here, pre-existing); notes collection 141/141. Two ERROR_TERMS_REQUIRED codes (400 at register, 403 at the gate): acceptable, documented in openapi, api-contract.md line 40 and the Postman descriptions; the web handles 403+terms_required.
   Non-blocking: media/notes integration tests need SMEM_TEST_S3_ENDPOINT on non-default ports. Merge together with #97 (T-111 alone breaks web sign-up). Owner approval needed (risk high).
 - 2026-10-21 18:16Z · leader · Leader review OK on e0a1ba6: one gate in requireUser (needTerms) compares the user row's terms_version with legal.CurrentVersion on every signed-in route; the exempt routes are explicit (get-me, accept-terms, verify-email, resend-verification via requireSession; logout needs no session); register validates accept_terms_version and stores it in the account transaction; the four-doc version test ties text and constant. QA_PASS: 22 gated routes probed live, migration up/down/up on data, Postman gate flow 12/12. Merge together with T-112 (#96 then #97). Waiting for the owner's approval (risk high).
+- 2026-10-22 00:58Z · human · owner approved merge
+- 2026-10-22 00:59Z · leader · Merged PR #96 as e0a7c22 (owner approved).
 
 ### T-112 — [E13] Web: Terms and Privacy pages, sign-up checkbox, accept screen, friend-form notice
-- **Status:** QA_PASS
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M2
@@ -4997,11 +5004,11 @@ Spec: .team/epics/E13-legal/01-terms-acceptance-api.md (read it from the repo ro
 - **Risk:** low
 - **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** leader
+- **Assignee:** —
 - **Branch:** task/t-112-e13-web-terms-and-privacy-pages-sign-up-checkbox
 - **PR:** 97
-- **Updated:** 2026-10-21 22:43Z by qa
-- **Comments-seen:** 9
+- **Updated:** 2026-10-22 00:59Z by leader
+- **Comments-seen:** 10
 
 Spec: .team/epics/E13-legal/02-legal-pages-web.md. Pages from docs/legal (draft banner while DRAFT), required checkbox at sign-up, accept screen, footer links, notice on the public note form, e2e step.
 
@@ -5021,6 +5028,7 @@ Spec: .team/epics/E13-legal/02-legal-pages-web.md. Pages from docs/legal (draft 
 - 2026-10-21 18:17Z · dev · Rework is files-only: 96ab278 deletes the 20 docs/legal/screenshots/ images (git diff c9f0c4c 96ab278 lists only those deletions); images kept on branch screenshots/t-112 (from c9f0c4c); PR body links updated. No code change, leader checks without new QA run.
 - 2026-10-21 18:17Z · leader · Leader checked 96ab278: git diff c9f0c4c..96ab278 is exactly the 20 deleted screenshot files, nothing else. The board only lets QA set QA_PASS, so QA confirms this files-only diff in its next run (no functional re-test needed) and records QA_PASS; then #96 and #97 merge once the owner approves T-111.
 - 2026-10-21 22:43Z · qa · Re-verification of head 96ab278 (previously passed c9f0c4c). git diff --name-status c9f0c4c 96ab278: 20 files, all status D; 0 paths outside docs/legal/screenshots/ (git diff --name-only | grep -v screenshots -> 0). No functional change, no re-test per leader instruction. gh pr checks 97: e2e, go, go-integration, image, security, web all pass; run 39651353268 headSha = 96ab278 = PR head.
+- 2026-10-22 00:59Z · leader · Merged PR #97 as 78ccfa0 after #96.
 
 ### T-113 — [E12] Media memory estimate for lossy WebP with alpha (ALPH) is too low
 - **Status:** TODO
