@@ -10,8 +10,8 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 8 | T-023, T-024, T-025, T-026, T-027, T-031, T-050, T-097 |
-| TODO | 2 | T-029, T-120 |
+| BACKLOG | 7 | T-023, T-024, T-025, T-026, T-027, T-031, T-050 |
+| TODO | 3 | T-029, T-097, T-120 |
 | IN_PROGRESS | 1 | T-116 |
 | MERGED | 1 | T-096 |
 | DONE | 100 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-117, T-118, T-119 |
@@ -21,7 +21,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?); Q-051 (Approve merge of T-100 (canonical public ids, PR #93)?); Q-052 (Approve merge of T-111 (Terms acceptance API, PR #96; merges together with T-112)?); Q-053 (Approve merge of T-110 (upload abuse follow-up, PR #99)?); Q-054 (Approve merge of T-107 (bounded photo download memory, PR #98)?)
 
-_Board last written 2026-10-22 19:15Z_
+_Board last written 2026-10-22 19:16Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4564,7 +4564,7 @@ Spec: .team/epics/E11-signatures/02-signature-pad-web.md. Next phase.
 - 2026-10-22 19:15Z · leader · Merged PR #112 as f0c074e (QA_PASS on b5d5cb2). Cosmetic leftovers (1.4 px ink offset from the border-box rect, alert and inbox spacing) go with T-097's visual pass. Owner device check is pending.
 
 ### T-097 — [E11] Print: signatures in memory-book and navy-classic
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1b
@@ -4575,12 +4575,13 @@ Spec: .team/epics/E11-signatures/02-signature-pad-web.md. Next phase.
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-19 04:19Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-22 19:16Z by leader
+- **Comments-seen:** 1
 
 Spec: .team/epics/E11-signatures/03-signature-print.md. Next phase.
 
 #### Comments
+- 2026-10-22 19:16Z · leader · Leader: promoted; T-095 and T-096 are merged. This task switches signatures on in the templates and carries the pad e2e step and QA notes (see spec).
 
 ### T-098 — [E12] IPv6 /64 keying and a per-account login limiter
 - **Status:** DONE
