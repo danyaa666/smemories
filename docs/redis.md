@@ -24,7 +24,7 @@ startup (5 s) and exits if it is unreachable, then logs `redis connected` with `
 
 `GET /readyz` answers 503 `ERROR_NOT_READY` when MySQL **or** Redis does not answer within 1 s, or when Redis refuses a write
 (readiness SETs `smem:<env>:probe:ready` with a 10 s expiry, so a full Redis with `noeviction` is not ready); the cause is
-logged, never put in the body. `GET /healthz` does not look at either. go-redis' own log lines go through slog
+logged, never put in the body. The result is cached for 2 s (concurrent probes share one check; a failure is cached for 2 s too), except the shutdown drain, which is checked on every request. `GET /healthz` does not look at either. go-redis' own log lines go through slog
 (`redis client: ...`, WARN) instead of raw stderr, and a failing `rediss://` connection names TLS in the startup error.
 
 `smemories-migrate` does not read `SMEM_REDIS_URL` or `SMEM_OTP_KEY` (the one-off migration task has no Redis access); only
