@@ -227,7 +227,7 @@ export interface paths {
         };
         /**
          * The signed-in user
-         * @description Called on every page load as the session bootstrap; `ERROR_UNAUTHORIZED` (401) means signed out. Sliding expiry: once more than half of the 30-day session lifetime has elapsed the expiry is extended and the cookie is sent again. `username` is the public handle (D-28); `username_next_change_at` is when it may change again, `null` when a change is allowed now. `terms` says which version of the Terms and Privacy Policy the user accepted (`accepted_version`, `null` = never), the current one, and whether the user must accept before any other signed-in endpoint works (`required`, see `/api/user/accept-terms`). This is one of the few endpoints that answer while `required` is true. Read-only and idempotent.
+         * @description Called on every page load as the session bootstrap; `ERROR_UNAUTHORIZED` (401) means signed out. Sliding expiry: once more than half of the 30-day session lifetime has elapsed the expiry is extended and the cookie is sent again, but never beyond 90 days after sign-in (each slide is the shorter of 30 days and the time left to that 90-day ceiling); after the ceiling this answers 401 however recently the session was used and the user must sign in again. `username` is the public handle (D-28); `username_next_change_at` is when it may change again, `null` when a change is allowed now. `terms` says which version of the Terms and Privacy Policy the user accepted (`accepted_version`, `null` = never), the current one, and whether the user must accept before any other signed-in endpoint works (`required`, see `/api/user/accept-terms`). This is one of the few endpoints that answer while `required` is true. Read-only and idempotent.
          */
         get: operations["getMe"];
         put?: never;
@@ -1591,7 +1591,7 @@ export interface components {
                 "application/json": components["schemas"]["ApiError"];
             };
         };
-        /** @description No, unknown or expired session (`ERROR_UNAUTHORIZED`). */
+        /** @description No, unknown or expired session, including one past its 90-day absolute lifetime (`ERROR_UNAUTHORIZED`). */
         ApiUnauthorized: {
             headers: {
                 [name: string]: unknown;
@@ -1729,7 +1729,7 @@ export interface components {
     parameters: never;
     requestBodies: never;
     headers: {
-        /** @description `smem_session=<32 random bytes, base64url>; Path=/; Max-Age=2592000; HttpOnly; SameSite=Lax` (plus `Secure` unless SMEM_ENV=dev). Only the token's SHA-256 is stored server-side. */
+        /** @description `smem_session=<32 random bytes, base64url>; Path=/; Max-Age=2592000; HttpOnly; SameSite=Lax` (plus `Secure` unless SMEM_ENV=dev). `Max-Age` is 30 days at sign-in; a slide re-sends the cookie with the shorter of 30 days and the time left to the 90-day absolute ceiling (from sign-in). Only the token's SHA-256 is stored server-side. */
         SessionCookie: string;
     };
     pathItems: never;
