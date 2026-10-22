@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { QueuedImg } from "../QueuedImg";
 
 type Props = {
   src: string;
@@ -18,7 +19,7 @@ export function PhotoTile({ src, alt, tape, onRemove, removeLabel, disabled, chi
     <figure className="photo-tile">
       {tape && <span className="tape" aria-hidden="true" />}
       <div className="photo-tile-frame">
-        <img src={src} alt={alt} loading="lazy" />
+        <QueuedImg src={src} alt={alt} />
         {onRemove && (
           <button
             type="button"

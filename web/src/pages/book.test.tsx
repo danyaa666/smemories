@@ -160,16 +160,16 @@ describe("book preview and print", () => {
     expect(print).toHaveBeenCalledTimes(1);
   });
 
-  it("images are lazy on screen and eager while the print dialog opens", async () => {
+  it("images decode asynchronously on screen and synchronously while the print dialog opens", async () => {
     serve(bookData([note(1, { photo_ids: [PHOTO(1)] })]));
     open();
     await waitFor(() => expect(sheets()).toHaveLength(4));
     const img = () => document.querySelector<HTMLImageElement>(".bk-note img")!;
-    expect(img().getAttribute("loading")).toBe("lazy");
+    expect(img().getAttribute("decoding")).toBe("async");
     act(() => void window.dispatchEvent(new Event("beforeprint")));
-    expect(img().getAttribute("loading")).toBe("eager");
+    expect(img().getAttribute("decoding")).toBe("sync");
     act(() => void window.dispatchEvent(new Event("afterprint")));
-    expect(img().getAttribute("loading")).toBe("lazy");
+    expect(img().getAttribute("decoding")).toBe("async");
   });
 
   it("says so when a photo cannot be loaded, and still lets the owner print", async () => {

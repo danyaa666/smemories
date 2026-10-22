@@ -1,6 +1,7 @@
 import type { TFunction } from "i18next";
 import { createContext, useContext, useState, type ReactNode } from "react";
 import { mediaUrl } from "../api/yearbooks";
+import { QueuedImg } from "../components/QueuedImg";
 import { designHeight, designZoom, DESIGN_W, type PageSize } from "./sizes";
 
 /** What every page of the book needs: its size, its own language (the book's, not the app's) and whether images load eagerly. */
@@ -43,11 +44,11 @@ export function Photo({ id, className }: { id: string | null | undefined; classN
   const [failed, setFailed] = useState(false);
   if (!id || failed) return <div className={`bk-ph ${className ?? ""}`} />;
   return (
-    <img
+    <QueuedImg
       className={`bk-photo ${className ?? ""}`}
       src={mediaUrl(id, "print")}
       alt=""
-      loading={eager ? "eager" : "lazy"}
+      eager={eager}
       decoding={eager ? "sync" : "async"}
       onError={() => setFailed(true)}
     />
