@@ -16,6 +16,8 @@ const PHOTO = path.join(HERE, "../print-check/fixtures/photo-01.jpg");
 const BASE = process.env.E2E_BASE_URL;
 const API = new URL(process.env.E2E_API_URL ?? BASE ?? "http://127.0.0.1");
 const OTP = process.env.SMEM_DEV_FIXED_OTP; // DEV-SHORTCUT(otp): the API of this run was started with it (scripts/e2e.sh)
+// The terms version the API requires at sign-up: the Go constant is the single source (internal/legal/legal.go).
+const TERMS_VERSION = readFileSync(path.join(HERE, "../../internal/legal/legal.go"), "utf8").match(/const CurrentVersion = "([^"]+)"/)[1];
 const RUN = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
 let server;
@@ -28,7 +30,7 @@ test.beforeAll(async () => {
   if (!BASE || !OTP) return;
   // An account with one photo, made through the API (the Origin header is what the CSRF guard wants on a write).
   const api = await request.newContext({ baseURL: API.origin, extraHTTPHeaders: { Origin: BASE } });
-  const reg = await api.post("/api/auth/register", { data: { email: `h2-${RUN}@example.com`, password: `Mật-khẩu-${RUN}-9`, display_name: "H2 gallery" } });
+  const reg = await api.post("/api/auth/register", { data: { email: `h2-${RUN}@example.com`, password: `Mật-khẩu-${RUN}-9`, display_name: "H2 gallery", accept_terms_version: TERMS_VERSION } });
   expect(reg.status(), "register (429: run `make reset-limits SMEM_ENV=test`)").toBe(200);
   session = /smem_session=([^;]+)/.exec(reg.headers()["set-cookie"] ?? "")?.[1] ?? "";
   expect(session).not.toBe("");
