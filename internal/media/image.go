@@ -237,7 +237,12 @@ func decodedBytes(data []byte, cfg image.Config, format string) int {
 		return px
 	case cm == color.Gray16Model:
 		return px * 2
-	case cm == color.YCbCrModel || cm == color.NYCbCrAModel: // lossy WebP: 4:2:0, plus alpha
+	case cm == color.YCbCrModel || cm == color.NYCbCrAModel: // lossy WebP: 4:2:0 frame (1.5) plus the 1 byte alpha plane when there is an ALPH chunk
+		if webpHasALPH(data) {
+			// 8.75: frame 1.5 + alpha plane 1 + the NRGBA (4) and the packed palette indices (up to 2) that x/image builds to decode a
+			// method-1 alpha through vp8l (T-113). The last two are garbage by the time the frame is decoded, but not yet collected.
+			return px * 35 / 4
+		}
 		return px * 5 / 2
 	case cm == color.RGBAModel || cm == color.NRGBAModel || cm == color.CMYKModel:
 		return px * 4
@@ -356,6 +361,21 @@ func jpegOrientation(d []byte) int {
 		}
 	}
 	return 1
+}
+
+// webpHasALPH reports whether a WebP has an ALPH chunk (lossy frame with transparency).
+func webpHasALPH(d []byte) bool {
+	for i := 12; i+8 <= len(d); {
+		n := int(binary.LittleEndian.Uint32(d[i+4:]))
+		if n < 0 || i+8+n > len(d) {
+			return false
+		}
+		if string(d[i:i+4]) == "ALPH" {
+			return true
+		}
+		i += 8 + n + n%2
+	}
+	return false
 }
 
 func webpOrientation(d []byte) int {
