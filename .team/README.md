@@ -5226,7 +5226,7 @@ QA of T-100 (2026-10-21): since T-100 a non-canonical id answers 400 ERROR_PARAM
 - **Branch:** task/t-115-e05-export-dialogs-return-focus-to-their
 - **PR:** https://github.com/danyaa666/smemories/pull/110
 - **Updated:** 2026-10-22 15:50Z by dev
-- **Comments-seen:** 3
+- **Comments-seen:** 4
 
 QA of T-094 (2026-10-21): after Continue in the public-link warning and after confirming Disable photo links, focus lands on <body>, so keyboard users restart at the top; return focus to the button that opened the dialog (in the shared Dialog component if that is where it belongs, covering backdrop click too). Also: a failed CI e2e run keeps a Playwright trace that contains the photo-link URL (a bearer token of the throwaway e2e database); scrub it or disable traces for that step. Component test for focus return; show the trace setting in the PR.
 
