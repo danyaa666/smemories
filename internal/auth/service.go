@@ -23,6 +23,9 @@ import (
 const (
 	// SessionTTL is the lifetime of a session; it slides forward once half has elapsed.
 	SessionTTL = 30 * 24 * time.Hour
+	// SessionMaxAge is the absolute ceiling: a session never lives past this long after it was created, however often it
+	// is used and slid forward (audit L3). The user signs in again once.
+	SessionMaxAge = 90 * 24 * time.Hour
 	// HashWait is how long a request waits for a free hashing slot before 503 busy.
 	HashWait = 2 * time.Second
 
@@ -42,6 +45,7 @@ const (
 type Session struct {
 	Token   string
 	Expires time.Time
+	TTL     time.Duration // Expires minus the issue time: the cookie's Max-Age
 }
 
 // Limits are the rate limits from config.
@@ -200,7 +204,7 @@ func (s *Service) newSession(now time.Time, userAgent string) (*Session, session
 		return nil, session{}, err
 	}
 	exp := now.Add(SessionTTL)
-	return &Session{Token: token, Expires: exp}, session{tokenHash: hash, now: now, expires: exp, userAgent: userAgent}, nil
+	return &Session{Token: token, Expires: exp, TTL: SessionTTL}, session{tokenHash: hash, now: now, expires: exp, userAgent: userAgent}, nil
 }
 
 // Login checks the credentials and issues a new session. Wrong password, unknown email and
@@ -287,7 +291,8 @@ func (s *Service) issue(ctx context.Context, u *User, userAgent, oldToken string
 }
 
 // Authenticate resolves a session cookie value to its user. When more than half the TTL
-// has elapsed the expiry is pushed out and refreshed is non-nil (the caller re-sends the cookie).
+// has elapsed the expiry is pushed out (never past created_at + SessionMaxAge) and refreshed is non-nil (the caller
+// re-sends the cookie). A session older than SessionMaxAge is refused however recently it was used.
 // A session store failure is a *SessionStoreError, never "anonymous".
 func (s *Service) Authenticate(ctx context.Context, token string) (u *User, refreshed *Session, err error) {
 	if token == "" {
@@ -295,7 +300,7 @@ func (s *Service) Authenticate(ctx context.Context, token string) (u *User, refr
 	}
 	hash := hashToken(token)
 	now := s.now().UTC()
-	uid, epoch, lastSeen, err := s.sessions.Lookup(ctx, hash)
+	uid, epoch, createdAt, lastSeen, err := s.sessions.Lookup(ctx, hash)
 	if errors.Is(err, errNotFound) {
 		return nil, nil, ErrUnauthenticated
 	}
@@ -303,8 +308,8 @@ func (s *Service) Authenticate(ctx context.Context, token string) (u *User, refr
 		return nil, nil, err
 	}
 	// Redis drops the key at its expiry; the check on the time we stored also makes the rule the same under a test clock.
-	exp := lastSeen.Add(SessionTTL)
-	if !exp.After(now) {
+	exp, ceiling := lastSeen.Add(SessionTTL), createdAt.Add(SessionMaxAge)
+	if !exp.After(now) || !ceiling.After(now) {
 		return nil, nil, ErrUnauthenticated
 	}
 	u, err = s.store.userByID(ctx, uid)
@@ -319,14 +324,15 @@ func (s *Service) Authenticate(ctx context.Context, token string) (u *User, refr
 		return nil, nil, ErrUnauthenticated
 	}
 	if exp.Sub(now) < SessionTTL/2 {
-		alive, err := s.sessions.Extend(ctx, hash, uid, now, SessionTTL)
+		ttl := min(SessionTTL, ceiling.Sub(now))
+		alive, err := s.sessions.Extend(ctx, hash, uid, now, ttl)
 		if err != nil {
 			return nil, nil, err
 		}
 		if !alive { // logged out (or reset) while we were looking
 			return nil, nil, ErrUnauthenticated
 		}
-		refreshed = &Session{Token: token, Expires: now.Add(SessionTTL)}
+		refreshed = &Session{Token: token, Expires: now.Add(ttl), TTL: ttl}
 	}
 	return s.expose(u), refreshed, nil
 }

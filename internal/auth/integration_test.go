@@ -647,6 +647,57 @@ func TestParallelLoginsRespectTheHashCap(t *testing.T) {
 	}
 }
 
+// T-101 AC3 (audit L3): a session has an absolute ceiling of SessionMaxAge from its creation, however often it is used.
+func TestSessionAbsoluteLifetime(t *testing.T) {
+	e := newEnv(t, opts{})
+	c := sessionCookie(t, e.register(testMail, testPW, "A")).Value
+	t0 := e.clock.now()
+	day := 24 * time.Hour
+	get := func() *httptest.ResponseRecorder {
+		return e.do(req{method: "GET", path: "/api/user/get-me", cookie: c})
+	}
+
+	// Used every day: valid on day 89, and no refresh ever sets the cookie or Redis past the ceiling.
+	var last *http.Cookie
+	for d := 1; d <= 89; d++ {
+		e.clock.advance(day)
+		rec := get()
+		want(t, rec, 200, "")
+		if rec.Header().Get("Set-Cookie") != "" {
+			last = sessionCookie(t, rec)
+			if !last.Expires.Before(t0.Add(SessionMaxAge).Add(time.Second)) || last.MaxAge <= 0 {
+				t.Fatalf("day %d: refreshed cookie Expires %v MaxAge %d, ceiling is %v", d, last.Expires, last.MaxAge, t0.Add(SessionMaxAge))
+			}
+			// Redis counts real time, the test clock is virtual: right after a refresh the TTL is what the refresh asked for.
+			keys, _ := e.rc.Client().Keys(context.Background(), e.rc.Key("sess", "*")).Result()
+			if ttl := e.rc.Client().PTTL(context.Background(), keys[0]).Val(); ttl > SessionMaxAge-time.Duration(d)*day+time.Minute {
+				t.Fatalf("day %d: Redis TTL %v is past the ceiling", d, ttl)
+			}
+		}
+	}
+	// The last refresh is near the ceiling: it was cut short to it (the day-80 refresh is 10 days from day 90).
+	if last == nil || last.Expires.After(t0.Add(SessionMaxAge).Add(time.Second)) || last.MaxAge >= int(SessionTTL/time.Second) {
+		t.Fatalf("last refreshed cookie %+v, want one shortened to the ceiling", last)
+	}
+
+	e.clock.advance(2 * day) // day 91, last seen the day before
+	want(t, get(), 401, "ERROR_UNAUTHORIZED")
+
+	want(t, e.login(testMail, testPW, ""), 200, "") // a new login after the ceiling works
+}
+
+// A session slid at day 80 would live to day 110 by the sliding rule alone; the ceiling still ends it at day 90.
+func TestSessionCeilingBeatsSliding(t *testing.T) {
+	e := newEnv(t, opts{})
+	c := sessionCookie(t, e.register(testMail, testPW, "A")).Value
+	for i := 0; i < 5; i++ { // a refresh at every 16th day: 16, 32, 48, 64, 80
+		e.clock.advance(16 * 24 * time.Hour)
+		want(t, e.do(req{method: "GET", path: "/api/user/get-me", cookie: c}), 200, "")
+	}
+	e.clock.advance(11 * 24 * time.Hour) // day 91
+	want(t, e.do(req{method: "GET", path: "/api/user/get-me", cookie: c}), 401, "ERROR_UNAUTHORIZED")
+}
+
 // AC5: expiry and sliding expiry (clock injected).
 func TestSessionExpiryAndSliding(t *testing.T) {
 	e := newEnv(t, opts{})

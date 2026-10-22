@@ -131,26 +131,28 @@ func (s *Sessions) Create(ctx context.Context, sess session) error {
 		h, ttl, sess.userID, sess.now.UnixMilli(), cleanUserAgent(sess.userAgent), s.sessPrefix(), sess.epoch)
 }
 
-// Lookup returns the owner, the credential epoch it was issued under (0 for a session written before T-103) and the
-// last-seen time of a session; errNotFound when it is unknown or expired (Redis drops it at its expiry).
-func (s *Sessions) Lookup(ctx context.Context, tokenHash []byte) (uid uint64, epoch uint32, lastSeen time.Time, err error) {
+// Lookup returns the owner, the credential epoch it was issued under (0 for a session written before T-103), the creation
+// time (the start of the absolute SessionMaxAge) and the last-seen time of a session; errNotFound when it is unknown or
+// expired (Redis drops it at its expiry).
+func (s *Sessions) Lookup(ctx context.Context, tokenHash []byte) (uid uint64, epoch uint32, createdAt, lastSeen time.Time, err error) {
 	m, err := s.rc.Client().HGetAll(ctx, s.sessKey(tokenKey(tokenHash))).Result()
 	if err != nil {
-		return 0, 0, time.Time{}, s.fail(err)
+		return 0, 0, time.Time{}, time.Time{}, s.fail(err)
 	}
 	uid, uerr := strconv.ParseUint(m["user_id"], 10, 64)
 	ms, merr := strconv.ParseInt(m["last_seen_at"], 10, 64)
+	cms, cerr := strconv.ParseInt(m["created_at"], 10, 64)
 	ep, eerr := strconv.ParseUint(m["epoch"], 10, 32)
 	if m["epoch"] == "" { // written before the epoch existed: epoch 0
 		ep, eerr = 0, nil
 	}
-	if uerr != nil || merr != nil || eerr != nil || uid == 0 { // missing, or a hash this code did not write
-		return 0, 0, time.Time{}, errNotFound
+	if uerr != nil || merr != nil || cerr != nil || eerr != nil || uid == 0 { // missing, or a hash this code did not write
+		return 0, 0, time.Time{}, time.Time{}, errNotFound
 	}
-	return uid, uint32(ep), time.UnixMilli(ms).UTC(), nil
+	return uid, uint32(ep), time.UnixMilli(cms).UTC(), time.UnixMilli(ms).UTC(), nil
 }
 
-// Extend slides the session to now+ttl. It reports false when the session no longer exists.
+// Extend slides the session to now+ttl (the caller keeps it within the absolute ceiling). It reports false when the session no longer exists.
 func (s *Sessions) Extend(ctx context.Context, tokenHash []byte, uid uint64, now time.Time, ttl time.Duration) (bool, error) {
 	h := tokenKey(tokenHash)
 	n, err := s.extend.Run(ctx, s.rc.Client(), []string{s.sessKey(h), s.userKey(uid)}, h, ttl.Milliseconds(), now.UnixMilli()).Int()
