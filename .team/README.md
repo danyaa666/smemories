@@ -12,18 +12,17 @@
 |---|---:|---|
 | BACKLOG | 8 | T-023, T-024, T-025, T-026, T-027, T-031, T-050, T-097 |
 | TODO | 4 | T-029, T-096, T-116, T-120 |
-| READY_FOR_QA | 1 | T-091 |
-| QA_FAIL | 1 | T-115 |
+| READY_FOR_QA | 1 | T-115 |
 | QA_PASS | 1 | T-095 |
-| MERGED | 1 | T-114 |
+| MERGED | 2 | T-091, T-114 |
 | DONE | 96 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-092, T-093, T-094, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-117, T-118, T-119 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-114 ([E03] Web: a malformed yearbook id in the URL shows 'book not found')
+**Awaiting your review (MERGED):** T-091 ([E06] Image-smoke timeout path, config-class retry and message grammar (T-090 QA leftovers)); T-114 ([E03] Web: a malformed yearbook id in the URL shows 'book not found')
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?); Q-051 (Approve merge of T-100 (canonical public ids, PR #93)?); Q-052 (Approve merge of T-111 (Terms acceptance API, PR #96; merges together with T-112)?); Q-053 (Approve merge of T-110 (upload abuse follow-up, PR #99)?); Q-054 (Approve merge of T-107 (bounded photo download memory, PR #98)?)
 
-_Board last written 2026-10-22 15:38Z_
+_Board last written 2026-10-22 15:51Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4343,7 +4342,7 @@ Spec: .team/epics/E06-go-live/10-migrate-docs-and-smoke-robustness.md (read it f
 - 2026-10-17 17:59Z · human · accepted by owner
 
 ### T-091 — [E06] Image-smoke timeout path, config-class retry and message grammar (T-090 QA leftovers)
-- **Status:** READY_FOR_QA
+- **Status:** MERGED
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M2
@@ -4354,14 +4353,16 @@ Spec: .team/epics/E06-go-live/10-migrate-docs-and-smoke-robustness.md (read it f
 - **Assignee:** —
 - **Branch:** task/t-091-e06-image-smoke-timeout-path-config-clas
 - **PR:** 111
-- **Updated:** 2026-10-22 15:37Z by dev
-- **Comments-seen:** 2
+- **Updated:** 2026-10-22 15:51Z by leader
+- **Comments-seen:** 4
 
 Small leftovers from the T-090 QA: (1) scripts/image-smoke.sh: when SMOKE_TIMEOUT fires it exits 143 with no FAIL message and leaves an orphaned sleep holding the pipe open (make image-smoke | tail hangs): print a FAIL line naming the step, kill the child by PID and exit 1. (2) Mail failures of class config are retried 3 times in the background: do not retry them (a misconfiguration will not fix itself in seconds). (3) The message '1 migrations' should read '1 migration'. (4) Add to the T-024 notes: alarm on the ERROR log line for request-path resend failures too, since the metric counts background sends only. Acceptance: each item has a test or a visible check; make lint build test, integration tests and make image-smoke stay green.
 
 #### Comments
 - 2026-10-22 14:43Z · leader · Leader: promoted to refill the pipeline (no deps).
 - 2026-10-22 15:37Z · dev · PR #111 head e07a755, CI green (first e2e run was cancelled in Install Chromium, rerun passed). (1) image-smoke timeout: watchdog kills children by PID, prints SMOKE FAIL naming last passed step, exit 1; verify with make image-smoke-selftest (fake hanging docker, SMOKE_TIMEOUT=2; fails on old script with 143). (2) deliverWithRetry no longer retries ClassConfig: TestDeliverWithRetryStopsOnConfigClass + row in TestBackgroundRetryPolicy. (3) '1 migration' singular: TestCompareSchema rows. (4) docs/email.md: alarm on ERROR line 'mailer: send failed' class=config too (T-024 notes under .team are leader-owned, so the note is in the doc; leader may copy it). make lint build test, test-integration, image-smoke all green locally.
+- 2026-10-22 15:50Z · qa · QA_PASS PR #111 head e07a755. CI all green (e2e, go, go-integration, image, security, web). Evidence: (1) image-smoke timeout: make image-smoke-selftest passes on the new script (2s, exit 1, FAIL line names step, no leftover sleep). The same selftest run against develop's old image-smoke.sh fails with 'exit code 143, want 1'. Real run SMOKE_TIMEOUT=12 bash scripts/image-smoke.sh smemories:local | tail -4: returned at 12.5s, rc=1, 'SMOKE FAIL: the whole run took longer than 12s (last step that passed: only the three binaries plus the distroless base)'; afterwards docker ps/network ls show no smem-smoke objects and pgrep finds no image-smoke process. kill_children walks pgrep -P $$ so only its own descendants are killed by PID; no pkill by name in the script. CI: 'make image-smoke-selftest' step precedes 'make image-smoke' in ci.yml image job. (2) Retry: removing '|| mailer.Class(err)==ClassConfig' makes TestDeliverWithRetryStopsOnConfigClass/config_is_not_retried fail ('3 sends, want 1'); restored, passes; unavailable still retried twice, rejected not retried; TestBackgroundRetryPolicy has the config row. mailer.ConfigError is the only new export (1 small func in errors.go), used by tests across packages only, no widening of behaviour. (3) Grammar: reverting count() makes TestCompareSchema fail on 'one pending' and 'gap' rows; restored, passes. (4) docs/email.md has the ERROR line 'mailer: send failed' class=config alarm note; docs/container.md updated. (5) make lint build test: rc 0 (web 389 tests pass); make test-integration: all ok; make image-smoke: 'image smoke test passed'. Non-blocking: (a) bash prints a 'Terminated: 15' line before the SMOKE FAIL line on a real timeout (cosmetic); (b) the 'ahead' singular branch has no test (cannot be reached while MaxSchemaAhead>=1); (c) T-024 board note itself is leader-owned, leader should copy the doc line into T-024.
+- 2026-10-22 15:51Z · leader · Merged PR #111 as 7d96942 (QA_PASS on e07a755, risk low). The alarm note is in the T-024 spec.
 
 ### T-092 — [E05] Public photo links: signed token, public-media endpoint, revoke-all (API)
 - **Status:** DONE
@@ -5213,7 +5214,7 @@ QA of T-100 (2026-10-21): since T-100 a non-canonical id answers 400 ERROR_PARAM
 - 2026-10-22 14:19Z · leader · Merged PR #109 as 73d6087 (QA_PASS on c422ddf, risk low; 40 browser cases en/vi).
 
 ### T-115 — [E05] Export dialogs return focus to their button; e2e traces drop photo-link URLs
-- **Status:** QA_FAIL
+- **Status:** READY_FOR_QA
 - **Priority:** P3
 - **Type:** bug
 - **Milestone:** M2
@@ -5224,7 +5225,7 @@ QA of T-100 (2026-10-21): since T-100 a non-canonical id answers 400 ERROR_PARAM
 - **Assignee:** —
 - **Branch:** task/t-115-e05-export-dialogs-return-focus-to-their
 - **PR:** https://github.com/danyaa666/smemories/pull/110
-- **Updated:** 2026-10-22 15:11Z by qa
+- **Updated:** 2026-10-22 15:50Z by dev
 - **Comments-seen:** 3
 
 QA of T-094 (2026-10-21): after Continue in the public-link warning and after confirming Disable photo links, focus lands on <body>, so keyboard users restart at the top; return focus to the button that opened the dialog (in the shared Dialog component if that is where it belongs, covering backdrop click too). Also: a failed CI e2e run keeps a Playwright trace that contains the photo-link URL (a bearer token of the throwaway e2e database); scrub it or disable traces for that step. Component test for focus return; show the trace setting in the PR.
@@ -5240,6 +5241,7 @@ QA of T-094 (2026-10-21): after Continue in the public-link warning and after co
   (1) Blocker: repack with `zip -D` (no directory entries) so `npx playwright trace open` reads the scrubbed trace. Add a check in scrub-trace.sh, or a test, that the repacked zip has no directory entries.
   (2) Fail closed: if the scrub fails for any reason, delete that trace.zip (and any file it could not scrub), print why, and keep the run's exit code. An unscrubbed token must never be uploaded.
   Screencast frames are accepted as is. Pull QA's test commit 9b83f06 first. No rebase, no force-push.
+- 2026-10-22 15:50Z · dev · Rework head b812b56 (merged origin/develop, no conflict). QA 1: scrub-trace.sh repacks with zip -D and fails if the zip has directory entries or fails unzip -t; forced failure after step 9 via make e2e: 0 dir entries, 'npx playwright trace open' prints the header, 'trace requests' lists 404 lines; pattern grep of unzipped trace + api/web/migrate logs + error-context.md for non-REDACTED token=, /c/<id>, token JSON, session cookie: 0 real hits (only the spec source's regex 'token=\S+'), 22 token=REDACTED. QA 2 (fail closed): each trace.zip is scrubbed by a child run of the script; any failure deletes that zip and prints why, script exits 0, e2e.sh also deletes results/*/trace.zip if the script itself fails and keeps the run's exit code. Simulated perl failure on the real scrubbed results: zip deleted, message printed. New node tests tools/e2e/scrub-trace.test.mjs (redaction, no dir entries, fail closed, missing folder) wired into npm run guard-test (CI runs it). docs/e2e.md updated. QA 3 accepted. CI green.
 
 ### T-116 — [E12] Web: limit concurrent photo requests on gallery pages (follow-up to T-107)
 - **Status:** TODO
