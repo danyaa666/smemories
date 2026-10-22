@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 import type { NoteItem } from "../api/notes";
 import { mediaUrl } from "../api/yearbooks";
 import { Badge } from "./ui/Badge";
+import { SignatureView } from "./SignatureView";
 import { Button } from "./ui/Button";
 
 /** Field ids of the catalogue (docs/note-fields.md) that have a label in the locale files; any other id is shown as it is. */
@@ -231,6 +232,7 @@ export function NoteCard({ note, lang, selected, onSelect, onStatus, onDelete, o
           ))}
         </ul>
       )}
+      <SignatureView value={note.signature} label={t("note.signature.of", { name })} />
       <div className="inbox-actions">
         {note.status !== "approved" && (
           <Button variant="secondary" onClick={() => onStatus("approved")}>

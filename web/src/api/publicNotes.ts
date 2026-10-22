@@ -1,3 +1,4 @@
+import type { components } from "./schema";
 import { ApiError, apiErrorFrom, request, unwrapSuccess } from "./client";
 
 // The public note form (no account, no cookie): docs/api-contract.md section 8, docs/note-fields.md.
@@ -18,6 +19,8 @@ export type NoteForm = {
   deadline_at: number | null;
   open: boolean;
   fields: NoteField[];
+  /** The signature pad is offered only when `enabled` (the book's template declares it); older answers have no such key. */
+  signature?: components["schemas"]["SignatureInfo"];
 };
 
 export const MAX_PHOTOS = 3;
@@ -29,7 +32,7 @@ export const getNoteForm = (token: string) =>
 
 /**
  * POST the note as one multipart request: `answers` first (the server refuses it after the photos), then the optional
- * honeypot, then the photos. XHR because fetch has no upload progress; `onProgress` gets 0..1 for the whole request.
+ * honeypot and signature, then the photos. XHR because fetch has no upload progress; `onProgress` gets 0..1 for the whole request.
  * A network error is an ApiError with status 0: the answer to a request the server refused early can be lost.
  */
 export function submitNote(
@@ -38,6 +41,7 @@ export function submitNote(
   photos: File[],
   onProgress: (fraction: number) => void,
   honeypot = "",
+  signature?: string,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -63,6 +67,7 @@ export function submitNote(
     const form = new FormData();
     form.append("answers", JSON.stringify(answers));
     if (honeypot) form.append("website", honeypot);
+    if (signature) form.append("signature", signature); // the canonical JSON; sent only when the friend signed
     for (const p of photos) form.append("photos", p);
     xhr.send(form);
   });

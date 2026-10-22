@@ -19,6 +19,9 @@ import { Banner } from "../components/ui/Banner";
 import { Button, buttonClass } from "../components/ui/Button";
 import { EmptyState } from "../components/ui/EmptyState";
 import { PhotoTile } from "../components/ui/PhotoTile";
+import { SignaturePad } from "../components/SignaturePad";
+import { SignatureView } from "../components/SignatureView";
+import { canonical, type Stroke } from "../signature";
 import { TextArea, TextField } from "../components/ui/TextField";
 
 export const BUSY_RETRIES = 3; // 503 busy: the server took nothing, so waiting Retry-After (2 s if absent) and resending is safe
@@ -173,7 +176,12 @@ function NoteFormBody({
   const [busy, setBusy] = useState(false);
   const [slow, setSlow] = useState(false);
   const [problem, setProblem] = useState<unknown>();
-  const [sent, setSent] = useState<Record<string, string>>();
+  const [sent, setSent] = useState<{
+    answers: Record<string, string>;
+    signature: Stroke[] | null;
+  }>();
+  const [signature, setSignature] = useState<Stroke[] | null>(null);
+  const [padKey, setPadKey] = useState(0); // a new key is an empty pad
   const [saved, setSaved] = useState(true);
   const [trap, setTrap] = useState(""); // honeypot: people never see it, bots fill it
   const formRef = useRef<HTMLFormElement>(null);
@@ -228,9 +236,16 @@ function NoteFormBody({
     setProgress(0);
     for (let attempt = 0; ; attempt++) {
       try {
-        await submitNote(token, body, files, setProgress, trap);
+        await submitNote(
+          token,
+          body,
+          files,
+          setProgress,
+          trap,
+          signature ? canonical(signature) : undefined,
+        );
         saveDraft(token, null);
-        setSent(body);
+        setSent({ answers: body, signature });
         break;
       } catch (e) {
         if (e instanceof ApiError && e.code === "busy" && attempt < BUSY_RETRIES) {
@@ -265,15 +280,23 @@ function NoteFormBody({
   }
 
   if (sent) {
-    const long = fields.find((f) => f.kind === "long_text" && sent[f.id]);
-    const sign = sent.name;
+    const long = fields.find((f) => f.kind === "long_text" && sent.answers[f.id]);
+    const sign = sent.answers.name;
     return (
       <section className="note-sent" aria-labelledby="note-sent-h">
         {long && (
           <blockquote className="note-card">
-            <p>{sent[long.id]}</p>
+            <p>{sent.answers[long.id]}</p>
             {sign && <footer>— {sign}</footer>}
           </blockquote>
+        )}
+        {sent.signature && (
+          <div className="note-receipt">
+            <SignatureView
+              value={{ v: 1, w: 1000, h: 400, s: sent.signature }}
+              label={t("note.signature.yours")}
+            />
+          </div>
         )}
         <h1 id="note-sent-h" ref={sentRef} tabIndex={-1}>
           {sign ? t("note.sent.titleName", { name: sign }) : t("note.sent.title")}
@@ -285,6 +308,8 @@ function NoteFormBody({
             setSent(undefined);
             setAnswers(Object.fromEntries(fields.map((f) => [f.id, ""])));
             setPhotos([]);
+            setSignature(null);
+            setPadKey((n) => n + 1);
           }}
         >
           {t("note.sent.another")}
@@ -311,7 +336,8 @@ function NoteFormBody({
     (badField === id
       ? t((problem as ApiError).code === "missing_answer" ? "note.required" : "note.invalidAnswer")
       : undefined);
-  const generic = problem && !photoFail && !badField ? problem : undefined;
+  const sigFail = problem instanceof ApiError && problem.code === "invalid_signature";
+  const generic = problem && !photoFail && !badField && !sigFail ? problem : undefined;
   const nFix = fields.filter((f) => fieldProblem(f.id)).length;
 
   return (
@@ -347,6 +373,30 @@ function NoteFormBody({
           />
         );
       })}
+
+      {form.signature?.enabled && (
+        <>
+          <SignaturePad
+            key={padKey}
+            limits={{
+              maxStrokes: form.signature.max_strokes,
+              maxPoints: form.signature.max_points,
+            }}
+            disabled={sending}
+            onChange={(s) => {
+              setSignature(s);
+              setProblem((p: unknown) =>
+                p instanceof ApiError && p.code === "invalid_signature" ? undefined : p,
+              );
+            }}
+          />
+          {sigFail && (
+            <p role="alert" className="field-error">
+              {t("note.signature.invalid")}
+            </p>
+          )}
+        </>
+      )}
 
       <div className="note-photos">
         <p className="note-photos-head">

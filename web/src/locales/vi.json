@@ -215,6 +215,18 @@
     "resent": "Chúng tôi đã gửi mã mới."
   },
   "note": {
+    "signature": {
+      "label": "Ký tên tại đây (không bắt buộc)",
+      "hint": "Dùng ngón tay, bút hoặc chuột để ký. Bạn có thể bỏ qua.",
+      "undo": "Hoàn tác",
+      "clear": "Xóa",
+      "tooDetailed": "Chữ ký quá chi tiết. Hãy xóa và ký đơn giản hơn.",
+      "invalid": "Không dùng được chữ ký này. Hãy xóa và ký lại.",
+      "added": "Đã thêm chữ ký",
+      "cleared": "Đã xóa chữ ký",
+      "of": "Chữ ký của {{name}}",
+      "yours": "Chữ ký của bạn"
+    },
     "writingIn": "bạn đang viết vào",
     "privacy": "Chỉ {{name}} đọc được lời nhắn này. Bạn ấy sẽ chọn lời nhắn nào được in vào sách.",
     "optional": "(không bắt buộc)",

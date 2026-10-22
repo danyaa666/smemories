@@ -142,3 +142,63 @@
 .note-cta {
   margin-top: var(--space-8);
 }
+
+/* Signature pad (T-096). touch-action: none is on the canvas only, so the page still scrolls everywhere else. */
+.sig-pad {
+  margin-bottom: var(--space-4);
+}
+
+.sig-label {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-small);
+  font-weight: var(--weight-semibold);
+}
+
+.sig-canvas {
+  display: block;
+  width: 100%;
+  min-height: 120px;
+  aspect-ratio: 5 / 2;
+  margin-bottom: var(--space-2);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: #fffdf7; /* the paper */
+  color: var(--color-ink); /* the ink: the canvas code reads it */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  cursor: crosshair;
+}
+
+@media (forced-colors: active) {
+  .sig-canvas {
+    background: Canvas;
+    color: CanvasText;
+  }
+}
+
+.sig-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.sig-view {
+  display: block;
+  height: 56px;
+  width: auto;
+  aspect-ratio: 5 / 2;
+  max-width: 100%;
+  color: var(--color-ink);
+}
+
+.note-receipt .sig-view {
+  height: 40px;
+}
+
+.note-receipt {
+  display: flex;
+  justify-content: center;
+  margin: var(--space-4) 0 var(--space-2);
+}
