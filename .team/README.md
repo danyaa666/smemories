@@ -11,18 +11,18 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 13 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-095, T-096, T-097, T-116 |
-| TODO | 5 | T-106, T-113, T-114, T-115, T-119 |
-| IN_PROGRESS | 1 | T-109 |
-| IN_QA | 1 | T-105 |
-| MERGED | 1 | T-101 |
+| TODO | 4 | T-106, T-113, T-114, T-115 |
+| IN_PROGRESS | 1 | T-119 |
+| IN_QA | 1 | T-109 |
+| MERGED | 2 | T-101, T-105 |
 | DONE | 90 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-092, T-093, T-094, T-098, T-099, T-100, T-102, T-103, T-104, T-107, T-108, T-110, T-111, T-112, T-117, T-118 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-101 ([E12] Small hardening: readyz cache, generic code-email greeting, absolute session lifetime)
+**Awaiting your review (MERGED):** T-101 ([E12] Small hardening: readyz cache, generic code-email greeting, absolute session lifetime); T-105 ([E12] Note links capped and paged; contributor photos cannot exhaust the owner's quota)
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?); Q-051 (Approve merge of T-100 (canonical public ids, PR #93)?); Q-052 (Approve merge of T-111 (Terms acceptance API, PR #96; merges together with T-112)?); Q-053 (Approve merge of T-110 (upload abuse follow-up, PR #99)?); Q-054 (Approve merge of T-107 (bounded photo download memory, PR #98)?)
 
-_Board last written 2026-10-22 04:48Z_
+_Board last written 2026-10-22 05:18Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4806,24 +4806,34 @@ Spec: .team/epics/E12-security-hardening/08-media-processing-robustness.md (read
 - 2026-10-21 13:52Z · human · accepted by owner
 
 ### T-105 — [E12] Note links capped and paged; contributor photos cannot exhaust the owner's quota
-- **Status:** IN_QA
+- **Status:** MERGED
 - **Priority:** P3
 - **Type:** security
 - **Milestone:** M2
 - **Depends-on:** —
 - **Risk:** high
 - **Rework:** 0
-- **Owner-approved:** —
-- **Assignee:** qa
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-105-e12-note-links-capped-and-paged-contribu
 - **PR:** https://github.com/danyaa666/smemories/pull/103
-- **Updated:** 2026-10-22 04:34Z by qa
-- **Comments-seen:** 1
+- **Updated:** 2026-10-22 05:18Z by leader
+- **Comments-seen:** 4
 
 Spec: .team/epics/E12-security-hardening/09-links-and-contributor-quota.md (read it from the repo root). Source: audit run 1, docs/security-audit-skill-2026-10-20/ (PR #86). Risk high: owner approves the merge.
 
 #### Comments
 - 2026-10-22 04:34Z · dev · PR #103 head 7c28a54, CI green (go, go-integration, e2e, web, image, security). 50-link cap (revoked incl.) + keyset paging on note-collection/get-list; owner quota = owner photos only, all variants (migration 20261022100000 adds thumb_bytes/print_bytes); contributor quota 600 photos/1 GiB per book, friend-readable message. Verify: TestLinkCap, TestLinkListPaging, TestContributorQuotaIsSeparate, TestOwnerQuotaCountsEveryVariant, TestSubmitLimits; Newman notes collection 157/0 on a private API+DB. Gaps: make e2e not run locally (reset-limits would hit the shared Redis); CI e2e passed. Old rows keep thumb_bytes/print_bytes 0.
+- 2026-10-22 04:56Z · qa · QA_PASS. PR #103 dev head 7c28a54 (CI green: go, go-integration, e2e, web, image, security); QA added test-only commit 4cb4534 (internal/notes/qa_t105_integration_test.go, internal/media/qa_t105_integration_test.go), so the PR head is now 4cb4534.
+  Evidence (AC -> how -> result):
+  AC1 link cap: dev TestLinkCap (50th ok, 51st 409 ERROR_LIMIT_REACHED, other book unaffected) PASS. Mine TestQALinkCapRace: 48 revoked + 16 parallel creates -> exactly 2 ok, 14 x 409, 50 rows; 12 parallel creates on a fresh book -> exactly 5 active, 6th 409. Code: count + revoked taken under yearbook_tab FOR UPDATE.
+  AC1 paging: dev TestLinkListPaging (stable across insert, no dups, limit 0/101/x and junk cursor -> 400 ERROR_PARAM, cursor of other book refused) PASS. Mine TestQALinkPagingTiesAndTamper: 9 links with the same created_at paged with limit=1 -> 9 distinct, no gap; flipped char at start/mid/end, appended char, upper-cased cursor -> 400; note-inbox cursor refused; other owner -> 404; limit=100 ok, -1 and 1.5 -> 400. Web: vitest 379/379 incl. 'loads the next page of links on request' (Show more links); tsc, eslint+prettier, lint:i18n, check:api ok.
+  AC2 quotas: TestContributorQuotaIsSeparate, TestOwnerQuotaCountsEveryVariant, TestSubmitLimits PASS (owner 200th photo still fits after contributors upload; full owner quota does not block friends; 601st contributor and over-1GiB -> 409 ERROR_QUOTA_EXCEEDED with 'send your note without photos'; text-only note still 200; nothing kept on refusal). Mine TestQAContributorQuotaRace: at 597/600 photos 10 parallel uploads -> exactly 3 ok, 7 refused, 9 objects left (no orphans), owner upload still 200; at the byte boundary (room for 2.5 photos) 8 parallel -> exactly 2 ok. Zero overshoot: the insert re-checks under the user-row lock; in-flight work is bounded by the T-102 slots.
+  Migration 20261022100000: expand-only (ADD COLUMN thumb_bytes/print_bytes INT UNSIGNED NOT NULL DEFAULT 0 with COMMENT); on a private DB did up, down, insert old row, up -> old row reads 0/0, down/up again clean. TestBackfillPrint asserts print_bytes filled (3 rows). internal/db tests pass.
+  AC3: go build, go vet (also -tags integration), golangci-lint 0 issues, go test ./... all ok; go test -race -count=1 -timeout 30m -tags integration ./... all ok (internal/auth takes 622 s; it only passes with the Makefile 30m timeout, the default 10m times out; not touched by this PR). Postman CLI (newman not installed) on a private API+DB (SMEM_ENV=dev, own DB and Redis db 9): notes 82 req/157 assertions 0 failed, run twice back to back; media 172/0; notes-moderation 164/0; public-media 92/0 (with SMEM_MEDIA_LINK_SECRET set). e2e: ran scripts/e2e.sh (what make e2e runs) on a private DB and Redis db 8, so the shared Redis and reset-limits were not touched: 5/5 passed. openapi, schema.d.ts, docs/media.md, docs/moderation.md updated and consistent with behaviour.
+  Non-blocking: (1) Postman notes collection covers paging and bounds but not the 51st link or the contributor 409 (impractical over HTTP in one run; covered by integration tests). (2) Rows older than the migration count 0 for thumb/print until the print backfill; thumb_bytes is never backfilled (no production data, as the spec says). (3) A leaked link can still fill the 600/1 GiB contributor room and stop friends sending photos until the owner deletes some (by design, text-only still works). (4) Revoked links cannot be deleted, so the 50 is permanent per book (documented). Cleanup: private DBs dropped, my API stopped, nothing touched in the shared stack.
+- 2026-10-22 04:58Z · human · owner approved merge
+- 2026-10-22 05:18Z · leader · Merged PR #103 as fd8f450 (owner approved; QA_PASS; CI 6/6 green on 4cb4534). Migration 20261022100000 is expand-only.
 
 ### T-106 — [E12] Auth and repository hygiene from audit run 1
 - **Status:** TODO
@@ -4949,7 +4959,7 @@ Spec: .team/epics/E06-go-live/11-concurrent-migrate-race.md. CI image job flake 
 - 2026-10-21 08:13Z · human · accepted by owner
 
 ### T-109 — [E02] Flaky TestConcurrentResetHasOneWinner under CPU load
-- **Status:** IN_PROGRESS
+- **Status:** IN_QA
 - **Priority:** P3
 - **Type:** bug
 - **Milestone:** M2
@@ -4957,15 +4967,16 @@ Spec: .team/epics/E06-go-live/11-concurrent-migrate-race.md. CI image job flake 
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** qa
 - **Branch:** task/t-109-e02-flaky-testconcurrentresethasonewinne
-- **PR:** —
-- **Updated:** 2026-10-22 04:34Z by dev
-- **Comments-seen:** 0
+- **PR:** https://github.com/danyaa666/smemories/pull/104
+- **Updated:** 2026-10-22 05:12Z by qa
+- **Comments-seen:** 1
 
 QA of T-103 (2026-10-21): go-integration was red once on internal/auth TestConcurrentResetHasOneWinner; the same failure reproduces on develop b3878c2 under CPU load, so it is the test, not T-103. Find why (likely the hash-slot wait in the test env is shorter than the hashing under load), make the test deterministic (larger hashWait or a held slot released on cue, no sleeps), and show it green with go test -race -count=50 while the machine is loaded (e.g. a parallel go test ./... in the background). No production code change unless the test proves a real bug.
 
 #### Comments
+- 2026-10-22 05:11Z · dev · Root cause: test ordering bug, NOT a product race. register and forgot send their mails from background goroutines; code() takes the newest mail, so when the reset mail overtook the registration mail it returned the verify code -> 8 wrong-code resets -> 0 winners. Redis check script is atomic; no product change. Fix: forgot() helper waits svc.Wait() when the recording mailer is used (also fixes TestEmailLocale msgs[0]/last); test now prints all answers. Repro: 300ms delay on the verify mail in the recording mailer, GOMAXPROCS=2 + 12 busy loops, -race -count=50: before 50/50 FAIL, after 50/50 PASS. Natural flake did not reproduce here (50 runs under load + parallel full integration run, before and after). Full internal/auth integration suite green, CI green on eb03f5d. Verify: PR #104 diff is tests only.
 
 ### T-110 — [E12] Owner uploads need a verified email and a per-client share; bound drains of rejected public bodies
 - **Status:** DONE
@@ -5211,7 +5222,7 @@ Spec: .team/epics/E06-go-live/12-go-1-26-10-base-image.md (read it from the main
 - 2026-10-22 03:52Z · human · accepted by owner
 
 ### T-119 — [E12] OpenAPI: document the 90-day absolute session lifetime (follow-up to T-101)
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P3
 - **Type:** docs
 - **Milestone:** M2
@@ -5219,10 +5230,10 @@ Spec: .team/epics/E06-go-live/12-go-1-26-10-base-image.md (read it from the main
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-119-e12-openapi-document-the-90-day-absolute
 - **PR:** —
-- **Updated:** 2026-10-22 04:32Z by leader
+- **Updated:** 2026-10-22 05:12Z by dev
 - **Comments-seen:** 0
 
 Spec: .team/epics/E12-security-hardening/12-openapi-session-ceiling.md (read it from the main checkout).
