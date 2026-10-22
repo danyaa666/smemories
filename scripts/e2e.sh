@@ -65,5 +65,6 @@ cd tools/e2e
 status=0
 E2E_BASE_URL="$ORIGIN" E2E_API_URL="http://127.0.0.1:$API_PORT" E2E_OUT="$OUT" npx playwright test || status=$?
 # A failed run keeps a trace that holds the link and photo tokens and the session cookie: scrub it before anything uploads it (T-115).
-./scrub-trace.sh "$OUT/results"
+# Fails closed: if the script itself cannot run, no trace is left behind. The run's own exit code is kept either way.
+./scrub-trace.sh "$OUT/results" || { echo "e2e: the trace scrub failed, deleting the traces" >&2; rm -f "$OUT"/results/*/trace.zip; }
 exit "$status"

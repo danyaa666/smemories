@@ -1,0 +1,65 @@
+{"version":10,"type":"context-options","origin":"library","browserName":"","playwrightVersion":"1.64.0","options":{},"platform":"darwin","wallTime":1792683622002,"monotonicTime":10169.266,"sdkLanguage":"javascript","title":"journey.spec.mjs:71 › M1 journey: sign up, build a book, collect notes, print the PDF"}
+{"type":"before","callId":"otnb@972","startTime":10169.883,"class":"APIRequestContext","method":"fetch","params":{"url":"/api/auth/login","method":"POST","jsonData":"{\"email\":\"e2e-mvjpje130au0@example.com\",\"password\":\"Mật-khẩu-mvjpje130au0-9\"}","timeout":15000}}
+{"type":"log","callId":"otnb@972","time":10170.383,"message":"→ POST http://127.0.0.1:14173/api/auth/login"}
+{"type":"log","callId":"otnb@972","time":10170.388,"message":"  user-agent: Playwright/1.64.0 (arm64; macOS 15.6) node/22.17"}
+{"type":"log","callId":"otnb@972","time":10170.391,"message":"  accept: */*"}
+{"type":"log","callId":"otnb@972","time":10170.392,"message":"  accept-encoding: gzip,deflate,br"}
+{"type":"log","callId":"otnb@972","time":10170.394,"message":"  Origin: http://127.0.0.1:14173"}
+{"type":"log","callId":"otnb@972","time":10170.395,"message":"  content-type: application/json"}
+{"type":"log","callId":"otnb@972","time":10170.397,"message":"  content-length: 81"}
+{"type":"log","callId":"otnb@972","time":10204.997,"message":"← 200 OK"}
+{"type":"log","callId":"otnb@972","time":10205.007,"message":"  access-control-allow-origin: http://127.0.0.1:14173"}
+{"type":"log","callId":"otnb@972","time":10205.009,"message":"  vary: Origin"}
+{"type":"log","callId":"otnb@972","time":10205.011,"message":"  cache-control: no-store"}
+{"type":"log","callId":"otnb@972","time":10205.013,"message":"  content-type: application/json; charset=utf-8"}
+{"type":"log","callId":"otnb@972","time":10205.014,"message":"  referrer-policy: no-referrer"}
+{"type":"log","callId":"otnb@972","time":10205.016,"message":"  set-cookie: __Host-smem_session=REDACTED; Path=/; Expires=Sat, 21 Nov 2026 15:40:22 GMT; Max-Age=2592000; HttpOnly; Secure; SameSite=Lax"}
+{"type":"log","callId":"otnb@972","time":10205.017,"message":"  x-content-type-options: nosniff"}
+{"type":"log","callId":"otnb@972","time":10205.019,"message":"  x-frame-options: DENY"}
+{"type":"log","callId":"otnb@972","time":10205.02,"message":"  x-request-id: ba68b9ecf41962fe984db190c39a354f"}
+{"type":"log","callId":"otnb@972","time":10205.022,"message":"  date: Thu, 22 Oct 2026 15:40:22 GMT"}
+{"type":"log","callId":"otnb@972","time":10205.024,"message":"  content-length: 257"}
+{"type":"log","callId":"otnb@972","time":10205.025,"message":"  connection: close"}
+{"type":"after","callId":"otnb@972","endTime":10205.545,"result":{"response":{"url":"http://127.0.0.1:14173/api/auth/login","status":200,"statusText":"OK","headers":[{"name":"Access-Control-Allow-Origin","value":"http://127.0.0.1:14173"},{"name":"Vary","value":"Origin"},{"name":"cache-control","value":"no-store"},{"name":"content-type","value":"application/json; charset=utf-8"},{"name":"referrer-policy","value":"no-referrer"},{"name":"set-cookie","value":"__Host-smem_session=REDACTED; Path=/; Expires=Sat, 21 Nov 2026 15:40:22 GMT; Max-Age=2592000; HttpOnly; Secure; SameSite=Lax"},{"name":"x-content-type-options","value":"nosniff"},{"name":"x-frame-options","value":"DENY"},{"name":"x-request-id","value":"ba68b9ecf41962fe984db190c39a354f"},{"name":"date","value":"Thu, 22 Oct 2026 15:40:22 GMT"},{"name":"content-length","value":"257"},{"name":"connection","value":"close"}],"serverAddr":{"ipAddress":"127.0.0.1","port":14173},"timing":{"startTime":1792683622003,"domainLookupStart":-1,"domainLookupEnd":-1,"connectStart":0,"secureConnectionStart":-1,"connectEnd":0.6559999999990396,"requestStart":0.6559999999990396,"responseStart":34.51499999999942},"responseEndTiming":34.998999999999796,"fetchUid":"314e465e835fcdb093958ef018d51c47"}}}
+{"type":"before","callId":"otnb@974","startTime":10206.447,"class":"APIRequestContext","method":"fetch","params":{"url":"/api/yearbook/get-list","method":"GET","timeout":15000}}
+{"type":"log","callId":"otnb@974","time":10207.169,"message":"→ GET http://127.0.0.1:14173/api/yearbook/get-list"}
+{"type":"log","callId":"otnb@974","time":10207.174,"message":"  user-agent: Playwright/1.64.0 (arm64; macOS 15.6) node/22.17"}
+{"type":"log","callId":"otnb@974","time":10207.176,"message":"  accept: */*"}
+{"type":"log","callId":"otnb@974","time":10207.178,"message":"  accept-encoding: gzip,deflate,br"}
+{"type":"log","callId":"otnb@974","time":10207.179,"message":"  Origin: http://127.0.0.1:14173"}
+{"type":"log","callId":"otnb@974","time":10207.181,"message":"  cookie: __Host-smem_session=REDACTED"}
+{"type":"log","callId":"otnb@974","time":10214.816,"message":"← 200 OK"}
+{"type":"log","callId":"otnb@974","time":10214.821,"message":"  access-control-allow-origin: http://127.0.0.1:14173"}
+{"type":"log","callId":"otnb@974","time":10214.823,"message":"  vary: Origin"}
+{"type":"log","callId":"otnb@974","time":10214.825,"message":"  cache-control: no-store"}
+{"type":"log","callId":"otnb@974","time":10214.826,"message":"  content-type: application/json; charset=utf-8"}
+{"type":"log","callId":"otnb@974","time":10214.828,"message":"  referrer-policy: no-referrer"}
+{"type":"log","callId":"otnb@974","time":10214.829,"message":"  x-content-type-options: nosniff"}
+{"type":"log","callId":"otnb@974","time":10214.831,"message":"  x-frame-options: DENY"}
+{"type":"log","callId":"otnb@974","time":10214.832,"message":"  x-request-id: 9d235a77785e299bd0767aeb98e91017"}
+{"type":"log","callId":"otnb@974","time":10214.834,"message":"  date: Thu, 22 Oct 2026 15:40:22 GMT"}
+{"type":"log","callId":"otnb@974","time":10214.835,"message":"  content-length: 728"}
+{"type":"log","callId":"otnb@974","time":10214.837,"message":"  connection: close"}
+{"type":"after","callId":"otnb@974","endTime":10214.9,"result":{"response":{"url":"http://127.0.0.1:14173/api/yearbook/get-list","status":200,"statusText":"OK","headers":[{"name":"Access-Control-Allow-Origin","value":"http://127.0.0.1:14173"},{"name":"Vary","value":"Origin"},{"name":"cache-control","value":"no-store"},{"name":"content-type","value":"application/json; charset=utf-8"},{"name":"referrer-policy","value":"no-referrer"},{"name":"x-content-type-options","value":"nosniff"},{"name":"x-frame-options","value":"DENY"},{"name":"x-request-id","value":"9d235a77785e299bd0767aeb98e91017"},{"name":"date","value":"Thu, 22 Oct 2026 15:40:22 GMT"},{"name":"content-length","value":"728"},{"name":"connection","value":"close"}],"serverAddr":{"ipAddress":"127.0.0.1","port":14173},"timing":{"startTime":1792683622040,"domainLookupStart":-1,"domainLookupEnd":-1,"connectStart":0,"secureConnectionStart":-1,"connectEnd":0.3600000000005821,"requestStart":0.3600000000005821,"responseStart":7.518000000000029},"responseEndTiming":7.632999999999811,"fetchUid":"5bb62646ec9697a8c9f0dca90a293d84"}}}
+{"type":"before","callId":"otnb@977","startTime":10216.356,"class":"APIRequestContext","method":"fetch","params":{"url":"/api/yearbook/delete","method":"POST","jsonData":"{\"id\":\"01M5J4A9R4EYTB6VVKRFYCDZJJ\"}","timeout":15000}}
+{"type":"log","callId":"otnb@977","time":10216.588,"message":"→ POST http://127.0.0.1:14173/api/yearbook/delete"}
+{"type":"log","callId":"otnb@977","time":10216.592,"message":"  user-agent: Playwright/1.64.0 (arm64; macOS 15.6) node/22.17"}
+{"type":"log","callId":"otnb@977","time":10216.593,"message":"  accept: */*"}
+{"type":"log","callId":"otnb@977","time":10216.596,"message":"  accept-encoding: gzip,deflate,br"}
+{"type":"log","callId":"otnb@977","time":10216.597,"message":"  Origin: http://127.0.0.1:14173"}
+{"type":"log","callId":"otnb@977","time":10216.599,"message":"  content-type: application/json"}
+{"type":"log","callId":"otnb@977","time":10216.6,"message":"  content-length: 35"}
+{"type":"log","callId":"otnb@977","time":10216.602,"message":"  cookie: __Host-smem_session=REDACTED"}
+{"type":"log","callId":"otnb@977","time":10236.687,"message":"← 200 OK"}
+{"type":"log","callId":"otnb@977","time":10236.691,"message":"  access-control-allow-origin: http://127.0.0.1:14173"}
+{"type":"log","callId":"otnb@977","time":10236.693,"message":"  vary: Origin"}
+{"type":"log","callId":"otnb@977","time":10236.695,"message":"  cache-control: no-store"}
+{"type":"log","callId":"otnb@977","time":10236.696,"message":"  content-type: application/json; charset=utf-8"}
+{"type":"log","callId":"otnb@977","time":10236.698,"message":"  referrer-policy: no-referrer"}
+{"type":"log","callId":"otnb@977","time":10236.699,"message":"  x-content-type-options: nosniff"}
+{"type":"log","callId":"otnb@977","time":10236.701,"message":"  x-frame-options: DENY"}
+{"type":"log","callId":"otnb@977","time":10236.702,"message":"  x-request-id: 80f4032e862637cdfdfae282983a2679"}
+{"type":"log","callId":"otnb@977","time":10236.704,"message":"  date: Thu, 22 Oct 2026 15:40:22 GMT"}
+{"type":"log","callId":"otnb@977","time":10236.705,"message":"  content-length: 26"}
+{"type":"log","callId":"otnb@977","time":10236.707,"message":"  connection: close"}
+{"type":"after","callId":"otnb@977","endTime":10236.765,"result":{"response":{"url":"http://127.0.0.1:14173/api/yearbook/delete","status":200,"statusText":"OK","headers":[{"name":"Access-Control-Allow-Origin","value":"http://127.0.0.1:14173"},{"name":"Vary","value":"Origin"},{"name":"cache-control","value":"no-store"},{"name":"content-type","value":"application/json; charset=utf-8"},{"name":"referrer-policy","value":"no-referrer"},{"name":"x-content-type-options","value":"nosniff"},{"name":"x-frame-options","value":"DENY"},{"name":"x-request-id","value":"80f4032e862637cdfdfae282983a2679"},{"name":"date","value":"Thu, 22 Oct 2026 15:40:22 GMT"},{"name":"content-length","value":"26"},{"name":"connection","value":"close"}],"serverAddr":{"ipAddress":"127.0.0.1","port":14173},"timing":{"startTime":1792683622049,"domainLookupStart":-1,"domainLookupEnd":-1,"connectStart":0,"secureConnectionStart":-1,"connectEnd":0.2750000000014552,"requestStart":0.2750000000014552,"responseStart":20.00500000000102},"responseEndTiming":20.090000000000146,"fetchUid":"89f3ad3d2daab1a5f787ada721c6d3e4"}}}

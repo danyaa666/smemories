@@ -71,8 +71,8 @@ error starts with `STEP FAILED: <n. title>`, then Playwright's own message and c
 (kept for 3 days) holds the trace (open it with `npx playwright show-trace`, or at trace.playwright.dev), the screenshot and `api.log`.
 A trace holds every request, response body and page snapshot, so it would contain the note-link token, the photo-link tokens and the session cookie.
 `scripts/e2e.sh` therefore runs `tools/e2e/scrub-trace.sh` on a failed run, before anything uploads the folder: it unpacks each `trace.zip`, replaces
-`token=...`, `/c/<token>`, `"token":"..."` and the `__Host-smem_session` cookie by `REDACTED`, and packs it again (needs `unzip`, `zip` and `perl`; the
-runner and macOS have them). The trace stays useful (steps, screenshots, request URLs and statuses) and the artifact expires after 3 days. The token
+`token=...`, `/c/<token>`, `"token":"..."` and the `__Host-smem_session` cookie by `REDACTED`, and packs it again without directory entries (Playwright's reader fails on them; needs `unzip`, `zip` and `perl`; the
+runner and macOS have them). It fails closed: a `trace.zip` that cannot be scrubbed and checked is deleted and the reason printed, so it is never uploaded; the run's exit code is kept. `npm run guard-test` in `tools/e2e` tests the script. The trace stays useful (steps, screenshots, request URLs and statuses) and the artifact expires after 3 days. The token
 is also never printed to the job log (every error leaving a step is scrubbed of it). To check it:
 `unzip -q out/results/*/trace.zip -d /tmp/t && grep -rE 'get-content\?token=[^R]' /tmp/t` finds nothing. A new bearer secret in the app needs a rule in the script. The job has a 10 minute limit (the journey itself 240 s) and caches the Chromium download per
 Playwright version.

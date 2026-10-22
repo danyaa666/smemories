@@ -1,0 +1,23 @@
+{"version":10,"type":"context-options","origin":"library","browserName":"","playwrightVersion":"1.64.0","options":{},"platform":"darwin","wallTime":1792683615052,"monotonicTime":3219.657,"sdkLanguage":"javascript","title":"journey.spec.mjs:71 › M1 journey: sign up, build a book, collect notes, print the PDF"}
+{"type":"before","callId":"otnb@593","startTime":3919.822,"class":"APIRequestContext","method":"fetch","params":{"url":"http://127.0.0.1:14173/api/user/get-me","method":"GET","headers":[{"name":"accept-language","value":"en-US"},{"name":"cookie","value":"__Host-smem_session=REDACTED"},{"name":"user-agent","value":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36"},{"name":"accept","value":"application/json"},{"name":"sec-ch-ua","value":"\"Not:A-Brand\";v=\"8\", \"Chromium\";v=\"156\", \"HeadlessChrome\";v=\"156\""},{"name":"sec-ch-ua-mobile","value":"?0"},{"name":"sec-ch-ua-platform","value":"\"macOS\""}],"timeout":15000}}
+{"type":"log","callId":"otnb@593","time":3920.422,"message":"→ GET http://127.0.0.1:14173/api/user/get-me"}
+{"type":"log","callId":"otnb@593","time":3920.428,"message":"  user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36"}
+{"type":"log","callId":"otnb@593","time":3920.43,"message":"  accept: application/json"}
+{"type":"log","callId":"otnb@593","time":3920.432,"message":"  accept-encoding: gzip,deflate,br"}
+{"type":"log","callId":"otnb@593","time":3920.433,"message":"  accept-language: en-US"}
+{"type":"log","callId":"otnb@593","time":3920.434,"message":"  cookie: __Host-smem_session=REDACTED"}
+{"type":"log","callId":"otnb@593","time":3920.436,"message":"  sec-ch-ua: \"Not:A-Brand\";v=\"8\", \"Chromium\";v=\"156\", \"HeadlessChrome\";v=\"156\""}
+{"type":"log","callId":"otnb@593","time":3920.437,"message":"  sec-ch-ua-mobile: ?0"}
+{"type":"log","callId":"otnb@593","time":3920.438,"message":"  sec-ch-ua-platform: \"macOS\""}
+{"type":"log","callId":"otnb@593","time":3926.303,"message":"← 200 OK"}
+{"type":"log","callId":"otnb@593","time":3926.315,"message":"  vary: Origin"}
+{"type":"log","callId":"otnb@593","time":3926.319,"message":"  cache-control: no-store"}
+{"type":"log","callId":"otnb@593","time":3926.322,"message":"  content-type: application/json; charset=utf-8"}
+{"type":"log","callId":"otnb@593","time":3926.325,"message":"  referrer-policy: no-referrer"}
+{"type":"log","callId":"otnb@593","time":3926.329,"message":"  x-content-type-options: nosniff"}
+{"type":"log","callId":"otnb@593","time":3926.332,"message":"  x-frame-options: DENY"}
+{"type":"log","callId":"otnb@593","time":3926.335,"message":"  x-request-id: d4ebae38cd37125a8f0e22f90a45b8d7"}
+{"type":"log","callId":"otnb@593","time":3926.339,"message":"  date: Thu, 22 Oct 2026 15:40:15 GMT"}
+{"type":"log","callId":"otnb@593","time":3926.343,"message":"  content-length: 347"}
+{"type":"log","callId":"otnb@593","time":3926.346,"message":"  connection: close"}
+{"type":"after","callId":"otnb@593","endTime":3926.495,"result":{"response":{"url":"http://127.0.0.1:14173/api/user/get-me","status":200,"statusText":"OK","headers":[{"name":"Vary","value":"Origin"},{"name":"cache-control","value":"no-store"},{"name":"content-type","value":"application/json; charset=utf-8"},{"name":"referrer-policy","value":"no-referrer"},{"name":"x-content-type-options","value":"nosniff"},{"name":"x-frame-options","value":"DENY"},{"name":"x-request-id","value":"d4ebae38cd37125a8f0e22f90a45b8d7"},{"name":"date","value":"Thu, 22 Oct 2026 15:40:15 GMT"},{"name":"content-length","value":"347"},{"name":"connection","value":"close"}],"serverAddr":{"ipAddress":"127.0.0.1","port":14173},"timing":{"startTime":1792683615753,"domainLookupStart":-1,"domainLookupEnd":-1,"connectStart":0,"secureConnectionStart":-1,"connectEnd":0.48900000000003274,"requestStart":0.48900000000003274,"responseStart":5.425000000000182},"responseEndTiming":5.717999999999847,"fetchUid":"06e6589cfd301758d46ee161ec6d1d12"}}}

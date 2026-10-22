@@ -1,0 +1,41 @@
+{"version":10,"type":"context-options","origin":"library","browserName":"","playwrightVersion":"1.64.0","options":{},"platform":"darwin","wallTime":1792683621537,"monotonicTime":9704.805,"sdkLanguage":"javascript","title":"journey.spec.mjs:71 › M1 journey: sign up, build a book, collect notes, print the PDF"}
+{"type":"before","callId":"otnb@865","startTime":9706.07,"class":"APIRequestContext","method":"fetch","params":{"url":"http://127.0.0.1:14173/api/public-media/get-content?token=REDACTED","method":"GET","timeout":15000}}
+{"type":"log","callId":"otnb@865","time":9706.359,"message":"→ GET http://127.0.0.1:14173/api/public-media/get-content?token=REDACTED"}
+{"type":"log","callId":"otnb@865","time":9706.363,"message":"  user-agent: Playwright/1.64.0 (arm64; macOS 15.6) node/22.17"}
+{"type":"log","callId":"otnb@865","time":9706.364,"message":"  accept: */*"}
+{"type":"log","callId":"otnb@865","time":9706.365,"message":"  accept-encoding: gzip,deflate,br"}
+{"type":"log","callId":"otnb@865","time":9718.821,"message":"← 200 OK"}
+{"type":"log","callId":"otnb@865","time":9718.827,"message":"  vary: Origin"}
+{"type":"log","callId":"otnb@865","time":9718.828,"message":"  accept-ranges: bytes"}
+{"type":"log","callId":"otnb@865","time":9718.83,"message":"  cache-control: public, max-age=300"}
+{"type":"log","callId":"otnb@865","time":9718.831,"message":"  content-disposition: inline"}
+{"type":"log","callId":"otnb@865","time":9718.832,"message":"  content-length: 57159"}
+{"type":"log","callId":"otnb@865","time":9718.834,"message":"  content-type: image/jpeg"}
+{"type":"log","callId":"otnb@865","time":9718.836,"message":"  cross-origin-resource-policy: cross-origin"}
+{"type":"log","callId":"otnb@865","time":9718.837,"message":"  etag: \"59258afbd40dca37a9af47cd8cfcd920\""}
+{"type":"log","callId":"otnb@865","time":9718.839,"message":"  last-modified: Thu, 22 Oct 2026 15:40:16 GMT"}
+{"type":"log","callId":"otnb@865","time":9718.84,"message":"  referrer-policy: no-referrer"}
+{"type":"log","callId":"otnb@865","time":9718.842,"message":"  x-content-type-options: nosniff"}
+{"type":"log","callId":"otnb@865","time":9718.843,"message":"  x-frame-options: DENY"}
+{"type":"log","callId":"otnb@865","time":9718.844,"message":"  x-request-id: 0a57bfb8b4d2db6d270b5f406021ebbf"}
+{"type":"log","callId":"otnb@865","time":9718.847,"message":"  x-robots-tag: noindex, nofollow"}
+{"type":"log","callId":"otnb@865","time":9718.848,"message":"  date: Thu, 22 Oct 2026 15:40:21 GMT"}
+{"type":"log","callId":"otnb@865","time":9718.849,"message":"  connection: close"}
+{"type":"after","callId":"otnb@865","endTime":9718.926,"result":{"response":{"url":"http://127.0.0.1:14173/api/public-media/get-content?token=REDACTED","status":200,"statusText":"OK","headers":[{"name":"Vary","value":"Origin"},{"name":"accept-ranges","value":"bytes"},{"name":"cache-control","value":"public, max-age=300"},{"name":"content-disposition","value":"inline"},{"name":"content-length","value":"57159"},{"name":"content-type","value":"image/jpeg"},{"name":"cross-origin-resource-policy","value":"cross-origin"},{"name":"etag","value":"\"59258afbd40dca37a9af47cd8cfcd920\""},{"name":"last-modified","value":"Thu, 22 Oct 2026 15:40:16 GMT"},{"name":"referrer-policy","value":"no-referrer"},{"name":"x-content-type-options","value":"nosniff"},{"name":"x-frame-options","value":"DENY"},{"name":"x-request-id","value":"0a57bfb8b4d2db6d270b5f406021ebbf"},{"name":"x-robots-tag","value":"noindex, nofollow"},{"name":"date","value":"Thu, 22 Oct 2026 15:40:21 GMT"},{"name":"connection","value":"close"}],"serverAddr":{"ipAddress":"127.0.0.1","port":14173},"timing":{"startTime":1792683621539,"domainLookupStart":-1,"domainLookupEnd":-1,"connectStart":0,"secureConnectionStart":-1,"connectEnd":0.36999999999898137,"requestStart":0.36999999999898137,"responseStart":12.29700000000048},"responseEndTiming":12.445999999999913,"fetchUid":"e4a0c7026dd7a9a40e34d4223eeb331b"}}}
+{"type":"before","callId":"otnb@875","startTime":9813.379,"class":"APIRequestContext","method":"fetch","params":{"url":"http://127.0.0.1:14173/api/public-media/get-content?token=REDACTED","method":"GET","timeout":15000}}
+{"type":"log","callId":"otnb@875","time":9813.573,"message":"→ GET http://127.0.0.1:14173/api/public-media/get-content?token=REDACTED"}
+{"type":"log","callId":"otnb@875","time":9813.576,"message":"  user-agent: Playwright/1.64.0 (arm64; macOS 15.6) node/22.17"}
+{"type":"log","callId":"otnb@875","time":9813.577,"message":"  accept: */*"}
+{"type":"log","callId":"otnb@875","time":9813.578,"message":"  accept-encoding: gzip,deflate,br"}
+{"type":"log","callId":"otnb@875","time":9820.269,"message":"← 404 Not Found"}
+{"type":"log","callId":"otnb@875","time":9820.285,"message":"  vary: Origin"}
+{"type":"log","callId":"otnb@875","time":9820.289,"message":"  cache-control: no-store"}
+{"type":"log","callId":"otnb@875","time":9820.291,"message":"  content-type: application/json; charset=utf-8"}
+{"type":"log","callId":"otnb@875","time":9820.297,"message":"  referrer-policy: no-referrer"}
+{"type":"log","callId":"otnb@875","time":9820.299,"message":"  x-content-type-options: nosniff"}
+{"type":"log","callId":"otnb@875","time":9820.302,"message":"  x-frame-options: DENY"}
+{"type":"log","callId":"otnb@875","time":9820.304,"message":"  x-request-id: 97b2c7c5fa8ed7a6f3dc6c12fa889369"}
+{"type":"log","callId":"otnb@875","time":9820.306,"message":"  date: Thu, 22 Oct 2026 15:40:21 GMT"}
+{"type":"log","callId":"otnb@875","time":9820.309,"message":"  content-length: 105"}
+{"type":"log","callId":"otnb@875","time":9820.311,"message":"  connection: close"}
+{"type":"after","callId":"otnb@875","endTime":9820.569,"result":{"response":{"url":"http://127.0.0.1:14173/api/public-media/get-content?token=REDACTED","status":404,"statusText":"Not Found","headers":[{"name":"Vary","value":"Origin"},{"name":"cache-control","value":"no-store"},{"name":"content-type","value":"application/json; charset=utf-8"},{"name":"referrer-policy","value":"no-referrer"},{"name":"x-content-type-options","value":"nosniff"},{"name":"x-frame-options","value":"DENY"},{"name":"x-request-id","value":"97b2c7c5fa8ed7a6f3dc6c12fa889369"},{"name":"date","value":"Thu, 22 Oct 2026 15:40:21 GMT"},{"name":"content-length","value":"105"},{"name":"connection","value":"close"}],"serverAddr":{"ipAddress":"127.0.0.1","port":14173},"timing":{"startTime":1792683621646,"domainLookupStart":-1,"domainLookupEnd":-1,"connectStart":0,"secureConnectionStart":-1,"connectEnd":0.2960000000002765,"requestStart":0.2960000000002765,"responseStart":6.347999999999956},"responseEndTiming":6.605999999999767,"fetchUid":"3046e1e9acd05a13f57c6aa17df932de"}}}
