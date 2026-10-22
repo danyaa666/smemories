@@ -37,6 +37,25 @@ async function render(book, name) {
   return { opened, saved, hosts, seen, shrunk, screenText, file, info: inspect(file), t: text(file) };
 }
 
+// T-121: the image queue (T-116) left the photos of pages never scrolled to without a src, and "ready" did not wait for them.
+// The book says it is ready only when every photo on the pages has loaded, with nothing scrolled and no print event.
+describe("every photo has loaded when the book says it is ready", () => {
+  for (const [template, notes, photos] of [["navy-classic", 40, 1], ["memory-book", 40, 30], [null, 84, 30]]) {
+    test(`${template ?? "basic"}, ${notes} notes`, async () => {
+      const page = await browser.newPage();
+      const seen = await serveBook(page, makeBook({ size: "A5", notes, template }));
+      await open(page);
+      const imgs = await page.evaluate(() =>
+        [...document.querySelectorAll("img.bk-photo")].map((i) => ({ src: i.hasAttribute("src"), w: i.naturalWidth })),
+      );
+      assert.equal(imgs.filter((i) => i.src && i.w > 0).length, imgs.length, "every photo on the pages has loaded at ready");
+      assert.ok(imgs.length >= photos, `${imgs.length} photos on the pages`);
+      assert.ok(seen.media <= 2 * photos, `${seen.media} media requests`);
+      await page.close();
+    });
+  }
+});
+
 describe("24-page book, 30 photos, 84 notes", () => {
   for (const size of ["A5", "A4", "Letter"]) {
     test(`${size}: pages, size, fonts, text, photos`, async () => {
