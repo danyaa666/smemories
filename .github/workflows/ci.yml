@@ -240,7 +240,7 @@ jobs:
         with:
           name: e2e-failure
           path: tools/e2e/out
-          retention-days: 3 # the trace holds the throwaway link token and cookies (docs/e2e.md)
+          retention-days: 3 # scripts/e2e.sh scrubs tokens and the session cookie from the trace first (tools/e2e/scrub-trace.sh, docs/e2e.md)
 
   # T-022 / T-089: builds the production image (no push), runs scripts/image-smoke.sh against it (private MySQL, Valkey and MinIO
   # containers it starts itself), then the secret-hygiene check, the Trivy scan (pinned image, fails on a fixable HIGH/CRITICAL
