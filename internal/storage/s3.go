@@ -148,6 +148,93 @@ func (s *S3) Get(ctx context.Context, key string) ([]byte, error) {
 	return io.ReadAll(out.Body)
 }
 
+// notFound reports whether err is the store saying the key does not exist (HEAD answers NotFound, GET NoSuchKey).
+func notFound(err error) bool {
+	var nf *types.NotFound
+	var nk *types.NoSuchKey
+	return errors.As(err, &nf) || errors.As(err, &nk)
+}
+
+// Open sizes the object with a HEAD and then reads it lazily: the first Read (and the first after a Seek) is a GET for
+// "bytes=<position>-", so HEAD requests and 304 answers never fetch a body and a download holds no more than the
+// copy buffer in memory. The body is read under ctx (the request's), not under the operation timeout.
+func (s *S3) Open(ctx context.Context, key string) (io.ReadSeekCloser, error) {
+	hctx, cancel := s.op(ctx)
+	defer cancel()
+	out, err := s.c.HeadObject(hctx, &s3.HeadObjectInput{Bucket: &s.bucket, Key: &key})
+	if err != nil {
+		if notFound(err) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return &s3Object{s: s, ctx: ctx, key: key, size: aws.ToInt64(out.ContentLength)}, nil
+}
+
+// s3Object is an object of the bucket read through ranged GETs. Not safe for concurrent use.
+type s3Object struct {
+	s    *S3
+	ctx  context.Context
+	key  string
+	size int64
+	pos  int64         // where the next Read starts
+	body io.ReadCloser // the open GET, positioned at pos; nil until needed
+}
+
+func (o *s3Object) Read(p []byte) (int, error) {
+	if o.pos >= o.size {
+		return 0, io.EOF
+	}
+	if o.body == nil {
+		out, err := o.s.c.GetObject(o.ctx, &s3.GetObjectInput{Bucket: &o.s.bucket, Key: &o.key, Range: aws.String(fmt.Sprintf("bytes=%d-", o.pos))})
+		if err != nil {
+			if notFound(err) {
+				return 0, ErrNotFound
+			}
+			return 0, err
+		}
+		o.body = out.Body
+	}
+	n, err := o.body.Read(p)
+	o.pos += int64(n)
+	if errors.Is(err, io.EOF) && o.pos < o.size {
+		err = io.ErrUnexpectedEOF // the store ended the body early: never present it as a complete object
+	}
+	return n, err
+}
+
+func (o *s3Object) Seek(off int64, whence int) (int64, error) {
+	var np int64
+	switch whence {
+	case io.SeekStart:
+		np = off
+	case io.SeekCurrent:
+		np = o.pos + off
+	case io.SeekEnd:
+		np = o.size + off
+	default:
+		return 0, apperr.New(apperr.Internal, "storage: bad seek whence")
+	}
+	if np < 0 {
+		return 0, apperr.New(apperr.Internal, "storage: negative seek position")
+	}
+	if np != o.pos {
+		_ = o.Close() // the open GET is at the old position
+		o.pos = np
+	}
+	return np, nil
+}
+
+// Close ends the GET in progress, if any; the object can still be read afterwards (the next Read opens a new GET).
+func (o *s3Object) Close() error {
+	if o.body == nil {
+		return nil
+	}
+	err := o.body.Close()
+	o.body = nil
+	return err
+}
+
 // deleteBatchMax is the most keys one DeleteObjects call takes.
 const deleteBatchMax = 1000
 

@@ -1,7 +1,9 @@
 package storage
 
 import (
+	"bytes"
 	"context"
+	"io"
 	"slices"
 	"strings"
 	"sync"
@@ -30,6 +32,18 @@ func (m *Memory) Get(_ context.Context, key string) ([]byte, error) {
 		return nil, ErrNotFound
 	}
 	return slices.Clone(b), nil
+}
+
+type memObject struct{ *bytes.Reader }
+
+func (memObject) Close() error { return nil }
+
+func (m *Memory) Open(_ context.Context, key string) (io.ReadSeekCloser, error) {
+	b, err := m.Get(context.Background(), key)
+	if err != nil {
+		return nil, err
+	}
+	return memObject{bytes.NewReader(b)}, nil
 }
 
 func (m *Memory) Delete(_ context.Context, keys ...string) error {

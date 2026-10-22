@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"testing"
 	"time"
 
@@ -65,5 +66,38 @@ func TestS3DeletePrefix(t *testing.T) {
 	}
 	if err := s.DeletePrefix(ctx, base+"empty/"); err != nil { // nothing to delete is fine
 		t.Fatal(err)
+	}
+}
+
+// T-107: Open sizes with a HEAD and reads with ranged GETs, against the real store.
+func TestS3OpenStreamsRanges(t *testing.T) {
+	s := storagetest.New(t)
+	ctx := context.Background()
+	prefix := "test/" + ulid.New(time.Now()) + "/"
+	t.Cleanup(func() { _ = s.DeletePrefix(ctx, prefix) })
+
+	if _, err := s.Open(ctx, prefix+"missing"); !errors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("missing key: got %v, want ErrNotFound", err)
+	}
+	data := bytes.Repeat([]byte("0123456789abcdef"), 40_000) // 640 KB: several reads
+	if err := s.Put(ctx, prefix+"a.bin", "application/octet-stream", data); err != nil {
+		t.Fatal(err)
+	}
+	o, err := s.Open(ctx, prefix+"a.bin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = o.Close() }()
+	if end, _ := o.Seek(0, io.SeekEnd); end != int64(len(data)) {
+		t.Fatalf("size %d", end)
+	}
+	_, _ = o.Seek(0, io.SeekStart)
+	if all, err := io.ReadAll(o); err != nil || !bytes.Equal(all, data) {
+		t.Fatalf("whole object: %d bytes, %v", len(all), err)
+	}
+	_, _ = o.Seek(123_457, io.SeekStart)
+	part := make([]byte, 1000)
+	if _, err := io.ReadFull(o, part); err != nil || !bytes.Equal(part, data[123_457:124_457]) {
+		t.Fatalf("range: %v", err)
 	}
 }
