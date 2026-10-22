@@ -20,7 +20,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?); Q-051 (Approve merge of T-100 (canonical public ids, PR #93)?); Q-052 (Approve merge of T-111 (Terms acceptance API, PR #96; merges together with T-112)?); Q-053 (Approve merge of T-110 (upload abuse follow-up, PR #99)?); Q-054 (Approve merge of T-107 (bounded photo download memory, PR #98)?)
 
-_Board last written 2026-10-22 17:43Z_
+_Board last written 2026-10-22 18:42Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4352,7 +4352,7 @@ Spec: .team/epics/E06-go-live/10-migrate-docs-and-smoke-robustness.md (read it f
 - **Branch:** task/t-091-e06-image-smoke-timeout-path-config-clas
 - **PR:** 111
 - **Updated:** 2026-10-22 17:43Z by human
-- **Comments-seen:** 4
+- **Comments-seen:** 5
 
 Small leftovers from the T-090 QA: (1) scripts/image-smoke.sh: when SMOKE_TIMEOUT fires it exits 143 with no FAIL message and leaves an orphaned sleep holding the pipe open (make image-smoke | tail hangs): print a FAIL line naming the step, kill the child by PID and exit 1. (2) Mail failures of class config are retried 3 times in the background: do not retry them (a misconfiguration will not fix itself in seconds). (3) The message '1 migrations' should read '1 migration'. (4) Add to the T-024 notes: alarm on the ERROR log line for request-path resend failures too, since the metric counts background sends only. Acceptance: each item has a test or a visible check; make lint build test, integration tests and make image-smoke stay green.
 
@@ -4486,7 +4486,7 @@ Spec: .team/epics/E05-templates-export/16-book-text-export-web.md. Download and 
 - **Branch:** task/t-095-e11-signature-storage-validation-and-api
 - **PR:** https://github.com/danyaa666/smemories/pull/108
 - **Updated:** 2026-10-22 17:43Z by human
-- **Comments-seen:** 11
+- **Comments-seen:** 12
 
 Spec: .team/epics/E11-signatures/01-signature-api.md. Next phase (after go-live, D-31). Vector strokes (L-14), template switch, public submit field, inbox and book-data reads. Risk high: public input.
 
@@ -5200,7 +5200,7 @@ QA of T-104 (2026-10-21): a lossy WebP with an ALPH chunk (compression 1) decode
 - **Branch:** task/t-114-e03-web-a-malformed-yearbook-id-in-the-u
 - **PR:** 109
 - **Updated:** 2026-10-22 17:43Z by human
-- **Comments-seen:** 3
+- **Comments-seen:** 4
 
 QA of T-100 (2026-10-21): since T-100 a non-canonical id answers 400 ERROR_PARAM instead of 404, and web/src/pages/YearbookEdit.tsx (line ~39) only shows 'book not found' for 404, so a hand-typed or lower-cased URL shows the generic invalid-request text. Treat ERROR_PARAM on the yearbook id like not found on every page that takes :id from the URL (edit, notes, note links, book); component tests for 404 and 400. No API change.
 
