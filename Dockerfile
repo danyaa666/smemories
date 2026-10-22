@@ -3,8 +3,8 @@
 # The # syntax= frontend and both bases are pinned by digest (the frontend is bumped by hand, Dependabot does not read that line); Dependabot's docker ecosystem keeps them current (.github/dependabot.yml).
 # The Go patch must be the newest of the go.mod minor (board L-10, govulncheck reports older stdlib patches).
 
-# golang:1.26-bookworm (1.26.9 when pinned), multi-arch index. Cross-compiles on the build host: no QEMU.
-FROM --platform=$BUILDPLATFORM golang:1.26-bookworm@sha256:d9c68c2c51161e12fd77e4c6320687c9cd86e1af1e3ad6e6cd63ff970641453c AS build
+# golang:1.26-bookworm (1.26.10 when pinned), multi-arch index. Cross-compiles on the build host: no QEMU.
+FROM --platform=$BUILDPLATFORM golang:1.26-bookworm@sha256:632dff7351799a5a9954a48dc06670ade72ee44e8c351cdc0e5a57af2fea21af AS build
 ARG TARGETOS
 ARG TARGETARCH
 # Not secrets: the release label and the git commit, set by `make image` and CI.
