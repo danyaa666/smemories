@@ -528,7 +528,7 @@ func TestPublicLookup(t *testing.T) {
 	deadline := e.now().Add(time.Hour).UnixMilli()
 	_, token := e.newLink(alice, book, fmt.Sprintf(`{"deadline_at":%d}`, deadline))
 	rec := e.lookup(token).status(200, "")
-	want := fmt.Sprintf(`{"status":"OK","data":{"yearbook":{"title":"Class 12A"},"owner":{"display_name":"Đặng Thị Hồng"},"deadline_at":%d,"open":true,"fields":%s}}`, deadline, defaultFieldsJSON)
+	want := fmt.Sprintf(`{"status":"OK","data":{"yearbook":{"title":"Class 12A"},"owner":{"display_name":"Đặng Thị Hồng"},"deadline_at":%d,"open":true,"fields":%s,"signature":{"enabled":false,"w":1000,"h":400,"max_strokes":12,"max_points":600}}}`, deadline, defaultFieldsJSON)
 	if strings.TrimSpace(rec.Body.String()) != want {
 		t.Fatalf("body %s\nwant %s", rec.Body.String(), want)
 	}
