@@ -11,8 +11,9 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 8 | T-023, T-024, T-025, T-026, T-027, T-031, T-050, T-097 |
-| TODO | 4 | T-029, T-091, T-096, T-116 |
-| IN_PROGRESS | 1 | T-115 |
+| TODO | 4 | T-029, T-096, T-116, T-120 |
+| READY_FOR_QA | 1 | T-091 |
+| QA_FAIL | 1 | T-115 |
 | QA_PASS | 1 | T-095 |
 | MERGED | 1 | T-114 |
 | DONE | 96 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-092, T-093, T-094, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-117, T-118, T-119 |
@@ -22,7 +23,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?); Q-051 (Approve merge of T-100 (canonical public ids, PR #93)?); Q-052 (Approve merge of T-111 (Terms acceptance API, PR #96; merges together with T-112)?); Q-053 (Approve merge of T-110 (upload abuse follow-up, PR #99)?); Q-054 (Approve merge of T-107 (bounded photo download memory, PR #98)?)
 
-_Board last written 2026-10-22 14:43Z_
+_Board last written 2026-10-22 15:38Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4342,7 +4343,7 @@ Spec: .team/epics/E06-go-live/10-migrate-docs-and-smoke-robustness.md (read it f
 - 2026-10-17 17:59Z · human · accepted by owner
 
 ### T-091 — [E06] Image-smoke timeout path, config-class retry and message grammar (T-090 QA leftovers)
-- **Status:** TODO
+- **Status:** READY_FOR_QA
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M2
@@ -4351,15 +4352,16 @@ Spec: .team/epics/E06-go-live/10-migrate-docs-and-smoke-robustness.md (read it f
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-22 14:43Z by leader
-- **Comments-seen:** 1
+- **Branch:** task/t-091-e06-image-smoke-timeout-path-config-clas
+- **PR:** 111
+- **Updated:** 2026-10-22 15:37Z by dev
+- **Comments-seen:** 2
 
 Small leftovers from the T-090 QA: (1) scripts/image-smoke.sh: when SMOKE_TIMEOUT fires it exits 143 with no FAIL message and leaves an orphaned sleep holding the pipe open (make image-smoke | tail hangs): print a FAIL line naming the step, kill the child by PID and exit 1. (2) Mail failures of class config are retried 3 times in the background: do not retry them (a misconfiguration will not fix itself in seconds). (3) The message '1 migrations' should read '1 migration'. (4) Add to the T-024 notes: alarm on the ERROR log line for request-path resend failures too, since the metric counts background sends only. Acceptance: each item has a test or a visible check; make lint build test, integration tests and make image-smoke stay green.
 
 #### Comments
 - 2026-10-22 14:43Z · leader · Leader: promoted to refill the pipeline (no deps).
+- 2026-10-22 15:37Z · dev · PR #111 head e07a755, CI green (first e2e run was cancelled in Install Chromium, rerun passed). (1) image-smoke timeout: watchdog kills children by PID, prints SMOKE FAIL naming last passed step, exit 1; verify with make image-smoke-selftest (fake hanging docker, SMOKE_TIMEOUT=2; fails on old script with 143). (2) deliverWithRetry no longer retries ClassConfig: TestDeliverWithRetryStopsOnConfigClass + row in TestBackgroundRetryPolicy. (3) '1 migration' singular: TestCompareSchema rows. (4) docs/email.md: alarm on ERROR line 'mailer: send failed' class=config too (T-024 notes under .team are leader-owned, so the note is in the doc; leader may copy it). make lint build test, test-integration, image-smoke all green locally.
 
 ### T-092 — [E05] Public photo links: signed token, public-media endpoint, revoke-all (API)
 - **Status:** DONE
@@ -5211,23 +5213,33 @@ QA of T-100 (2026-10-21): since T-100 a non-canonical id answers 400 ERROR_PARAM
 - 2026-10-22 14:19Z · leader · Merged PR #109 as 73d6087 (QA_PASS on c422ddf, risk low; 40 browser cases en/vi).
 
 ### T-115 — [E05] Export dialogs return focus to their button; e2e traces drop photo-link URLs
-- **Status:** IN_PROGRESS
+- **Status:** QA_FAIL
 - **Priority:** P3
 - **Type:** bug
 - **Milestone:** M2
 - **Depends-on:** —
 - **Risk:** low
-- **Rework:** 0
+- **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-115-e05-export-dialogs-return-focus-to-their
-- **PR:** —
-- **Updated:** 2026-10-22 14:33Z by dev
-- **Comments-seen:** 0
+- **PR:** https://github.com/danyaa666/smemories/pull/110
+- **Updated:** 2026-10-22 15:11Z by qa
+- **Comments-seen:** 3
 
 QA of T-094 (2026-10-21): after Continue in the public-link warning and after confirming Disable photo links, focus lands on <body>, so keyboard users restart at the top; return focus to the button that opened the dialog (in the shared Dialog component if that is where it belongs, covering backdrop click too). Also: a failed CI e2e run keeps a Playwright trace that contains the photo-link URL (a bearer token of the throwaway e2e database); scrub it or disable traces for that step. Component test for focus return; show the trace setting in the PR.
 
 #### Comments
+- 2026-10-22 14:58Z · dev · PR #110 head 4487f0a, CI green. Focus: shared Dialog waits for the disabled opener (busy job) to re-enable then focuses it; backdrop mousedown preventDefault; 3 new vitest tests (confirm+backdrop fail without fix). Traces: scripts/e2e.sh runs tools/e2e/scrub-trace.sh after the run (token=, /c/<token>, token JSON, session cookie -> REDACTED); verify by forcing a failure after step 9 and grepping the unpacked trace. Trace setting unchanged (retain-on-failure). Note: e2e registration limit is 5/h, run reset-limits between runs.
+- 2026-10-22 15:11Z · qa · QA of PR #110 head 4487f0a (+ my test commit 9b83f06 on the branch). CI green, web vitest 392 pass, eslint+prettier+tsc clean, make e2e exit 0 (pass run).
+  1. [major] The scrubbed trace.zip is not a valid input for Playwright's own reader. tools/e2e/scrub-trace.sh repacks with 'zip -qr -X' which adds directory entries (resources/, src/, attachments/, screencast/). Repro: force a failure (I added a 'expect(1).toBe(2)' step after step 9 in a scratch copy), run scripts/e2e.sh (exit 1, scrub runs), then 'cd tools/e2e && npx playwright trace open <out/results/*/trace.zip>' -> 'Error: EEXIST: file already exists, mkdir .../.playwright-cli/trace/resources', and 'npx playwright trace requests' prints nothing. The same trace before scrubbing opens fine (410 requests, 4 attachments). Root cause proven: repacking the scrubbed tree with 'zip -qr -X -D' (no directory entries) opens fine (410 requests). Fix: add -D to the zip call in scrub-trace.sh. I could not confirm the GUI 'npx playwright show-trace' (headless viewer cannot be driven here), so treat the CLI failure as the evidence; the entry list and JSON of every .trace/.network/.stacks line are otherwise intact (2507 lines parse, testzip OK).
+  2. [minor, non-blocking] If scrub-trace.sh itself fails (set -e inside it, e.g. missing zip/perl) scripts/e2e.sh exits non-zero and the 'if: failure()' upload step still uploads the unscrubbed tools/e2e/out. Consider deleting results/*/trace.zip when the scrub fails (fail closed).
+  3. [minor, non-blocking] Screencast frames in the trace are JPEG pixels and cannot be grepped or scrubbed; any screen that shows a link/token text during the run (note-link page, the manual-copy textarea) stays readable in a frame. The final test-failed-*.png I viewed shows no token.
+  VERIFIED OK: Focus (real Chromium via Playwright keyboard, scratch step 9b, all passed): Escape -> opener focused; backdrop mouse click -> opener focused; Cancel by Enter -> opener; Continue by keyboard (Tab, Enter) -> download, then opener focused once re-enabled; Disable photo links by keyboard -> that button focused once re-enabled; focus moved to a link during the job stays on the link. New vitest tests: against the old Dialog.tsx 2 of the 3 fail (confirm and backdrop; the 'moved on' test passes either way, as dev said). I added 1 test (commit 9b83f06): after the 30 s cap getTimerCount is 0, the focusin listener is removed, and a late re-enable does not steal focus. Scrub coverage: baseline (scrub disabled) trace+logs+screenshots+error-context had 693 session-cookie, 81+15 token, 64 /c/ hits; with the scrub 0 hits for the literal note-link token, photo tokens (incl. the ones minted in step 9b), session cookie value, and 0 non-REDACTED token=/ /c/<id> / cookie patterns across trace.zip, api.log, web.log, migrate.log, error-context.md, .last-run.json. Failed run still exits 1, passed run exits 0. CI order OK: 'The journey' step (e2e.sh incl. scrub) runs before the if:failure() upload. Re-test after fix 1 only needs: force a failure, run scrub, 'npx playwright trace open' on the zip, grep again.
+- 2026-10-22 15:11Z · leader · Leader: rework scope.
+  (1) Blocker: repack with `zip -D` (no directory entries) so `npx playwright trace open` reads the scrubbed trace. Add a check in scrub-trace.sh, or a test, that the repacked zip has no directory entries.
+  (2) Fail closed: if the scrub fails for any reason, delete that trace.zip (and any file it could not scrub), print why, and keep the run's exit code. An unscrubbed token must never be uploaded.
+  Screencast frames are accepted as is. Pull QA's test commit 9b83f06 first. No rebase, no force-push.
 
 ### T-116 — [E12] Web: limit concurrent photo requests on gallery pages (follow-up to T-107)
 - **Status:** TODO
@@ -5327,6 +5339,25 @@ Spec: .team/epics/E12-security-hardening/12-openapi-session-ceiling.md (read it 
 - 2026-10-22 08:43Z · qa · PR #105 head 851ef2f. AC1: grep of all lifetime/expiry/max-age text in api/openapi.yaml: exactly 4 places describe session lifetime (GET /api/user/me line 442, sessionCookie scheme 1810, SessionCookie header 1816, ApiUnauthorized 1844); each now states 30d sliding + 90d ceiling from sign-in + 401/sign in again (header: Max-Age 30d at sign-in, slide = min(30d, time left to ceiling)). Other 'expir' hits are verification codes/Cache-Control, not sessions. Code match: internal/auth/service.go SessionTTL=30d, SessionMaxAge=90d, Validate refuses when createdAt+90d <= now (401 even if recently used), slides only when <half left, ttl=min(SessionTTL, ceiling-now) - text claims no more. AC2: in T-119 worktree npm run gen:api -> git status clean (no diff); npm run check:api 'api schema ok'; npm run lint (eslint+prettier) pass. Diff vs develop = only api/openapi.yaml + web/src/api/schema.d.ts (7+/7-), no code. gh pr checks 105: e2e, go, go-integration, image, security, web all pass. Non-blocking: none.
 - 2026-10-22 08:43Z · leader · Merged PR #105 as b483ca7 (QA_PASS on 851ef2f, risk low, docs only).
 - 2026-10-22 08:53Z · human · accepted by owner
+
+### T-120 — [E06] CI: bound and cache the e2e Chromium install (two hangs on 2026-10-22)
+- **Status:** TODO
+- **Priority:** P3
+- **Type:** ci
+- **Milestone:** M2
+- **Depends-on:** —
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-22 15:38Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E06-go-live/13-ci-e2e-chromium-install.md (read it from the main checkout).
+
+#### Comments
 
 <!-- tasks:end -->
 
