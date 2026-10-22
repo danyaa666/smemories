@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -172,6 +172,63 @@ describe("Dialog", () => {
     await userEvent.click(opener);
     await userEvent.keyboard("{Escape}");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(opener).toHaveFocus();
+  });
+
+  // The export dialogs close on confirm while the opener is disabled for the running job (T-115).
+  function BusyHarness({ finish }: { finish: { current?: () => void } }) {
+    const [open, setOpen] = useState(false);
+    const [busy, setBusy] = useState(false);
+    finish.current = () => setBusy(false);
+    return (
+      <>
+        <button disabled={busy} onClick={() => setOpen(true)}>
+          Export
+        </button>
+        <button>Elsewhere</button>
+        {open && (
+          <Dialog
+            title="Export?"
+            confirmLabel="Go"
+            cancelLabel="No"
+            onConfirm={() => {
+              setBusy(true);
+              setOpen(false);
+            }}
+            onCancel={() => setOpen(false)}
+          />
+        )}
+      </>
+    );
+  }
+
+  it("returns focus to the opener after confirm once the running job enables it again", async () => {
+    const finish: { current?: () => void } = {};
+    render(<BusyHarness finish={finish} />);
+    const opener = screen.getByRole("button", { name: "Export" });
+    await userEvent.click(opener);
+    await userEvent.click(screen.getByRole("button", { name: "Go" }));
+    expect(opener).toBeDisabled();
+    act(() => finish.current?.());
+    await waitFor(() => expect(opener).toHaveFocus());
+  });
+
+  it("leaves focus alone when the user has moved on before the job ends", async () => {
+    const finish: { current?: () => void } = {};
+    render(<BusyHarness finish={finish} />);
+    await userEvent.click(screen.getByRole("button", { name: "Export" }));
+    await userEvent.click(screen.getByRole("button", { name: "Go" }));
+    await userEvent.click(screen.getByRole("button", { name: "Elsewhere" }));
+    act(() => finish.current?.());
+    await Promise.resolve();
+    expect(screen.getByRole("button", { name: "Elsewhere" })).toHaveFocus();
+  });
+
+  it("returns focus to the opener when a click outside the box closes the dialog", async () => {
+    render(<Harness />);
+    const opener = screen.getByRole("button", { name: "Delete book" });
+    await userEvent.click(opener);
+    await userEvent.click(screen.getByRole("dialog").parentElement!);
     expect(opener).toHaveFocus();
   });
 

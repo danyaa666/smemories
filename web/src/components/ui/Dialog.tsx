@@ -33,7 +33,24 @@ export function Dialog({
     const before = document.activeElement;
     cancel.current?.focus(); // the safe choice first
     return () => {
-      if (before instanceof HTMLElement) before.focus();
+      if (!(before instanceof HTMLElement)) return;
+      before.focus();
+      // A button that starts the work the dialog confirmed is disabled while it runs, and a disabled button cannot take focus
+      // (it would fall to <body>): wait until it is enabled again, unless the user has moved on in the meantime.
+      if (document.activeElement === before || !before.isConnected) return;
+      const stop = () => {
+        watch.disconnect();
+        document.removeEventListener("focusin", stop);
+        window.clearTimeout(giveUp);
+      };
+      const watch = new MutationObserver(() => {
+        if (before.hasAttribute("disabled")) return;
+        stop();
+        if (document.activeElement === document.body) before.focus();
+      });
+      watch.observe(before, { attributes: true, attributeFilter: ["disabled"] });
+      document.addEventListener("focusin", stop);
+      const giveUp = window.setTimeout(stop, 30_000); // ponytail: a job longer than this leaves focus on <body>
     };
   }, []);
   const onKeyDown = (e: KeyboardEvent) => {
@@ -59,7 +76,11 @@ export function Dialog({
     // eslint-disable-next-line jsx-a11y/no-static-element-interactions
     <div
       className="dialog-backdrop"
-      onMouseDown={(e) => e.target === e.currentTarget && onCancel()}
+      onMouseDown={(e) => {
+        if (e.target !== e.currentTarget) return;
+        e.preventDefault(); // else the browser moves focus to <body> after the dialog is gone, undoing the focus return
+        onCancel();
+      }}
     >
       {/* The keydown handler is the focus trap; the dialog itself is not a control. */}
       {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
