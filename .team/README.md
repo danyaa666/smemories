@@ -12,7 +12,7 @@
 |---|---:|---|
 | BACKLOG | 7 | T-023, T-024, T-025, T-026, T-027, T-031, T-050 |
 | TODO | 3 | T-029, T-097, T-120 |
-| IN_PROGRESS | 1 | T-116 |
+| READY_FOR_QA | 1 | T-116 |
 | MERGED | 1 | T-096 |
 | DONE | 100 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-117, T-118, T-119 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
@@ -21,7 +21,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?); Q-051 (Approve merge of T-100 (canonical public ids, PR #93)?); Q-052 (Approve merge of T-111 (Terms acceptance API, PR #96; merges together with T-112)?); Q-053 (Approve merge of T-110 (upload abuse follow-up, PR #99)?); Q-054 (Approve merge of T-107 (bounded photo download memory, PR #98)?)
 
-_Board last written 2026-10-22 19:16Z_
+_Board last written 2026-10-22 19:21Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -5244,7 +5244,7 @@ QA of T-100 (2026-10-21): since T-100 a non-canonical id answers 400 ERROR_PARAM
 - **Branch:** task/t-115-e05-export-dialogs-return-focus-to-their
 - **PR:** https://github.com/danyaa666/smemories/pull/110
 - **Updated:** 2026-10-22 19:08Z by human
-- **Comments-seen:** 6
+- **Comments-seen:** 7
 
 QA of T-094 (2026-10-21): after Continue in the public-link warning and after confirming Disable photo links, focus lands on <body>, so keyboard users restart at the top; return focus to the button that opened the dialog (in the shared Dialog component if that is where it belongs, covering backdrop click too). Also: a failed CI e2e run keeps a Playwright trace that contains the photo-link URL (a bearer token of the throwaway e2e database); scrub it or disable traces for that step. Component test for focus return; show the trace setting in the PR.
 
@@ -5269,7 +5269,7 @@ QA of T-094 (2026-10-21): after Continue in the public-link warning and after co
 - 2026-10-22 19:08Z · human · accepted by owner
 
 ### T-116 — [E12] Web: limit concurrent photo requests on gallery pages (follow-up to T-107)
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P3
 - **Type:** feature
 - **Milestone:** M2
@@ -5277,16 +5277,17 @@ QA of T-094 (2026-10-21): after Continue in the public-link warning and after co
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-116-e12-web-limit-concurrent-photo-requests-
-- **PR:** —
-- **Updated:** 2026-10-22 19:02Z by dev
-- **Comments-seen:** 1
+- **PR:** https://github.com/danyaa666/smemories/pull/113
+- **Updated:** 2026-10-22 19:20Z by dev
+- **Comments-seen:** 2
 
 QA of T-107 (2026-10-22): with 400 ms storage latency per object, a 100-thumbnail HTTP/2 burst gets 64 x 200 and 36 x 429, and <img> does not retry. If real S3 latency in the go-live phase shows this, load gallery images through a small client-side queue (at most 16 in flight, retry a 429 after Retry-After) instead of raising the server cap. Measure first on the deployed stack.
 
 #### Comments
 - 2026-10-22 09:08Z · leader · Leader: promoted to keep the pipeline at min_ready_tasks; T-107 is merged.
+- 2026-10-22 19:20Z · dev · Shared queue (16 in flight) in web/src/components/imageQueue.ts + QueuedImg.tsx; used by PhotoTile, NoteCard, Yearbooks cover, book Photo and the print preload. Verify: QueuedImg.test.tsx (100 photos peak 16; preload 100 settles only after all loaded/failed), print button still gated on photos.settled. Gaps: no Retry-After parsing (<img> cannot read headers), one fixed 1s retry; not measured on deployed stack. e2e first run hit a Chromium install timeout, rerun green.
 
 ### T-117 — [E13] Fix develop e2e after the Terms merges (journey readFileSync import, h2-gallery register terms version)
 - **Status:** DONE
@@ -5380,11 +5381,12 @@ Spec: .team/epics/E12-security-hardening/12-openapi-session-ceiling.md (read it 
 - **Branch:** —
 - **PR:** —
 - **Updated:** 2026-10-22 15:38Z by leader
-- **Comments-seen:** 0
+- **Comments-seen:** 1
 
 Spec: .team/epics/E06-go-live/13-ci-e2e-chromium-install.md (read it from the main checkout).
 
 #### Comments
+- 2026-10-22 19:21Z · leader · Leader: raised to P2. The third Chromium install hang (PR #113) needed a manual rerun.
 
 <!-- tasks:end -->
 
