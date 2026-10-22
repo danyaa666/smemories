@@ -252,7 +252,7 @@ test("M1 journey: sign up, build a book, collect notes, print the PDF", async ({
     expect(pdf.allFontsEmbedded, "every font is embedded").toBe(true);
     // The signed note's signature is on the preview (same DOM as the print) and on the paper: ink inside its box, with the page count unchanged.
     await expect(owner.locator("svg.bk-sig")).toHaveCount(1);
-    await expect(owner.getByRole("img", { name: `Signature of ${NOTES[0].name}` })).toHaveCount(1);
+    await expect(owner.getByRole("img", { name: `Chữ ký của ${NOTES[0].name}` })).toHaveCount(1); // the book is in Vietnamese
     const sigPages = (await signatureBoxes(owner)).flatMap((sheet, i) => sheet.sigs.map((box) => ({ page: i + 1, box })));
     await owner.emulateMedia({ media: null });
     expect(sigPages.map((x) => x.page), "the signature is on the first note's page").toEqual([3]);
