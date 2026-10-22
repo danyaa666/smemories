@@ -11,17 +11,18 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 7 | T-023, T-024, T-025, T-026, T-027, T-031, T-050 |
-| TODO | 3 | T-029, T-097, T-120 |
-| READY_FOR_QA | 1 | T-116 |
-| MERGED | 1 | T-096 |
+| TODO | 1 | T-029 |
+| IN_PROGRESS | 1 | T-097 |
+| READY_FOR_QA | 1 | T-120 |
+| MERGED | 2 | T-096, T-116 |
 | DONE | 100 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-117, T-118, T-119 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-096 ([E11] Web: signature pad on the public form and the signature in the inbox)
+**Awaiting your review (MERGED):** T-096 ([E11] Web: signature pad on the public form and the signature in the inbox); T-116 ([E12] Web: limit concurrent photo requests on gallery pages (follow-up to T-107))
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?); Q-051 (Approve merge of T-100 (canonical public ids, PR #93)?); Q-052 (Approve merge of T-111 (Terms acceptance API, PR #96; merges together with T-112)?); Q-053 (Approve merge of T-110 (upload abuse follow-up, PR #99)?); Q-054 (Approve merge of T-107 (bounded photo download memory, PR #98)?)
 
-_Board last written 2026-10-22 19:21Z_
+_Board last written 2026-10-22 19:47Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4564,7 +4565,7 @@ Spec: .team/epics/E11-signatures/02-signature-pad-web.md. Next phase.
 - 2026-10-22 19:15Z · leader · Merged PR #112 as f0c074e (QA_PASS on b5d5cb2). Cosmetic leftovers (1.4 px ink offset from the border-box rect, alert and inbox spacing) go with T-097's visual pass. Owner device check is pending.
 
 ### T-097 — [E11] Print: signatures in memory-book and navy-classic
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1b
@@ -4572,10 +4573,10 @@ Spec: .team/epics/E11-signatures/02-signature-pad-web.md. Next phase.
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-097-e11-print-signatures-in-memory-book-and-
 - **PR:** —
-- **Updated:** 2026-10-22 19:16Z by leader
+- **Updated:** 2026-10-22 19:38Z by dev
 - **Comments-seen:** 1
 
 Spec: .team/epics/E11-signatures/03-signature-print.md. Next phase.
@@ -5269,7 +5270,7 @@ QA of T-094 (2026-10-21): after Continue in the public-link warning and after co
 - 2026-10-22 19:08Z · human · accepted by owner
 
 ### T-116 — [E12] Web: limit concurrent photo requests on gallery pages (follow-up to T-107)
-- **Status:** READY_FOR_QA
+- **Status:** MERGED
 - **Priority:** P3
 - **Type:** feature
 - **Milestone:** M2
@@ -5280,14 +5281,33 @@ QA of T-094 (2026-10-21): after Continue in the public-link warning and after co
 - **Assignee:** —
 - **Branch:** task/t-116-e12-web-limit-concurrent-photo-requests-
 - **PR:** https://github.com/danyaa666/smemories/pull/113
-- **Updated:** 2026-10-22 19:20Z by dev
-- **Comments-seen:** 2
+- **Updated:** 2026-10-22 19:47Z by leader
+- **Comments-seen:** 4
 
 QA of T-107 (2026-10-22): with 400 ms storage latency per object, a 100-thumbnail HTTP/2 burst gets 64 x 200 and 36 x 429, and <img> does not retry. If real S3 latency in the go-live phase shows this, load gallery images through a small client-side queue (at most 16 in flight, retry a 429 after Retry-After) instead of raising the server cap. Measure first on the deployed stack.
 
 #### Comments
 - 2026-10-22 09:08Z · leader · Leader: promoted to keep the pipeline at min_ready_tasks; T-107 is merged.
 - 2026-10-22 19:20Z · dev · Shared queue (16 in flight) in web/src/components/imageQueue.ts + QueuedImg.tsx; used by PhotoTile, NoteCard, Yearbooks cover, book Photo and the print preload. Verify: QueuedImg.test.tsx (100 photos peak 16; preload 100 settles only after all loaded/failed), print button still gated on photos.settled. Gaps: no Retry-After parsing (<img> cannot read headers), one fixed 1s retry; not measured on deployed stack. e2e first run hit a Chromium install timeout, rerun green.
+- 2026-10-22 19:46Z · qa · QA_PASS T-116, PR #113 head 6217030. CI green (e2e, go, go-integration, image, security, web). Evidence is mine, real Chromium against a local API + MinIO, behind a TLS edge (HTTP/2 and HTTP/1.1 by ALPN, 1 HTTP/1.1 request per stream to the API, 400 ms added latency per photo), 100 photos seeded through the API.
+  | AC | How verified | Result |
+  | 100 photos never more than 16 in flight | Gallery (/yearbooks/:id, Show more x2 = 100 tiles) and print page (34 notes x 3 photos = 100, book-data answer fabricated through route.fulfill). Counted with Playwright request/finished/failed events AND server-side at the proxy | h2: client peak 16, server peak 16, 100x200, 0x429, each photo requested once. develop baseline: peak 100 (gallery), 9 (print preload). HTTP/1.1: client peak 16, wire peak 6 (browser limit), 100x200. Latency 0 also 16. |
+  | Loads as it scrolls | 35 tiles near the viewport requested before any scroll, 0 for the rest, all 100 ok after scrolling | pass |
+  | Print button disabled until every photo settled | polled the button every 100 ms | disabled 24 polls (2.6 s), enabled only when finished+failed = 100 |
+  | Print shows every photo, none blank | Real page.pdf() (fires beforeprint/afterprint, seen in the page); 100 img.bk-photo, none ever scrolled into view (0 had src before print), all 100 have src and naturalWidth>0 after; pdfimages -list on the PDF: 12 pages, 100 image placements (develop: 100) | pass |
+  | Photo that fails: error state, does not block print | Print page, one photo forced 500: button still enables after all settle, banner "Photos that could not be loaded: 1", PDF 99 placements. Gallery, one photo forced 429 always: exactly 2 requests (first + one retry after ~1 s), broken-image state, alt kept, 0 further requests in the next 4 s (no loop); a photo that fails once recovers on the retry (naturalWidth 360) | pass |
+  | Leaks | Gallery with 8 s photo latency (16 slots busy), client-side move to Preview and print: 16 print-variant requests started within 1.5 s (slots freed on unmount). Five leave/return round trips: no stall, wire peak stays 16 (browser dedupes the same URLs). Unit test "gives the slot back" | pass |
+  | Accessibility / layout | alt kept ("Photo N" on tiles, "" on decorative as before); tile box 147x110 for all 40 sampled tiles with or without src; CLS 0 to 0.004, same as develop (0.004) | pass |
+  | Tests fail without the queue | Scratch copy with the product diff reverse-applied: QueuedImg.test.tsx cannot import. Mutations on a scratch copy: LIMIT=1000 fails the 100-photo test; no slot release on unmount fails 4 tests (unmount, 2 print tests, one-photo design); retry unlimited fails the retry test | pass |
+  | Mechanical | web: vitest 397/397, eslint+prettier, tsc+vite build, lint:i18n all OK. `make e2e` (own DB and ports): 5/5 incl. journey with PDF | pass |
+  Non-blocking observations:
+  1. When a slot is freed by unmount the browser does NOT abort the request (0 aborted): leaving a gallery with 16 in flight and opening the print page gave 32 on the wire for a moment. Per-page bound is 16; across fast route changes it can exceed it (server cap is 64).
+  2. The print preload tries each photo once (no retry). A single 429/5xx there counts as failed and raises the banner even though the on-page image would retry; under the 16 cap this is unlikely. Same as before the change.
+  3. Tiles waiting for a slot are blank while loading tiles show the alt text; cosmetic.
+  4. Tests assert against the imported LIMIT, not the literal 16; changing the constant is not caught by the unit tests.
+  5. Not measured against real S3 latency (dev's own gap). No Retry-After parsing, fixed 1 s retry.
+  Cleanup: API stopped, test DBs dropped, nothing of mine listening. Uploaded test photos remain in the local MinIO bucket smemories-dev (dev data only). Harness: scratchpad h/run.mjs (not committed).
+- 2026-10-22 19:47Z · leader · Merged PR #113 as b683b6b (QA_PASS on 6217030). The peak of 16 in flight was measured; it briefly reaches 32 on the wire across a route change, well under T-107's 64.
 
 ### T-117 — [E13] Fix develop e2e after the Terms merges (journey readFileSync import, h2-gallery register terms version)
 - **Status:** DONE
@@ -5369,7 +5389,7 @@ Spec: .team/epics/E12-security-hardening/12-openapi-session-ceiling.md (read it 
 - 2026-10-22 08:53Z · human · accepted by owner
 
 ### T-120 — [E06] CI: bound and cache the e2e Chromium install (two hangs on 2026-10-22)
-- **Status:** TODO
+- **Status:** READY_FOR_QA
 - **Priority:** P3
 - **Type:** ci
 - **Milestone:** M2
@@ -5378,15 +5398,16 @@ Spec: .team/epics/E12-security-hardening/12-openapi-session-ceiling.md (read it 
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-22 15:38Z by leader
-- **Comments-seen:** 1
+- **Branch:** task/t-120-e06-ci-bound-and-cache-the-e2e-chromium-install
+- **PR:** https://github.com/danyaa666/smemories/pull/114
+- **Updated:** 2026-10-22 19:37Z by dev
+- **Comments-seen:** 2
 
 Spec: .team/epics/E06-go-live/13-ci-e2e-chromium-install.md (read it from the main checkout).
 
 #### Comments
 - 2026-10-22 19:21Z · leader · Leader: raised to P2. The third Chromium install hang (PR #113) needed a manual rerun.
+- 2026-10-22 19:37Z · dev · PR #114 head e106a96. ci.yml only: actions/cache keyed on OS + resolved @playwright/test version; hit -> install-deps only; step timeout-minutes 6, 150 s per attempt, one retry. Install step 14 s (miss) -> 8 s (hit); all checks green on head. Verify: e2e log shows 'Cache hit for: playwright-Linux-1.64.0' and 'install-deps chromium'. Real hang recovery cannot be forced in CI.
 
 <!-- tasks:end -->
 
