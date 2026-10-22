@@ -10,9 +10,10 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 11 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-096, T-097 |
-| TODO | 2 | T-115, T-116 |
-| IN_PROGRESS | 1 | T-095 |
+| BACKLOG | 8 | T-023, T-024, T-025, T-026, T-027, T-031, T-050, T-097 |
+| TODO | 4 | T-029, T-091, T-096, T-116 |
+| IN_PROGRESS | 1 | T-115 |
+| QA_PASS | 1 | T-095 |
 | MERGED | 1 | T-114 |
 | DONE | 96 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-092, T-093, T-094, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-117, T-118, T-119 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
@@ -21,7 +22,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?); Q-051 (Approve merge of T-100 (canonical public ids, PR #93)?); Q-052 (Approve merge of T-111 (Terms acceptance API, PR #96; merges together with T-112)?); Q-053 (Approve merge of T-110 (upload abuse follow-up, PR #99)?); Q-054 (Approve merge of T-107 (bounded photo download memory, PR #98)?)
 
-_Board last written 2026-10-22 14:19Z_
+_Board last written 2026-10-22 14:43Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -1820,7 +1821,7 @@ Small follow-ups found in the T-001 review and QA.
 - 2026-10-07 14:03Z · leader · accepted by owner (chat, 2026-10-07: 'Accept all')
 
 ### T-029 — [E01] Replace the frozen MinIO dev image with a maintained S3-compatible store
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -1831,8 +1832,8 @@ Small follow-ups found in the T-001 review and QA.
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
-- **Comments-seen:** 1
+- **Updated:** 2026-10-22 14:43Z by leader
+- **Comments-seen:** 2
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/07-replace-the-frozen-minio-dev-image-with-a.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1842,6 +1843,7 @@ MinIO no longer publishes container images (Docker Hub and Quay pulls fail), so 
 
 #### Comments
 - 2026-10-07 03:16Z · leader · QA note: bitnamilegacy/minio works (arm64 native) but is AGPL-3.0, unsupported by Broadcom, gets no CVE fixes, and the Docker Hub namespace can vanish. Fine for dev-only and loopback-only use. Until this task runs, pin the image by digest in docker-compose.yml and the T-009 CI service so a vanished tag cannot silently change what we run.
+- 2026-10-22 14:43Z · leader · Leader: promoted to refill the pipeline; dependency health of the dev stack. Never touch the main checkout's compose volumes.
 
 ### T-030 — [E01] T-002 follow-ups: isolate compose stacks, fail fast on auth errors, test-DB grants
 - **Status:** DONE
@@ -4340,7 +4342,7 @@ Spec: .team/epics/E06-go-live/10-migrate-docs-and-smoke-robustness.md (read it f
 - 2026-10-17 17:59Z · human · accepted by owner
 
 ### T-091 — [E06] Image-smoke timeout path, config-class retry and message grammar (T-090 QA leftovers)
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M2
@@ -4351,12 +4353,13 @@ Spec: .team/epics/E06-go-live/10-migrate-docs-and-smoke-robustness.md (read it f
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-17 16:46Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-22 14:43Z by leader
+- **Comments-seen:** 1
 
 Small leftovers from the T-090 QA: (1) scripts/image-smoke.sh: when SMOKE_TIMEOUT fires it exits 143 with no FAIL message and leaves an orphaned sleep holding the pipe open (make image-smoke | tail hangs): print a FAIL line naming the step, kill the child by PID and exit 1. (2) Mail failures of class config are retried 3 times in the background: do not retry them (a misconfiguration will not fix itself in seconds). (3) The message '1 migrations' should read '1 migration'. (4) Add to the T-024 notes: alarm on the ERROR log line for request-path resend failures too, since the metric counts background sends only. Acceptance: each item has a test or a visible check; make lint build test, integration tests and make image-smoke stay green.
 
 #### Comments
+- 2026-10-22 14:43Z · leader · Leader: promoted to refill the pipeline (no deps).
 
 ### T-092 — [E05] Public photo links: signed token, public-media endpoint, revoke-all (API)
 - **Status:** DONE
@@ -4469,7 +4472,7 @@ Spec: .team/epics/E05-templates-export/16-book-text-export-web.md. Download and 
 - 2026-10-21 13:52Z · human · accepted by owner
 
 ### T-095 — [E11] Signature storage, validation and API
-- **Status:** IN_PROGRESS
+- **Status:** QA_PASS
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1b
@@ -4477,11 +4480,11 @@ Spec: .team/epics/E05-templates-export/16-book-text-export-web.md. Download and 
 - **Risk:** high
 - **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** leader
 - **Branch:** task/t-095-e11-signature-storage-validation-and-api
 - **PR:** https://github.com/danyaa666/smemories/pull/108
-- **Updated:** 2026-10-22 14:07Z by dev
-- **Comments-seen:** 6
+- **Updated:** 2026-10-22 14:39Z by qa
+- **Comments-seen:** 9
 
 Spec: .team/epics/E11-signatures/01-signature-api.md. Next phase (after go-live, D-31). Vector strokes (L-14), template switch, public submit field, inbox and book-data reads. Risk high: public input.
 
@@ -4510,9 +4513,19 @@ Spec: .team/epics/E11-signatures/01-signature-api.md. Next phase (after go-live,
   - Postman: signatures collection run twice back to back on the switch-on build: 61/61 and 61/61 (enabled path, round trip, canonical, moderation, validation table); on the PR build as shipped (switch off): 59/59 twice. notes + notes-moderation: see finding 1.
   Cleanup done: API process stopped, scratch DBs smem_test_qa95* dropped, Redis db 5 flushed.
 - 2026-10-22 14:02Z · leader · Leader: rework scope = QA's one blocker only. Add `signature` to the expected keys in postman/notes (step 6 public lookup) and postman/notes-moderation (step 10 item shape, step 18a book-data shape): null for notes without one. Run both collections twice, plus signatures. Merge origin/develop first if the PR conflicts (no rebase, no force-push). The ascii charset is now a documented exception in docs/db-conventions.md (leader). The other non-blocking notes wait for T-097.
+- 2026-10-22 14:32Z · dev · Rework done for QA finding 1 (and nothing else). PR #108 head 5e7a80e (merged origin/develop first, clean, no conflict; no .team files in the PR diff). Changes: notes step 6 public lookup expects signature {enabled, w:1000, h:400, max_strokes:12, max_points:600}; notes-moderation step 10 item shape and 18a book-data shape include signature (asserted null for notes without one). Runs on a PR build, fresh scratch DB and fresh accounts per run (accounts created by a warm-up run, A/B marked verified, limits cleared): run 1 notes 157/157, notes-moderation 164/164, signatures 59/59; run 2 identical 157/157, 164/164, 59/59. CI on 5e7a80e: e2e, go, go-integration, image, security, web all pass. Scratch DBs dropped, API processes stopped, Redis db 7 flushed. Non-blocking a/c wait for T-097; b already documented by leader.
+- 2026-10-22 14:32Z · dev · QA finding 1 fixed: signature added to the expected keys in notes (6) and notes-moderation (10, 18a); both collections green twice plus signatures; head 5e7a80e, CI green.
+- 2026-10-22 14:39Z · qa · QA_PASS on head 5e7a80e (PR #108, CI green: e2e, go, go-integration, image, security, web). Finding 1 of my earlier QA_FAIL is fixed.
+  Evidence (mine):
+  1. Diff: 5e7a80e vs the develop merge b6998a6 touches only postman/notes (step 6: 1 line) and postman/notes-moderation (steps 10 and 18a: 2 lines). Merge b6998a6 brings develop only; PR diff vs origin/develop has no .team files.
+  2. Fresh scratch DB (migrated up, accounts A/B made verified, limits cleared before each run), PR build, SMEM_ENV=dev, postman collection run from postman/, two rounds: notes 157/157 and 157/157; notes-moderation 164/164 and 164/164; signatures 59/59 and 59/59.
+  3. Assertions are real: rebuilt the API with memory-book's signature switch on (go build -overlay, nothing committed) and ran a scratch copy of notes-moderation that picks memory-book and attaches a signature to N5. Result 165 assertions, exactly 1 failed: step 10 item shape 'expected { v: 1, w: 1000, h: 400, s: [...] } to deeply equal null'. So the key list includes signature (key assertion passes) and the null check bites on a signed note; 18a passed (N5 is pending, excluded from book data).
+  4. Smoke on the merged head: go test -race -count=1 -tags integration ./internal/signature/... ./internal/notes/... ./internal/bookdata/... ./internal/db/... all ok (notes 118 s); web npm test 379/379 (21 files), lint, prettier, typecheck, check:api ok.
+  Cleanup: API processes stopped, scratch DB smem_test_qa95r dropped, Redis db 5 flushed, no files left in the worktree.
+  Non-blocking (unchanged from before, wait for T-097): signatures collection should add a step on template classic (ERROR_PARAM) once memory-book is enabled; oversize signature to a disabled-template book answers ERROR_INVALID_SIGNATURE vs ERROR_PARAM for a small one.
 
 ### T-096 — [E11] Web: signature pad on the public form and the signature in the inbox
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1b
@@ -4523,12 +4536,13 @@ Spec: .team/epics/E11-signatures/01-signature-api.md. Next phase (after go-live,
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-19 04:19Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-22 14:43Z by leader
+- **Comments-seen:** 1
 
 Spec: .team/epics/E11-signatures/02-signature-pad-web.md. Next phase.
 
 #### Comments
+- 2026-10-22 14:43Z · leader · Leader: promoted; starts once T-095 merges. The spec was amended: thin to the 3072-byte cap.
 
 ### T-097 — [E11] Print: signatures in memory-book and navy-classic
 - **Status:** BACKLOG
@@ -5197,7 +5211,7 @@ QA of T-100 (2026-10-21): since T-100 a non-canonical id answers 400 ERROR_PARAM
 - 2026-10-22 14:19Z · leader · Merged PR #109 as 73d6087 (QA_PASS on c422ddf, risk low; 40 browser cases en/vi).
 
 ### T-115 — [E05] Export dialogs return focus to their button; e2e traces drop photo-link URLs
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P3
 - **Type:** bug
 - **Milestone:** M2
@@ -5205,10 +5219,10 @@ QA of T-100 (2026-10-21): since T-100 a non-canonical id answers 400 ERROR_PARAM
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-115-e05-export-dialogs-return-focus-to-their
 - **PR:** —
-- **Updated:** 2026-10-21 13:19Z by leader
+- **Updated:** 2026-10-22 14:33Z by dev
 - **Comments-seen:** 0
 
 QA of T-094 (2026-10-21): after Continue in the public-link warning and after confirming Disable photo links, focus lands on <body>, so keyboard users restart at the top; return focus to the button that opened the dialog (in the shared Dialog component if that is where it belongs, covering backdrop click too). Also: a failed CI e2e run keeps a Playwright trace that contains the photo-link URL (a bearer token of the throwaway e2e database); scrub it or disable traces for that step. Component test for focus return; show the trace setting in the PR.
