@@ -12,17 +12,16 @@
 |---|---:|---|
 | BACKLOG | 13 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-095, T-096, T-097, T-116 |
 | TODO | 3 | T-113, T-114, T-115 |
-| IN_PROGRESS | 1 | T-106 |
-| READY_FOR_QA | 1 | T-119 |
-| IN_QA | 1 | T-109 |
+| READY_FOR_QA | 2 | T-106, T-119 |
+| MERGED | 1 | T-109 |
 | DONE | 92 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-092, T-093, T-094, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-107, T-108, T-110, T-111, T-112, T-117, T-118 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** nothing
+**Awaiting your review (MERGED):** T-109 ([E02] Flaky TestConcurrentResetHasOneWinner under CPU load)
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?); Q-051 (Approve merge of T-100 (canonical public ids, PR #93)?); Q-052 (Approve merge of T-111 (Terms acceptance API, PR #96; merges together with T-112)?); Q-053 (Approve merge of T-110 (upload abuse follow-up, PR #99)?); Q-054 (Approve merge of T-107 (bounded photo download memory, PR #98)?)
 
-_Board last written 2026-10-22 05:34Z_
+_Board last written 2026-10-22 05:54Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4838,7 +4837,7 @@ Spec: .team/epics/E12-security-hardening/09-links-and-contributor-quota.md (read
 - 2026-10-22 05:34Z · human · accepted by owner
 
 ### T-106 — [E12] Auth and repository hygiene from audit run 1
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P3
 - **Type:** security
 - **Milestone:** M2
@@ -4846,15 +4845,16 @@ Spec: .team/epics/E12-security-hardening/09-links-and-contributor-quota.md (read
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-106-e12-auth-and-repository-hygiene-from-aud
-- **PR:** —
-- **Updated:** 2026-10-22 05:24Z by dev
-- **Comments-seen:** 0
+- **PR:** https://github.com/danyaa666/smemories/pull/106
+- **Updated:** 2026-10-22 05:48Z by dev
+- **Comments-seen:** 1
 
 Spec: .team/epics/E12-security-hardening/10-auth-and-repo-hygiene.md (read it from the repo root). Source: audit run 1, docs/security-audit-skill-2026-10-20/ (PR #86). Risk high: owner approves the merge.
 
 #### Comments
+- 2026-10-22 05:48Z · dev · PR #106 head 8b5726c, CI green (go, go-integration, web, e2e, image, security). Verify: __Host-smem_session in secure envs / smem_session in dev (TestSessionTokenAndCookieFlags), second Google subject refused (TestGoogleRefusesSecondSubject), RS384 token refused, Google name fallback is Student not email local part (only email-derived path), guard.mjs DSN host tests, gitignore/dependabot. RS256 pin equals go-oidc default (test locks it). Existing display_name rows not rewritten. Postman changed only in description (runs vs dev); make e2e proven by CI only.
 
 ### T-107 — [E12] Bound the memory of photo downloads (get-content and public-media)
 - **Status:** DONE
@@ -4961,7 +4961,7 @@ Spec: .team/epics/E06-go-live/11-concurrent-migrate-race.md. CI image job flake 
 - 2026-10-21 08:13Z · human · accepted by owner
 
 ### T-109 — [E02] Flaky TestConcurrentResetHasOneWinner under CPU load
-- **Status:** IN_QA
+- **Status:** MERGED
 - **Priority:** P3
 - **Type:** bug
 - **Milestone:** M2
@@ -4969,16 +4969,23 @@ Spec: .team/epics/E06-go-live/11-concurrent-migrate-race.md. CI image job flake 
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** —
 - **Branch:** task/t-109-e02-flaky-testconcurrentresethasonewinne
 - **PR:** https://github.com/danyaa666/smemories/pull/104
-- **Updated:** 2026-10-22 05:12Z by qa
-- **Comments-seen:** 1
+- **Updated:** 2026-10-22 05:54Z by leader
+- **Comments-seen:** 3
 
 QA of T-103 (2026-10-21): go-integration was red once on internal/auth TestConcurrentResetHasOneWinner; the same failure reproduces on develop b3878c2 under CPU load, so it is the test, not T-103. Find why (likely the hash-slot wait in the test env is shorter than the hashing under load), make the test deterministic (larger hashWait or a held slot released on cue, no sleeps), and show it green with go test -race -count=50 while the machine is loaded (e.g. a parallel go test ./... in the background). No production code change unless the test proves a real bug.
 
 #### Comments
 - 2026-10-22 05:11Z · dev · Root cause: test ordering bug, NOT a product race. register and forgot send their mails from background goroutines; code() takes the newest mail, so when the reset mail overtook the registration mail it returned the verify code -> 8 wrong-code resets -> 0 winners. Redis check script is atomic; no product change. Fix: forgot() helper waits svc.Wait() when the recording mailer is used (also fixes TestEmailLocale msgs[0]/last); test now prints all answers. Repro: 300ms delay on the verify mail in the recording mailer, GOMAXPROCS=2 + 12 busy loops, -race -count=50: before 50/50 FAIL, after 50/50 PASS. Natural flake did not reproduce here (50 runs under load + parallel full integration run, before and after). Full internal/auth integration suite green, CI green on eb03f5d. Verify: PR #104 diff is tests only.
+- 2026-10-22 05:54Z · qa · PR #104 head eb03f5d, QA_PASS. Evidence:
+  1. Diff: 2 files, internal/auth/integration_test.go (+3/-1, env.recorded flag) and verify_reset_integration_test.go (+16/-8: forgot() calls e.svc.Wait() when recording mailer used; test collects status+body of all answers). Tests only; no sleeps, timeout increases or retries (grep).
+  2. Root cause: ResetPassword -> Codes.Check -> checkScript (Redis Lua): compare and DEL on match happen in one atomic script, so only one concurrent correct code can win. Confirmed empirically: scratch copy with 18 parallel resets (limit 20/IP), -race -count=30, GOMAXPROCS=2: 30/30 exactly one winner. (Test ran 50x -race normally too: ok.)
+  3. Repro: scratch worktrees (removed, never committed) with a 300ms delay on the first mail Send per recMailer (atomic counter), GOMAXPROCS=2 + 12 busy loops, -race -count=50 -run TestConcurrentResetHasOneWinner: merge-base 64f8f76 FAIL 49/50 (0 winners, want 1); eb03f5d PASS 50/50. Note: a naive 'first Send sleeps' check with len(msgs)==0 delays both mails and does not reproduce; delay must be keyed on call order.
+  4. Full internal/auth integration suite, go test -race -count=1 -timeout 30m -tags integration ./internal/auth/...: ok 117s. go vet and go vet -tags integration ./... ok, gofmt clean. CI on eb03f5d: e2e, go, go-integration, image, security, web all pass; PR mergeable.
+  Non-blocking: other helpers that read newest mail after a background send (e.g. resend paths) rely on code() calling svc.Wait(), which it does; no other hazard found. All my load loops stopped (pgrep clean).
+- 2026-10-22 05:54Z · leader · Merged PR #104 as 11c594f (QA_PASS on eb03f5d, risk low, test-only).
 
 ### T-110 — [E12] Owner uploads need a verified email and a per-client share; bound drains of rejected public bodies
 - **Status:** DONE
