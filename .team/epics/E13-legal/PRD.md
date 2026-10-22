@@ -17,3 +17,4 @@ Drafts written by the leader from what the product actually does: `docs/legal/te
 |---|---|---|
 | T-111 Versioned terms acceptance (API) | `01-terms-acceptance-api.md` | — |
 | T-112 Web: legal pages, sign-up checkbox, accept screen, friend-form notice | `02-legal-pages-web.md` | T-111 |
+| T-117 Fix develop e2e after the Terms merges | `03-e2e-terms-fixups.md` | — |
