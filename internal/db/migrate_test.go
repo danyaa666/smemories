@@ -20,10 +20,11 @@ func TestCompareSchema(t *testing.T) {
 		{"equal", []int64{1, 2, 3}, 0, nil, ""},
 		{"never migrated", nil, 0, []string{"version 0", "expects 3", "3 migrations pending"}, ""},
 		{"behind", []int64{1}, 0, []string{"version 1", "expects 3", "2 migrations pending"}, ""},
+		{"one pending reads in the singular", []int64{1, 2}, 0, []string{"1 migration pending"}, "1 migrations"},
 		{"ahead is compatible", []int64{1, 2, 3, 4, 5}, 2, nil, ""},
 		{"too far ahead", []int64{1, 2, 3, 4, 5, 6, 7}, 4, []string{"version 7", "4 migrations ahead"}, ""},
 		// AC3: the gap names the missing version and the next applied one, two different numbers.
-		{"gap in the middle", []int64{1, 3}, 0, []string{"missing migration 2", "next applied one is 3"}, "version 3, this build expects 3"},
+		{"gap in the middle", []int64{1, 3}, 0, []string{"missing migration 2", "next applied one is 3", "1 migration not applied"}, "version 3, this build expects 3"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			ahead, err := compareSchema(known, tc.applied)

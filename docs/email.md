@@ -16,12 +16,12 @@ The API sends two kinds of mail, both a 6-digit code the student types (no links
 
 | Where | How it sends | If the provider fails |
 |---|---|---|
-| `POST /api/auth/register` | background, never waits | up to 2 retries (2 s, 5 s) while `ErrUnavailable`; then one ERROR log line (`request_id`, `class`, no address, no code) and `smem_mail_send_failures_total{class}`. The account exists; the student uses "send a new code". |
+| `POST /api/auth/register` | background, never waits | up to 2 retries (2 s, 5 s) while `ErrUnavailable` (none for class `config`: a misconfiguration does not fix itself in seconds); then one ERROR log line (`request_id`, `class`, no address, no code) and `smem_mail_send_failures_total{class}`. The account exists; the student uses "send a new code". |
 | `POST /api/auth/forgot-password` | background; the answer is the same `200` for every address, known, unknown or refused | same as above |
 | `POST /api/auth/resend-verification` | on the request, once, at most 10 s | `ErrUnavailable` -> `503 ERROR_MAIL_UNAVAILABLE` + `Retry-After: 30` (the resend try is given back, but at most 5 times an hour per user, so an outage cannot be used to hammer the provider: after that the tries count as usual, at most 5 + 3 sends an hour, then `429`); `ErrRejected` -> `400 ERROR_EMAIL_UNDELIVERABLE` |
 
 Failure classes (the metric label): `unavailable`, `rejected`, `config`, `shutdown`, `other` (a misconfiguration or bad credentials, which is also an ERROR log line). Alarm on
-`rate(smem_mail_send_failures_total[15m]) > 0` for `unavailable`, `config` and `other` (T-024); `config` must page at once (every send fails until the operator acts); `rejected` is the
+`rate(smem_mail_send_failures_total[15m]) > 0` for `unavailable`, `config` and `other` (T-024); `config` must page at once (every send fails until the operator acts); the metric counts the background sends only (register, forgot-password), so T-024 must also alarm on the ERROR log line `mailer: send failed` with `class=config` (T-091), which covers the request-path resend failures too; `rejected` is the
 student's address and only needs watching in bulk; `shutdown` counts emails dropped because the process had to exit before they were sent ([container.md](container.md#graceful-shutdown)),
 a few after a deploy are normal, a steady stream means the provider is slow.
 

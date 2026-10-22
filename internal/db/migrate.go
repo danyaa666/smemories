@@ -217,6 +217,14 @@ func maxVersion(known map[int64]bool) (m int64) {
 	return m
 }
 
+// count is "1 migration", "3 migrations": the refusal texts read the same for one as for many.
+func count(n int, noun string) string {
+	if n == 1 {
+		return "1 " + noun
+	}
+	return fmt.Sprintf("%d %ss", n, noun)
+}
+
 // compareSchema is the decision of CheckSchema on plain data: known are the embedded versions, applied the recorded ones. It returns how
 // many applied migrations this build does not know, or the refusal.
 func compareSchema(known map[int64]bool, applied []int64) (ahead int, err error) {
@@ -244,12 +252,12 @@ func compareSchema(known map[int64]bool, applied []int64) (ahead int, err error)
 					next = min(next, v)
 				}
 			}
-			return 0, apperr.New(apperr.Unavailable, fmt.Sprintf("database schema is missing migration %d (the next applied one is %d, highest %d, this build expects %d): %d migrations not applied; run smemories-migrate up first, and see docs/deploy.md if it fails", missing[0], next, have, want, len(missing)))
+			return 0, apperr.New(apperr.Unavailable, fmt.Sprintf("database schema is missing migration %d (the next applied one is %d, highest %d, this build expects %d): %s not applied; run smemories-migrate up first, and see docs/deploy.md if it fails", missing[0], next, have, want, count(len(missing), "migration")))
 		}
-		return 0, apperr.New(apperr.Unavailable, fmt.Sprintf("database schema is at version %d, this build expects %d: %d migrations pending; run smemories-migrate up first", have, want, len(missing)))
+		return 0, apperr.New(apperr.Unavailable, fmt.Sprintf("database schema is at version %d, this build expects %d: %s pending; run smemories-migrate up first", have, want, count(len(missing), "migration")))
 	}
 	if ahead > MaxSchemaAhead {
-		return ahead, apperr.New(apperr.Unavailable, fmt.Sprintf("database schema is at version %d, this build expects %d: %d migrations ahead (at most %d are compatible); deploy the newer image", have, want, ahead, MaxSchemaAhead))
+		return ahead, apperr.New(apperr.Unavailable, fmt.Sprintf("database schema is at version %d, this build expects %d: %s ahead (at most %d are compatible); deploy the newer image", have, want, count(ahead, "migration"), MaxSchemaAhead))
 	}
 	return ahead, nil
 }

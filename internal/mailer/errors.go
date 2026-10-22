@@ -24,3 +24,8 @@ func classify(kind error, reason string, cause error) error {
 func classifyAs(kind error, class, reason string, cause error) error {
 	return &sendError{kind: kind, class: class, reason: reason, cause: cause}
 }
+
+// ConfigError is an ErrUnavailable of class ClassConfig, for a provider (or a test double) that knows the operator must act.
+func ConfigError(reason string, cause error) error {
+	return classifyAs(ErrUnavailable, ClassConfig, reason, cause)
+}

@@ -12,7 +12,7 @@ COMPOSE_PROJECT_NAME := $(shell if docker ps -a --filter label=com.docker.compos
 endif
 export COMPOSE_PROJECT_NAME
 
-.PHONY: image image-smoke image-scan image-scan-selftest image-hygiene build test lint run web-install web-build web-test web-lint print-check up down migrate migrate-down test-integration reset-limits
+.PHONY: image image-smoke image-scan image-scan-selftest image-smoke-selftest image-hygiene build test lint run web-install web-build web-test web-lint print-check up down migrate migrate-down test-integration reset-limits
 
 build:
 	go build -o bin/smemories-api ./cmd/smemories-api
@@ -119,6 +119,10 @@ image:
 image-smoke:
 	@tag="smemories:smoke-$$$$-$$(date +%s)"; trap 'docker rmi "$$tag" >/dev/null 2>&1 || true' EXIT; \
 	$(MAKE) --no-print-directory image IMAGE="$$tag" && scripts/image-smoke.sh "$$tag"
+
+# Forces the whole-run timeout of image-smoke.sh with a fake docker that hangs: exit 1, a FAIL line naming the step, no child left (T-091). No Docker needed.
+image-smoke-selftest:
+	scripts/image-smoke-selftest.sh
 
 # Trivy (pinned image) fails on a fixable HIGH or CRITICAL vulnerability and writes build/sbom/sbom.cdx.json (T-089, docs/container.md).
 image-scan: image

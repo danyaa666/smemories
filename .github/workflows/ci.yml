@@ -252,6 +252,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - run: make image-smoke-selftest
       - run: make image-smoke
       - run: make image-hygiene
       # The vulnerability database is cached per day (Trivy re-downloads it when it is older than its own 24 h limit).
