@@ -11,8 +11,9 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 13 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-095, T-096, T-097, T-116 |
-| TODO | 6 | T-105, T-106, T-109, T-113, T-114, T-115 |
-| IN_PROGRESS | 1 | T-101 |
+| TODO | 6 | T-106, T-109, T-113, T-114, T-115, T-119 |
+| IN_PROGRESS | 1 | T-105 |
+| QA_PASS | 1 | T-101 |
 | DONE | 90 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-092, T-093, T-094, T-098, T-099, T-100, T-102, T-103, T-104, T-107, T-108, T-110, T-111, T-112, T-117, T-118 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
@@ -20,7 +21,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?); Q-051 (Approve merge of T-100 (canonical public ids, PR #93)?); Q-052 (Approve merge of T-111 (Terms acceptance API, PR #96; merges together with T-112)?); Q-053 (Approve merge of T-110 (upload abuse follow-up, PR #99)?); Q-054 (Approve merge of T-107 (bounded photo download memory, PR #98)?)
 
-_Board last written 2026-10-22 03:52Z_
+_Board last written 2026-10-22 04:32Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4637,7 +4638,7 @@ Spec: `.team/epics/E12-security-hardening/03-canonical-public-ids.md`. Audit M3:
 - 2026-10-21 13:52Z · human · accepted by owner
 
 ### T-101 — [E12] Small hardening: readyz cache, generic code-email greeting, absolute session lifetime
-- **Status:** IN_PROGRESS
+- **Status:** QA_PASS
 - **Priority:** P3
 - **Type:** security
 - **Milestone:** M2
@@ -4645,15 +4646,46 @@ Spec: `.team/epics/E12-security-hardening/03-canonical-public-ids.md`. Audit M3:
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** leader
 - **Branch:** task/t-101-e12-small-hardening-readyz-cache-generic
-- **PR:** —
-- **Updated:** 2026-10-22 03:42Z by dev
-- **Comments-seen:** 0
+- **PR:** https://github.com/danyaa666/smemories/pull/102
+- **Updated:** 2026-10-22 04:31Z by qa
+- **Comments-seen:** 2
 
 Spec: `.team/epics/E12-security-hardening/04-readyz-greeting-session-lifetime.md`. Audit L1, L2, L3: cache /readyz for 2 s, drop the unverified display name from the code emails, add a 90-day absolute session lifetime. Risk high: auth and sessions.
 
 #### Comments
+- 2026-10-22 04:10Z · dev · PR #102 head 08abb3c, CI green (6/6). readyz: 2 s cache, mutex shared check, drain evaluated before cache (ready.go). Greeting: Hello,/Xin chào,, renderEmail has no name. Sessions: SessionMaxAge 90d from created_at; Lookup returns it; slide uses min(30d, ceiling-now) for PEXPIRE and cookie Expires/Max-Age (Session.TTL). Tests: TestReadyCaches*/Concurrent*/Drain*/LoggedOnce, TestCodeEmailsNeverCarryTheDisplayName, TestSessionAbsoluteLifetime, TestSessionCeilingBeatsSliding. Adapted TestEmailLocale and TestReadyzAgainstRealDatabase (waits out cache). Base rebased onto origin/develop (local develop had an unpushed board commit). Gap: none.
+- 2026-10-22 04:31Z · qa · QA_PASS for PR #102 head 08abb3c (CI 6/6 green on it). I added one test-only commit, 2d0509e (2 QA test files, no product code); its CI re-run was still pending when I finished.
+  
+  AC1 readyz -> PASS.
+  - 100 probes in 1 s call db+redis once (TestReadyCachesTheCheckForTwoSeconds); 50 concurrent probes share one check; a failure is cached 2 s only; drain is evaluated before the cache; one log line per check.
+  - Mutation: the cache disabled in a scratch copy fails TestReadyCachesTheCheckForTwoSeconds (100 pings), TestReadyConcurrentProbesShareOneCheck (50) and TestReadyFailureIsLoggedOncePerCheck (20 log lines). Drain moved behind the cache fails TestReadyDrainIsNotHiddenByTheCache.
+  - My probes, all pass under -race: ready_qa_test.go (committed) has 50 concurrent probes on a dependency that honours its deadline: all 503 in ~1 s, 1 ping, no goroutine growth. A client that hangs up mid-check is not cached as not-ready (WithoutCancel).
+  - Live API (own port, own valkey container qa101-valkey on :16399, since removed): about 6400 probes/s; valkey stopped -> 503 after 2.14 s, one WARN line; valkey restarted -> 200. With SMEM_SHUTDOWN_DELAY=5s and a warm 200 cache, SIGTERM -> 503 at 0.0 s and on every probe after it, one 'readyz: shutdown ping failed' line.
+  - Non-blocking: a dependency that ignores ctx entirely (not sql.DB or go-redis) blocks every probe on the mutex until it returns (30 goroutines parked in my throwaway test, all released afterwards, no leak). Waiters cannot give up on their own request ctx. The old code hung the same way.
+  
+  AC2 greeting -> PASS. Neither the name nor user text can reach renderEmail (signature has no name).
+  - TestCodeEmailsNeverCarryTheDisplayName registers 'Click evil.example' in en and vi: no subject/text/HTML contains it, the code is present. Golden diffs are only the hello line (Hello, / Xin chào,).
+  - Mutation: name restored in the templates and renderEmail (scratch copy) fails TestEmailGolden and the integration test ('Hi Click evil.example,').
+  
+  AC3 session ceiling -> PASS.
+  - Dev's TestSessionAbsoluteLifetime (valid day 89, 401 day 91, new login works) and TestSessionCeilingBeatsSliding pass.
+  - Mine (TestQASessionCeilingExactBoundary): slide at day 80 gives Set-Cookie 'Expires=Tue, 05 Jan 2027 12:00:00 GMT; Max-Age=864000' (= created+90d, 10 days, not 30), Redis PTTL ~10 d, created_at unchanged. Valid at 90d-1min, 401 at 90d+1min.
+  - Mine (TestQASessionWithoutCreatedAtIsNotFound): created_at missing or garbage -> 401; a session without epoch (pre-T-103) still 200.
+  - Existing sessions in Redis: createScript has stored created_at since T-052, so every live session carries it and nothing is dropped on deploy. The oldest possible session is younger than 90 d (migration 0012 reset sessions). A session lacking created_at is logged out (401).
+  - T-103 epoch fence: unchanged code path, all T-103 tests pass.
+  
+  AC4 mechanical -> PASS.
+  - go build, go vet, go test ./... all ok.
+  - go test -race -count=1 -tags integration ./... all ok (auth 266 s), 0 FAIL, 0 DATA RACE.
+  - make lint ok. make e2e ok (5/5, run with explicit env since the worktree has no .env).
+  - postman auth collection run twice with the Postman CLI (newman is not installed): 118 requests / 252 assertions, 0 failures each time. The API needs SMEM_ENV=dev, Google dummy config and SMEM_ALLOWED_ORIGINS=http://localhost:5173, and the register rate limiter reset between runs. Platform collection: 13/14, the one failure is the manual 'stop the database first' step.
+  - Docs: redis.md (both numbers), email.md, container.md updated.
+  
+  Non-blocking:
+  (a) api/openapi.yaml:442 still describes the sliding expiry without the 90-day ceiling.
+  (b) the spec's 'auth doc' has no home file; redis.md carries it.
 
 ### T-102 — [E12] Upload slot fairness: per-user cap and paced body on media/create; early release for rejected public submissions
 - **Status:** DONE
@@ -4771,7 +4803,7 @@ Spec: .team/epics/E12-security-hardening/08-media-processing-robustness.md (read
 - 2026-10-21 13:52Z · human · accepted by owner
 
 ### T-105 — [E12] Note links capped and paged; contributor photos cannot exhaust the owner's quota
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P3
 - **Type:** security
 - **Milestone:** M2
@@ -4779,10 +4811,10 @@ Spec: .team/epics/E12-security-hardening/08-media-processing-robustness.md (read
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-105-e12-note-links-capped-and-paged-contribu
 - **PR:** —
-- **Updated:** 2026-10-20 16:48Z by leader
+- **Updated:** 2026-10-22 04:11Z by dev
 - **Comments-seen:** 0
 
 Spec: .team/epics/E12-security-hardening/09-links-and-contributor-quota.md (read it from the repo root). Source: audit run 1, docs/security-audit-skill-2026-10-20/ (PR #86). Risk high: owner approves the merge.
@@ -5131,7 +5163,7 @@ QA of T-107 (2026-10-22): with 400 ms storage latency per object, a 100-thumbnai
 - **Branch:** task/t-117-e13-fix-develop-e2e-after-the-terms-merg
 - **PR:** https://github.com/danyaa666/smemories/pull/100
 - **Updated:** 2026-10-22 03:52Z by human
-- **Comments-seen:** 5
+- **Comments-seen:** 6
 
 Spec: .team/epics/E13-legal/03-e2e-terms-fixups.md (read it from the main checkout). develop CI e2e is red since 78ccfa0 (#97 merge).
 
@@ -5162,7 +5194,7 @@ Spec: .team/epics/E13-legal/03-e2e-terms-fixups.md (read it from the main checko
 - **Branch:** task/t-118-e06-re-pin-the-go-build-image-to-1-26-10
 - **PR:** https://github.com/danyaa666/smemories/pull/101
 - **Updated:** 2026-10-22 03:52Z by human
-- **Comments-seen:** 5
+- **Comments-seen:** 6
 
 Spec: .team/epics/E06-go-live/12-go-1-26-10-base-image.md (read it from the main checkout). The CI image job (Trivy) is red on develop and on every PR.
 
@@ -5173,6 +5205,25 @@ Spec: .team/epics/E06-go-live/12-go-1-26-10-base-image.md (read it from the main
 - 2026-10-22 03:38Z · qa · Head 01cb1c6. AC1: buildx imagetools inspect golang:1.26-bookworm -> index (oci.image.index) digest sha256:632dff73...21af = the pinned digest; docker run --entrypoint '' <that digest> go version -> go1.26.10 linux/arm64; make image-smoke -> 'image smoke test passed' (all ok lines); go version -m on smemories-api extracted from smemories:local -> go1.26.10. AC2: make image-scan -> all 3 gobinaries 0 findings, 'ok - no fixable HIGH or CRITICAL'; PR 101 CI: image, go, web, security, go-integration (finished after wait) green; e2e red on the PR only because the branch predates T-117. e2e check: scratch worktree = origin/develop 22b9a10 + merge of 01cb1c6 (clean merge, diff vs develop = Dockerfile only), own compose project qa118e2e on ports 33106/36379/39000/39001, make up + migrate + make e2e -> 5 passed (h2/http1.1 gallery x4, M1 journey). Scratch stack, volumes and worktree removed (own project only; main stack untouched). AC3: diff = Dockerfile only, 2 lines (digest + comment 1.26.9->1.26.10); --platform=$BUILDPLATFORM and digest pin kept; no go.mod/CI/.trivyignore change. Non-blocking: e2e.sh builds with the host go and never uses the Dockerfile, so e2e cannot be affected by this change; the PR's e2e check will stay red until the branch is updated with develop.
 - 2026-10-22 03:38Z · leader · Merged PR #101 as 60a7ab1 (QA_PASS on 01cb1c6, risk low). The PR's e2e was red only because the branch predates T-117; QA ran e2e locally on develop+T-118: 5 passed.
 - 2026-10-22 03:52Z · human · accepted by owner
+
+### T-119 — [E12] OpenAPI: document the 90-day absolute session lifetime (follow-up to T-101)
+- **Status:** TODO
+- **Priority:** P3
+- **Type:** docs
+- **Milestone:** M2
+- **Depends-on:** T-101
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-22 04:32Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E12-security-hardening/12-openapi-session-ceiling.md (read it from the main checkout).
+
+#### Comments
 
 <!-- tasks:end -->
 

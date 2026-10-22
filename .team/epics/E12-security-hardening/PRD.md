@@ -22,6 +22,7 @@ The audit found no critical or high issue, but four gaps that are cheap to close
 | T-104 Media processing robustness (slots, panics, decoded limits) | `08-media-processing-robustness.md` | run 1: lead 5, hardening note | — |
 | T-105 Note links capped and paged; separate contributor photo quota | `09-links-and-contributor-quota.md` | run 1: lead 6, hardening note | — |
 | T-106 Auth and repository hygiene | `10-auth-and-repo-hygiene.md` | run 1: hardening notes | — |
+| T-119 OpenAPI: the 90-day session ceiling | `12-openapi-session-ceiling.md` | QA on T-101 | T-101 |
 
 Audit run 1 (2026-10-20, `docs/security-audit-skill-2026-10-20/`, PR #86, skill-based, source-only) added T-102..T-107 (T-107 is the download-memory task). Its leads 1, 3 and 9 are covered by T-098 and T-100 (plus the T-023 sizing note); lead 8 and the edge items went into the T-023 spec; the dev-default item went into T-050.
 
