@@ -187,16 +187,16 @@ func TestGoogleCreatesSocialOnlyAccount(t *testing.T) {
 func TestGoogleNameAndLocaleFallbacks(t *testing.T) {
 	e, p := newGoogleEnv(t, opts{})
 	for i, c := range []struct{ name, locale, wantName, wantLocale string }{
-		{"", "", "kim", "en"},
-		{"   ", "fr", "kim", "en"},
-		{"Bad\u202eName", "vi", "kim", "vi"},
-		{strings.Repeat("x", 101), "VI", "kim", "vi"},
+		{"", "", "Student", "en"},
+		{"   ", "fr", "Student", "en"},
+		{"Bad\u202eName", "vi", "Student", "vi"},
+		{strings.Repeat("x", 101), "VI", "Student", "vi"},
 		{"Kim", "en-GB", "Kim", "en"},
 	} {
 		email := fmt.Sprintf("kim%d@example.com", i)
 		rec := e.google(p, "", oidctest.Claims{Sub: fmt.Sprintf("s%d", i), Email: email, Name: c.name, Locale: c.locale})
 		wantRedirect(t, rec, "/")
-		wantName := strings.Replace(c.wantName, "kim", fmt.Sprintf("kim%d", i), 1)
+		wantName := c.wantName // T-106: never derived from the email address (public-collect/get shows it to link holders)
 		var name, locale string
 		if err := e.db.QueryRow(`SELECT display_name, locale FROM user_tab WHERE email = ?`, email).Scan(&name, &locale); err != nil {
 			t.Fatal(err)
@@ -321,6 +321,7 @@ func TestGoogleCallbackRejections(t *testing.T) {
 		{name: "unknown code", claims: good, code: "oidc_failed", tamper: func(_ *env, f *flow) { f.code = "made-up" }},
 		{name: "token endpoint fails", claims: good, code: "oidc_failed", tamper: func(_ *env, f *flow) { f.p.FailToken(true) }},
 		{name: "no id_token", claims: with(func(c *oidctest.Claims) { c.OmitIDToken = true }), code: "oidc_failed"},
+		{name: "RS384 token (only RS256 is accepted)", claims: with(func(c *oidctest.Claims) { c.RS384 = true }), code: "oidc_failed"},
 		{name: "bad signature", claims: with(func(c *oidctest.Claims) { c.BadSignature = true }), code: "oidc_failed"},
 		{name: "wrong issuer", claims: with(func(c *oidctest.Claims) { c.Issuer = "https://evil.example" }), code: "oidc_failed"},
 		{name: "wrong audience", claims: with(func(c *oidctest.Claims) { c.Audience = "someone-else" }), code: "oidc_failed"},
@@ -341,7 +342,7 @@ func TestGoogleCallbackRejections(t *testing.T) {
 			}
 			rec := f.callback("")
 			wantRedirect(t, rec, "/login?error="+c.code)
-			if cookieNamed(rec, CookieName) != nil {
+			if cookieNamed(rec, CookieName) != nil || cookieNamed(rec, HostCookieName) != nil {
 				t.Error("a session cookie was set")
 			}
 			e.nothingCreated()
@@ -557,4 +558,30 @@ func TestGoogleSecretsNeverLogged(t *testing.T) {
 	if !strings.Contains(out, "auth: google sign-in") {
 		t.Error("expected an audit log line")
 	}
+}
+
+// T-106: a user that already has a Google subject is never linked to a second one (recycled address).
+func TestGoogleRefusesSecondSubject(t *testing.T) {
+	e, p := newGoogleEnv(t, opts{})
+	first := e.google(p, "", oidctest.Claims{Sub: "sub-1", Email: "a@example.com", Name: "A"})
+	wantRedirect(t, first, "/")
+	old := sessionCookie(t, first).Value
+
+	rec := e.google(p, "", oidctest.Claims{Sub: "sub-2", Email: "a@example.com", Name: "A2"})
+	wantRedirect(t, rec, "/login?error=ERROR_FORBIDDEN")
+	if cookieNamed(rec, CookieName) != nil || cookieNamed(rec, HostCookieName) != nil {
+		t.Error("a session cookie was set")
+	}
+	if n := e.count(`SELECT COUNT(*) FROM user_identity_tab`); n != 1 {
+		t.Errorf("%d identities, want 1", n)
+	}
+	if n := e.count(`SELECT COUNT(*) FROM user_identity_tab WHERE subject = 'sub-2'`); n != 0 {
+		t.Error("the second subject was linked")
+	}
+	if n := e.count(`SELECT COUNT(*) FROM user_tab`); n != 1 {
+		t.Errorf("%d users, want 1", n)
+	}
+	want(t, e.me(old), 200, "") // the refusal revoked nothing
+	// The first subject still signs in.
+	wantRedirect(t, e.google(p, "", oidctest.Claims{Sub: "sub-1", Email: "a@example.com", Name: "A"}), "/")
 }

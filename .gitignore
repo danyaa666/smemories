@@ -11,6 +11,10 @@
 .env.staging
 *.pem
 *.key
+*.p12
+*.tfstate
+*.tfstate.*
+*.tfvars
 
 # Go
 /bin/
