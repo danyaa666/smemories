@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { mediaUrl } from "../api/yearbooks";
-
-const CONCURRENCY = 6;
+import { enqueue, loaded as cached } from "../components/imageQueue";
 
 /** Public ids of every photo the book shows, once each. */
 export function photoIds(
@@ -21,7 +20,7 @@ export function photoIds(
 }
 
 /**
- * Fetches every photo at the print size (a few at a time) so that the browser holds them before the print dialog opens;
+ * Fetches every photo at the print size (through the shared image queue) so that the browser holds them before the print dialog opens;
  * the images on the page are lazy and find them in the cache. `failed` photos print as empty frames, which the screen says.
  */
 export function usePhotoPreload(ids: string[]) {
@@ -29,26 +28,37 @@ export function usePhotoPreload(ids: string[]) {
   const [done, setDone] = useState({ key: "", loaded: 0, failed: 0 });
   useEffect(() => {
     let live = true;
-    let next = 0;
-    let loaded = 0;
+    let ok = 0;
     let failed = 0;
-    const queue = key ? key.split(",") : [];
-    const settle = (ok: boolean) => {
-      if (ok) loaded++;
+    const settle = (good: boolean) => {
+      if (good) ok++;
       else failed++;
-      if (live) setDone({ key, loaded, failed });
-      pump();
+      if (live) setDone({ key, loaded: ok, failed });
     };
-    const pump = () => {
-      if (!live || next >= queue.length) return;
-      const img = new Image();
-      img.onload = () => settle(true);
-      img.onerror = () => settle(false);
-      img.src = mediaUrl(queue[next++] ?? "", "print");
-    };
-    for (let i = 0; i < Math.min(CONCURRENCY, queue.length); i++) pump();
+    // The same queue as the images on the page (at most LIMIT requests in flight for the whole page).
+    const cancels = (key ? key.split(",") : []).map((id) => {
+      const url = mediaUrl(id, "print");
+      if (cached.has(url)) {
+        settle(true);
+        return () => {};
+      }
+      return enqueue((release) => {
+        const img = new Image();
+        img.onload = () => {
+          cached.add(url);
+          release();
+          settle(true);
+        };
+        img.onerror = () => {
+          release();
+          settle(false);
+        };
+        img.src = url;
+      });
+    });
     return () => {
       live = false;
+      cancels.forEach((c) => c());
     };
   }, [key]);
   const current = done.key === key;
