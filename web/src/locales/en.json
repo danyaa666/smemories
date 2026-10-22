@@ -149,7 +149,8 @@
     "username_reserved": "This username is not available. Choose another one.",
     "username_taken": "This username is already taken. Choose another one.",
     "username_change_too_soon": "You changed your username recently. You can change it again on {{date}}.",
-    "invalid_template": "That template is not available for this paper size. Pick another one."
+    "invalid_template": "That template is not available for this paper size. Pick another one.",
+    "terms_required": "Please accept the Terms of Use and the Privacy Policy to continue."
   },
   "books": {
     "title": "My yearbooks",
@@ -561,5 +562,18 @@
       "loadError": "The templates could not be loaded.",
       "preview": "Preview of the cover of {{name}}"
     }
+  },
+  "legal": {
+    "terms": "Terms of Use",
+    "privacy": "Privacy Policy",
+    "agree": "I agree to the <terms>Terms of Use</terms> and the <privacy>Privacy Policy</privacy>",
+    "notice": "By sending, you agree to the <terms>Terms of Use</terms> and the <privacy>Privacy Policy</privacy>. The book owner may share your photos by link.",
+    "draft": "Draft: not the final text"
+  },
+  "accept": {
+    "titleChanged": "Our terms have changed",
+    "titleFirst": "Before you start",
+    "body": "Please read the documents linked below, then accept to continue.",
+    "submit": "Accept and continue"
   }
 }

@@ -65,13 +65,14 @@ paths:
         The email is trimmed, lower-cased and normalised to NFC; a duplicate (case-insensitive, and NFC/NFD spellings are the same address) is `ERROR_EMAIL_TAKEN`.
         Password: 10-128 characters after NFKC normalisation and not equal to the email. Display name: 1-100 characters after trimming, no control or format characters.
         Rate limit: 5 per hour per IP, counted once the input is valid. A cookie-less request needs no Origin; one that carries a session cookie must come from an allowed Origin.
-        The account gets a default `username` (`user-` plus the last 8 characters of its id; longer slices on a clash, never an error). Not idempotent: a repeated call is `ERROR_EMAIL_TAKEN`. An unknown body field is `ERROR_PARAM`.
+        The body must carry `accept_terms_version` equal to the current Terms version (D-35); a missing, empty or other value is `ERROR_TERMS_REQUIRED` (400) before anything is created, and on success the version and the time are stored in the same transaction as the account. The account gets a default `username` (`user-` plus the last 8 characters of its id; longer slices on a clash, never an error). Not idempotent: a repeated call is `ERROR_EMAIL_TAKEN`. An unknown body field is `ERROR_PARAM`.
       x-auth: public
       x-error-codes:
         - {code: ERROR_INVALID_EMAIL, description: "Field `email`: not a single address, over 254 characters, local part over 64 bytes, or containing control or format characters."}
         - {code: ERROR_WEAK_PASSWORD, description: "Field `password`: fewer than 10 or more than 128 characters after normalisation, or equal to the email."}
         - {code: ERROR_INVALID_DISPLAY_NAME, description: "Field `display_name`: empty after trimming, over 100 characters, or containing control characters."}
         - {code: ERROR_INVALID_LOCALE, description: "Field `locale`: present but not `en` or `vi` (case-sensitive), or not a string."}
+        - {code: ERROR_TERMS_REQUIRED, description: "Field `accept_terms_version`: missing, empty or not the current Terms version (HTTP 400 here); nothing is created. The current version is in `get-me` `terms.current_version` after sign-in, and in the front matter of `docs/legal/*.md`."}
         - {code: ERROR_EMAIL_TAKEN, description: An account with this address already exists.}
         - {code: ERROR_RATE_LIMITED, description: "More than 5 registrations per hour from this IP; wait for `Retry-After` seconds."}
         - {code: ERROR_BUSY, description: "All password-hashing slots stayed taken for 2 seconds; retry after `Retry-After`."}
@@ -87,7 +88,7 @@ paths:
             schema: {$ref: "#/components/schemas/RegisterRequest"}
             examples:
               register:
-                value: {email: lan@example.com, password: correct-horse-battery, display_name: "Nguyễn Thị Lan", locale: vi}
+                value: {email: lan@example.com, password: correct-horse-battery, display_name: "Nguyễn Thị Lan", locale: vi, accept_terms_version: "2026-10-21"}
       responses:
         "200":
           description: Account created; the session cookie is set.
@@ -439,7 +440,7 @@ paths:
       summary: The signed-in user
       description: >-
         Called on every page load as the session bootstrap; `ERROR_UNAUTHORIZED` (401) means signed out. Sliding expiry: once more than half of the 30-day session lifetime has elapsed the
-        expiry is extended and the cookie is sent again. `username` is the public handle (D-28); `username_next_change_at` is when it may change again, `null` when a change is allowed now. Read-only and idempotent.
+        expiry is extended and the cookie is sent again. `username` is the public handle (D-28); `username_next_change_at` is when it may change again, `null` when a change is allowed now. `terms` says which version of the Terms and Privacy Policy the user accepted (`accepted_version`, `null` = never), the current one, and whether the user must accept before any other signed-in endpoint works (`required`, see `/api/user/accept-terms`). This is one of the few endpoints that answer while `required` is true. Read-only and idempotent.
       x-auth: required
       x-error-codes:
         - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed (the caller is not treated as signed out). Retry after `Retry-After`."}
@@ -454,10 +455,10 @@ paths:
               schema: {type: string}
           content:
             application/json:
-              schema: {$ref: "#/components/schemas/UserResponse"}
+              schema: {$ref: "#/components/schemas/MeResponse"}
               examples:
                 me:
-                  value: {status: OK, data: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, email: lan@example.com, email_verified: true, display_name: "Nguyễn Thị Lan", locale: vi, created_at: 1760000000000, username: user-8b0c1d2e, username_next_change_at: null}}
+                  value: {status: OK, data: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, email: lan@example.com, email_verified: true, display_name: "Nguyễn Thị Lan", locale: vi, created_at: 1760000000000, username: user-8b0c1d2e, username_next_change_at: null, terms: {accepted_version: "2026-10-21", current_version: "2026-10-21", required: false}}}
         "401": {$ref: "#/components/responses/ApiUnauthorized"}
         "500": {$ref: "#/components/responses/ApiInternal"}
         "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
@@ -515,6 +516,48 @@ paths:
         "429": {$ref: "#/components/responses/ApiRateLimited"}
         "500": {$ref: "#/components/responses/ApiInternal"}
         "503": {$ref: "#/components/responses/ApiAuthUnavailable"}
+  /api/user/accept-terms:
+    post:
+      operationId: acceptTerms
+      tags: [auth]
+      summary: Accept the current Terms of Use and Privacy Policy
+      description: >-
+        Called by the accept screen that the web shows when `get-me` says `terms.required` (a Google account on its first sign-in, an account created before the terms existed, or
+        everyone after the texts changed). `version` must equal the current version (`terms.current_version`); an older value, which is what a stale page sends, is `ERROR_PARAM`.
+        Stores the version and the time. Repeating it is harmless. Until it succeeds, every other signed-in endpoint answers `ERROR_TERMS_REQUIRED` (403); only `get-me`, this call,
+        `/api/auth/logout` and the email-verification endpoints still work. A request with the session cookie must come from an allowed Origin.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/AcceptTermsRequest"}
+            examples:
+              accept:
+                value: {version: "2026-10-21"}
+      responses:
+        "200":
+          description: The version is stored; the body is the same object as `get-me` (with `terms.required` false).
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/MeResponse"}
+              examples:
+                accepted:
+                  value: {status: OK, data: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, email: lan@example.com, email_verified: true, display_name: "Nguyễn Thị Lan", locale: vi, created_at: 1760000000000, username: user-8b0c1d2e, username_next_change_at: null, terms: {accepted_version: "2026-10-21", current_version: "2026-10-21", required: false}}}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
   /api/yearbook/create:
     post:
       operationId: createYearbook
@@ -966,10 +1009,13 @@ paths:
         usual JSON error envelope with the matching HTTP status and `Cache-Control: no-store`, so an error is never cached in place of the
         image; an `<img>` tag only needs the status. Only the owner may read (`ERROR_NOT_FOUND` for anyone else, and for an unknown id).
         `variant=print` is the 1800 px version for the print renderer; a photo uploaded before it existed, and not yet reached by the
-        backfill (`smemories-media-backfill`), is answered in display size. The route may take up to 2 minutes for a slow client.
+        backfill (`smemories-media-backfill`), is answered in display size. The route may take up to 2 minutes for a slow client; a client that reads
+        slower than 16 KiB/s (after 15 s) or stops reading for 10 s is disconnected. The bytes are streamed from the object store (T-107). One account may
+        have at most 64 downloads in progress; the 65th waits up to 0.5 s for a slot and is then `429 ERROR_RATE_LIMITED` with `Retry-After`, answered before anything is read.
       x-auth: required
       x-error-codes:
         - {code: ERROR_NOT_FOUND, description: The photo does not exist or belongs to someone else; the two cannot be told apart.}
+        - {code: ERROR_RATE_LIMITED, description: "This account already has 64 photo downloads in progress; retry after `Retry-After` seconds."}
         - {code: ERROR_STORAGE_ERROR, description: The object store failed or the stored object is gone; retry later.}
         - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
       security:
@@ -1003,6 +1049,7 @@ paths:
         "401": {$ref: "#/components/responses/ApiUnauthorized"}
         "404": {$ref: "#/components/responses/ApiNotFound"}
         "416": {description: Range not satisfiable.}
+        "429": {$ref: "#/components/responses/ApiRateLimited"}
         "500": {$ref: "#/components/responses/ApiInternal"}
         "502": {$ref: "#/components/responses/ApiBadGateway"}
         "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
@@ -1585,11 +1632,12 @@ paths:
         or CDN may keep serving a revoked or unshared photo for up to 5 minutes. Honours `HEAD`, `Range` (206) and `If-None-Match` (304); a refused link is
         never answered 304. Limits per client IP: 60 requests that find nothing per 15 minutes (only misses count, so a good link never uses this budget) and
         600 requests of any kind per 15 minutes; both answer `ERROR_RATE_LIMITED` with `Retry-After`, and both let the request through when Redis is down.
-        The route may take up to 2 minutes for a slow client.
+        A client IP may also have at most 64 downloads in progress (T-107): the 65th waits up to 0.5 s for a slot and is then the same `429 ERROR_RATE_LIMITED`, answered before the link is looked at.
+        The route may take up to 2 minutes for a slow client; a client that reads slower than 16 KiB/s (after 15 s) or stops reading for 10 s is disconnected.
       x-auth: public
       x-error-codes:
         - {code: ERROR_NOT_FOUND, description: "The link is not valid for any reason; the reasons cannot be told apart."}
-        - {code: ERROR_RATE_LIMITED, description: "Too many requests from this client IP; wait `Retry-After` seconds."}
+        - {code: ERROR_RATE_LIMITED, description: "Too many requests, or already 64 downloads in progress, from this client IP; wait `Retry-After` seconds."}
         - {code: ERROR_STORAGE_ERROR, description: The object store failed; retry later.}
       security: []
       parameters:
@@ -1798,7 +1846,8 @@ components:
         application/json:
           schema: {$ref: "#/components/schemas/ApiError"}
     ApiForbidden:
-      description: A business code listed in the operation's `x-error-codes` (for example `ERROR_CSRF_ORIGIN_MISMATCH`, `ERROR_EMAIL_NOT_VERIFIED`, `ERROR_VERIFICATION_FAILED`).
+      description: >-
+        A business code listed in the operation's `x-error-codes` (for example `ERROR_CSRF_ORIGIN_MISMATCH`, `ERROR_EMAIL_NOT_VERIFIED`, `ERROR_VERIFICATION_FAILED`). Every operation that needs the session cookie can also answer `ERROR_TERMS_REQUIRED` (403) until the user accepted the current Terms (`/api/user/accept-terms`); it is not repeated in each `x-error-codes`. Exempt: `get-me`, `accept-terms`, `logout`, `verify-email` and `resend-verification`.
       content:
         application/json:
           schema: {$ref: "#/components/schemas/ApiError"}
@@ -1897,6 +1946,37 @@ components:
         created_at: {type: integer, format: int64, description: "When the account was created, Unix ms. Always present."}
         username: {type: string, minLength: 3, maxLength: 30, pattern: "^[a-z0-9]+([._-][a-z0-9]+)*$", description: "The public handle, lower case, unique. A generated `user-xxxxxxxx` until the user changes it. Not a login name. Always present."}
         username_next_change_at: {type: [integer, "null"], format: int64, description: "When the username may be changed again, Unix ms; `null` when a change is allowed now (never changed, or the 7-day cooldown is over). Always present."}
+    Terms:
+      type: object
+      description: Where the signed-in user stands on the Terms of Use and Privacy Policy (D-35).
+      required: [accepted_version, current_version, required]
+      properties:
+        accepted_version: {type: [string, "null"], description: "The version the user accepted (the date of the texts in `docs/legal`, e.g. `2026-10-21`); `null` = never accepted."}
+        current_version: {type: string, description: "The version in force now."}
+        required: {type: boolean, description: "True when `accepted_version` is not `current_version`: the user must call `/api/user/accept-terms` before any other signed-in endpoint works."}
+    Me:
+      description: The user object plus `terms`.
+      allOf:
+        - $ref: "#/components/schemas/User"
+        - type: object
+          required: [terms]
+          properties:
+            terms: {$ref: "#/components/schemas/Terms"}
+    MeResponse:
+      type: object
+      required: [status, data]
+      properties:
+        status: {type: string, const: OK, description: Always `OK` on success.}
+        data: {$ref: "#/components/schemas/Me"}
+    AcceptTermsRequest:
+      type: object
+      additionalProperties: false
+      required: [version]
+      properties:
+        version:
+          type: string
+          description: "Required. The version the user was shown; it must equal the current version, otherwise `ERROR_PARAM` (a stale page). A non-string is `ERROR_PARAM`."
+          examples: ["2026-10-21"]
     UpdateUsernameRequest:
       type: object
       additionalProperties: false
@@ -1928,8 +2008,14 @@ components:
     RegisterRequest:
       type: object
       additionalProperties: false
-      required: [email, password, display_name]
+      required: [email, password, display_name, accept_terms_version]
       properties:
+        accept_terms_version:
+          type: string
+          description: >-
+            Required. The version of the Terms of Use and Privacy Policy the sign-up form showed (the current one, `2026-10-21` at the time of writing; the web has it from the same
+            constant as the texts in `docs/legal`). Missing, empty or another version is `ERROR_TERMS_REQUIRED` (HTTP 400) and nothing is created.
+          examples: ["2026-10-21"]
         email:
           type: string
           maxLength: 254

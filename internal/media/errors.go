@@ -54,6 +54,10 @@ func tooManyUploads(wait time.Duration) error {
 	return &RateLimitedError{Err: apperr.New(apperr.RateLimited, "too many uploads, try again later"), RetryAfter: wait}
 }
 
+func tooManyDownloads(wait time.Duration) error {
+	return &RateLimitedError{Err: apperr.New(apperr.RateLimited, "too many downloads in progress, try again shortly"), RetryAfter: wait}
+}
+
 func tooManyPublic(wait time.Duration) error {
 	return &RateLimitedError{Err: apperr.New(apperr.RateLimited, "too many requests, try again later"), RetryAfter: wait}
 }

@@ -7,7 +7,8 @@ media, link, public form, moderation, book data, renderer, PDF, text export and 
 
 ## The journey (each is a `test.step`, so a failure names its step)
 
-1. Register, verify with the fixed development code (`DEV-SHORTCUT(otp)`), see the `user-xxxxxxxx` chip on the yearbooks page.
+1. Register (the required Terms checkbox is ticked), verify with the fixed development code (`DEV-SHORTCUT(otp)`), see the `user-xxxxxxxx` chip on the yearbooks page.
+   Then (1b) get-me is made to say the accepted Terms are old: the user is sent to `/accept-terms`, accepts (real `accept-terms` call) and continues to the yearbooks.
 2. Create a yearbook (Vietnamese title, language `vi`, A5), fill the profile, upload a cover photo.
 3. Pick the `memory-book` template and see the preview change.
 4. Create a note link and read it once.
@@ -21,6 +22,12 @@ media, link, public form, moderation, book data, renderer, PDF, text export and 
    and the three note names and a photo link; that link opens from a fresh context with no cookies (200, `image/*`); Disable photo
    links, confirm, and the same link is now 404. The photo token is scrubbed from every error like the collection token.
 10. Revoke the link: the friend's page is a dead end after exactly one lookup request; sign out and the protected pages redirect to sign-in.
+
+## The gallery check over HTTP/2 (T-107)
+
+`tools/e2e/h2-gallery.spec.mjs` runs in the same `make e2e`: it registers a second account, uploads one photo, starts a small TLS proxy (throwaway certificate from `openssl`, HTTP/2 and
+HTTP/1.1, one HTTP/1.1 request per stream to the API like CloudFront/the ALB) and loads a page of 30 and of 100 `<img>` thumbnails in Chromium over each protocol. Every image must render with status 200 (a cap
+of 8 downloads per account left 22 of 30 broken over HTTP/2). `scripts/e2e.sh` passes the API address as `E2E_API_URL`.
 
 ## Run it locally
 

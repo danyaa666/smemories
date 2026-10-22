@@ -94,6 +94,38 @@ func (b *pacedBody) Read(p []byte) (int, error) {
 	return n, err
 }
 
+// PaceWriter is PaceBody for the response (T-107): every Write moves the connection's write deadline to p.Idle from now, but
+// never past p.Total from this call, and fails when the average rate stays under p.MinRate after p.Grace. A reader that stops
+// reading or drips is dropped (the Write fails with os.ErrDeadlineExceeded and the handler ends) instead of holding a
+// download slot until the route timeout. The returned writer still supports http.ResponseController (Unwrap).
+func PaceWriter(w http.ResponseWriter, p BodyPace) http.ResponseWriter {
+	now := time.Now()
+	return &pacedWriter{ResponseWriter: w, rc: http.NewResponseController(w), p: p, start: now, end: now.Add(p.Total)}
+}
+
+type pacedWriter struct {
+	http.ResponseWriter
+	rc    *http.ResponseController
+	p     BodyPace
+	start time.Time
+	end   time.Time
+	n     int64
+}
+
+func (w *pacedWriter) Unwrap() http.ResponseWriter { return w.ResponseWriter }
+
+func (w *pacedWriter) Write(p []byte) (int, error) {
+	_ = w.rc.SetWriteDeadline(minTime(time.Now().Add(w.p.Idle), w.end))
+	n, err := w.ResponseWriter.Write(p)
+	w.n += int64(n)
+	if err == nil && w.p.MinRate > 0 {
+		if el := time.Since(w.start); el > w.p.Grace && float64(w.n) < float64(w.p.MinRate)*el.Seconds() {
+			return n, os.ErrDeadlineExceeded
+		}
+	}
+	return n, err
+}
+
 func minTime(a, b time.Time) time.Time {
 	if a.Before(b) {
 		return a

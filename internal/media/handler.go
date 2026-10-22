@@ -1,7 +1,6 @@
 package media
 
 import (
-	"bytes"
 	"cmp"
 	"context"
 	"errors"
@@ -45,6 +44,17 @@ const (
 	// maxUploadsPerClient is how many owner uploads one client key (httpx.ClientIP) may have in progress (T-110): throwaway accounts
 	// behind one address cannot fill the shared pool. Taken right after the per-user cap.
 	maxUploadsPerClient = 4
+
+	// maxDownloadsPerClient is how many photo downloads one account (owner route) or one client address (public route) may have
+	// in progress (T-107); the next one is 429 before the store is touched. It is 64 because over HTTP/2 (CloudFront, the ALB) a gallery page
+	// requests all its images at once and an <img> does not retry a 429; streaming keeps memory flat, so the cap only bounds open connections.
+	maxDownloadsPerClient = 64
+	downloadRetryAfter    = 2 * time.Second
+	// downloadGrace is how long a request at the cap waits for a slot before it is refused: a gallery page over HTTP/2 can start
+	// more than 64 requests in the same instant, and each of them (a thumbnail) ends within milliseconds. Slow readers hold their slot
+	// much longer, so a client that really has 64 downloads open is still refused after this wait.
+	downloadGrace = 500 * time.Millisecond
+	downloadPoll  = 5 * time.Millisecond
 )
 
 // Handler serves the media endpoints: it decodes, validates the shape, calls the Service and writes the answer.
@@ -58,9 +68,13 @@ type Handler struct {
 	inflight       chan struct{}  // uploads being read or processed; bounds the memory held in request buffers
 	pace           httpx.BodyPace // what the body must keep up with; a field only so that a test can shorten it
 	userMu         sync.Mutex
-	perUser        map[uint64]int      // uploads in progress per internal user id (this process only: with N API tasks the cap is N x 2)
-	perClient      map[string]int      // ... per client key (httpx.ClientIP), same lock
-	clientCap      int                 // maxUploadsPerClient; a field only so that a test can raise it
+	perUser        map[uint64]int // uploads in progress per internal user id (this process only: with N API tasks the cap is N x 2)
+	perClient      map[string]int // ... per client key (httpx.ClientIP), same lock
+	clientCap      int            // maxUploadsPerClient; a field only so that a test can raise it
+	dlMu           sync.Mutex
+	dlPerClient    map[string]int      // downloads in progress per "u:<user id>" or "ip:<address>" (this process only)
+	dlTotal        int                 // sum of dlPerClient, for smem_media_download_inflight
+	dlPace         httpx.BodyPace      // what a reader of a photo must keep up with; a field only so that a test can shorten it
 	countPublic    func(result string) // metrics of the public endpoint (PublicOK, PublicNotFound, PublicRateLimited); nil = not counted
 }
 
@@ -78,11 +92,66 @@ func (h *Handler) SetPublicCounter(f func(result string)) { h.countPublic = f }
 // once (each buffers up to maxBytes); more get 503 ERROR_BUSY.
 func NewHandler(svc *Service, maxBytes int64, requireUser func(http.Handler) http.Handler, allowedOrigins []string, cursors *httpx.Cursors, logger *slog.Logger) *Handler {
 	return &Handler{svc: svc, maxBytes: maxBytes, requireUser: requireUser, allowedOrigins: allowedOrigins, cursors: cursors, logger: logger,
-		inflight: make(chan struct{}, uploadQueueFactor*cap(svc.sem)), pace: httpx.PhoneUploadPace, perUser: map[uint64]int{}, perClient: map[string]int{}, clientCap: maxUploadsPerClient}
+		inflight: make(chan struct{}, uploadQueueFactor*cap(svc.sem)), pace: httpx.PhoneUploadPace, perUser: map[uint64]int{}, perClient: map[string]int{}, clientCap: maxUploadsPerClient,
+		dlPerClient: map[string]int{}, dlPace: httpx.PhoneUploadPace}
 }
 
 // UploadsInProgress is how many owner uploads hold a shared slot now (for metrics).
 func (h *Handler) UploadsInProgress() int { return len(h.inflight) }
+
+// DownloadsInProgress is how many photo downloads (owner and public) hold a per-client slot now (for metrics).
+func (h *Handler) DownloadsInProgress() int {
+	h.dlMu.Lock()
+	defer h.dlMu.Unlock()
+	return h.dlTotal
+}
+
+// takeDownload is tryDownload that waits up to downloadGrace (or until ctx ends) for a slot at the cap.
+func (h *Handler) takeDownload(ctx context.Context, client string) (release func(), ok bool) {
+	deadline := time.Now().Add(downloadGrace)
+	for {
+		if release, ok = h.tryDownload(client); ok || !time.Now().Before(deadline) {
+			return release, ok
+		}
+		select {
+		case <-ctx.Done():
+			return nil, false
+		case <-time.After(downloadPoll):
+		}
+	}
+}
+
+// tryDownload counts one more download in progress for the client ("u:<id>" or "ip:<address>"); the returned func gives it
+// back (call it once, with defer). ok is false when the client is at maxDownloadsPerClient. It never waits.
+func (h *Handler) tryDownload(client string) (release func(), ok bool) {
+	h.dlMu.Lock()
+	defer h.dlMu.Unlock()
+	if h.dlPerClient == nil {
+		h.dlPerClient = map[string]int{}
+	}
+	if h.dlPerClient[client] >= maxDownloadsPerClient {
+		return nil, false
+	}
+	h.dlPerClient[client]++
+	h.dlTotal++
+	return func() {
+		h.dlMu.Lock()
+		defer h.dlMu.Unlock()
+		h.dlTotal--
+		if h.dlPerClient[client]--; h.dlPerClient[client] <= 0 {
+			delete(h.dlPerClient, client)
+		}
+	}, true
+}
+
+// paced wraps w so that a reader too slow for h.dlPace (httpx.PhoneUploadPace unless a test set another) is dropped.
+func (h *Handler) paced(w http.ResponseWriter) http.ResponseWriter {
+	p := h.dlPace
+	if p.Idle == 0 {
+		p = httpx.PhoneUploadPace
+	}
+	return httpx.PaceWriter(w, p)
+}
 
 // take counts one more upload in progress under key in counts; false when key is at max. It never waits.
 func take[K comparable](mu *sync.Mutex, counts map[K]int, key K, max int) bool {
@@ -332,6 +401,13 @@ func (h *Handler) content(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	// One account cannot hold every connection to the object store: its own cap comes before the database and the store (T-107).
+	release, ok := h.takeDownload(r.Context(), "u:"+strconv.FormatUint(u.InternalID, 10))
+	if !ok {
+		h.fail(w, r, tooManyDownloads(downloadRetryAfter))
+		return
+	}
+	defer release()
 	q := r.URL.Query()
 	id := q.Get("id")
 	if err := checkID(id, "id"); err != nil {
@@ -347,18 +423,20 @@ func (h *Handler) content(w http.ResponseWriter, r *http.Request) {
 		h.fail(w, r, apperr.New(apperr.Param, "variant must be thumb, display or print"))
 		return
 	}
-	m, data, ct, variant, err := h.svc.Content(r.Context(), u.InternalID, id, variant)
+	m, obj, ct, variant, err := h.svc.Content(r.Context(), u.InternalID, id, variant)
 	if err != nil {
 		h.fail(w, r, err) // an error is the JSON envelope with no-store (SecurityHeaders): an <img> only needs the status, and nothing is cached
 		return
 	}
-	writeContent(w, r, m, data, ct, variant, "private, max-age=3600")
+	defer func() { _ = obj.Close() }()
+	writeContent(h.paced(w), r, m, obj, ct, variant, "private, max-age=3600")
 }
 
 // writeContent sends the bytes of a photo: Content-Type from the database (never from the uploader), nosniff, the given
 // Cache-Control and an ETag per variant; ServeContent adds Range, If-Range, If-None-Match and HEAD. Shared by the owner's
-// media/get-content and the public link endpoint.
-func writeContent(w http.ResponseWriter, r *http.Request, m *Media, data []byte, ct, variant, cacheControl string) {
+// media/get-content and the public link endpoint. obj is read as a stream (T-107): HEAD and 304 read none of it, a Range reads
+// only that range from the store.
+func writeContent(w http.ResponseWriter, r *http.Request, m *Media, obj io.ReadSeeker, ct, variant, cacheControl string) {
 	hd := w.Header()
 	hd.Set("Content-Type", ct)
 	hd.Set("X-Content-Type-Options", "nosniff")
@@ -372,13 +450,22 @@ func writeContent(w http.ResponseWriter, r *http.Request, m *Media, data []byte,
 	}
 	hd.Set("ETag", etag+`"`)
 	// ponytail: bytes flow through the API (bandwidth ceiling); M2 serves presigned URLs behind CloudFront.
-	http.ServeContent(w, r, "", time.UnixMilli(m.CreatedAt).UTC(), bytes.NewReader(data))
+	http.ServeContent(w, r, "", time.UnixMilli(m.CreatedAt).UTC(), obj)
 }
 
 // publicContent serves one photo to anyone holding a valid link token: the display variant only, with the headers of a
 // document that must not be indexed, framed or leak its address. Every refusal of the link is the same 404.
 func (h *Handler) publicContent(w http.ResponseWriter, r *http.Request) {
-	m, data, err := h.svc.PublicContent(r.Context(), httpx.ClientIP(r), r.URL.Query().Get("token"))
+	ip := httpx.ClientIP(r)
+	release, ok := h.takeDownload(r.Context(), "ip:"+ip) // before the limiters, the database and the store (T-107)
+	if !ok {
+		err := tooManyDownloads(downloadRetryAfter)
+		h.countPublicResult(err)
+		h.fail(w, r, err)
+		return
+	}
+	defer release()
+	m, obj, err := h.svc.PublicContent(r.Context(), ip, r.URL.Query().Get("token"))
 	if err != nil {
 		h.countPublicResult(err)
 		h.fail(w, r, err)
@@ -393,7 +480,8 @@ func (h *Handler) publicContent(w http.ResponseWriter, r *http.Request) {
 	hd.Set("Referrer-Policy", "no-referrer")
 	hd.Set("Cross-Origin-Resource-Policy", "cross-origin") // an <img> on any page may embed it; the token is the access control
 	// public: a revoked link can still be served from a cache for up to 5 minutes (docs/media.md).
-	writeContent(w, r, m, data, m.ContentType, SizeDisplay, publicCacheControl)
+	defer func() { _ = obj.Close() }()
+	writeContent(h.paced(w), r, m, obj, m.ContentType, SizeDisplay, publicCacheControl)
 }
 
 const publicCacheControl = "public, max-age=300"

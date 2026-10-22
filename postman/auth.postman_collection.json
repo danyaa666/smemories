@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "SMemories - auth",
-    "description": "Email + password auth core (T-006): register, login, logout, /api/user/get-me, plus (T-007, T-048) verification code resend/verify, forgot/reset password. Run against an API started with SMEM_ENV=dev (the session cookie is not Secure there, so Newman's cookie jar sends it over http). Step 1 registers with locale vi (T-045: the stored locale is returned; the default en and the vi verification email are covered by the Go integration tests). Register is limited to 5 per hour per IP and each run makes 3 counted attempts (the register, the duplicate and, for the username steps, a second account), so a second run within the hour gets 429: run `make reset-limits` (the limiters live in Redis) or set SMEM_RATE_REGISTER_PER_HOUR higher. Forgot-password is limited to 5 per hour per IP and each run makes 2 counted calls, so a third run within the hour gets 429 (run `make reset-limits` to reset). Email one-time codes (T-048): the full flow uses the dev-only fixed code 123123 (`SMEM_DEV_FIXED_OTP`, default in `.env.example`; the API must run with it and SMEM_ENV=dev, otherwise the verify and reset steps fail). Wrong, malformed, locked (5 wrong attempts) and weak-password cases run here too. Code expiry (15 and 30 minutes), the real random codes, parallel guesses and the 503 when Redis is down are covered by the Go integration tests. Limits per run: 3 of 3 resends, about 10 of 20 verify attempts, 4 of 20 reset attempts per IP; two back-to-back runs fit. Google sign-in (T-011): the last folder needs the API started with the SMEM_GOOGLE_* variables (README, 'Google sign-in setup'); requests there do not follow redirects. Username (T-081, steps 37-55 of the full flow): default name, no-op, invalid/reserved/taken, the 7-day cooldown with Retry-After; the 20 failed attempts per hour limit and the 7-day clock edges run in the Go integration tests (they need a test clock). Mail provider (T-021): the last three edge requests resend a code for the second account; they expect 200 with the log mailer and the 503 ERROR_MAIL_UNAVAILABLE / 400 ERROR_EMAIL_UNDELIVERABLE answers when the collection variable mailFailure is `unavailable` or `rejected` (set it only against an API whose provider really fails; the Go integration tests and the SES stub tests cover both with no setup).",
+    "description": "Email + password auth core (T-006): register, login, logout, /api/user/get-me, plus (T-007, T-048) verification code resend/verify, forgot/reset password. Run against an API started with SMEM_ENV=dev (the session cookie is not Secure there, so Newman's cookie jar sends it over http). Step 1 registers with locale vi (T-045: the stored locale is returned; the default en and the vi verification email are covered by the Go integration tests). Register is limited to 5 per hour per IP and each run makes 5 counted attempts (the register, the duplicate, the second account of the username steps, the Terms folder's account and the Terms gate setup), so a second run within the hour gets 429: run `make reset-limits` (the limiters live in Redis) or set SMEM_RATE_REGISTER_PER_HOUR higher. Forgot-password is limited to 5 per hour per IP and each run makes 2 counted calls, so a third run within the hour gets 429 (run `make reset-limits` to reset). Email one-time codes (T-048): the full flow uses the dev-only fixed code 123123 (`SMEM_DEV_FIXED_OTP`, default in `.env.example`; the API must run with it and SMEM_ENV=dev, otherwise the verify and reset steps fail). Wrong, malformed, locked (5 wrong attempts) and weak-password cases run here too. Code expiry (15 and 30 minutes), the real random codes, parallel guesses and the 503 when Redis is down are covered by the Go integration tests. Limits per run: 3 of 3 resends, about 10 of 20 verify attempts, 4 of 20 reset attempts per IP; two back-to-back runs fit. Google sign-in (T-011): the last folder needs the API started with the SMEM_GOOGLE_* variables (README, 'Google sign-in setup'); requests there do not follow redirects. Username (T-081, steps 37-55 of the full flow): default name, no-op, invalid/reserved/taken, the 7-day cooldown with Retry-After; the 20 failed attempts per hour limit and the 7-day clock edges run in the Go integration tests (they need a test clock). Mail provider (T-021): the last three edge requests resend a code for the second account; they expect 200 with the log mailer and the 503 ERROR_MAIL_UNAVAILABLE / 400 ERROR_EMAIL_UNDELIVERABLE answers when the collection variable mailFailure is `unavailable` or `rejected` (set it only against an API whose provider really fails; the Go integration tests and the SES stub tests cover both with no setup). Terms (T-111, D-35): register needs `accept_terms_version` (collection variable `termsVersion`, keep it equal to `legal.CurrentVersion` / the version in docs/legal); the Edge cases folder covers a missing, empty, old and non-string value, and the Terms folder covers get-me `terms` and accept-terms. The 403 ERROR_TERMS_REQUIRED gate needs an account that has not accepted, which only the database can make: run the `Terms gate` folder in two steps, `newman run postman/auth.postman_collection.json --folder 'Terms gate'` (G1 registers newman-terms-gate@example.com; the other steps skip), then `make newman-unaccept-terms`, then the same command with `--env-var termsGate=1` (the full gate flow). Without `termsGate=1` those steps skip, so a plain full run stays green.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -12,6 +12,10 @@
     {
       "key": "origin",
       "value": "http://localhost:5173"
+    },
+    {
+      "key": "termsVersion",
+      "value": "2026-10-21"
     },
     {
       "key": "oidcState",
@@ -43,6 +47,14 @@
     },
     {
       "key": "mailFailure",
+      "value": ""
+    },
+    {
+      "key": "termsGate",
+      "value": ""
+    },
+    {
+      "key": "emailTerms",
       "value": ""
     }
   ],
@@ -101,7 +113,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"email\": \"{{email}}\", \"password\": \"{{password}}\", \"display_name\": \"{{displayName}}\", \"locale\": \"vi\"}"
+              "raw": "{\"email\": \"{{email}}\", \"password\": \"{{password}}\", \"display_name\": \"{{displayName}}\", \"locale\": \"vi\", \"accept_terms_version\": \"{{termsVersion}}\"}"
             }
           },
           "event": [
@@ -145,7 +157,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"user object is exactly the 8 documented fields\", () => { const u = pm.response.json().data; pm.expect(Object.keys(u).sort()).to.eql([\"created_at\",\"display_name\",\"email\",\"email_verified\",\"id\",\"locale\",\"username\",\"username_next_change_at\"]); pm.expect(u.id).to.match(/^[0-9A-HJKMNP-TV-Z]{26}$/); pm.expect(u.email_verified).to.eql(false); pm.expect(u.locale).to.eql(\"vi\"); pm.expect(u.created_at).to.be.a(\"number\"); });",
+                  "pm.test(\"user object is the 8 user fields plus terms\", () => { const u = pm.response.json().data; pm.expect(Object.keys(u).sort()).to.eql([\"created_at\",\"display_name\",\"email\",\"email_verified\",\"id\",\"locale\",\"terms\",\"username\",\"username_next_change_at\"]); pm.expect(u.id).to.match(/^[0-9A-HJKMNP-TV-Z]{26}$/); pm.expect(u.email_verified).to.eql(false); pm.expect(u.locale).to.eql(\"vi\"); pm.expect(u.created_at).to.be.a(\"number\"); });",
+                  "pm.test(\"terms: accepted, current, nothing required\", () => pm.expect(pm.response.json().data.terms).to.eql({accepted_version: pm.collectionVariables.get(\"termsVersion\"), current_version: pm.collectionVariables.get(\"termsVersion\"), required: false}));",
                   "pm.test(\"same user\", () => pm.expect(pm.response.json().data.id).to.eql(pm.collectionVariables.get(\"userId\")));"
                 ]
               }
@@ -285,7 +298,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"user object is exactly the 8 documented fields\", () => { const u = pm.response.json().data; pm.expect(Object.keys(u).sort()).to.eql([\"created_at\",\"display_name\",\"email\",\"email_verified\",\"id\",\"locale\",\"username\",\"username_next_change_at\"]); pm.expect(u.id).to.match(/^[0-9A-HJKMNP-TV-Z]{26}$/); pm.expect(u.email_verified).to.eql(false); pm.expect(u.locale).to.eql(\"vi\"); pm.expect(u.created_at).to.be.a(\"number\"); });"
+                  "pm.test(\"user object is the 8 user fields plus terms\", () => { const u = pm.response.json().data; pm.expect(Object.keys(u).sort()).to.eql([\"created_at\",\"display_name\",\"email\",\"email_verified\",\"id\",\"locale\",\"terms\",\"username\",\"username_next_change_at\"]); pm.expect(u.id).to.match(/^[0-9A-HJKMNP-TV-Z]{26}$/); pm.expect(u.email_verified).to.eql(false); pm.expect(u.locale).to.eql(\"vi\"); pm.expect(u.created_at).to.be.a(\"number\"); });",
+                  "pm.test(\"terms: accepted, current, nothing required\", () => pm.expect(pm.response.json().data.terms).to.eql({accepted_version: pm.collectionVariables.get(\"termsVersion\"), current_version: pm.collectionVariables.get(\"termsVersion\"), required: false}));"
                 ]
               }
             }
@@ -2092,7 +2106,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"email\": \"{{email2}}\", \"password\": \"{{password}}\", \"display_name\": \"Newman Two\"}"
+              "raw": "{\"email\": \"{{email2}}\", \"password\": \"{{password}}\", \"display_name\": \"Newman Two\", \"accept_terms_version\": \"{{termsVersion}}\"}"
             }
           },
           "event": [
@@ -2299,7 +2313,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"email\": \"not-an-email\", \"password\": \"{{password}}\", \"display_name\": \"A\"}"
+              "raw": "{\"email\": \"not-an-email\", \"password\": \"{{password}}\", \"display_name\": \"A\", \"accept_terms_version\": \"{{termsVersion}}\"}"
             }
           },
           "event": [
@@ -2339,7 +2353,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"email\": \"alice@localhost\", \"password\": \"{{password}}\", \"display_name\": \"A\"}"
+              "raw": "{\"email\": \"alice@localhost\", \"password\": \"{{password}}\", \"display_name\": \"A\", \"accept_terms_version\": \"{{termsVersion}}\"}"
             }
           },
           "event": [
@@ -2379,7 +2393,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"email\": \"x'; DROP TABLE users;--@example.com\", \"password\": \"{{password}}\", \"display_name\": \"A\"}"
+              "raw": "{\"email\": \"x'; DROP TABLE users;--@example.com\", \"password\": \"{{password}}\", \"display_name\": \"A\", \"accept_terms_version\": \"{{termsVersion}}\"}"
             }
           },
           "event": [
@@ -2419,7 +2433,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"email\": \"short-{{$guid}}@example.com\", \"password\": \"123456789\", \"display_name\": \"A\"}"
+              "raw": "{\"email\": \"short-{{$guid}}@example.com\", \"password\": \"123456789\", \"display_name\": \"A\", \"accept_terms_version\": \"{{termsVersion}}\"}"
             }
           },
           "event": [
@@ -2459,7 +2473,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"email\": \"{{sameValue}}\", \"password\": \"{{sameValue}}\", \"display_name\": \"A\"}"
+              "raw": "{\"email\": \"{{sameValue}}\", \"password\": \"{{sameValue}}\", \"display_name\": \"A\", \"accept_terms_version\": \"{{termsVersion}}\"}"
             }
           },
           "event": [
@@ -2509,7 +2523,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"email\": \"long-{{$guid}}@example.com\", \"password\": \"ppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp\", \"display_name\": \"A\"}"
+              "raw": "{\"email\": \"long-{{$guid}}@example.com\", \"password\": \"ppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp\", \"display_name\": \"A\", \"accept_terms_version\": \"{{termsVersion}}\"}"
             }
           },
           "event": [
@@ -2549,7 +2563,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"email\": \"blank-{{$guid}}@example.com\", \"password\": \"{{password}}\", \"display_name\": \"   \"}"
+              "raw": "{\"email\": \"blank-{{$guid}}@example.com\", \"password\": \"{{password}}\", \"display_name\": \"   \", \"accept_terms_version\": \"{{termsVersion}}\"}"
             }
           },
           "event": [
@@ -2589,7 +2603,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"email\": \"name-{{$guid}}@example.com\", \"password\": \"{{password}}\", \"display_name\": \"nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn\"}"
+              "raw": "{\"email\": \"name-{{$guid}}@example.com\", \"password\": \"{{password}}\", \"display_name\": \"nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn\", \"accept_terms_version\": \"{{termsVersion}}\"}"
             }
           },
           "event": [
@@ -2709,7 +2723,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"email\": \"{{emailUpper}}\", \"password\": \"{{password}}\", \"display_name\": \"Dup\"}"
+              "raw": "{\"email\": \"{{emailUpper}}\", \"password\": \"{{password}}\", \"display_name\": \"Dup\", \"accept_terms_version\": \"{{termsVersion}}\"}"
             }
           },
           "event": [
@@ -2721,6 +2735,163 @@
                   "pm.test(\"status 409\", () => pm.response.to.have.status(409));",
                   "pm.test(\"error code ERROR_EMAIL_TAKEN\", () => pm.expect(pm.response.json().status).to.eql(\"ERROR_EMAIL_TAKEN\"));",
                   "pm.test(\"error envelope with request id\", () => { const e = pm.response.json(); pm.expect(e.status).to.match(/^ERROR_[A-Z_]+$/); pm.expect(e.error_message).to.be.a(\"string\"); pm.expect(e.request_id).to.eql(pm.response.headers.get(\"X-Request-Id\")); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register - accept_terms_version missing - 400 ERROR_TERMS_REQUIRED",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"terms-{{$guid}}@example.com\", \"password\": \"{{password}}\", \"display_name\": \"A\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"error code ERROR_TERMS_REQUIRED\", () => pm.expect(pm.response.json().status).to.eql(\"ERROR_TERMS_REQUIRED\"));",
+                  "pm.test(\"nothing was created: no session cookie\", () => pm.expect(pm.response.headers.has(\"Set-Cookie\")).to.eql(false));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register - accept_terms_version empty - 400 ERROR_TERMS_REQUIRED",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"terms-{{$guid}}@example.com\", \"password\": \"{{password}}\", \"display_name\": \"A\", \"accept_terms_version\": \"\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"error code ERROR_TERMS_REQUIRED\", () => pm.expect(pm.response.json().status).to.eql(\"ERROR_TERMS_REQUIRED\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register - accept_terms_version is an old version - 400 ERROR_TERMS_REQUIRED",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"terms-{{$guid}}@example.com\", \"password\": \"{{password}}\", \"display_name\": \"A\", \"accept_terms_version\": \"2020-01-01\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"error code ERROR_TERMS_REQUIRED\", () => pm.expect(pm.response.json().status).to.eql(\"ERROR_TERMS_REQUIRED\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register - accept_terms_version not a string - 400 ERROR_PARAM",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"terms-{{$guid}}@example.com\", \"password\": \"{{password}}\", \"display_name\": \"A\", \"accept_terms_version\": true}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"error code ERROR_PARAM\", () => pm.expect(pm.response.json().status).to.eql(\"ERROR_PARAM\"));"
                 ]
               }
             }
@@ -2749,7 +2920,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"email\": \"locale-{{email}}\", \"password\": \"{{password}}\", \"display_name\": \"A\", \"locale\": \"fr\"}"
+              "raw": "{\"email\": \"locale-{{email}}\", \"password\": \"{{password}}\", \"display_name\": \"A\", \"locale\": \"fr\", \"accept_terms_version\": \"{{termsVersion}}\"}"
             }
           },
           "event": [
@@ -2788,7 +2959,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"email\": \"locale-{{email}}\", \"password\": \"{{password}}\", \"display_name\": \"A\", \"locale\": \"VI\"}"
+              "raw": "{\"email\": \"locale-{{email}}\", \"password\": \"{{password}}\", \"display_name\": \"A\", \"locale\": \"VI\", \"accept_terms_version\": \"{{termsVersion}}\"}"
             }
           },
           "event": [
@@ -2827,7 +2998,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"email\": \"locale-{{email}}\", \"password\": \"{{password}}\", \"display_name\": \"A\", \"locale\": 1}"
+              "raw": "{\"email\": \"locale-{{email}}\", \"password\": \"{{password}}\", \"display_name\": \"A\", \"locale\": 1, \"accept_terms_version\": \"{{termsVersion}}\"}"
             }
           },
           "event": [
@@ -3584,6 +3755,713 @@
         },
         {
           "name": "Mail 3. Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "logout"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Terms",
+      "item": [
+        {
+          "name": "T1. Register with the current version - 200",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"{{emailTerms}}\", \"password\": \"{{password}}\", \"display_name\": \"Terms Tester\", \"accept_terms_version\": \"{{termsVersion}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// One fresh account per run of this folder, for the accept-terms steps (generated before the first request only).",
+                  "if (pm.info.requestName.startsWith('T1. ')) {",
+                  "pm.collectionVariables.set('emailTerms', 'terms-' + Date.now() + '-' + Math.floor(Math.random() * 1e6) + '@example.com');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"session cookie set\", () => pm.expect(pm.response.headers.get(\"Set-Cookie\") || \"\").to.include(\"smem_session=\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "T2. Who am I - terms accepted, nothing required",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/user/get-me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "get-me"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"terms: accepted, current, nothing required\", () => pm.expect(pm.response.json().data.terms).to.eql({accepted_version: pm.collectionVariables.get(\"termsVersion\"), current_version: pm.collectionVariables.get(\"termsVersion\"), required: false}));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "T3. Accept an old version (stale page) - 400 ERROR_PARAM",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/user/accept-terms",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "accept-terms"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"version\": \"2020-01-01\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"error code ERROR_PARAM\", () => pm.expect(pm.response.json().status).to.eql(\"ERROR_PARAM\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "T4. Accept with no version - 400 ERROR_PARAM",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/user/accept-terms",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "accept-terms"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"error code ERROR_PARAM\", () => pm.expect(pm.response.json().status).to.eql(\"ERROR_PARAM\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "T5. Accept the current version - 200, same body as get-me",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/user/accept-terms",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "accept-terms"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"version\": \"{{termsVersion}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"terms: accepted, current, nothing required\", () => pm.expect(pm.response.json().data.terms).to.eql({accepted_version: pm.collectionVariables.get(\"termsVersion\"), current_version: pm.collectionVariables.get(\"termsVersion\"), required: false}));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "T6. Accept again - 200 (harmless)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/user/accept-terms",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "accept-terms"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"version\": \"{{termsVersion}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"terms: accepted, current, nothing required\", () => pm.expect(pm.response.json().data.terms).to.eql({accepted_version: pm.collectionVariables.get(\"termsVersion\"), current_version: pm.collectionVariables.get(\"termsVersion\"), required: false}));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "T7. Accept without Origin (cookie sent) - 403 ERROR_CSRF_ORIGIN_MISMATCH",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/user/accept-terms",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "accept-terms"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"version\": \"{{termsVersion}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"error code ERROR_CSRF_ORIGIN_MISMATCH\", () => pm.expect(pm.response.json().status).to.eql(\"ERROR_CSRF_ORIGIN_MISMATCH\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "T8. A gated endpoint works after acceptance (yearbook list) - 200",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/yearbook/get-list",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "yearbook",
+                "get-list"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "T9. Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "logout"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "T10. Accept without a session - 401",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/user/accept-terms",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "accept-terms"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"version\": \"{{termsVersion}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"error code ERROR_UNAUTHORIZED\", () => pm.expect(pm.response.json().status).to.eql(\"ERROR_UNAUTHORIZED\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Terms gate",
+      "item": [
+        {
+          "name": "G1. Setup - register the gate account (200, or 409 on a later run)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"newman-terms-gate@example.com\", \"password\": \"Fake-Newman-pw-gate-0123456789\", \"display_name\": \"Terms Gate\", \"accept_terms_version\": \"{{termsVersion}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"registered or already there\", () => pm.expect([200, 409]).to.include(pm.response.code));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "G2. Login as the gate account",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"newman-terms-gate@example.com\", \"password\": \"Fake-Newman-pw-gate-0123456789\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.variables.get(\"termsGate\") !== \"1\") { pm.test(\"skipped: set termsGate=1 after make newman-unaccept-terms (see the collection description)\", () => {}); return; }",
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "G3. Gated endpoint (update-username) - 403 ERROR_TERMS_REQUIRED",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/user/update-username",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "update-username"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\": \"terms.gate\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.variables.get(\"termsGate\") !== \"1\") { pm.test(\"skipped: set termsGate=1 after make newman-unaccept-terms (see the collection description)\", () => {}); return; }",
+                  "pm.test(\"status 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"error code ERROR_TERMS_REQUIRED\", () => pm.expect(pm.response.json().status).to.eql(\"ERROR_TERMS_REQUIRED\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "G4. Gated endpoint (yearbook list) - 403 ERROR_TERMS_REQUIRED",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/yearbook/get-list",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "yearbook",
+                "get-list"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.variables.get(\"termsGate\") !== \"1\") { pm.test(\"skipped: set termsGate=1 after make newman-unaccept-terms (see the collection description)\", () => {}); return; }",
+                  "pm.test(\"status 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"error code ERROR_TERMS_REQUIRED\", () => pm.expect(pm.response.json().status).to.eql(\"ERROR_TERMS_REQUIRED\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "G5. Who am I still works - terms required, nothing accepted",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/user/get-me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "get-me"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.variables.get(\"termsGate\") !== \"1\") { pm.test(\"skipped: set termsGate=1 after make newman-unaccept-terms (see the collection description)\", () => {}); return; }",
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"terms.required with no accepted version\", () => pm.expect(pm.response.json().data.terms).to.eql({accepted_version: null, current_version: pm.collectionVariables.get(\"termsVersion\"), required: true}));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "G6. Accept the current version - 200",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/user/accept-terms",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "accept-terms"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"version\": \"{{termsVersion}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.variables.get(\"termsGate\") !== \"1\") { pm.test(\"skipped: set termsGate=1 after make newman-unaccept-terms (see the collection description)\", () => {}); return; }",
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"terms: accepted, current, nothing required\", () => pm.expect(pm.response.json().data.terms).to.eql({accepted_version: pm.collectionVariables.get(\"termsVersion\"), current_version: pm.collectionVariables.get(\"termsVersion\"), required: false}));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "G7. The gated endpoint works again (yearbook list) - 200",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/yearbook/get-list",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "yearbook",
+                "get-list"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.variables.get(\"termsGate\") !== \"1\") { pm.test(\"skipped: set termsGate=1 after make newman-unaccept-terms (see the collection description)\", () => {}); return; }",
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "G8. Logout",
           "request": {
             "method": "POST",
             "header": [

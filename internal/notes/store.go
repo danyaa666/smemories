@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+
+	"github.com/danyaa666/smemories/internal/legal"
 )
 
 const (
@@ -226,8 +228,8 @@ func (s *Store) insertNote(ctx context.Context, n *newNote) error {
 	if count >= maxNotes {
 		return ErrFull
 	}
-	res, err := tx.ExecContext(ctx, `INSERT INTO note_tab (public_id, collection_id, yearbook_id, answers, status, created_at, updated_at) VALUES (?,?,?,?,?,?,?)`,
-		n.ID, n.Collection, n.Yearbook, string(n.Answers), StatusPending, n.CreatedAt, n.CreatedAt)
+	res, err := tx.ExecContext(ctx, `INSERT INTO note_tab (public_id, collection_id, yearbook_id, answers, status, terms_version, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?)`,
+		n.ID, n.Collection, n.Yearbook, string(n.Answers), StatusPending, legal.CurrentVersion, n.CreatedAt, n.CreatedAt)
 	if err != nil {
 		return err
 	}

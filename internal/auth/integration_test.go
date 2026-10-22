@@ -23,6 +23,7 @@ import (
 	"github.com/danyaa666/smemories/internal/auth/oidctest"
 	"github.com/danyaa666/smemories/internal/db/dbtest"
 	"github.com/danyaa666/smemories/internal/httpx"
+	"github.com/danyaa666/smemories/internal/legal"
 	"github.com/danyaa666/smemories/internal/mailer"
 	"github.com/danyaa666/smemories/internal/ratelimit"
 	"github.com/danyaa666/smemories/internal/redis"
@@ -187,8 +188,14 @@ func body(email, pw, name string) string {
 	return string(b)
 }
 
+// regBody is body plus the acceptance of the current Terms, which register requires (T-111).
+func regBody(email, pw, name string) string {
+	b, _ := json.Marshal(map[string]string{"email": email, "password": pw, "display_name": name, "accept_terms_version": legal.CurrentVersion})
+	return string(b)
+}
+
 func (e *env) register(email, pw, name string) *httptest.ResponseRecorder {
-	return e.do(req{method: "POST", path: "/api/auth/register", body: body(email, pw, name)})
+	return e.do(req{method: "POST", path: "/api/auth/register", body: regBody(email, pw, name)})
 }
 
 func (e *env) login(email, pw, remote string) *httptest.ResponseRecorder {
@@ -283,7 +290,9 @@ func TestRegisterMeLogoutFlow(t *testing.T) {
 	c := sessionCookie(t, rec)
 	me := e.do(req{method: "GET", path: "/api/user/get-me", cookie: c.Value})
 	want(t, me, 200, "")
-	if me.Body.String() != rec.Body.String() {
+	// get-me is the register user plus the Terms state (T-111).
+	terms := `,"terms":{"accepted_version":"` + legal.CurrentVersion + `","current_version":"` + legal.CurrentVersion + `","required":false}`
+	if strings.Replace(me.Body.String(), terms, "", 1) != rec.Body.String() || !strings.Contains(me.Body.String(), terms) {
 		t.Fatalf("/api/user/get-me = %s, register = %s", me.Body.String(), rec.Body.String())
 	}
 
@@ -376,7 +385,7 @@ func TestRegisterBadBodies(t *testing.T) {
 		"wrong type":     `{"email":1,"password":"x","display_name":"y"}`,
 		"trailing data":  `{"email":"a@example.com"} {"x":1}`,
 		"truncated json": `{"email":"a@exam`,
-		"unknown field":  `{"email":"a@example.com","password":"x","display_name":"y","admin":true}`, // auth bodies are strict since T-072
+		"unknown field":  `{"email":"a@example.com","password":"x","display_name":"y","accept_terms_version":"2026-10-21","admin":true}`, // auth bodies are strict since T-072
 	} {
 		rec := e.do(req{method: "POST", path: "/api/auth/register", body: b})
 		if rec.Code != 400 || errCode(t, rec) != "ERROR_PARAM" {
@@ -768,7 +777,7 @@ func TestRegisterRateLimit(t *testing.T) {
 	if rec.Header().Get("Retry-After") == "" {
 		t.Fatal("Retry-After missing")
 	}
-	want(t, e.do(req{method: "POST", path: "/api/auth/register", body: body("v@example.com", testPW, "V"), remote: "192.0.2.50:9"}), 200, "")
+	want(t, e.do(req{method: "POST", path: "/api/auth/register", body: regBody("v@example.com", testPW, "V"), remote: "192.0.2.50:9"}), 200, "")
 	e.clock.advance(time.Hour + time.Second)
 	want(t, e.register("u10@example.com", testPW, "U"), 200, "")
 	// Invalid input is refused before it can use up the budget.
@@ -813,8 +822,8 @@ func TestCSRFAndContentTypeOnRoutes(t *testing.T) {
 	want(t, e.do(req{method: "GET", path: "/api/user/get-me", cookie: c}), 200, "") // the session survived all of those
 
 	want(t, e.do(req{method: "POST", path: "/api/auth/login", body: "email=a&password=b", contentType: "application/x-www-form-urlencoded"}), 415, "ERROR_UNSUPPORTED_MEDIA_TYPE")
-	want(t, e.do(req{method: "POST", path: "/api/auth/register", body: body("z@example.com", testPW, "Z"), contentType: "text/plain"}), 415, "ERROR_UNSUPPORTED_MEDIA_TYPE")
-	want(t, e.do(req{method: "POST", path: "/api/auth/register", body: body("z@example.com", testPW, "Z"), contentType: "application/json; charset=utf-8"}), 200, "")
+	want(t, e.do(req{method: "POST", path: "/api/auth/register", body: regBody("z@example.com", testPW, "Z"), contentType: "text/plain"}), 415, "ERROR_UNSUPPORTED_MEDIA_TYPE")
+	want(t, e.do(req{method: "POST", path: "/api/auth/register", body: regBody("z@example.com", testPW, "Z"), contentType: "application/json; charset=utf-8"}), 200, "")
 
 	rec := e.do(req{method: "POST", path: "/api/auth/logout", cookie: c, headers: map[string]string{"Referer": origin + "/settings"}})
 	want(t, rec, 200, "")

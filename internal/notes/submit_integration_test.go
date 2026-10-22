@@ -33,6 +33,7 @@ import (
 
 	"github.com/danyaa666/smemories/internal/auth"
 	"github.com/danyaa666/smemories/internal/httpx"
+	"github.com/danyaa666/smemories/internal/legal"
 	"github.com/danyaa666/smemories/internal/media"
 	"github.com/danyaa666/smemories/internal/storage"
 	"github.com/danyaa666/smemories/internal/ulid"
@@ -234,6 +235,11 @@ func TestSubmitTextAndEmojiRoundTrip(t *testing.T) {
 	}
 	if got["name"] != "Nguyễn Văn Ánh" || got["message"] != msg || len(got) != 2 || status != "pending" || sortOrder != nil {
 		t.Fatalf("stored %q status %s sort %v", got, status, sortOrder)
+	}
+	// T-111: the note records which version of the Terms and Privacy Policy the form showed.
+	var terms string
+	if err := e.db.QueryRow(`SELECT terms_version FROM note_tab WHERE public_id = ?`, out.Data.ID).Scan(&terms); err != nil || terms != legal.CurrentVersion {
+		t.Fatalf("note terms_version %q (err %v), want %q", terms, err, legal.CurrentVersion)
 	}
 	// the owner's list now counts it
 	list := e.list(l.owner, l.book).status(200, "").data()["items"].([]any)
@@ -616,7 +622,7 @@ func TestSubmitPrivacy(t *testing.T) {
 		cols = append(cols, c)
 	}
 	_ = rows.Close()
-	if got := strings.Join(cols, ","); got != "id,public_id,collection_id,yearbook_id,answers,status,sort_order,created_at,updated_at" {
+	if got := strings.Join(cols, ","); got != "id,public_id,collection_id,yearbook_id,answers,status,sort_order,created_at,updated_at,terms_version" { // terms_version: the Terms version shown with the note (T-111), no client data
 		t.Fatalf("notes columns: %s", got)
 	}
 	// the stored text does not hold the address or agent either

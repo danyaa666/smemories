@@ -149,7 +149,8 @@
     "username_reserved": "Tên người dùng này không dùng được. Hãy chọn tên khác.",
     "username_taken": "Tên người dùng này đã có người dùng. Hãy chọn tên khác.",
     "username_change_too_soon": "Bạn vừa đổi tên người dùng. Bạn có thể đổi lại vào {{date}}.",
-    "invalid_template": "Mẫu trình bày này không dùng được cho khổ giấy này. Hãy chọn mẫu khác."
+    "invalid_template": "Mẫu trình bày này không dùng được cho khổ giấy này. Hãy chọn mẫu khác.",
+    "terms_required": "Hãy đồng ý với Điều khoản sử dụng và Chính sách quyền riêng tư để tiếp tục."
   },
   "books": {
     "title": "Kỷ yếu của tôi",
@@ -561,5 +562,18 @@
       "loadError": "Không tải được danh sách mẫu trình bày.",
       "preview": "Ảnh xem trước bìa của mẫu {{name}}"
     }
+  },
+  "legal": {
+    "terms": "Điều khoản sử dụng",
+    "privacy": "Chính sách quyền riêng tư",
+    "agree": "Tôi đồng ý với <terms>Điều khoản sử dụng</terms> và <privacy>Chính sách quyền riêng tư</privacy>",
+    "notice": "Khi gửi, bạn đồng ý với <terms>Điều khoản sử dụng</terms> và <privacy>Chính sách quyền riêng tư</privacy>. Chủ sổ có thể chia sẻ ảnh của bạn qua liên kết.",
+    "draft": "Bản nháp: chưa phải bản chính thức"
+  },
+  "accept": {
+    "titleChanged": "Điều khoản đã được cập nhật",
+    "titleFirst": "Trước khi bắt đầu",
+    "body": "Hãy đọc các văn bản có liên kết bên dưới, rồi đồng ý để tiếp tục.",
+    "submit": "Đồng ý và tiếp tục"
   }
 }

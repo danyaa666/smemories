@@ -15,6 +15,7 @@ func TestHandlersRefuseARequestWithoutAUser(t *testing.T) {
 		"verifyEmail":        h.verifyEmail,
 		"resendVerification": h.resendVerification,
 		"updateUsername":     h.updateUsername,
+		"acceptTerms":        h.acceptTerms,
 	} {
 		rec := httptest.NewRecorder()
 		f(rec, httptest.NewRequest(http.MethodPost, "/", strings.NewReader("{}")))

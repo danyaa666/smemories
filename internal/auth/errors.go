@@ -22,7 +22,11 @@ var (
 	CodeUsernameReserved      = apperr.NewCode("ERROR_USERNAME_RESERVED", 400)
 	CodeUsernameTaken         = apperr.NewCode("ERROR_USERNAME_TAKEN", 409)
 	CodeUsernameChangeTooSoon = apperr.NewCode("ERROR_USERNAME_CHANGE_TOO_SOON", 429)
-	CodeBusy                  = apperr.NewCode("ERROR_BUSY", 503)
+	// CodeTermsRequired is 403 on a signed-in request until the current Terms are accepted; the register request that omits the
+	// version answers the same name with 400 (CodeTermsRequiredAtRegister), because nothing is signed in yet (T-111).
+	CodeTermsRequired           = apperr.NewCode("ERROR_TERMS_REQUIRED", 403)
+	CodeTermsRequiredAtRegister = apperr.NewCode("ERROR_TERMS_REQUIRED", 400)
+	CodeBusy                    = apperr.NewCode("ERROR_BUSY", 503)
 	// The mail provider (T-021): resend-verification is the one endpoint that sends on the request path and says so.
 	CodeMailUnavailable    = apperr.NewCode("ERROR_MAIL_UNAVAILABLE", 503)
 	CodeEmailUndeliverable = apperr.NewCode("ERROR_EMAIL_UNDELIVERABLE", 400)
@@ -40,6 +44,8 @@ var (
 	// ErrBusy: every hashing slot stayed taken for the whole wait (retry shortly).
 	ErrBusy = apperr.New(CodeBusy, "server busy, retry shortly")
 
+	ErrTermsRequired      = apperr.New(CodeTermsRequired, "accept the current Terms of Use and Privacy Policy first")
+	errTermsAtRegister    = apperr.New(CodeTermsRequiredAtRegister, "accept_terms_version must be the current Terms version")
 	errInvalidEmail       = apperr.New(CodeInvalidEmail, "email is not valid")
 	errWeakPassword       = apperr.New(CodeWeakPassword, "password must be 10-128 characters and differ from the email")
 	errInvalidDisplayName = apperr.New(CodeInvalidDisplayName, "display name must be 1-100 characters without control characters")

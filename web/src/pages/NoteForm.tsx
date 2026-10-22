@@ -13,6 +13,7 @@ import {
   type NoteForm as Form,
 } from "../api/publicNotes";
 import { errorText } from "../auth/errors";
+import { LegalNotice } from "../components/LegalConsent";
 import { LanguageSwitcher } from "../components/LanguageSwitcher";
 import { Banner } from "../components/ui/Banner";
 import { Button, buttonClass } from "../components/ui/Button";
@@ -451,6 +452,7 @@ function NoteFormBody({
       <Button type="submit" variant="primary" busy={sending} className="note-send">
         {sending ? t("note.sending") : t("note.send")}
       </Button>
+      <LegalNotice />
     </form>
   );
 }

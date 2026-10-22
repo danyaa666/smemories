@@ -7,6 +7,7 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   plugins: [react()],
   server: {
+    fs: { allow: [".."] }, // src/legal imports the texts from ../docs/legal (?raw); the default only allows web/
     proxy: {
       "/api": {
         target: process.env.SMEM_API_PROXY ?? "http://localhost:8080",

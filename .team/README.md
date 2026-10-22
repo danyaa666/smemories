@@ -10,19 +10,18 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 12 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-095, T-096, T-097 |
-| TODO | 8 | T-101, T-105, T-106, T-109, T-110, T-113, T-114, T-115 |
-| READY_FOR_QA | 1 | T-112 |
-| IN_QA | 1 | T-107 |
-| QA_PASS | 1 | T-111 |
+| BACKLOG | 13 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-095, T-096, T-097, T-116 |
+| TODO | 7 | T-101, T-105, T-106, T-109, T-113, T-114, T-115 |
+| CHANGES_REQUESTED | 1 | T-110 |
+| MERGED | 3 | T-107, T-111, T-112 |
 | DONE | 84 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-092, T-093, T-094, T-098, T-099, T-100, T-102, T-103, T-104, T-108 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** nothing
+**Awaiting your review (MERGED):** T-107 ([E12] Bound the memory of photo downloads (get-content and public-media)); T-111 ([E13] Versioned acceptance of the Terms and Privacy Policy (API)); T-112 ([E13] Web: Terms and Privacy pages, sign-up checkbox, accept screen, friend-form notice)
 
-**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?); Q-051 (Approve merge of T-100 (canonical public ids, PR #93)?); Q-052 (Approve merge of T-111 (Terms acceptance API, PR #96; merges together with T-112)?)
+**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?); Q-051 (Approve merge of T-100 (canonical public ids, PR #93)?); Q-052 (Approve merge of T-111 (Terms acceptance API, PR #96; merges together with T-112)?); Q-053 (Approve merge of T-110 (upload abuse follow-up, PR #99)?); Q-054 (Approve merge of T-107 (bounded photo download memory, PR #98)?)
 
-_Board last written 2026-10-21 18:17Z_
+_Board last written 2026-10-22 00:59Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -586,6 +585,24 @@ QA_PASS and leader review OK on 2210d38, CI green. Every id from the browser mus
 - **Answer:** _(pending)_
 
 QA_PASS and leader review OK on e0a1ba6, CI green. Sign-up requires accepting the current Terms and Privacy version; every signed-in request is refused with ERROR_TERMS_REQUIRED until the user accepts (existing accounts and new Google accounts accept once on the new screen from T-112); notes record the version shown. Merges together with T-112 (#97, web pages and checkbox), which passed QA too. The texts stay marked DRAFT until you finalise them before go-live. Reply 'team approve T-111'.
+
+### Q-053 — Approve merge of T-110 (upload abuse follow-up, PR #99)?
+- **Status:** OPEN
+- **Asked:** 2026-10-21 23:04Z
+- **Blocks:** T-110
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+QA_PASS and leader review OK on d0c5ed8, CI green. Photo upload now needs a verified email, each network address may have at most 4 uploads in progress, and at most 16 rejected public submissions per address are drained (the rest are cut off). QA replayed the attack: a victim's uploads succeeded 23 of 23 times (before: 503 every time). Reply 'team approve T-110'.
+
+### Q-054 — Approve merge of T-107 (bounded photo download memory, PR #98)?
+- **Status:** OPEN
+- **Asked:** 2026-10-21 23:24Z
+- **Blocks:** T-107
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+QA_PASS and leader review OK on 70efad7, CI green. Photos are streamed instead of loaded whole: QA measured +5 MiB memory under 64 slow readers versus about +1 GB on today's develop; responses are byte-identical; a user or address can have at most 64 downloads at once (galleries of 100 thumbnails load over HTTP/2). Reply 'team approve T-107'.
 
 <!-- questions:end -->
 
@@ -4793,24 +4810,75 @@ Spec: .team/epics/E12-security-hardening/10-auth-and-repo-hygiene.md (read it fr
 #### Comments
 
 ### T-107 — [E12] Bound the memory of photo downloads (get-content and public-media)
-- **Status:** IN_QA
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
 - **Depends-on:** T-092
 - **Risk:** high
-- **Rework:** 0
-- **Owner-approved:** —
-- **Assignee:** qa
+- **Rework:** 1
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-107-e12-bound-the-memory-of-photo-downloads-
 - **PR:** https://github.com/danyaa666/smemories/pull/98
-- **Updated:** 2026-10-21 18:17Z by qa
-- **Comments-seen:** 1
+- **Updated:** 2026-10-22 00:59Z by leader
+- **Comments-seen:** 7
 
 Spec: .team/epics/E12-security-hardening/07-bounded-photo-download-memory.md (read it from the repo root). Source: audit run 1, docs/security-audit-skill-2026-10-20/ (PR #86). Risk high: owner approves the merge.
 
 #### Comments
 - 2026-10-21 18:16Z · dev · PR #98, head 8dc097a. Chose streaming (Storage.Open = HEAD + lazy ranged GET under http.ServeContent), no byte budget/env var. Cap 8 per user/IP (429 before DB/store), httpx.PaceWriter slow-reader drop, smem_media_download_inflight. 64 slow readers x 8 MiB: heap +7 MiB, RSS +7 MiB (+30 under -race) vs 512 MiB buffered. Lint, full -race integration, Postman media+public-media, make e2e green. Verify: ranged GET on real S3, 8-cap vs shared NAT on public route.
+- 2026-10-21 19:09Z · qa · QA_FAIL T-107, PR #98, head 8dc097a (CI green on that head; make lint, make test, make test-integration -race all green here; media+public-media Postman green twice each; make e2e green).
+  
+  ISSUES
+  1. [major, AC3] A page of 30 thumbnails does NOT load when the browser multiplexes (HTTP/2). The cap of 8 per user is hit by a normal gallery page.
+     Repro (real Chromium via Playwright, tools/e2e's playwright): a node http2 TLS server on :18443 serves a page with 30 `<img loading="lazy" src="/api/media/get-content?id=<photo>&variant=thumb&n=i">` and proxies to the API (one HTTP/1.1 request per stream, as CloudFront/ALB do), session cookie set.
+     Expected: 30/30 images. Actual on head 8dc097a: 8 of 30 render, 22 answered 429 (3 rounds, identical). Same page through the same proxy against develop (bac2cf1): 30/30. Same page over HTTP/1.1 (browser limit of 6 per host): 30/30, so the dev's test (TestThirtyThumbnailsLoad uses 6 at a time) and the e2e only cover the HTTP/1.1 case.
+     Quick repro without a browser: 30 concurrent thumb requests of one user: `seq 30 | xargs -P30 -I{} curl -s -o /dev/null -w "%{http_code}\n" -H "Cookie: smem_session=<tok>" "$API/api/media/get-content?id=$ID&variant=thumb" | sort | uniq -c` gave 17x200 and 13x429 (python threads, 10 pages of 30: 124 ok / 176 429). A thumbnail is ~1.4 KB here and still overlaps, so real networks are worse (a 50 KB thumb on a 1 Mbit/s link stays in flight for 0.4 s, and all 30 multiplex at once).
+     Why it matters: the web has no concurrency limit (web/src: only native loading="lazy" in Photos/NoteCard/PhotoTile/Yearbooks; the "6 at a time" in book/ready.ts is the print preload only), the target is CloudFront/ALB (T-023, h2 to the browser), and an <img> does not retry a 429, so thumbnails stay broken until reload. The docs/media.md claim "a page of 30 thumbnails is never refused" is only true on HTTP/1.1.
+     Suspected area: internal/media/handler.go maxDownloadsPerClient = 8 counts every in-flight download, small or big. With streaming a download costs one 32 KiB buffer and one store connection, so 8 protects little. Options (dev/leader to choose, spec says 8 so the leader may need to amend it): raise the owner cap well above a page (for example 32 or 64) and keep a lower cap only for the 8 MiB-class load; or count only display/print variants (thumb exempt or a separate larger cap); or add a client-side limiter (~6 concurrent) in the web for every gallery image. Whatever is chosen, add a test with 30 truly parallel thumb requests (not 6 at a time), and update docs/media.md.
+     Same shape on the public route (cap 8 per client address): one browser over h2 showing more than 8 public photos, or a few people behind one NAT, gets 429s with no retry (the NAT concern you listed is confirmed as real, see below).
+  
+  VERIFIED (my own evidence, real API + MinIO in compose project qat107 on ports 13306/16379/19000, develop built from bac2cf1 on :18081 vs head on :18080, same DB/bucket/secret)
+  - AC1 memory: 64 slow readers (8 users x 8, owner route) of an 8 MiB object, real MinIO, at +5 s: head heap_inuse +10.4 MiB / RSS +0.2 MiB (second run +4.4 MiB / +0.1 MiB); public route 8 IPs x 8: heap +0.6 MiB / RSS +0.0. Develop, same load: heap +969 MiB, RSS +1102 MiB (and held for the whole 40 s watched). In-test numbers (go test -race -v, 3 runs): heap +4..6 MiB, RSS +1/+28 MiB (RSS in a -race test process is noisy, one run even fell).
+  - AC2 equality: 314 requests (owner display/thumb/print/bad variant + public; GET and HEAD; full, mid/open/suffix/0-0/last-byte/clipped/unsatisfiable/invalid/multi/overlapping ranges, unknown unit, If-None-Match exact/weak/list/*/other, INM+Range, If-Range etag match/mismatch/date match/old, If-Modified-Since, If-Match ok/bad, Accept-Encoding, plus 401/404/400 errors) sent to develop and head: status, every header except Date/X-Request-Id, and body sha256 identical in all 314 (0 differences). Head bodies equal the bytes I put in MinIO.
+  - 304 / HEAD fetch no body (mc admin trace on MinIO): HEAD, 304 and 416 = one HeadObject, zero GetObject, on both routes. Full GET = HeadObject + one GetObject (206 ranged). Suffix and middle ranges = HeadObject + ranged GetObject. Develop does one full GetObject even for a 304.
+  - Per-client cap: 8 held then the 9th = 429 ERROR_RATE_LIMITED, Retry-After: 2, Cache-Control: no-store, also for HEAD and for an unknown id (so it precedes id checks); another user unaffected; a freed slot is reusable. Public: 9th from the same address 429 (also with a garbage token, so before the link check), another address 200; rate_limited counter increments. MySQL Com_select: the 9th owner request costs 1 select (RequireUser loads the user, it runs before the cap because the key is the user id), a normal request costs 2 more; the 429 does no media or store work. Public 429 does no DB work. Non-blocking: spec says "before any DB" but auth necessarily precedes.
+  - Slow readers, server side (gauge), small SO_RCVBUF client: stalled reader dropped at 10.3 s; 2 KiB/s drip dropped at 16.2 s, 8 KiB/s at 18.3 s, 40 KiB/s kept; 64 stalled readers all gone by 15.4 s. Gauge smem_media_download_inflight 64 -> 0, and 0 after every client close/abort. (A client sees the end late because kernel buffers still hold data; judge by the gauge.)
+  - Postman: media (86 req / 165 assertions) and public-media (39 / 89) twice each against the head, 0 failures (the register limit of 5 per hour per IP needs `make reset-limits` between runs, as before). No 429 request was added to either collection (dev's note): acceptable, covered by Go tests, but I would add one E-case if the cap is reworked.
+  - Flaky/hang watch: whole `make test-integration` once (all ok, media 99 s), and the new download tests 3x with -race (27 s): no MySQL handshake hang seen.
+  
+  OTHER NOTES (non-blocking)
+  - The cap and the gauge are per process (N tasks = N x 8), documented.
+  - The store GET lives as long as the client downloads, up to the 2-minute total (a 17 KiB/s reader holds one MinIO connection and a goroutine for 2 min; capped 8 per client but there is no global bound on clients); S3 transport has no connection limit set. Acceptable for now, mention for T-023 sizing.
+  - A ranged or early-closed GET closes the store connection, so each range request costs a new connection (documented by the dev).
+  - Environment incident: during my run Docker Desktop's VM stopped answering (docker.sock 500, "no route to host 192.168.65.7:2376"), a media -race run then timed out with "test database unreachable". It was not the test or the code: I quit and reopened Docker Desktop once (containers restarted by themselves, the kind containers too), then reran everything above successfully. My stack qat107 is down (no -v; volumes qat107_* remain).
+- 2026-10-21 19:10Z · leader · Leader 2026-10-22 after QA_FAIL: the spec was wrong, not the code. Requirement 2 and AC3 are amended: the per-user and per-client-key cap is 64 (streaming already keeps memory flat; the cap only bounds connections), and AC3 now requires 30 and 100 thumbnails to load over HTTP/2. Rework: change the constant, update docs/media.md with the reason, add the HTTP/2 gallery check (the QA's h2-proxy repro is on this board), keep everything else (AC1/AC2 passed). Re-read the spec.
+- 2026-10-21 23:01Z · dev · Rework head 70efad7 (merged origin/develop, no force-push). Cap 64 (constant), reason in docs/media.md. DEVIATION to confirm: cap 64 alone failed 100 thumbs over h2 (Chromium via h2 proxy: 83/100, 17x429, all 100 start in the same instant), so a client at the cap waits up to 500 ms (downloadGrace) for a slot before the 429; 64 slow readers still get 429. New tools/e2e/h2-gallery.spec.mjs in make e2e: 30 and 100 thumbs over h2 and http/1.1 all 200 (3 runs); Go: TestGalleryPageOfThumbnailsLoadsAtOnce (fails at cap 8), TestDownloadAtTheCapWaitsForAFreedSlot, 65th=429 both routes. make lint test test-integration (-race) + make e2e green; Postman not re-run. QA: re-run e2e + your h2 repro; check the wait is acceptable. Risk high: owner approves merge.
+- 2026-10-21 23:01Z · leader · Leader 2026-10-22: the 500 ms wait for a freed slot before the 429 (downloadGrace in takeDownload) is accepted as part of requirement 2: bounded, it keeps 64 slow readers refused, and it makes a 100-thumbnail HTTP/2 burst load. QA re-checks with make e2e (new h2-gallery spec) and the h2 repro.
+- 2026-10-21 23:24Z · qa · QA_PASS T-107 (re-check), PR #98, head 70efad7. CI green on that head (go, go-integration, e2e, image, security, web); PR MERGEABLE/CLEAN. All evidence mine: own compose project qat107b on 13306/16379/19000, head API :18080, current develop (e4426c5) API :18081, same DB/bucket/secret. Torn down (no -v).
+  
+  EVIDENCE (AC -> how -> result)
+  - Mechanical: make lint (go vet, golangci-lint 0 issues, web lint/typecheck/i18n/api) + make test green. make test-integration (-race, SMEM_TEST_S3_ENDPOINT=http://127.0.0.1:19000) all packages ok (media 108 s, notes 187 s, storage 7 s). make e2e green: 5 passed (h2-gallery x4 + journey). (A first integration run failed only because I had not pointed the tests' S3 endpoint at my stack; rerun with the variable was green.)
+  - Cap 64, both routes (my script, real MinIO, 8 MiB object held by slow readers with a 4 KiB SO_RCVBUF): 63 held -> 64th = 200; 64 held, gauge 64 -> 65th = 429 ERROR_RATE_LIMITED, Retry-After: 2, Cache-Control: no-store, after 507-512 ms; again 429. Same on owner (per user) and public (per XFF address). Public rate_limited counter 0 -> 22.
+  - Grace bounded: 20 parallel refused requests at the cap: all 429, max wait 508-511 ms, total 511-512 ms (they wait in parallel, they do not stack). 64 slow readers are still refused. A slot freed ~200 ms into a 65th request: 200 in 215-256 ms (both routes).
+  - AC3 h2: my Chromium (Playwright) + node http2 TLS proxy (one HTTP/1.1 request per stream to the API), 3 rounds each: 30 and 100 thumbnails over h2 = 30/30 and 100/100 all 200; same over HTTP/1.1 (--disable-http2). Also with 150 ms and 400 ms of simulated S3 latency per store request (delaying TCP proxy in front of MinIO): 30 and 100 all render at 150 ms (0.32 s per thumb). The old head 8dc097a gave 8/30 here.
+  - make e2e now includes tools/e2e/h2-gallery.spec.mjs (playwright.config testMatch + E2E_API_URL in scripts/e2e.sh): 30 and 100 thumbnails over h2 and http/1.1, each asserts protocol, all statuses 200 and every image decoded.
+  - AC1 memory flat: 64 slow readers of an 8 MiB object (8 users x 8, owner): head heap +5.4 MiB, RSS +9.8 MiB at +5 s; public route (8 addresses x 8): heap -0.2 MiB, RSS +0.7 MiB. Current develop, same load: heap +866 MiB, RSS +1072 MiB. Go test TestSlowReadersDoNotHoldTheObjectInMemory green.
+  - Slow readers dropped: stalled reader gauge 0 at 10.3 s; 2 KiB/s drip at 10.4 s; 64 stalled readers all gone at 15.4 s. Gauge smem_media_download_inflight: 64 -> 0 in every run (also 0.0 right after closing the held sockets, and after the Chromium runs).
+  - AC2 after the merge: 314 requests (owner display/thumb/print/bad variant + public; GET+HEAD; full and ~15 range shapes, If-None-Match/If-Range/If-Modified-Since/If-Match variants, Accept-Encoding, 401/404/400 errors) to current develop and to the head: status, all headers except Date/X-Request-Id, body sha256 identical in all 314 (0 differences); head bodies equal the bytes in MinIO.
+  - Postman (verify-newman-users run, reset-limits between runs): media 86 requests / 165 assertions and public-media 39 / 89, run twice each, 0 failures.
+  - Trial merge of PR #99 (T-110, d0c5ed8) into 70efad7: CONFLICTS in internal/media/handler.go (4 hunks: the const block, the Handler struct fields, NewHandler, and the helper block where T-110 replaced takeUser/releaseUser by generic take/release and T-107 adds takeDownload/tryDownload/paced next to them) and in docs/media.md (the "Upload fairness" paragraph, next to the new "Photo downloads" paragraph). No other file conflicts. Purely adjacent additions; I resolved it keeping both sides in a throwaway worktree: gofmt only needed to realign two struct comments, go build, go vet (with -tags integration), golangci-lint (0 issues), unit tests, and -race integration for internal/media (75 s) and internal/notes (121 s) all pass. Note the package-level generic func release in T-110 is shadowed by the local `release` variable in T-107's content/publicContent/tryDownload; it compiles and lints clean. Whichever of #98/#99 merges second needs that rebase (dev's job, ~10 min).
+  
+  NON-BLOCKING OBSERVATIONS
+  1. The 500 ms grace only covers a burst while the first 64 downloads end quickly. With simulated 400 ms of store latency per request (0.8 s per thumb, far above S3 in the same region) 100 thumbnails over h2 give 64x200 + 36x429 (30 thumbnails stay 30/30 at any latency). Fine for AC3 as written; for T-023 sizing keep thumbnails served in well under 500 ms, or raise the cap if galleries of more than 64 images become normal.
+  2. On my machine removing the grace (cap 64 alone) still renders 100/100 in Chromium (dev saw 83/100), and TestGalleryPageOfThumbnailsLoadsAtOnce also passes without the grace, so neither the Go test nor the e2e spec reliably fails if downloadGrace is dropped; TestDownloadAtTheCapWaitsForAFreedSlot (slot freed after grace/5) does cover it for the constant 500 ms (with grace 0 it degenerates). With cap 8 and grace 500 both gallery checks also pass; only cap 8 + grace 0 fails them. Timing-dependent, not a blocker.
+  3. A request waiting for a slot polls every 5 ms under the handler's mutex; a client sending thousands of simultaneous requests at its cap costs a goroutine each for 500 ms. Bounded, acceptable.
+  4. Still no 429 request in the media / public-media Postman collections (covered by Go tests): fine.
+  5. Cap and gauge are per process (N tasks = N x 64), documented.
+- 2026-10-21 23:24Z · leader · Leader review OK on 70efad7: streaming keeps memory flat (QA: +5/+10 MiB vs +866/+1072 MiB on develop), responses byte-identical to develop (314 requests), cap 64 with a bounded 500 ms grace, HTTP/2 galleries of 30 and 100 render. Known limit (QA): with slow storage (400 ms per object) a 100-image HTTP/2 burst still gets some 429s; the web gallery limiter in T-116 is the follow-up if real S3 latency shows it. Trial merge with #99 conflicts (adjacent additions in media/handler.go and docs/media.md): whichever merges second merges develop. Waiting for the owner's approval (risk high).
+- 2026-10-22 00:58Z · human · owner approved merge
+- 2026-10-22 00:59Z · leader · Merged PR #98 as 025d0dd (owner approved).
 
 ### T-108 — [E06] Concurrent smemories-migrate up on an empty database fails (missing zero version migration)
 - **Status:** DONE
@@ -4864,37 +4932,50 @@ QA of T-103 (2026-10-21): go-integration was red once on internal/auth TestConcu
 #### Comments
 
 ### T-110 — [E12] Owner uploads need a verified email and a per-client share; bound drains of rejected public bodies
-- **Status:** TODO
+- **Status:** CHANGES_REQUESTED
 - **Priority:** P2
 - **Type:** security
 - **Milestone:** M2
 - **Depends-on:** T-102
 - **Risk:** high
-- **Rework:** 0
-- **Owner-approved:** —
+- **Rework:** 1
+- **Owner-approved:** yes
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-21 03:31Z by leader
-- **Comments-seen:** 0
+- **Branch:** task/t-110-e12-owner-uploads-need-a-verified-email-
+- **PR:** https://github.com/danyaa666/smemories/pull/99
+- **Updated:** 2026-10-22 00:59Z by leader
+- **Comments-seen:** 3
 
 Spec: .team/epics/E12-security-hardening/11-upload-abuse-followup.md (read it from the repo root). Source: QA of T-102. Risk high: owner approves the merge.
 
 #### Comments
+- 2026-10-21 19:19Z · dev · PR #99 head d0c5ed8. Verified email 403 + per-client cap 4 (429 Retry-After 5) on media/create; 16 drains/client with Connection: close + gauge smem_public_drains_in_progress. Ran: lint, go test -race -tags integration ./... , vitest, Postman media 91/172 and public-media 42/92 (now fixed newman-notes accounts: Setup + make verify-newman-users), make e2e: all green. NOT run: make image-smoke (I added a verify-account step in scripts/image-smoke.sh) - QA please run. AC3 memory is Go heap (29.3->31.4 MiB with 16 draining+84 closed), not RSS of 1500 sockets. PR #98 (T-107) overlaps handler.go: expect conflicts, I merge develop later. Risk high: owner approves.
+- 2026-10-21 23:04Z · qa · QA_PASS on PR #99 head d0c5ed8 (CI green: e2e, go, go-integration, image, security, web; MERGEABLE). Env: own compose project qa110 (ports 13306/16379/19000/19001, down without -v; qa110_* volumes left), real API binary built from the PR head with SMEM_ENV=dev, default pace, SMEM_TRUST_PROXY=true only to give each test its own client key via X-Forwarded-For.
+  AC1 unverified account: POST media/create -> 403 ERROR_EMAIL_NOT_VERIFIED in 0.02 s. Headers-only request (Content-Length 5000000, no body sent) -> 403 at once, so no body read; gauge smem_media_uploads_in_progress stays 0 after 7 attempts. Verified account uploads 200. 12 garbage (400) uploads and 4 abruptly closed drips from one key: gauge back to 0, 3 normal uploads then 200 (caps released on every path).
+  AC2 4 verified accounts behind one key: 2 accounts x 2 drips (1 byte/5 s) = 4 in progress (gauge 4); the 5th upload from that key (3rd and 4th account) -> 429 ERROR_RATE_LIMITED, Retry-After 5, in 0.00 s; victim from another key -> 200 in 0.02 s; drippers end 408 at 15.0 s, gauge 0, key can upload again. Attack replay (4 accounts x 2 drips reopened non-stop for 45 s, the T-102 starvation case): victim from another key 23/23 x 200, max pool gauge 4 of 8 (T-102 run: victim 75/75 x 503).
+  AC3 public submit-note, address warmed to 429 (70 unknown-token posts), then 100 bodies held mid-upload, SMEM_PUBLIC_UPLOAD_* raised so that the drain cap is the active bound: gauge smem_public_drains_in_progress = 16 at 3 s, 84 answered at once 429 ERROR_RATE_LIMITED + Connection: close and closed by the server, the 16 drained answer 429 at 10 s (idle pace); gauge 0 at the end, public_uploads gauge 0 throughout. Control = develop (T-102): 0/100 answered at 3 s, all 100 held to 10 s. With default config (per-IP slot cap 8) the same 100 give 15 drained + 85 x 503 ERROR_BUSY with Connection: close (slot refusal happens first, also bounded). A fully sent 2 MiB rate-limited body still gets a readable 429 (no reset) when under the cap.
+  RSS (process_resident_memory_bytes, macOS, noisy): 100 bodies PR 42.0 -> 48.4/48.8 MiB (+6.4), heap_inuse 23.2 -> 27.9; control develop 41.2 -> 27.1 (macOS compressed it, not a saving), heap 23.3 -> 28.8. 1500 bodies: PR RSS 41.9 -> 80.4 (a second run 24.1 -> 72.0), heap 25.9 MiB, 1484 answered/closed within 3 s; control develop RSS 41.1 -> 89.2, heap 44.4 MiB, none answered for 10 s. So the bound frees sockets and ~18 MiB of heap, but RSS at 1500 is still +30..48 MiB from the burst itself (1500 goroutines and connection buffers): see observation a.
+  AC4 make lint (gofmt, vet x2, golangci-lint, web lint/typecheck/i18n/api types) + make test (go -race, vitest 20 files/361 tests): exit 0. make test-integration (-race -tags integration ./..., media 112 s): exit 0, 27 packages ok. make image-smoke (real run, registry pull worked, no pull-line copy needed): 'image smoke test passed', incl. the dev's new verify-account step and 'photo upload ... works on a read-only root'. Postman via postman CLI (make verify-newman-users after the Setup folder), each run twice back to back, limits reset between: media 91 req/172 assertions 0 failed x2 (incl. the ERROR_EMAIL_NOT_VERIFIED edge entry), public-media 42/92 0 failed x2. make e2e: 1 passed. 
+  Web (real Chromium, vite preview + API, account registered and not verified, upload from the yearbook screen): media/create 403 ERROR_EMAIL_NOT_VERIFIED -> visible message 'Verify your email address first, then try again.' (en-US) and 'Hãy xác minh địa chỉ email trước, rồi thử lại.' (vi-VN); vitest case for 403 added.
+  Docs: docs/media.md, docs/observability.md (gauge), api/openapi.yaml (403 + 429 text), README, Postman updated and consistent with behaviour. No changes under .team/ in the PR.
+  Non-blocking observations: a) RSS at 1500 simultaneous bodies from one address is still +30..48 MiB (burst of handlers/buffers, not retained sockets); only an LB/fd limit bounds that, same as before. b) Per-process counts (client cap 4 x N tasks), already documented. c) PR #98 (T-107) overlaps media/handler.go: dev merges develop after; I did not trial-merge it. d) The client key is the last X-Forwarded-For hop when SMEM_TRUST_PROXY=true; behind the ALB that must be set for the cap to key on real clients (existing behaviour of httpx.ClientIP). Risk high: owner approves the merge.
+- 2026-10-21 23:04Z · leader · Leader review OK on d0c5ed8 (based on QA's evidence and the spec): verified-email check before any slot or body read, per-client cap of 4 after the per-user cap, drains capped at 16 per key with Connection: close, gauge, docs, web message. QA_PASS with the attack replay (victim 23/23 OK, was 503 every time), real image-smoke, Postman and e2e. Note for T-023: SMEM_TRUST_PROXY=true behind the ALB is required for per-client keys. Overlaps PR #98 (T-107) in media/handler.go: whichever merges second merges develop. Waiting for the owner's approval (risk high).
+- 2026-10-22 00:58Z · human · owner approved merge
+- 2026-10-22 00:59Z · leader · Owner approved, but PR #99 now conflicts with develop after #98 (T-107) merged (internal/media/handler.go, docs/media.md: adjacent additions). Merge origin/develop into the branch, keep both sides, re-run go test + integration, push. No rebase, no force-push. No other changes.
 
 ### T-111 — [E13] Versioned acceptance of the Terms and Privacy Policy (API)
-- **Status:** QA_PASS
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M2
 - **Depends-on:** —
 - **Risk:** high
 - **Rework:** 0
-- **Owner-approved:** —
-- **Assignee:** leader
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-111-e13-versioned-acceptance-of-the-terms-an
 - **PR:** https://github.com/danyaa666/smemories/pull/96
-- **Updated:** 2026-10-21 18:15Z by qa
+- **Updated:** 2026-10-22 00:59Z by leader
 - **Comments-seen:** 5
 
 Spec: .team/epics/E13-legal/01-terms-acceptance-api.md (read it from the repo root). Decision D-35. Register requires the current version, a gate on signed-in endpoints until accepted, accept-terms endpoint, version stored on notes. Risk high: owner approves the merge.
@@ -4911,9 +4992,11 @@ Spec: .team/epics/E13-legal/01-terms-acceptance-api.md (read it from the repo ro
   Postman: auth collection, Terms gate two-step flow works as described (G1 setup, make newman-unaccept-terms, termsGate=1: G3/G4 403 ERROR_TERMS_REQUIRED, G5 get-me required, G6 accept, G7 200: 12/12 assertions). Full auth collection run twice back to back: 252 assertions, only the 20 in the 'Google sign-in' folder fail (no SMEM_GOOGLE_* configured here, pre-existing); notes collection 141/141. Two ERROR_TERMS_REQUIRED codes (400 at register, 403 at the gate): acceptable, documented in openapi, api-contract.md line 40 and the Postman descriptions; the web handles 403+terms_required.
   Non-blocking: media/notes integration tests need SMEM_TEST_S3_ENDPOINT on non-default ports. Merge together with #97 (T-111 alone breaks web sign-up). Owner approval needed (risk high).
 - 2026-10-21 18:16Z · leader · Leader review OK on e0a1ba6: one gate in requireUser (needTerms) compares the user row's terms_version with legal.CurrentVersion on every signed-in route; the exempt routes are explicit (get-me, accept-terms, verify-email, resend-verification via requireSession; logout needs no session); register validates accept_terms_version and stores it in the account transaction; the four-doc version test ties text and constant. QA_PASS: 22 gated routes probed live, migration up/down/up on data, Postman gate flow 12/12. Merge together with T-112 (#96 then #97). Waiting for the owner's approval (risk high).
+- 2026-10-22 00:58Z · human · owner approved merge
+- 2026-10-22 00:59Z · leader · Merged PR #96 as e0a7c22 (owner approved).
 
 ### T-112 — [E13] Web: Terms and Privacy pages, sign-up checkbox, accept screen, friend-form notice
-- **Status:** READY_FOR_QA
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** feature
 - **Milestone:** M2
@@ -4924,8 +5007,8 @@ Spec: .team/epics/E13-legal/01-terms-acceptance-api.md (read it from the repo ro
 - **Assignee:** —
 - **Branch:** task/t-112-e13-web-terms-and-privacy-pages-sign-up-checkbox
 - **PR:** 97
-- **Updated:** 2026-10-21 18:17Z by dev
-- **Comments-seen:** 8
+- **Updated:** 2026-10-22 00:59Z by leader
+- **Comments-seen:** 10
 
 Spec: .team/epics/E13-legal/02-legal-pages-web.md. Pages from docs/legal (draft banner while DRAFT), required checkbox at sign-up, accept screen, footer links, notice on the public note form, e2e step.
 
@@ -4944,6 +5027,8 @@ Spec: .team/epics/E13-legal/02-legal-pages-web.md. Pages from docs/legal (draft 
 - 2026-10-21 18:16Z · leader · QA_PASS received on c9f0c4c (77 browser checks). One rework before merge, no QA re-check needed: remove docs/legal/screenshots from the PR (put them on a screenshots/t-112 branch linked from the PR body, like T-094). Nothing else changes. Then READY_FOR_QA is not needed: set QA_PASS? No: set READY_FOR_QA and the leader confirms the file-only diff.
 - 2026-10-21 18:17Z · dev · Rework is files-only: 96ab278 deletes the 20 docs/legal/screenshots/ images (git diff c9f0c4c 96ab278 lists only those deletions); images kept on branch screenshots/t-112 (from c9f0c4c); PR body links updated. No code change, leader checks without new QA run.
 - 2026-10-21 18:17Z · leader · Leader checked 96ab278: git diff c9f0c4c..96ab278 is exactly the 20 deleted screenshot files, nothing else. The board only lets QA set QA_PASS, so QA confirms this files-only diff in its next run (no functional re-test needed) and records QA_PASS; then #96 and #97 merge once the owner approves T-111.
+- 2026-10-21 22:43Z · qa · Re-verification of head 96ab278 (previously passed c9f0c4c). git diff --name-status c9f0c4c 96ab278: 20 files, all status D; 0 paths outside docs/legal/screenshots/ (git diff --name-only | grep -v screenshots -> 0). No functional change, no re-test per leader instruction. gh pr checks 97: e2e, go, go-integration, image, security, web all pass; run 39651353268 headSha = 96ab278 = PR head.
+- 2026-10-22 00:59Z · leader · Merged PR #97 as 78ccfa0 after #96.
 
 ### T-113 — [E12] Media memory estimate for lossy WebP with alpha (ALPH) is too low
 - **Status:** TODO
@@ -4999,6 +5084,25 @@ QA of T-100 (2026-10-21): since T-100 a non-canonical id answers 400 ERROR_PARAM
 - **Comments-seen:** 0
 
 QA of T-094 (2026-10-21): after Continue in the public-link warning and after confirming Disable photo links, focus lands on <body>, so keyboard users restart at the top; return focus to the button that opened the dialog (in the shared Dialog component if that is where it belongs, covering backdrop click too). Also: a failed CI e2e run keeps a Playwright trace that contains the photo-link URL (a bearer token of the throwaway e2e database); scrub it or disable traces for that step. Component test for focus return; show the trace setting in the PR.
+
+#### Comments
+
+### T-116 — [E12] Web: limit concurrent photo requests on gallery pages (follow-up to T-107)
+- **Status:** BACKLOG
+- **Priority:** P3
+- **Type:** feature
+- **Milestone:** M2
+- **Depends-on:** —
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-21 23:24Z by leader
+- **Comments-seen:** 0
+
+QA of T-107 (2026-10-22): with 400 ms storage latency per object, a 100-thumbnail HTTP/2 burst gets 64 x 200 and 36 x 429, and <img> does not retry. If real S3 latency in the go-live phase shows this, load gallery images through a small client-side queue (at most 16 in flight, retry a 429 after Retry-After) instead of raising the server cap. Measure first on the deployed stack.
 
 #### Comments
 

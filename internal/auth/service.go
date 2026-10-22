@@ -14,6 +14,8 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/danyaa666/smemories/internal/apperr"
+	"github.com/danyaa666/smemories/internal/legal"
 	"github.com/danyaa666/smemories/internal/ratelimit"
 	"github.com/danyaa666/smemories/internal/ulid"
 )
@@ -144,8 +146,12 @@ func hashToken(token string) []byte {
 	return h[:]
 }
 
-// Register validates the input (locale is "en" or "vi"), creates the account and signs it in.
-func (s *Service) Register(ctx context.Context, ip, userAgent, email, password, displayName, locale string) (*User, *Session, error) {
+// Register validates the input (locale is "en" or "vi"; acceptTerms is legal.CurrentVersion), creates the account with the
+// acceptance stored and signs it in.
+func (s *Service) Register(ctx context.Context, ip, userAgent, email, password, displayName, locale, acceptTerms string) (*User, *Session, error) {
+	if acceptTerms != legal.CurrentVersion {
+		return nil, nil, errTermsAtRegister
+	}
 	if locale != "en" && locale != "vi" {
 		return nil, nil, errInvalidLocale
 	}
@@ -170,7 +176,7 @@ func (s *Service) Register(ctx context.Context, ip, userAgent, email, password, 
 		return nil, nil, err
 	}
 	now := s.now().UTC()
-	u := &User{ID: ulid.New(now), Email: email, DisplayName: name, Locale: locale, CreatedAt: now.UnixMilli()}
+	u := &User{ID: ulid.New(now), Email: email, DisplayName: name, Locale: locale, CreatedAt: now.UnixMilli(), TermsVersion: acceptTerms}
 	sess, row, err := s.newSession(now, userAgent)
 	if err != nil {
 		return nil, nil, err
@@ -323,6 +329,20 @@ func (s *Service) Authenticate(ctx context.Context, token string) (u *User, refr
 		refreshed = &Session{Token: token, Expires: now.Add(SessionTTL)}
 	}
 	return s.expose(u), refreshed, nil
+}
+
+// AcceptTerms stores that u accepted version, which must be the current one (a stale page sends an old one: ERROR_PARAM).
+// It returns u with the new acceptance.
+func (s *Service) AcceptTerms(ctx context.Context, u *User, version string) (*User, error) {
+	if version != legal.CurrentVersion {
+		return nil, apperr.New(apperr.Param, "version is not the current Terms version")
+	}
+	if err := s.store.acceptTerms(ctx, u.InternalID, version, s.now().UnixMilli()); err != nil {
+		return nil, err
+	}
+	c := *u
+	c.TermsVersion = version
+	return &c, nil
 }
 
 // Logout deletes the session; an unknown or empty token is not an error.

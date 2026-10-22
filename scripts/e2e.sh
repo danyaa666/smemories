@@ -62,4 +62,4 @@ for i in $(seq 1 60); do
 done
 
 cd tools/e2e
-E2E_BASE_URL="$ORIGIN" E2E_OUT="$OUT" npx playwright test
+E2E_BASE_URL="$ORIGIN" E2E_API_URL="http://127.0.0.1:$API_PORT" E2E_OUT="$OUT" npx playwright test

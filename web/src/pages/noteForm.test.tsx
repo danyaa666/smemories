@@ -442,3 +442,31 @@ describe("public note form", () => {
     });
   });
 });
+
+describe("terms notice", () => {
+  it("shows one line under the send button, with links to both pages, in both languages", async () => {
+    load();
+    const { unmount } = renderApp("/c/abc");
+    const send = await screen.findByRole("button", { name: "Send my note" });
+    const notice = send.nextElementSibling as HTMLElement;
+    expect(notice).toHaveTextContent(
+      "By sending, you agree to the Terms of Use and the Privacy Policy. The book owner may share your photos by link.",
+    );
+    expect(within(notice).getByRole("link", { name: "Terms of Use" })).toHaveAttribute(
+      "href",
+      "/terms",
+    );
+    expect(within(notice).getByRole("link", { name: "Privacy Policy" })).toHaveAttribute(
+      "href",
+      "/privacy",
+    );
+    unmount();
+    await i18n.changeLanguage("vi");
+    load();
+    renderApp("/c/abc");
+    const sendVi = await screen.findByRole("button", { name: /Gửi/ });
+    expect(sendVi.nextElementSibling).toHaveTextContent(
+      "Khi gửi, bạn đồng ý với Điều khoản sử dụng và Chính sách quyền riêng tư. Chủ sổ có thể chia sẻ ảnh của bạn qua liên kết.",
+    );
+  });
+});

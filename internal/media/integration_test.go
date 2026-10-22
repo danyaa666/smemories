@@ -24,6 +24,7 @@ import (
 	"github.com/danyaa666/smemories/internal/auth"
 	"github.com/danyaa666/smemories/internal/db/dbtest"
 	"github.com/danyaa666/smemories/internal/httpx"
+	"github.com/danyaa666/smemories/internal/legal"
 	"github.com/danyaa666/smemories/internal/mailer"
 	"github.com/danyaa666/smemories/internal/medialink"
 	"github.com/danyaa666/smemories/internal/metrics"
@@ -58,6 +59,16 @@ func (f *flaky) Get(ctx context.Context, key string) ([]byte, error) {
 		return nil, errors.New("injected get failure")
 	}
 	return f.Storage.Get(ctx, key)
+}
+
+func (f *flaky) Open(ctx context.Context, key string) (io.ReadSeekCloser, error) {
+	f.mu.Lock()
+	fail := f.failGet
+	f.mu.Unlock()
+	if fail {
+		return nil, errors.New("injected get failure")
+	}
+	return f.Storage.Open(ctx, key)
 }
 
 // count is how many objects exist under prefix.
@@ -176,6 +187,15 @@ func (s *syncBuf) String() string {
 func newEnv(t *testing.T) *env {
 	t.Helper()
 	t.Parallel() // T-077: every env has its own database, Redis prefix, ULID-keyed objects and processing semaphore, so tests never share state
+	return buildEnv(t)
+}
+
+// newSerialEnv is newEnv for a test that measures the whole process (memory): it does not call t.Parallel, and the
+// parallel tests only resume once every serial test has finished, so nothing else runs while it measures.
+func newSerialEnv(t *testing.T) *env { t.Helper(); return buildEnv(t) }
+
+func buildEnv(t *testing.T) *env {
+	t.Helper()
 	d := dbtest.New(t)
 	e := &env{t: t, db: d, st: &flaky{Storage: storagetest.New(t), keys: map[string]bool{}}}
 	e.logs = &syncBuf{}
@@ -240,7 +260,7 @@ func (e *env) register(email string) user {
 // registerUnverified is a fresh password account whose email was never confirmed.
 func (e *env) registerUnverified(email string) user {
 	e.t.Helper()
-	b, _ := json.Marshal(map[string]string{"email": email, "password": testPW, "display_name": "Tester"})
+	b, _ := json.Marshal(map[string]string{"email": email, "password": testPW, "display_name": "Tester", "accept_terms_version": legal.CurrentVersion})
 	rec := httptest.NewRecorder()
 	r := httptest.NewRequest("POST", "/api/auth/register", bytes.NewReader(b))
 	r.Header.Set("Content-Type", "application/json")

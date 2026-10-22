@@ -10,6 +10,7 @@ import (
 
 	"github.com/danyaa666/smemories/internal/apperr"
 	"github.com/danyaa666/smemories/internal/httpx"
+	"github.com/danyaa666/smemories/internal/legal"
 	"github.com/danyaa666/smemories/internal/mailer"
 	"github.com/danyaa666/smemories/internal/ratelimit"
 	"github.com/danyaa666/smemories/internal/redis"
@@ -41,18 +42,21 @@ func NewHandler(svc *Service, cfg HandlerConfig, logger *slog.Logger) *Handler {
 func (h *Handler) Routes(mux *http.ServeMux) {
 	open := func(f http.HandlerFunc) http.Handler { return Guard(h.cfg.AllowedOrigins, f) }
 	signedIn := func(f http.HandlerFunc) http.Handler { return Guard(h.cfg.AllowedOrigins, h.RequireUser(f)) }
+	// The few endpoints a user who has not accepted the current Terms may still call (T-111): see RequireUser.
+	anyTerms := func(f http.HandlerFunc) http.Handler { return Guard(h.cfg.AllowedOrigins, h.requireSession(f)) }
 	mux.Handle("POST /api/auth/register", open(h.register))
 	mux.Handle("POST /api/auth/login", open(h.login))
 	mux.Handle("POST /api/auth/logout", open(h.logout))
-	mux.Handle("POST /api/auth/verify-email", signedIn(h.verifyEmail))
-	mux.Handle("POST /api/auth/resend-verification", signedIn(h.resendVerification))
+	mux.Handle("POST /api/auth/verify-email", anyTerms(h.verifyEmail))
+	mux.Handle("POST /api/auth/resend-verification", anyTerms(h.resendVerification))
 	mux.Handle("POST /api/auth/forgot-password", open(h.forgotPassword))
 	mux.Handle("POST /api/auth/reset-password", open(h.resetPassword))
 	if h.google != nil {
 		mux.HandleFunc("GET /api/auth/google-start", h.googleStart)
 		mux.HandleFunc("GET /api/auth/google-callback", h.googleCallback)
 	}
-	mux.Handle("GET /api/user/get-me", h.RequireUser(http.HandlerFunc(h.me)))
+	mux.Handle("GET /api/user/get-me", h.requireSession(http.HandlerFunc(h.me)))
+	mux.Handle("POST /api/user/accept-terms", anyTerms(h.acceptTerms))
 	mux.Handle("POST /api/user/update-username", signedIn(h.updateUsername))
 }
 
@@ -80,10 +84,20 @@ func MustUser(w http.ResponseWriter, r *http.Request) (*User, bool) {
 	return u, true
 }
 
-// RequireUser answers 401 unauthenticated unless the request carries a live session;
-// otherwise it stores the user for UserFrom, slides the session expiry when due, and
-// calls next. Other packages wrap their protected routes with it.
+// RequireUser answers 401 unauthenticated unless the request carries a live session, and 403 ERROR_TERMS_REQUIRED unless the
+// user accepted the current Terms and Privacy Policy (T-111, D-35: the one gate for every signed-in endpoint); otherwise it
+// stores the user for UserFrom, slides the session expiry when due, and calls next. Other packages wrap their protected
+// routes with it. get-me, accept-terms and the email-verification endpoints use requireSession instead; logout needs no session.
 func (h *Handler) RequireUser(next http.Handler) http.Handler {
+	return h.requireUser(next, true)
+}
+
+// requireSession is RequireUser without the Terms check.
+func (h *Handler) requireSession(next http.Handler) http.Handler {
+	return h.requireUser(next, false)
+}
+
+func (h *Handler) requireUser(next http.Handler, needTerms bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		u, refreshed, err := h.svc.Authenticate(r.Context(), cookieToken(r))
 		if err != nil {
@@ -92,6 +106,10 @@ func (h *Handler) RequireUser(next http.Handler) http.Handler {
 		}
 		if refreshed != nil {
 			h.setCookie(w, refreshed)
+		}
+		if needTerms && u.TermsVersion != legal.CurrentVersion {
+			h.fail(w, r, ErrTermsRequired)
+			return
 		}
 		next.ServeHTTP(w, r.WithContext(WithUser(r.Context(), u)))
 	})
@@ -106,6 +124,8 @@ type credentials struct {
 type registerRequest struct {
 	credentials
 	Locale any `json:"locale"` // absent or null: "en"; anything but a string is invalid_locale
+	// AcceptTermsVersion must be legal.CurrentVersion (ERROR_TERMS_REQUIRED otherwise, T-111).
+	AcceptTermsVersion string `json:"accept_terms_version"`
 }
 
 func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
@@ -117,7 +137,7 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
 	if in.Locale != nil {
 		locale, _ = in.Locale.(string) // a non-string leaves "", which Register rejects
 	}
-	u, sess, err := h.svc.Register(r.Context(), h.clientIP(r), r.UserAgent(), in.Email, in.Password, in.DisplayName, locale)
+	u, sess, err := h.svc.Register(r.Context(), h.clientIP(r), r.UserAgent(), in.Email, in.Password, in.DisplayName, locale, in.AcceptTermsVersion)
 	if err != nil {
 		h.fail(w, r, err)
 		return
@@ -199,13 +219,53 @@ func (h *Handler) resetPassword(w http.ResponseWriter, r *http.Request) {
 	h.respond(w, r, nil, h.svc.ResetPassword(r.Context(), h.clientIP(r), in.Email, in.Code, in.Password))
 }
 
+// Terms is what get-me says about the acceptance of the Terms and Privacy Policy.
+type Terms struct {
+	AcceptedVersion *string `json:"accepted_version"` // null = never accepted
+	CurrentVersion  string  `json:"current_version"`
+	Required        bool    `json:"required"` // true = the user must accept before anything else works
+}
+
+func termsOf(u *User) Terms {
+	t := Terms{CurrentVersion: legal.CurrentVersion, Required: u.TermsVersion != legal.CurrentVersion}
+	if u.TermsVersion != "" {
+		t.AcceptedVersion = &u.TermsVersion
+	}
+	return t
+}
+
+// meResponse is get-me: the user plus the Terms state.
+type meResponse struct {
+	*User
+	Terms Terms `json:"terms"`
+}
+
 // me answers with the user itself; a field added to User (like the username of T-081) shows up here with no other change.
 func (h *Handler) me(w http.ResponseWriter, r *http.Request) {
 	u, ok := MustUser(w, r)
 	if !ok {
 		return
 	}
-	httpx.OK(w, r, u)
+	httpx.OK(w, r, meResponse{User: u, Terms: termsOf(u)})
+}
+
+func (h *Handler) acceptTerms(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Version string `json:"version"`
+	}
+	if !decode(w, r, &in) {
+		return
+	}
+	u, ok := MustUser(w, r)
+	if !ok {
+		return
+	}
+	nu, err := h.svc.AcceptTerms(r.Context(), u, in.Version)
+	if err != nil {
+		h.fail(w, r, err)
+		return
+	}
+	httpx.OK(w, r, meResponse{User: nu, Terms: termsOf(nu)})
 }
 
 func (h *Handler) updateUsername(w http.ResponseWriter, r *http.Request) {
