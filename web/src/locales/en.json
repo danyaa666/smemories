@@ -215,6 +215,18 @@
     "resent": "We sent a new code."
   },
   "note": {
+    "signature": {
+      "label": "Sign here (optional)",
+      "hint": "Draw with your finger, a pen or the mouse. You can skip this.",
+      "undo": "Undo",
+      "clear": "Clear",
+      "tooDetailed": "Your signature is too detailed. Clear it and sign more simply.",
+      "invalid": "We couldn't use this signature. Clear it and sign again.",
+      "added": "Signature added",
+      "cleared": "Signature cleared",
+      "of": "Signature of {{name}}",
+      "yours": "Your signature"
+    },
     "writingIn": "you're writing in",
     "privacy": "Only {{name}} will see your note. They choose which ones go in the book.",
     "optional": "(optional)",
