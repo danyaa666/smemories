@@ -13,15 +13,14 @@
 | BACKLOG | 11 | T-023, T-024, T-025, T-026, T-027, T-029, T-031, T-050, T-091, T-096, T-097 |
 | TODO | 3 | T-114, T-115, T-116 |
 | IN_PROGRESS | 1 | T-095 |
-| MERGED | 2 | T-106, T-113 |
-| DONE | 94 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-092, T-093, T-094, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-107, T-108, T-109, T-110, T-111, T-112, T-117, T-118, T-119 |
+| DONE | 96 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-092, T-093, T-094, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-117, T-118, T-119 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-106 ([E12] Auth and repository hygiene from audit run 1); T-113 ([E12] Media memory estimate for lossy WebP with alpha (ALPH) is too low)
+**Awaiting your review (MERGED):** nothing
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-044 (Approve merge of T-092 (public photo links API, PR #85)?); Q-045 (Approve merge of T-098 (IPv6 /64 keying and per-account login limit, PR #87)?); Q-046 (Approve merge of T-099 (mandatory SMEM_ENV, dev/test local-only, PR #88)?); Q-047 (Approve merge of T-108 (concurrent migrate race fix, PR #91)?); Q-048 (Approve merge of T-102 (upload slot fairness, PR #90)?); Q-049 (Approve merge of T-103 (sessions cannot survive a password reset or Google merge, PR #89)?); Q-050 (Approve merge of T-104 (media processing robustness, PR #94)?); Q-051 (Approve merge of T-100 (canonical public ids, PR #93)?); Q-052 (Approve merge of T-111 (Terms acceptance API, PR #96; merges together with T-112)?); Q-053 (Approve merge of T-110 (upload abuse follow-up, PR #99)?); Q-054 (Approve merge of T-107 (bounded photo download memory, PR #98)?)
 
-_Board last written 2026-10-22 09:23Z_
+_Board last written 2026-10-22 09:33Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4838,7 +4837,7 @@ Spec: .team/epics/E12-security-hardening/09-links-and-contributor-quota.md (read
 - 2026-10-22 05:34Z · human · accepted by owner
 
 ### T-106 — [E12] Auth and repository hygiene from audit run 1
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P3
 - **Type:** security
 - **Milestone:** M2
@@ -4849,7 +4848,7 @@ Spec: .team/epics/E12-security-hardening/09-links-and-contributor-quota.md (read
 - **Assignee:** —
 - **Branch:** task/t-106-e12-auth-and-repository-hygiene-from-aud
 - **PR:** https://github.com/danyaa666/smemories/pull/106
-- **Updated:** 2026-10-22 09:23Z by leader
+- **Updated:** 2026-10-22 09:33Z by human
 - **Comments-seen:** 7
 
 Spec: .team/epics/E12-security-hardening/10-auth-and-repo-hygiene.md (read it from the repo root). Source: audit run 1, docs/security-audit-skill-2026-10-20/ (PR #86). Risk high: owner approves the merge.
@@ -4869,6 +4868,7 @@ Spec: .team/epics/E12-security-hardening/10-auth-and-repo-hygiene.md (read it fr
   Non-blocking: (a) openapi apiKey securityScheme name stays smem_session (one value only; description explains __Host-). (b) The other Postman collections hardcode smem_session; fine because they target SMEM_ENV=dev. (c) Existing display_name rows derived from emails are not rewritten (dev stated this).
 - 2026-10-22 09:23Z · human · owner approved merge
 - 2026-10-22 09:23Z · leader · Merged PR #106 as 56b732b (owner approved; QA_PASS; CI 6/6 green on 9fb03c1). __Host- cookie outside dev: existing non-dev sessions sign in again once.
+- 2026-10-22 09:33Z · human · accepted by owner
 
 ### T-107 — [E12] Bound the memory of photo downloads (get-content and public-media)
 - **Status:** DONE
@@ -5114,7 +5114,7 @@ Spec: .team/epics/E13-legal/02-legal-pages-web.md. Pages from docs/legal (draft 
 - 2026-10-22 02:05Z · human · accepted by owner
 
 ### T-113 — [E12] Media memory estimate for lossy WebP with alpha (ALPH) is too low
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P3
 - **Type:** bug
 - **Milestone:** M2
@@ -5125,7 +5125,7 @@ Spec: .team/epics/E13-legal/02-legal-pages-web.md. Pages from docs/legal (draft 
 - **Assignee:** —
 - **Branch:** task/t-113-e12-media-memory-estimate-for-lossy-webp
 - **PR:** https://github.com/danyaa666/smemories/pull/107
-- **Updated:** 2026-10-22 09:21Z by leader
+- **Updated:** 2026-10-22 09:33Z by human
 - **Comments-seen:** 5
 
 QA of T-104 (2026-10-21): a lossy WebP with an ALPH chunk (compression 1) decodes to a transient NRGBA at about 4 bytes per pixel, while the decode-memory estimate in internal/media assumes about 2.5; a valid 5000x5000 file can peak near 160 MB against an estimated 62 MB, so the processing-slot and SMEM_MEMORY_LIMIT_MIB sizing (docs/media.md) is optimistic. Fix the estimate per format (WebP with alpha uses 4 B/px, or the real decoder output size), add a test with a WebP-with-alpha fixture that measures the peak (testing.AllocsPerRun or runtime.MemStats around one decode), update the numbers in docs/media.md. No behaviour change for JPEG and PNG.
@@ -5142,6 +5142,7 @@ QA of T-104 (2026-10-21): a lossy WebP with an ALPH chunk (compression 1) decode
   Cleanup: API process I started is stopped, scratch DB dropped, test yearbook deleted, large scratch images deleted. Nothing in .team or product code changed.
 - 2026-10-22 09:19Z · human · owner approved merge
 - 2026-10-22 09:21Z · leader · Merged PR #107 as df67daa (owner approved; QA_PASS; CI 6/6 green on 6d7a2a0). Alpha WebP cutoff about 3916 px (documented about 3800).
+- 2026-10-22 09:33Z · human · accepted by owner
 
 ### T-114 — [E03] Web: a malformed yearbook id in the URL shows 'book not found'
 - **Status:** TODO
