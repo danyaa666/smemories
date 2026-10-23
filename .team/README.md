@@ -13,11 +13,10 @@
 | BACKLOG | 7 | T-023, T-024, T-025, T-026, T-027, T-031, T-050 |
 | TODO | 1 | T-124 |
 | IN_PROGRESS | 1 | T-029 |
-| MERGED | 2 | T-097, T-123 |
-| DONE | 105 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122 |
+| DONE | 107 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-097 ([E11] Print: signatures in memory-book and navy-classic); T-123 ([E12] Flaky TestSlowUploadsDoNotStarveOthersForLong (T-102 slot test) in CI)
+**Awaiting your review (MERGED):** nothing
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-055 (What should the team build after E11 signatures: go-live (M2) or the class yearbook (M3)?)
 
@@ -4579,7 +4578,7 @@ Spec: .team/epics/E11-signatures/02-signature-pad-web.md. Next phase.
 - 2026-10-23 01:53Z · human · accepted by owner
 
 ### T-097 — [E11] Print: signatures in memory-book and navy-classic
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1b
@@ -4590,7 +4589,7 @@ Spec: .team/epics/E11-signatures/02-signature-pad-web.md. Next phase.
 - **Assignee:** —
 - **Branch:** task/t-097-e11-print-signatures-in-memory-book-and-
 - **PR:** https://github.com/danyaa666/smemories/pull/115
-- **Updated:** 2026-10-23 06:01Z by leader
+- **Updated:** 2026-10-23 06:35Z by human
 - **Comments-seen:** 7
 
 Spec: .team/epics/E11-signatures/03-signature-print.md. Next phase.
@@ -4636,6 +4635,7 @@ Spec: .team/epics/E11-signatures/03-signature-print.md. Next phase.
   NON-BLOCKING: the A5 default 1968..2000 window above (a 2000-char emoji-heavy memory-book note on A5 is cut off with a signature and was not with none); the 60-char name font is small (about 8 to 10 pt on A5). Chrome headless printToPDF failure on the stress fixture seen on the previous head was not re-run.
   CLEANUP: all my vite, API and node processes stopped; scratch DB smem_test_qa97 dropped; scratch develop worktree and the .env copy removed. Note: deleting Redis keys was blocked by the sandbox, so I used a separate Redis db instead; no smem:* keys touched.
 - 2026-10-23 06:01Z · leader · Merged PR #115 as cd175c7 (QA_PASS on d705967). Signatures are on in memory-book and navy-classic; the fit rule held from 300 to 2000 chars on all page sizes; no-signature books are identical. E11 is complete pending the owner's real-device check.
+- 2026-10-23 06:35Z · human · accepted by owner
 
 ### T-098 — [E12] IPv6 /64 keying and a per-account login limiter
 - **Status:** DONE
@@ -5530,7 +5530,7 @@ Spec: .team/epics/E06-go-live/14-go-dependency-refresh.md (read it from the main
 - 2026-10-23 01:53Z · human · accepted by owner
 
 ### T-123 — [E12] Flaky TestSlowUploadsDoNotStarveOthersForLong (T-102 slot test) in CI
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P2
 - **Type:** bug
 - **Milestone:** M2
@@ -5541,7 +5541,7 @@ Spec: .team/epics/E06-go-live/14-go-dependency-refresh.md (read it from the main
 - **Assignee:** —
 - **Branch:** task/t-123-e12-flaky-testslowuploadsdonotstarveothe
 - **PR:** https://github.com/danyaa666/smemories/pull/118
-- **Updated:** 2026-10-23 06:35Z by leader
+- **Updated:** 2026-10-23 06:35Z by human
 - **Comments-seen:** 4
 
 Spec: .team/epics/E12-security-hardening/14-flaky-slow-upload-test.md (read it from the main checkout).
@@ -5559,6 +5559,7 @@ Spec: .team/epics/E12-security-hardening/14-flaky-slow-upload-test.md (read it f
   AC2 CI on PR #118: e2e, go, go-integration, image, security, web all pass.
   Non-blocking: (1) T-124 download-cap tests fail under heavy load as noted (seen 2/3 runs). (2) TestDrippingUploadEndsOnMinRate has no time bound, so it would only catch a slow-ending upload by the 20 s Total/other error, not assert it ended near 0.7 s; with the check removed it still failed (400), so fine. All 24 load processes stopped (pgrep: 0); scratch copies only under the session scratchpad.
 - 2026-10-23 06:35Z · leader · Merged PR #118 as dc9960d (QA_PASS on 1c30a9d; tests only). T-124 is unblocked.
+- 2026-10-23 06:35Z · human · accepted by owner
 
 ### T-124 — [E12] Download-cap integration tests fail under heavy CPU load (T-107 tests)
 - **Status:** TODO
