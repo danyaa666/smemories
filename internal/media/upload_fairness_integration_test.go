@@ -15,11 +15,18 @@ import (
 	"github.com/danyaa666/smemories/internal/httpx"
 )
 
-// T-102. A short pace so that the tests are quick: 1 s without a byte, or under 1 KB/s after 0.5 s, ends an upload.
-var testPace = httpx.BodyPace{Idle: time.Second, Total: 20 * time.Second, MinRate: 1000, Grace: 500 * time.Millisecond}
+// T-102. A short pace so that the tests are quick: 1 s without a byte ends an upload. The tests that hold slots use it as it is:
+// a drip keeps the upload alive until the test calls stallDrips (T-123), so a slot is never freed by a clock the test does not control.
+var testPace = httpx.BodyPace{Idle: time.Second, Total: time.Minute}
 
-func (e *env) serve() *httptest.Server {
-	e.mh.pace = testPace
+// minRatePace also drops a body under 1 KB/s after 0.5 s, however often it moves. Only TestDrippingUploadEndsOnMinRate uses it: it
+// frees a slot within about 0.7 s, so any test that needs several slots held at once must not.
+var minRatePace = httpx.BodyPace{Idle: time.Second, Total: 20 * time.Second, MinRate: 1000, Grace: 500 * time.Millisecond}
+
+func (e *env) serve() *httptest.Server { return e.servePaced(testPace) }
+
+func (e *env) servePaced(pace httpx.BodyPace) *httptest.Server {
+	e.mh.pace = pace
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if ip := r.Header.Get("X-Test-IP"); ip != "" { // one test can play many addresses
 			r.RemoteAddr = ip + ":4000"
@@ -30,8 +37,24 @@ func (e *env) serve() *httptest.Server {
 	return srv
 }
 
+// stallDrips makes every drip() go silent: each upload it holds ends in 408 once the idle window (1 s) has passed.
+func (e *env) stallDrips() { e.stallMu.Do(func() { close(e.stall) }) }
+
+// waitInProgress waits until n owner uploads hold a shared slot (the slot gauge) and fails the test if they never do, so a probe
+// never runs against a pool that is not in the state the test assumes.
+func (e *env) waitInProgress(n int) {
+	e.t.Helper()
+	deadline := time.Now().Add(30 * time.Second)
+	for e.mh.UploadsInProgress() != n {
+		if time.Now().After(deadline) {
+			e.t.Fatalf("%d uploads hold a slot, want %d", e.mh.UploadsInProgress(), n)
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+}
+
 // drip opens an upload of u that promises 1 MiB, sends the first part header and then one byte every 200 ms (so the idle
-// timeout never fires, only the minimum rate does). The returned func reads the answer.
+// timeout does not fire, and with minRatePace the minimum rate does) until stallDrips. The returned func reads the answer.
 func (e *env) drip(srv *httptest.Server, u user, book string) func() (int, http.Header) {
 	e.t.Helper()
 	conn, err := net.Dial("tcp", srv.Listener.Addr().String())
@@ -42,12 +65,11 @@ func (e *env) drip(srv *httptest.Server, u user, book string) func() (int, http.
 	fmt.Fprintf(conn, "POST /api/media/create HTTP/1.1\r\nHost: x\r\nCookie: %s=%s\r\nOrigin: %s\r\nX-Test-IP: %s\r\nContent-Type: multipart/form-data; boundary=B\r\nContent-Length: %d\r\n\r\n",
 		auth.CookieName, u.cookie, origin, u.ip, 1<<20)
 	fmt.Fprintf(conn, "--B\r\nContent-Disposition: form-data; name=\"yearbook_id\"\r\n\r\n%s", book[:5])
-	stop := make(chan struct{})
-	e.t.Cleanup(func() { close(stop) })
+	e.t.Cleanup(e.stallDrips)
 	go func() {
 		for {
 			select {
-			case <-stop:
+			case <-e.stall:
 				return
 			case <-time.After(200 * time.Millisecond):
 				if _, err := conn.Write([]byte("x")); err != nil {
@@ -115,10 +137,7 @@ func TestPerUserUploadCap(t *testing.T) {
 	bookA, bookB := e.newBook(a), e.newBook(b)
 
 	d1, d2 := e.drip(srv, a, bookA), e.drip(srv, a, bookA)
-	deadline := time.Now().Add(5 * time.Second)
-	for e.mh.UploadsInProgress() != 2 && time.Now().Before(deadline) {
-		time.Sleep(10 * time.Millisecond)
-	}
+	e.waitInProgress(2)
 	start := time.Now()
 	res := e.realUpload(srv, a, bookA)
 	if res.StatusCode != 429 || res.Header.Get("Retry-After") != "5" || time.Since(start) > time.Second {
@@ -127,6 +146,7 @@ func TestPerUserUploadCap(t *testing.T) {
 	if got := e.realUpload(srv, b, bookB); got.StatusCode != 200 {
 		t.Fatalf("another user's upload: %d", got.StatusCode)
 	}
+	e.stallDrips()
 	for i, d := range []func() (int, http.Header){d1, d2} {
 		if code, _ := d(); code != 408 {
 			t.Fatalf("dripper %d: %d, want 408", i, code)
@@ -141,8 +161,9 @@ func TestPerUserUploadCap(t *testing.T) {
 	}
 }
 
-// AC2: eight users with one dripping upload each hold the whole shared pool (503 for a ninth) only until the pace ends them; an
-// upload whose body arrives in slow pieces, but keeps moving, still succeeds.
+// AC2: eight users with one dripping upload each hold the whole shared pool (503 for a ninth) only until the pace ends them (here:
+// until they fall silent, the idle window; the minimum rate has its own test); an upload whose body arrives in slow pieces, but
+// keeps moving, still succeeds.
 func TestSlowUploadsDoNotStarveOthersForLong(t *testing.T) {
 	e := newEnv(t)
 	e.mh.clientCap = 100 // this test is about the shared pool: its eight users must not meet the per-address share
@@ -154,14 +175,12 @@ func TestSlowUploadsDoNotStarveOthersForLong(t *testing.T) {
 	}
 	ninth := e.register("fair-ninth@example.com")
 	book := e.newBook(ninth)
-	deadline := time.Now().Add(5 * time.Second)
-	for e.mh.UploadsInProgress() != cap(e.mh.inflight) && time.Now().Before(deadline) {
-		time.Sleep(10 * time.Millisecond)
-	}
+	e.waitInProgress(cap(e.mh.inflight)) // the drips hold their slots until stallDrips, so the pool stays full for the probe
 	res := e.realUpload(srv, ninth, book)
 	if res.StatusCode != 503 {
 		t.Fatalf("with the pool full: %d", res.StatusCode)
 	}
+	e.stallDrips()
 	for i, d := range drips {
 		if code, _ := d(); code != 408 {
 			t.Fatalf("dripper %d: %d, want 408", i, code)
@@ -169,7 +188,8 @@ func TestSlowUploadsDoNotStarveOthersForLong(t *testing.T) {
 	}
 	e.waitIdle()
 
-	// a slow but steady body: the photo in four pieces, 300 ms apart (idle window 1 s)
+	// a slow but steady body: the photo in four pieces, 300 ms apart (idle window 1 s), on a server that also enforces the minimum rate
+	srv = e.servePaced(minRatePace)
 	body, ct := multipartBody(book, "file", "a.jpg", "image/jpeg", photo(t))
 	conn, err := net.Dial("tcp", srv.Listener.Addr().String())
 	if err != nil {
@@ -193,6 +213,18 @@ func TestSlowUploadsDoNotStarveOthersForLong(t *testing.T) {
 	if got.StatusCode != 200 {
 		t.Fatalf("slow but steady upload: %d", got.StatusCode)
 	}
+}
+
+// T-102: a body that keeps moving, but under the minimum rate, ends in 408 and gives every slot back. This is the only test that
+// lets the rate end an upload; it needs no second upload, so it has no timing to get wrong.
+func TestDrippingUploadEndsOnMinRate(t *testing.T) {
+	e := newEnv(t)
+	srv := e.servePaced(minRatePace)
+	u := e.register("rate-a@example.com")
+	if code, _ := e.drip(srv, u, e.newBook(u))(); code != 408 {
+		t.Fatalf("dripping upload: %d, want 408", code)
+	}
+	e.waitIdle()
 }
 
 // T-110 AC1: an unverified account is 403 ERROR_EMAIL_NOT_VERIFIED on media/create, with no slot taken and no body read (the
@@ -232,10 +264,7 @@ func TestPerClientUploadShare(t *testing.T) {
 	}{{a, bookA}, {a, bookA}, {b, bookB}, {b, bookB}} {
 		drips = append(drips, e.drip(srv, d.u, d.book))
 	}
-	deadline := time.Now().Add(5 * time.Second)
-	for e.mh.UploadsInProgress() != maxUploadsPerClient && time.Now().Before(deadline) {
-		time.Sleep(10 * time.Millisecond)
-	}
+	e.waitInProgress(maxUploadsPerClient)
 	start := time.Now()
 	res := e.realUpload(srv, c, bookC) // a third account of the same address: its own cap is empty, the address share is full
 	if res.StatusCode != 429 || res.Header.Get("Retry-After") != "5" || time.Since(start) > time.Second {
@@ -244,6 +273,7 @@ func TestPerClientUploadShare(t *testing.T) {
 	if got := e.realUpload(srv, victim, bookV); got.StatusCode != 200 {
 		t.Fatalf("victim from another address: %d", got.StatusCode)
 	}
+	e.stallDrips()
 	for i, d := range drips {
 		if code, _ := d(); code != 408 {
 			t.Fatalf("dripper %d: %d, want 408", i, code)
