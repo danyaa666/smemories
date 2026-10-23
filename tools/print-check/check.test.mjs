@@ -74,7 +74,7 @@ describe("24-page book, 30 photos, 84 notes", () => {
       assert.ok(r.shrunk >= 1, "the long note was shrunk to fit");
       // Vietnamese text is extractable and exact (NFC); emoji survive as text
       for (const s of ["Nguyễn Thị Hồng Ánh", "Đặng Ngọc Bích Trâm", "Huỳnh Ngọc Diệp", "Chuyến dã ngoại ở Đà Lạt", "Lời nhắn từ bạn bè", "Học, học nữa, học mãi"])
-        assert.ok(r.t.includes(s), `extracted text contains "${s}"`);
+        assert.ok(r.t.includes(s), `extracted text contains "${s}"; lines with its first word: ${JSON.stringify(r.t.split("\n").filter((l) => l.includes(s.split(" ")[0])).slice(0, 4))}`);
       assert.ok(r.t.includes("😄"), "emoji are text");
       // the screen controls are not printed
       assert.ok(!r.t.includes("Xem trước và in") && !r.t.includes("Print or save"), "no app chrome in the PDF");
@@ -102,7 +102,7 @@ describe("memory-book template: 24 pages, 30 photos, 21 notes", () => {
       assert.deepEqual([...r.hosts], [new URL(BASE).host], "no request to any other host");
       assert.ok(r.saved.bytes < 4e6, `the PDF stays small (the dotted paper is one picture), got ${r.saved.bytes}`);
       for (const s of ["Nguyễn Thị Hồng Ánh", "Đặng Ngọc Bích Trâm", "Từ một người bạn", "Giữ liên lạc nhé", "Hẹn ngày gặp lại", "Chuyến dã ngoại ở Đà Lạt"])
-        assert.ok(r.t.includes(s), `extracted text contains "${s}"`);
+        assert.ok(r.t.includes(s), `extracted text contains "${s}"; lines with its first word: ${JSON.stringify(r.t.split("\n").filter((l) => l.includes(s.split(" ")[0])).slice(0, 4))}`);
       assert.ok(r.t.includes("😄"), "emoji are text");
       assert.ok(!r.t.includes("Xem trước và in") && !r.t.includes("Nguyễn Thị Hồng Ánh, "), "no app chrome and no list of shrunk notes in the PDF");
     });
@@ -199,7 +199,7 @@ describe("navy-classic template: 24 pages, 84 notes", () => {
       assert.ok(r.saved.bytes < 4e6, `the PDF stays small, got ${r.saved.bytes}`);
       // text-transform makes the small labels capitals in the PDF
       for (const s of ["Nguyễn Thị Hồng Ánh", "Đặng Ngọc Bích Trâm", "Giới thiệu về mình", "Lưu bút", "Tạm biệt, khóa 2026", "KHÓA", "ĐỂ LẠI ĐÔI LỜI", "Chuyến dã ngoại ở Đà Lạt", "Học, học nữa, học mãi"])
-        assert.ok(r.t.includes(s), `extracted text contains "${s}"`);
+        assert.ok(r.t.includes(s), `extracted text contains "${s}"; lines with its first word: ${JSON.stringify(r.t.split("\n").filter((l) => l.includes(s.split(" ")[0])).slice(0, 4))}`);
       assert.ok(r.t.includes("😄"), "emoji are text");
       assert.ok(!r.t.includes("Xem trước và in"), "no app chrome in the PDF");
     });
