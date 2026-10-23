@@ -54,21 +54,21 @@ func TestProdContractValid(t *testing.T) {
 		t.Fatal(err)
 	}
 	for name, m := range map[string]map[string]string{
-		"base (task role, no static keys)": prodBase(),
-		"CA file instead of tls=true":      with("SMEM_DB_DSN", "app:p@tcp(db:3306)/d", "SMEM_DB_TLS_CA_FILE", ca),
-		"explicit DB opt-out":              with("SMEM_DB_DSN", "app:p@tcp(db:3306)/d", "SMEM_DB_ALLOW_INSECURE", "true"),
-		"redis password in its own var":    with("SMEM_REDIS_URL", "rediss://cache.internal:6379/0", "SMEM_REDIS_PASSWORD", secRedis),
-		"redis opt-out":                    with("SMEM_REDIS_URL", "redis://cache:6379/0", "SMEM_REDIS_ALLOW_INSECURE", "true"),
-		"https custom S3 endpoint":         with("SMEM_S3_ENDPOINT", "https://s3.internal.example.com"),
-		"http S3 endpoint, opted":          with("SMEM_S3_ENDPOINT", "http://minio:9000", "SMEM_S3_ALLOW_INSECURE", "true"),
-		"static S3 keys (MinIO-like)":      with("SMEM_S3_ACCESS_KEY", "k", "SMEM_S3_SECRET_KEY", secS3),
-		"metrics on loopback":              with("SMEM_METRICS_ADDR", "127.0.0.1:9090"),
-		"metrics on localhost":             with("SMEM_METRICS_ADDR", "localhost:9090"),
-		"metrics on a private address":     with("SMEM_METRICS_ADDR", "10.0.1.5:9090"),
-		"metrics on all interfaces, opted": with("SMEM_METRICS_ADDR", "0.0.0.0:9090", "SMEM_METRICS_ALLOW_ANY_INTERFACE", "true"),
-		"bare from address":                with("SMEM_MAIL_FROM", "no-reply@mail.smemories.io"),
-		"configuration set":                with("SMEM_SES_CONFIGURATION_SET", "smem-prod"),
-		"google on with a strong key":      with("SMEM_GOOGLE_CLIENT_ID", "id", "SMEM_GOOGLE_CLIENT_SECRET", "s", "SMEM_OIDC_COOKIE_KEY", secOIDC),
+		"base (task role, no static keys)":  prodBase(),
+		"CA file instead of tls=true":       with("SMEM_DB_DSN", "app:p@tcp(db:3306)/d", "SMEM_DB_TLS_CA_FILE", ca),
+		"explicit DB opt-out":               with("SMEM_DB_DSN", "app:p@tcp(db:3306)/d", "SMEM_DB_ALLOW_INSECURE", "true"),
+		"redis password in its own var":     with("SMEM_REDIS_URL", "rediss://cache.internal:6379/0", "SMEM_REDIS_PASSWORD", secRedis),
+		"redis opt-out":                     with("SMEM_REDIS_URL", "redis://cache:6379/0", "SMEM_REDIS_ALLOW_INSECURE", "true"),
+		"https custom S3 endpoint":          with("SMEM_S3_ENDPOINT", "https://s3.internal.example.com"),
+		"http S3 endpoint, opted":           with("SMEM_S3_ENDPOINT", "http://s3:9000", "SMEM_S3_ALLOW_INSECURE", "true"),
+		"static S3 keys (local-store-like)": with("SMEM_S3_ACCESS_KEY", "k", "SMEM_S3_SECRET_KEY", secS3),
+		"metrics on loopback":               with("SMEM_METRICS_ADDR", "127.0.0.1:9090"),
+		"metrics on localhost":              with("SMEM_METRICS_ADDR", "localhost:9090"),
+		"metrics on a private address":      with("SMEM_METRICS_ADDR", "10.0.1.5:9090"),
+		"metrics on all interfaces, opted":  with("SMEM_METRICS_ADDR", "0.0.0.0:9090", "SMEM_METRICS_ALLOW_ANY_INTERFACE", "true"),
+		"bare from address":                 with("SMEM_MAIL_FROM", "no-reply@mail.smemories.io"),
+		"configuration set":                 with("SMEM_SES_CONFIGURATION_SET", "smem-prod"),
+		"google on with a strong key":       with("SMEM_GOOGLE_CLIENT_ID", "id", "SMEM_GOOGLE_CLIENT_SECRET", "s", "SMEM_OIDC_COOKIE_KEY", secOIDC),
 	} {
 		if _, err := Load(exact(m)); err != nil {
 			t.Errorf("%s: %v", name, err)
@@ -104,9 +104,9 @@ func TestProdContractRefusals(t *testing.T) {
 		{"one http origin in a list", with("SMEM_ALLOWED_ORIGINS", "https://app.example.com,http://localhost:5173"), "SMEM_ALLOWED_ORIGINS"},
 		{"no base URL", with("SMEM_PUBLIC_BASE_URL", ""), "SMEM_PUBLIC_BASE_URL"},
 		{"http base URL", with("SMEM_PUBLIC_BASE_URL", "http://app.example.com"), "SMEM_PUBLIC_BASE_URL"},
-		{"http S3 endpoint", with("SMEM_S3_ENDPOINT", "http://minio:9000"), "SMEM_S3_ENDPOINT"},
+		{"http S3 endpoint", with("SMEM_S3_ENDPOINT", "http://s3:9000"), "SMEM_S3_ENDPOINT"},
 		{"S3 endpoint with credentials", with("SMEM_S3_ENDPOINT", "https://k:"+secS3+"@s3.example.com"), "SMEM_S3_ENDPOINT"},
-		{"http S3 endpoint with credentials", with("SMEM_S3_ENDPOINT", "http://k:"+secS3+"@minio:9000"), "SMEM_S3_ENDPOINT"},
+		{"http S3 endpoint with credentials", with("SMEM_S3_ENDPOINT", "http://k:"+secS3+"@s3:9000"), "SMEM_S3_ENDPOINT"},
 		{"bad S3 opt-out value", with("SMEM_S3_ALLOW_INSECURE", "sure"), "SMEM_S3_ALLOW_INSECURE"},
 		{"origin with credentials", with("SMEM_ALLOWED_ORIGINS", "https://u:"+secS3+"@app.example.com"), "SMEM_ALLOWED_ORIGINS"},
 		{"http origin with credentials", with("SMEM_ALLOWED_ORIGINS", "http://u:"+secS3+"@app.example.com"), "SMEM_ALLOWED_ORIGINS"},
@@ -193,7 +193,7 @@ func TestURLCredentialsRefusedEverywhereAndRedacted(t *testing.T) {
 func TestLogWarnings(t *testing.T) {
 	var buf strings.Builder
 	l := slog.New(slog.NewJSONHandler(&buf, nil))
-	cfg, err := Load(exact(with("SMEM_DB_ALLOW_INSECURE", "true", "SMEM_REDIS_ALLOW_INSECURE", "true", "SMEM_S3_ENDPOINT", "http://minio:9000", "SMEM_S3_ALLOW_INSECURE", "true",
+	cfg, err := Load(exact(with("SMEM_DB_ALLOW_INSECURE", "true", "SMEM_REDIS_ALLOW_INSECURE", "true", "SMEM_S3_ENDPOINT", "http://s3:9000", "SMEM_S3_ALLOW_INSECURE", "true",
 		"SMEM_S3_ACCESS_KEY", "k", "SMEM_S3_SECRET_KEY", secS3, "SMEM_METRICS_ADDR", "0.0.0.0:9090", "SMEM_METRICS_ALLOW_ANY_INTERFACE", "true")))
 	if err != nil {
 		t.Fatal(err)

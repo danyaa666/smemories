@@ -12,7 +12,7 @@ Require exactly these four status checks; the names are the job names and are st
 | Check | What it runs | Local equivalent |
 |---|---|---|
 | `go` | `gofmt -l .` (must print nothing), `go vet ./...` (also with `-tags integration`), golangci-lint v2.8.0 with [`.golangci.yml`](../.golangci.yml) (`errcheck`, `govet`, `staticcheck`, `ineffassign`, `unused`, `gosec`, `bodyclose`), `go test -race -coverprofile=coverage.txt ./...`; total coverage goes to the job summary | `make lint` (Go part) and `make test` |
-| `go-integration` | MySQL 8.4 container (`utf8mb4`, same server flags as `docker-compose.yml`), a Valkey 8 container (same pinned image and flags) and a MinIO container (S3, the frozen image from `docker-compose.yml`), then `make test-integration` | `make up` then `make test-integration` |
+| `go-integration` | MySQL 8.4 container (`utf8mb4`, same server flags as `docker-compose.yml`), a Valkey 8 container (same pinned image and flags) and an S3 container (SeaweedFS `weed mini`, same image and digest as `docker-compose.yml`), then `make test-integration` | `make up` then `make test-integration` |
 | `web` | In `web/`: `npm ci`, `lint`, `lint:i18n`, `typecheck`, `test`, `build`, `check:api` | `make web-lint web-test web-build` |
 | `security` | `govulncheck ./...` (blocking); `npm audit --audit-level=high --omit=dev` (reported, not blocking: see the comment in the workflow) | `go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...` and `cd web && npm audit --audit-level=high --omit=dev` |
 
@@ -45,8 +45,8 @@ branch, no force pushes, no deletions. Do not require the `ci` workflow name; on
   server arguments (character set, collation, `sql_mode`, time zone). The root password is a fake that exists only on the
   runner. Tests create and drop their own `smem_test_*` databases.
 - Valkey 8 (Redis protocol, `docs/redis.md`) is also a `docker run`, with the digest-pinned image and the flags of `docker-compose.yml` (AOF, `noeviction`); keep the digest in both files in step. `SMEM_TEST_REDIS_URL` in the job `env` points the tests at it; each test uses its own key prefix and cleans up. The `go` job needs no Redis.
-- MinIO is started the same way (fake credentials, `SMEM_TEST_S3_*` in the job `env`); the storage tests create the bucket on first use and delete the objects they write.
-- `e2e` (T-020, [e2e.md](e2e.md)): the M1 journey in Chromium against the built web app and the real API on the same three services (MinIO also gets its bucket). It is the only job that sets `SMEM_DEV_FIXED_OTP` (the API runs with `SMEM_ENV=test`). Not a required check until it has run green ten times in a row; on failure it uploads the Playwright trace, a screenshot and the API log (`e2e-failure`). Local: `make up`, `make e2e`.
+- The S3 store is started the same way (`docker run` with the digest of `docker-compose.yml`; `-p 127.0.0.1:9000:8333`; the `docker-compose` entry of `.github/dependabot.yml` raises the compose digest, and `ci.yml` and `scripts/image-smoke.sh` must follow it by hand) (fake credentials, `SMEM_TEST_S3_*` in the job `env`); the storage tests create the bucket on first use and delete the objects they write.
+- `e2e` (T-020, [e2e.md](e2e.md)): the M1 journey in Chromium against the built web app and the real API on the same three services (the S3 store also gets its bucket, through `S3_BUCKET`). It is the only job that sets `SMEM_DEV_FIXED_OTP` (the API runs with `SMEM_ENV=test`). Not a required check until it has run green ten times in a row; on failure it uploads the Playwright trace, a screenshot and the API log (`e2e-failure`). Local: `make up`, `make e2e`.
 - Dependabot ([`.github/dependabot.yml`](../.github/dependabot.yml)) opens one grouped weekly pull request per ecosystem
   (`gomod`, `npm` in `/web`, `github-actions`) against `develop`.
 - Making `npm audit` blocking: delete `continue-on-error: true` in the `security` job once the dependency tree is clean.

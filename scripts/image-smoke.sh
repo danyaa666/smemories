@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Smoke test of the production image (T-022, docs/container.md). Usage: scripts/image-smoke.sh [IMAGE]   (default smemories:local)
 #
-# Starts a private MySQL, Valkey and MinIO on a private docker network (nothing is published on the host except the API
+# Starts a private MySQL, Valkey and S3 store (SeaweedFS) on a private docker network (nothing is published on the host except the API
 # port on 127.0.0.1, and nothing of the developer's compose stack is touched), then checks the image:
 #   1. static: non-root user, labels, no shell, only the three binaries, size under 60 MB
 #   2. the API refuses an un-migrated database; two concurrent smemories-migrate up are safe; down is refused in prod; status, version
@@ -25,7 +25,7 @@ IMAGE="${1:-smemories:local}"
 RUN="smem-smoke-$(od -An -N4 -tx1 /dev/urandom | tr -d ' \n')"
 MYSQL_IMG='mysql:8.4@sha256:6ea90827b1100f8f2ae306a539f86d2c264a26ed435a2a9f75551dd5c3aeb242'
 VALKEY_IMG='valkey/valkey:8@sha256:640c5e62cea04b6d6f2084232651d0cc70362d31f4f805e7be94dbed6855e8f2'
-MINIO_IMG='bitnamilegacy/minio:2025.4.22-debian-12-r2@sha256:50cec18ac4184af4671a78aedd5554942c8ae105d51a465fa82037949046da01'
+S3_IMG='chrislusf/seaweedfs:4.48@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d'   # the digest of docker-compose.yml and ci.yml (T-029)
 MAX_MB=60
 TASK_TIMEOUT="${SMOKE_TASK_TIMEOUT:-120}"   # seconds for one docker run of a one-off task or a refused start
 SMOKE_TIMEOUT="${SMOKE_TIMEOUT:-900}"       # seconds for the whole script (about 40 s warm; image pulls on a cold runner take longer)
@@ -35,7 +35,7 @@ PROD_ORIGIN=https://smoke.example.com   # what the prod refusals use
 
 TMP="$(mktemp -d)"
 rand() { od -An -N24 -tx1 /dev/urandom | tr -d ' \n'; }
-DB_PW="$(rand)"; ROOT_PW="$(rand)"; S3_USER="smokeminio"; S3_PW="$(rand)"; OTP_KEY="$(rand)$(rand)"; LINK_KEY="$(rand)"   # LINK_KEY: 48 hex characters read as base64 are 36 bytes, over the 32 SMEM_MEDIA_LINK_SECRET needs
+DB_PW="$(rand)"; ROOT_PW="$(rand)"; S3_USER="smokes3"; S3_PW="$(rand)"; OTP_KEY="$(rand)$(rand)"; LINK_KEY="$(rand)"   # LINK_KEY: 48 hex characters read as base64 are 36 bytes, over the 32 SMEM_MEDIA_LINK_SECRET needs
 
 exec 4>&2   # the trap can fire inside bounded's `2>/dev/null` braces: the timeout message goes to this saved stderr
 cleanup() {
@@ -120,7 +120,7 @@ rm -f "$TMP/fs.tar"
 
 # --- services ---------------------------------------------------------------------------------------------------
 # Pull the pinned images first, bounded, so a slow registry fails here with its own message and not inside a service start.
-for img in "$MYSQL_IMG" "$VALKEY_IMG" "$MINIO_IMG"; do
+for img in "$MYSQL_IMG" "$VALKEY_IMG" "$S3_IMG"; do
   bounded 600 docker pull -q "$img" >/dev/null || fail "could not pull $img in 600s"
 done
 docker network create "$RUN" >/dev/null
@@ -130,16 +130,16 @@ run -d --name "$RUN-mysql" --network "$RUN" -e MYSQL_ROOT_PASSWORD="$ROOT_PW" -e
   --sql-mode=ONLY_FULL_GROUP_BY,STRICT_ALL_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION \
   --default-time-zone=+00:00 >/dev/null
 run -d --name "$RUN-redis" --network "$RUN" "$VALKEY_IMG" valkey-server --save "" --appendonly no --protected-mode no >/dev/null
-run -d --name "$RUN-minio" --network "$RUN" -e MINIO_ROOT_USER="$S3_USER" -e MINIO_ROOT_PASSWORD="$S3_PW" "$MINIO_IMG" >/dev/null
+run -d --name "$RUN-s3" --network "$RUN" -e AWS_ACCESS_KEY_ID="$S3_USER" -e AWS_SECRET_ACCESS_KEY="$S3_PW" -e S3_BUCKET="$BUCKET" "$S3_IMG" \
+  mini -dir=/data -ip.bind=0.0.0.0 -master.telemetry=false -s3.port=8333 >/dev/null
 for i in $(seq 1 60); do
   bounded 20 docker exec "$RUN-mysql" mysqladmin ping -h 127.0.0.1 -uroot -p"$ROOT_PW" --silent >/dev/null 2>&1 &&
     bounded 20 docker exec "$RUN-redis" valkey-cli ping 2>/dev/null | grep -qx PONG &&
-    bounded 20 docker exec "$RUN-minio" curl -fsS -m 60 -m 10 http://127.0.0.1:9000/minio/health/ready >/dev/null 2>&1 && break
+    bounded 20 docker exec "$RUN-s3" wget -q -O /dev/null http://127.0.0.1:8333/status >/dev/null 2>&1 && break
   [ "$i" -lt 60 ] || fail "services did not become ready"
   sleep 2
 done
-bounded 60 docker exec "$RUN-minio" sh -c "mc alias set local http://127.0.0.1:9000 '$S3_USER' '$S3_PW' >/dev/null && mc mb --ignore-existing local/$BUCKET >/dev/null"
-ok "private MySQL, Valkey and MinIO are up"
+ok "private MySQL, Valkey and S3 store are up"
 
 DSN="smemories:$DB_PW@tcp($RUN-mysql:3306)/smemories"
 umask 077
@@ -148,7 +148,7 @@ umask 077
 # neither (docs/production-config.md), and section 3 proves that prod refuses without them.
 cat >"$TMP/task.env" <<EOF
 SMEM_DB_DSN=$DSN
-SMEM_S3_ENDPOINT=http://$RUN-minio:9000
+SMEM_S3_ENDPOINT=http://$RUN-s3:8333
 SMEM_S3_BUCKET=$BUCKET
 SMEM_S3_ACCESS_KEY=$S3_USER
 SMEM_S3_SECRET_KEY=$S3_PW

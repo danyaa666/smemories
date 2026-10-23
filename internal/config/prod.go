@@ -62,7 +62,7 @@ func (cfg *Config) loadProd(getenv func(string) string) error {
 		return fmt.Errorf("SMEM_PUBLIC_BASE_URL=%q: prod needs an https URL", redactURL(cfg.PublicBaseURL))
 	}
 
-	// A custom object-store endpoint (MinIO or similar) must be https; AWS S3 needs no endpoint at all.
+	// A custom object-store endpoint (a local S3-compatible store) must be https; AWS S3 needs no endpoint at all.
 	if u, _ := url.Parse(cfg.S3Endpoint); cfg.S3Endpoint != "" && !cfg.S3AllowInsecure && (u == nil || u.Scheme != "https") {
 		return fmt.Errorf("SMEM_S3_ENDPOINT=%q: prod needs an https URL (leave it unset for AWS S3)", redactURL(cfg.S3Endpoint))
 	}

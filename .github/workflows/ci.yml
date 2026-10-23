@@ -1,4 +1,4 @@
-# Continuous integration: Go, Go integration (MySQL, Valkey, MinIO), web, security. Details and the
+# Continuous integration: Go, Go integration (MySQL, Valkey, SeaweedFS S3), web, security. Details and the
 # required-check names for branch protection: docs/ci.md.
 # No repository secrets are used anywhere in this file; keep it that way (public repo, and
 # pull requests from forks must be able to run it).
@@ -70,11 +70,11 @@ jobs:
     env:
       # Throwaway MySQL on the runner, reachable only from the runner. Obviously fake, not a secret.
       SMEM_TEST_DB_DSN: root:ci-only-fake-root-pw@tcp(127.0.0.1:3306)/smemories
-      # Throwaway MinIO on the runner (same frozen image as docker-compose.yml, L-08). Fake credentials; the
+      # Throwaway S3 store on the runner (SeaweedFS, same image and digest as docker-compose.yml, T-029). Fake credentials; the
       # storage tests create the bucket themselves.
       SMEM_TEST_S3_ENDPOINT: http://127.0.0.1:9000
-      SMEM_TEST_S3_ACCESS_KEY: ci-only-minio
-      SMEM_TEST_S3_SECRET_KEY: ci-only-fake-minio-pw
+      SMEM_TEST_S3_ACCESS_KEY: ci-only-s3
+      SMEM_TEST_S3_SECRET_KEY: ci-only-fake-s3-pw
       SMEM_TEST_S3_BUCKET: smemories-ci
       # Throwaway Valkey on the runner (same pinned image as docker-compose.yml, T-051). No password, loopback only.
       SMEM_TEST_REDIS_URL: redis://127.0.0.1:6379/0
@@ -111,16 +111,17 @@ jobs:
           exit 1
       - name: Check the server character set
         run: docker exec mysql mysql -uroot -pci-only-fake-root-pw -N -e "SELECT @@character_set_server, @@collation_server" | grep -qx $'utf8mb4\tutf8mb4_0900_ai_ci'
-      - name: Start MinIO (S3)
+      - name: Start the S3 store (SeaweedFS)
         run: |
-          docker run -d --name minio -p 127.0.0.1:9000:9000 \
-            -e MINIO_ROOT_USER=ci-only-minio -e MINIO_ROOT_PASSWORD=ci-only-fake-minio-pw \
-            bitnamilegacy/minio:2025.4.22-debian-12-r2
+          docker run -d --name s3 -p 127.0.0.1:9000:8333 \
+            -e AWS_ACCESS_KEY_ID=ci-only-s3 -e AWS_SECRET_ACCESS_KEY=ci-only-fake-s3-pw \
+            chrislusf/seaweedfs:4.48@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d \
+            mini -dir=/data -ip.bind=0.0.0.0 -master.telemetry=false -s3.port=8333
           for i in $(seq 1 60); do
-            curl -fsS http://127.0.0.1:9000/minio/health/ready && exit 0
+            curl -fsS http://127.0.0.1:9000/status && exit 0
             sleep 2
           done
-          docker logs minio
+          docker logs s3
           exit 1
       # Same image and flags as docker-compose.yml (the digest is the one pinned there; keep them in step). A
       # `services:` container cannot take server arguments, so this is a docker run like the other two.
@@ -139,7 +140,7 @@ jobs:
       - run: make test-integration
 
   # T-020: the M1 journey in a real browser (Playwright, Chromium) against the built web app, the real API and the same
-  # MySQL, MinIO and Valkey as go-integration (docs/e2e.md). This is the ONLY job that sets SMEM_DEV_FIXED_OTP: the API runs
+  # MySQL, S3 store and Valkey as go-integration (docs/e2e.md). This is the ONLY job that sets SMEM_DEV_FIXED_OTP: the API runs
   # with SMEM_ENV=test, the one environment besides dev where the registered DEV-SHORTCUT(otp) is allowed. The link token of the
   # journey is never printed. On failure the Playwright trace, a screenshot and the API log are uploaded.
   e2e:
@@ -152,8 +153,8 @@ jobs:
       SMEM_S3_ENDPOINT: http://127.0.0.1:9000
       SMEM_S3_REGION: us-east-1
       SMEM_S3_BUCKET: smemories-e2e
-      SMEM_S3_ACCESS_KEY: ci-only-minio
-      SMEM_S3_SECRET_KEY: ci-only-fake-minio-pw
+      SMEM_S3_ACCESS_KEY: ci-only-s3
+      SMEM_S3_SECRET_KEY: ci-only-fake-s3-pw
       SMEM_S3_PATH_STYLE: "true"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -190,17 +191,17 @@ jobs:
           done
           docker logs mysql
           exit 1
-      - name: Start MinIO (S3) and create the bucket
+      - name: Start the S3 store (SeaweedFS) with the bucket
         run: |
-          docker run -d --name minio -p 127.0.0.1:9000:9000 \
-            -e MINIO_ROOT_USER=ci-only-minio -e MINIO_ROOT_PASSWORD=ci-only-fake-minio-pw \
-            bitnamilegacy/minio:2025.4.22-debian-12-r2
+          docker run -d --name s3 -p 127.0.0.1:9000:8333 \
+            -e AWS_ACCESS_KEY_ID=ci-only-s3 -e AWS_SECRET_ACCESS_KEY=ci-only-fake-s3-pw -e S3_BUCKET=smemories-e2e \
+            chrislusf/seaweedfs:4.48@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d \
+            mini -dir=/data -ip.bind=0.0.0.0 -master.telemetry=false -s3.port=8333
           for i in $(seq 1 60); do
-            curl -fsS http://127.0.0.1:9000/minio/health/ready && break
-            [ "$i" -lt 60 ] || { docker logs minio; exit 1; }
+            curl -fsS http://127.0.0.1:9000/status && break
+            [ "$i" -lt 60 ] || { docker logs s3; exit 1; }
             sleep 2
           done
-          docker exec minio sh -c "mc alias set local http://127.0.0.1:9000 ci-only-minio ci-only-fake-minio-pw && mc mb --ignore-existing local/smemories-e2e"
       - name: Start Valkey 8 (Redis protocol)
         run: |
           docker run -d --name valkey -p 127.0.0.1:6379:6379 \
@@ -269,7 +270,7 @@ jobs:
           path: tools/e2e/out
           retention-days: 3 # scripts/e2e.sh scrubs tokens and the session cookie from the trace first (tools/e2e/scrub-trace.sh, docs/e2e.md)
 
-  # T-022 / T-089: builds the production image (no push), runs scripts/image-smoke.sh against it (private MySQL, Valkey and MinIO
+  # T-022 / T-089: builds the production image (no push), runs scripts/image-smoke.sh against it (private MySQL, Valkey and S3 store
   # containers it starts itself), then the secret-hygiene check, the Trivy scan (pinned image, fails on a fixable HIGH/CRITICAL
   # vulnerability) and the SBOM artifact. Not a required check until the owner adds it.
   image:

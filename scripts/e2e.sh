@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # End-to-end run of the M1 journey (T-020, docs/e2e.md). Usage: scripts/e2e.sh   (or `make e2e`)
 #
-# Needs MySQL, Valkey and MinIO already running (`make up`, or the services of the CI job) and the SMEM_DB_DSN, SMEM_REDIS_URL and
+# Needs MySQL, Valkey and the S3 store already running (`make up`, or the services of the CI job) and the SMEM_DB_DSN, SMEM_REDIS_URL and
 # SMEM_S3_* settings in the environment (`make` loads .env). It builds the API and the web app, starts them on ports of their own
 # (the developer's API on :8080 and dev server on :5173 are not touched), runs tools/e2e/journey.spec.mjs and stops what it started.
 #
