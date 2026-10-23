@@ -11,18 +11,18 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 7 | T-023, T-024, T-025, T-026, T-027, T-031, T-050 |
-| TODO | 2 | T-029, T-122 |
-| IN_PROGRESS | 1 | T-121 |
+| TODO | 1 | T-029 |
+| IN_PROGRESS | 1 | T-122 |
 | QA_FAIL | 1 | T-097 |
-| MERGED | 3 | T-096, T-116, T-120 |
+| MERGED | 4 | T-096, T-116, T-120, T-121 |
 | DONE | 100 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-117, T-118, T-119 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-096 ([E11] Web: signature pad on the public form and the signature in the inbox); T-116 ([E12] Web: limit concurrent photo requests on gallery pages (follow-up to T-107)); T-120 ([E06] CI: bound and cache the e2e Chromium install (two hangs on 2026-10-22))
+**Awaiting your review (MERGED):** T-096 ([E11] Web: signature pad on the public form and the signature in the inbox); T-116 ([E12] Web: limit concurrent photo requests on gallery pages (follow-up to T-107)); T-120 ([E06] CI: bound and cache the e2e Chromium install (two hangs on 2026-10-22)); T-121 ([E12] Fix the print-check regression from the image queue (T-116) and run print-check in CI)
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-055 (What should the team build after E11 signatures: go-live (M2) or the class yearbook (M3)?)
 
-_Board last written 2026-10-23 00:14Z_
+_Board last written 2026-10-23 01:25Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -5463,7 +5463,7 @@ Spec: .team/epics/E06-go-live/13-ci-e2e-chromium-install.md (read it from the ma
 - 2026-10-22 19:55Z · leader · Merged PR #114 as f4f2bba (QA_PASS on e106a96). Cache hit 8 s vs miss 14 s; a hung attempt is cut at 150 s and retried once (QA proved it in a container).
 
 ### T-121 — [E12] Fix the print-check regression from the image queue (T-116) and run print-check in CI
-- **Status:** IN_PROGRESS
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** bug
 - **Milestone:** M2
@@ -5471,18 +5471,27 @@ Spec: .team/epics/E06-go-live/13-ci-e2e-chromium-install.md (read it from the ma
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-121-e12-fix-the-print-check-regression-from-
-- **PR:** —
-- **Updated:** 2026-10-22 23:42Z by dev
-- **Comments-seen:** 0
+- **PR:** https://github.com/danyaa666/smemories/pull/116
+- **Updated:** 2026-10-23 01:25Z by leader
+- **Comments-seen:** 3
 
 Spec: .team/epics/E12-security-hardening/13-print-check-regression-after-image-queue.md (read it from the main checkout). print-check is 51/55 on develop since T-116; printed books may miss photos.
 
 #### Comments
+- 2026-10-23 00:58Z · dev · PR #116 head b9810e3, CI green (e2e incl. new Print check step 115 s, 52/52). Root cause: T-116 QueuedImg left book photos without src until IntersectionObserver fired (never for unscrolled print pages; BookPages is memoised) and ready did not wait for page images; real PDFs still had all photos (page.pdf 1/1 navy, 30/30 memory-book before and after) because beforeprint re-rendered from cache, so a latent race, not observed loss. Fix: book Photo always eager (still queued, cap 16), ready waits for every page photo to settle (BookEnv.track). Verify: print-check 52/52 (49 + 3 new; 55 appears once T-097 merges), vitest 461, regression tests fail on fa4a97c. CI-only text-check tweaks: pdftotext on the runner splits letter-spaced words.
+- 2026-10-23 01:25Z · qa · QA_PASS PR #116 head b9810e3. CI green (e2e incl. Print check step 52/52, go, go-integration, image, security, web).
+  Text-assertion loosening (squash spaces; Dòn/xuốn forms), scratch copy of head with MUT hook on text()/words(): control none 9/9 pass; spaces inserted inside words 9/9 pass (intended); drop a line (Lưu bút/Giới thiệu về mình/Chuyến dã ngoại) 0/9 pass; truncate 2 letters 0/9; truncate 1 last letter (Đà Lạ) fails every test that holds the needle (whitespace-tolerant mutation: 9/9 fail); truncate mid-word 9/9 fail; swap words (Học mãi / Thị Nguyễn / liên Giữ) fail every test holding the needle; swap with no spaces (bútLưu, Ngọc Đặng) 0/9. Cut-off check: shifting every pdftotext word 60pt down fails 9/9 with 'Dòng ... lies outside its box'; Dòn/xuốn only widen the set, never narrow it. Conclusion: loosening cannot hide dropped, truncated or reordered text. OLD (fa4a97c) checks run against the PR app: 49/49 pass locally, so the loosening is only for CI's pdftotext.
+  Baseline: fa4a97c with old checks 45/49 (4 navy/oval fails reproduce). PR new check.test.mjs on fa4a97c app: 7 fail incl. the new 'every photo has loaded when ready' x3 (navy, memory-book, basic). New vitest cases in book.test.tsx on fa4a97c: 2 fail, 60 pass; on head 461/461.
+  Local on head: make-equivalent npm test in tools/print-check 52/52 (78 s); web vitest 461/461; eslint+prettier clean; tsc clean.
+  AC2 (real page.pdf, nothing scrolled, vite production build): memory-book 40 notes -> 21 notes with photos, 28 note photos + cover + profile: DOM 30 photos, PDF 30; basic 40 notes: DOM 30, PDF 30; navy-classic 40 notes: template prints only the cover photo (DOM 1, PDF 1; same at fa4a97c). At ready on fa4a97c DOM loaded 0/30 (memory), 0/1 (navy); on head 30/30 and 1/1. Print button 'Print or save as PDF' is disabled in every sample before ready (media delayed 400 ms) and enabled at ready.
+  AC3 gallery/T-116: vitest QueuedImg (100 photos, LIMIT 16, lazy gallery, preload shares queue) pass; production build book with 100 distinct photos: max 16 in flight, 102/102 loaded at ready, ready in 2.4 s.
+  Non-blocking: (1) 'make e2e' not run locally: the T-121 worktree has no .env (SMEM_DB_DSN); CI e2e journey is green. (2) Under 'vite dev' (print-check's server, React StrictMode double effects) the book shows 30 in flight, same at fa4a97c; not a production issue (production build caps at 16). (3) 52 tests, 55 after T-097. (4) Real print dialog not driven, page.pdf only. Scratch worktree and servers removed.
+- 2026-10-23 01:25Z · leader · Merged PR #116 as fc04382 (QA_PASS on b9810e3). print-check now runs in CI (52/52). The loosened text checks were proved by mutations to still catch dropped, truncated and swapped text. T-097 rework can start on top.
 
 ### T-122 — [E06] One-time Go dependency refresh and govulncheck in CI (Dependabot never ran)
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** deps
 - **Milestone:** M2
@@ -5490,10 +5499,10 @@ Spec: .team/epics/E12-security-hardening/13-print-check-regression-after-image-q
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-122-e06-one-time-go-dependency-refresh-and-g
 - **PR:** —
-- **Updated:** 2026-10-23 00:14Z by leader
+- **Updated:** 2026-10-23 00:58Z by dev
 - **Comments-seen:** 0
 
 Spec: .team/epics/E06-go-live/14-go-dependency-refresh.md (read it from the main checkout).
