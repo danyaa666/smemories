@@ -12,15 +12,15 @@
 |---|---:|---|
 | BACKLOG | 7 | T-023, T-024, T-025, T-026, T-027, T-031, T-050 |
 | IN_PROGRESS | 1 | T-124 |
-| IN_QA | 1 | T-029 |
+| MERGED | 1 | T-029 |
 | DONE | 107 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** nothing
+**Awaiting your review (MERGED):** T-029 ([E01] Replace the frozen MinIO dev image with a maintained S3-compatible store)
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-055 (What should the team build after E11 signatures: go-live (M2) or the class yearbook (M3)?)
 
-_Board last written 2026-10-23 09:42Z_
+_Board last written 2026-10-23 12:49Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -1834,7 +1834,7 @@ Small follow-ups found in the T-001 review and QA.
 - 2026-10-07 14:03Z · leader · accepted by owner (chat, 2026-10-07: 'Accept all')
 
 ### T-029 — [E01] Replace the frozen MinIO dev image with a maintained S3-compatible store
-- **Status:** IN_QA
+- **Status:** MERGED
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -1842,11 +1842,11 @@ Small follow-ups found in the T-001 review and QA.
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** —
 - **Branch:** task/t-029-e01-replace-the-frozen-minio-dev-image-w
 - **PR:** https://github.com/danyaa666/smemories/pull/119
-- **Updated:** 2026-10-23 09:42Z by qa
-- **Comments-seen:** 5
+- **Updated:** 2026-10-23 12:49Z by leader
+- **Comments-seen:** 8
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/07-replace-the-frozen-minio-dev-image-with-a.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1860,6 +1860,20 @@ MinIO no longer publishes container images (Docker Hub and Quay pulls fail), so 
 - 2026-10-22 19:02Z · leader · Leader: the spec is now written: .team/epics/E01-foundation/T-029-replace-frozen-minio.md (read it from the main checkout). The candidate is chosen by test (SeaweedFS, then versitygw); never touch the old minio-data volumes.
 - 2026-10-23 06:56Z · dev · Dev: SLIP to fix: my first test runs used the MAIN stack Redis (6379) because my worktree .env still pointed at it. Keys smem:dev:rl:* and smem:test:rl:* from my runs sit in the main Redis; smem:dev:rl:register:127.0.0.1 is 5/5 (register limiter) until about 07:25Z, which can 429 QA's T-097 registrations. 'make reset-limits SMEM_ENV=dev' on the main stack clears it (I was denied touching the main Redis, so I did not). Also: CLAUDE.md still says 'MySQL and MinIO stack' (leader's file). Log L-decision: dev and CI object store = SeaweedFS weed mini 4.48 by digest.
 - 2026-10-23 06:56Z · dev · PR #119 head 2c2fd3c, CI green on all 6 jobs (e2e needed one rerun: apt lock in Install Chromium, before S3 starts). SeaweedFS 4.48 weed mini, digest-pinned, passed: integration x2 (fresh, reused), newman media + public-media, e2e, image-smoke, lint; versitygw not needed. No product code change. Deviations: no s3-init service (bucket made by the server via S3_BUCKET); dependabot docker-compose entry added. QA: own compose project and ports; old .env files need the S3_* lines (make up says so). See the comment about main Redis keys.
+- 2026-10-23 11:47Z · qa · QA progress: done and green on my own qa029 project: digest is multi-arch index (amd64+arm64) and CI amd64 pulled the same digest, integration run 1 (fresh volume), newman media x2 and public-media x2, make e2e, make image-smoke, README one-command copy (read-only, checksum equal), AC3 volume retention incl. --remove-orphans, dependabot schema, S3 probes (my test commit cf9e633, CI 6/6 green). Remaining: integration run 2 (reused volume, slow ~40 min under load), then cleanup and verdict. No blockers.
+- 2026-10-23 12:48Z · qa · QA_PASS T-029 (PR #119, tested head 2c2fd3c; I added one test-only commit cf9e633, CI 6/6 green on it). Own project qa029, ports 13306/16379/19000, now removed.
+  Evidence (AC / check -> result):
+  - Digest chrislusf/seaweedfs:4.48@sha256:4e61d15f... = OCI index: linux/amd64 (aba492e2), arm64 (f1f30347), 386, arm/v7; images built 2026-09-28. Same string in docker-compose.yml, ci.yml (2 jobs), scripts/image-smoke.sh. CI log (amd64 runner) pulled that exact digest in go-integration and e2e; image job smoke incl. photo upload passed.
+  - AC1: make up (11 s, all healthy) + make migrate + make test-integration: run 1 on fresh s3-data volume: 29 ok, 0 FAIL; run 2 on the reused volume: 29 ok, 0 FAIL (43 and 77 min wall, machine load avg ~140 from other agents' jobs). My first run failed on storage/notes S3 tests with 403 only because my .env lacked SMEM_TEST_S3_ENDPOINT (tests default to :9000 and hit the main stack with wrong keys): my setup, not a defect; no data written there.
+  - Postman: media (172 assertions, 0 failed) x2 back to back; public-media (92 assertions, 0 failed) x2. make e2e: 5 passed (journey + h2 gallery 30/100 thumbs). make image-smoke: passed (photo upload on read-only root, drain, prod refusals).
+  - AC2: gh pr checks 119 at cf9e633: e2e, go, go-integration, image, security, web all pass; attempt 2 of the earlier run also all success (dev: apt lock rerun).
+  - AC3: grep of Makefile, compose and scripts: no volume rm / down -v / prune anywhere; make down = docker compose down (keeps volumes); up uses --remove-orphans. Experiment: project with an old 'minio' service + volume, then compose up --remove-orphans s3 with the new file: minio container removed, volume and its marker file kept. After my runs docker volume ls still lists awesomeproject1_minio-data and smemories_minio-data (and the mysql/redis ones); main stack untouched.
+  - README one-command copy: seeded a throwaway legacy volume (qa029x_minio-data, 2 objects), ran the README command with the volume :ro against my s3 -> both objects mirrored, 300000-byte object md5 equals the old ETag. Volume removed afterwards. Old-style .env (no S3_ROOT_*): compose stops with 'update .env from .env.example (the MINIO_* lines became S3_*, T-029)'.
+  - dependabot.yml: valid YAML (parsed by Ruby) and validates against the SchemaStore dependabot-2.0 schema (ajv, valid:true) with ecosystem docker-compose, target-branch develop, weekly, groups. Cannot prove Dependabot opens a PR for the SHA-pinned tag; the file is schema-valid.
+  - AC4: grep -rniI minio (outside .team): docker-compose.yml error text (migration hint), README migration section, CLAUDE.md:52 (leader file, says 'MySQL and MinIO stack') and internal/config/config.go:289. config.go:289 is the start-up error text when only one of SMEM_S3_ACCESS_KEY/SECRET_KEY is set ('set both (static keys, MinIO) or neither (task role)'): a hint to the operator, no test asserts it, no behaviour depends on it. Harmless; I accept it (minor: leader may reword in a later product change, or accept as is). CLAUDE.md:52 needs the leader.
+  - S3 behaviours (new test internal/storage/s3_compat_qa_test.go, integration tag, committed cf9e633, passes locally and in CI amd64): 2505 objects listed in >=3 pages via the paginator; Delete of 1001 keys (2 batches) OK; DeletePrefix pages through the rest; HEAD missing key -> typed NotFound; Delete missing key -> success; ranged GET 0-0, 5-14, open end, suffix -10, past-end clamp all return the exact bytes with Content-Range; range beyond size -> 416 InvalidRange; empty object opens and reads to EOF; Open missing -> ErrNotFound.
+  Non-blocking: (1) CI keeps a manual digest copy in ci.yml and image-smoke.sh (documented; dependabot only raises compose). (2) tests default to SMEM_TEST_S3_ENDPOINT=:9000 regardless of S3_PORT in .env, so a non-default S3_PORT needs SMEM_TEST_S3_ENDPOINT too (pre-existing, same as before). (3) Developer worktree .env was replaced by me during testing and restored from backup.
+- 2026-10-23 12:49Z · leader · Merged PR #119 as faaa833 (QA_PASS on cf9e633, risk low). Dev and CI now use SeaweedFS 4.48 (L-16). Owner: add the new S3_* lines to your .env before the next make up; the old minio volumes are untouched.
 
 ### T-030 — [E01] T-002 follow-ups: isolate compose stacks, fail fast on auth errors, test-DB grants
 - **Status:** DONE
@@ -5576,12 +5590,13 @@ Spec: .team/epics/E12-security-hardening/14-flaky-slow-upload-test.md (read it f
 - **Assignee:** dev
 - **Branch:** task/t-124-e12-download-cap-integration-tests-fail-
 - **PR:** —
-- **Updated:** 2026-10-23 09:42Z by dev
-- **Comments-seen:** 0
+- **Updated:** 2026-10-23 11:47Z by dev
+- **Comments-seen:** 1
 
 Spec: .team/epics/E12-security-hardening/15-download-cap-tests-under-load.md (read it from the main checkout).
 
 #### Comments
+- 2026-10-23 11:47Z · dev · Status: root cause found, a test timing assumption, not a product bug. The cap tests hold 64 downloads with the default pace (10 s idle); under load, holding 64 takes 35-45 s, so the first slots are dropped by design (gauge 14-19, want 64). Reproduced on old code: 2 of 3 full-package runs failed under -race, GOMAXPROCS=2 and 24 busy loops. Fix is test-only: the three tests use a hold pace that never drops (commit 36a4f2b, local). Left: the 50x per test and 3 full-package runs under load (slow, about 90 s per iteration of setup). Seen once or twice under load: a held download answered 502 (object store); I am checking whether it is load on MinIO or a gap. No blocker.
 
 <!-- tasks:end -->
 
