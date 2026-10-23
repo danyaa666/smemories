@@ -55,8 +55,6 @@ function Icon({
 const rowWeight = (chars: number) => 0.25 + chars / 200;
 /** A signed message card is never shorter than its signature (88 px) plus the card's head and padding. */
 const MESSAGE_SIGNED_BASIS = 150;
-/** ... and the other rows of that page give up some of their 104 px minimum (one line of text still fits at 88). */
-const OTHER_SIGNED_BASIS = 88;
 
 /**
  * The dotted paper is one picture (memory-dots.png), not the canvas's tiled gradient: Chromium prints a tiled gradient as a
@@ -457,10 +455,7 @@ function FriendPage({ note, number, data }: { note: BookNote; number: number; da
             <div
               key={i}
               className="mb-row"
-              style={{
-                flexGrow: rowWeight(Math.max(...r.fields.map((f) => (a[f] ?? "").length))),
-                ...(signed && { flexBasis: OTHER_SIGNED_BASIS }),
-              }}
+              style={{ flexGrow: rowWeight(Math.max(...r.fields.map((f) => (a[f] ?? "").length))) }}
             >
               {r.nodes}
             </div>
