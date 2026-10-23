@@ -1,11 +1,19 @@
 import type { TFunction } from "i18next";
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { mediaUrl } from "../api/yearbooks";
 import { QueuedImg } from "../components/QueuedImg";
 import { designHeight, designZoom, DESIGN_W, type PageSize } from "./sizes";
 
-/** What every page of the book needs: its size, its own language (the book's, not the app's) and whether images load eagerly. */
-export type BookEnv = { size: PageSize; t: TFunction; eager: boolean };
+/**
+ * What every page of the book needs: its size, its own language (the book's, not the app's), whether images decode synchronously
+ * (the print dialog is opening) and `track`, which counts the photos still loading (+1 when one starts, -1 when it settles).
+ */
+export type BookEnv = {
+  size: PageSize;
+  t: TFunction;
+  eager: boolean;
+  track: (delta: number) => void;
+};
 const Env = createContext<BookEnv | null>(null);
 export const BookEnvProvider = Env.Provider;
 export function useBookEnv(): BookEnv {
@@ -36,21 +44,37 @@ export function Sheet({ label, children }: { label: string; children: ReactNode 
 }
 
 /**
- * A photo in the print size (T-057). Lazy on screen; the book preloads every photo before printing is allowed, and
- * `eager` (set while the print dialog opens) makes the browser fetch whatever is left. A photo that fails shows an empty frame.
+ * A photo in the print size (T-057). The book is only ever for printing, so a photo never waits to come near the screen
+ * (IntersectionObserver does not fire for pages that were never scrolled to, T-121): it queues at once, at most LIMIT in flight (T-116),
+ * and the book is not ready until it has settled. A photo that fails shows an empty frame.
  */
 export function Photo({ id, className }: { id: string | null | undefined; className?: string }) {
-  const { eager } = useBookEnv();
+  const { eager, track } = useBookEnv();
   const [failed, setFailed] = useState(false);
+  const open = useRef(false);
+  const settle = () => {
+    if (open.current) track(-1);
+    open.current = false;
+  };
+  useEffect(() => {
+    if (!id) return;
+    open.current = true;
+    track(1);
+    return settle;
+  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!id || failed) return <div className={`bk-ph ${className ?? ""}`} />;
   return (
     <QueuedImg
       className={`bk-photo ${className ?? ""}`}
       src={mediaUrl(id, "print")}
       alt=""
-      eager={eager}
+      eager
       decoding={eager ? "sync" : "async"}
-      onError={() => setFailed(true)}
+      onLoad={settle}
+      onError={() => {
+        settle();
+        setFailed(true);
+      }}
     />
   );
 }

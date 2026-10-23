@@ -144,7 +144,7 @@ jobs:
   # journey is never printed. On failure the Playwright trace, a screenshot and the API log are uploaded.
   e2e:
     runs-on: ubuntu-24.04
-    timeout-minutes: 10 # the journey itself is limited to 240 s (tools/e2e/playwright.config.mjs)
+    timeout-minutes: 15 # the journey itself is limited to 240 s (tools/e2e/playwright.config.mjs), print-check to 6 min
     env:
       # Throwaway services on the runner, loopback only; obviously fake values, not secrets (same as go-integration).
       SMEM_DB_DSN: root:ci-only-fake-root-pw@tcp(127.0.0.1:3306)/smem_e2e
@@ -250,6 +250,17 @@ jobs:
         env:
           SMEM_DEV_FIXED_OTP: "123123" # DEV-SHORTCUT(otp): the only CI job that sets it; the API below runs with SMEM_ENV=test
         run: scripts/e2e.sh
+      # T-121: the print check (tools/print-check, the same Playwright version and browser cache as above, poppler installed above)
+      # prints fixture books to PDF and inspects them, so a change that drops photos or text from the printed book fails the PR.
+      # T-116 broke it unnoticed because it only ran by hand. The whole suite runs; its time is printed so it can be watched.
+      - name: Print check
+        timeout-minutes: 6
+        working-directory: tools/print-check
+        run: |
+          start=$SECONDS
+          npm ci
+          npm test
+          echo "print-check: $((SECONDS - start)) s"
       - name: Playwright trace, screenshot and API log
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

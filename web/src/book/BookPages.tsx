@@ -18,14 +18,16 @@ export const BookPages = memo(function BookPages({
   size,
   t,
   eager,
+  track,
 }: {
   data: BookData;
   size: PageSize;
   t: TFunction;
   eager: boolean;
+  track: (delta: number) => void;
 }) {
   const tpl = getTemplate(data.yearbook.template_id);
-  const env = useMemo(() => ({ size, t, eager }), [size, t, eager]);
+  const env = useMemo(() => ({ size, t, eager, track }), [size, t, eager, track]);
   const noteGroups = useMemo(() => paginate(data.notes, tpl.notesPerPage), [data.notes, tpl]);
   return (
     <BookEnvProvider value={env}>

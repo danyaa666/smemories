@@ -11,17 +11,18 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 7 | T-023, T-024, T-025, T-026, T-027, T-031, T-050 |
-| TODO | 1 | T-029 |
-| IN_PROGRESS | 1 | T-097 |
-| MERGED | 3 | T-096, T-116, T-120 |
+| TODO | 2 | T-029, T-123 |
+| READY_FOR_QA | 1 | T-122 |
+| QA_FAIL | 1 | T-097 |
+| MERGED | 4 | T-096, T-116, T-120, T-121 |
 | DONE | 100 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-117, T-118, T-119 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-096 ([E11] Web: signature pad on the public form and the signature in the inbox); T-116 ([E12] Web: limit concurrent photo requests on gallery pages (follow-up to T-107)); T-120 ([E06] CI: bound and cache the e2e Chromium install (two hangs on 2026-10-22))
+**Awaiting your review (MERGED):** T-096 ([E11] Web: signature pad on the public form and the signature in the inbox); T-116 ([E12] Web: limit concurrent photo requests on gallery pages (follow-up to T-107)); T-120 ([E06] CI: bound and cache the e2e Chromium install (two hangs on 2026-10-22)); T-121 ([E12] Fix the print-check regression from the image queue (T-116) and run print-check in CI)
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-055 (What should the team build after E11 signatures: go-live (M2) or the class yearbook (M3)?)
 
-_Board last written 2026-10-22 19:55Z_
+_Board last written 2026-10-23 01:30Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4578,24 +4579,50 @@ Spec: .team/epics/E11-signatures/02-signature-pad-web.md. Next phase.
 - 2026-10-22 19:15Z · leader · Merged PR #112 as f0c074e (QA_PASS on b5d5cb2). Cosmetic leftovers (1.4 px ink offset from the border-box rect, alert and inbox spacing) go with T-097's visual pass. Owner device check is pending.
 
 ### T-097 — [E11] Print: signatures in memory-book and navy-classic
-- **Status:** IN_PROGRESS
+- **Status:** QA_FAIL
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1b
 - **Depends-on:** T-095
 - **Risk:** low
-- **Rework:** 0
+- **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-097-e11-print-signatures-in-memory-book-and-
-- **PR:** —
-- **Updated:** 2026-10-22 19:38Z by dev
-- **Comments-seen:** 1
+- **PR:** https://github.com/danyaa666/smemories/pull/115
+- **Updated:** 2026-10-22 20:55Z by qa
+- **Comments-seen:** 4
 
 Spec: .team/epics/E11-signatures/03-signature-print.md. Next phase.
 
 #### Comments
 - 2026-10-22 19:16Z · leader · Leader: promoted; T-095 and T-096 are merged. This task switches signatures on in the templates and carries the pad e2e step and QA notes (see spec).
+- 2026-10-22 20:09Z · dev · PR #115 head 08945b0, CI green (e2e, go, go-integration, image, security, web). Verify: make print-check (55/55, new signature test per template x A5/A4/Letter), make e2e (pad signed in the journey, inbox and PDF show it), no-signature snapshots unchanged, newman signatures x2 (71/71; new classic step: ERROR_PARAM), screenshots docs/templates/signatures/. QA notes: oversize code is ERROR_INVALID_SIGNATURE whatever the template, documented in docs/note-fields.md + openapi and pinned by test; pad quantises against content box; alert and inbox signature spacing fixed. Known: the 2000-char memory-book note sits at the 50% font floor and can stay cut off with a signature (listed by the overflow summary). Memory-book room: message row basis 196 px when signed.
+- 2026-10-22 20:55Z · qa · QA_FAIL on PR #115 head 08945b0 (CI green). Signature rendering itself is sound; 3 issues remain.
+  
+  ISSUES
+  1. [blocker, AC2] `make print-check` is RED on this head: 51/55 pass. Failures: navy-classic A5/A4/Letter "book fetches only that photo (2 !== 1)" and "oval takes portrait and landscape photos alike (portrait photo is 0,0)". NOT caused by T-097 code: identical 4 failures on plain develop fa4a97c; green (49/49) at 5258ccb, the develop commit just before T-116 (PR #113, web/src/book/env.tsx + ready.ts, shared image queue) merged. Repro: cd tools/print-check && npm test (twice, deterministic). print-check is not in CI, so nobody saw it. Needs a fix on develop (T-116 follow-up) or in this PR before AC2 can pass; dev's "55/55" predates the merge of develop.
+  2. [major] memory-book: a signature makes mid-length messages shrink to the 50% floor and get cut off where they fit without one. Repro (fixture makeBook template memory-book, only `message` changed, ink-only PDF, [data-fit=overflow] count):
+     - 1000 chars: A5 and A4 fit without a signature, cut off WITH one; Letter cut off both ways.
+     - 600 chars: Letter fits without, cut off WITH one (7.5 pt, visible empty space left in the card).
+     - all four optional fields at 200 chars + message 600: Letter 0 cut off without, 12 with.
+     The leader accepted only the 2000-character note; 600 and 1000 chars are ordinary. The print screen does list them. Suspected: MESSAGE_SIGNED_BASIS=196 plus the row weights in memory.tsx / .mb-sig-foot leave the text box too small on Letter.
+  3. [minor] navy-classic: names of about 50 to 60 characters (form limit 60) are cut off at the 0.35 floor with a signature (4 of 4 notes, A5/A4/Letter) and fit without one; 40 characters is fine. Name block loses 125 px + 8 px gap. Listed on the print screen.
+  
+  EVIDENCE (all run by QA)
+  - Real browsers, to PDF, background graphics OFF: bundled Chromium, Google Chrome 155 and Edge Dev, memory-book and navy-classic x A5/A4/Letter x {edge-of-box frame signature, maximal 12-stroke with the 2000-char note, 40 notes, 0 notes, 400-short-lines and 2000-char cut-off notes}. 0 overlaps (text boxes and PDF words vs signature box), ink in every signature box, page count 3 + ceil(n/per page), boxes within 40x16 / 24x9 mm scaled, edge strokes not clipped. Chrome 155 headless printToPDF fails ("Printing failed") on the stress fixture (60-char names, 600-char fields) even with signature null, so that fixture was run in bundled Chromium only; unrelated to signatures.
+  - 2000-char note with signature: cut off at the font floor on all sizes, never overlapped, listed in the overflow summary ("..., 5 pt, and still cut off - Open in the inbox"). Accepted as per leader decision (AC3 and summary both hold).
+  - No-signature books: for 12 configs (2 templates x 3 sizes x 2 fixtures) the PDF word boxes and sheet DOM are identical to develop.
+  - Tamper: 19 hostile signatures through book-data (string coords, markup in a coordinate, floats, out of range, negative, 1e21, extra key, wrong w, 13 strokes, 601 points, JSON string, array, number, odd length, tiny extent, svg string, __proto__, null): only the valid one renders; every path d matches ^[ML0-9 ]+$, no script, no handler, no dialog. parseSignature enforces the Go rules.
+  - QA notes: classic refuses a signature (ERROR_PARAM, nothing stored) in the new Postman step; oversize (>4 KiB) is ERROR_INVALID_SIGNATURE on classic too, documented in openapi and note-fields.md (a signature between 3072 B and 4 KiB on a classic book is still ERROR_PARAM; documented as decided after the lookup; minor). Pad quantise: pointer drawn at 25/75 percent of the content box submitted exactly [250,100,750,100,750,300]. Alert has 16 px below it; inbox signature has 12 px above and below (screenshots checked).
+  - make e2e: 5/5 pass (journey signs a note, inbox and preview show it, PDF has ink in the box). newman on API built from the head with SMEM_ENV=dev, scratch DB, Redis db 3: signatures 71/71 x2, notes 157/157 x2, notes-moderation 164/164 x2 (they fail on SMEM_ENV=test because of the cookie name, expected). go build, vet, go test -count=1 ./...: pass. web lint, prettier, tsc, i18n, api schema, vitest 496/496: pass.
+  - Cleanup: all my servers stopped, scratch DB smem_test_qa97 dropped, scratch worktree and .env copy removed.
+  Re-test needs: print-check green, and a decision or fix for issue 2 (and ideally 3).
+- 2026-10-22 20:56Z · leader · Leader: rework scope (after T-121 lands; then merge origin/develop, no rebase or force-push).
+  (1) The print-check failures are a develop regression from T-116. T-121 (P1) fixes it; T-097's AC2 is re-checked after that.
+  (2) Memory-book: a signature must not push ordinary messages to the font floor. Rule: any message that fits above the 50 percent floor without a signature still fits with one, at most one font step smaller, on A5, A4 and Letter. Likely fix: float the signature at the bottom right after the last line (text may wrap beside it) instead of reserving a full-width band. Show the max length that fits with and without a signature per page size in the PR. The 2000-character case stays as accepted: no overlap, listed in the overflow summary.
+  (3) Navy-classic: names up to the API's maximum length must not be cut off with a signature. Wrap the name to a second line, or drop the signature below the name when the name is long. Test at the max length.
+  Keep everything else: no-signature layout identical, ink only, validated integers only.
 
 ### T-098 — [E12] IPv6 /64 keying and a per-account login limiter
 - **Status:** DONE
@@ -5434,6 +5461,73 @@ Spec: .team/epics/E06-go-live/13-ci-e2e-chromium-install.md (read it from the ma
    Worst case 300 s fits the 360 s step timeout. Containers all exited; nothing left running.
   Non-blocking: (1) timeout-minutes is 6, not the 'for example 4' in the spec; correct given 2 x 150 s + kills. (2) a hit run only reinstalls OS deps, so a hang in apt (install-deps) is also bounded and retried. (3) Real hang recovery cannot be forced in CI, as dev said; covered by the local proof.
 - 2026-10-22 19:55Z · leader · Merged PR #114 as f4f2bba (QA_PASS on e106a96). Cache hit 8 s vs miss 14 s; a hung attempt is cut at 150 s and retried once (QA proved it in a container).
+
+### T-121 — [E12] Fix the print-check regression from the image queue (T-116) and run print-check in CI
+- **Status:** MERGED
+- **Priority:** P1
+- **Type:** bug
+- **Milestone:** M2
+- **Depends-on:** —
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** task/t-121-e12-fix-the-print-check-regression-from-
+- **PR:** https://github.com/danyaa666/smemories/pull/116
+- **Updated:** 2026-10-23 01:25Z by leader
+- **Comments-seen:** 3
+
+Spec: .team/epics/E12-security-hardening/13-print-check-regression-after-image-queue.md (read it from the main checkout). print-check is 51/55 on develop since T-116; printed books may miss photos.
+
+#### Comments
+- 2026-10-23 00:58Z · dev · PR #116 head b9810e3, CI green (e2e incl. new Print check step 115 s, 52/52). Root cause: T-116 QueuedImg left book photos without src until IntersectionObserver fired (never for unscrolled print pages; BookPages is memoised) and ready did not wait for page images; real PDFs still had all photos (page.pdf 1/1 navy, 30/30 memory-book before and after) because beforeprint re-rendered from cache, so a latent race, not observed loss. Fix: book Photo always eager (still queued, cap 16), ready waits for every page photo to settle (BookEnv.track). Verify: print-check 52/52 (49 + 3 new; 55 appears once T-097 merges), vitest 461, regression tests fail on fa4a97c. CI-only text-check tweaks: pdftotext on the runner splits letter-spaced words.
+- 2026-10-23 01:25Z · qa · QA_PASS PR #116 head b9810e3. CI green (e2e incl. Print check step 52/52, go, go-integration, image, security, web).
+  Text-assertion loosening (squash spaces; Dòn/xuốn forms), scratch copy of head with MUT hook on text()/words(): control none 9/9 pass; spaces inserted inside words 9/9 pass (intended); drop a line (Lưu bút/Giới thiệu về mình/Chuyến dã ngoại) 0/9 pass; truncate 2 letters 0/9; truncate 1 last letter (Đà Lạ) fails every test that holds the needle (whitespace-tolerant mutation: 9/9 fail); truncate mid-word 9/9 fail; swap words (Học mãi / Thị Nguyễn / liên Giữ) fail every test holding the needle; swap with no spaces (bútLưu, Ngọc Đặng) 0/9. Cut-off check: shifting every pdftotext word 60pt down fails 9/9 with 'Dòng ... lies outside its box'; Dòn/xuốn only widen the set, never narrow it. Conclusion: loosening cannot hide dropped, truncated or reordered text. OLD (fa4a97c) checks run against the PR app: 49/49 pass locally, so the loosening is only for CI's pdftotext.
+  Baseline: fa4a97c with old checks 45/49 (4 navy/oval fails reproduce). PR new check.test.mjs on fa4a97c app: 7 fail incl. the new 'every photo has loaded when ready' x3 (navy, memory-book, basic). New vitest cases in book.test.tsx on fa4a97c: 2 fail, 60 pass; on head 461/461.
+  Local on head: make-equivalent npm test in tools/print-check 52/52 (78 s); web vitest 461/461; eslint+prettier clean; tsc clean.
+  AC2 (real page.pdf, nothing scrolled, vite production build): memory-book 40 notes -> 21 notes with photos, 28 note photos + cover + profile: DOM 30 photos, PDF 30; basic 40 notes: DOM 30, PDF 30; navy-classic 40 notes: template prints only the cover photo (DOM 1, PDF 1; same at fa4a97c). At ready on fa4a97c DOM loaded 0/30 (memory), 0/1 (navy); on head 30/30 and 1/1. Print button 'Print or save as PDF' is disabled in every sample before ready (media delayed 400 ms) and enabled at ready.
+  AC3 gallery/T-116: vitest QueuedImg (100 photos, LIMIT 16, lazy gallery, preload shares queue) pass; production build book with 100 distinct photos: max 16 in flight, 102/102 loaded at ready, ready in 2.4 s.
+  Non-blocking: (1) 'make e2e' not run locally: the T-121 worktree has no .env (SMEM_DB_DSN); CI e2e journey is green. (2) Under 'vite dev' (print-check's server, React StrictMode double effects) the book shows 30 in flight, same at fa4a97c; not a production issue (production build caps at 16). (3) 52 tests, 55 after T-097. (4) Real print dialog not driven, page.pdf only. Scratch worktree and servers removed.
+- 2026-10-23 01:25Z · leader · Merged PR #116 as fc04382 (QA_PASS on b9810e3). print-check now runs in CI (52/52). The loosened text checks were proved by mutations to still catch dropped, truncated and swapped text. T-097 rework can start on top.
+
+### T-122 — [E06] One-time Go dependency refresh and govulncheck in CI (Dependabot never ran)
+- **Status:** READY_FOR_QA
+- **Priority:** P2
+- **Type:** deps
+- **Milestone:** M2
+- **Depends-on:** —
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** task/t-122-e06-one-time-go-dependency-refresh-and-g
+- **PR:** https://github.com/danyaa666/smemories/pull/117
+- **Updated:** 2026-10-23 01:30Z by dev
+- **Comments-seen:** 1
+
+Spec: .team/epics/E06-go-live/14-go-dependency-refresh.md (read it from the main checkout).
+
+#### Comments
+- 2026-10-23 01:30Z · dev · PR #117 head 928d7d7, go.mod/go.sum only. Direct modules all current (aws family, goose 3.29.0, client_golang 1.25.0, x/crypto 0.58, x/image 0.47, x/text 0.43). Release notes: goose no locking change; client_golang only runtime-metric name fix go_cpu_classes_gc_mark_assist (unused in repo); x/image no decoder change; T-113 WebP test passes (8.53 B/px vs est 8.75). Local lint/test/test-integration/image-smoke green; CI all green. govulncheck@v1.8.0 already blocking in CI security job (passes): 0 reachable module vulns; x/crypto openpgp GO-2026-5932 unreachable, no fix. FLAKY: go-integration failed once on TestSlowUploadsDoNotStarveOthersForLong (got 200 instead of 503 'pool full', timing, unrelated to deps), passed on rerun - worth a follow-up task. Owner action remains: dependabot.yml on main.
+
+### T-123 — [E12] Flaky TestSlowUploadsDoNotStarveOthersForLong (T-102 slot test) in CI
+- **Status:** TODO
+- **Priority:** P2
+- **Type:** bug
+- **Milestone:** M2
+- **Depends-on:** —
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-23 01:30Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E12-security-hardening/14-flaky-slow-upload-test.md (read it from the main checkout).
+
+#### Comments
 
 <!-- tasks:end -->
 

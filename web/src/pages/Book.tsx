@@ -1,6 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { flushSync } from "react-dom";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 import { getBookData, type BookData } from "../api/book";
@@ -97,7 +105,9 @@ function BookScreen({ data, bookId }: { data: BookData; bookId: string }) {
   const { states, Provider } = useFitReport();
   const { ref, scale } = useStageScale(size);
   const [eager, setEager] = useState(false);
-  const ready = fonts && photos.settled;
+  const [loading, setLoading] = useState(0); // photos on the pages that have not settled yet
+  const track = useCallback((delta: number) => setLoading((n) => n + delta), []);
+  const ready = fonts && photos.settled && loading === 0;
   const pages = pageCount(data);
 
   // The print dialog lays the page out as soon as the event handler returns: load every image first.
@@ -190,7 +200,7 @@ function BookScreen({ data, bookId }: { data: BookData; bookId: string }) {
       </div>
       <div ref={ref} className="bk-stage" style={stageStyle}>
         <Provider>
-          <BookPages data={data} size={size} t={bookT} eager={eager} />
+          <BookPages data={data} size={size} t={bookT} eager={eager} track={track} />
         </Provider>
       </div>
     </>
