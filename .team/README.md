@@ -11,16 +11,15 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 7 | T-023, T-024, T-025, T-026, T-027, T-031, T-050 |
-| IN_PROGRESS | 1 | T-124 |
-| MERGED | 1 | T-029 |
+| MERGED | 2 | T-029, T-124 |
 | DONE | 107 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-029 ([E01] Replace the frozen MinIO dev image with a maintained S3-compatible store)
+**Awaiting your review (MERGED):** T-029 ([E01] Replace the frozen MinIO dev image with a maintained S3-compatible store); T-124 ([E12] Download-cap integration tests fail under heavy CPU load (T-107 tests))
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-055 (What should the team build after E11 signatures: go-live (M2) or the class yearbook (M3)?)
 
-_Board last written 2026-10-23 12:49Z_
+_Board last written 2026-10-23 19:59Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -5579,7 +5578,7 @@ Spec: .team/epics/E12-security-hardening/14-flaky-slow-upload-test.md (read it f
 - 2026-10-23 06:35Z · human · accepted by owner
 
 ### T-124 — [E12] Download-cap integration tests fail under heavy CPU load (T-107 tests)
-- **Status:** IN_PROGRESS
+- **Status:** MERGED
 - **Priority:** P3
 - **Type:** bug
 - **Milestone:** M2
@@ -5587,16 +5586,22 @@ Spec: .team/epics/E12-security-hardening/14-flaky-slow-upload-test.md (read it f
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-124-e12-download-cap-integration-tests-fail-
-- **PR:** —
-- **Updated:** 2026-10-23 11:47Z by dev
-- **Comments-seen:** 1
+- **PR:** https://github.com/danyaa666/smemories/pull/120
+- **Updated:** 2026-10-23 19:59Z by leader
+- **Comments-seen:** 7
 
 Spec: .team/epics/E12-security-hardening/15-download-cap-tests-under-load.md (read it from the main checkout).
 
 #### Comments
 - 2026-10-23 11:47Z · dev · Status: root cause found, a test timing assumption, not a product bug. The cap tests hold 64 downloads with the default pace (10 s idle); under load, holding 64 takes 35-45 s, so the first slots are dropped by design (gauge 14-19, want 64). Reproduced on old code: 2 of 3 full-package runs failed under -race, GOMAXPROCS=2 and 24 busy loops. Fix is test-only: the three tests use a hold pace that never drops (commit 36a4f2b, local). Left: the 50x per test and 3 full-package runs under load (slow, about 90 s per iteration of setup). Seen once or twice under load: a held download answered 502 (object store); I am checking whether it is load on MinIO or a gap. No blocker.
+- 2026-10-23 13:27Z · dev · Progress: with the fix, 50x under load: DownloadAtTheCapWaitsForAFreedSlot 50/50; Public 49/50 and Owner 49/50. The single failure in each (and one earlier in Public) is not slot accounting: a held download gets 502 because MinIO answers HeadObject with 403 Forbidden once in about 50 under 24 busy loops (logged as 'media: storage failed ... HeadObject ... 403'). Not a timing assumption of the tests and not the grace; looks like MinIO/Docker Desktop under CPU starvation. I will not add a retry (rule). Full-package runs under load are still running; I will report them and leave the 403 to your decision (follow-up task?).
+- 2026-10-23 16:14Z · dev · SeaweedFS rerun done, same load (-race, GOMAXPROCS=2, 24 busy loops), develop merged (faaa833): Public 50/50, Owner 50/50, WaitsForAFreedSlot 50/50, 3 of 3 full-package runs green. The HeadObject 403 did NOT recur (0 in 150 runs + 3 full runs), so it was old-MinIO behaviour; no follow-up needed. Before the fix: old code 2 of 3 full runs failed (gauge 14-19, want 64). Cause: held downloads dropped by the default 10 s idle pace while 64 holds take 35-45 s under load; test-only fix (8 lines). Residual: wait test still needs the freed slot within the 500 ms grace. CI green on PR #120 head 080d15e. Load processes and my compose project t124dev stopped (pgrep clean).
+- 2026-10-23 16:14Z · dev · PR #120 head 080d15e, tests only (download_integration_test.go +8: holdPace). Verify: run the 3 tests under load 50x and the package 3x. Compose project t124dev removed.
+- 2026-10-23 19:31Z · qa · QA status 19:16Z: done (1) diff is tests only, +8 lines holdPace, no sleeps/retries/timeouts, waits on gauge via waitInflight (10 s, Fatalf); (2) product accounting/grace read: release is deferred, no gap, default 10 s pace drops held slots by design; (3) old code reproduced under -race GOMAXPROCS=2 + 24 busy loops: full-package run 1 FAIL 'downloads in progress: 19, want 64' (only full package fails; the 3 tests alone pass on old code); new head per-test -count=20 under load: Public 20/20, WaitsForAFreedSlot 20/20, Owner 19/20 (one 502 on the other account's thumb GET, object store; 40/40 on a rerun); full package under load on new head: the 3 cap tests pass, 2 other tests failed (TestPublicAllLimiter, TestPublicLimitersFailOpen), checking. Remaining: goroutine/fd leak probe (check 5), then verdict.
+- 2026-10-23 19:48Z · qa · QA_PASS (PR #120 head 080d15e, CI green: go, go-integration, e2e, web, image, security). Evidence: AC1/req1 diff = +8 lines in internal/media/download_integration_test.go (holdPace {Idle:1h,Total:1h} on the 3 cap tests); no sleeps/retries/longer timeouts; tests still wait on the gauge via waitInflight (10 s, Fatalf with got/want). Root cause: read handler.go takeDownload/tryDownload/release (deferred, per-client map under mutex) and httpx.PaceWriter: accounting and the 500 ms grace are correct; default 10 s idle write pace drops a held download by design, and under load holding 64 takes longer. No product gap. Reproduction (my own compose project t124qa, SeaweedFS, race, GOMAXPROCS=2, 24 busy loops): OLD develop full package run 1 FAILED 'TestDownloadAtTheCapWaitsForAFreedSlot: downloads in progress: 19, want 64' (the 3 tests alone, 3 runs, passed on old code: only the full package contention fails; I stopped after 1 run, 36 min per run). NEW head, same load, -count=20 per test: Public 20/20, WaitsForAFreedSlot 20/20, Owner 19/20; 1 failure 'another account: 502' (object store GET for the other account's thumb, ERROR_STORAGE_ERROR, not slot accounting); diagnostic rerun Owner -count=40 under load: 40/40. One full-package run under load on new head: the 3 cap tests passed; 2 unrelated tests failed (TestPublicAllLimiter, TestPublicLimitersFailOpen; the latter uses 200 ms Redis timeouts, load-sensitive by design); both pass alone. Check 4 (residual): WaitsForAFreedSlot needs the close at +100 ms to free the slot within 500 ms of the 65th request reaching the handler; it needs ~400 ms of scheduling starvation of the freed-slot unwind to flake. 20/20 under load, so no flake observed. A fix would need a product hook (downloadGrace as a Handler field like dlPace, test sets 30 s) or a waiter gauge so the test closes only after the 65th is parked; test-only cannot make it deterministic. Check 5 leak: temporary probe (deleted, not committed) ran the 3 tests as subtests under -race: fds before=3 after=3, goroutines 2->8 = 3 idle net/http client keep-alive pairs (persistConn readLoop/writeLoop from the register/upload helpers), no handler or held-connection goroutine left; the 1 h pace does not leak (cleanup closes client conns and srv.CloseClientConnections). Non-blocking: (a) rare 502 from the store in Owner test under heavy load, 1 of ~60 runs; if it recurs make a follow-up to log/inspect the store error; (b) AC1 asks 3/3 full-package runs under load; I did 1 (time box 30 min), dev reported 3/3; (c) full package under load takes ~36 min/run. All load processes stopped (pgrep clean), compose project t124qa removed with down -v.
+- 2026-10-23 19:59Z · leader · Merged PR #120 as ed897ed (QA_PASS on 080d15e; tests only). Not filed as tasks, because they have never failed in CI or in normal runs: TestPublicAllLimiter and TestPublicLimitersFailOpen under 24 busy loops with GOMAXPROCS=2, a rare 1-in-60 store 502, and the 500 ms grace dependency in TestDownloadAtTheCapWaitsForAFreedSlot. File a task if any of them fails in CI.
 
 <!-- tasks:end -->
 
