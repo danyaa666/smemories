@@ -164,6 +164,8 @@ type env struct {
 	logs    *syncBuf          // everything the API logged
 	metrics *metrics.Metrics
 	bookSvc *yearbook.Service // the yearbook service the API uses, for tests that call it without the handlers
+	stall   chan struct{}     // T-123: closed by stallDrips; the held uploads of drip() then fall silent
+	stallMu sync.Once
 }
 
 // syncBuf is a log sink that tests read while requests may still be finishing.
@@ -197,7 +199,7 @@ func newSerialEnv(t *testing.T) *env { t.Helper(); return buildEnv(t) }
 func buildEnv(t *testing.T) *env {
 	t.Helper()
 	d := dbtest.New(t)
-	e := &env{t: t, db: d, st: &flaky{Storage: storagetest.New(t), keys: map[string]bool{}}}
+	e := &env{t: t, db: d, st: &flaky{Storage: storagetest.New(t), keys: map[string]bool{}}, stall: make(chan struct{})}
 	e.logs = &syncBuf{}
 	logger := slog.New(slog.NewJSONHandler(e.logs, nil))
 	mail, _ := mailer.NewLog("test", io.Discard)
