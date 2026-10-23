@@ -6,7 +6,7 @@ const RETRY_MS = 1000;
 type Props = Omit<ImgHTMLAttributes<HTMLImageElement>, "src" | "loading"> & {
   src: string;
   alt: string;
-  /** Do not wait for the image to come near the screen (the book while the print dialog opens). */
+  /** Do not wait for the image to come near the screen (the book: it is only for printing). */
   eager?: boolean;
 };
 
@@ -38,6 +38,7 @@ export function QueuedImg({ src, alt, eager, onLoad, onError, ...rest }: Props) 
     return enqueue((done) => {
       release.current = done;
       setTurn((t) => ({ ...t, src }));
+      if (loaded.has(src)) done(); // another loader (the book's preload) fetched it while this one waited: no slot needed
     });
   }, [near, src, turn.attempt]);
 

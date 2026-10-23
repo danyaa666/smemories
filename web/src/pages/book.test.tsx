@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { BookData } from "../api/book";
 import i18n from "../i18n";
+import { loaded } from "../components/imageQueue";
 import { err, mockApi, ok, renderApp, user, type Call } from "../test/api";
 
 const BOOK = "01J9Z3K6V8Q4M7N2P5R8T0AAAA";
@@ -57,6 +58,10 @@ class FakeImage {
   }
 }
 const finishPhotos = () => act(() => void pending.splice(0).forEach((f) => f()));
+/** jsdom never loads an <img>: the photos on the pages settle when the test says so (T-121: the book is ready only after they do). */
+const photoImgs = () => [...document.querySelectorAll<HTMLImageElement>("img.bk-photo")];
+const settleImgs = (type: "load" | "error") =>
+  act(() => void photoImgs().forEach((i) => i.dispatchEvent(new Event(type))));
 
 function serve(data: BookData | Response, calls: Record<string, (c: Call) => Response> = {}) {
   return mockApi({
@@ -78,6 +83,7 @@ const sheets = (label?: string) =>
 beforeEach(() => {
   pending = [];
   requested = [];
+  loaded.clear();
   vi.stubGlobal("Image", FakeImage);
 });
 afterEach(() => vi.unstubAllGlobals());
@@ -154,10 +160,35 @@ describe("book preview and print", () => {
     await userEvent.click(button);
     expect(print).not.toHaveBeenCalled();
     await finishPhotos();
+    await new Promise((r) => setTimeout(r, 50));
+    expect(button).toBeDisabled(); // fetched, but the photos on the pages are still loading
+    settleImgs("load");
     await waitFor(() => expect(button).toBeEnabled());
     expect(screen.getByText("Ready to print: 4 pages.")).toBeInTheDocument();
     await userEvent.click(button);
     expect(print).toHaveBeenCalledTimes(1);
+  });
+
+  it("T-121: every photo loads at once even when IntersectionObserver never fires (pages never scrolled to), under the 16 cap", async () => {
+    vi.stubGlobal(
+      "IntersectionObserver",
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    );
+    const many = Array.from({ length: 40 }, (_, i) => note(i + 1, { photo_ids: [PHOTO(i + 1)] }));
+    serve(bookData(many));
+    open();
+    await waitFor(() => expect(photoImgs()).toHaveLength(40));
+    await waitFor(() => expect(photoImgs().filter((i) => i.getAttribute("src"))).toHaveLength(16));
+    // each photo that settles frees a slot for the next one: all 40 get their file without any scrolling
+    for (let i = 0; i < 4 && photoImgs().some((p) => !p.getAttribute("src")); i++) {
+      settleImgs("load");
+      await new Promise((r) => setTimeout(r, 20));
+    }
+    expect(photoImgs().every((p) => p.getAttribute("src"))).toBe(true);
   });
 
   it("images decode asynchronously on screen and synchronously while the print dialog opens", async () => {
@@ -185,7 +216,14 @@ describe("book preview and print", () => {
     serve(bookData([note(1, { photo_ids: [PHOTO(1)] })]));
     open();
     expect(await screen.findByText(/Photos that could not be loaded: 1/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Print or save as PDF" })).toBeEnabled();
+    // the photo on the page fails too (after its one retry) and still does not block printing
+    await waitFor(
+      () => {
+        settleImgs("error");
+        expect(screen.getByRole("button", { name: "Print or save as PDF" })).toBeEnabled();
+      },
+      { timeout: 4000 },
+    );
   });
 
   it("asks for the page size of the book in @page and in the print help", async () => {
