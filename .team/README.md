@@ -12,7 +12,7 @@
 |---|---:|---|
 | BACKLOG | 7 | T-023, T-024, T-025, T-026, T-027, T-031, T-050 |
 | TODO | 2 | T-029, T-123 |
-| IN_PROGRESS | 1 | T-097 |
+| READY_FOR_QA | 1 | T-097 |
 | DONE | 105 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
@@ -20,7 +20,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-055 (What should the team build after E11 signatures: go-live (M2) or the class yearbook (M3)?)
 
-_Board last written 2026-10-23 01:53Z_
+_Board last written 2026-10-23 04:42Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4557,7 +4557,7 @@ Spec: .team/epics/E11-signatures/01-signature-api.md. Next phase (after go-live,
 - **Branch:** task/t-096-e11-web-signature-pad-on-the-public-form
 - **PR:** https://github.com/danyaa666/smemories/pull/112
 - **Updated:** 2026-10-23 01:53Z by human
-- **Comments-seen:** 5
+- **Comments-seen:** 6
 
 Spec: .team/epics/E11-signatures/02-signature-pad-web.md. Next phase.
 
@@ -4578,7 +4578,7 @@ Spec: .team/epics/E11-signatures/02-signature-pad-web.md. Next phase.
 - 2026-10-23 01:53Z · human · accepted by owner
 
 ### T-097 — [E11] Print: signatures in memory-book and navy-classic
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1b
@@ -4586,11 +4586,11 @@ Spec: .team/epics/E11-signatures/02-signature-pad-web.md. Next phase.
 - **Risk:** low
 - **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-097-e11-print-signatures-in-memory-book-and-
 - **PR:** https://github.com/danyaa666/smemories/pull/115
-- **Updated:** 2026-10-23 01:30Z by dev
-- **Comments-seen:** 4
+- **Updated:** 2026-10-23 03:24Z by dev
+- **Comments-seen:** 5
 
 Spec: .team/epics/E11-signatures/03-signature-print.md. Next phase.
 
@@ -4622,6 +4622,7 @@ Spec: .team/epics/E11-signatures/03-signature-print.md. Next phase.
   (2) Memory-book: a signature must not push ordinary messages to the font floor. Rule: any message that fits above the 50 percent floor without a signature still fits with one, at most one font step smaller, on A5, A4 and Letter. Likely fix: float the signature at the bottom right after the last line (text may wrap beside it) instead of reserving a full-width band. Show the max length that fits with and without a signature per page size in the PR. The 2000-character case stays as accepted: no overlap, listed in the overflow summary.
   (3) Navy-classic: names up to the API's maximum length must not be cut off with a signature. Wrap the name to a second line, or drop the signature below the name when the name is long. Test at the max length.
   Keep everything else: no-signature layout identical, ink only, validated integers only.
+- 2026-10-23 03:24Z · dev · Rework 1 on PR #115 head d705967, CI green (e2e incl. the new Print check step, go, go-integration, image, security, web). Merged origin/develop (T-121), no rebase. (1) print-check 67/67 (52 develop + T-097); (2) memory-book: signature floated at the bottom right of the message text box (text wraps beside it; a zero-width float as tall as the box minus 88 px keeps it at the bottom even for a cut-off 2000-char note), signed page: photo/fields 30 px shorter, card min height 150. New print-check test per size (default + heavy fixture): message that fits unsigned is not cut off signed, font at most 1 px smaller (measured worst 1 px; others fields 1 px). Max length table in the PR (A5 2000/1967, A4 1915/1967, Letter 1178/1227 default; 1769/1774, 1622/1676, 1030/1037 heavy). 2000-char case unchanged: no overlap, in the overflow summary. (3) navy-classic: name wraps beside the signature, tested at 60 chars on A5/A4/Letter. Unsigned layout identical (snapshots unchanged). Test tolerance: boxes within 1.5 px of the floor unsigned are exempt (CI Linux renders heavy Letter 1 px tighter than macOS). Screenshots regenerated.
 
 ### T-098 — [E12] IPv6 /64 keying and a per-account login limiter
 - **Status:** DONE
@@ -5321,7 +5322,7 @@ QA of T-094 (2026-10-21): after Continue in the public-link warning and after co
 - **Branch:** task/t-116-e12-web-limit-concurrent-photo-requests-
 - **PR:** https://github.com/danyaa666/smemories/pull/113
 - **Updated:** 2026-10-23 01:53Z by human
-- **Comments-seen:** 4
+- **Comments-seen:** 5
 
 QA of T-107 (2026-10-22): with 400 ms storage latency per object, a 100-thumbnail HTTP/2 burst gets 64 x 200 and 36 x 429, and <img> does not retry. If real S3 latency in the go-live phase shows this, load gallery images through a small client-side queue (at most 16 in flight, retry a 429 after Retry-After) instead of raising the server cap. Measure first on the deployed stack.
 
@@ -5441,7 +5442,7 @@ Spec: .team/epics/E12-security-hardening/12-openapi-session-ceiling.md (read it 
 - **Branch:** task/t-120-e06-ci-bound-and-cache-the-e2e-chromium-install
 - **PR:** https://github.com/danyaa666/smemories/pull/114
 - **Updated:** 2026-10-23 01:53Z by human
-- **Comments-seen:** 4
+- **Comments-seen:** 5
 
 Spec: .team/epics/E06-go-live/13-ci-e2e-chromium-install.md (read it from the main checkout).
 
@@ -5476,7 +5477,7 @@ Spec: .team/epics/E06-go-live/13-ci-e2e-chromium-install.md (read it from the ma
 - **Branch:** task/t-121-e12-fix-the-print-check-regression-from-
 - **PR:** https://github.com/danyaa666/smemories/pull/116
 - **Updated:** 2026-10-23 01:53Z by human
-- **Comments-seen:** 3
+- **Comments-seen:** 4
 
 Spec: .team/epics/E12-security-hardening/13-print-check-regression-after-image-queue.md (read it from the main checkout). print-check is 51/55 on develop since T-116; printed books may miss photos.
 
@@ -5505,7 +5506,7 @@ Spec: .team/epics/E12-security-hardening/13-print-check-regression-after-image-q
 - **Branch:** task/t-122-e06-one-time-go-dependency-refresh-and-g
 - **PR:** https://github.com/danyaa666/smemories/pull/117
 - **Updated:** 2026-10-23 01:53Z by human
-- **Comments-seen:** 3
+- **Comments-seen:** 4
 
 Spec: .team/epics/E06-go-live/14-go-dependency-refresh.md (read it from the main checkout).
 
