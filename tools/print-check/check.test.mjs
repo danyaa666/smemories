@@ -327,7 +327,7 @@ for (const template of ["memory-book", "navy-classic", "basic"]) {
             assert.ok(cx >= box.x0 && cx <= box.x1 && cy >= box.y0 && cy <= box.y1, `${marker}: "${x.t}" at (${cx.toFixed(3)}, ${cy.toFixed(3)}) of page ${p + 1} lies outside its box x ${box.x0.toFixed(3)}-${box.x1.toFixed(3)}, y ${box.y0.toFixed(3)}-${box.y1.toFixed(3)}`);
           }
         }
-        assert.ok(seen > 0, `${marker}: its words are in the PDF`);
+        assert.ok(seen > 0, `${marker}: its words are in the PDF; words of its pages: ${JSON.stringify(pdf.filter((_, p) => boxes[p].some((b) => b.text.includes(marker))).map((pg) => pg.words.slice(0, 40).map((x) => x.t).join(" ")))}`);
       }
     });
   }
