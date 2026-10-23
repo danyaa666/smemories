@@ -87,7 +87,7 @@ Structured fields for the content that goes into the book:
 - **Web:** Vite, React, TypeScript, react-i18next.
 - **PDF:** pure-Go PDF library, declarative JSON templates, preview shown with pdf.js.
 - **Hosting:** AWS (Fargate, RDS MySQL, S3, CloudFront), planned for milestone M2.
-- **Local development:** Docker Compose runs MySQL and MinIO; no cloud credentials are needed.
+- **Local development:** Docker Compose runs MySQL, Valkey and an S3-compatible store (SeaweedFS); no cloud credentials are needed.
 
 ## Development
 
@@ -100,7 +100,7 @@ Prerequisites: Go 1.26 (the `go` directive in `go.mod`), `make`, Docker with Com
 | `make lint` | Fails (listing the files) if a tracked or new Go file is not gofmt-clean, runs `go vet` (with and without the `integration` tag), then the web checks (eslint, prettier, `tsc`, i18n key parity, stale API types) |
 | `make web-install` | `npm ci` in `web/` (Node 22, see `web/.nvmrc`); the other web targets do it on demand. Dev server: `cd web && npm run dev` (proxies `/api/*` to `localhost:8080`) |
 | `make run` | Runs the API from source (needs the stack below: `SMEM_DB_DSN` is required) |
-| `make up` / `make down` | Start (and wait for) / stop MySQL 8.4, Valkey 8 (Redis protocol) and MinIO; creates `.env` from `.env.example` first. Ports bind to `127.0.0.1`. `make up` also (re)applies the `smem_test_%` grants, so it works on older MySQL volumes |
+| `make up` / `make down` | Start (and wait for) / stop MySQL 8.4, Valkey 8 (Redis protocol) and the S3 store (SeaweedFS); creates `.env` from `.env.example` first. Ports bind to `127.0.0.1`. `make up` also (re)applies the `smem_test_%` grants, so it works on older MySQL volumes |
 | `make migrate` / `make migrate-down` | Apply all migrations / roll back the last one (dev only; `down` needs `--allow-down` and is refused with `SMEM_ENV=prod`, see docs/deploy.md) |
 | `make test-integration` | Tests tagged `integration` against the local MySQL and Valkey (run `make up migrate` first; each test gets its own throwaway database) |
 | `make e2e` | The M1 journey in a real browser (Playwright) against a locally started API and the built web app, on the stack from `make up`; needs poppler. See [docs/e2e.md](docs/e2e.md) |
@@ -108,7 +108,7 @@ Prerequisites: Go 1.26 (the `go` directive in `go.mod`), `make`, Docker with Com
 Run the API locally:
 
 ```sh
-make up migrate               # creates .env, starts MySQL + MinIO, applies migrations
+make up migrate               # creates .env, starts MySQL + the S3 store, applies migrations
 make run                      # make loads .env for you (SMEM_ENV=dev comes from it)
 curl -i localhost:8080/healthz   # {"status":"ok"}
 curl -i localhost:8080/readyz    # {"status":"ready"}; 503 ERROR_NOT_READY while MySQL or Redis is down
@@ -117,7 +117,7 @@ curl -i localhost:8080/readyz    # {"status":"ready"}; 503 ERROR_NOT_READY while
 Several checkouts on one machine: `make up` names the compose project after the checkout directory
 (`COMPOSE_PROJECT_NAME`, lower-cased; set it in your shell or `.env` to choose another name), so each checkout has its own
 containers and volumes and `make down` in one leaves the others running. The host ports are fixed per machine, so give each
-checkout free ones in its `.env`: `MYSQL_PORT`, `REDIS_PORT`, `MINIO_PORT`, `MINIO_CONSOLE_PORT` (and match the port in `SMEM_DB_DSN`,
+checkout free ones in its `.env`: `MYSQL_PORT`, `REDIS_PORT`, `S3_PORT` (and match the port in `SMEM_DB_DSN`,
 `SMEM_TEST_DB_DSN`, `SMEM_REDIS_URL` and `SMEM_TEST_REDIS_URL`). A checkout whose stack already runs under the old fixed name `smemories` keeps that name; to retire an
 old stack run `COMPOSE_PROJECT_NAME=smemories docker compose down` once from the directory that started it.
 Always start and stop the stack with `make up` / `make down`: a bare `docker compose ...` outside make targets the old shared `smemories`
@@ -128,8 +128,22 @@ project, and a bare `docker compose down -v` would delete that project's data vo
 `http://192.168.1.20:5173`, and list that origin in `SMEM_ALLOWED_ORIGINS`); a public tunnel (ngrok, Cloudflare Tunnel) is refused on purpose, because it would expose the public
 OTP key and the fixed code to the internet. A deployed environment is always `SMEM_ENV=prod`.
 
-MinIO console: <http://127.0.0.1:9001> (credentials in `.env`). MinIO stopped publishing Docker images, so
-the compose file uses a frozen Bitnami build; it is for local development only.
+The S3 store is SeaweedFS (`weed mini`, Apache-2.0, image pinned by digest; T-029). It replaced MinIO, which stopped publishing images. Only the
+S3 port (`S3_PORT`, default 9000) is published, there is no web console, and the bucket (`S3_BUCKET`) is created when the container starts. Its data
+lives in the new named volume `<project>_s3-data`; `make up` removes the old `minio` container but never a volume. The old `<project>_minio-data`
+volume stays as it is and can be deleted by hand once you no longer want it.
+
+An `.env` created before T-029 needs the new lines: copy the `S3_PORT`, `S3_ROOT_USER`, `S3_ROOT_PASSWORD` block and the `SMEM_S3_ACCESS_KEY` /
+`SMEM_S3_SECRET_KEY` values from `.env.example` (they replace `MINIO_*` and the `smem_minio` keys); `make up` stops with a message until they exist.
+
+Optional, to copy the objects of the old MinIO volume into the new store (run after `make up`; reads the old volume read-only, replace the two
+passwords by the old and the new `.env` values and `awesomeproject1` by your compose project name):
+
+```sh
+docker run --rm --network awesomeproject1_default -v awesomeproject1_minio-data:/bitnami/minio/data:ro \
+  -e MINIO_ROOT_USER=smem_minio -e MINIO_ROOT_PASSWORD=<old password> --entrypoint sh bitnamilegacy/minio:2025.4.22-debian-12-r2 -c \
+  'minio server /bitnami/minio/data --address 127.0.0.1:9100 >/dev/null 2>&1 & sleep 6; mc alias set old http://127.0.0.1:9100 smem_minio "$MINIO_ROOT_PASSWORD" >/dev/null; mc alias set new http://s3:8333 smem_s3 <new password> >/dev/null; mc mirror old/smemories-dev new/smemories-dev'
+```
 
 Configuration is read from environment variables (see `.env.example`): `SMEM_HTTP_ADDR` (default `:8080`),
 `SMEM_ENV` (`dev|test|prod`; **required, no default**: every binary refuses to start without it, `.env.example` sets `dev`), `SMEM_LOG_LEVEL` (`debug|info|warn|error`, default `info`),
@@ -143,9 +157,9 @@ last `X-Forwarded-For` hop; only behind a trusted proxy), `SMEM_AUTH_MAX_CONCURR
 (19456), `SMEM_AUTH_ARGON_TIME` (2), `SMEM_AUTH_ARGON_PARALLELISM` (1), and the rate limits `SMEM_RATE_REGISTER_PER_HOUR` (5),
 `SMEM_RATE_LOGIN_FAILS_PER_EMAIL` (10), `SMEM_RATE_LOGIN_FAILS_PER_IP` (100) and `SMEM_RATE_LOGIN_FAILS_PER_ACCOUNT` (50); IPv6 clients are limited by their /64. The session cookie is `Secure` unless `SMEM_ENV=dev`.
 Email codes (`docs/auth-otp.md`): `SMEM_OTP_KEY` (HMAC key of the 6-digit verification and reset codes, at least 32 random bytes, e.g. `openssl rand -base64 48`; required unless `SMEM_ENV` is `dev` or `test`, where a fixed development key is used) and the dev-only `SMEM_DEV_FIXED_OTP` (6 digits, `123123` in `.env.example`, accepted as every code in dev and test only; the API refuses to start with it in any other environment; see `docs/dev-shortcuts.md`).
-Photos (see `.env.example`): `SMEM_S3_ENDPOINT` (empty for AWS S3, `http://127.0.0.1:9000` for the local MinIO), `SMEM_S3_REGION`,
+Photos (see `.env.example`): `SMEM_S3_ENDPOINT` (empty for AWS S3, `http://127.0.0.1:9000` for the local S3 store), `SMEM_S3_REGION`,
 `SMEM_S3_BUCKET` (required in prod, default `smemories-dev`), `SMEM_S3_ACCESS_KEY`, `SMEM_S3_SECRET_KEY`, `SMEM_S3_PATH_STYLE` (true
-for MinIO), `SMEM_MEDIA_MAX_BYTES` (10 MiB upload cap) and `SMEM_MEDIA_MAX_CONCURRENT` (2 images processed at once; memory budget in `docs/media.md`) and `SMEM_MEMORY_LIMIT_MIB` (soft Go memory limit, 0 = unset; about 75% of the container memory) and `SMEM_METRICS_ADDR` (internal Prometheus `/metrics` listener, empty = off; see `docs/observability.md`) and the public note upload settings `SMEM_PUBLIC_UPLOAD_MAX_CONNS` (48; submissions in progress at once, each spooled to disk while it arrives), `SMEM_PUBLIC_UPLOAD_CONCURRENT_PER_IP` (8; of which one client IP may have) and `SMEM_UPLOAD_TMP_DIR` (spool directory, default the OS temp dir; worst case 48 x 32 MiB of disk, see `docs/media.md`).
+for the local store), `SMEM_MEDIA_MAX_BYTES` (10 MiB upload cap) and `SMEM_MEDIA_MAX_CONCURRENT` (2 images processed at once; memory budget in `docs/media.md`) and `SMEM_MEMORY_LIMIT_MIB` (soft Go memory limit, 0 = unset; about 75% of the container memory) and `SMEM_METRICS_ADDR` (internal Prometheus `/metrics` listener, empty = off; see `docs/observability.md`) and the public note upload settings `SMEM_PUBLIC_UPLOAD_MAX_CONNS` (48; submissions in progress at once, each spooled to disk while it arrives), `SMEM_PUBLIC_UPLOAD_CONCURRENT_PER_IP` (8; of which one client IP may have) and `SMEM_UPLOAD_TMP_DIR` (spool directory, default the OS temp dir; worst case 48 x 32 MiB of disk, see `docs/media.md`).
 An invalid value stops the process with a message naming the variable. The API contract is
 `api/openapi.yaml`; the Postman collections live in `postman/` (`newman run postman/platform.postman_collection.json`
 against a running API; the media collection uploads files, so run it from `postman/` with `--working-dir .`; the notes, media and public-media collections need verified test accounts (owner uploads need a verified email since T-110): see their descriptions and `make verify-newman-users`; the notes-moderation collection uses the same accounts and also uploads a fixture, see [docs/moderation.md](docs/moderation.md)).

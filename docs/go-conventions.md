@@ -52,7 +52,7 @@ The skill uses the private `go-common/errors`. We have our own equivalent with t
 
 ## Tests
 
-- Table-driven tests for logic; `httptest` + the real MySQL/Redis/MinIO stack for integration (`make test-integration`); `-race` for concurrent code; avoid mocks unless unavoidable.
+- Table-driven tests for logic; `httptest` + the real MySQL/Redis/S3-store stack for integration (`make test-integration`); `-race` for concurrent code; avoid mocks unless unavoidable.
 - A refactor does not change behaviour: integration tests pass unchanged. The exception is E10, which changes the contract on purpose: tests change only for renamed paths, envelope, timestamps, codes and tables, and each such change is listed in the PR description.
 
 ## Specs (be-td)

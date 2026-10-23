@@ -161,7 +161,7 @@ repeats one write), can be stopped with Ctrl-C and restarted, and holds one imag
 the next run) and exits 1 when something failed. Run it once after `make migrate` / the deploy that carries migration 0013; locally `make build && bin/smemories-media-backfill`.
 
 - **Environment (T-075).** It loads its configuration like `smemories-migrate` (`config.LoadMigrate`): `SMEM_DB_DSN` plus the object-store settings
-  (`SMEM_S3_BUCKET`, `SMEM_S3_REGION`, `SMEM_S3_ENDPOINT` and `SMEM_S3_PATH_STYLE` for MinIO, `SMEM_S3_ACCESS_KEY` / `SMEM_S3_SECRET_KEY`) and the required `SMEM_ENV` (no default) and the optional `SMEM_LOG_LEVEL`, `SMEM_DB_MAX_*`. It does **not** need `SMEM_REDIS_URL`, `SMEM_OTP_KEY`, `SMEM_ALLOWED_ORIGINS`
+  (`SMEM_S3_BUCKET`, `SMEM_S3_REGION`, `SMEM_S3_ENDPOINT` and `SMEM_S3_PATH_STYLE` for a local store, `SMEM_S3_ACCESS_KEY` / `SMEM_S3_SECRET_KEY`) and the required `SMEM_ENV` (no default) and the optional `SMEM_LOG_LEVEL`, `SMEM_DB_MAX_*`. It does **not** need `SMEM_REDIS_URL`, `SMEM_OTP_KEY`, `SMEM_ALLOWED_ORIGINS`
   or `SMEM_PUBLIC_BASE_URL`; values that are set are still validated. The one-off task definition (T-022) carries exactly this list.
 - **Object-store outage.** After `--max-consecutive-failures` (default 20) object-store errors in a row (a read that is not "not found", or a write) the run stops with
   exit 1 and "object store keeps failing", instead of walking every photo at about 2.5 s each. A photo that fails on its own (display object missing or corrupt) does not count and

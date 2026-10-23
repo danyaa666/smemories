@@ -70,11 +70,10 @@ e2e: web/node_modules
 	@$(MAKE) --no-print-directory reset-limits SMEM_ENV=test
 	SMEM_DB_DSN="$$(printf '%s' "$$SMEM_DB_DSN" | sed -E 's|/[^/?]*(\?.*)?$$|/$(E2E_DB)\1|')" scripts/e2e.sh
 
-# Starts MySQL 8.4, Valkey and MinIO and returns once all are healthy and the bucket exists.
+# Starts MySQL 8.4, Valkey and the S3 store (SeaweedFS) and returns once all are healthy; the bucket is created at startup.
 up:
 	@test -f .env || { cp .env.example .env; echo "created .env from .env.example"; }
-	docker compose up -d --wait mysql redis minio
-	docker compose run --rm -T minio-init
+	docker compose up -d --wait --remove-orphans mysql redis s3
 	@# The init script only runs on a fresh volume; GRANT is idempotent, so re-run it for older volumes.
 	docker compose exec -T mysql sh /docker-entrypoint-initdb.d/10-test-grants.sh
 
@@ -113,7 +112,7 @@ IMAGE ?= smemories:local
 image:
 	docker build --provenance=false --sbom=false --build-arg VERSION=$$(git describe --tags --always --dirty) --build-arg COMMIT=$$(git rev-parse HEAD) -t $(IMAGE) .
 
-# Starts its own private MySQL, Valkey and MinIO (never the `make up` stack) and checks the image; see the header of the script.
+# Starts its own private MySQL, Valkey and S3 store (never the `make up` stack) and checks the image; see the header of the script.
 # The image gets a tag of its own for this run (smemories:smoke-<pid>-<time>, removed at the end), because the shared smemories:local was once
 # overwritten by another process in the middle of a run (T-090). To test an existing tag, call scripts/image-smoke.sh <tag> yourself.
 image-smoke:

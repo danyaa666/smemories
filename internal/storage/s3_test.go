@@ -58,7 +58,7 @@ func TestCredentialSources(t *testing.T) {
 		cfg  S3Config
 		want string
 	}{
-		{"static keys win and still work for MinIO", S3Config{AccessKey: "AKIDSTATIC", SecretKey: "s"}, "Credential=AKIDSTATIC/"},
+		{"static keys win and still work for a local store", S3Config{AccessKey: "AKIDSTATIC", SecretKey: "s"}, "Credential=AKIDSTATIC/"},
 		{"empty access key uses the default chain", S3Config{}, "Credential=AKIDCHAINENV/"},
 		{"an injected provider wins over the chain", S3Config{Credentials: credentials.NewStaticCredentialsProvider("AKIDFAKE", "s", "")}, "Credential=AKIDFAKE/"},
 	} {

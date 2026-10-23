@@ -1,7 +1,7 @@
 # End-to-end test of the M1 journey
 
 One Playwright test (`tools/e2e/journey.spec.mjs`, Chromium only) drives the whole M1 journey in a real browser against the
-**built web app**, the **real API** and the real MySQL, Valkey and MinIO, so a regression anywhere in the chain (auth, yearbook,
+**built web app**, the **real API** and the real MySQL, Valkey and S3 store, so a regression anywhere in the chain (auth, yearbook,
 media, link, public form, moderation, book data, renderer, PDF, text export and public photo links) turns CI red. The manual half of the M1 exit criteria
 (Safari, phones, the print dialog) stays in `docs/spikes/print/OWNER-TESTS.md`.
 
@@ -32,7 +32,7 @@ of 8 downloads per account left 22 of 30 broken over HTTP/2). `scripts/e2e.sh` p
 ## Run it locally
 
 ```sh
-make up              # MySQL, Valkey, MinIO (once)
+make up              # MySQL, Valkey, S3 store (once)
 make e2e             # about 20 s of set-up, then the journey in about 10 s
 ```
 
@@ -66,7 +66,7 @@ Redis db, and run again.
 
 ## Reading a CI failure
 
-The `e2e` job in `.github/workflows/ci.yml` starts MySQL, MinIO and Valkey like `go-integration`, then runs `scripts/e2e.sh`. The
+The `e2e` job in `.github/workflows/ci.yml` starts MySQL, the S3 store and Valkey like `go-integration`, then runs `scripts/e2e.sh`. The
 error starts with `STEP FAILED: <n. title>`, then Playwright's own message and code frame. On failure the artifact `e2e-failure`
 (kept for 3 days) holds the trace (open it with `npx playwright show-trace`, or at trace.playwright.dev), the screenshot and `api.log`.
 A trace holds every request, response body and page snapshot, so it would contain the note-link token, the photo-link tokens and the session cookie.

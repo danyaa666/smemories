@@ -1,4 +1,4 @@
-// The M1 journey end to end (T-020, docs/e2e.md): one test, Chromium, the real web build, API, MySQL, Valkey and MinIO.
+// The M1 journey end to end (T-020, docs/e2e.md): one test, Chromium, the real web build, API, MySQL, Valkey and the S3 store.
 //   make e2e        (starts the API and the web server itself; see scripts/e2e.sh)
 // Every step is a test.step, so a failure names the step. There is no fixed sleep: each action waits for the screen or the network
 // response that proves it worked. The PDF checks reuse tools/print-check (poppler helpers).
