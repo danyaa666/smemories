@@ -12,17 +12,16 @@
 |---|---:|---|
 | BACKLOG | 7 | T-023, T-024, T-025, T-026, T-027, T-031, T-050 |
 | TODO | 2 | T-029, T-123 |
-| READY_FOR_QA | 1 | T-122 |
-| QA_FAIL | 1 | T-097 |
-| MERGED | 4 | T-096, T-116, T-120, T-121 |
+| IN_PROGRESS | 1 | T-097 |
+| MERGED | 5 | T-096, T-116, T-120, T-121, T-122 |
 | DONE | 100 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-117, T-118, T-119 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-096 ([E11] Web: signature pad on the public form and the signature in the inbox); T-116 ([E12] Web: limit concurrent photo requests on gallery pages (follow-up to T-107)); T-120 ([E06] CI: bound and cache the e2e Chromium install (two hangs on 2026-10-22)); T-121 ([E12] Fix the print-check regression from the image queue (T-116) and run print-check in CI)
+**Awaiting your review (MERGED):** T-096 ([E11] Web: signature pad on the public form and the signature in the inbox); T-116 ([E12] Web: limit concurrent photo requests on gallery pages (follow-up to T-107)); T-120 ([E06] CI: bound and cache the e2e Chromium install (two hangs on 2026-10-22)); T-121 ([E12] Fix the print-check regression from the image queue (T-116) and run print-check in CI); T-122 ([E06] One-time Go dependency refresh and govulncheck in CI (Dependabot never ran))
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-055 (What should the team build after E11 signatures: go-live (M2) or the class yearbook (M3)?)
 
-_Board last written 2026-10-23 01:30Z_
+_Board last written 2026-10-23 01:42Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4579,7 +4578,7 @@ Spec: .team/epics/E11-signatures/02-signature-pad-web.md. Next phase.
 - 2026-10-22 19:15Z · leader · Merged PR #112 as f0c074e (QA_PASS on b5d5cb2). Cosmetic leftovers (1.4 px ink offset from the border-box rect, alert and inbox spacing) go with T-097's visual pass. Owner device check is pending.
 
 ### T-097 — [E11] Print: signatures in memory-book and navy-classic
-- **Status:** QA_FAIL
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1b
@@ -4587,10 +4586,10 @@ Spec: .team/epics/E11-signatures/02-signature-pad-web.md. Next phase.
 - **Risk:** low
 - **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** dev
 - **Branch:** task/t-097-e11-print-signatures-in-memory-book-and-
 - **PR:** https://github.com/danyaa666/smemories/pull/115
-- **Updated:** 2026-10-22 20:55Z by qa
+- **Updated:** 2026-10-23 01:30Z by dev
 - **Comments-seen:** 4
 
 Spec: .team/epics/E11-signatures/03-signature-print.md. Next phase.
@@ -5491,7 +5490,7 @@ Spec: .team/epics/E12-security-hardening/13-print-check-regression-after-image-q
 - 2026-10-23 01:25Z · leader · Merged PR #116 as fc04382 (QA_PASS on b9810e3). print-check now runs in CI (52/52). The loosened text checks were proved by mutations to still catch dropped, truncated and swapped text. T-097 rework can start on top.
 
 ### T-122 — [E06] One-time Go dependency refresh and govulncheck in CI (Dependabot never ran)
-- **Status:** READY_FOR_QA
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** deps
 - **Milestone:** M2
@@ -5502,13 +5501,15 @@ Spec: .team/epics/E12-security-hardening/13-print-check-regression-after-image-q
 - **Assignee:** —
 - **Branch:** task/t-122-e06-one-time-go-dependency-refresh-and-g
 - **PR:** https://github.com/danyaa666/smemories/pull/117
-- **Updated:** 2026-10-23 01:30Z by dev
-- **Comments-seen:** 1
+- **Updated:** 2026-10-23 01:42Z by leader
+- **Comments-seen:** 3
 
 Spec: .team/epics/E06-go-live/14-go-dependency-refresh.md (read it from the main checkout).
 
 #### Comments
 - 2026-10-23 01:30Z · dev · PR #117 head 928d7d7, go.mod/go.sum only. Direct modules all current (aws family, goose 3.29.0, client_golang 1.25.0, x/crypto 0.58, x/image 0.47, x/text 0.43). Release notes: goose no locking change; client_golang only runtime-metric name fix go_cpu_classes_gc_mark_assist (unused in repo); x/image no decoder change; T-113 WebP test passes (8.53 B/px vs est 8.75). Local lint/test/test-integration/image-smoke green; CI all green. govulncheck@v1.8.0 already blocking in CI security job (passes): 0 reachable module vulns; x/crypto openpgp GO-2026-5932 unreachable, no fix. FLAKY: go-integration failed once on TestSlowUploadsDoNotStarveOthersForLong (got 200 instead of 503 'pool full', timing, unrelated to deps), passed on rerun - worth a follow-up task. Owner action remains: dependabot.yml on main.
+- 2026-10-23 01:42Z · qa · PR #117 head 928d7d7. AC1: diff = go.mod+go.sum only, no major bumps; go mod verify ok; go mod tidy -diff clean; go list -m -u shows no outstanding direct-module updates (only indirects). AC2: with GOTOOLCHAIN=go1.26.10: make lint OK; go test -race ./... OK; make test-integration OK (all 29 pkgs ok, no flake seen); make image-smoke OK; make e2e OK (8 guard tests + 5 playwright); CI on head all 6 jobs pass. AC3: govulncheck@v1.8.0 on go1.26.10: 0 affected; only GO-2026-5932 x/crypto/openpgp in a required module, not called (no fix). CI security job runs 'go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...' as a plain blocking step (ci.yml:345-346). Spot checks: goose: TestMigrateUpConcurrentAppliesOnce/LockTimeout/LockIsPerDatabase/WaitsForVersionTableCreation, TestMigrateCycle (up/down/up) and *DroppedAndDownRecreates all PASS. client_golang: dumped Handler() output of internal/metrics from develop vs PR via a throwaway test (removed): 47 metric names and all TYPE lines identical. x/image: TestDecodedBytesBoundsALossyWebPWithAlpha PASS (8.53 B/px vs est 8.75); real HTTP upload of alpha.webp and alpha-lossy-2048.webp through the built image (modified copy of image-smoke.sh, deleted) returned OK with width/height 32x16 and 2048x2048. Non-blocking: TestSlowUploadsDoNotStarveOthersForLong did not recur in my runs (T-123). Note for others: make e2e from a worktree needs COMPOSE_PROJECT_NAME=awesomeproject1 and the main .env sourced.
+- 2026-10-23 01:42Z · leader · Merged PR #117 as 1c752f4 (QA_PASS on 928d7d7). Direct Go modules are current; govulncheck finds 0 reachable on 1.26.10; the 47 metric names are unchanged.
 
 ### T-123 — [E12] Flaky TestSlowUploadsDoNotStarveOthersForLong (T-102 slot test) in CI
 - **Status:** TODO
