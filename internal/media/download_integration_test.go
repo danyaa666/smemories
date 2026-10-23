@@ -42,6 +42,11 @@ func (e *env) setDisplay(mediaID string, size int) []byte {
 	return b
 }
 
+// holdPace is the pace of a test that holds download slots: nobody is dropped by a clock the test does not control. The default pace
+// (10 s without a byte) ends a held download that long after its socket buffers filled, which under load can be before the test has
+// held all 64 (T-124); the slots are freed by the test closing the connection, or by its cleanup.
+var holdPace = httpx.BodyPace{Idle: time.Hour, Total: time.Hour}
+
 // hold opens a download of path (cookie "" = anonymous) and never reads the answer: the server's write blocks once the socket buffers are full.
 func (e *env) hold(srv *httptest.Server, path, cookie string) net.Conn {
 	e.t.Helper()
@@ -104,6 +109,7 @@ func get(t *testing.T, srv *httptest.Server, path, cookie string) dlAnswer {
 // a photo), another account is not affected, and a freed slot is usable again.
 func TestOwnerDownloadsAreCappedPerUser(t *testing.T) {
 	e := newEnv(t)
+	e.mh.dlPace = holdPace
 	srv := e.serve()
 	a, b := e.register("a@example.com"), e.register("b@example.com")
 	bookA, bookB := e.newBook(a), e.newBook(b)
@@ -135,6 +141,7 @@ func TestOwnerDownloadsAreCappedPerUser(t *testing.T) {
 // the grace, and refused (the test above) when none does.
 func TestDownloadAtTheCapWaitsForAFreedSlot(t *testing.T) {
 	e := newEnv(t)
+	e.mh.dlPace = holdPace
 	srv := e.serve()
 	a := e.register("a@example.com")
 	idA := e.uploadPhoto(a, e.newBook(a))
@@ -154,6 +161,7 @@ func TestDownloadAtTheCapWaitsForAFreedSlot(t *testing.T) {
 // AC3 (public route): at most 64 per client address, answered before the limiters, the database and the store; counted as rate_limited.
 func TestPublicDownloadsAreCappedPerClient(t *testing.T) {
 	e := newEnv(t)
+	e.mh.dlPace = holdPace
 	srv := e.serve()
 	u := e.register("a@example.com")
 	book := e.newBook(u)
