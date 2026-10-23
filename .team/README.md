@@ -11,8 +11,8 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 7 | T-023, T-024, T-025, T-026, T-027, T-031, T-050 |
-| TODO | 1 | T-124 |
-| IN_PROGRESS | 1 | T-029 |
+| IN_PROGRESS | 1 | T-124 |
+| IN_QA | 1 | T-029 |
 | DONE | 107 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
@@ -20,7 +20,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-055 (What should the team build after E11 signatures: go-live (M2) or the class yearbook (M3)?)
 
-_Board last written 2026-10-23 06:35Z_
+_Board last written 2026-10-23 09:42Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -680,6 +680,7 @@ Leader decisions (low-risk, inside the approved stack):
 | L-13 | **`github.com/aws/aws-sdk-go-v2/config` (and its credential modules) added for the AWS default credential chain (T-086).** | Leader decision 2026-10-17: same vendor and major version as the S3 client already in use, maintained by AWS, needed so the task role works without static keys (T-022 requirement 5). govulncheck stays in CI. | Hand-rolling IMDS/ECS credential fetching | Replace if AWS ships the chain in the already-used module |
 | L-14 | **Handwritten signatures are stored as validated vector strokes, never as images or markup.** | Leader decision 2026-10-19 for E11 (owner asked for signatures gathered from friends in the next phase). Integer points in a canonical JSON (at most 12 strokes, 600 points, 3072 bytes), re-serialised by the server and drawn by our own code as an SVG path: no image pipeline cost, no EXIF, no XSS surface, crisp in print, tiny. Only positions are kept (no timing, pressure or device data) so the data cannot act as a biometric. The template manifest switches the pad on. | PNG upload through the media pipeline; storing the client's SVG | A need for coloured or pressure-sensitive pens (then a new format version `v`) |
 | L-15 | **Security audit 2026-10-20 becomes epic E12 (T-098..T-101); three design choices.** (1) The per-account login limiter (50 failures per 15 minutes, fail closed) accepts that an attacker can lock a victim's login for 15 minutes; password reset and Google sign-in stay open. (2) Public ids are validated at the edge and object keys use the stored id; the `public_id` collation is not changed. (3) `SMEM_ENV` is required with no default, and `dev`/`test` refuse non-local origins. | Leader decision 2026-10-20 after the audit in [docs/security-audit-2026-10-20.md](../docs/security-audit-2026-10-20.md); no new dependency, no cost, no change to the stack. Without a per-account cap, password guessing is bounded only by argon2 cost once an attacker rotates addresses. A binary collation needs a table rebuild and adds nothing once the edge rejects non-canonical ids. A silent `dev` default prints email codes into production logs. | No per-account limit; a hard lockout; changing the collation; defaulting the image to `prod` | Real class bursts trip the per-account limit (T-031 measurement), or a lock-out abuse report |
+| L-16 | **The dev and CI object store is SeaweedFS 4.48 (`weed mini`), pinned by digest, replacing the frozen `bitnamilegacy/minio` image.** | Leader decision 2026-10-23 after T-029's tests. SeaweedFS (Apache-2.0, released 2026-09-28) passed the whole checklist with no product code change: integration tests twice, the media and public-media Postman collections, e2e and image-smoke. Production keeps AWS S3, so this affects only dev and CI. The bucket is created by the server at start-up, so there is no `s3-init` service. The old MinIO volumes are kept and untouched. | versitygw (not needed, kept as the fallback); staying on the frozen MinIO image (no fixes, drifts from S3). | A SeaweedFS S3 incompatibility shows up in a test, or an unpatched CVE in the pinned image. |
 | L-12 | **Designer templates are imported as pre-rendered decoration plus slots; the runtime stays pure Go.** | Leader decision 2026-10-08 within D-06/D-12. A dev-only Node/Playwright tool renders each canvas page to a background PNG with text and photo placeholders hidden and reads slot and label boxes from the page; the Go renderer draws the background, then localised static text and the user's text and photos (template format v2, T-038). No browser at run time. Costs about 1 MiB per page of embedded assets (budget 8 MiB per template). | Re-draw every design in JSON shapes by hand; render HTML in the server (headless browser); embed PDF pages as backgrounds (new dependency) | Assets pass 64 MiB in total, or a design needs live vector effects |
 
 ## 5. Engineering conventions
@@ -1833,7 +1834,7 @@ Small follow-ups found in the T-001 review and QA.
 - 2026-10-07 14:03Z · leader · accepted by owner (chat, 2026-10-07: 'Accept all')
 
 ### T-029 — [E01] Replace the frozen MinIO dev image with a maintained S3-compatible store
-- **Status:** IN_PROGRESS
+- **Status:** IN_QA
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -1841,11 +1842,11 @@ Small follow-ups found in the T-001 review and QA.
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** qa
 - **Branch:** task/t-029-e01-replace-the-frozen-minio-dev-image-w
-- **PR:** —
-- **Updated:** 2026-10-23 05:53Z by dev
-- **Comments-seen:** 3
+- **PR:** https://github.com/danyaa666/smemories/pull/119
+- **Updated:** 2026-10-23 09:42Z by qa
+- **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/07-replace-the-frozen-minio-dev-image-with-a.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1857,6 +1858,8 @@ MinIO no longer publishes container images (Docker Hub and Quay pulls fail), so 
 - 2026-10-07 03:16Z · leader · QA note: bitnamilegacy/minio works (arm64 native) but is AGPL-3.0, unsupported by Broadcom, gets no CVE fixes, and the Docker Hub namespace can vanish. Fine for dev-only and loopback-only use. Until this task runs, pin the image by digest in docker-compose.yml and the T-009 CI service so a vanished tag cannot silently change what we run.
 - 2026-10-22 14:43Z · leader · Leader: promoted to refill the pipeline; dependency health of the dev stack. Never touch the main checkout's compose volumes.
 - 2026-10-22 19:02Z · leader · Leader: the spec is now written: .team/epics/E01-foundation/T-029-replace-frozen-minio.md (read it from the main checkout). The candidate is chosen by test (SeaweedFS, then versitygw); never touch the old minio-data volumes.
+- 2026-10-23 06:56Z · dev · Dev: SLIP to fix: my first test runs used the MAIN stack Redis (6379) because my worktree .env still pointed at it. Keys smem:dev:rl:* and smem:test:rl:* from my runs sit in the main Redis; smem:dev:rl:register:127.0.0.1 is 5/5 (register limiter) until about 07:25Z, which can 429 QA's T-097 registrations. 'make reset-limits SMEM_ENV=dev' on the main stack clears it (I was denied touching the main Redis, so I did not). Also: CLAUDE.md still says 'MySQL and MinIO stack' (leader's file). Log L-decision: dev and CI object store = SeaweedFS weed mini 4.48 by digest.
+- 2026-10-23 06:56Z · dev · PR #119 head 2c2fd3c, CI green on all 6 jobs (e2e needed one rerun: apt lock in Install Chromium, before S3 starts). SeaweedFS 4.48 weed mini, digest-pinned, passed: integration x2 (fresh, reused), newman media + public-media, e2e, image-smoke, lint; versitygw not needed. No product code change. Deviations: no s3-init service (bucket made by the server via S3_BUCKET); dependabot docker-compose entry added. QA: own compose project and ports; old .env files need the S3_* lines (make up says so). See the comment about main Redis keys.
 
 ### T-030 — [E01] T-002 follow-ups: isolate compose stacks, fail fast on auth errors, test-DB grants
 - **Status:** DONE
@@ -4590,7 +4593,7 @@ Spec: .team/epics/E11-signatures/02-signature-pad-web.md. Next phase.
 - **Branch:** task/t-097-e11-print-signatures-in-memory-book-and-
 - **PR:** https://github.com/danyaa666/smemories/pull/115
 - **Updated:** 2026-10-23 06:35Z by human
-- **Comments-seen:** 7
+- **Comments-seen:** 8
 
 Spec: .team/epics/E11-signatures/03-signature-print.md. Next phase.
 
@@ -5542,7 +5545,7 @@ Spec: .team/epics/E06-go-live/14-go-dependency-refresh.md (read it from the main
 - **Branch:** task/t-123-e12-flaky-testslowuploadsdonotstarveothe
 - **PR:** https://github.com/danyaa666/smemories/pull/118
 - **Updated:** 2026-10-23 06:35Z by human
-- **Comments-seen:** 4
+- **Comments-seen:** 5
 
 Spec: .team/epics/E12-security-hardening/14-flaky-slow-upload-test.md (read it from the main checkout).
 
@@ -5562,7 +5565,7 @@ Spec: .team/epics/E12-security-hardening/14-flaky-slow-upload-test.md (read it f
 - 2026-10-23 06:35Z · human · accepted by owner
 
 ### T-124 — [E12] Download-cap integration tests fail under heavy CPU load (T-107 tests)
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P3
 - **Type:** bug
 - **Milestone:** M2
@@ -5570,10 +5573,10 @@ Spec: .team/epics/E12-security-hardening/14-flaky-slow-upload-test.md (read it f
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-124-e12-download-cap-integration-tests-fail-
 - **PR:** —
-- **Updated:** 2026-10-23 05:52Z by leader
+- **Updated:** 2026-10-23 09:42Z by dev
 - **Comments-seen:** 0
 
 Spec: .team/epics/E12-security-hardening/15-download-cap-tests-under-load.md (read it from the main checkout).
