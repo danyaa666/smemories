@@ -48,14 +48,17 @@ Format v1, canonical JSON: `{"v":1,"w":1000,"h":400,"s":[[x0,y0,x1,y1,...],...]}
 - **Re-serialised.** The server parses into a struct (`internal/signature`) and stores `json.Marshal` of it in `note_tab.signature_json` (`VARCHAR(3072)`, NULL =
   none); the client's string, its spacing and key order are never stored. Reads (`note/get-list`, `book-data/get`) parse the stored value again and answer
   `null` for anything that is not valid, so the API can only ever return integers.
-- **Errors.** Any breach is `ERROR_INVALID_SIGNATURE` (400); the message names the rule, never the content. It is checked right after the text and before any
+- **Errors.** Any breach is `ERROR_INVALID_SIGNATURE` (400); the message names the rule, never the content. A part over 4 KiB is refused while the body is
+  read, before the book and its template are looked up, so it is `ERROR_INVALID_SIGNATURE` whatever the template; a well-sized signature sent to a book whose
+  template does not enable signatures is `ERROR_PARAM` (decided after the lookup). A client that obeys `data.signature.enabled` never sees either. It is checked right after the text and before any
   photo is processed, so a bad signature stores nothing and costs no image work. A request that fails here is not counted against the submission limits.
 - **No biometrics, no logging.** Only positions are kept: no timing, pressure, speed, pointer type or device data. The content is never logged, put in an
   error or used as a metric label.
 - **Moderation.** The signature is part of the note row: it follows the note's status (pending, approved, hidden), is returned to the owner by `note/get-list`
   in every status and by `book-data/get` for approved notes only, and is deleted with the note, with the yearbook, and is covered by any account deletion or
   data export (E06 T-025), which work on the note row.
-- **Drawing it.** Clients build an SVG path from the numbers (T-096, T-097); never as user-supplied markup or an uploaded file.
+- **Drawing it.** Clients build an SVG path from the numbers (T-096, T-097); never as user-supplied markup or an uploaded file. In print
+  (`web/src/book/BookSignature.tsx`) it is inline SVG, strokes only and in the template's ink colour: no fill, no image, nothing that "background graphics off" removes.
 
 ## Adding a field
 

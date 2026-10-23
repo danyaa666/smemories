@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { BookData, BookNote } from "../../api/book";
+import { BookSignature, hasSignature } from "../BookSignature";
 import { FitText } from "../fit";
 import { Photo, Sheet, useBookEnv } from "../env";
 import { designHeight } from "../sizes";
@@ -247,35 +248,54 @@ function Profile({ data }: { data: BookData }) {
   );
 }
 
-/** One friend, in the way of a signed autograph: the message on ruled lines, the name below it as the signature. */
+/**
+ * One friend, in the way of a signed autograph: the message on ruled lines, the name below it as the signature. A friend's drawn
+ * signature (T-097) sits at the right end of the name line, in the height the name and its line already take (58 px), so the
+ * note, its text fit and the four-per-page capacity are unchanged; only the name's width is smaller. No drawn signature: as before.
+ */
 function Autograph({ note }: { note: BookNote }) {
+  const { t } = useBookEnv();
   const a = note.answers;
   const key = (f: string) => `note:${note.id}:${f}`;
+  const name = (
+    <>
+      <FitText
+        fitKey={key("name")}
+        className="serif nc-line nc-signature"
+        style={{ fontSize: 28 }}
+        minScale={0.35}
+      >
+        {a.name ?? ""}
+      </FitText>
+      {a.relationship && (
+        <FitText
+          fitKey={key("relationship")}
+          className="caps nc-line nc-sign-line"
+          style={{ fontSize: 10 }}
+          minScale={0.35}
+        >
+          {a.relationship}
+        </FitText>
+      )}
+    </>
+  );
   return (
     <div className="nc-note">
       <FitText fitKey={key("message")} className="serif nc-msg" style={{ fontSize: 19 }}>
         {a.message ?? ""}
       </FitText>
-      <div className="nc-sign nc-note-sign">
-        <FitText
-          fitKey={key("name")}
-          className="serif nc-line nc-signature"
-          style={{ fontSize: 28 }}
-          minScale={0.35}
-        >
-          {a.name ?? ""}
-        </FitText>
-        {a.relationship && (
-          <FitText
-            fitKey={key("relationship")}
-            className="caps nc-line nc-sign-line"
-            style={{ fontSize: 10 }}
-            minScale={0.35}
-          >
-            {a.relationship}
-          </FitText>
-        )}
-      </div>
+      {hasSignature(note.signature) ? (
+        <div className="nc-note-sign nc-signed">
+          <div className="nc-sign nc-signed-name">{name}</div>
+          <BookSignature
+            value={note.signature}
+            label={t("note.signature.of", { name: a.name ?? "" })}
+            className="nc-sig"
+          />
+        </div>
+      ) : (
+        <div className="nc-sign nc-note-sign">{name}</div>
+      )}
     </div>
   );
 }

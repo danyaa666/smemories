@@ -3,6 +3,7 @@
   "renderer": "html",
   "name": {"en": "Memory Book", "vi": "Lưu bút"},
   "page_sizes": ["A5", "A4", "Letter"],
+  "signature": true,
   "note_fields": [
     {"id": "name", "required": true},
     {"id": "how_we_met"},

@@ -1,6 +1,6 @@
 // Helpers of the print check: start the web dev server, serve a fixture book through Playwright routes, print to PDF, inspect the PDF with poppler.
 import { execFileSync, spawn } from "node:child_process";
-import { readFileSync, statSync } from "node:fs";
+import { readFileSync, rmSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { BOOK_ID, photoId } from "./fixture.mjs";
@@ -127,6 +127,42 @@ export async function fitBoxes(page) {
         const r = e.getBoundingClientRect();
         return { text: e.textContent, x0: (r.left - s.left) / s.width, y0: (r.top - s.top) / s.height, x1: (r.right - s.left) / s.width, y1: (r.bottom - s.top) / s.height };
       });
+    }),
+  );
+}
+
+/** Page `n` (1-based) of a PDF as an 8-bit grey picture at `dpi`: { w, h, px } (poppler: pdftoppm -gray, a binary PGM). */
+export function raster(file, n, dpi = 100) {
+  const prefix = `${file}.p${n}`;
+  run("pdftoppm", "-r", String(dpi), "-f", String(n), "-l", String(n), "-gray", "-singlefile", file, prefix);
+  const buf = readFileSync(`${prefix}.pgm`);
+  rmSync(`${prefix}.pgm`);
+  const [, w, h] = /^P5\s+(\d+)\s+(\d+)\s+255\s/.exec(buf.subarray(0, 32).toString("latin1"));
+  return { w: +w, h: +h, px: buf.subarray(buf.length - w * h) };
+}
+
+/** Dark pixels (grey below 128) of a picture inside a box given as fractions of the page: { x0, y0, x1, y1 }. */
+export function inkIn(pic, box) {
+  let n = 0;
+  for (let y = Math.floor(box.y0 * pic.h); y < Math.ceil(box.y1 * pic.h); y++)
+    for (let x = Math.floor(box.x0 * pic.w); x < Math.ceil(box.x1 * pic.w); x++) if (pic.px[y * pic.w + x] < 128) n++;
+  return n;
+}
+
+/** The signatures (svg.bk-sig) and the text boxes (.bk-fit) of every sheet in print layout, as fractions of the sheet. */
+export async function signatureBoxes(page) {
+  await page.emulateMedia({ media: "print" });
+  return page.evaluate(() =>
+    [...document.querySelectorAll(".bk-sheet")].map((sheet) => {
+      const s = sheet.getBoundingClientRect();
+      const box = (e) => {
+        const r = e.getBoundingClientRect();
+        return { x0: (r.left - s.left) / s.width, y0: (r.top - s.top) / s.height, x1: (r.right - s.left) / s.width, y1: (r.bottom - s.top) / s.height };
+      };
+      return {
+        sigs: [...sheet.querySelectorAll("svg.bk-sig")].map(box),
+        texts: [...sheet.querySelectorAll(".bk-fit")].map((e) => ({ ...box(e), text: e.textContent })),
+      };
     }),
   );
 }

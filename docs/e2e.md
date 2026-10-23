@@ -12,12 +12,12 @@ media, link, public form, moderation, book data, renderer, PDF, text export and 
 2. Create a yearbook (Vietnamese title, language `vi`, A5), fill the profile, upload a cover photo.
 3. Pick the `memory-book` template and see the preview change.
 4. Create a note link and read it once.
-5. In a second, anonymous browser context open the link, send a note (diacritics, emoji, one photo).
-6. The inbox shows 1 pending note and the sidebar badge; approve it.
+5. In a second, anonymous browser context open the link, draw a signature on the pad with the mouse (two strokes; the receipt shows it), send a note (diacritics, emoji, one photo).
+6. The inbox shows 1 pending note (with its signature) and the sidebar badge; approve it.
 7. Two more notes, approve them, move one up; the order survives a reload.
 8. Print screen ready, `page.pdf()`: page count (`3 + ceil(notes / notes-per-page)`; memory-book has one friend per page, so 6),
    A5 size (420 x 595 pt), fonts embedded, title, owner and every note's author and message present, notes in book order, no text
-   outside its page. The PDF helpers are the ones of `tools/print-check`.
+   outside its page; the preview shows the signature of the first note (`svg.bk-sig`) and the PDF has ink inside its box. The PDF helpers are the ones of `tools/print-check`.
 9. Export as text (T-094): Download text file, accept the public-link warning, and the downloaded file holds the title, the owner
    and the three note names and a photo link; that link opens from a fresh context with no cookies (200, `image/*`); Disable photo
    links, confirm, and the same link is now 404. The photo token is scrubbed from every error like the collection token.

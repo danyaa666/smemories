@@ -193,6 +193,16 @@
   color: var(--color-ink);
 }
 
+/* The server's refusal of the signature sits between the pad and the Photos heading: room below it. */
+.sig-error {
+  margin-bottom: var(--space-4);
+}
+
+/* In an inbox card the signature has room above the Approve and Hide buttons. */
+.inbox-card .sig-view {
+  margin: var(--space-3) 0;
+}
+
 .note-receipt .sig-view {
   height: 40px;
 }

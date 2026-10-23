@@ -9,7 +9,7 @@ import { mkdtempSync, readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { inspect, savePdf, text, words } from "../print-check/lib.mjs";
+import { inkIn, inspect, raster, savePdf, signatureBoxes, text, words } from "../print-check/lib.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PHOTO = (n) => path.join(HERE, "../print-check/fixtures", `photo-${String(n).padStart(2, "0")}.jpg`);
@@ -167,28 +167,45 @@ test("M1 journey: sign up, build a book, collect notes, print the PDF", async ({
     await expect(owner.getByLabel("Link for Class chat")).toHaveCount(0); // shown once, then gone
   });
 
-  const send = async (n, photo) => {
+  /** Signs the pad of the public form with the mouse (the same Pointer Events as a finger): a zig-zag with a flourish, two strokes. */
+  const sign = async () => {
+    const box = await friend.locator("canvas.sig-canvas").boundingBox();
+    expect(box, "the pad is on the page (memory-book enables signatures)").toBeTruthy();
+    const at = (fx, fy) => [box.x + box.width * fx, box.y + box.height * fy];
+    for (const stroke of [[[0.12, 0.65], [0.25, 0.3], [0.38, 0.7], [0.5, 0.3], [0.62, 0.7], [0.88, 0.35]], [[0.2, 0.82], [0.8, 0.8]]]) {
+      await friend.mouse.move(...at(...stroke[0]));
+      await friend.mouse.down();
+      for (const pt of stroke.slice(1)) await friend.mouse.move(...at(...pt), { steps: 8 });
+      await friend.mouse.up();
+    }
+    await expect(friend.getByText("Signature added")).toHaveCount(1);
+  };
+
+  const send = async (n, photo, signed = false) => {
     await friend.getByLabel(/^Your name/).fill(NOTES[n].name);
     await friend.getByLabel(/^Your message/).fill(NOTES[n].message);
+    if (signed) await sign();
     if (photo) await friend.locator(".note-add-photo input[type=file]").setInputFiles(PHOTO(photo));
     if (photo) await expect(friend.getByRole("img", { name: "Your photo 1" })).toBeVisible();
     const sent = friend.waitForResponse((r) => r.url().includes("/api/public-collect/submit-note") && r.ok());
     await friend.getByRole("button", { name: "Send my note" }).click();
     await sent;
     await expect(friend.getByRole("heading", { name: `Sent! Thank you, ${NOTES[n].name}.` })).toBeVisible();
+    if (signed) await expect(friend.getByRole("img", { name: "Your signature" })).toBeVisible(); // the receipt shows what was sent
   };
 
-  await step("5. a friend opens the link in an anonymous browser and sends a note with a photo", async () => {
+  await step("5. a friend opens the link in an anonymous browser, signs the pad and sends a note with a photo", async () => {
     await friend.goto(link);
     await expect(friend.getByRole("heading", { name: TITLE })).toBeVisible();
     await expect(friend.getByText("By sending, you agree to the Terms of Use and the Privacy Policy.")).toBeVisible();
-    await send(0, 2);
+    await send(0, 2, true); // the first note is the only signed one
   });
 
   await step("6. the inbox shows one pending note and the badge; approve it", async () => {
     await owner.goto(bookUrl("/notes"));
     await expect(owner.getByText("1 waiting for you · 0 in your book")).toBeVisible();
     await expect(owner.getByRole("link", { name: /^Notes from friends\s*1$/ })).toBeVisible();
+    await expect(owner.getByRole("img", { name: `Signature of ${NOTES[0].name}` })).toBeVisible(); // the inbox card shows the drawing
     await owner.getByRole("button", { name: `Approve ${NOTES[0].name}` }).click();
     await owner.getByRole("button", { name: /^Approved/ }).click();
     await expect(owner.locator(".inbox-card")).toHaveCount(1);
@@ -233,6 +250,13 @@ test("M1 journey: sign up, build a book, collect notes, print the PDF", async ({
     expect(pdf.pages, "pages").toBe(pages);
     expect(Math.abs(pdf.sizePt[0] - 420) < 1 && Math.abs(pdf.sizePt[1] - 595) < 1, `A5 is 420 x 595 pt, got ${pdf.sizePt}`).toBe(true);
     expect(pdf.allFontsEmbedded, "every font is embedded").toBe(true);
+    // The signed note's signature is on the preview (same DOM as the print) and on the paper: ink inside its box, with the page count unchanged.
+    await expect(owner.locator("svg.bk-sig")).toHaveCount(1);
+    await expect(owner.getByRole("img", { name: `Chữ ký của ${NOTES[0].name}` })).toHaveCount(1); // the book is in Vietnamese
+    const sigPages = (await signatureBoxes(owner)).flatMap((sheet, i) => sheet.sigs.map((box) => ({ page: i + 1, box })));
+    await owner.emulateMedia({ media: null });
+    expect(sigPages.map((x) => x.page), "the signature is on the first note's page").toEqual([3]);
+    expect(inkIn(raster(file, 3), sigPages[0].box), "ink inside the signature box of the PDF").toBeGreaterThan(50);
     const all = norm(text(file));
     for (const s of [TITLE, OWNER.name, ...NOTES.flatMap((n) => [n.name, n.message])])
       expect(all, `the PDF contains "${s}"`).toContain(norm(s));

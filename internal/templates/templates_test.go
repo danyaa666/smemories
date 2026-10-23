@@ -294,6 +294,15 @@ func TestSignatureSwitch(t *testing.T) {
 	}
 }
 
+// T-097: the two designed templates draw a signature in print and so declare the switch; the plain ones do not.
+func TestBuiltInSignatureSwitch(t *testing.T) {
+	for id, want := range map[string]bool{"memory-book": true, "navy-classic": true, "classic": false, "modern": false} {
+		if got := SignatureEnabled(id); got != want {
+			t.Errorf("SignatureEnabled(%q) = %v, want %v", id, got, want)
+		}
+	}
+}
+
 func TestNoteFieldsCustomAndDefault(t *testing.T) {
 	custom := mutate(t, func(r map[string]any) {
 		r["note_fields"] = []any{map[string]any{"id": "name", "required": true}, map[string]any{"id": "how_we_met"}, map[string]any{"id": "message", "required": true}}

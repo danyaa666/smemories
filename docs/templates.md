@@ -91,6 +91,13 @@ The built-in html template is `memory-book` (T-059, the pastel Memory Book of de
 `best_memory` and `wish`; the page also prints `nickname`, `relationship` and `advice` when a note has them (older
 notes, or a later manifest that asks for them).
 
+Signatures (T-097): `memory-book` and `navy-classic` declare `"signature": true`. A note's drawn signature is printed by the shared
+`web/src/book/BookSignature.tsx` (inline SVG, ink only). In `memory-book` it is floated at the bottom right of the message's text box, 220 x 88 design px
+(40 x 16 mm on A5); the text wraps beside it, and a signed page gives the message the room (the photo and the fields beside it are 30 px shorter, the card's minimum
+height is 150 px), so a message that fits without a signature fits with one (print check: font at most 1 px smaller, never cut off); in `navy-classic` it is at the right end of the name line,
+125 x 50 design px (about 23 x 9 mm on A5), inside the 58 px the name block already had, so the four-per-page capacity and the 50 % font floor are
+unchanged; with a signature the name wraps to a second line beside it (a 60-character name is not cut off), and a note without a signature keeps today's layout. `classic` and `modern` (the Go renderers) do not declare it and print none.
+
 The second one is `navy-classic` (T-060, the navy and gold canvas of design `temp2`; `web/src/book/templates/navy.tsx`):
 cover, profile (welcome-letter layout with an oval portrait), "Autographs" notes pages with four friends each (message on
 ruled lines, name as the signature) and a back page in the cover's frame. Its form asks `name` and `message` (required) and

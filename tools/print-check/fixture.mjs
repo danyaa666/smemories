@@ -36,8 +36,27 @@ function memoryNotes(notes, longNote, cutOff) {
   }));
 }
 
+/** Signatures for the fixture (T-097): a maximal one (12 strokes, as near the 3072-byte cap as the format allows, touching all four edges of the drawing space), a tiny one (the 5 % minimum extent) and a normal one. */
+export const SIGNATURES = {
+  maximal: (() => {
+    const bytes = (s) => JSON.stringify({ v: 1, w: 1000, h: 400, s }).length;
+    let best;
+    for (let n = 4; n < 80; n++) {
+      const s = Array.from({ length: 12 }, (_, k) =>
+        Array.from({ length: n * 2 }, (_, i) => (i % 2 ? Math.round(200 + 200 * Math.sin((i * 0.45 + k) % 6.3) * (k % 2 ? -1 : 1)) : Math.round((i / 2 / (n - 1)) * 1000))),
+      );
+      s[0][0] = 0; s[0][1] = 0; s[1][s[1].length - 2] = 1000; s[1][s[1].length - 1] = 400; // the corners
+      if (bytes(s) > 3072) break;
+      best = s;
+    }
+    return { v: 1, w: 1000, h: 400, s: best };
+  })(),
+  tiny: { v: 1, w: 1000, h: 400, s: [[480, 200, 540, 200]] },
+  normal: { v: 1, w: 1000, h: 400, s: [[120, 260, 300, 120, 480, 280], [500, 260, 880, 240]] },
+};
+
 /** `notes` approved notes; the first 28 carry one photo each, the cover and the profile one more: 30 distinct photos. */
-export function makeBook({ notes = 84, size = "A5", truncatedOf = null, template = null, longNote = -1, stress = false, cutOff = false, profileMax = false, portrait = true } = {}) {
+export function makeBook({ notes = 84, size = "A5", truncatedOf = null, template = null, longNote = -1, stress = false, cutOff = false, profileMax = false, portrait = true, signatures = false } = {}) {
   const list = template === "memory-book" ? memoryNotes(notes, longNote, cutOff) : Array.from({ length: notes }, (_, i) => ({
     id: ulid("N", i + 1),
     answers: {
@@ -94,6 +113,8 @@ export function makeBook({ notes = 84, size = "A5", truncatedOf = null, template
     Object.assign(book.yearbook, { title: fill("Tmark", 120), school_name: fill("Smark", 120), class_name: fill("Cmark", 120), motto: fill("Mmark", 200) });
     Object.assign(book.profile, { full_name: fill("Zname", 100), nickname: fill("Knick", 50), hobbies: fill("Hmark", 300), future_plans: fill("Pmark", 300), quote: fill("Qmark", 500) });
   }
+  // signatures: note 1 maximal, 2 tiny, 3 none, 4 normal, then the cycle again (the 2000-character note is the 5th of a navy page's cycle).
+  for (const [i, n] of book.notes.entries()) n.signature = signatures ? [SIGNATURES.maximal, SIGNATURES.tiny, null, SIGNATURES.normal][i % 4] : null;
   if (!portrait) book.profile.photo_media_id = null;
   return book;
 }

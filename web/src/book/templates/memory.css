@@ -153,6 +153,11 @@
   border-radius: 18px;
   background: #fcd5e2;
 }
+/* A signed note needs the height for its signature: the photo (and the fields beside it) are 30 px shorter. */
+.mb-signed .mb-friend-photo,
+.mb-signed .mb-stick {
+  height: 190px;
+}
 .mb-stick-text {
   font-size: 24px;
   line-height: 1;
@@ -217,6 +222,22 @@
     transparent 0 calc(1lh - 1.5px),
     rgba(59, 47, 74, 0.32) calc(1lh - 1.5px) 1lh
   );
+}
+/* The friend's signature (T-097): 40 x 16 mm on A5 = 220 x 88 design px, at the bottom right of the message's text box, in the text box: it is
+   floated right after a zero-width float (.mb-sig-gap) as tall as the box minus the signature, so it sits at the bottom whatever the length of the text
+   and the text wraps beside it (a cut-off message never pushes it out of the card). A signed message costs the area of the signature, not a full-width
+   band. Ink only: the colour of the page's text, no fill, no background. */
+.mb-sig-gap {
+  float: right;
+  width: 0;
+  height: calc(100% - 88px);
+}
+.mb-sig {
+  float: right;
+  clear: right;
+  width: 220px;
+  height: 88px;
+  color: #3b2f4a;
 }
 .mb-side {
   display: flex;

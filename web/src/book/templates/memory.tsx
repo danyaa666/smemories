@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import type { BookData, BookNote } from "../../api/book";
+import { BookSignature, hasSignature } from "../BookSignature";
 import { FitText } from "../fit";
 import { Photo, Sheet, useBookEnv } from "../env";
 import { designHeight } from "../sizes";
@@ -52,6 +53,8 @@ function Icon({
 
 /** A row of boxes keeps a minimum height (its basis in CSS) and shares what is left in proportion to its longest text: a 2000-character message gets the room, a one-line answer stays small. */
 const rowWeight = (chars: number) => 0.25 + chars / 200;
+/** A signed message card is never shorter than its signature (88 px) plus the card's head and padding. */
+const MESSAGE_SIGNED_BASIS = 150;
 
 /**
  * The dotted paper is one picture (memory-dots.png), not the canvas's tiled gradient: Chromium prints a tiled gradient as a
@@ -122,6 +125,7 @@ function Ruled({
   iconColor,
   grow = 1,
   side,
+  tail,
   children,
 }: {
   fitKey: string;
@@ -131,6 +135,8 @@ function Ruled({
   iconColor: string;
   grow?: number;
   side?: ReactNode;
+  /** At the bottom right of the text box (the friend's signature, floated right; it comes first in the DOM, see .mb-sig-gap): the text wraps beside it, so it costs the area of the signature, not a full-width band. */
+  tail?: ReactNode;
   children: string;
 }) {
   return (
@@ -141,6 +147,7 @@ function Ruled({
       </div>
       <div className="mb-ruled-body">
         <FitText fitKey={fitKey} className="mb-lines" style={{ fontSize: 20 }}>
+          {tail}
           {children}
         </FitText>
         {side}
@@ -400,6 +407,7 @@ function FriendPage({ note, number, data }: { note: BookNote; number: number; da
     },
   ].filter((r) => r.nodes.some(Boolean));
   const extra = note.photo_ids.slice(1, 3);
+  const signed = hasSignature(note.signature);
   return (
     <Page label="notes" bg="#FFFBF6">
       <div className="mb-flow">
@@ -419,7 +427,7 @@ function FriendPage({ note, number, data }: { note: BookNote; number: number; da
         >
           {t("bookPages.memory.friendTitle")}
         </Title>
-        <div className="mb-head-row">
+        <div className={`mb-head-row${signed ? " mb-signed" : ""}`}>
           {note.photo_ids[0] ? (
             <Polaroid id={note.photo_ids[0]} className="mb-friend-photo" />
           ) : (
@@ -428,7 +436,7 @@ function FriendPage({ note, number, data }: { note: BookNote; number: number; da
               <div className="cute mb-stick-text">{t("bookPages.memory.stickPhoto")}</div>
             </div>
           )}
-          <div className="mb-fields" style={{ height: 220 }}>
+          <div className="mb-fields" style={{ height: signed ? 190 : 220 }}>
             <Field fitKey={key("name")} label={t("bookPages.fields.name")} value={a.name ?? ""} />
             <Field
               fitKey={key("nickname")}
@@ -453,13 +461,31 @@ function FriendPage({ note, number, data }: { note: BookNote; number: number; da
             </div>
           ))}
           {a.message && (
-            <div className="mb-row" style={{ flexGrow: rowWeight(a.message.length) }}>
+            <div
+              className="mb-row"
+              style={{
+                flexGrow: rowWeight(a.message.length),
+                ...(signed && { flexBasis: MESSAGE_SIGNED_BASIS }),
+              }}
+            >
               <Ruled
                 fitKey={key("message")}
                 title={t("bookPages.fields.message")}
                 bg="#E6DEFA"
                 icon="heart"
                 iconColor="#D9668C"
+                tail={
+                  signed && (
+                    <>
+                      <span className="mb-sig-gap" aria-hidden="true" />
+                      <BookSignature
+                        value={note.signature}
+                        label={t("note.signature.of", { name: a.name ?? "" })}
+                        className="mb-sig"
+                      />
+                    </>
+                  )
+                }
                 side={
                   extra.length > 0 && (
                     <div className="mb-side">
