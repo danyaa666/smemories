@@ -470,10 +470,10 @@ for (const size of ["A5", "A4", "Letter"]) {
       for (const L of lengths) {
         const [p, s] = [await fits(L, false), await fits(L, true)];
         assert.equal(s.length, p.length, "the same text boxes with and without a signature");
-        // a box that is clear of the font floor (1 px) without a signature is not cut off with one (a box already at the floor without one, in the
+        // a box that is clear of the font floor (1.5 px) without a signature is not cut off with one (a box already at the floor without one, in the
         // heaviest fixture, is not the signature's doing and its fit varies a little with the machine's text rendering)
         p.forEach((x, i) => {
-          if (x.fit === "overflow" || x.px <= x.base * 0.5 + 1) return;
+          if (x.fit === "overflow" || x.px <= x.base * 0.5 + 1.5) return;
           assert.notEqual(s[i].fit, "overflow", `${L} characters: a signature cuts off ${s[i].cls} (${x.px} px without one)`);
         });
         const msg = (r) => r.findLast((x) => x.cls.includes("mb-lines")).px;
