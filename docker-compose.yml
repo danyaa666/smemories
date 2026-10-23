@@ -1,4 +1,4 @@
-# Local development stack: MySQL 8.4 + Valkey 8 (Redis protocol) + MinIO (S3). Dev-only credentials come from .env
+# Local development stack: MySQL 8.4 + Valkey 8 (Redis protocol) + SeaweedFS (S3). Dev-only credentials come from .env
 # (copied from .env.example by `make up`). Every port binds to loopback only.
 name: smemories
 
@@ -65,42 +65,30 @@ services:
       retries: 20
       start_period: 3s
 
-  minio:
-    # MinIO no longer publishes images on Docker Hub or Quay. This is a frozen Bitnami build
-    # (server + mc in one image) of 2025.4.22, the last release whose web console still works.
-    # Dev-only, loopback-only, holds no real data.
-    image: bitnamilegacy/minio:2025.4.22-debian-12-r2
+  s3:
+    # SeaweedFS (Apache-2.0), `weed mini`: master, volume server, filer and S3 gateway in one process (T-029; it replaced the
+    # frozen MinIO image). Only the S3 port is published; the single credential pair is the dev placeholder. The bucket is
+    # created at startup (-bucket). Telemetry is switched off. The tag is pinned by digest (multi-arch index: amd64 and arm64);
+    # keep it in step with .github/workflows/ci.yml and scripts/image-smoke.sh. Dev-only, loopback-only, holds no real data.
+    image: chrislusf/seaweedfs:4.48@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d
     restart: unless-stopped
+    command: ["mini", "-dir=/data", "-ip.bind=0.0.0.0", "-master.telemetry=false", "-s3.port=8333"]
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?}
+      AWS_ACCESS_KEY_ID: ${S3_ROOT_USER:?update .env from .env.example (the MINIO_* lines became S3_*, T-029)}
+      AWS_SECRET_ACCESS_KEY: ${S3_ROOT_PASSWORD:?update .env from .env.example (the MINIO_* lines became S3_*, T-029)}
+      S3_BUCKET: ${S3_BUCKET:?}
     ports:
-      - "127.0.0.1:${MINIO_PORT:-9000}:9000"
-      - "127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001"
+      - "127.0.0.1:${S3_PORT:-9000}:8333"
     volumes:
-      - minio-data:/bitnami/minio/data
+      - s3-data:/data
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:9000/minio/health/ready"]
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8333/status"]
       interval: 3s
       timeout: 3s
       retries: 40
       start_period: 5s
 
-  minio-init:
-    image: bitnamilegacy/minio:2025.4.22-debian-12-r2
-    depends_on:
-      minio:
-        condition: service_healthy
-    restart: "no"
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?}
-      S3_BUCKET: ${S3_BUCKET:?}
-    entrypoint: ["/bin/sh", "-c"]
-    command:
-      - mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD" && mc mb --ignore-existing "local/$$S3_BUCKET"
-
 volumes:
   mysql-data:
   redis-data:
-  minio-data:
+  s3-data:

@@ -70,9 +70,9 @@ task definition, `SM` = Secrets Manager injected as an environment variable, `SS
 |---|---|---|---|---|---|---|
 | `SMEM_S3_BUCKET` | yes | `smemories-dev` outside prod | no | env | api, backfill | must be set. |
 | `SMEM_S3_REGION` | no (the task has `AWS_REGION`; set it anyway) | `us-east-1` | no | env | api, backfill | |
-| `SMEM_S3_ENDPOINT` | no | empty (AWS S3) | no | not set | api, backfill | for MinIO only; URL without credentials. In prod it must be `https://` unless `SMEM_S3_ALLOW_INSECURE` is set; leave it unset for AWS S3. |
+| `SMEM_S3_ENDPOINT` | no | empty (AWS S3) | no | not set | api, backfill | for a local S3-compatible store only; URL without credentials. In prod it must be `https://` unless `SMEM_S3_ALLOW_INSECURE` is set; leave it unset for AWS S3. |
 | `SMEM_S3_ALLOW_INSECURE` | no, **never on AWS** | `false` | no | not set | api, backfill | `true` lets prod use an `http://` `SMEM_S3_ENDPOINT` (image smoke test on a private docker network only). Logged at start as `production safety opt-out is on`. |
-| `SMEM_S3_PATH_STYLE` | no | `false` | no | not set | api, backfill | `true` for MinIO only. |
+| `SMEM_S3_PATH_STYLE` | no | `false` | no | not set | api, backfill | `true` for a local S3-compatible store only. |
 | `SMEM_S3_ACCESS_KEY` | **no: leave it unset** | empty | **yes** | not set | api, backfill | Empty means the [default credential chain](#s3-credentials-and-timeouts) (the ECS task role). Set it only together with `SMEM_S3_SECRET_KEY`. Static keys are **allowed** in prod but override the task role, so every binary logs a WARN naming `SMEM_S3_ACCESS_KEY` at start (decision: warn, not refuse, so the smoke test and a break-glass run still work). |
 | `SMEM_S3_SECRET_KEY` | **no: leave it unset** | empty | **yes** | not set | api, backfill | Same: both or neither, otherwise the loader refuses. |
 
@@ -137,7 +137,7 @@ IPv4 text, any other IPv6 address as its first 64 bits in canonical form (`2001:
 
 With `SMEM_S3_ACCESS_KEY` empty the client uses the **AWS default credential chain**: environment variables, web identity, shared config, the **ECS task role** (the container credentials
 endpoint Fargate provides) and the EC2 instance role, refreshed by the SDK before they expire. Give the task role `s3:GetObject`, `s3:PutObject`, `s3:DeleteObject`, `s3:ListBucket`
-on the bucket and nothing else; no static key exists anywhere. Static keys (both variables) still work, for MinIO in dev and test. A task without a role starts, and its first storage call
+on the bucket and nothing else; no static key exists anywhere. Static keys (both variables) still work, for the local store in dev and test. A task without a role starts, and its first storage call
 fails with a credentials error (`/readyz` does not check the bucket).
 
 The client no longer waits the AWS default (about 25 s on a refused connection, repeated by silent retries). Fixed values, in `storage.S3Config`: dial 3 s, TLS handshake 5 s, response

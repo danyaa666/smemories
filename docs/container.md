@@ -65,14 +65,14 @@ in every environment.
   (binaries included) or any `docker history` line or label holds `AKIA` plus 16 key characters or the dev OTP value `123123`. It never prints a match, only the file name. Its
   `--self-test` builds a derived image with a planted `.env` and expects the check to fail, and also expects a missing image to fail: the check fails closed, with
   "cannot inspect image", whenever it cannot inspect, export or unpack the image it was given (T-090).
-- Raising a pinned digest (Trivy, the Dockerfile `# syntax=` frontend, the smoke test's MinIO image) is a manual change; Dependabot covers the `FROM` lines only.
+- Raising a pinned digest (Trivy, the Dockerfile `# syntax=` frontend, the smoke test's SeaweedFS image, which must match `docker-compose.yml` and `ci.yml`) is a manual change; Dependabot covers the `FROM` lines only.
 - A finding with a fix means: bump the Go patch or the dependency (or the distroless digest) and rebuild; there is no ignore file.
 
 ## Tests
 
 - `make image` builds `smemories:local`; `make image-smoke` builds its own tag `smemories:smoke-<pid>-<time>` (so another process re-tagging `smemories:local` cannot change
   what is tested, and two runs side by side do not touch each other; the tag is removed at the end), then runs [`scripts/image-smoke.sh`](../scripts/image-smoke.sh), which starts
-  its own private MySQL, Valkey and MinIO (never the `make up` stack) and checks: user, labels, no shell, file list, size under 60 MB;
+  its own private MySQL, Valkey and S3 store (never the `make up` stack) and checks: user, labels, no shell, file list, size under 60 MB;
   the API refusing an un-migrated database, two concurrent `smemories-migrate up`, `status`, `version`, `down` refused in prod, `smemories-media-backfill --dry-run`; the prod refusals (dev OTP shortcut, missing or short
   `SMEM_OTP_KEY` and `SMEM_MEDIA_LINK_SECRET`, no secret echoed); the API refusing to start without `SMEM_ENV` and with `SMEM_ENV=test` plus a public base URL or origin (T-099: the image sets no `SMEM_ENV`, every task definition must); a read-only root without the spool; the API under `--read-only --user 65532 --cap-drop ALL` (health,
   register, login, yearbook create, photo upload); SIGTERM during a slow request (readyz 503 while draining, the request completes, exit 0).

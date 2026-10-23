@@ -52,12 +52,12 @@ type Config struct {
 	UploadTmpDir       string // SMEM_UPLOAD_TMP_DIR: where public submissions are spooled while they arrive, default the OS temp dir
 	MediaMaxConcurrent int    // SMEM_MEDIA_MAX_CONCURRENT: images processed at once, default 2 (see docs/media.md)
 	MemoryLimitMiB     int    // SMEM_MEMORY_LIMIT_MIB: soft memory limit of the Go runtime in MiB, 0 = unset
-	S3Endpoint         string // SMEM_S3_ENDPOINT: empty for AWS S3, e.g. http://127.0.0.1:9000 for MinIO
+	S3Endpoint         string // SMEM_S3_ENDPOINT: empty for AWS S3, e.g. http://127.0.0.1:9000 for the local S3 store
 	S3Region           string // SMEM_S3_REGION, default us-east-1
 	S3Bucket           string // SMEM_S3_BUCKET: required in prod, default smemories-dev otherwise
 	S3AccessKey        string // SMEM_S3_ACCESS_KEY: never log
 	S3SecretKey        string // SMEM_S3_SECRET_KEY: never log
-	S3PathStyle        bool   // SMEM_S3_PATH_STYLE: true for MinIO
+	S3PathStyle        bool   // SMEM_S3_PATH_STYLE: true for the local S3 store
 
 	// Production contract (prod.go, docs/production-config.md). The three opt-outs are read in every environment but only matter in prod.
 	DBTLSCAFile              string // SMEM_DB_TLS_CA_FILE: PEM bundle (the RDS CA) the database certificate is verified against; makes the DSN need no tls= parameter

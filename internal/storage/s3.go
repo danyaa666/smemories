@@ -31,8 +31,8 @@ const (
 )
 
 // S3Config describes an S3-compatible bucket. Endpoint is empty for AWS S3 and set (with PathStyle)
-// for MinIO. With AccessKey empty the client uses the AWS default credential chain (environment, the ECS task role, EC2 instance
-// role, shared config), which is how production runs; static keys are for MinIO in dev and test.
+// for a local store. With AccessKey empty the client uses the AWS default credential chain (environment, the ECS task role, EC2 instance
+// role, shared config), which is how production runs; static keys are for the local store in dev and test.
 //
 // A zero timeout or MaxAttempts takes the Default* value above. S3Config is passed by value on purpose: start-up settings, read once.
 type S3Config struct {
@@ -97,7 +97,7 @@ func NewS3(cfg S3Config) (*S3, error) {
 		Credentials:      creds,
 		HTTPClient:       httpc,
 		RetryMaxAttempts: orDefault(cfg.MaxAttempts, DefaultMaxAttempts),
-		// Send checksums only where S3 requires them: older MinIO builds and other S3 clones
+		// Send checksums only where S3 requires them: older S3 servers and other S3 clones
 		// reject the optional ones.
 		RequestChecksumCalculation: aws.RequestChecksumCalculationWhenRequired,
 		ResponseChecksumValidation: aws.ResponseChecksumValidationWhenRequired,

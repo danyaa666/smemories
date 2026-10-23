@@ -237,7 +237,7 @@ func TestLoadMediaAndS3(t *testing.T) {
 	for _, c := range []struct{ key, val string }{
 		{"SMEM_MEDIA_MAX_BYTES", "0"}, {"SMEM_MEDIA_MAX_BYTES", "999999999999"}, {"SMEM_MEDIA_MAX_CONCURRENT", "0"}, {"SMEM_PUBLIC_UPLOAD_CONCURRENT_PER_IP", "0"}, {"SMEM_PUBLIC_UPLOAD_MAX_CONNS", "0"}, {"SMEM_UPLOAD_TMP_DIR", "/no/such/dir/for/smem"},
 		{"SMEM_MEMORY_LIMIT_MIB", "-1"}, {"SMEM_MEMORY_LIMIT_MIB", "63"}, {"SMEM_MEMORY_LIMIT_MIB", "1048577"}, {"SMEM_MEMORY_LIMIT_MIB", "1g"},
-		{"SMEM_S3_ENDPOINT", "minio:9000"}, {"SMEM_S3_PATH_STYLE", "maybe"},
+		{"SMEM_S3_ENDPOINT", "s3:9000"}, {"SMEM_S3_PATH_STYLE", "maybe"},
 	} {
 		if _, err := Load(env(map[string]string{"SMEM_DB_DSN": dsn, c.key: c.val})); err == nil || !strings.Contains(err.Error(), c.key) {
 			t.Errorf("%s=%q: want error naming the variable, got %v", c.key, c.val, err)

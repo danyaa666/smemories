@@ -52,3 +52,12 @@ updates:
     groups:
       docker-images:
         patterns: ["*"]
+  # T-029: the pinned MySQL, Valkey and SeaweedFS images of docker-compose.yml. ci.yml and scripts/image-smoke.sh repeat the digests; follow by hand.
+  - package-ecosystem: docker-compose
+    directory: /
+    target-branch: develop
+    schedule:
+      interval: weekly
+    groups:
+      compose-images:
+        patterns: ["*"]

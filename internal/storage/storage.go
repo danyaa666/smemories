@@ -1,4 +1,4 @@
-// Package storage is the object store behind uploaded photos: MinIO locally, S3 in production.
+// Package storage is the object store behind uploaded photos: SeaweedFS locally, S3 in production.
 // Objects are always written whole and read whole (Get) or streamed (Open); callers authorise every access (the bucket is private).
 package storage
 

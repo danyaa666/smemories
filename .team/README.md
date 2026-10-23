@@ -11,16 +11,16 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 7 | T-023, T-024, T-025, T-026, T-027, T-031, T-050 |
-| TODO | 1 | T-124 |
-| IN_PROGRESS | 1 | T-029 |
+| IN_PROGRESS | 1 | T-124 |
+| MERGED | 1 | T-029 |
 | DONE | 107 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** nothing
+**Awaiting your review (MERGED):** T-029 ([E01] Replace the frozen MinIO dev image with a maintained S3-compatible store)
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-055 (What should the team build after E11 signatures: go-live (M2) or the class yearbook (M3)?)
 
-_Board last written 2026-10-23 06:35Z_
+_Board last written 2026-10-23 12:49Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -680,6 +680,7 @@ Leader decisions (low-risk, inside the approved stack):
 | L-13 | **`github.com/aws/aws-sdk-go-v2/config` (and its credential modules) added for the AWS default credential chain (T-086).** | Leader decision 2026-10-17: same vendor and major version as the S3 client already in use, maintained by AWS, needed so the task role works without static keys (T-022 requirement 5). govulncheck stays in CI. | Hand-rolling IMDS/ECS credential fetching | Replace if AWS ships the chain in the already-used module |
 | L-14 | **Handwritten signatures are stored as validated vector strokes, never as images or markup.** | Leader decision 2026-10-19 for E11 (owner asked for signatures gathered from friends in the next phase). Integer points in a canonical JSON (at most 12 strokes, 600 points, 3072 bytes), re-serialised by the server and drawn by our own code as an SVG path: no image pipeline cost, no EXIF, no XSS surface, crisp in print, tiny. Only positions are kept (no timing, pressure or device data) so the data cannot act as a biometric. The template manifest switches the pad on. | PNG upload through the media pipeline; storing the client's SVG | A need for coloured or pressure-sensitive pens (then a new format version `v`) |
 | L-15 | **Security audit 2026-10-20 becomes epic E12 (T-098..T-101); three design choices.** (1) The per-account login limiter (50 failures per 15 minutes, fail closed) accepts that an attacker can lock a victim's login for 15 minutes; password reset and Google sign-in stay open. (2) Public ids are validated at the edge and object keys use the stored id; the `public_id` collation is not changed. (3) `SMEM_ENV` is required with no default, and `dev`/`test` refuse non-local origins. | Leader decision 2026-10-20 after the audit in [docs/security-audit-2026-10-20.md](../docs/security-audit-2026-10-20.md); no new dependency, no cost, no change to the stack. Without a per-account cap, password guessing is bounded only by argon2 cost once an attacker rotates addresses. A binary collation needs a table rebuild and adds nothing once the edge rejects non-canonical ids. A silent `dev` default prints email codes into production logs. | No per-account limit; a hard lockout; changing the collation; defaulting the image to `prod` | Real class bursts trip the per-account limit (T-031 measurement), or a lock-out abuse report |
+| L-16 | **The dev and CI object store is SeaweedFS 4.48 (`weed mini`), pinned by digest, replacing the frozen `bitnamilegacy/minio` image.** | Leader decision 2026-10-23 after T-029's tests. SeaweedFS (Apache-2.0, released 2026-09-28) passed the whole checklist with no product code change: integration tests twice, the media and public-media Postman collections, e2e and image-smoke. Production keeps AWS S3, so this affects only dev and CI. The bucket is created by the server at start-up, so there is no `s3-init` service. The old MinIO volumes are kept and untouched. | versitygw (not needed, kept as the fallback); staying on the frozen MinIO image (no fixes, drifts from S3). | A SeaweedFS S3 incompatibility shows up in a test, or an unpatched CVE in the pinned image. |
 | L-12 | **Designer templates are imported as pre-rendered decoration plus slots; the runtime stays pure Go.** | Leader decision 2026-10-08 within D-06/D-12. A dev-only Node/Playwright tool renders each canvas page to a background PNG with text and photo placeholders hidden and reads slot and label boxes from the page; the Go renderer draws the background, then localised static text and the user's text and photos (template format v2, T-038). No browser at run time. Costs about 1 MiB per page of embedded assets (budget 8 MiB per template). | Re-draw every design in JSON shapes by hand; render HTML in the server (headless browser); embed PDF pages as backgrounds (new dependency) | Assets pass 64 MiB in total, or a design needs live vector effects |
 
 ## 5. Engineering conventions
@@ -1833,7 +1834,7 @@ Small follow-ups found in the T-001 review and QA.
 - 2026-10-07 14:03Z · leader · accepted by owner (chat, 2026-10-07: 'Accept all')
 
 ### T-029 — [E01] Replace the frozen MinIO dev image with a maintained S3-compatible store
-- **Status:** IN_PROGRESS
+- **Status:** MERGED
 - **Priority:** P3
 - **Type:** tech-debt
 - **Milestone:** M1
@@ -1841,11 +1842,11 @@ Small follow-ups found in the T-001 review and QA.
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-029-e01-replace-the-frozen-minio-dev-image-w
-- **PR:** —
-- **Updated:** 2026-10-23 05:53Z by dev
-- **Comments-seen:** 3
+- **PR:** https://github.com/danyaa666/smemories/pull/119
+- **Updated:** 2026-10-23 12:49Z by leader
+- **Comments-seen:** 8
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/07-replace-the-frozen-minio-dev-image-with-a.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1857,6 +1858,22 @@ MinIO no longer publishes container images (Docker Hub and Quay pulls fail), so 
 - 2026-10-07 03:16Z · leader · QA note: bitnamilegacy/minio works (arm64 native) but is AGPL-3.0, unsupported by Broadcom, gets no CVE fixes, and the Docker Hub namespace can vanish. Fine for dev-only and loopback-only use. Until this task runs, pin the image by digest in docker-compose.yml and the T-009 CI service so a vanished tag cannot silently change what we run.
 - 2026-10-22 14:43Z · leader · Leader: promoted to refill the pipeline; dependency health of the dev stack. Never touch the main checkout's compose volumes.
 - 2026-10-22 19:02Z · leader · Leader: the spec is now written: .team/epics/E01-foundation/T-029-replace-frozen-minio.md (read it from the main checkout). The candidate is chosen by test (SeaweedFS, then versitygw); never touch the old minio-data volumes.
+- 2026-10-23 06:56Z · dev · Dev: SLIP to fix: my first test runs used the MAIN stack Redis (6379) because my worktree .env still pointed at it. Keys smem:dev:rl:* and smem:test:rl:* from my runs sit in the main Redis; smem:dev:rl:register:127.0.0.1 is 5/5 (register limiter) until about 07:25Z, which can 429 QA's T-097 registrations. 'make reset-limits SMEM_ENV=dev' on the main stack clears it (I was denied touching the main Redis, so I did not). Also: CLAUDE.md still says 'MySQL and MinIO stack' (leader's file). Log L-decision: dev and CI object store = SeaweedFS weed mini 4.48 by digest.
+- 2026-10-23 06:56Z · dev · PR #119 head 2c2fd3c, CI green on all 6 jobs (e2e needed one rerun: apt lock in Install Chromium, before S3 starts). SeaweedFS 4.48 weed mini, digest-pinned, passed: integration x2 (fresh, reused), newman media + public-media, e2e, image-smoke, lint; versitygw not needed. No product code change. Deviations: no s3-init service (bucket made by the server via S3_BUCKET); dependabot docker-compose entry added. QA: own compose project and ports; old .env files need the S3_* lines (make up says so). See the comment about main Redis keys.
+- 2026-10-23 11:47Z · qa · QA progress: done and green on my own qa029 project: digest is multi-arch index (amd64+arm64) and CI amd64 pulled the same digest, integration run 1 (fresh volume), newman media x2 and public-media x2, make e2e, make image-smoke, README one-command copy (read-only, checksum equal), AC3 volume retention incl. --remove-orphans, dependabot schema, S3 probes (my test commit cf9e633, CI 6/6 green). Remaining: integration run 2 (reused volume, slow ~40 min under load), then cleanup and verdict. No blockers.
+- 2026-10-23 12:48Z · qa · QA_PASS T-029 (PR #119, tested head 2c2fd3c; I added one test-only commit cf9e633, CI 6/6 green on it). Own project qa029, ports 13306/16379/19000, now removed.
+  Evidence (AC / check -> result):
+  - Digest chrislusf/seaweedfs:4.48@sha256:4e61d15f... = OCI index: linux/amd64 (aba492e2), arm64 (f1f30347), 386, arm/v7; images built 2026-09-28. Same string in docker-compose.yml, ci.yml (2 jobs), scripts/image-smoke.sh. CI log (amd64 runner) pulled that exact digest in go-integration and e2e; image job smoke incl. photo upload passed.
+  - AC1: make up (11 s, all healthy) + make migrate + make test-integration: run 1 on fresh s3-data volume: 29 ok, 0 FAIL; run 2 on the reused volume: 29 ok, 0 FAIL (43 and 77 min wall, machine load avg ~140 from other agents' jobs). My first run failed on storage/notes S3 tests with 403 only because my .env lacked SMEM_TEST_S3_ENDPOINT (tests default to :9000 and hit the main stack with wrong keys): my setup, not a defect; no data written there.
+  - Postman: media (172 assertions, 0 failed) x2 back to back; public-media (92 assertions, 0 failed) x2. make e2e: 5 passed (journey + h2 gallery 30/100 thumbs). make image-smoke: passed (photo upload on read-only root, drain, prod refusals).
+  - AC2: gh pr checks 119 at cf9e633: e2e, go, go-integration, image, security, web all pass; attempt 2 of the earlier run also all success (dev: apt lock rerun).
+  - AC3: grep of Makefile, compose and scripts: no volume rm / down -v / prune anywhere; make down = docker compose down (keeps volumes); up uses --remove-orphans. Experiment: project with an old 'minio' service + volume, then compose up --remove-orphans s3 with the new file: minio container removed, volume and its marker file kept. After my runs docker volume ls still lists awesomeproject1_minio-data and smemories_minio-data (and the mysql/redis ones); main stack untouched.
+  - README one-command copy: seeded a throwaway legacy volume (qa029x_minio-data, 2 objects), ran the README command with the volume :ro against my s3 -> both objects mirrored, 300000-byte object md5 equals the old ETag. Volume removed afterwards. Old-style .env (no S3_ROOT_*): compose stops with 'update .env from .env.example (the MINIO_* lines became S3_*, T-029)'.
+  - dependabot.yml: valid YAML (parsed by Ruby) and validates against the SchemaStore dependabot-2.0 schema (ajv, valid:true) with ecosystem docker-compose, target-branch develop, weekly, groups. Cannot prove Dependabot opens a PR for the SHA-pinned tag; the file is schema-valid.
+  - AC4: grep -rniI minio (outside .team): docker-compose.yml error text (migration hint), README migration section, CLAUDE.md:52 (leader file, says 'MySQL and MinIO stack') and internal/config/config.go:289. config.go:289 is the start-up error text when only one of SMEM_S3_ACCESS_KEY/SECRET_KEY is set ('set both (static keys, MinIO) or neither (task role)'): a hint to the operator, no test asserts it, no behaviour depends on it. Harmless; I accept it (minor: leader may reword in a later product change, or accept as is). CLAUDE.md:52 needs the leader.
+  - S3 behaviours (new test internal/storage/s3_compat_qa_test.go, integration tag, committed cf9e633, passes locally and in CI amd64): 2505 objects listed in >=3 pages via the paginator; Delete of 1001 keys (2 batches) OK; DeletePrefix pages through the rest; HEAD missing key -> typed NotFound; Delete missing key -> success; ranged GET 0-0, 5-14, open end, suffix -10, past-end clamp all return the exact bytes with Content-Range; range beyond size -> 416 InvalidRange; empty object opens and reads to EOF; Open missing -> ErrNotFound.
+  Non-blocking: (1) CI keeps a manual digest copy in ci.yml and image-smoke.sh (documented; dependabot only raises compose). (2) tests default to SMEM_TEST_S3_ENDPOINT=:9000 regardless of S3_PORT in .env, so a non-default S3_PORT needs SMEM_TEST_S3_ENDPOINT too (pre-existing, same as before). (3) Developer worktree .env was replaced by me during testing and restored from backup.
+- 2026-10-23 12:49Z · leader · Merged PR #119 as faaa833 (QA_PASS on cf9e633, risk low). Dev and CI now use SeaweedFS 4.48 (L-16). Owner: add the new S3_* lines to your .env before the next make up; the old minio volumes are untouched.
 
 ### T-030 — [E01] T-002 follow-ups: isolate compose stacks, fail fast on auth errors, test-DB grants
 - **Status:** DONE
@@ -4590,7 +4607,7 @@ Spec: .team/epics/E11-signatures/02-signature-pad-web.md. Next phase.
 - **Branch:** task/t-097-e11-print-signatures-in-memory-book-and-
 - **PR:** https://github.com/danyaa666/smemories/pull/115
 - **Updated:** 2026-10-23 06:35Z by human
-- **Comments-seen:** 7
+- **Comments-seen:** 8
 
 Spec: .team/epics/E11-signatures/03-signature-print.md. Next phase.
 
@@ -5542,7 +5559,7 @@ Spec: .team/epics/E06-go-live/14-go-dependency-refresh.md (read it from the main
 - **Branch:** task/t-123-e12-flaky-testslowuploadsdonotstarveothe
 - **PR:** https://github.com/danyaa666/smemories/pull/118
 - **Updated:** 2026-10-23 06:35Z by human
-- **Comments-seen:** 4
+- **Comments-seen:** 5
 
 Spec: .team/epics/E12-security-hardening/14-flaky-slow-upload-test.md (read it from the main checkout).
 
@@ -5562,7 +5579,7 @@ Spec: .team/epics/E12-security-hardening/14-flaky-slow-upload-test.md (read it f
 - 2026-10-23 06:35Z · human · accepted by owner
 
 ### T-124 — [E12] Download-cap integration tests fail under heavy CPU load (T-107 tests)
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P3
 - **Type:** bug
 - **Milestone:** M2
@@ -5570,15 +5587,16 @@ Spec: .team/epics/E12-security-hardening/14-flaky-slow-upload-test.md (read it f
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-124-e12-download-cap-integration-tests-fail-
 - **PR:** —
-- **Updated:** 2026-10-23 05:52Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-23 11:47Z by dev
+- **Comments-seen:** 1
 
 Spec: .team/epics/E12-security-hardening/15-download-cap-tests-under-load.md (read it from the main checkout).
 
 #### Comments
+- 2026-10-23 11:47Z · dev · Status: root cause found, a test timing assumption, not a product bug. The cap tests hold 64 downloads with the default pace (10 s idle); under load, holding 64 takes 35-45 s, so the first slots are dropped by design (gauge 14-19, want 64). Reproduced on old code: 2 of 3 full-package runs failed under -race, GOMAXPROCS=2 and 24 busy loops. Fix is test-only: the three tests use a hold pace that never drops (commit 36a4f2b, local). Left: the 50x per test and 3 full-package runs under load (slow, about 90 s per iteration of setup). Seen once or twice under load: a held download answered 502 (object store); I am checking whether it is load on MinIO or a gap. No blocker.
 
 <!-- tasks:end -->
 
