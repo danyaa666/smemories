@@ -316,7 +316,7 @@ for (const template of ["memory-book", "navy-classic", "basic"]) {
       await page.close();
       const pdf = words(file);
       assert.equal(pdf.length, boxes.length, "one PDF page per sheet");
-      for (const [marker, mark] of [["Dòng", new Set(["Dòng"])], ["Một đoạn", new Set(["đoạn", "dài", "xuống"])]]) {
+      for (const [marker, mark] of [["Dòng", new Set(["Dòng", "Dòn"])], ["Một đoạn", new Set(["đoạn", "dài", "xuống", "xuốn"])]] // pdftotext on the CI runner may cut a word before its last letter ("Dòn g")) {
         let seen = 0;
         for (const [p, { w, h, words: ws }] of pdf.entries()) {
           const box = boxes[p].find((b) => b.text.includes(marker));
