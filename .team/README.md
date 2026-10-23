@@ -11,8 +11,9 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 7 | T-023, T-024, T-025, T-026, T-027, T-031, T-050 |
-| TODO | 2 | T-029, T-123 |
-| READY_FOR_QA | 1 | T-097 |
+| TODO | 2 | T-029, T-124 |
+| READY_FOR_QA | 1 | T-123 |
+| IN_QA | 1 | T-097 |
 | DONE | 105 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
@@ -20,7 +21,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-055 (What should the team build after E11 signatures: go-live (M2) or the class yearbook (M3)?)
 
-_Board last written 2026-10-23 04:42Z_
+_Board last written 2026-10-23 05:52Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -4578,7 +4579,7 @@ Spec: .team/epics/E11-signatures/02-signature-pad-web.md. Next phase.
 - 2026-10-23 01:53Z · human · accepted by owner
 
 ### T-097 — [E11] Print: signatures in memory-book and navy-classic
-- **Status:** READY_FOR_QA
+- **Status:** IN_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1b
@@ -4586,10 +4587,10 @@ Spec: .team/epics/E11-signatures/02-signature-pad-web.md. Next phase.
 - **Risk:** low
 - **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** qa
 - **Branch:** task/t-097-e11-print-signatures-in-memory-book-and-
 - **PR:** https://github.com/danyaa666/smemories/pull/115
-- **Updated:** 2026-10-23 03:24Z by dev
+- **Updated:** 2026-10-23 04:42Z by qa
 - **Comments-seen:** 5
 
 Spec: .team/epics/E11-signatures/03-signature-print.md. Next phase.
@@ -5517,7 +5518,7 @@ Spec: .team/epics/E06-go-live/14-go-dependency-refresh.md (read it from the main
 - 2026-10-23 01:53Z · human · accepted by owner
 
 ### T-123 — [E12] Flaky TestSlowUploadsDoNotStarveOthersForLong (T-102 slot test) in CI
-- **Status:** TODO
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** bug
 - **Milestone:** M2
@@ -5526,12 +5527,33 @@ Spec: .team/epics/E06-go-live/14-go-dependency-refresh.md (read it from the main
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-23 01:30Z by leader
-- **Comments-seen:** 0
+- **Branch:** task/t-123-e12-flaky-testslowuploadsdonotstarveothe
+- **PR:** https://github.com/danyaa666/smemories/pull/118
+- **Updated:** 2026-10-23 05:52Z by dev
+- **Comments-seen:** 2
 
 Spec: .team/epics/E12-security-hardening/14-flaky-slow-upload-test.md (read it from the main checkout).
+
+#### Comments
+- 2026-10-23 05:52Z · dev · Out of scope, found while stressing (GOMAXPROCS=2 + 24 busy loops, full internal/media integration package, old code too): TestPublicDownloadsAreCappedPerClient (downloads in progress: 17, want 64), TestOwnerDownloadsAreCappedPerUser, TestDownloadAtTheCapWaitsForAFreedSlot fail. Probably same class (timing assumptions under load); suggest a follow-up task.
+- 2026-10-23 05:52Z · dev · Root cause: test timing, not slot accounting. Min-rate pace (~0.7s) freed early drips before the 8th registered; wait loop fell through silently. Fix (tests only): hold-pace + stallDrips hook, waitInProgress fails on timeout, dedicated min-rate test. Evidence: old failed 1/3 full-package runs under load and with forced 1.2s delay; new 250/250 at -race -count=50 under load. CI green, PR #118 head 1c30a9d.
+
+### T-124 — [E12] Download-cap integration tests fail under heavy CPU load (T-107 tests)
+- **Status:** TODO
+- **Priority:** P3
+- **Type:** bug
+- **Milestone:** M2
+- **Depends-on:** T-123
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-23 05:52Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E12-security-hardening/15-download-cap-tests-under-load.md (read it from the main checkout).
 
 #### Comments
 
