@@ -13,16 +13,15 @@
 | BACKLOG | 7 | T-023, T-024, T-025, T-026, T-027, T-031, T-050 |
 | TODO | 1 | T-124 |
 | IN_PROGRESS | 1 | T-029 |
-| READY_FOR_QA | 1 | T-123 |
-| MERGED | 1 | T-097 |
+| MERGED | 2 | T-097, T-123 |
 | DONE | 105 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-097 ([E11] Print: signatures in memory-book and navy-classic)
+**Awaiting your review (MERGED):** T-097 ([E11] Print: signatures in memory-book and navy-classic); T-123 ([E12] Flaky TestSlowUploadsDoNotStarveOthersForLong (T-102 slot test) in CI)
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-055 (What should the team build after E11 signatures: go-live (M2) or the class yearbook (M3)?)
 
-_Board last written 2026-10-23 06:01Z_
+_Board last written 2026-10-23 06:35Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -5531,7 +5530,7 @@ Spec: .team/epics/E06-go-live/14-go-dependency-refresh.md (read it from the main
 - 2026-10-23 01:53Z · human · accepted by owner
 
 ### T-123 — [E12] Flaky TestSlowUploadsDoNotStarveOthersForLong (T-102 slot test) in CI
-- **Status:** READY_FOR_QA
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** bug
 - **Milestone:** M2
@@ -5542,14 +5541,24 @@ Spec: .team/epics/E06-go-live/14-go-dependency-refresh.md (read it from the main
 - **Assignee:** —
 - **Branch:** task/t-123-e12-flaky-testslowuploadsdonotstarveothe
 - **PR:** https://github.com/danyaa666/smemories/pull/118
-- **Updated:** 2026-10-23 05:52Z by dev
-- **Comments-seen:** 2
+- **Updated:** 2026-10-23 06:35Z by leader
+- **Comments-seen:** 4
 
 Spec: .team/epics/E12-security-hardening/14-flaky-slow-upload-test.md (read it from the main checkout).
 
 #### Comments
 - 2026-10-23 05:52Z · dev · Out of scope, found while stressing (GOMAXPROCS=2 + 24 busy loops, full internal/media integration package, old code too): TestPublicDownloadsAreCappedPerClient (downloads in progress: 17, want 64), TestOwnerDownloadsAreCappedPerUser, TestDownloadAtTheCapWaitsForAFreedSlot fail. Probably same class (timing assumptions under load); suggest a follow-up task.
 - 2026-10-23 05:52Z · dev · Root cause: test timing, not slot accounting. Min-rate pace (~0.7s) freed early drips before the 8th registered; wait loop fell through silently. Fix (tests only): hold-pace + stallDrips hook, waitInProgress fails on timeout, dedicated min-rate test. Evidence: old failed 1/3 full-package runs under load and with forced 1.2s delay; new 250/250 at -race -count=50 under load. CI green, PR #118 head 1c30a9d.
+- 2026-10-23 06:35Z · qa · QA_PASS, PR #118 head 1c30a9d. Evidence (all mine):
+  AC1 diff tests only: 2 files, internal/media/integration_test.go (+stall chan) and upload_fairness_integration_test.go; no product code. No new sleeps/retries to sync: only a 5 ms poll inside waitInProgress, which t.Fatalf's after 30 s with the observed count (old loops fell through silently after 5 s). The 30 s is a fail-loud bound, not a wait that can pass.
+  Root cause: read Handler.create (handler.go:226-269): per-user and per-client take()+defer release, then inflight slot with defer release, all before PaceBody; every path releases; UploadsInProgress()=len(inflight). No accounting gap; the slot is held until the handler returns, and the min-rate pace (1 KB/s after 0.5 s) legitimately ends drips in ~0.7 s. Test timing assumption confirmed.
+  Repro of old failure: forced a 1.2 s delay before the 8th drip in scratch copies of parent c678374 and of head (same patch): old FAILS 'with the pool full: 200' (the CI symptom), head PASSES. Natural full-package runs of old code under -race, GOMAXPROCS=2, 24 'yes' loops, 3 runs: target test did not flake for me (0/3; dev saw 1/3), only T-124 download-cap tests failed (runs 1, 2).
+  AC3 min-rate test: scratch copy of head with the MinRate branch in httpx pacedBody.Read disabled: TestDrippingUploadEndsOnMinRate FAILS (400, want 408); the other 4 upload tests still pass there, so it is the only test the rate decides (the steady-body part of the Slow test uses minRatePace but succeeds).
+  Stability: GOMAXPROCS=2 go test -race -tags integration -count=50 on the 5 upload tests (PerUserUploadCap, SlowUploadsDoNotStarveOthersForLong, DrippingUploadEndsOnMinRate, PerClientUploadShare, UnverifiedAccountCannotUpload) with 24 busy loops: 250/250 PASS, 0 FAIL (488 s).
+  Full: go test -race -tags integration -count=1 ./internal/media/... ok (81 s, no load); go vet/gofmt clean.
+  AC2 CI on PR #118: e2e, go, go-integration, image, security, web all pass.
+  Non-blocking: (1) T-124 download-cap tests fail under heavy load as noted (seen 2/3 runs). (2) TestDrippingUploadEndsOnMinRate has no time bound, so it would only catch a slow-ending upload by the 20 s Total/other error, not assert it ended near 0.7 s; with the check removed it still failed (400), so fine. All 24 load processes stopped (pgrep: 0); scratch copies only under the session scratchpad.
+- 2026-10-23 06:35Z · leader · Merged PR #118 as dc9960d (QA_PASS on 1c30a9d; tests only). T-124 is unblocked.
 
 ### T-124 — [E12] Download-cap integration tests fail under heavy CPU load (T-107 tests)
 - **Status:** TODO
