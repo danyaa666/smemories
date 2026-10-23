@@ -64,7 +64,7 @@ function book(
 }
 
 const html = (b: BookData, size: PageSize) =>
-  renderToStaticMarkup(<BookPages data={b} size={size} t={t} eager={false} />);
+  renderToStaticMarkup(<BookPages data={b} size={size} t={t} eager={false} track={() => {}} />);
 
 describe("a book with no signature renders as before", () => {
   for (const tpl of TEMPLATES)
@@ -161,10 +161,10 @@ describe("signatures in the templates", () => {
         expect(html(book(tpl, size, bad), size)).toBe(html(book(tpl, size, null), size));
       });
     }
-  it("memory-book puts the signature inside the message card, after the text; navy-classic at the end of the name line", () => {
+  it("memory-book floats the signature at the bottom right inside the message's text box; navy-classic at the end of the name line", () => {
     const m = html(book("memory-book", "A5", SIG), "A5");
     expect(m).toMatch(
-      /mb-lines[^>]*>Giữ liên lạc nhé 1<\/div><\/div><div class="mb-sig-foot"><svg class="bk-sig mb-sig"/,
+      /mb-lines[^>]*><span class="mb-sig-gap" aria-hidden="true"><\/span><svg class="bk-sig mb-sig"[\s\S]*?<\/svg>Giữ liên lạc nhé 1<\/div>/,
     );
     const n = html(book("navy-classic", "A5", SIG), "A5");
     expect(n).toMatch(/nc-signed-name[\s\S]*?<\/div><svg class="bk-sig nc-sig"/);

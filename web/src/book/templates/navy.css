@@ -313,6 +313,13 @@
   min-width: 0;
   margin-top: 0;
 }
+/* A long name wraps to a second (third) line beside the signature instead of shrinking to nothing in the narrower box: the fit still shrinks
+   the font until the lines fit the 36 px of the name's box (the unsigned note keeps its single line). */
+.nc-signed-name .nc-signature {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.1;
+}
 .nc-sig {
   display: block;
   flex: none;

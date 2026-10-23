@@ -8,7 +8,7 @@ import os from "node:os";
 import path from "node:path";
 import { after, before, describe, test } from "node:test";
 import { chromium } from "playwright";
-import { makeBook, photoId } from "./fixture.mjs";
+import { makeBook, photoId, SIGNATURES } from "./fixture.mjs";
 import { BASE, fitBoxes, inkIn, inspect, open, raster, savePdf, serveBook, signatureBoxes, startServer, text, words } from "./lib.mjs";
 
 const squash = (x) => x.replace(/\s+/g, "");
@@ -414,9 +414,12 @@ for (const template of ["memory-book", "navy-classic"]) {
         const scale = wmm / MM.A5[0];
         assert.ok(wm <= SIG_MM[template][0] * scale + 0.5 && hm <= SIG_MM[template][1] * scale + 0.5, `page ${p + 1}: ${wm.toFixed(1)} x ${hm.toFixed(1)} mm exceeds the maximum of ${SIG_MM[template].join(" x ")} mm on A5 scaled to ${size}`);
         assert.ok(sig.x0 >= 0 && sig.y0 >= 0 && sig.x1 <= 1 && sig.y1 <= 1, "inside its page");
+        // a text box is apart from the signature, or (memory-book: the signature floats inside its message box, the text wraps beside it) contains it;
+        // that no word lies in the signature box is the check on the PDF words below
         for (const t of texts) {
           const apart = t.x1 <= sig.x0 + 0.001 || t.x0 >= sig.x1 - 0.001 || t.y1 <= sig.y0 + 0.001 || t.y0 >= sig.y1 - 0.001;
-          assert.ok(apart, `page ${p + 1}: the text box "${t.text.slice(0, 20)}" overlaps the signature box`);
+          const holds = template === "memory-book" && t.x0 <= sig.x0 + 0.001 && t.x1 >= sig.x1 - 0.001 && t.y0 <= sig.y0 + 0.001 && t.y1 >= sig.y1 - 0.001;
+          assert.ok(apart || holds, `page ${p + 1}: the text box "${t.text.slice(0, 20)}" overlaps the signature box`);
         }
         // the words of the PDF
         const { w, h, words: ws } = pdfWords[p];
@@ -434,6 +437,57 @@ for (const template of ["memory-book", "navy-classic"]) {
       assert.ok(r.includes("😄"), "emoji are text");
     });
   }
+}
+
+// T-097 rework: a signature must not push ordinary text to the font floor.
+// Memory-book: a message that fits above the 50 % floor without a signature still fits with one, and its font is at most 1 px (two 0.5 px fit steps) smaller.
+// The lengths are ordinary (a few lines to a full page); the fixture is the default friend and the heavy one (the four optional fields at 200 characters).
+const SENTENCE = "Chuyến dã ngoại ở Đà Lạt là kỷ niệm đẹp nhất của mình, cảm ơn bạn vì đã luôn ở bên cạnh nhé. ";
+const sentence = (n) => SENTENCE.repeat(Math.ceil(n / SENTENCE.length)).slice(0, n).trim();
+async function fitsOf(book) {
+  const page = await browser.newPage();
+  await serveBook(page, book);
+  await open(page);
+  const r = await page.evaluate(() => [...document.querySelectorAll(".bk-fit")].map((e) => ({ cls: e.className, fit: e.dataset.fit, px: parseFloat(getComputedStyle(e).fontSize) })));
+  await page.close();
+  return r;
+}
+for (const size of ["A5", "A4", "Letter"]) {
+  for (const heavy of [false, true]) {
+    test(`memory-book ${size}${heavy ? " (four long optional fields)" : ""}: a signature keeps ordinary messages off the font floor`, async () => {
+      const lengths = heavy ? [100, 300, 500, 700] : [100, 300, 600, 900];
+      const fits = (L, sign) => {
+        const book = makeBook({ size, notes: 1, template: "memory-book" });
+        const n = book.notes[0];
+        n.photo_ids = [];
+        if (heavy) for (const f of ["how_we_met", "first_impression", "best_memory", "wish"]) n.answers[f] = sentence(200);
+        n.answers.message = sentence(L);
+        n.signature = sign ? SIGNATURES.maximal : null;
+        return fitsOf(book);
+      };
+      for (const L of lengths) {
+        const [p, s] = [await fits(L, false), await fits(L, true)];
+        assert.ok(!p.some((x) => x.fit === "overflow"), `${L} characters: cut off even without a signature (test length too long)`);
+        assert.ok(!s.some((x) => x.fit === "overflow"), `${L} characters: a signature cuts the page off at the floor (${s.filter((x) => x.fit === "overflow").map((x) => x.cls)})`);
+        const msg = (r) => r.findLast((x) => x.cls.includes("mb-lines")).px;
+        assert.ok(msg(p) - msg(s) <= 1, `${L} characters: the message font drops from ${msg(p)} to ${msg(s)} px with a signature`);
+      }
+    });
+  }
+}
+
+// Navy-classic: names up to the form's limit (60 characters) wrap beside the signature instead of being cut off.
+for (const size of ["A5", "A4", "Letter"]) {
+  test(`navy-classic ${size}: a 60-character name is not cut off beside a signature`, async () => {
+    const book = makeBook({ size, notes: 4, template: "navy-classic", signatures: true });
+    for (const n of book.notes) n.answers.name = "Nguyễn Thị Hồng Ánh Tuyết Mai Lan Phương Thảo Vy Quỳnh Giang".slice(0, 60);
+    assert.equal(book.notes[0].answers.name.length, 60);
+    const r = await fitsOf(book);
+    const names = r.filter((x) => x.cls.includes("nc-signature") && !x.cls.includes("nc-sign-line"));
+    assert.ok(names.length >= 4, "the four names are on the page");
+    assert.deepEqual(names.filter((x) => x.fit === "overflow"), [], "no name is cut off");
+    assert.ok(names.every((x) => x.px >= 9), "no name is set below 9 px");
+  });
 }
 
 test("a book cut at 300 notes warns on screen and prints only the book", async () => {
