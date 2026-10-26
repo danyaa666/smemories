@@ -10,17 +10,17 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 13 | T-023, T-024, T-025, T-027, T-031, T-050, T-125, T-126, T-127, T-128, T-129, T-130, T-131 |
-| QA_PASS | 1 | T-026 |
-| MERGED | 1 | T-132 |
+| BACKLOG | 12 | T-023, T-024, T-025, T-027, T-031, T-050, T-126, T-127, T-128, T-129, T-130, T-131 |
+| IN_PROGRESS | 1 | T-125 |
+| MERGED | 2 | T-026, T-132 |
 | DONE | 109 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-132 ([E06] CI: pause the go-integration and e2e jobs (owner decision D-37))
+**Awaiting your review (MERGED):** T-026 ([E07] Classes, memberships and roles (API foundation)); T-132 ([E06] CI: pause the go-integration and e2e jobs (owner decision D-37))
 
-**Open questions for you:** Q-056 (Approve merge of T-026 (class foundation API, PR #121)?)
+**Open questions for you:** none
 
-_Board last written 2026-10-26 03:13Z_
+_Board last written 2026-10-26 06:48Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -618,7 +618,7 @@ C) Both: the team does B while you prepare the A inputs, then switches to A when
 Recommendation: A, with C as the fallback if the inputs take more than a few days.
 
 ### Q-056 — Approve merge of T-026 (class foundation API, PR #121)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-26 03:01Z
 - **Blocks:** T-026
 - **Recommendation:** approve
@@ -1764,18 +1764,18 @@ Automated RDS and S3 backups with a documented and tested restore drill; user-in
 - 2026-10-17 15:11Z · leader · DEFERRED by the owner (decision D-31, 2026-10-17): this needs a real domain or AWS credentials, or is a go-live gate. Do not start it until the leader opens the go-live phase (E06 PRD, 'Live verification phase'). Stays BACKLOG.
 
 ### T-026 — [E07] Classes, memberships and roles (API foundation)
-- **Status:** QA_PASS
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
 - **Depends-on:** —
 - **Risk:** high
 - **Rework:** 0
-- **Owner-approved:** —
-- **Assignee:** leader
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-026-e07-classes-memberships-and-roles-api-fo
 - **PR:** https://github.com/danyaa666/smemories/pull/121
-- **Updated:** 2026-10-26 03:00Z by qa
+- **Updated:** 2026-10-26 06:47Z by leader
 - **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E07-class-yearbook/01-class-yearbook-classes-memberships-roles-and.md`
@@ -1790,6 +1790,8 @@ Class space owned by an admin (teacher or monitor), invite links/emails for stud
 - 2026-10-26 02:57Z · leader · Leader: dev deviations accepted (member public_id + timestamps; VARCHAR role/language; last-admin 403 with its own code ERROR_LAST_ADMIN; anonymous 401). QA: Docker daemon is down on the host and agents must not restart Docker Desktop. Verify the CI run on head 98571b3 (go-integration incl. matrix, last-admin concurrency, migration round trip; e2e) as evidence for integration, do the code review against the spec/DESIGN.md/docs/class-permissions.md and the api-contract/db-conventions checklists, run unit tests and lint locally, and run newman (postman/class.postman_collection.json twice) only if Docker is already up. If it is not, say so in your comment; do not start it.
 - 2026-10-26 03:00Z · qa · QA_PASS on head 98571b3 (PR #121, MERGEABLE, 0 files under .team/). CI run 40260556784 (github.com/danyaa666/smemories/actions/runs/40260556784) is on exactly this head, conclusion success: e2e, go, go-integration (10m26s; log shows ok internal/class 32.0s, internal/db 216s incl. migration round trip + 4 concurrent migrate, dbtest), image, security, web all pass. NOT RUN: local integration tests and newman (Docker daemon is down, I did not start it; the Postman collection was reviewed statically only: 6 steps no-session, 120/121-char names, lower-case/short/missing ids, token reuse across users, 11th class 409; dev's request to run it twice with SMEM_ENV=dev + SMEM_DEV_FIXED_OTP is still open and belongs to whoever has Docker). LOCAL (worktree, no Docker): go build ./... ok; go vet ./... and go vet -tags integration ./... ok; go test -race -count=1 ./... all ok (incl. internal/class unit tests); golangci-lint run ./...: 0 issues; web: openapi-typescript regenerated to scratch == committed schema.d.ts (in sync), tsc --noEmit ok. AC EVIDENCE: AC1 matrix = TestPermissionMatrix (7 endpoints x admin/student/stranger/anonymous/other-class member, plus byte-equal 404 vs nonexistent class), create/list in TestMatrixCreateAndList, CI-green; AC2 = TestLastAdminHoldsUnderConcurrency (leave/remove/demote-each-other/demote-self, 12 rounds each) + TestManyAdminsLeavingAtOnce (8 admins -> 7 OK, 1 ERROR_LAST_ADMIN), CI-green; and code review: every membership change locks class_tab row FOR UPDATE then member rows, admin count read under that lock, no cycle with yearbook delete (takes yearbook row, then clearBook updates member rows, never a class lock); AC3 = TestCreateNeedsVerifiedEmailAndHonoursTheCap (user_tab row locked before count, so concurrent creates cannot pass 10), CI-green; AC4 = TestStudentNeverSeesTheRoster (get has no roster/names; student get-list 403; roster has no email/user_id), CI-green; AC5 = TestMigrateClassTables + CI. CODE REVIEW vs spec/DESIGN/class-permissions/api-contract/db-conventions/go-conventions: access checks are one SQL join on class_member_tab (store.access) and repeated under lock in the membership-changing transactions; handlers only call the Service, never the Store; 404 for non-member and nonexistent identical, 403 for low role, role validated after Authorize so non-members cannot probe validation; ids validated canonical (ulid.Valid) before any query, member_id lookups scoped by class_id (cross-class member id gives 404); cursors AES-sealed and scoped to list+user(+class); only public ULIDs serialised (internal ids unexported), roster has no email/user_id; limits: name 1..120 runes, school 0..120, year 1950..2100, language en|vi, 10 admin classes, 60-member page, writes rate-limited per user fail-closed (120/h); no fmt.Errorf/errors.New in internal/class; orphan pairs registered in dbtest (4 pairs); ChildPurger registered in main.go and tested (TestDeletingTheYearbookClearsTheLink); migration is two new tables, expand-only, with a Down, no FKs, BIGINT ms, no ENUM (accepted deviation); the four dev deviations accepted by the leader are consistent with docs/class-permissions.md and openapi. NON-BLOCKING OBSERVATIONS: (1) the 10-classes-as-admin cap is enforced only in class/create; class-member/update-role admin promotion has no cap check, so a user can become admin of more than 10 classes by being promoted. Add the cap (409 ERROR_LIMIT_REACHED, checked under the target user lock) to promotion or document it as intended; fits T-125 or a follow-up. (2) the 60-member cap and 5-invite cap have no enforcement point yet (no add-member path until T-125); T-125 must enforce under the class lock and add a cell to the matrix. (3) the matrix has no cell for an unverified-email member or for an admin passing a real member_id from a different class (covered by the store scoping by class_id and a fake-id test, not by a real cross-class id); worth one assertion in T-125 matrix extension. (4) no code path deletes a user, so class_member_tab.user_id has no purger; if account deletion is ever added it must handle memberships and the last-admin rule.
 - 2026-10-26 03:01Z · leader · Leader review OK on head 98571b3 (unchanged since QA): spec and DESIGN followed, one SQL join per access check, 404 vs 403 correct, last-admin under the class row lock, expand-only migration with Down, no FK, no .team changes, CI green incl. integration. Non-blocking items (admin-class cap on update-role, 60/5 caps, cross-class member cell) moved into the T-125 spec. Awaiting owner: team approve T-026. Not run locally: newman (Docker down).
+- 2026-10-26 06:47Z · human · owner approved merge
+- 2026-10-26 06:47Z · leader · merged 4b8105e (owner-approved). Review: one SQL join per access check, 404 vs 403, last-admin under class row lock, expand-only migration, CI green at head 98571b3. For owner to check: docs/class-permissions.md matrix; newman (postman/class.postman_collection.json) not yet run locally because Docker was down; caps and cross-class cell carried into T-125.
 
 ### T-027 — [E07] Class book data API and the admin's read-only media access
 - **Status:** BACKLOG
@@ -5621,7 +5623,7 @@ Spec: .team/epics/E12-security-hardening/15-download-cap-tests-under-load.md (re
 - 2026-10-26 02:06Z · human · accepted by owner
 
 ### T-125 — [E07] Class invites: create, revoke, lookup, accept
-- **Status:** BACKLOG
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
@@ -5629,15 +5631,16 @@ Spec: .team/epics/E12-security-hardening/15-download-cap-tests-under-load.md (re
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-125-e07-class-invites-create-revoke-lookup-a
 - **PR:** —
-- **Updated:** 2026-10-26 02:17Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-26 06:48Z by dev
+- **Comments-seen:** 1
 
 Spec: .team/epics/E07-class-yearbook/03-class-invites.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.
 
 #### Comments
+- 2026-10-26 06:48Z · leader · T-026 merged (4b8105e); spec updated with QA follow-ups
 
 ### T-126 — [E07] A student's page: link a personal yearbook to the class
 - **Status:** BACKLOG
