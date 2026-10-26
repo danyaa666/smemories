@@ -16,6 +16,7 @@ export function AuthNav() {
       {user ? (
         <>
           <Link to="/yearbooks">{t("nav.yearbooks")}</Link>
+          <Link to="/classes">{t("nav.classes")}</Link>
           <Link to="/account">{user.display_name}</Link>
           <Button variant="ghost" disabled={out.isPending} onClick={() => out.mutate()}>
             {t("nav.signOut")}

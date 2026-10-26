@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Link, useLocation } from "react-router-dom";
 import { resendVerification, verifyEmail } from "../api/auth";
 import { dropTokenParam } from "../auth/dropTokenParam";
-import { errorText, fieldError, formError } from "../auth/errors";
+import { errorText, fieldError, formError, safePath } from "../auth/errors";
 import { ME_KEY, useMe } from "../auth/useMe";
 import { CODE_LENGTH, CodeField } from "../components/CodeField";
 import { ResendCode } from "../components/ResendCode";
@@ -14,7 +14,9 @@ export function VerifyEmail() {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const { data: user } = useMe();
-  const justSent = (useLocation().state as { sent?: boolean } | null)?.sent === true;
+  const nav = useLocation().state as { sent?: boolean; from?: unknown } | null;
+  const justSent = nav?.sent === true;
+  const next = safePath(nav?.from);
   const [code, setCode] = useState("");
   const [short, setShort] = useState(false); // fewer than 6 digits: say so without spending an attempt
   useEffect(dropTokenParam, []);
@@ -48,7 +50,7 @@ export function VerifyEmail() {
       <>
         <h1>{t("verify.title")}</h1>
         <p role="status">{t("verify.done")}</p>
-        <Link to="/account">{t("verify.continue")}</Link>
+        <Link to={next}>{t("verify.continue")}</Link>
       </>
     );
   }

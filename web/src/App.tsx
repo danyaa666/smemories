@@ -9,6 +9,10 @@ import { LegalLinks } from "./components/LegalConsent";
 import { LegalPage } from "./legal/LegalPage";
 import { AcceptTerms } from "./pages/AcceptTerms";
 import { Account } from "./pages/Account";
+import { ClassDetail } from "./pages/ClassDetail";
+import { ClassNew } from "./pages/ClassNew";
+import { Classes } from "./pages/Classes";
+import { JoinClass } from "./pages/JoinClass";
 import { ForgotPassword } from "./pages/ForgotPassword";
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
@@ -37,6 +41,7 @@ export function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/terms" element={<LegalPage doc="terms" />} />
+        <Route path="/join/:token" element={<JoinClass />} />
         <Route path="/privacy" element={<LegalPage doc="privacy" />} />
         <Route element={<RequireAuth />}>
           <Route path="/verify-email" element={<VerifyEmail />} />
@@ -47,6 +52,9 @@ export function App() {
       <Route element={<RequireAuth />}>
         <Route element={<YearbookLayout />}>
           <Route path="/account" element={<Account />} />
+          <Route path="/classes" element={<Classes />} />
+          <Route path="/classes/new" element={<ClassNew />} />
+          <Route path="/classes/:id" element={<ClassDetail />} />
           <Route path="/yearbooks" element={<Yearbooks />} />
           <Route path="/yearbooks/new" element={<YearbookNew />} />
           <Route path="/yearbooks/:id" element={<YearbookEdit />} />

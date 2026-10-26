@@ -28,6 +28,7 @@ export type NavItem = {
  */
 export const NAV_ITEMS: NavItem[] = [
   { key: "books", to: () => "/yearbooks", label: "nav.yearbooks", tab: "nav.tabBooks" },
+  { key: "classes", to: () => "/classes", label: "nav.classes", tab: "nav.tabClasses" },
   {
     key: "profile",
     to: (id) => (id ? `/yearbooks/${id}` : null),

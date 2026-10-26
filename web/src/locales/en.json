@@ -39,7 +39,9 @@
     "tabNotes": "Notes",
     "tabLinks": "Links",
     "print": "Preview and print",
-    "tabPrint": "Print"
+    "tabPrint": "Print",
+    "classes": "Classes",
+    "tabClasses": "Classes"
   },
   "fields": {
     "email": "Email",
@@ -589,5 +591,121 @@
     "titleFirst": "Before you start",
     "body": "Please read the documents linked below, then accept to continue.",
     "submit": "Accept and continue"
+  },
+  "classes": {
+    "title": "My classes",
+    "new": "New class",
+    "newTitle": "New class",
+    "empty": "You are not in any class yet. Create one, or open an invite link from your teacher.",
+    "back": "Back to my classes",
+    "notFound": "This class does not exist.",
+    "yourRole": "Your role",
+    "cancel": "Cancel",
+    "verifyLink": "Verify your email",
+    "role": {
+      "admin": "Admin",
+      "student": "Student"
+    },
+    "form": {
+      "name": "Class name",
+      "school": "School",
+      "year": "Graduation year",
+      "language": "Language of the class book",
+      "submit": "Create class"
+    },
+    "page": {
+      "title": "My page in the class book",
+      "none": "You have not created your page yet. It is your own yearbook, and only you can edit it.",
+      "create": "Create my page",
+      "open": "Open my page",
+      "complete": "Profile complete",
+      "incomplete": "Profile not complete yet",
+      "notes": "Approved notes: {{n}}"
+    },
+    "roster": {
+      "title": "Members",
+      "role": "Role",
+      "joined": "Joined {{date}}",
+      "noPage": "No page chosen yet",
+      "makeAdmin": "Make admin",
+      "makeStudent": "Make student",
+      "makeAdminFor": "Make {{name}} an admin",
+      "makeStudentFor": "Make {{name}} a student",
+      "remove": "Remove",
+      "removeFor": "Remove {{name}}",
+      "removeTitle": "Remove {{name}} from the class?",
+      "removeBody": "They lose access to the class. Their own yearbook is not touched."
+    },
+    "invites": {
+      "title": "Invite links",
+      "help": "Share a link with your students yourself; no email is sent. Anyone who has the link can join as a student.",
+      "lifetime": "Link works for",
+      "days": "{{n}} days",
+      "create": "Create invite link",
+      "once": "Copy this link now. It cannot be shown again.",
+      "link": "Invite link",
+      "copy": "Copy link",
+      "copied": "Link copied.",
+      "copyFailed": "Could not copy. Select the link and copy it by hand.",
+      "hide": "Done, hide the link",
+      "listTitle": "Your links",
+      "empty": "No invite links yet.",
+      "created": "Created {{date}}",
+      "expires": "expires {{date}}",
+      "revoke": "Revoke",
+      "revokeTitle": "Revoke this link?",
+      "revokeBody": "The link stops working at once. People who already joined stay in the class.",
+      "state": {
+        "active": "Active",
+        "revoked": "Revoked",
+        "expired": "Expired"
+      }
+    },
+    "leave": {
+      "title": "Leave this class",
+      "button": "Leave class",
+      "confirmTitle": "Leave {{name}}?",
+      "body": "You stop being a member. Your own yearbook is not touched."
+    },
+    "join": {
+      "title": "Join a class",
+      "heading": "Join {{name}}",
+      "invalidTitle": "Invite not valid",
+      "invalid": "This invite is not valid.",
+      "invalidHelp": "Ask your teacher for a new link.",
+      "signInFirst": "Create an account or sign in to join.",
+      "accept": "Join this class",
+      "joined": "You joined {{name}}",
+      "joinedHelp": "Next, create your page in the class book.",
+      "toClass": "Go to the class"
+    },
+    "errors": {
+      "last_admin": "A class needs at least one admin. Make someone else an admin first, or delete the class.",
+      "forbidden": "Only a class admin can do that.",
+      "not_found": "This class does not exist or you are not a member of it.",
+      "class_full": "This class is full (60 members).",
+      "conflict": "That yearbook is already the page of another class.",
+      "invalid_name": "Enter a class name of 1 to 120 characters without invisible or control characters.",
+      "invalid_school_name": "The school name can have at most 120 characters, without invisible or control characters.",
+      "invalid_language": "Pick English or Vietnamese.",
+      "invalid_role": "That role is not valid.",
+      "invalid_expires_at": "Pick a link lifetime of 7 to 30 days.",
+      "create": {
+        "limit_reached": "You can be admin of at most 10 classes."
+      },
+      "invite": {
+        "limit_reached": "A class can have at most 5 active invite links. Revoke one first."
+      },
+      "role": {
+        "limit_reached": "That person is already admin of 10 classes."
+      },
+      "join": {
+        "not_found": "This invite is not valid.",
+        "limit_reached": "You can be admin of at most 10 classes."
+      },
+      "page": {
+        "limit_reached": "You can have at most 20 yearbooks. Delete one to make room."
+      }
+    }
   }
 }
