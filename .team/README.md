@@ -12,7 +12,7 @@
 |---|---:|---|
 | BACKLOG | 6 | T-023, T-024, T-025, T-031, T-050, T-131 |
 | TODO | 1 | T-133 |
-| IN_PROGRESS | 1 | T-134 |
+| READY_FOR_QA | 1 | T-134 |
 | MERGED | 7 | T-027, T-125, T-126, T-127, T-128, T-129, T-130 |
 | DONE | 111 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-132 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
@@ -21,7 +21,7 @@
 
 **Open questions for you:** none
 
-_Board last written 2026-10-26 14:21Z_
+_Board last written 2026-10-26 14:40Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -5945,7 +5945,7 @@ Spec: .team/epics/E07-class-yearbook/10-class-book-limits-and-caching.md. QA fol
 - 2026-10-26 09:58Z · leader · T-027 merged (3e1dea3)
 
 ### T-134 — [E07] Web: edit and delete a class, link an existing yearbook as the page
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
@@ -5953,11 +5953,11 @@ Spec: .team/epics/E07-class-yearbook/10-class-book-limits-and-caching.md. QA fol
 - **Risk:** low
 - **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-134-e07-web-edit-and-delete-a-class-link-an-
 - **PR:** https://github.com/danyaa666/smemories/pull/130
-- **Updated:** 2026-10-26 14:14Z by dev
-- **Comments-seen:** 4
+- **Updated:** 2026-10-26 14:40Z by dev
+- **Comments-seen:** 5
 
 Spec: .team/epics/E07-class-yearbook/11-web-class-edit-delete-and-existing-page.md. Gaps left by T-128: no UI to rename or delete a class (API exists), no way to pick an existing yearbook as the page, and Google sign-in is hidden on the join path.
 
@@ -5966,6 +5966,7 @@ Spec: .team/epics/E07-class-yearbook/11-web-class-edit-delete-and-existing-page.
 - 2026-10-26 14:01Z · leader · Leader: new requirement 7 added to the spec after T-130 merged (44c2767): /classes/:id/book must show NotFound for students and strangers without a class-book/get request, as the assemble route does; the print summary should also list a class name cut at the smallest template size. Re-read the spec.
 - 2026-10-26 14:14Z · dev · PR #130 head e98a067. Full CI by hand run 40335831996: success (go, image, e2e, security, web, go-integration all green). Local: lint, typecheck, build, vitest 569, i18n parity, check:api. Verify at 375px both locales: admin edit/delete/print links on /classes/:id and assemble; student sees none (no admin requests); picker pick/switch/unlink + 409 row reason; Google hint on /login and /register from /join/ only; role error in the member row; counter counts runes (native maxLength still UTF-16, noted in PR). Print link target exists after #129 (T-130) merges.
 - 2026-10-26 14:14Z · leader · Requirement 7 of the spec (print route guard: NotFound for students and strangers on /classes/:id/book with no class-book/get request; summary also lists a class name cut at the smallest template size) was added after you started. Implement it, rebase on develop (T-130 merged, 44c2767) so the print link resolves, rerun checks and the manual full CI, then READY_FOR_QA.
+- 2026-10-26 14:40Z · dev · Rework (requirement 7) done. PR #130 head ef2f382. Merged origin/develop (T-130 = 44c2767) instead of rebasing: a rebase needs a force-push, which is not allowed; the PR diff is still only T-134. /classes/:id/book now goes through the same AdminOnly guard as assemble (shared classes/AdminOnly.tsx): student or stranger gets NotFound and NO class-book/get request (tests in classBook.test.tsx). Summary lists a class name cut on the cover (classSummary.coverCut + banner, both locales, unit test). Print link test follows the link to the real route and sees the cover. tools/print-check/lib.mjs now answers /api/class/get as admin (e2e was failing without it: run 40338291359 e2e red for that reason). Full CI by hand run 40340038450: success (go, go-integration, e2e, image, security, web). Local: lint, typecheck, build, vitest 585, i18n parity, check:api.
 
 <!-- tasks:end -->
 
