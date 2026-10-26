@@ -248,7 +248,7 @@ func TestClassBookHasApprovedContentOnly(t *testing.T) {
 
 	r := e.classBook(admin, cls).status(200, "OK")
 	d := r.data()
-	wantKeys(t, "class-book/get", d, "class", "front_pages", "members", "back_pages")
+	wantKeys(t, "class-book/get", d, "class", "front_pages", "members", "back_pages", "truncated")
 	wantKeys(t, "class", d["class"].(map[string]any), "id", "name", "school_name", "graduation_year", "language")
 	if len(d["front_pages"].([]any)) != 0 || len(d["back_pages"].([]any)) != 0 {
 		t.Fatalf("pages: %v %v", d["front_pages"], d["back_pages"])
