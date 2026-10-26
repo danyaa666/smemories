@@ -117,7 +117,8 @@ clears it, an absent key is refused so a typo cannot unlink). The link is a poin
    row, so there is no cycle.
 4. **Linking changes no permission.** Every `yearbook/*`, `note-collection/*`, `note/*`, `media/*`, `book-data/*` and `book-export/*` endpoint
    still checks `owner_id = caller`, so the class admin gets 404 on all of them for a student's linked book (tested endpoint by endpoint in
-   `page_integration_test.go`). Leaving the class or being removed never touches the yearbook; deleting the yearbook keeps the membership.
+   `page_integration_test.go`); the one exception is `media/delete`, which by design answers 200 and does nothing for a photo that is not the
+   caller's, so repeating a delete is harmless and nothing leaks. Leaving the class or being removed never touches the yearbook; deleting the yearbook keeps the membership.
 5. **What the member sees** (`class/get`, and the answer of `set-book`): `page: {linked, yearbook_id, profile_complete, approved_notes}` for their
    own row only. **What the admin sees** (`class-member/get-list`): per member `page_linked`, `profile_complete`, `approved_notes` and nothing
    else: no profile text, no note text, no photo id, no yearbook id, and not the pending or hidden count. A link to a yearbook the member does not
