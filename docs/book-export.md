@@ -68,7 +68,7 @@ note_count, approved_total, truncated}`. Permissions and privacy: [class-permiss
   their own order, with `truncated: true` and the real `approved_total` (never silent).
 - **Cost.** One query for the class, one for the members, then per linked member the book, its profile (and the photo ids) and the notes with their photo links: a handful of queries per member,
   none per note (`TestClassBookQueryCountIsPerMember`). No limiter: it is an admin read, and the 60 x 5 queries are indexed (`TestClassBookQueriesUseIndexes`).
-- **Size.** Measured by `TestClassBookFullClass` (60 members x 40 notes of about 230 characters, two photo ids each): see the result in the task's board comment; the budget is 4 MiB.
+- **Size.** Measured by `TestClassBookFullClass` (60 members x 40 notes of about 230 characters, two photo ids each): **1.14 MiB** (`TestClassBookSizeOfAFullClass` computes it without a database; the integration test fails above 4 MiB on the real answer). The budget is 4 MiB.
   The theoretical worst case is far larger: one note may hold about 4.7 thousand characters of answers (up to 3 bytes each in Vietnamese) and a signature of up to 3 KiB, so 60 x 40 maximal notes would be about 40 MiB. Nobody writes that
   (the cap of 500 characters on five of the nine fields and 2000 on the message is a ceiling, a note is typically a few hundred bytes), and a book of 2400 maximal notes is not 120 pages either; the 4 MiB target holds for
   realistic notes, not as a hard limit. If it ever matters, the lever is the per-member cap (`notes.MaxClassBookNotes`), not a response-size check.

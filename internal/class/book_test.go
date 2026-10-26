@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/danyaa666/smemories/internal/bookdata"
 	"github.com/danyaa666/smemories/internal/media"
 	"github.com/danyaa666/smemories/internal/notes"
 	"github.com/danyaa666/smemories/internal/yearbook"
@@ -98,5 +99,28 @@ func TestMediaAdminRoleMatches(t *testing.T) {
 	}
 	if media.ShareableNoteStatus != noteApproved || !strings.EqualFold(noteApproved, notes.StatusApproved) {
 		t.Fatal("the approved status drifted")
+	}
+}
+
+// The size of a full class book (60 members x 40 approved notes of about 230 characters with two photos each, no signature) is
+// measured here without a database: the shape is the whole story. The integration test TestClassBookFullClass measures the real answer.
+func TestClassBookSizeOfAFullClass(t *testing.T) {
+	msg := strings.Repeat("Lời nhắn thân thương. ", 10)
+	id := "01K7Q8W3ZR5N2M4X6V8B0C1D2E"
+	photo := id
+	b := ClassBook{Class: BookClass{ID: id, Name: "Lớp 12A1", Language: "vi"}, FrontPages: []any{}, BackPages: []any{}}
+	for range MaxMembers {
+		m := BookMember{MemberID: id, Name: "Nguyễn Thị Hồng", Linked: true, Yearbook: &BookStyle{PageSize: "A4", Language: "vi"},
+			Profile: &bookdata.ProfileInfo{FullName: "Nguyễn Thị Hồng", Quote: msg, PhotoMediaID: &photo}, NoteCount: notes.MaxClassBookNotes, ApprovedTotal: notes.MaxClassBookNotes}
+		for range notes.MaxClassBookNotes {
+			ans, _ := json.Marshal(map[string]string{"name": "Linh", "relationship": "classmate", "message": msg})
+			m.Notes = append(m.Notes, &notes.BookNote{ID: id, Answers: ans, PhotoIDs: []string{id, id}})
+		}
+		b.Members = append(b.Members, m)
+	}
+	out, _ := json.Marshal(b)
+	t.Logf("full class book: %d bytes (%.2f MiB)", len(out), float64(len(out))/(1<<20))
+	if len(out) > 4<<20 {
+		t.Fatalf("%d bytes is over the 4 MiB budget", len(out))
 	}
 }
