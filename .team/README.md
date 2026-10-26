@@ -11,17 +11,17 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 6 | T-023, T-024, T-025, T-031, T-050, T-131 |
-| TODO | 2 | T-133, T-134 |
-| IN_QA | 1 | T-130 |
-| MERGED | 6 | T-027, T-125, T-126, T-127, T-128, T-129 |
+| TODO | 1 | T-133 |
+| IN_PROGRESS | 1 | T-134 |
+| MERGED | 7 | T-027, T-125, T-126, T-127, T-128, T-129, T-130 |
 | DONE | 111 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-132 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-027 ([E07] Class book data API and the admin's read-only media access); T-125 ([E07] Class invites: create, revoke, lookup, accept); T-126 ([E07] A student's page: link a personal yearbook to the class); T-127 ([E07] Class pages and book order (API)); T-128 ([E07] Web: classes, invites, joining and the student's page); T-129 ([E07] Web: assemble the class book (order, class pages))
+**Awaiting your review (MERGED):** T-027 ([E07] Class book data API and the admin's read-only media access); T-125 ([E07] Class invites: create, revoke, lookup, accept); T-126 ([E07] A student's page: link a personal yearbook to the class); T-127 ([E07] Class pages and book order (API)); T-128 ([E07] Web: classes, invites, joining and the student's page); T-129 ([E07] Web: assemble the class book (order, class pages)); T-130 ([E07] Web: print the class book (many profiles, 120 pages))
 
 **Open questions for you:** none
 
-_Board last written 2026-10-26 13:55Z_
+_Board last written 2026-10-26 14:01Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -5844,7 +5844,7 @@ Spec: .team/epics/E07-class-yearbook/07-web-assembly-ui.md (read it from the mai
 - 2026-10-26 13:34Z · leader · merged b7171c4. Review: web-only (14 files under web/src), keyboard reorder with focus and live region, full-list update-order payload, bodies rendered as text, 400/409 reload, student/stranger NotFound with no requests; QA browser pass at 375 px en+vi. For owner to check: reorder with a real mouse drag and on a phone (not covered); emoji counter counts UTF-16 units (cosmetic, in T-134).
 
 ### T-130 — [E07] Web: print the class book (many profiles, 120 pages)
-- **Status:** IN_QA
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
@@ -5852,11 +5852,11 @@ Spec: .team/epics/E07-class-yearbook/07-web-assembly-ui.md (read it from the mai
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** —
 - **Branch:** task/t-130-e07-web-print-the-class-book-many-profil
 - **PR:** https://github.com/danyaa666/smemories/pull/129
-- **Updated:** 2026-10-26 13:55Z by qa
-- **Comments-seen:** 3
+- **Updated:** 2026-10-26 14:01Z by leader
+- **Comments-seen:** 5
 
 Spec: .team/epics/E07-class-yearbook/08-web-class-book-print.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.
 
@@ -5864,6 +5864,17 @@ Spec: .team/epics/E07-class-yearbook/08-web-class-book-print.md (read it from th
 - 2026-10-26 13:16Z · leader · T-127 merged (2db5ede)
 - 2026-10-26 13:54Z · dev · PR #129 head 5277637. Route /classes/:id/book (admin), ProfilePages extracted from BookPages (personal route unchanged), FitScope per student, summary (no page, 40-note limit, template floor, profile/class page cut), page count + >120 warning, one paper size (most common, picker or ?size=). Local: lint, typecheck, build, vitest 564, i18n, check:api, print-check 69/69. Manual CI run 40333150101: web, go, e2e (print-check 69/69, class book +10 s), image, security green; go-integration still running (no Go change). QA: print the class book (30 students) in Chrome/Edge both languages. Gaps: no link to the print route from the class screens (T-129 area); one paper size per book is my decision, confirm.
 - 2026-10-26 13:54Z · leader · Leader: one paper size per class book (default = the size most students chose, tie to A5; changeable on screen or ?size=) accepted. QA: manual CI run 40333150101 was still finishing go-integration when dev reported; verify it succeeded and its headSha is the PR head 5277637, and that the print-check count (69/69) is real. The missing link to /classes/:id/book is moved to T-134 (now P2, T-131 depends on it).
+- 2026-10-26 14:00Z · qa · QA_PASS, PR #129 head 5277637 (worktree == PR head).
+  CI: manual run 40333150101 headSha 5277637 completed/success, jobs go, e2e, go-integration, security, image, web all success; its e2e Print check log: tests 69, pass 69, fail 0. I did not start a new run. Not run by me: make test-integration / make e2e (Docker down; no Go, schema or api change in the diff, and print-check does not need them).
+  Local on 5277637: web lint+prettier, typecheck, build, vitest 564/564 (31 files), i18n parity ok, check:api ok; print-check (Playwright Chromium) tests 69 pass 69 fail 0 (incl. class book A5 and A4: 77 pages, ready ~1.4 s). Processes stopped.
+  AC1: made my own A5 PDF of the 30-student fixture via tools/print-check helpers: pdfinfo 77 pages, A5 420x595pt; rendered all 77 pages to PNG and read them: cover (class, school, Khoa 2026), front page 'Loi chao' with 3 lines kept, students 01..28 in order (3 templates), student 30 (unlinked) absent, back page 'Thay co chu nhiem', back cover last; no blank page. print-check asserts the same on A4 (77 pages) plus order, fonts embedded, photos >=29 in the PDF.
+  AC2: diff of BookPages is only the extraction (ProfilePages, profilePageCount; pageCount = 2 + profile count, same value), Book.tsx only exports useStageScale, templates untouched; all earlier print-check cases green (69 = old cases + 1 class case group).
+  AC3: vitest 'Print stays disabled until every photo ... at most 16 in flight' green (30 photos, 16 src set, button disabled until all settled, then print called); print-check: every img.bk-photo loaded at ready with nothing scrolled, 1 class-book request, media requests <= 60 for 30 files, Print enabled. Photo preload uses the shared imageQueue (LIMIT 16), unchanged. I did not try a browser by hand with a stubbed /api beyond print-check's route stub.
+  AC4: vitest + print-check: summary names the 41-note student ('Only 40 of 41 approved notes'), the too-long note student ('Notes too long ... cut off: 1', exactly one [data-fit=overflow]), and the unlinked student ('no page'); class page cut listed separately.
+  Req2: class page body is a React text node (vitest: '<script>' shown literally, newlines kept, no script element).
+  Req6: ?size= goes through Object.hasOwn(SIZES, s) else the common size; pageCss only interpolates SIZES numbers, so no injection; common size, tie to A5 covered in vitest. Locales en/vi parity ok, no package/api/.team change in the diff.
+  Non-blocking: (a) route is not gated client-side like /classes/:id/assemble: a student or stranger triggers one class-book/get request and sees the error banner (403/404 from the server, no data, plus a Retry button) instead of the NotFound screen; docs/book-export.md says so on purpose. Consider NotFound for 403/404 in a later task. (b) the class cover title (FitText cc:title) cut at the floor would not be listed in the summary (a very long class name). (c) no link to the route from class screens: T-134.
+- 2026-10-26 14:01Z · leader · merged 44c2767. Review: ProfilePages extracted from BookPages with the personal book unchanged, ready waits for every photo, one paper size per class book (default = most chosen, ?size= validated), overflow summary; manual full CI run 40333150101 green on head 5277637 incl. print-check 69/69; QA read the real A5 PDF of a 30-student class (77 pages, right order, no blank pages). For owner to check: print a real class to PDF in Chrome; students on /classes/:id/book see an error banner, not NotFound (in T-134).
 
 ### T-131 — [E07] Privacy review, legal texts and the class journey (e2e)
 - **Status:** BACKLOG
@@ -5934,7 +5945,7 @@ Spec: .team/epics/E07-class-yearbook/10-class-book-limits-and-caching.md. QA fol
 - 2026-10-26 09:58Z · leader · T-027 merged (3e1dea3)
 
 ### T-134 — [E07] Web: edit and delete a class, link an existing yearbook as the page
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
@@ -5942,16 +5953,17 @@ Spec: .team/epics/E07-class-yearbook/10-class-book-limits-and-caching.md. QA fol
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-134-e07-web-edit-and-delete-a-class-link-an-
 - **PR:** —
-- **Updated:** 2026-10-26 13:55Z by leader
-- **Comments-seen:** 1
+- **Updated:** 2026-10-26 13:55Z by dev
+- **Comments-seen:** 2
 
 Spec: .team/epics/E07-class-yearbook/11-web-class-edit-delete-and-existing-page.md. Gaps left by T-128: no UI to rename or delete a class (API exists), no way to pick an existing yearbook as the page, and Google sign-in is hidden on the join path.
 
 #### Comments
 - 2026-10-26 13:55Z · leader · T-128 merged; now P2 because T-131 needs the print link
+- 2026-10-26 14:01Z · leader · Leader: new requirement 7 added to the spec after T-130 merged (44c2767): /classes/:id/book must show NotFound for students and strangers without a class-book/get request, as the assemble route does; the print summary should also list a class name cut at the smallest template size. Re-read the spec.
 
 <!-- tasks:end -->
 
