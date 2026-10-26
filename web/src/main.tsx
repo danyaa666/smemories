@@ -11,6 +11,7 @@ import "./styles.css";
 import "./styles/ui.css";
 import "./styles/note.css";
 import "./styles/inbox.css";
+import "./styles/classes.css";
 
 const queryClient = makeQueryClient(3);
 
