@@ -5,6 +5,8 @@ and on pushes to `develop` and `main`; a newer push to the same pull request can
 read-only (`contents: read`), no job uses a repository secret, and every third-party action is pinned to a full
 commit SHA with the version in a comment (Dependabot keeps them current, see below).
 
+**Paused jobs (D-37, T-132):** `go-integration` and `e2e` carry `if: ${{ github.event_name == 'workflow_dispatch' }}`, so on pushes and pull requests they report *skipped* (counted as passing, so the required check `go-integration` stays satisfied) and they run only by hand: `gh workflow run ci.yml --ref <branch>`. QA runs the same commands locally. To switch them back on, delete the two `if:` lines.
+
 ## Required checks (branch protection on `develop` and `main`)
 
 Require exactly these four status checks; the names are the job names and are stable:
