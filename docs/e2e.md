@@ -66,6 +66,8 @@ Redis db, and run again.
 
 ## Reading a CI failure
 
+**The `e2e` job is paused (D-37, T-132):** it does not run on pushes and pull requests (it shows as skipped) and runs only by hand with `gh workflow run ci.yml --ref <branch>`. QA runs the same commands locally (`make e2e` and the print-check, see CLAUDE.md "CI scope"). To switch it back on, delete the `if:` line above the job.
+
 The `e2e` job in `.github/workflows/ci.yml` starts MySQL, the S3 store and Valkey like `go-integration`, then runs `scripts/e2e.sh`. The
 error starts with `STEP FAILED: <n. title>`, then Playwright's own message and code frame. On failure the artifact `e2e-failure`
 (kept for 3 days) holds the trace (open it with `npx playwright show-trace`, or at trace.playwright.dev), the screenshot and `api.log`.

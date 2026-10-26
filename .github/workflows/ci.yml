@@ -8,6 +8,7 @@ on:
   pull_request:
   push:
     branches: [develop, main]
+  workflow_dispatch:
 
 # Least privilege: every job only reads the repository.
 permissions:
@@ -64,6 +65,8 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   go-integration:
+    # D-37 (T-132): paused on push and pull request, runs by hand only (gh workflow run ci.yml --ref <branch>); delete this `if:` to switch it back on.
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-24.04
     # T-077: above `make test-integration`'s -timeout 30m plus the service start-up, so a hang ends in Go's goroutine dump, not in a cancelled job.
     timeout-minutes: 40
@@ -144,6 +147,8 @@ jobs:
   # with SMEM_ENV=test, the one environment besides dev where the registered DEV-SHORTCUT(otp) is allowed. The link token of the
   # journey is never printed. On failure the Playwright trace, a screenshot and the API log are uploaded.
   e2e:
+    # D-37 (T-132): paused on push and pull request, runs by hand only (gh workflow run ci.yml --ref <branch>); delete this `if:` to switch it back on.
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15 # the journey itself is limited to 240 s (tools/e2e/playwright.config.mjs), print-check to 6 min
     env:

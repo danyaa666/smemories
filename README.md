@@ -105,6 +105,8 @@ Prerequisites: Go 1.26 (the `go` directive in `go.mod`), `make`, Docker with Com
 | `make test-integration` | Tests tagged `integration` against the local MySQL and Valkey (run `make up migrate` first; each test gets its own throwaway database) |
 | `make e2e` | The M1 journey in a real browser (Playwright) against a locally started API and the built web app, on the stack from `make up`; needs poppler. See [docs/e2e.md](docs/e2e.md) |
 
+**CI scope (D-37):** CI runs `go`, `web`, `security` and `image` on every push and pull request. `go-integration` (`make test-integration`) and `e2e` (journey and print-check) run by hand only: `gh workflow run ci.yml --ref <branch>`; on a PR they show as skipped. QA runs the same commands locally (see CLAUDE.md "CI scope").
+
 Run the API locally:
 
 ```sh
