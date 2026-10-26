@@ -11,17 +11,17 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 9 | T-023, T-024, T-025, T-031, T-050, T-129, T-130, T-131, T-134 |
-| TODO | 2 | T-127, T-133 |
-| IN_QA | 1 | T-128 |
-| MERGED | 3 | T-027, T-125, T-126 |
+| TODO | 1 | T-133 |
+| IN_PROGRESS | 1 | T-127 |
+| MERGED | 4 | T-027, T-125, T-126, T-128 |
 | DONE | 111 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-132 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-027 ([E07] Class book data API and the admin's read-only media access); T-125 ([E07] Class invites: create, revoke, lookup, accept); T-126 ([E07] A student's page: link a personal yearbook to the class)
+**Awaiting your review (MERGED):** T-027 ([E07] Class book data API and the admin's read-only media access); T-125 ([E07] Class invites: create, revoke, lookup, accept); T-126 ([E07] A student's page: link a personal yearbook to the class); T-128 ([E07] Web: classes, invites, joining and the student's page)
 
 **Open questions for you:** none
 
-_Board last written 2026-10-26 09:58Z_
+_Board last written 2026-10-26 10:02Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -5749,7 +5749,7 @@ Spec: .team/epics/E07-class-yearbook/04-student-page-link.md (read it from the m
 - 2026-10-26 08:59Z · leader · merged 1bc9845 (owner-approved). Review: link is a pointer only, owner_id check under yearbook row lock, 409 for a second class, delete clears link, per-IP budgets raised; full CI run 40291645124 green on head f88609f. For owner to check: docs/class-permissions.md page section; newman not run (Docker down); T-027 carries the media/create guard.
 
 ### T-127 — [E07] Class pages and book order (API)
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
@@ -5757,10 +5757,10 @@ Spec: .team/epics/E07-class-yearbook/04-student-page-link.md (read it from the m
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-127-e07-class-pages-and-book-order-api
 - **PR:** —
-- **Updated:** 2026-10-26 09:58Z by leader
+- **Updated:** 2026-10-26 09:59Z by dev
 - **Comments-seen:** 1
 
 Spec: .team/epics/E07-class-yearbook/05-class-pages-and-order.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.
@@ -5769,7 +5769,7 @@ Spec: .team/epics/E07-class-yearbook/05-class-pages-and-order.md (read it from t
 - 2026-10-26 09:58Z · leader · T-027 merged (3e1dea3)
 
 ### T-128 — [E07] Web: classes, invites, joining and the student's page
-- **Status:** IN_QA
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
@@ -5777,17 +5777,32 @@ Spec: .team/epics/E07-class-yearbook/05-class-pages-and-order.md (read it from t
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** —
 - **Branch:** task/t-128-e07-web-classes-invites-joining-and-the-
 - **PR:** https://github.com/danyaa666/smemories/pull/126
-- **Updated:** 2026-10-26 09:57Z by qa
-- **Comments-seen:** 2
+- **Updated:** 2026-10-26 10:02Z by leader
+- **Comments-seen:** 4
 
 Spec: .team/epics/E07-class-yearbook/06-web-classes-join-and-student-page.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.
 
 #### Comments
 - 2026-10-26 09:00Z · leader · T-126 merged; web can start after T-027 (one dev at a time)
 - 2026-10-26 09:56Z · dev · PR #126 head e2a02ba. Web: /classes, /classes/new, /classes/:id (admin: invites+roster; student: own page only), /join/:token. vitest 533 pass, lint/typecheck/build/i18n/check:api green; PR CI go/web/security/image pass. Manual full CI run 40301323364 (touched Register/Login/VerifyEmail/nav): all jobs green (e2e first attempt failed on playwright apt install, rerun green). Verify: student view makes no roster/invite calls; token never in query/storage/console; Google button hidden on login/register when coming from /join. Gaps (not in spec): class edit/delete, choosing an existing yearbook as page. Register/Login/VerifyEmail now honour state.from.
+- 2026-10-26 10:02Z · qa · QA_PASS. Head e2a02ba4139ca5c3712de99d43e2190b8307c939 (= worktree HEAD = PR head). CI: PR run 40301324802 go/web/security/image pass (go-integration, e2e skipped per D-37); manual full run 40301323364 headSha = e2a02ba, all 6 jobs success (go, go-integration, web, e2e, security, image).
+  Local (web/): lint (eslint+prettier), typecheck, build, lint:i18n ("i18n check ok"), check:api ("api schema ok"), vitest 27 files / 533 tests pass. No new dependency; api/openapi.yaml, schema.d.ts, .team/ and package files untouched (git diff origin/develop...HEAD).
+  Browser pass: Vite dev server (VITE_GOOGLE_SIGNIN=true) + Playwright chromium at 375x812, all /api calls stubbed with page.route (no Docker, no backend); servers stopped. Scripts in the qa scratchpad, not committed. No horizontal overflow on any screen; en and vi screenshots looked right.
+  AC1 student view: PASS. ClassDetail mounts Invites/Roster only when my_role==="admin" (after class/get has answered, no flash). Stub run as student: only GET user/get-me and GET class/get; zero class-member/get-list or class-invite/* calls; page text has no roster/invite/member action. Test classes.test.tsx:153 asserts the same.
+  AC2 invite link: PASS. Warning banner shown ("It cannot be shown again"), Copy link wrote the full link to the real clipboard and shows "Link copied.", copy failure has its own message. Link gone after reload and after SPA navigate-away/back (#invite-link count 0, token not in page HTML). Link lives only in component state; create.reset() on hide.
+  AC3 token handling: PASS. Token only in the path /join/:token and in POST bodies (lookup, accept); grep of the diff: read in JoinClass via useParams, query key ["invite-preview", token] (memory), api/classes.ts bodies. Observed over a full sign-up round trip: no URL query carries it, localStorage {} and sessionStorage has only resendUntil:verify, document.title always "SMemories", console has no token (only vite/React devtools lines and the 401 of get-me). Router state: history.state.usr.from="/join/<token>" on the /register and /verify-email entries (that is the same path the URL already holds; sessionStorage is not touched; no ScrollRestoration keyed on it). Browser history retains it like it retains the URL: acceptable. Server sends Referrer-Policy: no-referrer (internal/httpx/middleware.go:150) and index.html loads no external resource.
+  AC3/4 join flows: PASS. Signed out -> Create account (state.from) -> register -> verify-email (state sent+from) -> code -> Continue -> back on /join/<token> -> Join this class -> "You joined ...". Sign-in round trip also returns to /join/<token>. Login<->Register links carry state.from both ways. Terms gate: Navigate to /accept-terms with from (join.test.tsx:137; AcceptTerms returns via safePath). Unknown, 2000-char, "%00%20" and "expired/revoked-like" tokens all render the identical "Invite not valid / This invite is not valid. / Ask your teacher for a new link." (vi identical across them too); the API contract answers 404 for malformed/unknown/expired/revoked, and a dead link at accept time shows the same text (join.test.tsx:106). Network error/5xx/429 shows a retry instead, which is fine.
+  Open redirect: Login/Register/VerifyEmail/AcceptTerms read state.from only through safePath (one leading slash, no // or /\), auth.test.tsx already covers //evil, /\evil, https://evil. Existing Login/Register/VerifyEmail tests are green; without state.from behaviour is unchanged (/account).
+  Roles/errors/a11y: roles shown as text (Admin/Student, Quan tri vien), invite state as text Badge, last_admin has a clear message for leave and for role change/remove (tests 240 and 291), sections use aria-labelledby, role changes use named aria-labels per member, Tab from the invite input lands on Copy link. en/vi parity check green.
+  NON-BLOCKING observations (for the leader to decide; none violates an AC):
+  1. Google-only student (AC5 question): NOT told what to do. On Login and Register reached from /join/ the Google button is hidden (confirmed in browser, VITE_GOOGLE_SIGNIN=true) and nothing explains why; join page says only "Create an account or sign in to join." A student with only Google has to guess to sign in with Google from /login and then reopen the invite. Suggest a one-line hint in en and vi on the join page (or on Login/Register when from is /join/): "Use Google? Sign in with Google from the home page, then open this link again." Worth a small follow-up task or a rework note; I did not fail it because the AC does not require Google on this path and the dev choice is correct for the token.
+  2. Role-change errors on the roster are shown above the whole list, not next to the member's row (screen-reader users hear it via role=alert, sighted users may miss which row). Minor.
+  3. An admin's own roster row offers "Remove" and "Make student" (server enforces last-admin); fine, just noting.
+  NOT checked: real API/DB (Docker down; join, accept, rate limits and server-side 404 uniformity were taken from the OpenAPI contract and dev's/CI results, not exercised); real Google OIDC; real screen reader (only role/label/focus-order inspection); e2e is T-131.
+- 2026-10-26 10:02Z · leader · merged d0b3e25. Review: token only in the path, POST bodies and in-memory router state (QA browser pass at 375 px, en+vi); no storage/console use outside test assertions; student view makes only get-me and class/get; safePath on state.from; full CI run 40301323364 green on head e2a02ba. For owner to check: sign up through an invite link on a real device; Google-only students are not told what to do yet (T-134 adds the hint).
 
 ### T-129 — [E07] Web: assemble the class book (order, class pages)
 - **Status:** BACKLOG
