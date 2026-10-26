@@ -18,9 +18,9 @@
 
 **Awaiting your review (MERGED):** nothing
 
-**Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-055 (What should the team build after E11 signatures: go-live (M2) or the class yearbook (M3)?)
+**Open questions for you:** none
 
-_Board last written 2026-10-26 02:26Z_
+_Board last written 2026-10-26 02:43Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -393,14 +393,14 @@ Third database conversion of E10. Three migrations rename note_collections, note
 Small CI-file change (go-integration timeout-minutes 15 -> 40) plus 'make test-integration' now passes -timeout 30m, and the internal/media integration tests run in parallel: 189-198 s -> 44-48 s locally (-76%); on GitHub CI the media package drops from 277-343 s to 150-222 s and the job from 6.5-7.5 to 5.5 min. QA: same 44 tests before and after, only a fixture size changed (2000 px, still above the 1800 px print edge), 7 mutations still fail, parallel runs repeated with -race/-count=5/GOMAXPROCS=2 without flakes. Caveats found by QA: one unrelated ratelimit timing test failed once on CI under the new load and passed on re-run, and the media test binary peaks at 1.9 GB (was 0.7 GB). Both are handled by follow-up T-079 (deterministic timing, cap parallelism). To approve: team approve T-077.
 
 ### Q-030 — Approve merge of T-071 (auth/user API v2, PR #58)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-15 14:42Z
 - **Blocks:** T-071
 - **Recommendation:** approve
 - **Answer:** approved by owner via team approve T-071
 
 ### Q-031 — Approve merge of T-081 (username API + user_tab migration, PR #62)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-16 03:30Z
 - **Blocks:** T-081
 - **Recommendation:** approve
@@ -414,7 +414,7 @@ Small CI-file change (go-integration timeout-minutes 15 -> 40) plus 'make test-i
 - **Answer:** _(pending)_
 
 ### Q-033 — Which email provider sends the sign-up and reset codes in production, and which domain do we send from?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-17 00:46Z
 - **Blocks:** T-021
 - **Recommendation:** A: Amazon SES, sending from a subdomain such as mail.<your-domain>
@@ -423,7 +423,7 @@ Small CI-file change (go-integration timeout-minutes 15 -> 40) plus 'make test-i
 Context: the API can only log codes today (LogMailer); production needs a real mailer (T-021), and the API will not start in prod without one (found by T-022). Options: A) Amazon SES - same AWS account (D-08), about 0.10 USD per 1000 emails, DKIM/SPF/DMARC through Route 53 or any DNS, bounces/complaints via SNS; new accounts start in the 'sandbox' and need a one-time request to send to unverified addresses (about a day). B) Resend - simplest API and best developer experience, free up to 3000 emails/month then 20 USD/month, no AWS dependency, DNS records needed. C) Postmark - strongest transactional deliverability, about 15 USD/month for 10000 emails, DNS records needed. Needed from you whichever you pick: the domain you will send from (do you own one yet? which?) and who can edit its DNS. Recommendation: A, because it adds no new vendor or bill, uses the same IAM role as the rest of the app, and the volume (6-digit codes) is tiny. Blocked meanwhile: T-021 (and with it the first real deploy T-023 and T-050).
 
 ### Q-034 — Which licence for the public repository (it has none today)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-17 00:46Z
 - **Blocks:** —
 - **Recommendation:** A: keep it unlicensed (all rights reserved) for now
@@ -446,7 +446,7 @@ Context: github.com/danyaa666/smemories is public (D-09) but has no LICENSE file
 - **Answer:** _(pending)_
 
 ### Q-037 — Which domain will SMemories send email from and be served on, and who can edit its DNS?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-17 12:52Z
 - **Blocks:** T-021,T-023
 - **Recommendation:** Use a domain you already own (or buy one) and a subdomain mail.<domain> for email
@@ -604,7 +604,7 @@ QA_PASS and leader review OK on d0c5ed8, CI green. Photo upload now needs a veri
 QA_PASS and leader review OK on 70efad7, CI green. Photos are streamed instead of loaded whole: QA measured +5 MiB memory under 64 slow readers versus about +1 GB on today's develop; responses are byte-identical; a user or address can have at most 64 downloads at once (galleries of 100 thumbnails load over HTTP/2). Reply 'team approve T-107'.
 
 ### Q-055 — What should the team build after E11 signatures: go-live (M2) or the class yearbook (M3)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-22 19:51Z
 - **Blocks:** T-023, T-026
 - **Recommendation:** A: go-live. It needs from you: domain name, AWS account and region (Singapore recommended), and the lean (about 95 USD/month) vs growth (about 160) choice from docs/cost-estimate.md. Meanwhile the team does what needs no account: T-050 prep notes, T-029, and a health sweep.
