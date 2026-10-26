@@ -1,6 +1,6 @@
 # E07_T-134 — Web: edit and delete a class, link an existing yearbook as the page
 
-**Epic:** E07-class-yearbook · **Design:** [DESIGN.md](DESIGN.md) · **Milestone:** M3 · **Risk:** low · **Priority:** P3 · **Type:** feature
+**Epic:** E07-class-yearbook · **Design:** [DESIGN.md](DESIGN.md) · **Milestone:** M3 · **Risk:** low · **Priority:** P2 · **Type:** feature
 **Depends on:** T-128 (merged). **Read first:** DESIGN.md, docs/class-permissions.md (class/update, class/delete, class-member/set-book), the T-128 screens in `web/src/` (class pages, join flow), QA's and dev's T-128 comments on the board.
 
 #### Why
@@ -10,6 +10,7 @@ T-128 shipped the join flow and the student's page but left three gaps (none wer
 3. Google sign-in is hidden on Login/Register when the visitor comes from `/join/`, because `return_to` would put the join path (the token) in a query string. A student who only has Google must sign in first, then open the link again.
 
 #### Requirements (SHALL)
+0. **Print link (admin):** `/classes/:id` and `/classes/:id/assemble` get a visible "Print the class book" link to `/classes/:id/book` (T-130 built the route, nothing links to it yet). T-131's journey uses it.
 1. **Edit class (admin):** name, school, year, language form on `/classes/:id`, saved with `class/update`; errors shown inline.
 2. **Delete class (admin):** a confirm step that names the class and says what happens (members lose access; nobody's yearbook is deleted); calls `class/delete`; returns to `/classes`.
 3. **Page picker (any member):** on `/classes/:id` a student can choose one of their own yearbooks (list from the existing yearbook list endpoint) or create a new one, and can unlink (`set-book` with `null`). A yearbook already linked to another class shows as unavailable with a short reason (409 handled, not hidden).

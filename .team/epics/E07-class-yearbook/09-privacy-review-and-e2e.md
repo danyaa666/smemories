@@ -1,7 +1,7 @@
 # E07_T-131 — Privacy review, legal texts and the class journey (e2e)
 
 **Epic:** E07-class-yearbook · **Design:** [DESIGN.md](DESIGN.md) · **Milestone:** M3 · **Risk:** high · **Priority:** P2 · **Type:** docs+test
-**Depends on:** T-129, T-130. **Read first:** DESIGN.md, docs/class-permissions.md, docs/legal/*.md (D-35, versioned acceptance), tools/e2e (the M1 journey), docs/security-audit-2026-10-20.md.
+**Depends on:** T-129, T-130, T-134 (the link to the print route). **Read first:** DESIGN.md, docs/class-permissions.md, docs/legal/*.md (D-35, versioned acceptance), tools/e2e (the M1 journey), docs/security-audit-2026-10-20.md.
 
 #### Requirements (SHALL)
 1. **Privacy review document** `docs/class-privacy-review.md`: what personal data a class adds (roster, roles, invite metadata, students' profiles and approved notes and photos shown to the admin), who sees it (the matrix), retention (leave, remove, class delete, yearbook delete), the admin-leaves case, and the abuse cases (leaked invite, admin removed). List every endpoint that exposes class data and the test that proves its role check. End with an **owner sign-off block** left unchecked.
