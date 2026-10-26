@@ -11,16 +11,16 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 11 | T-023, T-024, T-025, T-027, T-031, T-050, T-127, T-128, T-129, T-130, T-131 |
-| READY_FOR_QA | 1 | T-126 |
+| QA_PASS | 1 | T-126 |
 | MERGED | 1 | T-125 |
 | DONE | 111 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-132 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
 **Awaiting your review (MERGED):** T-125 ([E07] Class invites: create, revoke, lookup, accept)
 
-**Open questions for you:** none
+**Open questions for you:** Q-058 (Approve merge of T-126 (student page link, PR #124)?)
 
-_Board last written 2026-10-26 08:33Z_
+_Board last written 2026-10-26 08:38Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -628,6 +628,13 @@ Recommendation: A, with C as the fallback if the inputs take more than a few day
 - **Status:** RESOLVED
 - **Asked:** 2026-10-26 07:29Z
 - **Blocks:** T-125
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+### Q-058 — Approve merge of T-126 (student page link, PR #124)?
+- **Status:** OPEN
+- **Asked:** 2026-10-26 08:38Z
+- **Blocks:** T-126
 - **Recommendation:** approve
 - **Answer:** _(pending)_
 
@@ -5672,7 +5679,7 @@ Spec: .team/epics/E07-class-yearbook/03-class-invites.md (read it from the main 
 - 2026-10-26 07:57Z · leader · merged a968301 (owner-approved). Review: 256-bit token, hash only, POST body, one 404 path for dead tokens, caps under class row lock, idempotent verified-only accept; full CI run 40284520659 green on head 1d9074b. For owner to check: docs/class-permissions.md invite section; newman not run (Docker down); per-IP budgets raised in T-126.
 
 ### T-126 — [E07] A student's page: link a personal yearbook to the class
-- **Status:** READY_FOR_QA
+- **Status:** QA_PASS
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
@@ -5680,11 +5687,11 @@ Spec: .team/epics/E07-class-yearbook/03-class-invites.md (read it from the main 
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** leader
 - **Branch:** task/t-126-e07-a-student-s-page-link-a-personal-yea
 - **PR:** 124
-- **Updated:** 2026-10-26 08:32Z by dev
-- **Comments-seen:** 3
+- **Updated:** 2026-10-26 08:38Z by qa
+- **Comments-seen:** 5
 
 Spec: .team/epics/E07-class-yearbook/04-student-page-link.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.
 
@@ -5692,6 +5699,20 @@ Spec: .team/epics/E07-class-yearbook/04-student-page-link.md (read it from the m
 - 2026-10-26 07:57Z · leader · T-125 merged (a968301); spec carries the per-IP budget follow-up
 - 2026-10-26 08:32Z · dev · PR #124, head f88609f. Docker daemon is down here (not started, per rule), so integration ran as a manual full CI: workflow_dispatch run 40291645124 on f88609f = web, go, go-integration (make test-integration, -race, ./... all packages), e2e, security, image all success; PR-event jobs go/web/security/image also pass. First manual run 40290343030 (91a4fdd) failed only on my new IDOR test (two wrong expectations in the test, fixed: revoke-photo-links takes {id}; media/delete is by design a silent 200 no-op for a foreign photo, snapshot proves nothing deleted). Not run: newman (no local stack); Postman Student page flow + edge cases added, QA please run it. What: class-member/set-book (own membership, owner_id check FOR UPDATE, 409 ERROR_CONFLICT for a 2nd class, null unlinks, absent key 400, lock order yearbook>class>member like clearBook); class/get page{linked,yearbook_id,profile_complete,approved_notes}; roster adds profile_complete+approved_notes (exact keys tested); T-125 carry-over: per-IP lookups 600/10min, accepts 300/h, test of 60 students from one IP, client-IP/TRUST_PROXY note in docs/class-permissions.md. DECISION NEEDED (spec silent): profile_complete = owner profile has non-empty name AND a photo; approved_notes = notes with status approved. Tests: page_integration_test.go (TestSetBookMatrix, TestOneYearbookOneClass, TestSameYearbookInTwoClassesAtOnce, link-vs-delete race, TestRosterHasCountsAndFlagsOnly, TestAdminStillHasNoRightsOverAStudentsBook over 19 endpoints, TestSixtyStudentsJoinFromOneAddress). Verify: roster keys, admin 404s, media/delete no-op noted in docs.
 - 2026-10-26 08:33Z · leader · Leader: profile_complete (owner profile has a non-empty name and a photo) and approved_notes (notes with status approved) accepted as defined; the admin sees these two flags only. QA: see dev's note; run the Student page flow folder only if Docker is up, check the exact roster keys and the admin 404s on a linked student's yearbook, notes and media endpoints.
+- 2026-10-26 08:38Z · qa · QA_PASS on PR #124 head f88609f1d26ad8c480b48276be38def58dd7dd7e (worktree == PR head, mergeable, no .team/ files, no migration: uq_class_member_tab_yearbook already exists from T-125).
+  CI: manual full run 40291645124 headSha == f88609f, go/web/go-integration(-race, all pkgs)/e2e/security/image all success; PR-event run 40291648975 go/web/security/image pass (integration+e2e skipped per D-37).
+  Run by me locally (no Docker): go build ./..., go vet ./... and go vet -tags integration ./... OK; go test -race ./... all ok; golangci-lint run ./... 0 issues; web: npm ci, gen:api produces no diff vs committed schema.d.ts, check:api ok, tsc typecheck ok.
+  NOT run: integration tests, newman (Docker down; the local brew mysqld is broken, missing abseil dylib). Integration evidence is CI run 40291645124 only. Postman 'Student page flow' (29 steps) + edge cases exist, JSON valid, not executed twice by me.
+  Evidence by AC (code read + CI-run tests):
+  - AC1: setBook (page.go) locks yearbook 'public_id=? AND owner_id=<caller> FOR UPDATE', then lockMembership(caller) - the caller is always the member, body has no member field (DecodeJSON refuses unknown fields -> 400, tested). Foreign/missing yearbook = same 404 (sameAnswer asserted), non-member/other class/foreign yearbook = class 404 first (Authorize before throttle, so no budget burn), admin links student's book = 404, member removed then link/unlink = 404, absent key/wrong type/lowercase/empty = 400. TestSetBookMatrix, TestSetBookAfterLeavingAndKeepsTheBook.
+  - AC2: second class 409 ERROR_CONFLICT (under yearbook lock, unique key backstop); unlink then relink in other class OK; TestSameYearbookInTwoClassesAtOnce 8 rounds = exactly one 200 + one 409; delete clears link via ChildPurger in same tx (yearbook.remove: lockBook, deleteProfiles, DeleteByYearbook/clearBook, deleteBook); link-vs-delete 12 rounds, zero dangling + AssertNoOrphans; remove/leave keep the book.
+  - Lock order yearbook > class > member: checked every path. class/create (user_tab then NEW class), accept (class, invite, member), update-role/remove/leave (class, member(s), keepAnAdmin admin rows, remove also user_tab) never take a yearbook row; yearbook delete takes yearbook then member row only (no class lock). No cycle found.
+  - AC3: roster row keys asserted exactly: id,name,role,joined_at,page_linked,profile_complete,approved_notes; body scanned for SECRET text, ids, pending/hidden; foreign-owned link counts as unlinked (join on owner_id); flags use 2 grouped queries per page. class/get-list carries no page object. Leader-accepted definitions implemented as stated.
+  - AC4: TestAdminStillHasNoRightsOverAStudentsBook: 18 admin calls get 404 ERROR_NOT_FOUND with no leak + DB snapshot unchanged; media/delete answers 200 no-op for a foreign photo (existing media.Service behaviour, same as for a missing id, nothing deleted, documented in docs/class-permissions.md). Route list vs openapi: all yearbook/note/media/note-collection/book-data/book-export routes covered EXCEPT media/create (multipart with yearbook_id). Code evidence: media store line ~65 uses owner_id=caller -> 404, so no hole, but it is the one route the endpoint-by-endpoint test does not list.
+  - Carry-over: invite.go lookupAllPerWindow=600/10min, acceptPerIPWindow=300/h, miss limiter 20 and per-user budget unchanged; TestSixtyStudentsJoinFromOneAddress (60 users, 2 lookups + 2 accepts each, one RemoteAddr) passed in CI. docs/class-permissions.md client-IP section matches httpx.ResolveClientIP (RemoteAddr host; last X-Forwarded-For hop only with SMEM_TRUST_PROXY=true; IPv6 /64) and flags the T-023 requirement.
+  - openapi set-book + ClassPageStatusResponse present; schema.d.ts regenerates identically.
+  Non-blocking: (1) add media/create to the admin-404 list as a follow-up (multipart); (2) spec req 5 says 404 for every media/* endpoint, media/delete is a 200 no-op by existing design, documented, leader already aware; (3) profile_complete only checks photo_media_id IS NOT NULL, not that the media row still exists; (4) shared 20 misses/10min per school IP is unchanged by spec, a class mistyping links could trip it. QA added no test files.
+- 2026-10-26 08:38Z · leader · Leader review OK on head f88609f (unchanged since QA): link is a pointer only, set/clear by the owner with owner_id check under the yearbook row lock (yearbook, class, member order, no cycle seen), second class 409, delete clears the link, 404 for foreign or missing yearbook, per-IP budgets raised with a 60-users-one-IP test, no migration, no .team changes; full CI run 40291645124 green on this head. Non-blocking, moved to T-027: media/create missing from the admin-404 endpoint test (add a route-list guard), dangling photo id tolerance. Awaiting owner: team approve T-126. Not run locally: integration tests and newman (Docker down).
 
 ### T-127 — [E07] Class pages and book order (API)
 - **Status:** BACKLOG

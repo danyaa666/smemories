@@ -10,6 +10,10 @@
 4. Bounds: members at most 60, notes per member 40, total response measured and documented (target under 4 MiB); reuse the page budget (about 120 pages) in the docs.
 5. openapi, `schema.d.ts`, Postman, docs/book-export.md section "Class book".
 
+#### Carried over from T-126 QA (2026-10-26, required here)
+- The admin-404 endpoint test (internal/class/page_integration_test.go) must cover **every** route in `api/openapi.yaml` that takes a yearbook, note or media id, including `media/create`, which T-126 left out. T-027 adds the one read path an admin has into a member's yearbook (profile photo and approved-note photos), so extend the test with that path as the only allowed exception and add a guard (a test that lists the routes from the OpenAPI file and fails when a new route is missing from the matrix).
+- `profile_complete` checks that `photo_media_id` is set, not that the media row exists. Make the class book tolerate a dangling photo id (renders without the photo, never errors) and cover it with a test.
+
 #### Acceptance criteria
 - [ ] AC1 — Matrix: a student, a non-member and an admin of another class get 403 or 404 on `class-book/get` and on every photo id in it.
 - [ ] AC2 — Negative media tests: pending-note photo, hidden-note photo, an unlinked yearbook's photo, a removed member's photo, a photo of a book linked to another class: all 404 for the admin.
