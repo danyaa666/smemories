@@ -14,13 +14,18 @@
 4. Revoking an invite does not remove members who already joined. Removing a member does not revoke the invite.
 5. openapi, `schema.d.ts`, Postman (extend `class.postman_collection.json`), docs.
 
+#### Carried over from T-026 QA (2026-10-26, non-blocking there, required here)
+- **Admin-classes cap:** the 10-classes-as-admin cap is checked only in `class/create`. `class-member/update-role` (and the invite accept, if it ever grants admin) must enforce it too: a user who is admin of 10 classes cannot be promoted in an 11th (409, same code as create), checked under the member/class lock.
+- **Caps need an enforcement point:** the 60-member and 5-active-invite caps are enforced here, under the class row lock, with a matrix cell each.
+- **Matrix cell:** add a real cross-class `member_id` cell to the permission matrix (an admin of class A names a member id of class B on update-role and remove: 404, nothing changes).
+
 #### Acceptance criteria
 - [ ] AC1 — Create, list, revoke, lookup and accept work for the matrix in docs/class-permissions.md; a student cannot create or list invites (403), a non-member gets 404.
 - [ ] AC2 — Expired and revoked tokens behave exactly like unknown ones on `lookup` and `accept` (same status and body).
 - [ ] AC3 — 6th active invite refused; 61st member refused; accept is idempotent and never changes an admin's role.
 - [ ] AC4 — A concurrency test: 10 simultaneous accepts of one token on a class with 59 members produce exactly one new member.
 - [ ] AC5 — The token appears in no log line, error, metric label or stored column (grep a full integration run's logs).
-- [ ] AC6 — `go test -race -tags integration`, lint, newman green; CI green.
+- [ ] AC6 — The three carried-over items above are covered by tests. `go test -race -tags integration`, lint, newman green; CI green.
 
 #### Test plan
 QA tries token guessing and timing differences, replays an old token after revoke, accepts as an unverified user, accepts twice, and greps logs for the token.
