@@ -28,3 +28,6 @@ The deploy pipeline must run `scripts/check-no-dev-shortcuts.sh` (T-050) before 
 
 #### Leader note from decision D-23 (2026-10-08)
 Provision ElastiCache (Valkey or Redis OSS, decide by price) in the private subnets: encryption in transit and at rest, an auth token in Secrets Manager, Multi-AZ with automatic failover once there is real traffic, `maxmemory-policy noeviction`, a parameter group in code. **Bring the monthly cost estimate (node size, one versus two nodes) to the owner before provisioning** (E06 PRD: cost agreed first). A single small node is acceptable for the first users; losing it only logs everybody out.
+
+#### Leader note from T-125 (2026-10-26): invite links are secrets in the path
+The class invite link is `/join/<token>`; the token is a bearer secret. The CDN, load balancer and web-server access logs must not record the path of `/join/*` (log it as `/join/[redacted]` or drop the path), and no analytics or error-reporting tool may capture it. `docs/class-permissions.md` states the rule; `tools/e2e/scrub-trace.sh` already scrubs it from traces. Add a check to the deploy verification (a request to `/join/TESTTOKEN` must not appear verbatim in any log group after the smoke test).
