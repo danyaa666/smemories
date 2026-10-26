@@ -11,6 +11,7 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 13 | T-023, T-024, T-025, T-027, T-031, T-050, T-125, T-126, T-127, T-128, T-129, T-130, T-131 |
+| TODO | 1 | T-132 |
 | IN_PROGRESS | 1 | T-026 |
 | DONE | 109 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
@@ -19,7 +20,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-055 (What should the team build after E11 signatures: go-live (M2) or the class yearbook (M3)?)
 
-_Board last written 2026-10-26 02:18Z_
+_Board last written 2026-10-26 02:26Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -660,6 +661,7 @@ Owner decisions (2026-10-06, `/team-init` interview). "Rejected" lists the optio
 | D-34 | **Dependabot alerts and security updates stay off.** | Owner answer 2026-10-21 to Q-043 (audit finding L6; the leader had recommended turning them on). The weekly version PRs from `dependabot.yml`, `govulncheck` (fails the build) and `npm audit` (warns) remain. | Turn both on | A dependency advisory is missed between weekly PRs |
 | D-35 | **Terms of Use and Privacy Policy (EN and VI), accepted with a required checkbox at sign-up, stored by version, re-accepted when the text changes; a notice on the public friend form.** | Owner request and answers 2026-10-21 (leader recommendations taken: leader drafts the texts, checkbox + version; extras chosen: Privacy Policy page and the friend-form notice that the owner may share photos by link, which closes the D-32 open item; no separate 18+ checkbox, the terms state 18+). Drafts in `docs/legal/` are not legal advice: the owner or a lawyer reviews them and fills every [bracketed] item before go-live. Epic E13 (T-111 API, T-112 web). | Link-only consent; owner-written text first | The texts are reviewed, or a regulator or partner asks for more |
 | D-36 | **Class yearbook (E07) is built before go-live; this replaces the D-11 order for now.** Rules for E07: 18+ only (D-01 stands); a student needs an account (invite link, then email code or Google); inside a class only the page owner and the admin see a student's notes and photos; students never see each other's notes. | Owner answered Q-055 on 2026-10-26 ("class yearbook only", then the three scope questions). The team had nothing else to build and the go-live inputs (domain, AWS account, cost tier) were not ready. | Both in parallel; go-live only; minors in a class (needs consent work); no-account students (a shared link would be the credential); whole-class visibility | Go-live inputs arrive (the team switches back to E06 after E07's first slice); a school pilot with minors is planned (new epic); a leaked-invite incident |
+| D-37 | **CI no longer runs `go-integration` and `e2e` (journey and print-check) on pushes and pull requests; they run by hand (`workflow_dispatch`).** QA runs the same checks locally and puts the result on the board. | Owner request 2026-10-26: a full CI run takes 8-10 min (integration 8.4-10, e2e 6.2). Done by T-132 with job-level `if:` so the required check `go-integration` reports skipped, not missing. `go`, `web`, `security` and `image` keep running. | Run only the race detector on unit packages; shard integration and print-check (about 4-5 min) | Permission-matrix, migration, concurrency and print regressions reach `develop` unseen unless QA ran the local commands; undo = delete the two `if:` lines |
 
 Leader decisions (low-risk, inside the approved stack):
 
@@ -5737,6 +5739,25 @@ Spec: .team/epics/E07-class-yearbook/08-web-class-book-print.md (read it from th
 - **Comments-seen:** 0
 
 Spec: .team/epics/E07-class-yearbook/09-privacy-review-and-e2e.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.
+
+#### Comments
+
+### T-132 — [E06] CI: pause the go-integration and e2e jobs (owner decision D-37)
+- **Status:** TODO
+- **Priority:** P1
+- **Type:** ci
+- **Milestone:** M2
+- **Depends-on:** —
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-26 02:26Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E06-go-live/15-ci-pause-integration-and-e2e.md. Owner decision D-37 (2026-10-26): CI takes 8-10 min; the go-integration and e2e jobs (the latter includes print-check) stop running on pushes and pull requests, but stay in the file and can be run by hand.
 
 #### Comments
 

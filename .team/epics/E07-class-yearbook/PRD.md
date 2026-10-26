@@ -43,6 +43,8 @@ flowchart LR
 ## Exit criteria ("stable" for this epic)
 - A class of at least 30 students produces one exported book from a staging environment; the permission matrix is tested; the privacy review is signed off by the owner.
 
+> **CI note (D-37, 2026-10-26):** CI no longer runs `go-integration` and `e2e` (journey, print-check). Every acceptance criterion in this epic that says "CI green" for integration, e2e or print-check means "QA ran it locally on the PR head and put the result on the board" (CLAUDE.md "CI scope"). The permission-matrix test (T-026) and the class journey (T-131) are the checks that matter most; QA must run them and quote the output.
+
 ## Task index
 Design first: [DESIGN.md](DESIGN.md). Specs live next to this file; **status lives only on the board** (`L list`), never here, so it cannot drift.
 | Task | Spec file | Depends on |
