@@ -1,6 +1,6 @@
 # E07 — Class yearbook
 
-**Status:** planned   **Milestone(s):** M3   **Owner decisions:** D-01, D-03, Q-002 / D-11 (README §4)
+**Status:** active (design)   **Milestone(s):** M3, pulled ahead of go-live   **Owner decisions:** D-01, D-03, D-11, D-36, Q-002, Q-055 (README §4)
 
 ## Problem and users
 The headline use case: a class makes one yearbook together. A teacher or class monitor (admin) creates the class space, invites students, and each
@@ -18,7 +18,7 @@ student fills in their own page; the admin assembles and exports one book. Today
 ## Scope and requirements
 - Functional: classes, memberships and roles (admin, student); invites; many profiles per book; class pages and templates; assembly and export.
 - Non-functional: a full privacy review before any build (many students' personal data, photos); roles enforced on every endpoint; export budget scales to 120 pages.
-- Constraints: builds on E03, E04, E05; starts only after E06 (go-live first, D-11).
+- Constraints: builds on E03, E04, E05. D-36 (2026-10-26) moved this epic ahead of go-live (E06); the go-live inputs are still the owner's.
 
 ## Flow and data
 ```mermaid
@@ -30,10 +30,15 @@ flowchart LR
     B --> X[Export PDF]
 ```
 
+## Decisions taken (D-36, owner, 2026-10-26)
+- **Audience 18+ only.** No minors, no parental consent, no teacher-gated accounts. A school pilot with minors is a separate later epic.
+- **A student needs an account.** The invite link leads to sign-up (email code or Google); the account owns the student's page.
+- **Visibility:** the page owner and the class admin see a student's notes and photos. Students never see each other's notes or private photos. The permission matrix (written in the T-126 spec) is tested on every endpoint.
+
 ## Risks and open questions
-- Can a student be a profile without an account? (owner question when this epic starts)
-- Who may see whose photos and notes inside a class? Needs a written permission matrix.
-- Whether minors can take part, and the consent model if so (D-01 revisit trigger).
+- Privacy review: many students' personal data and photos in one book; the owner signs off before any production use (exit criteria).
+- An admin who leaves or is removed: who owns the class and the data? (decided in the T-126 spec: a class always has at least one admin; the last admin cannot leave.)
+- Invite abuse: links must expire, be revocable and be capped (T-126 spec).
 
 ## Exit criteria ("stable" for this epic)
 - A class of at least 30 students produces one exported book from a staging environment; the permission matrix is tested; the privacy review is signed off by the owner.

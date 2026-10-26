@@ -18,7 +18,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-055 (What should the team build after E11 signatures: go-live (M2) or the class yearbook (M3)?)
 
-_Board last written 2026-10-26 02:06Z_
+_Board last written 2026-10-26 02:13Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -606,7 +606,7 @@ QA_PASS and leader review OK on 70efad7, CI green. Photos are streamed instead o
 - **Asked:** 2026-10-22 19:51Z
 - **Blocks:** T-023, T-026
 - **Recommendation:** A: go-live. It needs from you: domain name, AWS account and region (Singapore recommended), and the lean (about 95 USD/month) vs growth (about 160) choice from docs/cost-estimate.md. Meanwhile the team does what needs no account: T-050 prep notes, T-029, and a health sweep.
-- **Answer:** _(pending)_
+- **Answer:** Owner 2026-10-26: class yearbook only (E07). Audience 18+ only; a student needs an account; inside a class only the page owner and the admin see a student's notes and photos.
 
 Context: E12 hardening is done; E11 signatures finish with T-097 (in progress). The ready pipeline is 3 (min 4).
 Options:
@@ -658,6 +658,7 @@ Owner decisions (2026-10-06, `/team-init` interview). "Rejected" lists the optio
 | D-33 | **Promotion to `main` is enforced, in two steps: `enforce_admins` on `main` now; a separate agent account and an owner-only ruleset before go-live.** | Owner answer 2026-10-21 to Q-042 (audit finding M4, leader recommendation). Step 1 stops checks being skipped and direct pushes to `main`; an agent with the owner's admin login could still merge a PR to `main`, so step 2 (agents on a write-only account, ruleset bypass = owner, 1 review) is a prerequisite of the first deploy. `develop` keeps admin pushes because the board commits go there. | Leave as is | An agent pushes or merges to `main` despite the rule |
 | D-34 | **Dependabot alerts and security updates stay off.** | Owner answer 2026-10-21 to Q-043 (audit finding L6; the leader had recommended turning them on). The weekly version PRs from `dependabot.yml`, `govulncheck` (fails the build) and `npm audit` (warns) remain. | Turn both on | A dependency advisory is missed between weekly PRs |
 | D-35 | **Terms of Use and Privacy Policy (EN and VI), accepted with a required checkbox at sign-up, stored by version, re-accepted when the text changes; a notice on the public friend form.** | Owner request and answers 2026-10-21 (leader recommendations taken: leader drafts the texts, checkbox + version; extras chosen: Privacy Policy page and the friend-form notice that the owner may share photos by link, which closes the D-32 open item; no separate 18+ checkbox, the terms state 18+). Drafts in `docs/legal/` are not legal advice: the owner or a lawyer reviews them and fills every [bracketed] item before go-live. Epic E13 (T-111 API, T-112 web). | Link-only consent; owner-written text first | The texts are reviewed, or a regulator or partner asks for more |
+| D-36 | **Class yearbook (E07) is built before go-live; this replaces the D-11 order for now.** Rules for E07: 18+ only (D-01 stands); a student needs an account (invite link, then email code or Google); inside a class only the page owner and the admin see a student's notes and photos; students never see each other's notes. | Owner answered Q-055 on 2026-10-26 ("class yearbook only", then the three scope questions). The team had nothing else to build and the go-live inputs (domain, AWS account, cost tier) were not ready. | Both in parallel; go-live only; minors in a class (needs consent work); no-account students (a shared link would be the credential); whole-class visibility | Go-live inputs arrive (the team switches back to E06 after E07's first slice); a school pilot with minors is planned (new epic); a leaked-invite incident |
 
 Leader decisions (low-risk, inside the approved stack):
 
@@ -1844,7 +1845,7 @@ Small follow-ups found in the T-001 review and QA.
 - **Branch:** task/t-029-e01-replace-the-frozen-minio-dev-image-w
 - **PR:** https://github.com/danyaa666/smemories/pull/119
 - **Updated:** 2026-10-26 02:06Z by human
-- **Comments-seen:** 8
+- **Comments-seen:** 9
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E01-foundation/07-replace-the-frozen-minio-dev-image-with-a.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -5590,7 +5591,7 @@ Spec: .team/epics/E12-security-hardening/14-flaky-slow-upload-test.md (read it f
 - **Branch:** task/t-124-e12-download-cap-integration-tests-fail-
 - **PR:** https://github.com/danyaa666/smemories/pull/120
 - **Updated:** 2026-10-26 02:06Z by human
-- **Comments-seen:** 7
+- **Comments-seen:** 8
 
 Spec: .team/epics/E12-security-hardening/15-download-cap-tests-under-load.md (read it from the main checkout).
 
