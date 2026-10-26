@@ -10,18 +10,18 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 9 | T-023, T-024, T-025, T-031, T-050, T-127, T-129, T-130, T-131 |
-| TODO | 1 | T-128 |
-| READY_FOR_QA | 1 | T-027 |
+| BACKLOG | 10 | T-023, T-024, T-025, T-031, T-050, T-127, T-129, T-130, T-131, T-133 |
+| IN_PROGRESS | 1 | T-128 |
+| QA_PASS | 1 | T-027 |
 | MERGED | 2 | T-125, T-126 |
 | DONE | 111 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-132 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
 **Awaiting your review (MERGED):** T-125 ([E07] Class invites: create, revoke, lookup, accept); T-126 ([E07] A student's page: link a personal yearbook to the class)
 
-**Open questions for you:** none
+**Open questions for you:** Q-059 (Approve merge of T-027 (class book API and the admin's read-only photo access, PR #125)?)
 
-_Board last written 2026-10-26 09:31Z_
+_Board last written 2026-10-26 09:38Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -636,6 +636,13 @@ Recommendation: A, with C as the fallback if the inputs take more than a few day
 - **Status:** RESOLVED
 - **Asked:** 2026-10-26 08:38Z
 - **Blocks:** T-126
+- **Recommendation:** approve
+- **Answer:** _(pending)_
+
+### Q-059 — Approve merge of T-027 (class book API and the admin's read-only photo access, PR #125)?
+- **Status:** OPEN
+- **Asked:** 2026-10-26 09:38Z
+- **Blocks:** T-027
 - **Recommendation:** approve
 - **Answer:** _(pending)_
 
@@ -1810,7 +1817,7 @@ Class space owned by an admin (teacher or monitor), invite links/emails for stud
 - 2026-10-26 07:13Z · human · accepted by owner
 
 ### T-027 — [E07] Class book data API and the admin's read-only media access
-- **Status:** READY_FOR_QA
+- **Status:** QA_PASS
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
@@ -1818,11 +1825,11 @@ Class space owned by an admin (teacher or monitor), invite links/emails for stud
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** leader
 - **Branch:** task/t-027-e07-class-book-data-api-and-the-admin-s-
 - **PR:** https://github.com/danyaa666/smemories/pull/125
-- **Updated:** 2026-10-26 09:30Z by dev
-- **Comments-seen:** 3
+- **Updated:** 2026-10-26 09:37Z by qa
+- **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E07-class-yearbook/02-class-book-assembly-many-profiles-per-book.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1834,6 +1841,25 @@ Book with many student profiles in a chosen order, class-level pages (intro, tea
 - 2026-10-26 08:59Z · leader · T-126 merged (1bc9845); spec carries QA follow-ups
 - 2026-10-26 09:30Z · dev · PR #125, head 195656b. Docker daemon was down (not started), so integration ran in the full CI by hand: gh run 40297998394 on head 2d1... (first commit; later commit only adds a unit test and docs) = go, web, security, image, e2e, go-integration ALL success (go-integration: internal/class ok 255s, internal/media ok 320s, internal/notes ok 318s, internal/db ok 201s, internal/yearbook ok 66s). PR checks on 195656b: go, web, security, image pass. Tests: internal/class/book_integration_test.go (matrix, approved-only, cap 40, dangling photo, media read path negatives, moderation at once, query count, 60x40, EXPLAIN, OpenAPI route guard), book_test.go (unit, runs locally). Full class book size 1.14 MiB (realistic 230-char notes); theoretical worst case with maximal notes is ~40 MiB, documented in docs/book-export.md (lever = per-member cap). To verify: media.Store.readable SQL (the only new read path), adminCalls now includes media/create and set-book. Newman not run (no stack); collection extended with Class book flow folder. Class pages arrays are [] until T-128.
 - 2026-10-26 09:30Z · dev · Correction: the by-hand integration CI run 40297998394 was on head c96c83c (the first commit); the second commit 195656b only adds a unit test and doc/openapi text.
+- 2026-10-26 09:37Z · qa · QA_PASS T-027, PR #125, head 195656b (branch == PR head; worktree clean after my mutations).
+  CI: PR checks on 195656b go/web/security/image pass (e2e, go-integration skipped by D-37). Manual full CI run 40297998394 is on c96c83c (headSha confirmed via gh): go, web, security, image, e2e, go-integration all success; log shows internal/class ok 255s, internal/media ok 320s, internal/notes ok 318s. `git diff c96c83c..195656b --stat` = api/openapi.yaml (one description line), docs/book-export.md, web/src/api/schema.d.ts (same comment line), internal/class/book_test.go (+24, unit test): no production Go, so no new manual run needed.
+  Could not run: DB integration tests locally (Docker daemon down, Homebrew mysqld is broken: missing abseil dylib), newman (not installed, no stack). DB behaviour of `readable` therefore rests on the CI run of c96c83c plus my line-by-line SQL review below.
+  Local, on head: go build, go vet, go vet -tags integration: clean; golangci-lint run ./...: 0 issues; go test -race ./...: all ok (class, media, notes, api included); TestClassBookSizeOfAFullClass 1.14 MiB; web `tsc --noEmit` ok; regenerating openapi-typescript from api/openapi.yaml gives a byte-identical src/api/schema.d.ts; no .team/ and no migrations in the diff (no schema change at all).
+  
+  Evidence per criterion
+  - readable SQL (internal/media/store.go): `m.public_id=? AND (y.owner_id=? OR EXISTS(cm JOIN adm ON adm.class_id=cm.class_id AND adm.user_id=caller AND adm.role='admin' WHERE cm.yearbook_id=y.id AND cm.user_id=y.owner_id AND (owner profile p.is_owner=1 AND p.yearbook_id=y.id AND p.photo_media_id=m.id OR approved-note photo: np.media_id=m.id AND n.yearbook_id=y.id AND n.status='approved')))`. Traced: pending/hidden note photo -> no match (status); cover, orphan photo -> no match; unlinked yearbook -> no cm row; removed/left member -> class_member_tab row is DELETEd (store.go 383/398), no status column, so no match; another class -> adm.class_id must equal cm.class_id; student/classmate/demoted admin -> role check at query time; photo of another yearbook referenced by a profile or note -> m joined to y AND the profile/note must belong to the same y, so no match; a photo also used by a non-approved note cannot exist (unique key on note_photo_tab.media_id, one note per media). Index use: public_id unique, cm.yearbook_id unique, note_photo media_id unique.
+  - Callers: grep shows `readable` has exactly one caller, media.Service.Content, which has exactly one caller, handler.content (media/get-content). Delete and every write still use `owned`; public link path unchanged. Owner path unchanged (y.owner_id=? branch).
+  - Same 404 for every refusal: ErrNotFound from scanMedia for no rows; same code path as a missing photo. Tests TestAdminMediaReadPath / TestClassBookMatrix assert it for 7 refusal kinds + other admin + stranger + classmate + demoted admin + anonymous 401.
+  - class-book/get: admin only (Authorize RoleAdmin): student 403, non-member/other-class admin/unknown class 404 identical body (sameAnswer), anonymous 401, bad id 400, POST 405/404. Content: approved only via the notes service's existing approvedNotes (not copied SQL), cap 40 with approved_total/truncated, order = member sort_order,id then the student's own note order; test checks pending/hidden text, motto, birthday, token, email absent; response has only public ULIDs (member_id, note id, media ids), no user id/email. Dangling or deleted profile photo id -> photo_media_id null, 200 (TestClassBookToleratesADanglingPhotoID).
+  - Guard test mutation (run by me, -tags integration, needs no DB): deleting `"media/delete"` from adminCalls -> FAIL "media/delete takes a yearbook, note or media id but is not in adminCalls"; removing /api/media/delete from openapi.yaml -> FAIL "adminCalls has media/delete, which is not a route taking an id". Restored with git checkout. Matrix now includes media/create and class-member/set-book.
+  - AC3/AC4/AC5: TestClassBookFollowsModeration, TestClassBookQueryCountIsPerMember, TestClassBookQueriesUseIndexes, TestClassBookFullClass, TestOwnersBookDataIsUnchanged all passed in the CI integration run. Postman: "Class book flow" folder exists (32 requests: happy path, pending photo 404, student 403, non-member 404, 401, 400, hide then 404, leave, delete class); newman not run by me.
+  
+  Non-blocking observations (nothing blocks the verdict)
+  1. Beyond the cap: a student's approved notes 41 and later are not returned by class-book/get, but their photos ARE readable by the admin (readable has no cap). Still approved content of a linked page, so no privacy breach; either document it or accept. No test covers it.
+  2. Cache: media/get-content keeps `private, max-age=3600` (spec says unchanged), so after a note is hidden the server answers 404 at once but the admin's browser may still show a cached copy for up to 1 h. Same as the owner today.
+  3. Size, maximal case: one note can hold 60+40+60+2000+5x500 = 4660 characters (up to 4 bytes each, emoji) plus a 3 KiB signature = about 22 KB, so 60 x 40 maximal notes is roughly 50 MiB (dev's 40 MiB is the 3-byte figure). Reachable only by about 60 colluding verified accounts in one class (a single student contributes at most about 0.9 MB), and the admin is the class creator, so a hostile user can build it for themselves. Cost: WriteJSON marshals the whole body then copies it (append), so peak is roughly 2-3x, i.e. 100-150 MB of server memory per request, and class-book/get has no rate limiter (reads are not limited). Recommendation (follow-up, not for this PR): put a per-user read limiter on class-book/get (a few calls per minute) and, if the 120-page budget is meant to be a hard rule, a cap on total bytes or lower per-member cap (notes.MaxClassBookNotes); realistic classes stay at about 1.2 MB so no change is needed for normal use.
+  4. Unverified-email owners: book-data/get refuses them (T-013 rule), class-book/get does not check the owner's verified flag by design (documented in ClassBookNotes). Unverified users cannot have approved notes today, so no effect.
+- 2026-10-26 09:38Z · leader · Leader review OK on head 195656b (unchanged since QA): read the whole readable SQL (admin of a class where the media's yearbook is the member's own linked page, and only the owner profile photo or a photo of an approved note of that yearbook; owned() still used by every write); one caller path; guard test mutation-checked; CI run 40297998394 green on the production code of this head (second commit tests/docs only). Non-blocking, moved to new task T-133: read limiter, 8 MiB response cap with truncated list, admin photo no-store. Accepted: admin can open photos of approved notes beyond the 40 cap (documented there). Awaiting owner: team approve T-027. Not run locally: integration tests and newman (Docker down).
 
 ### T-028 — [E01] T-001 follow-ups: log route not path, lint scope and findings, OpenAPI 404/405
 - **Status:** DONE
@@ -5740,7 +5766,7 @@ Spec: .team/epics/E07-class-yearbook/05-class-pages-and-order.md (read it from t
 #### Comments
 
 ### T-128 — [E07] Web: classes, invites, joining and the student's page
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
@@ -5748,10 +5774,10 @@ Spec: .team/epics/E07-class-yearbook/05-class-pages-and-order.md (read it from t
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-128-e07-web-classes-invites-joining-and-the-
 - **PR:** —
-- **Updated:** 2026-10-26 09:00Z by leader
+- **Updated:** 2026-10-26 09:31Z by dev
 - **Comments-seen:** 1
 
 Spec: .team/epics/E07-class-yearbook/06-web-classes-join-and-student-page.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.
@@ -5844,6 +5870,25 @@ Spec: .team/epics/E06-go-live/15-ci-pause-integration-and-e2e.md. Owner decision
   Non-blocking: the header comment of ci.yml line 1 still lists 'Go integration' among what CI runs (cosmetic).
 - 2026-10-26 03:10Z · leader · merged 9be9475. Review: diff is 5 lines in ci.yml (workflow_dispatch + job-level if on go-integration and e2e), docs updated; PR shows both jobs skipped, others green; manual run 40261726624 passed all 6 jobs. For owner to check: the next PR on develop shows go-integration and e2e as skipped and stays mergeable; first line of ci.yml still lists Go integration (cosmetic).
 - 2026-10-26 07:13Z · human · accepted by owner
+
+### T-133 — [E07] Class book: read limiter, response size cap and admin photo caching
+- **Status:** BACKLOG
+- **Priority:** P3
+- **Type:** hardening
+- **Milestone:** M3
+- **Depends-on:** T-027
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-26 09:38Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E07-class-yearbook/10-class-book-limits-and-caching.md. QA follow-ups from T-027: class-book/get has no read limiter, a maximal class book is about 50 MiB, and an admin's cached photo outlives a hidden note by up to an hour.
+
+#### Comments
 
 <!-- tasks:end -->
 
