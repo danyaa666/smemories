@@ -21,7 +21,7 @@
 
 **Open questions for you:** none
 
-_Board last written 2026-10-26 10:33Z_
+_Board last written 2026-10-26 13:12Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -1829,7 +1829,7 @@ Class space owned by an admin (teacher or monitor), invite links/emails for stud
 - **Branch:** task/t-027-e07-class-book-data-api-and-the-admin-s-
 - **PR:** https://github.com/danyaa666/smemories/pull/125
 - **Updated:** 2026-10-26 09:58Z by leader
-- **Comments-seen:** 5
+- **Comments-seen:** 7
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E07-class-yearbook/02-class-book-assembly-many-profiles-per-book.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
