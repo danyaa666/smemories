@@ -705,7 +705,62 @@
       },
       "page": {
         "limit_reached": "You can have at most 20 yearbooks. Delete one to make room."
+      },
+      "assemble": {
+        "limit_reached": "A class can have at most 30 pages. Delete one first."
       }
+    },
+    "assemble": "Assemble the class book"
+  },
+  "assemble": {
+    "title": "Class book of {{name}}",
+    "help": "Set the order of the book: class pages first, then the students, then the closing pages. Drag by the grip, or use the arrow buttons. Nothing changes for the students until you save.",
+    "toClass": "Back to the class",
+    "front": "Class pages at the front",
+    "students": "Students' pages",
+    "back": "Class pages at the back",
+    "noPages": "No pages here yet.",
+    "noStudents": "Nobody has joined yet.",
+    "noPage": "No page yet (prints nothing)",
+    "truncated": "{{n}} are printed",
+    "grip": "Drag to reorder {{name}}",
+    "moveUp": "Move {{name}} up",
+    "moveDown": "Move {{name}} down",
+    "moved": "{{name}}, moved to position {{position}} of {{total}}",
+    "save": "Save order",
+    "discard": "Discard changes",
+    "unsaved": "You have unsaved changes.",
+    "saved": "Order saved.",
+    "stale": "The class changed while you were arranging it (someone joined or left, or a page was added or deleted). We reloaded the current order. Check it and save again.",
+    "add": "Add a class page",
+    "edit": "Edit",
+    "delete": "Delete",
+    "editFor": "Edit {{name}}",
+    "deleteFor": "Delete {{name}}",
+    "deleteTitle": "Delete the page {{name}}?",
+    "deleteBody": "The page is removed from the class book. This cannot be undone.",
+    "deleted": "Page {{name}} deleted.",
+    "pageSaved": "Page {{name}} saved.",
+    "editor": {
+      "add": "New class page",
+      "edit": "Edit class page",
+      "kind": "Kind of page",
+      "placement": "Where in the book",
+      "title": "Title",
+      "body": "Text",
+      "bodyHelp": "Plain text only. Line breaks are kept; tabs become two spaces.",
+      "save": "Save page"
+    },
+    "kind": {
+      "intro": "Introduction",
+      "teachers": "Teachers",
+      "events": "Events",
+      "superlatives": "Superlatives",
+      "custom": "Custom"
+    },
+    "placement": {
+      "front": "Before the students' pages",
+      "back": "After the students' pages"
     }
   }
 }

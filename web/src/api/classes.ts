@@ -9,6 +9,9 @@ export type ClassInvite = S["ClassInvite"];
 export type ClassInviteCreated = S["ClassInviteCreated"];
 export type ClassInvitePreview = S["ClassInvitePreview"];
 export type ClassRole = SchoolClass["my_role"];
+export type ClassPage = S["ClassPage"];
+export type ClassBook = S["ClassBookResponse"]["data"];
+export type ClassPageInput = Omit<S["ClassPageCreateRequest"], "class_id">;
 
 const enc = encodeURIComponent;
 const more = (next?: string) => (next ? `&next_id=${enc(next)}` : "");
@@ -54,3 +57,15 @@ export const lookupInvite = (token: string) =>
   postJson<ClassInvitePreview>("/class-invite/lookup", { token });
 export const acceptInvite = (token: string) =>
   postJson<SchoolClass>("/class-invite/accept", { token });
+
+// Admin only: the class book screen (T-129). The book is assembled on read; the order is always the full lists.
+export const getClassBook = (classId: string) =>
+  request<ClassBook>(`/class-book/get?class_id=${enc(classId)}`);
+export const updateOrder = (body: S["ClassBookOrderRequest"]) =>
+  postJson<void>("/class-book/update-order", body);
+export const createClassPage = (classId: string, page: ClassPageInput) =>
+  postJson<ClassPage>("/class-page/create", { class_id: classId, ...page });
+export const updateClassPage = (classId: string, id: string, page: ClassPageInput) =>
+  postJson<ClassPage>("/class-page/update", { class_id: classId, id, ...page });
+export const deleteClassPage = (classId: string, id: string) =>
+  postJson<void>("/class-page/delete", { class_id: classId, id });

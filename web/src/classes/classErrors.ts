@@ -3,7 +3,7 @@ import { ApiError } from "../api/client";
 import { errorText } from "../auth/errors";
 
 /** Where an error came from: the same code means different things in different forms (limit_reached is 10 classes, or 5 invite links). */
-export type ClassCtx = "create" | "invite" | "role" | "join" | "leave" | "page";
+export type ClassCtx = "create" | "invite" | "role" | "join" | "leave" | "page" | "assemble";
 
 /** `classes.errors.<ctx>.<code>`, then `classes.errors.<code>`, then the general message of that code. */
 export function classErrorText(t: TFunction, e: unknown, ctx: ClassCtx): string {

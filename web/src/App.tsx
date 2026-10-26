@@ -9,6 +9,7 @@ import { LegalLinks } from "./components/LegalConsent";
 import { LegalPage } from "./legal/LegalPage";
 import { AcceptTerms } from "./pages/AcceptTerms";
 import { Account } from "./pages/Account";
+import { ClassAssemble } from "./pages/ClassAssemble";
 import { ClassDetail } from "./pages/ClassDetail";
 import { ClassNew } from "./pages/ClassNew";
 import { Classes } from "./pages/Classes";
@@ -55,6 +56,7 @@ export function App() {
           <Route path="/classes" element={<Classes />} />
           <Route path="/classes/new" element={<ClassNew />} />
           <Route path="/classes/:id" element={<ClassDetail />} />
+          <Route path="/classes/:id/assemble" element={<ClassAssemble />} />
           <Route path="/yearbooks" element={<Yearbooks />} />
           <Route path="/yearbooks/new" element={<YearbookNew />} />
           <Route path="/yearbooks/:id" element={<YearbookEdit />} />
