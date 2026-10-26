@@ -66,12 +66,15 @@ export function Login() {
           {m.isPending ? t("auth.working") : t("login.submit")}
         </Button>
       </form>
-      <GoogleButton label={t("login.google")} returnTo={from} />
+      {/* Google sign-in would carry the path in a query string, and a join path holds a secret. */}
+      {!from.startsWith("/join/") && <GoogleButton label={t("login.google")} returnTo={from} />}
       <p>
         <Link to="/forgot-password">{t("login.forgot")}</Link>
       </p>
       <p>
-        <Link to="/register">{t("login.noAccount")}</Link>
+        <Link to="/register" state={state?.from ? { from } : undefined}>
+          {t("login.noAccount")}
+        </Link>
       </p>
     </>
   );

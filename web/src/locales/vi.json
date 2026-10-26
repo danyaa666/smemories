@@ -39,7 +39,9 @@
     "tabNotes": "Lời nhắn",
     "tabLinks": "Liên kết",
     "print": "Xem trước và in",
-    "tabPrint": "In"
+    "tabPrint": "In",
+    "classes": "Lớp học",
+    "tabClasses": "Lớp"
   },
   "fields": {
     "email": "Email",
@@ -589,5 +591,121 @@
     "titleFirst": "Trước khi bắt đầu",
     "body": "Hãy đọc các văn bản có liên kết bên dưới, rồi đồng ý để tiếp tục.",
     "submit": "Đồng ý và tiếp tục"
+  },
+  "classes": {
+    "title": "Lớp của tôi",
+    "new": "Lớp mới",
+    "newTitle": "Lớp mới",
+    "empty": "Bạn chưa ở trong lớp nào. Hãy tạo một lớp, hoặc mở đường dẫn mời từ giáo viên.",
+    "back": "Về danh sách lớp",
+    "notFound": "Lớp này không tồn tại.",
+    "yourRole": "Vai trò của bạn",
+    "cancel": "Hủy",
+    "verifyLink": "Xác minh email",
+    "role": {
+      "admin": "Quản trị viên",
+      "student": "Học sinh"
+    },
+    "form": {
+      "name": "Tên lớp",
+      "school": "Trường",
+      "year": "Năm tốt nghiệp",
+      "language": "Ngôn ngữ của kỷ yếu lớp",
+      "submit": "Tạo lớp"
+    },
+    "page": {
+      "title": "Trang của tôi trong kỷ yếu lớp",
+      "none": "Bạn chưa tạo trang của mình. Đó là kỷ yếu riêng của bạn và chỉ bạn được chỉnh sửa.",
+      "create": "Tạo trang của tôi",
+      "open": "Mở trang của tôi",
+      "complete": "Hồ sơ đã đầy đủ",
+      "incomplete": "Hồ sơ chưa đầy đủ",
+      "notes": "Lưu bút đã duyệt: {{n}}"
+    },
+    "roster": {
+      "title": "Thành viên",
+      "role": "Vai trò",
+      "joined": "Tham gia {{date}}",
+      "noPage": "Chưa chọn trang",
+      "makeAdmin": "Đặt làm quản trị viên",
+      "makeStudent": "Đặt làm học sinh",
+      "makeAdminFor": "Đặt {{name}} làm quản trị viên",
+      "makeStudentFor": "Đặt {{name}} làm học sinh",
+      "remove": "Xóa khỏi lớp",
+      "removeFor": "Xóa {{name}} khỏi lớp",
+      "removeTitle": "Xóa {{name}} khỏi lớp?",
+      "removeBody": "Bạn ấy mất quyền truy cập lớp. Kỷ yếu riêng của bạn ấy không bị ảnh hưởng."
+    },
+    "invites": {
+      "title": "Đường dẫn mời",
+      "help": "Tự gửi đường dẫn cho học sinh; hệ thống không gửi email. Ai có đường dẫn đều có thể tham gia với vai trò học sinh.",
+      "lifetime": "Đường dẫn có hiệu lực",
+      "days": "{{n}} ngày",
+      "create": "Tạo đường dẫn mời",
+      "once": "Hãy sao chép đường dẫn này ngay. Sẽ không thể xem lại.",
+      "link": "Đường dẫn mời",
+      "copy": "Sao chép đường dẫn",
+      "copied": "Đã sao chép đường dẫn.",
+      "copyFailed": "Không sao chép được. Hãy chọn đường dẫn và sao chép thủ công.",
+      "hide": "Xong, ẩn đường dẫn",
+      "listTitle": "Các đường dẫn của bạn",
+      "empty": "Chưa có đường dẫn mời nào.",
+      "created": "Tạo ngày {{date}}",
+      "expires": "hết hạn {{date}}",
+      "revoke": "Thu hồi",
+      "revokeTitle": "Thu hồi đường dẫn này?",
+      "revokeBody": "Đường dẫn ngừng hoạt động ngay. Những người đã tham gia vẫn ở trong lớp.",
+      "state": {
+        "active": "Đang hoạt động",
+        "revoked": "Đã thu hồi",
+        "expired": "Đã hết hạn"
+      }
+    },
+    "leave": {
+      "title": "Rời lớp này",
+      "button": "Rời lớp",
+      "confirmTitle": "Rời {{name}}?",
+      "body": "Bạn không còn là thành viên. Kỷ yếu riêng của bạn không bị ảnh hưởng."
+    },
+    "join": {
+      "title": "Tham gia lớp",
+      "heading": "Tham gia {{name}}",
+      "invalidTitle": "Lời mời không hợp lệ",
+      "invalid": "Lời mời này không hợp lệ.",
+      "invalidHelp": "Hãy nhờ giáo viên gửi đường dẫn mới.",
+      "signInFirst": "Hãy tạo tài khoản hoặc đăng nhập để tham gia.",
+      "accept": "Tham gia lớp này",
+      "joined": "Bạn đã tham gia {{name}}",
+      "joinedHelp": "Tiếp theo, hãy tạo trang của bạn trong kỷ yếu lớp.",
+      "toClass": "Đến lớp"
+    },
+    "errors": {
+      "last_admin": "Lớp cần ít nhất một quản trị viên. Hãy đặt người khác làm quản trị viên trước, hoặc xóa lớp.",
+      "forbidden": "Chỉ quản trị viên của lớp mới làm được việc này.",
+      "not_found": "Lớp này không tồn tại hoặc bạn không phải thành viên.",
+      "class_full": "Lớp đã đầy (60 thành viên).",
+      "conflict": "Kỷ yếu đó đã là trang của một lớp khác.",
+      "invalid_name": "Nhập tên lớp từ 1 đến 120 ký tự, không có ký tự ẩn hoặc ký tự điều khiển.",
+      "invalid_school_name": "Tên trường tối đa 120 ký tự, không có ký tự ẩn hoặc ký tự điều khiển.",
+      "invalid_language": "Chọn tiếng Anh hoặc tiếng Việt.",
+      "invalid_role": "Vai trò đó không hợp lệ.",
+      "invalid_expires_at": "Chọn thời hạn đường dẫn từ 7 đến 30 ngày.",
+      "create": {
+        "limit_reached": "Bạn chỉ có thể là quản trị viên của tối đa 10 lớp."
+      },
+      "invite": {
+        "limit_reached": "Mỗi lớp có tối đa 5 đường dẫn mời đang hoạt động. Hãy thu hồi một đường dẫn trước."
+      },
+      "role": {
+        "limit_reached": "Người này đã là quản trị viên của 10 lớp."
+      },
+      "join": {
+        "not_found": "Lời mời này không hợp lệ.",
+        "limit_reached": "Bạn chỉ có thể là quản trị viên của tối đa 10 lớp."
+      },
+      "page": {
+        "limit_reached": "Bạn chỉ có thể có tối đa 20 kỷ yếu. Hãy xóa bớt một cuốn."
+      }
+    }
   }
 }

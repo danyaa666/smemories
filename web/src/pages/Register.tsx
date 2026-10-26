@@ -1,13 +1,13 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, Navigate } from "react-router-dom";
+import { Link, Navigate, useLocation } from "react-router-dom";
 import { register } from "../api/auth";
 import { GoogleButton } from "../components/GoogleButton";
 import { LegalConsent } from "../components/LegalConsent";
 import { TERMS_VERSION } from "../legal/legal";
 import { TextField } from "../components/TextField";
-import { fieldError, formError } from "../auth/errors";
+import { fieldError, formError, safePath } from "../auth/errors";
 import { ME_KEY, useMe } from "../auth/useMe";
 import { Button } from "../components/ui/Button";
 
@@ -15,6 +15,9 @@ export function Register() {
   const { t, i18n } = useTranslation();
   const qc = useQueryClient();
   const { data: user } = useMe();
+  const fromState = (useLocation().state as { from?: unknown } | null)?.from;
+  const from = typeof fromState === "string" ? safePath(fromState) : undefined; // e.g. /join/<token>: back there after sign-up
+  const joining = from?.startsWith("/join/") === true;
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -33,9 +36,9 @@ export function Register() {
   if (user) {
     // Straight after sign-up the code is on its way: land on the code screen (it starts its resend cooldown).
     return user.email_verified ? (
-      <Navigate to="/account" replace />
+      <Navigate to={from ?? "/account"} replace />
     ) : (
-      <Navigate to="/verify-email" replace state={{ sent: m.isSuccess }} />
+      <Navigate to="/verify-email" replace state={{ sent: m.isSuccess, from }} />
     );
   }
   const submit = (e: FormEvent) => {
@@ -81,9 +84,12 @@ export function Register() {
           {m.isPending ? t("auth.working") : t("register.submit")}
         </Button>
       </form>
-      <GoogleButton label={t("register.google")} returnTo="/account" />
+      {/* Google sign-in would carry the path in a query string, and a join path holds a secret. */}
+      {!joining && <GoogleButton label={t("register.google")} returnTo="/account" />}
       <p>
-        <Link to="/login">{t("register.haveAccount")}</Link>
+        <Link to="/login" state={from ? { from } : undefined}>
+          {t("register.haveAccount")}
+        </Link>
       </p>
     </>
   );
