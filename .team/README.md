@@ -19,7 +19,7 @@
 
 **Open questions for you:** Q-057 (Approve merge of T-125 (class invites, PR #123)?)
 
-_Board last written 2026-10-26 07:29Z_
+_Board last written 2026-10-26 07:43Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -1782,7 +1782,7 @@ Automated RDS and S3 backups with a documented and tested restore drill; user-in
 - **Branch:** task/t-026-e07-classes-memberships-and-roles-api-fo
 - **PR:** https://github.com/danyaa666/smemories/pull/121
 - **Updated:** 2026-10-26 07:13Z by human
-- **Comments-seen:** 7
+- **Comments-seen:** 8
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E07-class-yearbook/01-class-yearbook-classes-memberships-roles-and.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -5795,7 +5795,7 @@ Spec: .team/epics/E07-class-yearbook/09-privacy-review-and-e2e.md (read it from 
 - **Branch:** task/t-132-e06-ci-pause-the-go-integration-and-e2e-
 - **PR:** 122
 - **Updated:** 2026-10-26 07:13Z by human
-- **Comments-seen:** 3
+- **Comments-seen:** 4
 
 Spec: .team/epics/E06-go-live/15-ci-pause-integration-and-e2e.md. Owner decision D-37 (2026-10-26): CI takes 8-10 min; the go-integration and e2e jobs (the latter includes print-check) stop running on pushes and pull requests, but stay in the file and can be run by hand.
 
