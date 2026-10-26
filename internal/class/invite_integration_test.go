@@ -712,9 +712,11 @@ func TestInviteRateLimits(t *testing.T) {
 		e.lookup(token).status(200, "OK")
 	}
 
-	for range acceptPerIPWindow {
+	// the per-IP budget is larger than one user's write budget (120 an hour), so spread the wrong tokens over three users
+	guessers := []person{kid, e.user("Kid2"), e.user("Kid3")}
+	for i := range acceptPerIPWindow {
 		tok, _, _ := newInviteToken()
-		e.accept(kid, tok).status(404, "ERROR_NOT_FOUND")
+		e.accept(guessers[i%len(guessers)], tok).status(404, "ERROR_NOT_FOUND")
 	}
 	e.accept(kid, token).status(429, "ERROR_RATE_LIMITED")
 	if e.role(kid, cls) != "" {

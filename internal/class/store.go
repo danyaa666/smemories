@@ -19,10 +19,12 @@ type Class struct {
 	Language       string `json:"language"`
 	MyRole         string `json:"my_role"`     // admin or student
 	PageLinked     bool   `json:"page_linked"` // the caller has chosen which of their yearbooks is their class page
-	CreatedAt      int64  `json:"created_at"`  // Unix ms
-	UpdatedAt      int64  `json:"updated_at"`  // Unix ms
-	internalID     uint64
-	memberRow      uint64 // class_member_tab.id of the caller: the list cursor
+	// Page is the caller's own page status, set by class/get only (the list and the other answers leave it out).
+	Page       *PageStatus `json:"page,omitempty"`
+	CreatedAt  int64       `json:"created_at"` // Unix ms
+	UpdatedAt  int64       `json:"updated_at"` // Unix ms
+	internalID uint64
+	memberRow  uint64 // class_member_tab.id of the caller: the list cursor
 }
 
 // Member is a roster row, seen by an admin only.
@@ -32,8 +34,12 @@ type Member struct {
 	Role       string `json:"role"`
 	JoinedAt   int64  `json:"joined_at"`   // Unix ms
 	PageLinked bool   `json:"page_linked"` // the member has chosen a class page; nothing about its content
-	row        uint64
-	userID     uint64
+	// Counts and flags about the page, never its text, its notes or its photo ids (T-126). Zero when nothing is linked.
+	ProfileComplete bool `json:"profile_complete"`
+	ApprovedNotes   int  `json:"approved_notes"`
+	row             uint64
+	userID          uint64
+	book            sql.Null[uint64] // yearbook_tab.id of the page, only when the member owns it; never serialised
 }
 
 // Store persists classes and memberships. Every access check is a join on class_member_tab (user id and role) or, inside a
@@ -43,7 +49,8 @@ type Member struct {
 // membership changes of one class, which is what keeps "the last admin stays" true under concurrency), then the
 // class_member_tab rows. class/create locks the user_tab row first (it creates the class, so there is no class row yet).
 // A yearbook delete takes the yearbook_tab row first and then clears class_member_tab.yearbook_id (clearBook); it never
-// takes a class lock, so the two orders cannot form a cycle.
+// takes a class lock. setBook (the one transaction that touches both) therefore takes the yearbook row first, then the class
+// and member rows; no other class transaction takes a yearbook row, so the orders cannot form a cycle.
 //
 // Reads that decide a cap or a state are locking reads (FOR UPDATE), never plain ones: a plain read takes the transaction's
 // snapshot, which may be older than the lock just won. Caps (60 members, 5 active invites) are counted under the class row lock.
@@ -249,7 +256,7 @@ func (s *Store) remove(ctx context.Context, userID uint64, publicID string) erro
 // Two queries whatever the page size: the member rows, then their users.
 func (s *Store) members(ctx context.Context, classID, after uint64, limit int) ([]Member, uint64, error) {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT id, public_id, user_id, role, joined_at, yearbook_id IS NOT NULL FROM class_member_tab WHERE class_id = ? AND id > ? ORDER BY id LIMIT ?`,
+		`SELECT m.id, m.public_id, m.user_id, m.role, m.joined_at, y.id FROM class_member_tab m LEFT JOIN yearbook_tab y ON y.id = m.yearbook_id AND y.owner_id = m.user_id WHERE m.class_id = ? AND m.id > ? ORDER BY m.id LIMIT ?`,
 		classID, after, limit+1)
 	if err != nil {
 		return nil, 0, dbErr(err, "list members")
@@ -258,9 +265,10 @@ func (s *Store) members(ctx context.Context, classID, after uint64, limit int) (
 	out := make([]Member, 0, limit+1)
 	for rows.Next() {
 		var m Member
-		if err := rows.Scan(&m.row, &m.ID, &m.userID, &m.Role, &m.JoinedAt, &m.PageLinked); err != nil {
+		if err := rows.Scan(&m.row, &m.ID, &m.userID, &m.Role, &m.JoinedAt, &m.book); err != nil {
 			return nil, 0, dbErr(err, "scan member")
 		}
+		m.PageLinked = m.book.Valid
 		out = append(out, m)
 	}
 	if err := rows.Err(); err != nil {
@@ -299,7 +307,7 @@ func (s *Store) members(ctx context.Context, classID, after uint64, limit int) (
 	for i := range out {
 		out[i].Name = names[out[i].userID]
 	}
-	return out, next, nil
+	return out, next, s.pageFlags(ctx, out)
 }
 
 // target locks the member memberID of the class (the caller is already locked in as admin). A member id of another class is

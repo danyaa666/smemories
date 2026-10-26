@@ -18,12 +18,18 @@ import (
 	"time"
 
 	"github.com/danyaa666/smemories/internal/auth"
+	"github.com/danyaa666/smemories/internal/bookdata"
+	"github.com/danyaa666/smemories/internal/bookexport"
 	"github.com/danyaa666/smemories/internal/db/dbtest"
 	"github.com/danyaa666/smemories/internal/httpx"
 	"github.com/danyaa666/smemories/internal/legal"
 	"github.com/danyaa666/smemories/internal/mailer"
+	"github.com/danyaa666/smemories/internal/media"
+	"github.com/danyaa666/smemories/internal/medialink"
+	"github.com/danyaa666/smemories/internal/notes"
 	"github.com/danyaa666/smemories/internal/ratelimit"
 	"github.com/danyaa666/smemories/internal/redis/redistest"
+	"github.com/danyaa666/smemories/internal/storage"
 	"github.com/danyaa666/smemories/internal/ulid"
 	"github.com/danyaa666/smemories/internal/yearbook"
 )
@@ -95,8 +101,21 @@ func newEnv(t *testing.T) *env {
 	e.svc = NewService(NewStore(d), cursors, limiters, e.now)
 	e.svc.SetPublicBaseURL(baseURL)
 	ch := NewHandler(e.svc, ah.RequireUser, []string{origin}, ah.ClientIP)
-	yh := yearbook.NewHandler(yearbook.NewService(yearbook.NewStore(d), cursors, nil, e.now, e.svc), ah.RequireUser, []string{origin})
-	e.h = httpx.NewRouter(logger, ah.Routes, ch.Routes, yh.Routes)
+	// The whole book stack, wired as in cmd/smemories-api, so the tests can show that a class link gives no right over any of it.
+	mediaSvc := media.NewService(media.NewStore(d), storage.NewMemory(), 2, limiters, e.now)
+	signer, _ := medialink.New([]byte(strings.Repeat("L", medialink.MinSecretBytes)))
+	mediaSvc.SetPublicLinks(signer)
+	bookStore := yearbook.NewStore(d)
+	notesSvc := notes.NewService(notes.NewStore(d), mediaSvc, cursors, limiters, logger, e.now)
+	mediaSvc.SetRefClearer(bookStore, notesSvc)
+	bookSvc := yearbook.NewService(bookStore, cursors, mediaSvc, e.now, mediaSvc, notesSvc, e.svc)
+	bookSvc.SetLimiters(limiters)
+	yh := yearbook.NewHandler(bookSvc, ah.RequireUser, []string{origin})
+	mh := media.NewHandler(mediaSvc, 10<<20, ah.RequireUser, []string{origin}, cursors, logger)
+	nh := notes.NewHandler(notesSvc, 10<<20, ah.RequireUser, []string{origin}, ah.ClientIP, logger)
+	dh := bookdata.NewHandler(bookdata.NewService(bookSvc, notesSvc), ah.RequireUser)
+	xh := bookexport.NewHandler(bookexport.NewService(bookSvc, notesSvc, signer, baseURL, limiters, e.now), ah.RequireUser)
+	e.h = httpx.NewRouter(logger, ah.Routes, ch.Routes, yh.Routes, mh.Routes, nh.Routes, dh.Routes, xh.Routes)
 	return e
 }
 

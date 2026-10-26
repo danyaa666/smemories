@@ -116,9 +116,14 @@ func (s *Service) List(ctx context.Context, userID uint64, limit int, nextID str
 	return out, sealPos(s.tokens, classListScope(userID), next), nil
 }
 
-// Get returns the class with the caller's role and page status. It never carries the roster, whatever the role.
+// Get returns the class with the caller's role and their own page status. It never carries the roster, whatever the role.
 func (s *Service) Get(ctx context.Context, userID uint64, classID string) (*Class, error) {
-	return s.Authorize(ctx, userID, classID, RoleStudent)
+	c, err := s.Authorize(ctx, userID, classID, RoleStudent)
+	if err != nil {
+		return nil, err
+	}
+	c.Page, err = s.store.pageStatus(ctx, userID, c.internalID)
+	return c, err
 }
 
 // Update replaces the editable fields of the class (admin).

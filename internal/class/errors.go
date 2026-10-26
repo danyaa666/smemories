@@ -37,6 +37,10 @@ var (
 	ErrInviteNotFound = apperr.New(apperr.NotFound, "invite not found")
 	// ErrEmailNotVerified is class/create or class-invite/accept from an account whose email is not verified yet.
 	ErrEmailNotVerified = apperr.New(CodeEmailNotVerified, "verify your email first")
+	// ErrYearbookNotFound is a yearbook id that does not exist or is somebody else's: the same answer, like in the yearbook package.
+	ErrYearbookNotFound = apperr.New(apperr.NotFound, "yearbook not found")
+	// ErrBookLinked is a yearbook that is already the page of a class (a yearbook belongs to at most one class).
+	ErrBookLinked = apperr.New(apperr.Conflict, "this yearbook is already the page of a class")
 	// ErrLastAdmin protects the class from being left without an admin.
 	ErrLastAdmin = apperr.New(CodeLastAdmin, "a class needs at least one admin")
 )

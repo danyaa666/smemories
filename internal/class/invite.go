@@ -31,11 +31,13 @@ const (
 
 	// Public lookups, per client IP: every request counts against lookupAllPerWindow, a miss also against lookupMissesPerWindow
 	// (a hit is refunded), so a visitor with a good link is never throttled by the guessing limit. Accepting is a write: per user
-	// (the shared class write budget) and per IP.
-	lookupAllPerWindow    = 120
+	// (the shared class write budget) and per IP. The per-IP budgets are generous on purpose: a whole class of 60 students joins
+	// from one school network (one NAT address) and must have room for refreshes and retries; a 256-bit token cannot be guessed,
+	// so these only bound load. The guessing limit is the miss limiter, which stays at 20.
+	lookupAllPerWindow    = 600
 	lookupMissesPerWindow = 20
 	lookupWindow          = 10 * time.Minute
-	acceptPerIPWindow     = 60
+	acceptPerIPWindow     = 300
 	acceptWindow          = time.Hour
 
 	joinPath = "/join/"
