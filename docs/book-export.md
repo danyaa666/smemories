@@ -57,3 +57,20 @@ a link can open that photo without signing in until the owner calls `yearbook/re
 link), or until the note is hidden or deleted. This is the owner's choice in decision D-32 (README section 4); the controls are in
 [media.md](media.md) ("Public photo links"). The text itself never holds an internal id, storage key, hash or email address (asserted by a test), the
 response is `Cache-Control: no-store`, and neither the text nor a link is ever logged. Each call makes the links again at the current epoch.
+
+## Class book (T-027)
+
+`GET /api/class-book/get?class_id=` (package `internal/class`, session, class admin only) is the data of the class book for the browser renderer, the class counterpart of
+`book-data/get`: `{class, front_pages, members[], back_pages}`; each member is `{member_id, name, linked, yearbook{template_id, page_size, language}, profile, notes[],
+note_count, approved_total, truncated}`. Permissions and privacy: [class-permissions.md](class-permissions.md). The class pages (T-128) arrive in the two arrays; until then they are empty.
+
+- **Budget.** The book keeps the page budget of about 120 pages: at most **60 members and 40 approved notes per member** (`notes.MaxClassBookNotes`). A student with more approved notes is cut at 40 in
+  their own order, with `truncated: true` and the real `approved_total` (never silent).
+- **Cost.** One query for the class, one for the members, then per linked member the book, its profile (and the photo ids) and the notes with their photo links: a handful of queries per member,
+  none per note (`TestClassBookQueryCountIsPerMember`). No limiter: it is an admin read, and the 60 x 5 queries are indexed (`TestClassBookQueriesUseIndexes`).
+- **Size.** Measured by `TestClassBookFullClass` (60 members x 40 notes of about 230 characters, two photo ids each): **1.14 MiB** (`TestClassBookSizeOfAFullClass` computes it without a database; the integration test fails above 4 MiB on the real answer). The budget is 4 MiB.
+  The theoretical worst case is far larger: one note may hold about 4.7 thousand characters of answers (up to 3 bytes each in Vietnamese) and a signature of up to 3 KiB, so 60 x 40 maximal notes would be about 40 MiB. Nobody writes that
+  (the cap of 500 characters on five of the nine fields and 2000 on the message is a ceiling, a note is typically a few hundred bytes), and a book of 2400 maximal notes is not 120 pages either; the 4 MiB target holds for
+  realistic notes, not as a hard limit. If it ever matters, the lever is the per-member cap (`notes.MaxClassBookNotes`), not a response-size check.
+- **Photos.** The images are fetched by the admin with `media/get-content?variant=print`, which accepts exactly the profile photo and the approved notes' photos of the linked books (one SQL statement, see class-permissions.md).
+- The data is not cached and not exported as text in v1; the admin prints the book in the browser.

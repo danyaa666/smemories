@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "SMemories - class yearbook: classes, memberships and roles (E07, T-026, T-125, T-126)",
-    "description": "Classes, the two roles and the permission matrix (docs/class-permissions.md). Run against an API started with SMEM_ENV=dev and SMEM_DEV_FIXED_OTP set (.env.example does: 123123), because the flow verifies its two fresh accounts with the dev email code; the session token is read from the register response's Set-Cookie header and sent in an explicit Cookie header, so users A (teacher, admin) and B (not in A's class) act in one run. Each run registers 3 users (the register limit is 5 per hour per IP: run `make reset-limits` before a second run within the hour) and every run uses new accounts, so it can run twice in a row. Run the whole collection in order: the Edge cases folder reuses the users from the Full flow. What it cannot cover: the last-admin race with two admins, the 60-member cap and the concurrent accepts are covered by internal/class/*_integration_test.go (a Postman run is one client). T-125 adds the invite flow (create, list, revoke, public lookup, accept; the token is a secret and is never echoed after creation) and its edge cases. The invite flow needs users A and B and B's class from the full flow, so run the folders in order. Lookup misses count against 20 per 10 minutes per client IP and accepts against 60 per hour: `make reset-limits` between runs. (The server budgets are 600 lookups per 10 minutes and 300 accepts per hour since T-126; a Newman run stays far below them.) T-126 adds the Student page flow (set-book: only the owner links their own yearbook, one yearbook one class, roster counts and flags only, the admin still gets 404 on the student's yearbook, notes and photos, deleting the yearbook clears the link) and its edge cases; it needs users A and B from the full flow and uses two new classes it deletes at the end.",
+    "name": "SMemories - class yearbook: classes, memberships and roles (E07, T-026, T-125, T-126, T-027)",
+    "description": "Classes, the two roles and the permission matrix (docs/class-permissions.md). Run against an API started with SMEM_ENV=dev and SMEM_DEV_FIXED_OTP set (.env.example does: 123123), because the flow verifies its two fresh accounts with the dev email code; the session token is read from the register response's Set-Cookie header and sent in an explicit Cookie header, so users A (teacher, admin) and B (not in A's class) act in one run. Each run registers 3 users (the register limit is 5 per hour per IP: run `make reset-limits` before a second run within the hour) and every run uses new accounts, so it can run twice in a row. Run the whole collection in order: the Edge cases folder reuses the users from the Full flow. What it cannot cover: the last-admin race with two admins, the 60-member cap and the concurrent accepts are covered by internal/class/*_integration_test.go (a Postman run is one client). T-125 adds the invite flow (create, list, revoke, public lookup, accept; the token is a secret and is never echoed after creation) and its edge cases. The invite flow needs users A and B and B's class from the full flow, so run the folders in order. Lookup misses count against 20 per 10 minutes per client IP and accepts against 60 per hour: `make reset-limits` between runs. (The server budgets are 600 lookups per 10 minutes and 300 accepts per hour since T-126; a Newman run stays far below them.) T-126 adds the Student page flow (set-book: only the owner links their own yearbook, one yearbook one class, roster counts and flags only, the admin still gets 404 on the student's yearbook, notes and photos, deleting the yearbook clears the link) and its edge cases; it needs users A and B from the full flow and uses two new classes it deletes at the end. T-027 adds the Class book flow (class-book/get: approved notes only, in the student's order; the admin opens exactly the approved notes' photos and nothing else; a student, a non-member and a hidden note all get 403 or 404) and uses users A, B and C from the earlier folders; it sends two public notes with photos (fixtures/media, so run Newman from the postman folder) and deletes its class at the end.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -135,6 +135,50 @@
     },
     {
       "key": "bookB",
+      "value": ""
+    },
+    {
+      "key": "cbClassId",
+      "value": ""
+    },
+    {
+      "key": "cbInviteToken",
+      "value": ""
+    },
+    {
+      "key": "cbMemberB",
+      "value": ""
+    },
+    {
+      "key": "cbNameB",
+      "value": ""
+    },
+    {
+      "key": "cbBook",
+      "value": ""
+    },
+    {
+      "key": "cbLinkToken",
+      "value": ""
+    },
+    {
+      "key": "cbNote1",
+      "value": ""
+    },
+    {
+      "key": "cbPhoto1",
+      "value": ""
+    },
+    {
+      "key": "cbNote2",
+      "value": ""
+    },
+    {
+      "key": "cbPhoto2",
+      "value": ""
+    },
+    {
+      "key": "cbNoPhotoMessage",
       "value": ""
     }
   ],
@@ -4718,6 +4762,1549 @@
                 "exec": [
                   "pm.test('status 200', () => pm.response.to.have.status(200));",
                   "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Class book flow",
+      "item": [
+        {
+          "name": "Book: A creates a class for the class book flow",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"Book class\",\"school_name\":\"THPT\",\"graduation_year\":2026,\"language\":\"vi\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                  "pm.collectionVariables.set('cbClassId', pm.response.json().data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Book: A creates an invite",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-invite/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-invite",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\":\"{{cbClassId}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                  "pm.collectionVariables.set('cbInviteToken', pm.response.json().data.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Book: B accepts the invite and becomes a student",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-invite/accept",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-invite",
+                "accept"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"token\":\"{{cbInviteToken}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                  "pm.test('student', () => pm.expect(pm.response.json().data.my_role).to.eql('student'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Book: A reads the roster to learn B's member id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-member/get-list?class_id={{cbClassId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-member",
+                "get-list"
+              ],
+              "query": [
+                {
+                  "key": "class_id",
+                  "value": "{{cbClassId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                  "const m = pm.response.json().data.items.find(i => i.role === 'student');",
+                  "pm.test('B is in the roster', () => pm.expect(m).to.be.an('object'));",
+                  "pm.collectionVariables.set('cbMemberB', m.id);",
+                  "pm.collectionVariables.set('cbNameB', m.name);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Book: B creates a yearbook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/yearbook/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "yearbook",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"Newman class book page\",\"language\":\"en\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                  "pm.collectionVariables.set('cbBook', pm.response.json().data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Book: B makes a note link",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/note-collection/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "note-collection",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"yearbook_id\":\"{{cbBook}}\",\"label\":\"class\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                  "pm.collectionVariables.set('cbLinkToken', pm.response.json().data.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Book: a friend sends the first note with a photo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{cbLinkToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{cbLinkToken}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "{\"name\": \"Linh\", \"message\": \"first note, will be approved\"}",
+                  "type": "text"
+                },
+                {
+                  "key": "photos",
+                  "type": "file",
+                  "src": "fixtures/media/photo-gps.jpg"
+                },
+                {
+                  "key": "website",
+                  "value": "",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Book: a friend sends the second note with a photo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/public-collect/submit-note?token={{cbLinkToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public-collect",
+                "submit-note"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{cbLinkToken}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answers",
+                  "value": "{\"name\": \"Linh\", \"message\": \"second note, stays pending\"}",
+                  "type": "text"
+                },
+                {
+                  "key": "photos",
+                  "type": "file",
+                  "src": "fixtures/media/photo-alpha.png"
+                },
+                {
+                  "key": "website",
+                  "value": "",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Book: B lists the pending notes and keeps both ids and photo ids",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/note/get-list?yearbook_id={{cbBook}}&status=pending",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "note",
+                "get-list"
+              ],
+              "query": [
+                {
+                  "key": "yearbook_id",
+                  "value": "{{cbBook}}"
+                },
+                {
+                  "key": "status",
+                  "value": "pending"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                  "const items = pm.response.json().data.items;",
+                  "const one = items.find(n => n.answers.error_message.includes('first'));",
+                  "const two = items.find(n => n.answers.error_message.includes('second'));",
+                  "pm.test('both notes are there with a photo each', () => { pm.expect(one.photos).to.have.length(1); pm.expect(two.photos).to.have.length(1); });",
+                  "pm.collectionVariables.set('cbNote1', one.id);",
+                  "pm.collectionVariables.set('cbPhoto1', one.photos[0].id);",
+                  "pm.collectionVariables.set('cbNote2', two.id);",
+                  "pm.collectionVariables.set('cbPhoto2', two.photos[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Book: B approves the first note only",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/note/batch-update-status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "note",
+                "batch-update-status"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"yearbook_id\":\"{{cbBook}}\",\"ids\":[\"{{cbNote1}}\"],\"status\":\"approved\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Book: A reads the class book while B has no page: B is listed with no content",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-book/get?class_id={{cbClassId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-book",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "class_id",
+                  "value": "{{cbClassId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('keys', () => pm.expect(Object.keys(d).sort()).to.eql(['back_pages', 'class', 'front_pages', 'members']));",
+                  "pm.test('no class pages yet', () => { pm.expect(d.front_pages).to.eql([]); pm.expect(d.back_pages).to.eql([]); });",
+                  "const b = d.members.find(m => m.member_id === pm.collectionVariables.get('cbMemberB'));",
+                  "pm.test('B is listed, not linked, no content', () => { pm.expect(b.linked).to.eql(false); pm.expect(b.profile).to.eql(null); pm.expect(b.yearbook).to.eql(null); pm.expect(b.notes).to.eql([]); pm.expect(b.note_count).to.eql(0); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Book: A fetches the photo of an approved note before B has a page - 404",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/media/get-content?id={{cbPhoto1}}&variant=print",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "media",
+                "get-content"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{cbPhoto1}}"
+                },
+                {
+                  "key": "variant",
+                  "value": "print"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));",
+                  "pm.collectionVariables.set('cbNoPhotoMessage', pm.response.json().error_message);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Book: B links the yearbook as their class page",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-member/set-book",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-member",
+                "set-book"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\":\"{{cbClassId}}\",\"yearbook_id\":\"{{cbBook}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Book: A reads the class book: B's page holds the approved note only",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-book/get?class_id={{cbClassId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-book",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "class_id",
+                  "value": "{{cbClassId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                  "const d = pm.response.json().data;",
+                  "const b = d.members.find(m => m.member_id === pm.collectionVariables.get('cbMemberB'));",
+                  "pm.test('member keys', () => pm.expect(Object.keys(b).sort()).to.eql(['approved_total', 'linked', 'member_id', 'name', 'note_count', 'notes', 'profile', 'truncated', 'yearbook']));",
+                  "pm.test('linked, with the book style and a profile without a birthday', () => { pm.expect(b.linked).to.eql(true); pm.expect(Object.keys(b.yearbook).sort()).to.eql(['language', 'page_size', 'template_id']); pm.expect(Object.keys(b.profile).sort()).to.eql(['full_name', 'future_plans', 'hobbies', 'nickname', 'photo_media_id', 'quote']); });",
+                  "pm.test('one approved note with its photo, in order', () => { pm.expect(b.notes).to.have.length(1); pm.expect(b.notes[0].id).to.eql(pm.collectionVariables.get('cbNote1')); pm.expect(b.notes[0].photo_ids).to.eql([pm.collectionVariables.get('cbPhoto1')]); pm.expect(b.note_count).to.eql(1); pm.expect(b.approved_total).to.eql(1); pm.expect(b.truncated).to.eql(false); });",
+                  "const text = pm.response.text();",
+                  "pm.test('the pending note and its photo are not in the book', () => { pm.expect(text).to.not.include('second note'); pm.expect(text).to.not.include(pm.collectionVariables.get('cbNote2')); pm.expect(text).to.not.include(pm.collectionVariables.get('cbPhoto2')); pm.expect(text).to.not.include('@'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Book: A opens the approved note's photo - 200, private cache",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/media/get-content?id={{cbPhoto1}}&variant=print",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "media",
+                "get-content"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{cbPhoto1}}"
+                },
+                {
+                  "key": "variant",
+                  "value": "print"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('an image', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/^image\\//));",
+                  "pm.test('private cache, nosniff', () => { pm.expect(pm.response.headers.get('Cache-Control')).to.eql('private, max-age=3600'); pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Book: A opens the pending note's photo - 404, the same answer as for a photo that does not exist",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/media/get-content?id={{cbPhoto2}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "media",
+                "get-content"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{cbPhoto2}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));",
+                  "pm.test('same message as the unknown photo', () => pm.expect(pm.response.json().error_message).to.eql(pm.collectionVariables.get('cbNoPhotoMessage')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Book: A opens a photo id that does not exist - 404",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/media/get-content?id=01K7Q8W3ZR5N2M4X6V8B0C1D2E",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "media",
+                "get-content"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "01K7Q8W3ZR5N2M4X6V8B0C1D2E"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));",
+                  "pm.test('same message', () => pm.expect(pm.response.json().error_message).to.eql(pm.collectionVariables.get('cbNoPhotoMessage')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Book: A deletes the approved photo - 200 and nothing happens (still readable)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/media/delete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "media",
+                "delete"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{cbPhoto1}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Book: the photo is still there for A after that",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/media/get-content?id={{cbPhoto1}}&variant=thumb",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "media",
+                "get-content"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{cbPhoto1}}"
+                },
+                {
+                  "key": "variant",
+                  "value": "thumb"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Book: B (a student) reads the class book - 403 ERROR_FORBIDDEN",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-book/get?class_id={{cbClassId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-book",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "class_id",
+                  "value": "{{cbClassId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 403', () => pm.response.to.have.status(403));",
+                  "pm.test('code ERROR_FORBIDDEN', () => pm.expect(pm.response.json().status).to.eql('ERROR_FORBIDDEN'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Book: C (not a member) reads the class book - 404",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenC}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-book/get?class_id={{cbClassId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-book",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "class_id",
+                  "value": "{{cbClassId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Book: C opens the approved note's photo - 404",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenC}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/media/get-content?id={{cbPhoto1}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "media",
+                "get-content"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{cbPhoto1}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Book: A reads a class that does not exist - 404, like a non-member",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-book/get?class_id=01K7Q8W3ZR5N2M4X6V8B0C1D2E",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-book",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "class_id",
+                  "value": "01K7Q8W3ZR5N2M4X6V8B0C1D2E"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Book: no session - 401",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-book/get?class_id={{cbClassId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-book",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "class_id",
+                  "value": "{{cbClassId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Book: lower-case class id - 400 ERROR_PARAM",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-book/get?class_id=01k7q8w3zr5n2m4x6v8b0c1d2e",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-book",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "class_id",
+                  "value": "01k7q8w3zr5n2m4x6v8b0c1d2e"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Book: B hides the note",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/note/batch-update-status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "note",
+                "batch-update-status"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"yearbook_id\":\"{{cbBook}}\",\"ids\":[\"{{cbNote1}}\"],\"status\":\"hidden\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Book: the next class book has no note",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-book/get?class_id={{cbClassId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-book",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "class_id",
+                  "value": "{{cbClassId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                  "const b = pm.response.json().data.members.find(m => m.member_id === pm.collectionVariables.get('cbMemberB'));",
+                  "pm.test('no notes now', () => { pm.expect(b.notes).to.eql([]); pm.expect(b.approved_total).to.eql(0); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Book: and its photo is a 404 at once",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/media/get-content?id={{cbPhoto1}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "media",
+                "get-content"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{cbPhoto1}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Book: B leaves the class",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-member/leave",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-member",
+                "leave"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\":\"{{cbClassId}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Book: B is gone from the class book",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-book/get?class_id={{cbClassId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-book",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "class_id",
+                  "value": "{{cbClassId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                  "pm.test('B is not listed', () => pm.expect(pm.response.json().data.members.find(m => m.member_id === pm.collectionVariables.get('cbMemberB'))).to.eql(undefined));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Book: A deletes the class",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class/delete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class",
+                "delete"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{cbClassId}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Book: A reads the deleted class book - 404",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-book/get?class_id={{cbClassId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-book",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "class_id",
+                  "value": "{{cbClassId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
                 ]
               }
             }

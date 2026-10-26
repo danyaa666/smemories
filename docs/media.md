@@ -6,7 +6,7 @@
 |---|---|
 | `POST /api/media/create` | `multipart/form-data`: text field `yearbook_id` and the image in the part `file` (either order). Answers `{status:"OK", data:{id, yearbook_id, content_type, bytes, width, height, created_at}}`. |
 | `GET /api/media/get-list?yearbook_id=&limit=&next_id=&uploader=` | `data: {items, next_id}`, newest first, `limit` 1..100 (default 50). `uploader` is `owner` (default), `contributor` or `all`. |
-| `GET /api/media/get-content?id=&variant=display\|thumb\|print` | **Binary** on success (no envelope; `Content-Type` from the database, `nosniff`, `Cache-Control: private, max-age=3600`, `ETag` per variant, `HEAD`/`Range`/`If-None-Match` work; streamed from the object store, see "Photo downloads"); the JSON error envelope with `Cache-Control: no-store` on failure. |
+| `GET /api/media/get-content?id=&variant=display\|thumb\|print` | **Binary** on success (no envelope; `Content-Type` from the database, `nosniff`, `Cache-Control: private, max-age=3600`, `ETag` per variant, `HEAD`/`Range`/`If-None-Match` work; readable by the yearbook's owner and, read only, by the admin of a class whose member linked the yearbook, for its profile photo and the photos of approved notes only (docs/class-permissions.md); streamed from the object store, see "Photo downloads"); the JSON error envelope with `Cache-Control: no-store` on failure. |
 | `POST /api/media/delete` | JSON `{id}`; idempotent. |
 | `GET /api/public-media/get-content?token=` | **Public** (no session, no cookie, no CORS), **binary** display variant only, behind a signed link token; see "Public photo links" below. |
 
