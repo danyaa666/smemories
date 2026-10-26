@@ -30,6 +30,7 @@ import { Yearbooks } from "./pages/Yearbooks";
 
 // The book screen carries its own CSS and the book fonts, so it is a separate chunk (T-058).
 const Book = lazy(() => import("./pages/Book").then((m) => ({ default: m.Book })));
+const ClassBook = lazy(() => import("./pages/ClassBook").then((m) => ({ default: m.ClassBook })));
 
 export function App() {
   return (
@@ -57,6 +58,14 @@ export function App() {
           <Route path="/classes/new" element={<ClassNew />} />
           <Route path="/classes/:id" element={<ClassDetail />} />
           <Route path="/classes/:id/assemble" element={<ClassAssemble />} />
+          <Route
+            path="/classes/:id/book"
+            element={
+              <Suspense fallback={null}>
+                <ClassBook />
+              </Suspense>
+            }
+          />
           <Route path="/yearbooks" element={<Yearbooks />} />
           <Route path="/yearbooks/new" element={<YearbookNew />} />
           <Route path="/yearbooks/:id" element={<YearbookEdit />} />

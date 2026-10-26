@@ -74,3 +74,13 @@ note_count, approved_total, truncated}`. Permissions and privacy: [class-permiss
   realistic notes, not as a hard limit. If it ever matters, the lever is the per-member cap (`notes.MaxClassBookNotes`), not a response-size check.
 - **Photos.** The images are fetched by the admin with `media/get-content?variant=print`, which accepts exactly the profile photo and the approved notes' photos of the linked books (one SQL statement, see class-permissions.md).
 - The data is not cached and not exported as text in v1; the admin prints the book in the browser.
+
+### Printing the class book (T-130)
+
+`/classes/:id/book` (class admin; a student sees the 403 message) prints the class book in the browser, like `/yearbooks/:id/book` prints a personal one. Order: cover (class name, school, year),
+the front class pages, then for each member in book order the **existing** profile and notes pages of that student's own template (`ProfilePages` in `web/src/book/BookPages.tsx`, shared with
+the personal book, whose route and templates are unchanged), the back class pages, the back cover. A member with no page prints nothing. The paper size is one for the whole book: the size most students
+chose, or the one picked on the screen (`?size=A5|A4|Letter`); the cover and class pages are in the class's language, a student's pages in the student's own. A class page is plain text (React text nodes, newlines
+kept) shrunk to one page; the text of a page that still does not fit is cut and listed. The screen shows the page count (a warning above 120) and a summary naming the students with no page, the students whose
+approved notes were left out by the 40-note limit, whose notes or profile are cut at the template's smallest size, and the class pages that are cut. Ready (`html[data-book-ready]`, Print enabled) waits for the fonts and
+for **every** photo of every student's pages, through the shared queue of at most 16 requests in flight. `tools/print-check` prints a 30-student fixture (three templates, 77 pages) on A5 and A4 (about 10 s).

@@ -579,6 +579,22 @@
       "preview": "Preview of the cover of {{name}}"
     }
   },
+  "classBook": {
+    "title": "Print the class book",
+    "loading": "Loading the class book...",
+    "back": "Back to the class",
+    "size": "Paper size",
+    "sizeHelp": "One paper size for the whole book. Each student's pages keep their own design and language.",
+    "unnamed": "Student without a name",
+    "overBudget": "This book has {{pages}} pages, more than the {{budget}} pages the class book is planned for. It still prints, but check the cost with your printer.",
+    "noPage": "Students with no page, so nothing is printed for them ({{count}}): {{names}}.",
+    "cutPages": "Class pages that are too long for their space and are cut off in the printout ({{count}}): {{titles}}.",
+    "issuesTitle": "Students whose pages are cut: {{count}}",
+    "issuesHelp": "These approved texts do not all fit in the printout. The student can hide a note, or ask a friend to write a shorter one.",
+    "dropped": "Only {{shown}} of {{total}} approved notes are in the class book.",
+    "cutNotes": "Notes too long for their space and cut off: {{count}}.",
+    "cutProfile": "Profile texts too long for their space and cut off: {{count}}."
+  },
   "legal": {
     "terms": "Terms of Use",
     "privacy": "Privacy Policy",
