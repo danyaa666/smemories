@@ -114,10 +114,10 @@ export function gripProps(
   };
 }
 
-type Order = NonNullable<Props["order"]>;
+export type Order = NonNullable<Props["order"]>;
 
 /** Classes for a row in a drag: dimmed while it is the one dragged, a drop line on the row it would land on. */
-function dropClass(id: string, order?: Order): string {
+export function dropClass(id: string, order?: Order): string {
   const d = order?.dragging;
   if (!order || !d) return "";
   if (d.id === id) return "is-dragging";

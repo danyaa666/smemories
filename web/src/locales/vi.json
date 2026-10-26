@@ -705,7 +705,62 @@
       },
       "page": {
         "limit_reached": "Bạn chỉ có thể có tối đa 20 kỷ yếu. Hãy xóa bớt một cuốn."
+      },
+      "assemble": {
+        "limit_reached": "Một lớp có tối đa 30 trang. Hãy xóa bớt một trang."
       }
+    },
+    "assemble": "Sắp xếp sách lớp"
+  },
+  "assemble": {
+    "title": "Sách lớp {{name}}",
+    "help": "Sắp xếp thứ tự cuốn sách: trang của lớp ở đầu, rồi đến các bạn học sinh, rồi các trang cuối. Kéo bằng tay nắm hoặc dùng nút mũi tên. Chỉ khi bạn lưu thì thứ tự mới thay đổi.",
+    "toClass": "Về lớp",
+    "front": "Trang của lớp ở đầu sách",
+    "students": "Trang của học sinh",
+    "back": "Trang của lớp ở cuối sách",
+    "noPages": "Chưa có trang nào ở đây.",
+    "noStudents": "Chưa có ai tham gia.",
+    "noPage": "Chưa có trang (sẽ không in)",
+    "truncated": "in {{n}} ghi chú",
+    "grip": "Kéo để sắp xếp lại {{name}}",
+    "moveUp": "Chuyển {{name}} lên",
+    "moveDown": "Chuyển {{name}} xuống",
+    "moved": "{{name}}, đã chuyển đến vị trí {{position}} trên {{total}}",
+    "save": "Lưu thứ tự",
+    "discard": "Bỏ thay đổi",
+    "unsaved": "Bạn có thay đổi chưa lưu.",
+    "saved": "Đã lưu thứ tự.",
+    "stale": "Lớp đã thay đổi trong lúc bạn sắp xếp (có người vào hoặc rời lớp, hoặc một trang được thêm hay xóa). Chúng tôi đã tải lại thứ tự hiện tại. Hãy kiểm tra rồi lưu lại.",
+    "add": "Thêm trang của lớp",
+    "edit": "Sửa",
+    "delete": "Xóa",
+    "editFor": "Sửa {{name}}",
+    "deleteFor": "Xóa {{name}}",
+    "deleteTitle": "Xóa trang {{name}}?",
+    "deleteBody": "Trang sẽ bị gỡ khỏi sách lớp. Không thể hoàn tác.",
+    "deleted": "Đã xóa trang {{name}}.",
+    "pageSaved": "Đã lưu trang {{name}}.",
+    "editor": {
+      "add": "Trang mới của lớp",
+      "edit": "Sửa trang của lớp",
+      "kind": "Loại trang",
+      "placement": "Vị trí trong sách",
+      "title": "Tiêu đề",
+      "body": "Nội dung",
+      "bodyHelp": "Chỉ văn bản thuần. Xuống dòng được giữ nguyên; phím Tab thành hai dấu cách.",
+      "save": "Lưu trang"
+    },
+    "kind": {
+      "intro": "Lời giới thiệu",
+      "teachers": "Thầy cô",
+      "events": "Sự kiện",
+      "superlatives": "Bình chọn vui",
+      "custom": "Tùy chọn"
+    },
+    "placement": {
+      "front": "Trước các trang của học sinh",
+      "back": "Sau các trang của học sinh"
     }
   }
 }

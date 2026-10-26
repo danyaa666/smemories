@@ -21,3 +21,40 @@
   font-family: var(--font-mono);
   overflow-wrap: anywhere;
 }
+
+/* ── Class book assembly (T-129) ─────────────── */
+.order-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 var(--space-4);
+  display: grid;
+  gap: var(--space-2);
+}
+
+.assemble-row {
+  flex-wrap: wrap;
+}
+
+.assemble-row .assemble-actions,
+.assemble-row .page-body {
+  flex: 1 0 100%;
+}
+
+/* The text of a class page: newlines kept, never markup. */
+.page-body {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.page-body-clamp {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+}
+
+.page-editor {
+  margin: var(--space-4) 0;
+}

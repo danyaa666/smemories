@@ -59,6 +59,9 @@ export function ClassDetail() {
       <MyPage cls={c} />
       {c.my_role === "admin" && (
         <>
+          <p>
+            <Link to={`/classes/${c.id}/assemble`}>{t("classes.assemble")}</Link>
+          </p>
           <Invites classId={c.id} />
           <Roster classId={c.id} />
         </>
