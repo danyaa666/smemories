@@ -11,7 +11,8 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 7 | T-023, T-024, T-025, T-031, T-050, T-131, T-134 |
-| TODO | 3 | T-129, T-130, T-133 |
+| TODO | 2 | T-130, T-133 |
+| READY_FOR_QA | 1 | T-129 |
 | MERGED | 5 | T-027, T-125, T-126, T-127, T-128 |
 | DONE | 111 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-132 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
@@ -20,7 +21,7 @@
 
 **Open questions for you:** none
 
-_Board last written 2026-10-26 13:16Z_
+_Board last written 2026-10-26 13:26Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -5810,7 +5811,7 @@ Spec: .team/epics/E07-class-yearbook/06-web-classes-join-and-student-page.md (re
 - 2026-10-26 10:02Z · leader · merged d0b3e25. Review: token only in the path, POST bodies and in-memory router state (QA browser pass at 375 px, en+vi); no storage/console use outside test assertions; student view makes only get-me and class/get; safePath on state.from; full CI run 40301323364 green on head e2a02ba. For owner to check: sign up through an invite link on a real device; Google-only students are not told what to do yet (T-134 adds the hint).
 
 ### T-129 — [E07] Web: assemble the class book (order, class pages)
-- **Status:** TODO
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
@@ -5819,15 +5820,16 @@ Spec: .team/epics/E07-class-yearbook/06-web-classes-join-and-student-page.md (re
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-26 13:16Z by leader
-- **Comments-seen:** 1
+- **Branch:** task/t-129-e07-web-assemble-the-class-book-order-cl
+- **PR:** https://github.com/danyaa666/smemories/pull/128
+- **Updated:** 2026-10-26 13:26Z by dev
+- **Comments-seen:** 2
 
 Spec: .team/epics/E07-class-yearbook/07-web-assembly-ui.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.
 
 #### Comments
 - 2026-10-26 13:16Z · leader · T-127 merged (2db5ede); editor must turn tabs into spaces
+- 2026-10-26 13:26Z · dev · PR #128 head b3561e1. Screen /classes/:id/assemble (admin only; students get NotFound, no book request). Reorder by drag, grip arrows and up/down buttons; explicit Save order sends full lists; 400/409 reloads + banner. Page editor (tabs->2 spaces, server message shown, counter 4000), text-only bodies. en+vi. Verify: keyboard reorder of 30 students, reload keeps order, paste <img onerror> in a body, 375px (not checked in a real browser, Docker down). Local: lint, tsc, build, vitest 550, i18n, check:api green; CI go/web/image/security pass, e2e/go-integration skipped (D-37).
 
 ### T-130 — [E07] Web: print the class book (many profiles, 120 pages)
 - **Status:** TODO
