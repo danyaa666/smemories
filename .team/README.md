@@ -11,17 +11,17 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 7 | T-023, T-024, T-025, T-031, T-050, T-131, T-134 |
-| TODO | 2 | T-130, T-133 |
-| READY_FOR_QA | 1 | T-129 |
-| MERGED | 5 | T-027, T-125, T-126, T-127, T-128 |
+| TODO | 1 | T-133 |
+| IN_PROGRESS | 1 | T-130 |
+| MERGED | 6 | T-027, T-125, T-126, T-127, T-128, T-129 |
 | DONE | 111 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-132 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-027 ([E07] Class book data API and the admin's read-only media access); T-125 ([E07] Class invites: create, revoke, lookup, accept); T-126 ([E07] A student's page: link a personal yearbook to the class); T-127 ([E07] Class pages and book order (API)); T-128 ([E07] Web: classes, invites, joining and the student's page)
+**Awaiting your review (MERGED):** T-027 ([E07] Class book data API and the admin's read-only media access); T-125 ([E07] Class invites: create, revoke, lookup, accept); T-126 ([E07] A student's page: link a personal yearbook to the class); T-127 ([E07] Class pages and book order (API)); T-128 ([E07] Web: classes, invites, joining and the student's page); T-129 ([E07] Web: assemble the class book (order, class pages))
 
 **Open questions for you:** none
 
-_Board last written 2026-10-26 13:26Z_
+_Board last written 2026-10-26 13:34Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -5811,7 +5811,7 @@ Spec: .team/epics/E07-class-yearbook/06-web-classes-join-and-student-page.md (re
 - 2026-10-26 10:02Z · leader · merged d0b3e25. Review: token only in the path, POST bodies and in-memory router state (QA browser pass at 375 px, en+vi); no storage/console use outside test assertions; student view makes only get-me and class/get; safePath on state.from; full CI run 40301323364 green on head e2a02ba. For owner to check: sign up through an invite link on a real device; Google-only students are not told what to do yet (T-134 adds the hint).
 
 ### T-129 — [E07] Web: assemble the class book (order, class pages)
-- **Status:** READY_FOR_QA
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
@@ -5822,17 +5822,29 @@ Spec: .team/epics/E07-class-yearbook/06-web-classes-join-and-student-page.md (re
 - **Assignee:** —
 - **Branch:** task/t-129-e07-web-assemble-the-class-book-order-cl
 - **PR:** https://github.com/danyaa666/smemories/pull/128
-- **Updated:** 2026-10-26 13:26Z by dev
-- **Comments-seen:** 2
+- **Updated:** 2026-10-26 13:34Z by leader
+- **Comments-seen:** 4
 
 Spec: .team/epics/E07-class-yearbook/07-web-assembly-ui.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.
 
 #### Comments
 - 2026-10-26 13:16Z · leader · T-127 merged (2db5ede); editor must turn tabs into spaces
 - 2026-10-26 13:26Z · dev · PR #128 head b3561e1. Screen /classes/:id/assemble (admin only; students get NotFound, no book request). Reorder by drag, grip arrows and up/down buttons; explicit Save order sends full lists; 400/409 reloads + banner. Page editor (tabs->2 spaces, server message shown, counter 4000), text-only bodies. en+vi. Verify: keyboard reorder of 30 students, reload keeps order, paste <img onerror> in a body, 375px (not checked in a real browser, Docker down). Local: lint, tsc, build, vitest 550, i18n, check:api green; CI go/web/image/security pass, e2e/go-integration skipped (D-37).
+- 2026-10-26 13:33Z · qa · QA_PASS on head b3561e10a725cdf520ba4d3d6e9c3af4354c9d3d (PR #128). CI run 40330083219: go, image, security, web pass; e2e and go-integration skipped (D-37). Scope: git diff origin/develop...b3561e1 --stat = 14 files, all under web/src; no .team/, api/, openapi.yaml, schema.d.ts, package.json or lockfile change. NoteCard.tsx change is only 'export' on Order and dropClass; notes screens tests green.
+  Local (worktree): npm lint (eslint+prettier) ok, typecheck ok, build ok, vitest 29 files / 550 tests ok, lint:i18n ok, check:api ok.
+  Browser pass: Vite dev server (stopped afterwards) + Playwright chromium at 375px against a stubbed /api (script in the scratchpad, 30 students, 2 front + 1 back page), en and vi (vi via smemories.lang; h1 'Sách lớp ...', all strings vi).
+  AC1 keyboard reorder: PASS. Up button + Enter/Space, grip ArrowUp/ArrowDown; focus stayed on the moved item's control (aria-label 'Move Student 5 up' / 'Drag to reorder Student 5'); live region 'Student 5, moved to position 4 of 30' (vi: 'đã chuyển đến vị trí 4 trên 30'); ArrowUp at top is a no-op, last Down disabled. Save by keyboard sent ONE update-order with class_id + full member_ids (30) + front_page_ids (2, swapped) + back_page_ids (1); after reload the order and front order were the same. Not tried: real mouse drag (jsdom/unit tests only; same gripProps as notes).
+  AC2 injection: PASS. Title and body with <img onerror>, <script>, javascript: and <a href=javascript:> saved to the back list: window.__pwn undefined, 0 img/script/a[href^=javascript] elements created, text shown literally with the newline; unit test asserts querySelector('img'/'script') null.
+  AC3 rejected save: PASS for 409 and 400 (server also added a member meanwhile): banner shown, list reloaded with the new member, Save disabled, arrangement dropped.
+  AC4 access: PASS. Student and stranger (class/get 404) see 'Page not found'; network log only /user/get-me and /class/get, no /class-book or /class-page request. Admin: rows show approved note count ('Approved notes: N') and 'No page yet (prints nothing)' for unlinked students.
+  AC5 editor: PASS. 5 kinds, front/back selects, create/edit/delete (confirm dialog; Esc keeps the page, no delete request before confirm), pasted tab -> two spaces in the field (payload covered by unit test), Tab key moves focus (no trap), server 400 message and 409 limit_reached text shown in role=alert.
+  AC6/AC7: no horizontal scroll (375/375) with list and with editor open, both locales; buttons/selects/inputs >= 44px; focus order grip, up, down, edit, delete; editor heading gets focus on open; en/vi key parity ok; no new dependency.
+  Non-blocking observations (none violates an AC): (a) the shared TextArea counter uses string .length (UTF-16), so 10 emoji show 20/4000 and maxLength stops at 2000 emoji, while the server counts runes; Vietnamese NFC text counts correctly (34 chars = 34). Same behaviour in NoteForm; if rune-exact is wanted, count [...value].length in TextArea (a separate small task, not this PR). (b) The plain links 'SMemories' (header) and 'Back to the class' render 24x167 and 20x134 px, under 44 px; same link style as the rest of the app, not new. (c) the stranger case fires class/get 4 times (react-query retry on 404), harmless.
+  Could not check: real server/DB (Docker down, API stubbed), real pointer drag, Safari/Firefox.
+- 2026-10-26 13:34Z · leader · merged b7171c4. Review: web-only (14 files under web/src), keyboard reorder with focus and live region, full-list update-order payload, bodies rendered as text, 400/409 reload, student/stranger NotFound with no requests; QA browser pass at 375 px en+vi. For owner to check: reorder with a real mouse drag and on a phone (not covered); emoji counter counts UTF-16 units (cosmetic, in T-134).
 
 ### T-130 — [E07] Web: print the class book (many profiles, 120 pages)
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
@@ -5840,10 +5852,10 @@ Spec: .team/epics/E07-class-yearbook/07-web-assembly-ui.md (read it from the mai
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-130-e07-web-print-the-class-book-many-profil
 - **PR:** —
-- **Updated:** 2026-10-26 13:16Z by leader
+- **Updated:** 2026-10-26 13:27Z by dev
 - **Comments-seen:** 1
 
 Spec: .team/epics/E07-class-yearbook/08-web-class-book-print.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.

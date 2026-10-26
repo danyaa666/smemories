@@ -15,7 +15,8 @@ T-128 shipped the join flow and the student's page but left three gaps (none wer
 3. **Page picker (any member):** on `/classes/:id` a student can choose one of their own yearbooks (list from the existing yearbook list endpoint) or create a new one, and can unlink (`set-book` with `null`). A yearbook already linked to another class shows as unavailable with a short reason (409 handled, not hidden).
 4. **Google on the join path:** keep it hidden unless a design that keeps the token out of every URL is found; instead show one sentence on Login/Register when coming from `/join/` ("Signed in with Google? Sign in first, then open your invite link again.") in both locales. Do not store the token anywhere to bridge the round trip.
 5. **Role-change errors** (e.g. the last-admin refusal) show next to the member's row, not above the list (QA, T-128).
-6. Both locales with i18n parity, phone width, keyboard and screen-reader basics, no new dependency, vitest for each new state. No change to `api/openapi.yaml`.
+6. **Small fixes from T-129 QA:** the shared `TextArea` counter counts UTF-16 units (10 emoji show 20/4000) while the server counts runes: count runes; the two plain links "SMemories" and "Back to the class" are under 44 px on phones.
+7. Both locales with i18n parity, phone width, keyboard and screen-reader basics, no new dependency, vitest for each new state. No change to `api/openapi.yaml`.
 
 #### Acceptance criteria
 - [ ] AC1 — Admin edits and deletes a class; a student sees neither control (rendered and in network calls).
