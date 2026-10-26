@@ -92,11 +92,13 @@ func TestMigrateClassInviteTable(t *testing.T) {
 	if err := invite("I3", "t3"); err != nil {
 		t.Error(err)
 	}
-	if err := db.MigrateDown(ctx, d); err != nil {
-		t.Fatalf("down: %v", err)
+	for i := 0; i < 10 && exists() != "0"; i++ { // newer migrations go down first
+		if err := db.MigrateDown(ctx, d); err != nil {
+			t.Fatalf("down: %v", err)
+		}
 	}
 	if exists() != "0" || dump(t, ctx, d, `SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'class_tab'`)[0] != "1" {
-		t.Fatal("down must drop only class_invite_tab")
+		t.Fatal("down must drop class_invite_tab and keep class_tab")
 	}
 	if err := db.MigrateUp(ctx, d); err != nil {
 		t.Fatalf("up again: %v", err)

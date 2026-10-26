@@ -149,7 +149,7 @@ func TestPageMatrix(t *testing.T) {
 					}
 				}
 				if a.status != 200 && (e.order(cls).key() != before || e.pageCount(cls) != pages ||
-					e.count(`SELECT COUNT(*) FROM class_page_tab WHERE title = 'Changed'`) != 0) {
+					e.count(`SELECT COUNT(*) FROM class_page_tab p JOIN class_tab c ON c.id = p.class_id WHERE c.public_id = ? AND p.title = 'Changed'`, cls) != 0) {
 					t.Fatal("a refused request changed the class")
 				}
 			})
