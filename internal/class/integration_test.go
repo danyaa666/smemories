@@ -29,18 +29,35 @@ import (
 )
 
 const (
-	origin = "http://localhost:5173"
-	testPW = "Tr0ub4dor&3-fake-test-password" // obviously fake
+	origin  = "http://localhost:5173"
+	baseURL = "https://app.example.test"
+	testPW  = "Tr0ub4dor&3-fake-test-password" // obviously fake
 )
+
+// syncBuf is a log sink that is safe for the concurrent requests of a test.
+type syncBuf struct {
+	mu sync.Mutex
+	b  bytes.Buffer
+}
+
+func (s *syncBuf) Write(p []byte) (int, error) { s.mu.Lock(); defer s.mu.Unlock(); return s.b.Write(p) }
+func (s *syncBuf) String() string              { s.mu.Lock(); defer s.mu.Unlock(); return s.b.String() }
 
 type env struct {
 	t     *testing.T
+	logs  *syncBuf // every log line of the stack, at debug level: AC5 greps it for the invite token
 	db    *sql.DB
 	h     http.Handler
 	svc   *Service
 	mu    sync.Mutex
 	clock time.Time
 	n     int
+}
+
+func (e *env) advance(d time.Duration) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.clock = e.clock.Add(d)
 }
 
 func (e *env) now() time.Time {
@@ -54,8 +71,8 @@ func (e *env) now() time.Time {
 func newEnv(t *testing.T) *env {
 	t.Helper()
 	d := dbtest.New(t)
-	e := &env{t: t, db: d, clock: time.Date(2026, 10, 26, 12, 0, 0, 0, time.UTC)}
-	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
+	e := &env{t: t, db: d, logs: new(syncBuf), clock: time.Date(2026, 10, 26, 12, 0, 0, 0, time.UTC)}
+	logger := slog.New(slog.NewJSONHandler(e.logs, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	hasher := auth.NewHasher(auth.HashParams{MemoryKiB: 64, Time: 1, Parallelism: 1}, 4, auth.HashWait)
 	mail, _ := mailer.NewLog("test", io.Discard)
 	rc := redistest.New(t)
@@ -76,7 +93,8 @@ func newEnv(t *testing.T) *env {
 	ah := auth.NewHandler(asvc, auth.HandlerConfig{AllowedOrigins: []string{origin}}, logger)
 	cursors := httpx.NewCursors([]byte(strings.Repeat("c", 32)))
 	e.svc = NewService(NewStore(d), cursors, limiters, e.now)
-	ch := NewHandler(e.svc, ah.RequireUser, []string{origin})
+	e.svc.SetPublicBaseURL(baseURL)
+	ch := NewHandler(e.svc, ah.RequireUser, []string{origin}, ah.ClientIP)
 	yh := yearbook.NewHandler(yearbook.NewService(yearbook.NewStore(d), cursors, nil, e.now, e.svc), ah.RequireUser, []string{origin})
 	e.h = httpx.NewRouter(logger, ah.Routes, ch.Routes, yh.Routes)
 	return e

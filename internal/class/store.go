@@ -44,6 +44,12 @@ type Member struct {
 // class_member_tab rows. class/create locks the user_tab row first (it creates the class, so there is no class row yet).
 // A yearbook delete takes the yearbook_tab row first and then clears class_member_tab.yearbook_id (clearBook); it never
 // takes a class lock, so the two orders cannot form a cycle.
+//
+// Reads that decide a cap or a state are locking reads (FOR UPDATE), never plain ones: a plain read takes the transaction's
+// snapshot, which may be older than the lock just won. Caps (60 members, 5 active invites) are counted under the class row lock.
+// A promotion to admin (setRole) then also takes the promoted user's user_tab row, so two classes promoting the same user, and
+// class/create, serialise there and the 10-admin-classes cap holds; no transaction holding a user row waits for a class lock,
+// so there is no cycle. Accepting an invite takes the class row, then the invite row, then the member rows.
 type Store struct{ db *sql.DB }
 
 func NewStore(db *sql.DB) *Store { return &Store{db: db} }
@@ -134,16 +140,8 @@ func (s *Store) inTx(ctx context.Context, fn func(tx *sql.Tx) error) error {
 // concurrent creates cannot both slip under maxAdminClasses.
 func (s *Store) create(ctx context.Context, userID uint64, c *Class, memberID string, nowMs int64) error {
 	return s.inTx(ctx, func(tx *sql.Tx) error {
-		var locked uint64
-		if err := tx.QueryRowContext(ctx, `SELECT id FROM user_tab WHERE id = ? FOR UPDATE`, userID).Scan(&locked); err != nil {
-			return dbErr(err, "lock user")
-		}
-		var n int
-		if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM class_member_tab WHERE user_id = ? AND role = ?`, userID, RoleAdmin).Scan(&n); err != nil {
-			return dbErr(err, "count classes")
-		}
-		if n >= maxAdminClasses {
-			return ErrLimitReached
+		if err := capAdminClasses(ctx, tx, userID); err != nil {
+			return err
 		}
 		res, err := tx.ExecContext(ctx,
 			`INSERT INTO class_tab (public_id, name, school_name, graduation_year, language, created_by, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?)`,
@@ -228,7 +226,7 @@ func (s *Store) update(ctx context.Context, userID uint64, publicID string, in *
 	})
 }
 
-// remove deletes the class and its member rows (admin only). Yearbooks are never touched: a member row only points at one.
+// remove deletes the class, its member rows and its invites (admin only). Yearbooks are never touched: a member row only points at one.
 func (s *Store) remove(ctx context.Context, userID uint64, publicID string) error {
 	return s.inTx(ctx, func(tx *sql.Tx) error {
 		classID, _, err := lockMembership(ctx, tx, userID, publicID, RoleAdmin)
@@ -237,6 +235,9 @@ func (s *Store) remove(ctx context.Context, userID uint64, publicID string) erro
 		}
 		if _, err := tx.ExecContext(ctx, `DELETE FROM class_member_tab WHERE class_id = ?`, classID); err != nil {
 			return dbErr(err, "delete members")
+		}
+		if _, err := tx.ExecContext(ctx, `DELETE FROM class_invite_tab WHERE class_id = ?`, classID); err != nil {
+			return dbErr(err, "delete invites")
 		}
 		_, err = tx.ExecContext(ctx, `DELETE FROM class_tab WHERE id = ?`, classID)
 		return dbErr(err, "delete class")
@@ -301,13 +302,32 @@ func (s *Store) members(ctx context.Context, classID, after uint64, limit int) (
 	return out, next, nil
 }
 
-// target locks the member memberID of the class (the caller is already locked in as admin).
-func target(ctx context.Context, tx *sql.Tx, classID uint64, memberID string) (row uint64, role string, err error) {
-	err = tx.QueryRowContext(ctx, `SELECT id, role FROM class_member_tab WHERE class_id = ? AND public_id = ? FOR UPDATE`, classID, memberID).Scan(&row, &role)
+// target locks the member memberID of the class (the caller is already locked in as admin). A member id of another class is
+// not found here, since the lookup is scoped to classID.
+func target(ctx context.Context, tx *sql.Tx, classID uint64, memberID string) (row, userID uint64, role string, err error) {
+	err = tx.QueryRowContext(ctx, `SELECT id, user_id, role FROM class_member_tab WHERE class_id = ? AND public_id = ? FOR UPDATE`, classID, memberID).Scan(&row, &userID, &role)
 	if errors.Is(err, sql.ErrNoRows) {
-		return 0, "", ErrMemberNotFound
+		return 0, 0, "", ErrMemberNotFound
 	}
-	return row, role, dbErr(err, "lock target")
+	return row, userID, role, dbErr(err, "lock target")
+}
+
+// capAdminClasses is ErrLimitReached when userID is already admin of maxAdminClasses classes. It locks the user_tab row first, so
+// concurrent promotions of one user in different classes (and class/create) serialise; the count that follows is the transaction's
+// first plain read (every earlier read of a membership change is a locking one), so it sees what the previous holder committed.
+func capAdminClasses(ctx context.Context, tx *sql.Tx, userID uint64) error {
+	var locked uint64
+	if err := tx.QueryRowContext(ctx, `SELECT id FROM user_tab WHERE id = ? FOR UPDATE`, userID).Scan(&locked); err != nil {
+		return dbErr(err, "lock user")
+	}
+	var n int
+	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM class_member_tab WHERE user_id = ? AND role = ?`, userID, RoleAdmin).Scan(&n); err != nil {
+		return dbErr(err, "count classes")
+	}
+	if n >= maxAdminClasses {
+		return ErrLimitReached
+	}
+	return nil
 }
 
 // setRole gives the member memberID the role newRole (admin only). Demoting the last admin is ErrLastAdmin.
@@ -317,7 +337,7 @@ func (s *Store) setRole(ctx context.Context, userID uint64, publicID, memberID, 
 		if err != nil {
 			return err
 		}
-		row, role, err := target(ctx, tx, classID, memberID)
+		row, memberUser, role, err := target(ctx, tx, classID, memberID)
 		if err != nil {
 			return err
 		}
@@ -326,6 +346,11 @@ func (s *Store) setRole(ctx context.Context, userID uint64, publicID, memberID, 
 		}
 		if err := keepAnAdmin(ctx, tx, classID, role); err != nil {
 			return err
+		}
+		if newRole == RoleAdmin {
+			if err := capAdminClasses(ctx, tx, memberUser); err != nil {
+				return err
+			}
 		}
 		_, err = tx.ExecContext(ctx, `UPDATE class_member_tab SET role = ?, updated_at = ? WHERE id = ?`, newRole, nowMs, row)
 		return dbErr(err, "update role")
@@ -340,7 +365,7 @@ func (s *Store) removeMember(ctx context.Context, userID uint64, publicID, membe
 		if err != nil {
 			return err
 		}
-		row, role, err := target(ctx, tx, classID, memberID)
+		row, _, role, err := target(ctx, tx, classID, memberID)
 		if err != nil {
 			return err
 		}

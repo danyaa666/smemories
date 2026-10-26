@@ -18,10 +18,11 @@ type Handler struct {
 	svc            *Service
 	requireUser    func(http.Handler) http.Handler // auth.Handler.RequireUser
 	allowedOrigins []string                        // for auth.Guard
+	clientIP       func(*http.Request) string      // auth.Handler.ClientIP, for the invite limits
 }
 
-func NewHandler(svc *Service, requireUser func(http.Handler) http.Handler, allowedOrigins []string) *Handler {
-	return &Handler{svc: svc, requireUser: requireUser, allowedOrigins: allowedOrigins}
+func NewHandler(svc *Service, requireUser func(http.Handler) http.Handler, allowedOrigins []string, clientIP func(*http.Request) string) *Handler {
+	return &Handler{svc: svc, requireUser: requireUser, allowedOrigins: allowedOrigins, clientIP: clientIP}
 }
 
 // Routes registers the endpoints on mux (pass to httpx.NewRouter).
@@ -37,6 +38,12 @@ func (h *Handler) Routes(mux *http.ServeMux) {
 	mux.Handle("POST /api/class-member/update-role", write(h.updateRole))
 	mux.Handle("POST /api/class-member/remove", write(h.removeMember))
 	mux.Handle("POST /api/class-member/leave", write(h.leave))
+	mux.Handle("POST /api/class-invite/create", write(h.createInvite))
+	mux.Handle("GET /api/class-invite/get-list", read(h.invites))
+	mux.Handle("POST /api/class-invite/revoke", write(h.revokeInvite))
+	mux.Handle("POST /api/class-invite/accept", write(h.acceptInvite))
+	// Public, a POST only so the token travels in the body and never in a URL (docs/api-contract.md, section 6).
+	mux.Handle("POST /api/class-invite/lookup", auth.Guard(h.allowedOrigins, http.HandlerFunc(h.lookupInvite)))
 }
 
 // The request bodies: the ids next to the fields the service validates.
@@ -58,6 +65,17 @@ type (
 	roleInput struct {
 		memberInput
 		Role string `json:"role"`
+	}
+	createInviteInput struct {
+		ClassID   string `json:"class_id"`
+		ExpiresAt *int64 `json:"expires_at"`
+	}
+	revokeInviteInput struct {
+		ClassID string `json:"class_id"`
+		ID      string `json:"id"`
+	}
+	tokenInput struct {
+		Token string `json:"token"`
 	}
 )
 
@@ -183,6 +201,69 @@ func (h *Handler) leave(w http.ResponseWriter, r *http.Request) {
 	var in classIDInput
 	if httpx.DecodeJSON(w, r, &in) && validID(w, r, in.ClassID, "class_id") {
 		respond(w, r, nil, h.svc.Leave(r.Context(), u.InternalID, in.ClassID))
+	}
+}
+
+func (h *Handler) createInvite(w http.ResponseWriter, r *http.Request) {
+	u, ok := auth.MustUser(w, r)
+	if !ok {
+		return
+	}
+	var in createInviteInput
+	if httpx.DecodeJSON(w, r, &in) && validID(w, r, in.ClassID, "class_id") {
+		inv, err := h.svc.CreateInvite(r.Context(), u.InternalID, in.ClassID, in.ExpiresAt)
+		respond(w, r, inv, err)
+	}
+}
+
+func (h *Handler) invites(w http.ResponseWriter, r *http.Request) {
+	u, ok := auth.MustUser(w, r)
+	if !ok {
+		return
+	}
+	id := r.URL.Query().Get("class_id")
+	if !validID(w, r, id, "class_id") {
+		return
+	}
+	limit, err := httpx.ParseLimit(r, DefaultInviteListLimit, MaxInviteListLimit)
+	if err != nil {
+		fail(w, r, err)
+		return
+	}
+	items, next, err := h.svc.Invites(r.Context(), u.InternalID, id, limit, r.URL.Query().Get("next_id"))
+	respond(w, r, httpx.Page[Invite]{Items: items, NextID: next}, err)
+}
+
+func (h *Handler) revokeInvite(w http.ResponseWriter, r *http.Request) {
+	u, ok := auth.MustUser(w, r)
+	if !ok {
+		return
+	}
+	var in revokeInviteInput
+	if httpx.DecodeJSON(w, r, &in) && validID(w, r, in.ClassID, "class_id") && validID(w, r, in.ID, "id") {
+		respond(w, r, nil, h.svc.RevokeInvite(r.Context(), u.InternalID, in.ClassID, in.ID))
+	}
+}
+
+// lookupInvite and acceptInvite take the token from the body. A token is never validated here beyond being a string: a wrong
+// one, a malformed one and a missing one all get the one ErrInviteNotFound answer from the service.
+func (h *Handler) lookupInvite(w http.ResponseWriter, r *http.Request) {
+	var in tokenInput
+	if httpx.DecodeJSON(w, r, &in) {
+		p, err := h.svc.LookupInvite(r.Context(), h.clientIP(r), in.Token)
+		respond(w, r, p, err)
+	}
+}
+
+func (h *Handler) acceptInvite(w http.ResponseWriter, r *http.Request) {
+	u, ok := auth.MustUser(w, r)
+	if !ok {
+		return
+	}
+	var in tokenInput
+	if httpx.DecodeJSON(w, r, &in) {
+		c, err := h.svc.AcceptInvite(r.Context(), u.InternalID, h.clientIP(r), u.EmailVerified, in.Token)
+		respond(w, r, c, err)
 	}
 }
 

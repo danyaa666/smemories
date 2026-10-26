@@ -15,8 +15,8 @@ admin never edits, moderates or reads the unapproved content of a student's book
 
 | Role | Who | How it is obtained |
 |---|---|---|
-| `admin` | the teacher or the class monitor | creating the class, or being promoted by an admin |
-| `student` | everybody else in the class | joining with an invite (T-125), or being demoted by an admin |
+| `admin` | the teacher or the class monitor | creating the class, or being promoted by an admin; never by an invite |
+| `student` | everybody else in the class | joining with an invite, or being demoted by an admin |
 
 A class always has at least one admin. Roles are per class: the same person can be admin of one class and student of another.
 
@@ -33,8 +33,9 @@ A class always has at least one admin. Roles are per class: the same person can 
 | Promote or demote a member (`class-member/update-role`) | 200 (last admin protected) | **403** | 404 | 404 | 401 |
 | Remove a member (`class-member/remove`) | 200 (last admin protected) | **403** | 404 | 404 | 401 |
 | Leave the class (`class-member/leave`) | 200 unless last admin | 200 | 404 | 404 | 401 |
-| Create, list, revoke invites (T-125) | yes | 403 | 404 | 404 | 401 |
-| Join with an invite (T-125) | n/a | yes, becomes student | needs an account first | yes, becomes student | 401 |
+| Create, list, revoke invites (`class-invite/create`, `get-list`, `revoke`; T-125) | 200 | **403** | 404 | 404 | 401 |
+| Preview an invite link (`class-invite/lookup`, public; T-125) | 200 for a live token, else 404 | same | same | same | same (no session needed) |
+| Join with an invite (`class-invite/accept`, verified email; T-125) | 200, keeps `admin` | 200, keeps `student` | 200, becomes student | 200, becomes student | 401 |
 | Read class book data: profiles, approved notes, class pages (T-126) | yes | **no (403)** | 404 | 404 | 401 |
 | Read a student's pending or hidden notes, note-link tokens, unapproved photos | **never** | own only, via the normal yearbook endpoints | no | no | no |
 | Edit a student's yearbook | **never** | own only | no | no | no |
@@ -62,15 +63,44 @@ Rows marked with a ticket id are enforced by that ticket; this file is the contr
 7. **Deleting is local.** Deleting a class removes the class and membership rows and nothing else; a member's yearbook is never touched.
    Deleting a yearbook clears the link in `class_member_tab.yearbook_id` and keeps the membership. Leaving or being removed never touches
    the member's yearbook.
-8. **Verified email to create.** `class/create` needs a verified email (403 `ERROR_EMAIL_NOT_VERIFIED`); a user can be admin of at most 10
-   classes (409 `ERROR_LIMIT_REACHED`).
+8. **Verified email to create or join.** `class/create` and `class-invite/accept` need a verified email (403 `ERROR_EMAIL_NOT_VERIFIED`).
+   A user can be admin of at most 10 classes (409 `ERROR_LIMIT_REACHED`), whether by creating one or by being promoted in one
+   (`class-member/update-role`): the count is taken under a lock on the user's row, so two classes promoting the same person, or a promotion
+   racing a `class/create`, cannot both take the last slot.
 9. **Writes are rate-limited** per user (120 an hour, shared by the class writes) and fail closed: if the limiter store is down, the
    write is refused with 503 `ERROR_UNAVAILABLE`. Reads are not limited.
 
+## Invites (T-125)
+
+An invite is a link `<public base URL>/join/<token>` that an admin makes and shares by hand (no invite email, docs/email.md). Whoever holds a
+live link may join as a `student`; the link is a bearer secret, so:
+
+1. **The token is shown once.** 32 random bytes (`crypto/rand`), base64url, 43 characters. `class-invite/create` returns it and the link;
+   the server stores only the SHA-256 (`class_invite_tab.token_hash`, unique), so nothing can show it again, and `get-list` has no token.
+2. **It is never logged.** Handlers read it from the JSON body (`POST` for `lookup` and `accept`), not from a URL; the API's access log
+   records the route only; no error, metric label or stored column holds it. The web path `/join/<token>` is redacted wherever a
+   URL of the web app is recorded: the Playwright trace scrubber (`tools/e2e/scrub-trace.sh`) and, for T-023, the edge (ALB / CloudFront /
+   web-server) access logs, which must drop or mask the path after `/join/` exactly as they must for `/c/`. A test greps a run's logs for the token.
+3. **Dead tokens look alike.** Unknown, malformed, empty, expired and revoked tokens get the same 404 `ERROR_NOT_FOUND` (`invite not found`),
+   byte for byte, on `lookup` and on `accept`, also for a caller who already belongs to the class. All take the same code path (one lookup by
+   hash, then a constant-time compare of the hash); the state is judged afterwards.
+4. **Lookup shows the class name and school** and nothing else (not the member count, not whether the class is full). Rate limits per
+   client IP: 120 requests and 20 misses per 10 minutes (a live link is not a miss), fail open because a 256-bit token cannot be guessed.
+5. **Accept is a write and is idempotent.** It counts against the user's 120 writes an hour and against 60 accepts per IP an hour (a wrong
+   token costs a write too), fails closed if the limiter store is down, and never changes an existing member's role: an admin who opens
+   an invite stays admin, a promoted student stays promoted. A new member is always a `student`.
+6. **Caps are checked under the class row lock** (the same lock as every membership change): 5 active (unrevoked, unexpired) invites,
+   60 members. A full class answers 409 `ERROR_CLASS_FULL` (a member of a full class still gets their membership back); ten accepts of the
+   last seat at once add exactly one member. A revoke takes the same lock, so an accept that starts after a revoke commits is refused.
+7. **Lifetime** 14 days by default; `expires_at` (Unix ms) may be set from now (exclusive) to 30 days.
+8. Revoking a link removes nobody who joined with it; removing a member does not revoke the link. Deleting a class deletes its invites.
+9. An invite or member id is looked up inside the class named in the request, so an admin of class A who sends an id of class B gets 404
+   and nothing changes (matrix test `TestCrossClassIDsChangeNothing`).
+
 ## Limits
 
-Classes per user as admin: 10. Members per class: 60 (enforced where members are added, T-125). Active invites per class: 5 (T-125).
-Class pages per class: 30 (T-128). A class name is 1 to 120 characters; the school 0 to 120; the graduation year 1950 to 2100;
+Classes per user as admin: 10 (create and promotion). Members per class: 60 (`class-invite/accept`). Active invites per class: 5.
+Invite lifetime: 14 days by default, 30 at most. Class pages per class: 30 (T-128). A class name is 1 to 120 characters; the school 0 to 120; the graduation year 1950 to 2100;
 the language `en` or `vi`.
 
 ## Privacy statement
@@ -86,5 +116,6 @@ in T-131, which also has the owner sign off before production use.
 
 `internal/class/matrix_integration_test.go` (the matrix above, one fresh class per cell, plus the 404 equality), `class_integration_test.go`
 (last admin under concurrency, caps, validation, canonical ids, paging, rate limit, deleting a class or a yearbook),
-`internal/db/class_tab_integration_test.go` (migration round trip and the keys), and `postman/class.postman_collection.json` (the
+`invite_integration_test.go` (invites: matrix cells, caps, concurrency, dead tokens, the log grep, the cross-class ids and the promotion cap),
+`internal/db/class_tab_integration_test.go` (migration round trips and the keys), and `postman/class.postman_collection.json` (the
 same flows over HTTP, newman).

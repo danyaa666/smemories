@@ -91,3 +91,25 @@ func TestErrorCodes(t *testing.T) {
 		t.Fatal("HTTP statuses changed")
 	}
 }
+
+func TestInviteToken(t *testing.T) {
+	seen := map[string]bool{}
+	for range 50 {
+		tok, hash, err := newInviteToken()
+		if err != nil || len(tok) != tokenLen || seen[tok] {
+			t.Fatalf("token %q, %v", tok, err)
+		}
+		seen[tok] = true
+		if got, ok := inviteHash(tok); !ok || got != hash {
+			t.Fatalf("inviteHash(%q) = %x, %v; want %x", tok, got, ok, hash)
+		}
+	}
+	for name, s := range map[string]string{
+		"empty": "", "short": strings.Repeat("a", tokenLen-1), "long": strings.Repeat("a", tokenLen+1), "padding": strings.Repeat("a", tokenLen-1) + "=",
+		"space": strings.Repeat("a", tokenLen-1) + " ", "slash": strings.Repeat("a", tokenLen-1) + "/", "unicode": strings.Repeat("é", tokenLen/2),
+	} {
+		if _, ok := inviteHash(s); ok {
+			t.Errorf("%s is accepted as a token", name)
+		}
+	}
+}

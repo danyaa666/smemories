@@ -2225,6 +2225,237 @@ paths:
         "429": {$ref: "#/components/responses/ApiRateLimited"}
         "500": {$ref: "#/components/responses/ApiInternal"}
         "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/class-invite/create:
+    post:
+      operationId: createClassInvite
+      tags: [class]
+      summary: Make a join link for a class (admin)
+      description: >-
+        Called by an admin of the class (the invite screen). Returns the link **once**: the `token` is a bearer secret (32 random bytes, 43 base64url characters) that lets whoever holds it join the class as a `student`; the server keeps only its SHA-256, so it cannot be shown again. Show `link` (`<public base URL>/join/<token>`) to the admin to copy; there is no invite email.
+        `expires_at` (Unix ms) is optional: it defaults to 14 days from now and must be in the future and at most 30 days away. A class has at most 5 active invites (not revoked, not expired); the 6th is `ERROR_LIMIT_REACHED`, counted under the class lock so parallel creates cannot exceed it.
+        A member who is not an admin gets `ERROR_FORBIDDEN`; a non-member and an unknown class get `ERROR_NOT_FOUND`. Not idempotent: repeating a lost request makes a second link. A request with the session cookie must come from an allowed Origin.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: "The class does not exist or the caller is not a member of it; the two cannot be told apart."}
+        - {code: ERROR_FORBIDDEN, description: "The caller is a member but not an admin of this class."}
+        - {code: ERROR_INVALID_EXPIRES_AT, description: "Field `expires_at`: not in the future, or more than 30 days away."}
+        - {code: ERROR_LIMIT_REACHED, description: The class already has 5 active invites.}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+        - {code: ERROR_RATE_LIMITED, description: "More than 120 class writes by this user in an hour. Retry after `Retry-After`."}
+        - {code: ERROR_UNAVAILABLE, description: "The write rate limiter in Redis did not answer, so the write fails closed. Retry after `Retry-After`."}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/ClassInviteCreateRequest"}
+            examples:
+              example:
+                value: {class_id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E}
+      responses:
+        "200":
+          description: The new invite with its token and link, shown only here.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ClassInviteCreatedResponse"}
+              examples:
+                ok:
+                  value:
+                    status: OK
+                    data: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2H, created_at: 1760000000000, expires_at: 1761209600000, revoked_at: null, active: true, token: "Zm9vYmFyZm9vYmFyZm9vYmFyZm9vYmFyZm9vYmFyMDA", link: "https://app.example.com/join/Zm9vYmFyZm9vYmFyZm9vYmFyZm9vYmFyZm9vYmFyMDA"}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "409": {$ref: "#/components/responses/ApiConflict"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "429": {$ref: "#/components/responses/ApiRateLimited"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/class-invite/get-list:
+    get:
+      operationId: listClassInvites
+      tags: [class]
+      summary: List the join links of a class (admin)
+      description: >-
+        Called by an admin of the class. Newest first; revoked and expired links are listed too, with `active` false. It never carries a token or a link: those were shown once, by `/api/class-invite/create`.
+        Keyset paginated like every list; `next_id` is bound to this class and this caller. A `limit` outside 1..50 is `ERROR_PARAM`. A member who is not an admin gets `ERROR_FORBIDDEN`; a non-member and an unknown class get `ERROR_NOT_FOUND`.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: "The class does not exist or the caller is not a member of it; the two cannot be told apart."}
+        - {code: ERROR_FORBIDDEN, description: "The caller is a member but not an admin of this class."}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
+      security:
+        - sessionCookie: []
+      parameters:
+        - {name: class_id, in: query, required: true, schema: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$'}, description: Class ULID.}
+        - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 50, default: 20}, description: "Page size, default 20, maximum 50."}
+        - {name: next_id, in: query, required: false, schema: {type: string}, description: "Opaque token from the previous page; omit it for the first page."}
+      responses:
+        "200":
+          description: A page of invites.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ClassInviteListResponse"}
+              examples:
+                ok:
+                  value:
+                    status: OK
+                    data:
+                      items:
+                        - {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2H, created_at: 1760000000000, expires_at: 1761209600000, revoked_at: null, active: true}
+                      next_id: ""
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/class-invite/revoke:
+    post:
+      operationId: revokeClassInvite
+      tags: [class]
+      summary: Revoke a join link (admin)
+      description: >-
+        Called by an admin of the class. The link stops working at once; members who already joined with it stay, and removing a member never revokes a link. Revoking a revoked link succeeds and changes nothing.
+        An invite id that is not in this class (an id of another class included) is `ERROR_NOT_FOUND` and nothing changes. A member who is not an admin gets `ERROR_FORBIDDEN`; a non-member and an unknown class get `ERROR_NOT_FOUND`.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: "The class does not exist or the caller is not a member of it; the two cannot be told apart."}
+        - {code: ERROR_FORBIDDEN, description: "The caller is a member but not an admin of this class."}
+        - {code: ERROR_NOT_FOUND, description: "(Also) the invite id is not an invite of this class."}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+        - {code: ERROR_RATE_LIMITED, description: "More than 120 class writes by this user in an hour. Retry after `Retry-After`."}
+        - {code: ERROR_UNAVAILABLE, description: "The write rate limiter in Redis did not answer, so the write fails closed. Retry after `Retry-After`."}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/ClassInviteRevokeRequest"}
+            examples:
+              example:
+                value: {class_id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, id: 01K7Q8W3ZR5N2M4X6V8B0C1D2H}
+      responses:
+        "200":
+          description: The invite is revoked.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/EmptyResponse"}
+              examples:
+                ok:
+                  value:
+                    {status: OK, data: {}}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "429": {$ref: "#/components/responses/ApiRateLimited"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/class-invite/lookup:
+    post:
+      operationId: lookupClassInvite
+      tags: [class]
+      summary: Preview a join link (public)
+      description: >-
+        Called by the join page (`/join/<token>`) before the visitor signs in. No session is needed and none is read. Returns only the class name and school of an **active** link. An unknown, malformed, empty, expired or revoked `token` all answer the same `ERROR_NOT_FOUND`, byte for byte, and take the same code path (one lookup by SHA-256).
+        A `POST` although it only reads, and the one exception to "GET reads": the token is a bearer secret and travels in the body, never in a URL that a proxy or access log could record. Every request counts against 120 per client IP per 10 minutes, and a request that misses also against 20 per 10 minutes (a hit is refunded); past either limit the answer is `ERROR_RATE_LIMITED` with `Retry-After`. The limiters fail open: a 256-bit token cannot be guessed, they bound load.
+        The preview does not say whether the class is full, nor how many members it has.
+      x-auth: public
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: "The token is missing, malformed, unknown, expired or revoked; the five cannot be told apart."}
+        - {code: ERROR_RATE_LIMITED, description: "Too many requests from this client IP; wait `Retry-After` seconds."}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/ClassInviteTokenRequest"}
+            examples:
+              example:
+                value: {token: "Zm9vYmFyZm9vYmFyZm9vYmFyZm9vYmFyZm9vYmFyMDA"}
+      responses:
+        "200":
+          description: The link is active.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ClassInvitePreviewResponse"}
+              examples:
+                ok:
+                  value:
+                    status: OK
+                    data: {name: "Lớp 12A1", school_name: "THPT Chu Văn An"}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "429": {$ref: "#/components/responses/ApiRateLimited"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+  /api/class-invite/accept:
+    post:
+      operationId: acceptClassInvite
+      tags: [class]
+      summary: Join a class with a join link
+      description: >-
+        Called by the join page for a signed-in user with a verified email who accepted the Terms. Adds the caller to the class as a `student` and returns the class as `/api/class/get` does. Idempotent: a caller who is already a member gets their membership back and **keeps their role** (an admin is never downgraded, a promoted student never demoted).
+        An unknown, malformed, empty, expired or revoked `token` answers `ERROR_NOT_FOUND`, byte for byte as `lookup` does, also for a caller who is already a member. A class with 60 members refuses a new member with `ERROR_CLASS_FULL`; the cap is checked under the class lock, so ten simultaneous accepts of the last seat add exactly one member.
+        Accepting is a write: it counts against the caller's 120 class writes an hour (a wrong token too, which bounds guessing per user) and against 60 accepts per client IP per hour. An unverified email is `ERROR_EMAIL_NOT_VERIFIED` and nothing is joined. A request with the session cookie must come from an allowed Origin.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: "The token is missing, malformed, unknown, expired or revoked; the five cannot be told apart."}
+        - {code: ERROR_EMAIL_NOT_VERIFIED, description: The caller's email address is not verified yet; nothing was joined.}
+        - {code: ERROR_CLASS_FULL, description: The class already has 60 members.}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+        - {code: ERROR_RATE_LIMITED, description: "More than 120 class writes by this user in an hour, or 60 accepts from this client IP. Retry after `Retry-After`."}
+        - {code: ERROR_UNAVAILABLE, description: "The write rate limiter in Redis did not answer, so the write fails closed. Retry after `Retry-After`."}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/ClassInviteTokenRequest"}
+            examples:
+              example:
+                value: {token: "Zm9vYmFyZm9vYmFyZm9vYmFyZm9vYmFyZm9vYmFyMDA"}
+      responses:
+        "200":
+          description: The caller is a member of the class.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ClassResponse"}
+              examples:
+                ok:
+                  value:
+                    status: OK
+                    data: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, name: "Lớp 12A1", school_name: "THPT Chu Văn An", graduation_year: 2026, language: vi, my_role: student, page_linked: false, created_at: 1760000000000, updated_at: 1760000000000}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "409": {$ref: "#/components/responses/ApiConflict"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "429": {$ref: "#/components/responses/ApiRateLimited"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
 components:
   securitySchemes:
     sessionCookie:
@@ -3167,3 +3398,75 @@ components:
               description: The members of this page, oldest first.
               items: {$ref: "#/components/schemas/ClassMember"}
             next_id: {type: string, description: "Opaque page token for the next page; the empty string on the last page."}
+    ClassInviteCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [class_id]
+      properties:
+        class_id: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$', description: "Required. ULID of the class."}
+        expires_at: {type: [integer, "null"], format: int64, description: "Optional, Unix ms: when the link stops working. Default 14 days from now; must be in the future and at most 30 days away."}
+    ClassInviteRevokeRequest:
+      type: object
+      additionalProperties: false
+      required: [class_id, id]
+      properties:
+        class_id: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$', description: "Required. ULID of the class."}
+        id: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$', description: "Required. ULID of the invite (the `id` of a list row), not the token."}
+    ClassInviteTokenRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        token: {type: string, description: "The link token, a bearer secret of 43 base64url characters (the last part of `/join/<token>`). A missing, empty or malformed one is `ERROR_NOT_FOUND`, like an unknown one."}
+    ClassInvite:
+      type: object
+      description: A join link as an admin sees it. Never carries the token or the link.
+      required: [id, created_at, expires_at, revoked_at, active]
+      properties:
+        id: {type: string, description: "Invite ULID; use it as `id` to revoke. Not the token."}
+        created_at: {type: integer, format: int64, description: "When the link was made, Unix ms."}
+        expires_at: {type: integer, format: int64, description: "When the link stops working, Unix ms."}
+        revoked_at: {type: [integer, "null"], format: int64, description: "When an admin revoked it, Unix ms; `null` while not revoked."}
+        active: {type: boolean, description: "True when the link is neither revoked nor expired now. Only active links count against the cap of 5."}
+    ClassInviteCreated:
+      description: A new join link. The only answer that carries the token.
+      allOf:
+        - {$ref: "#/components/schemas/ClassInvite"}
+        - type: object
+          required: [token, link]
+          properties:
+            token: {type: string, description: "The bearer secret, 43 base64url characters. Shown once; the server keeps only its SHA-256."}
+            link: {type: string, description: "`<public base URL>/join/<token>`, ready to copy. Treat it like a password: never log or store it."}
+    ClassInviteCreatedResponse:
+      type: object
+      required: [status, data]
+      properties:
+        status: {type: string, const: OK, description: Always `OK` on success.}
+        data: {$ref: "#/components/schemas/ClassInviteCreated"}
+    ClassInviteListResponse:
+      type: object
+      required: [status, data]
+      properties:
+        status: {type: string, const: OK, description: Always `OK` on success.}
+        data:
+          type: object
+          description: One page of the class's invites.
+          required: [items, next_id]
+          properties:
+            items:
+              type: array
+              description: The invites of this page, newest first, revoked and expired ones included.
+              items: {$ref: "#/components/schemas/ClassInvite"}
+            next_id: {type: string, description: "Opaque page token for the next page; the empty string on the last page."}
+    ClassInvitePreview:
+      type: object
+      description: All a visitor with a valid link learns about the class.
+      required: [name, school_name]
+      properties:
+        name: {type: string, description: "The class name."}
+        school_name: {type: string, description: "The school; empty when unset."}
+    ClassInvitePreviewResponse:
+      type: object
+      required: [status, data]
+      properties:
+        status: {type: string, const: OK, description: Always `OK` on success.}
+        data: {$ref: "#/components/schemas/ClassInvitePreview"}

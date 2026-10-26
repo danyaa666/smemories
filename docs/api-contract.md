@@ -58,6 +58,7 @@ Response `data`: `{ "items": [ ... ], "next_id": "" }`. `next_id` is an opaque s
 
 Each endpoint declares `x-auth`: `required` (session cookie), `public`, or `optional`. State-changing `POST`s keep the existing origin guard.
 Public endpoints that take a credential in the URL (`token`) keep it out of logs: the access log records the route, never the query string.
+A new public endpoint that takes a bearer secret puts it in the **JSON body** instead (deliberate exception to "`GET` reads": `POST /api/class-invite/lookup`, T-125), so no proxy, load balancer or browser history ever sees it in a URL; it answers the same `ERROR_NOT_FOUND` for every token that is not live.
 
 ## 7. Documentation: `api/openapi.yaml` is the contract
 
