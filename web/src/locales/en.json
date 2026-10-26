@@ -677,7 +677,8 @@
       "accept": "Join this class",
       "joined": "You joined {{name}}",
       "joinedHelp": "Next, create your page in the class book.",
-      "toClass": "Go to the class"
+      "toClass": "Go to the class",
+      "googleHint": "Signed in with Google? Sign in first, then open your invite link again."
     },
     "errors": {
       "last_admin": "A class needs at least one admin. Make someone else an admin first, or delete the class.",
@@ -710,7 +711,29 @@
         "limit_reached": "A class can have at most 30 pages. Delete one first."
       }
     },
-    "assemble": "Assemble the class book"
+    "assemble": "Assemble the class book",
+    "print": "Print the class book",
+    "edit": {
+      "title": "Class details",
+      "submit": "Save changes",
+      "saved": "Saved."
+    },
+    "delete": {
+      "title": "Delete this class",
+      "button": "Delete class",
+      "confirmTitle": "Delete {{name}}?",
+      "body": "Every member loses access to the class and the class pages are removed. Nobody's yearbook is deleted."
+    },
+    "pick": {
+      "title": "Choose one of your yearbooks",
+      "choose": "Choose an existing yearbook",
+      "change": "Choose another yearbook",
+      "unlink": "Unlink my page",
+      "use": "Use this one",
+      "useFor": "Use {{title}} as my page",
+      "current": "This is your page now.",
+      "empty": "You have no yearbooks yet."
+    }
   },
   "assemble": {
     "title": "Class book of {{name}}",

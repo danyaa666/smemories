@@ -677,7 +677,8 @@
       "accept": "Tham gia lớp này",
       "joined": "Bạn đã tham gia {{name}}",
       "joinedHelp": "Tiếp theo, hãy tạo trang của bạn trong kỷ yếu lớp.",
-      "toClass": "Đến lớp"
+      "toClass": "Đến lớp",
+      "googleHint": "Đăng nhập bằng Google? Hãy đăng nhập trước, rồi mở lại đường dẫn mời."
     },
     "errors": {
       "last_admin": "Lớp cần ít nhất một quản trị viên. Hãy đặt người khác làm quản trị viên trước, hoặc xóa lớp.",
@@ -710,7 +711,29 @@
         "limit_reached": "Một lớp có tối đa 30 trang. Hãy xóa bớt một trang."
       }
     },
-    "assemble": "Sắp xếp sách lớp"
+    "assemble": "Sắp xếp sách lớp",
+    "print": "In kỷ yếu lớp",
+    "edit": {
+      "title": "Thông tin lớp",
+      "submit": "Lưu thay đổi",
+      "saved": "Đã lưu."
+    },
+    "delete": {
+      "title": "Xóa lớp này",
+      "button": "Xóa lớp",
+      "confirmTitle": "Xóa {{name}}?",
+      "body": "Mọi thành viên mất quyền truy cập lớp và các trang của lớp bị xóa. Kỷ yếu của không ai bị xóa."
+    },
+    "pick": {
+      "title": "Chọn một kỷ yếu của bạn",
+      "choose": "Chọn kỷ yếu có sẵn",
+      "change": "Chọn kỷ yếu khác",
+      "unlink": "Bỏ liên kết trang của tôi",
+      "use": "Dùng kỷ yếu này",
+      "useFor": "Dùng {{title}} làm trang của tôi",
+      "current": "Đây là trang hiện tại của bạn.",
+      "empty": "Bạn chưa có kỷ yếu nào."
+    }
   },
   "assemble": {
     "title": "Sách lớp {{name}}",

@@ -15,6 +15,9 @@ type Common = {
   counter?: boolean;
 };
 
+/** The server counts characters (runes), not UTF-16 units: an emoji is 1, not 2. */
+const runes = (s: string) => [...s].length;
+
 type Parts = Common & { max?: number | undefined };
 
 function Shell({
@@ -69,7 +72,7 @@ export function TextField({ label, help, error, counter, ...input }: InputProps)
   const id = useId();
   const c = { label, help, error, counter, max: input.maxLength };
   return (
-    <Shell {...c} id={id} length={input.value.length}>
+    <Shell {...c} id={id} length={runes(input.value)}>
       <input
         id={id}
         aria-invalid={error ? true : undefined}
@@ -90,7 +93,7 @@ export function TextArea({ label, help, error, counter, rows = 3, ...area }: Are
   const id = useId();
   const c = { label, help, error, counter, max: area.maxLength };
   return (
-    <Shell {...c} id={id} length={area.value.length}>
+    <Shell {...c} id={id} length={runes(area.value)}>
       <textarea
         id={id}
         rows={rows}

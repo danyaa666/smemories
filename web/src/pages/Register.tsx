@@ -84,8 +84,12 @@ export function Register() {
           {m.isPending ? t("auth.working") : t("register.submit")}
         </Button>
       </form>
-      {/* Google sign-in would carry the path in a query string, and a join path holds a secret. */}
-      {!joining && <GoogleButton label={t("register.google")} returnTo="/account" />}
+      {/* Google sign-in would carry the path in a query string, and a join path holds a secret: say so instead. */}
+      {joining ? (
+        <p>{t("classes.join.googleHint")}</p>
+      ) : (
+        <GoogleButton label={t("register.google")} returnTo="/account" />
+      )}
       <p>
         <Link to="/login" state={from ? { from } : undefined}>
           {t("register.haveAccount")}

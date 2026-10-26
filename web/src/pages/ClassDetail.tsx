@@ -6,10 +6,11 @@ import { getClass, leaveClass } from "../api/classes";
 import { ApiError } from "../api/client";
 import { errorText } from "../auth/errors";
 import { classErrorText } from "../classes/classErrors";
+import { ClassSettings } from "../classes/ClassSettings";
 import { Invites } from "../classes/Invites";
 import { MyPage } from "../classes/MyPage";
 import { Roster } from "../classes/Roster";
-import { Button } from "../components/ui/Button";
+import { Button, buttonClass } from "../components/ui/Button";
 import { Dialog } from "../components/ui/Dialog";
 import { CLASSES_KEY } from "./Classes";
 
@@ -49,7 +50,9 @@ export function ClassDetail() {
   return (
     <>
       <p>
-        <Link to="/classes">{t("classes.back")}</Link>
+        <Link to="/classes" className="back-link">
+          {t("classes.back")}
+        </Link>
       </p>
       <h1>{c.name}</h1>
       {meta && <p>{meta}</p>}
@@ -59,9 +62,15 @@ export function ClassDetail() {
       <MyPage cls={c} />
       {c.my_role === "admin" && (
         <>
-          <p>
-            <Link to={`/classes/${c.id}/assemble`}>{t("classes.assemble")}</Link>
+          <p className="row-actions">
+            <Link to={`/classes/${c.id}/assemble`} className={buttonClass()}>
+              {t("classes.assemble")}
+            </Link>
+            <Link to={`/classes/${c.id}/book`} className={buttonClass()}>
+              {t("classes.print")}
+            </Link>
           </p>
+          <ClassSettings cls={c} />
           <Invites classId={c.id} />
           <Roster classId={c.id} />
         </>

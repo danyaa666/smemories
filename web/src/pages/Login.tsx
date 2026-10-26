@@ -66,8 +66,12 @@ export function Login() {
           {m.isPending ? t("auth.working") : t("login.submit")}
         </Button>
       </form>
-      {/* Google sign-in would carry the path in a query string, and a join path holds a secret. */}
-      {!from.startsWith("/join/") && <GoogleButton label={t("login.google")} returnTo={from} />}
+      {/* Google sign-in would carry the path in a query string, and a join path holds a secret: say so instead. */}
+      {from.startsWith("/join/") ? (
+        <p>{t("classes.join.googleHint")}</p>
+      ) : (
+        <GoogleButton label={t("login.google")} returnTo={from} />
+      )}
       <p>
         <Link to="/forgot-password">{t("login.forgot")}</Link>
       </p>

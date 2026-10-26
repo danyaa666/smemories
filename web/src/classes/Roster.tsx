@@ -46,11 +46,6 @@ export function Roster({ classId }: { classId: string }) {
           <Button onClick={() => void q.refetch()}>{t("auth.retry")}</Button>
         </>
       )}
-      {role.error && (
-        <p role="alert" className="error">
-          {classErrorText(t, role.error, "role")}
-        </p>
-      )}
       <ul className="member-list">
         {members.map((m) => (
           <li key={m.id} className="card member-row">
@@ -64,6 +59,11 @@ export function Roster({ classId }: { classId: string }) {
                 ? `${t(m.profile_complete ? "classes.page.complete" : "classes.page.incomplete")} · ${t("classes.page.notes", { n: m.approved_notes })}`
                 : t("classes.roster.noPage")}
             </p>
+            {role.error && role.variables?.id === m.id && (
+              <p role="alert" className="error">
+                {classErrorText(t, role.error, "role")}
+              </p>
+            )}
             <div className="row-actions">
               <Button
                 busy={role.isPending && role.variables?.id === m.id}

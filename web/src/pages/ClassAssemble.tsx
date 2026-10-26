@@ -16,7 +16,7 @@ import { OrderList, type OrderItem } from "../classes/OrderList";
 import { PageEditor } from "../classes/PageEditor";
 import { orderOf, orderPayload, reconcile, sameOrder, type BookOrder } from "../classes/ordering";
 import { Banner } from "../components/ui/Banner";
-import { Button } from "../components/ui/Button";
+import { Button, buttonClass } from "../components/ui/Button";
 import { Dialog } from "../components/ui/Dialog";
 import { NotFound } from "./NotFound";
 
@@ -155,7 +155,9 @@ function Assemble({ classId }: { classId: string }) {
   return (
     <>
       <p>
-        <Link to={`/classes/${classId}`}>{t("assemble.toClass")}</Link>
+        <Link to={`/classes/${classId}`} className="back-link">
+          {t("assemble.toClass")}
+        </Link>
       </p>
       <h1>{t("assemble.title", { name: data.class.name })}</h1>
       <p>{t("assemble.help")}</p>
@@ -186,6 +188,9 @@ function Assemble({ classId }: { classId: string }) {
         >
           {t("assemble.add")}
         </Button>
+        <Link to={`/classes/${classId}/book`} className={buttonClass()}>
+          {t("classes.print")}
+        </Link>
       </div>
       {dirty && <p role="status">{t("assemble.unsaved")}</p>}
       {editing && (
