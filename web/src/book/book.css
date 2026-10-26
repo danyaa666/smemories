@@ -318,3 +318,11 @@
   width: 100%;
   font: inherit;
 }
+
+/* Class book (T-130): the cover and the class pages reuse the built-in layout above. */
+.bk-cover-plain {
+  justify-content: center;
+}
+.bk-cp-title {
+  overflow-wrap: anywhere;
+}

@@ -8,8 +8,8 @@ import os from "node:os";
 import path from "node:path";
 import { after, before, describe, test } from "node:test";
 import { chromium } from "playwright";
-import { makeBook, photoId, SIGNATURES } from "./fixture.mjs";
-import { BASE, fitBoxes, inkIn, inspect, open, raster, savePdf, serveBook, signatureBoxes, startServer, text, words } from "./lib.mjs";
+import { CLASS_BOOK_CASES, classBookPages, makeBook, makeClassBook, photoId, SIGNATURES, studentName } from "./fixture.mjs";
+import { BASE, fitBoxes, inkIn, inspect, open, openClassBook, raster, savePdf, serveBook, signatureBoxes, startServer, text, words } from "./lib.mjs";
 
 const squash = (x) => x.replace(/\s+/g, "");
 const PT = { A5: [419.53, 595.28], A4: [595.28, 841.89], Letter: [612, 792] }; // exact sizes in points
@@ -509,4 +509,73 @@ test("a book cut at 300 notes warns on screen and prints only the book", async (
 test("a book with no notes still prints cover, profile and back", async () => {
   const r = await render(makeBook({ notes: 0 }), "empty");
   assert.equal(r.info.pages, 3);
+});
+
+// T-130: the class book. 30 students in three designs, 29 profile photos and the notes' photos, front and back class pages, printed on A5 and on A4.
+// The routes serve one class-book answer; the personal book above is untouched.
+describe("class book: 30 students, 77 pages", () => {
+  for (const size of ["A5", "A4"]) {
+    test(`${size}: every page there, in order, none blank, every photo loaded at ready, nothing cut off but what the screen lists`, async () => {
+      const cb = makeClassBook();
+      const want = classBookPages(cb);
+      assert.ok(want <= 120, `the fixture is within the 120 page budget (${want})`);
+      const page = await browser.newPage();
+      const seen = await serveBook(page, null, cb);
+      const opened = await openClassBook(page, size);
+      assert.equal(opened.pages, want, "the ready signal carries the page count");
+
+      // every photo of the pages has loaded when the book says it is ready (nothing scrolled, no print event)
+      const imgs = await page.evaluate(() => [...document.querySelectorAll("img.bk-photo")].map((i) => ({ src: i.hasAttribute("src"), w: i.naturalWidth })));
+      assert.ok(imgs.length >= 29, `${imgs.length} photos on the pages`);
+      assert.equal(imgs.filter((i) => i.src && i.w > 0).length, imgs.length, "every photo has loaded at ready");
+      assert.ok(seen.media <= 60, `${seen.media} media requests for 30 files`);
+      assert.equal(seen.classBook, 1, "the class book comes from one request");
+      assert.equal(await page.locator("button", { hasText: /Print or save as PDF/ }).isEnabled(), true, "Print is enabled at ready");
+
+      // the screen lists exactly who is cut: the 41-note student, the note too long for its box, and the student with no page
+      const ui = await page.locator("div.bk-ui").innerText();
+      assert.ok(ui.includes(`Ready to print: ${want} pages.`), "the page count is on the screen");
+      for (const i of [CLASS_BOOK_CASES.limit, CLASS_BOOK_CASES.tooLong, CLASS_BOOK_CASES.noPage]) assert.ok(ui.includes(studentName(i)), `${studentName(i)} is in the summary`);
+      assert.match(ui, new RegExp(`${studentName(CLASS_BOOK_CASES.limit)}: Only 40 of 41 approved notes`));
+      assert.match(ui, new RegExp(`${studentName(CLASS_BOOK_CASES.tooLong)}: Notes too long for their space and cut off: 1`));
+      assert.equal(await page.locator("[data-fit=overflow]").count(), 1, "one text box is cut off, the one in the summary");
+      const outside = await page.evaluate(() =>
+        [...document.querySelectorAll(".bk-fit")].filter((e) => {
+          const r = e.getBoundingClientRect(), s = e.closest(".bk-sheet").getBoundingClientRect();
+          return r.left < s.left - 1 || r.right > s.right + 1 || r.top < s.top - 1 || r.bottom > s.bottom + 1;
+        }).length,
+      );
+      assert.equal(outside, 0, "every text box is inside its page");
+
+      const file = path.join(tmp, `class-${size}.pdf`);
+      const saved = await savePdf(page, file);
+      await page.close();
+      console.log(`# class book ${size}: ${want} pages, ready ${opened.readyMs} ms, pdf ${saved.pdfMs} ms, ${(saved.bytes / 1e6).toFixed(1)} MB`);
+      const info = inspect(file);
+      assert.equal(info.pages, want, "the PDF has every page");
+      for (const [i, w] of PT[size].entries()) assert.ok(Math.abs(info.sizePt[i] - w) < 1, `${size} page size ${info.sizePt} vs ${PT[size]}`);
+      assert.ok(info.allFontsEmbedded, "every font is embedded");
+      assert.ok(info.photos >= 29, `${info.photos} photos in the PDF`);
+
+      // no blank page, and the order: cover, front page, students in the order set, back page, back cover
+      const pdf = words(file);
+      pdf.forEach((p, n) => assert.ok(p.words.length >= 3, `page ${n + 1} is not blank (${p.words.length} words)`));
+      const pages = text(file).split("\f").slice(0, want).map((t) => squash(t).toLowerCase());
+      const at = (needle, from = 0) => pages.findIndex((t, n) => n >= from && t.includes(squash(needle).toLowerCase()));
+      assert.equal(at("Lớp 12A1 Chu Văn An"), 0, "the cover is first");
+      assert.equal(at("Lời chào của cả lớp"), 1, "the front class page follows");
+      assert.equal(at("Thầy cô chủ nhiệm"), want - 2, "the back class page is second to last");
+      assert.equal(at("Cảm ơn bạn đã là một phần"), want - 1, "the back cover is last");
+      let from = 2;
+      for (const [i, m] of cb.members.entries()) {
+        if (!m.linked) {
+          assert.equal(at(studentName(i)), -1, "a student without a page is not printed");
+          continue;
+        }
+        const n = at(studentName(i), from);
+        assert.ok(n >= from && n < want - 2, `${studentName(i)} is in the PDF after the previous student (page ${n + 1})`);
+        from = n;
+      }
+    });
+  }
 });

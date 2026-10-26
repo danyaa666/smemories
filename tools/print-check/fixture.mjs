@@ -118,3 +118,68 @@ export function makeBook({ notes = 84, size = "A5", truncatedOf = null, template
   if (!portrait) book.profile.photo_media_id = null;
   return book;
 }
+
+// ---- The class book (T-130): the answer of GET /api/class-book/get for 30 students ----
+export const CLASS_ID = "01J9Z3K6V8Q4M7N2P5R8T0CCCC";
+/** Notes per page of each template (web/src/book/templates): the test counts the pages itself from this. */
+export const NOTES_PER_PAGE = { basic: 4, "navy-classic": 4, "memory-book": 1 };
+const GIVEN = ["Nguyễn Thị Hồng Ánh", "Đặng Ngọc Bích Trâm", "Huỳnh Ngọc Diệp", "Trần Quốc Việt", "Lê Hoàng Phương Uyên", "Phạm Thị Thùy Dương"];
+/** The student's name; the number makes it unique, so the test can find the student's page in the PDF text. */
+export const studentName = (i) => `${GIVEN[i % GIVEN.length]} ${String(i + 1).padStart(2, "0")}`;
+/** Special students: one whose notes were cut at 40 (41 approved), one whose note is too long for its box, one with no page. */
+export const CLASS_BOOK_CASES = { limit: 8, tooLong: 12, noPage: 29 };
+
+/**
+ * 30 students in three designs (memory-book every 5th, navy-classic every other, the built-in layout), 29 profile photos (the 30 files are reused),
+ * 2 front and back class pages, one of them with newlines. 77 pages in all, under the 120 page budget.
+ */
+export function makeClassBook({ students = 30 } = {}) {
+  let photo = 0;
+  const members = Array.from({ length: students }, (_, i) => {
+    const base = { member_id: ulid("M", i + 1), name: studentName(i) };
+    if (i === CLASS_BOOK_CASES.noPage) return { ...base, linked: false, yearbook: null, profile: null, notes: [], note_count: 0, approved_total: 0, truncated: false };
+    const template = i % 5 === 0 ? "memory-book" : i % 2 === 1 ? "navy-classic" : null;
+    const count = i === CLASS_BOOK_CASES.limit ? 40 : template === "memory-book" ? 2 : 3;
+    const notes = Array.from({ length: count }, (_, k) => ({
+      id: ulid("N", i * 100 + k + 1),
+      answers: {
+        name: GIVEN[(i + k + 1) % GIVEN.length],
+        relationship: "Bạn cùng lớp",
+        message: i === CLASS_BOOK_CASES.tooLong && k === 0 ? CUT_OFF[0] : MESSAGES[(i + k) % MESSAGES.length],
+        wish: WISH[(i + k) % WISH.length],
+      },
+      signature: null,
+      photo_ids: k < 2 ? [photoId((photo++ % 30) + 1)] : [],
+    }));
+    return {
+      ...base,
+      linked: true,
+      yearbook: { template_id: template, page_size: "A5", language: "vi" },
+      profile: {
+        full_name: studentName(i),
+        nickname: "",
+        quote: "Hãy sống như thể hôm nay là ngày cuối cùng.",
+        hobbies: "Đọc sách, vẽ, đi bộ đường dài",
+        future_plans: "Học thiết kế đồ họa 🎨",
+        photo_media_id: photoId((i % 30) + 1),
+      },
+      notes,
+      note_count: notes.length,
+      approved_total: i === CLASS_BOOK_CASES.limit ? 41 : notes.length,
+      truncated: i === CLASS_BOOK_CASES.limit,
+    };
+  });
+  const page = (n, placement, title, body) => ({ id: ulid("G", n), kind: "intro", title, body, placement, created_at: 1759276800000, updated_at: 1759276800000 });
+  return {
+    class: { id: CLASS_ID, name: "Lớp 12A1 Chu Văn An", school_name: "THPT Chu Văn An", graduation_year: 2026, language: "vi" },
+    front_pages: [page(1, "front", "Lời chào của cả lớp", "Ba năm cùng nhau.\nCảm ơn thầy cô và các bạn 😄\n\nHẹn gặp lại!")],
+    members,
+    back_pages: [page(2, "back", "Thầy cô chủ nhiệm", "Cô Nguyễn Thị Lan\nThầy Trần Văn Minh")],
+  };
+}
+
+/** The pages the class book must have: cover, front pages, each linked student's profile and notes pages, back pages, back cover. */
+export function classBookPages(cb) {
+  const students = cb.members.reduce((n, m) => (m.linked ? n + 1 + Math.ceil(m.notes.length / NOTES_PER_PAGE[m.yearbook.template_id ?? "basic"]) : n), 0);
+  return 2 + cb.front_pages.length + students + cb.back_pages.length;
+}
