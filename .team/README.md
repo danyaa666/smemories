@@ -10,18 +10,17 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 9 | T-023, T-024, T-025, T-031, T-050, T-129, T-130, T-131, T-134 |
-| TODO | 1 | T-133 |
-| READY_FOR_QA | 1 | T-127 |
-| MERGED | 4 | T-027, T-125, T-126, T-128 |
+| BACKLOG | 7 | T-023, T-024, T-025, T-031, T-050, T-131, T-134 |
+| TODO | 3 | T-129, T-130, T-133 |
+| MERGED | 5 | T-027, T-125, T-126, T-127, T-128 |
 | DONE | 111 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-132 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-027 ([E07] Class book data API and the admin's read-only media access); T-125 ([E07] Class invites: create, revoke, lookup, accept); T-126 ([E07] A student's page: link a personal yearbook to the class); T-128 ([E07] Web: classes, invites, joining and the student's page)
+**Awaiting your review (MERGED):** T-027 ([E07] Class book data API and the admin's read-only media access); T-125 ([E07] Class invites: create, revoke, lookup, accept); T-126 ([E07] A student's page: link a personal yearbook to the class); T-127 ([E07] Class pages and book order (API)); T-128 ([E07] Web: classes, invites, joining and the student's page)
 
 **Open questions for you:** none
 
-_Board last written 2026-10-26 13:12Z_
+_Board last written 2026-10-26 13:16Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -5749,7 +5748,7 @@ Spec: .team/epics/E07-class-yearbook/04-student-page-link.md (read it from the m
 - 2026-10-26 08:59Z · leader · merged 1bc9845 (owner-approved). Review: link is a pointer only, owner_id check under yearbook row lock, 409 for a second class, delete clears link, per-IP budgets raised; full CI run 40291645124 green on head f88609f. For owner to check: docs/class-permissions.md page section; newman not run (Docker down); T-027 carries the media/create guard.
 
 ### T-127 — [E07] Class pages and book order (API)
-- **Status:** READY_FOR_QA
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
@@ -5760,8 +5759,8 @@ Spec: .team/epics/E07-class-yearbook/04-student-page-link.md (read it from the m
 - **Assignee:** —
 - **Branch:** task/t-127-e07-class-pages-and-book-order-api
 - **PR:** https://github.com/danyaa666/smemories/pull/127
-- **Updated:** 2026-10-26 10:33Z by dev
-- **Comments-seen:** 3
+- **Updated:** 2026-10-26 13:16Z by leader
+- **Comments-seen:** 5
 
 Spec: .team/epics/E07-class-yearbook/05-class-pages-and-order.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.
 
@@ -5769,6 +5768,10 @@ Spec: .team/epics/E07-class-yearbook/05-class-pages-and-order.md (read it from t
 - 2026-10-26 09:58Z · leader · T-027 merged (3e1dea3)
 - 2026-10-26 10:33Z · dev · PR #127 head ba6b13e (merged develop 26f5455 in). Docker is down here, so no local make test-integration; manual full CI on the branch head ba6b13e: run 40306717433 = success (go, go-integration with -race, e2e, web, security, image all green; includes TestPageMatrix, TestUpdateOrder, TestConcurrentReordersEndInOneOfTheTwo x20 rounds, TestReorderRacingOtherWrites, migration + AssertNoOrphans). First manual run 40305435503 failed on two test-only mistakes (matrix no-change query not scoped to class; invite migration test assumed it was the newest migration), fixed in ba6b13e. What to verify: (1) class-page/* and class-book/update-order admin-only, student 403 / non-member 404 equal to missing class; (2) update-order = full permutation per list (member_ids, front_page_ids, back_page_ids), 400 ERROR_INVALID_<FIELD>, nothing written, one tx under class lock; (3) body plain text unchanged (only NFC/trim/CRLF->LF, same as other multiline fields; tabs are refused like elsewhere); (4) NOTE side change outside the spec text: class-invite/accept now gives a new member sort_order = max+1, otherwise a latecomer (default 0) would jump to the front of an ordered book (TestNewMemberGoesLast); (5) route guard: routesWithIDs skips class-page/ like class/ and class-invite/ (their id is a page id); the new routes are in TestPageMatrix. Not done: newman run (no stack; folder 'Class pages and order flow' syntax-checked only, 41 requests); response size cap/read limiter stay with T-133 (pages add <=0.7 MiB, full class 1.85 MiB in TestClassBookSizeOfAFullClass). schema.d.ts regenerated only (web checks green).
 - 2026-10-26 10:33Z · leader · Leader: the change outside the spec (class-invite/accept gives a new member the next sort_order, TestNewMemberGoesLast) is accepted. QA: check that it holds under concurrent accepts (no duplicate sort_order that breaks the permutation check of class-book/update-order) and that the full CI run 40306717433 is on the PR head ba6b13e. QA waits for the usage window (resumes about 13:12Z).
+- 2026-10-26 13:15Z · qa · QA_PASS on head ba6b13e26df0bd2bc01b7f0d902407fd0bc1bc3c (PR #127 head equals it). CI: manual run 40306717433 headSha == PR head, success (go, go-integration, e2e, web, security, image). NOT run by me: go integration tests and newman (Docker down; newman not installed), so AC1-AC3 integration evidence is CI's run plus code reading. Local in worktree: go build, go vet, go vet -tags integration, go test -race ./... all clean; golangci-lint 0 issues; web typecheck, check:api (schema ok), npm test 533/533, eslint+prettier clean; postman JSON parses; no .team/ files in the diff.
+  Evidence by item: (1) all five routes use Authorize/lockMembership with RoleAdmin; TestPageMatrix covers each route x admin/student 403/non-member 404/anonymous 401; page and member ids are looked up scoped by class_id (updatePage/deletePage/permutation), TestPageIDsOfAnotherClassChangeNothing. (2) update-order: pre-lock checks (len cap 60/30, malformed id, duplicate) then under class lock compares exact sets with len + membership, 400 per list, all 3 UPDATEs in one tx; tests cover missing/extra/foreign/dup/malformed/empty/oversized/cross-side/unknown field. Lock order: class row, caller member row, members by id, pages by id; accept/remove/leave/set-book/class-delete/page writes all take the class row first, setBook takes yearbook then class (no cycle, noted in store.go); I found no deadlock path. (3) accept holds the class row lock, then COUNT/MAX FOR UPDATE, so concurrent accepts cannot get equal sort_order; update-order checks by public id not by sort_order, so gaps or old ties (default 0 rows) cannot break the permutation, and book order is sort_order,id so ties and gaps are deterministic; only other member INSERT is class/create (first member). (4) body: textx.CleanMultiline (CRLF->LF, NFC, trim, runes 0..4000) and title Clean 1..120; no HTML handling; test with <script> and 4-byte emoji; cap 30 counted under lock, parallel test 12 creates -> 5 ok, 7 409. (5) class remove deletes pages in the same tx; orphan pair registered; TestDeletingTheClassRemovesItsPages. (6) class-book/get uses ORDER BY placement=back, sort_order, id; TestUpdateOrder checks get follows order; size test adds 30 worst-case pages. (7) migration: one new table, no FK, Down drops it, round-trip test; openapi + schema.d.ts in sync (check:api); routesWithIDs skip of class-page/ is right (page id, not a yearbook/note/media id) and the routes are in TestPageMatrix.
+  Non-blocking: a tab in a page body is refused (control char rule shared with other multiline fields), which may surprise someone pasting an indented list; response size cap stays with T-133; newman folder not executed by anyone (41 requests, syntax only).
+- 2026-10-26 13:16Z · leader · merged 2db5ede. Review: admin-only writes, ids resolved inside the class, update-order exact permutation in one transaction under the class lock, new members get a unique sort_order under the same lock, plain-text bodies, 30-page cap under lock; full CI run 40306717433 green on head ba6b13e. For owner to check: docs/class-permissions.md pages and order; newman not run (Docker down).
 
 ### T-128 — [E07] Web: classes, invites, joining and the student's page
 - **Status:** MERGED
@@ -5807,7 +5810,7 @@ Spec: .team/epics/E07-class-yearbook/06-web-classes-join-and-student-page.md (re
 - 2026-10-26 10:02Z · leader · merged d0b3e25. Review: token only in the path, POST bodies and in-memory router state (QA browser pass at 375 px, en+vi); no storage/console use outside test assertions; student view makes only get-me and class/get; safePath on state.from; full CI run 40301323364 green on head e2a02ba. For owner to check: sign up through an invite link on a real device; Google-only students are not told what to do yet (T-134 adds the hint).
 
 ### T-129 — [E07] Web: assemble the class book (order, class pages)
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
@@ -5818,15 +5821,16 @@ Spec: .team/epics/E07-class-yearbook/06-web-classes-join-and-student-page.md (re
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-26 02:17Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-26 13:16Z by leader
+- **Comments-seen:** 1
 
 Spec: .team/epics/E07-class-yearbook/07-web-assembly-ui.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.
 
 #### Comments
+- 2026-10-26 13:16Z · leader · T-127 merged (2db5ede); editor must turn tabs into spaces
 
 ### T-130 — [E07] Web: print the class book (many profiles, 120 pages)
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
@@ -5837,12 +5841,13 @@ Spec: .team/epics/E07-class-yearbook/07-web-assembly-ui.md (read it from the mai
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-26 02:17Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-26 13:16Z by leader
+- **Comments-seen:** 1
 
 Spec: .team/epics/E07-class-yearbook/08-web-class-book-print.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.
 
 #### Comments
+- 2026-10-26 13:16Z · leader · T-127 merged (2db5ede)
 
 ### T-131 — [E07] Privacy review, legal texts and the class journey (e2e)
 - **Status:** BACKLOG

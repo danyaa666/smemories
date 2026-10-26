@@ -6,6 +6,7 @@
 #### Requirements (SHALL)
 1. Route `/classes/:id/assemble` (admin only; students get the not-found screen). Two lists: front class pages, the students' pages (name, `linked` flag, approved note count), back class pages. Reorder with drag and with **keyboard buttons** (move up, move down); save with `class-book/update-order`; show conflicts clearly if the server rejects the permutation (reload the current order).
 2. **Class pages editor:** create, edit, delete pages of the five kinds with title and plain-text body (counter at 4000), placement front or back. Render the body as **text** (React text nodes, newlines preserved); a `<script>` string must show literally. No `dangerouslySetInnerHTML`, no new dependency.
+3a. **Tabs:** the API refuses a tab character in a page body (shared text rule). The editor turns a typed or pasted tab into two spaces before sending and shows the server's message if any other rule fails.
 3. Students without a linked page are listed with a visible "no page yet" state and can be moved or left out of nothing (they simply print nothing); the admin can see the counts only.
 4. Both locales, i18n parity, phone width, accessibility basics (labels, focus after move, live region for the new position).
 5. vitest for ordering logic (including the permutation payload), the editor and the text rendering.
