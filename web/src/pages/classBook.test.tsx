@@ -88,9 +88,21 @@ const settleImgs = () =>
 const labels = () =>
   [...document.querySelectorAll("section[data-page]")].map((s) => s.getAttribute("data-page"));
 
-function serve(book: ClassBook | Response) {
+function serve(book: ClassBook | Response, role: "admin" | "student" = "admin") {
   return mockApi({
     "GET /user/get-me": () => ok(user()),
+    [`GET /class/get?id=${CLASS}`]: () =>
+      ok({
+        id: CLASS,
+        name: "Lớp 12A1",
+        school_name: "",
+        graduation_year: 2026,
+        language: "vi",
+        my_role: role,
+        page_linked: false,
+        created_at: 1,
+        updated_at: 1,
+      }),
     [`GET /class-book/get?class_id=${CLASS}`]: () => (book instanceof Response ? book : ok(book)),
   });
 }
@@ -239,11 +251,23 @@ describe("print the class book (T-130)", () => {
     expect(document.querySelector("style")?.textContent).toContain("215.9mm 279.4mm");
   });
 
-  it("a student gets the 403 message and no book; the page is not drawn", async () => {
-    serve(err(403, "forbidden"));
+  it("a student gets the not-found screen and no class-book request is made", async () => {
+    const calls = serve(classBook([member(1)]), "student");
     open();
-    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Page not found" })).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(document.querySelectorAll("section[data-page]")).toHaveLength(0);
+    expect(calls.some((c) => c.path.startsWith("/class-book/get"))).toBe(false);
+  });
+
+  it("a stranger (404 on the class) gets the same screen and no class-book request", async () => {
+    const calls = mockApi({
+      "GET /user/get-me": () => ok(user()),
+      [`GET /class/get?id=${CLASS}`]: err(404, "not_found"),
+    });
+    open();
+    expect(await screen.findByRole("heading", { name: "Page not found" })).toBeInTheDocument();
+    expect(calls.some((c) => c.path.startsWith("/class-book/get"))).toBe(false);
   });
 
   it("ignores fields it does not know (a later API may add truncated, ...)", async () => {

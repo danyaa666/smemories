@@ -1,6 +1,6 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import i18n from "../i18n";
 import { err, mockApi, ok, renderApp, user } from "../test/api";
 
@@ -157,8 +157,8 @@ describe("join page", () => {
     renderApp(`/join/${TOKEN}`);
     await userEvent.click(await main().findByRole("link", { name: "Create account" }));
     expect(where()).toBe("/register");
-    // Google sign-in would put the join path into a query string
-    expect(screen.queryByText(/Google/)).not.toBeInTheDocument();
+    // Google sign-in would put the join path into a query string: a sentence instead, no button (the hint tests below)
+    expect(screen.queryByRole("link", { name: /Google/ })).not.toBeInTheDocument();
     await userEvent.type(await screen.findByLabelText("Your name"), "Lan");
     await userEvent.type(screen.getByLabelText("Email"), "lan@example.com");
     await userEvent.type(screen.getByLabelText(/^Password/), "correct horse battery");
@@ -212,7 +212,7 @@ describe("join page", () => {
     });
     renderApp(`/join/${TOKEN}`);
     await userEvent.click(await main().findByRole("link", { name: "Sign in" }));
-    expect(screen.queryByText(/Google/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Google/ })).not.toBeInTheDocument();
     await userEvent.type(await screen.findByLabelText("Email"), "lan@example.com");
     await userEvent.type(screen.getByLabelText("Password"), "correct horse battery");
     await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
@@ -248,5 +248,58 @@ describe("join page", () => {
     renderApp(`/join/${TOKEN}`);
     expect(await screen.findByRole("heading", { name: "Tham gia Lớp 12A1" })).toBeInTheDocument();
     expect(screen.getByText("Hãy tạo tài khoản hoặc đăng nhập để tham gia.")).toBeInTheDocument();
+  });
+});
+
+describe("Google sign-in hint on the join path", () => {
+  const HINT = "Signed in with Google? Sign in first, then open your invite link again.";
+  afterEach(() => vi.unstubAllEnvs());
+
+  it.each([
+    ["Sign in", "Email"],
+    ["Create account", "Your name"],
+  ])(
+    "shows the hint, no Google link, and keeps the token out of every sink (%s)",
+    async (link, field) => {
+      vi.stubEnv("VITE_GOOGLE_SIGNIN", "true"); // Google is configured: the button would show anywhere else
+      const sinks = [
+        vi.spyOn(console, "log"),
+        vi.spyOn(console, "warn"),
+        vi.spyOn(console, "error"),
+      ];
+      const calls = mockApi({ ...base, "GET /user/get-me": signedOut });
+      renderApp(`/join/${TOKEN}`, { browser: true });
+      await userEvent.click(await main().findByRole("link", { name: link }));
+      await screen.findByLabelText(field);
+      expect(screen.getByText(HINT)).toBeInTheDocument();
+      expect(screen.queryByRole("link", { name: /Google/ })).not.toBeInTheDocument();
+      expect(document.querySelector('a[href*="google"]')).toBeNull();
+      expect(window.location.href).not.toContain(TOKEN);
+      expect(JSON.stringify([{ ...localStorage }, { ...sessionStorage }])).not.toContain(TOKEN);
+      for (const spy of sinks) expect(JSON.stringify(spy.mock.calls)).not.toContain(TOKEN);
+      expect(calls.filter((c) => c.path.includes(TOKEN))).toEqual([]);
+    },
+  );
+
+  it("is not shown on plain Login and Register, where the Google button is", async () => {
+    vi.stubEnv("VITE_GOOGLE_SIGNIN", "true");
+    for (const [path, label] of [
+      ["/login", "Sign in with Google"],
+      ["/register", "Sign up with Google"],
+    ]) {
+      mockApi({ "GET /user/get-me": signedOut });
+      const { unmount } = renderApp(path!);
+      expect(await screen.findByRole("link", { name: label })).toBeInTheDocument();
+      expect(screen.queryByText(HINT)).not.toBeInTheDocument();
+      unmount();
+    }
+  });
+
+  it("is translated", async () => {
+    await i18n.changeLanguage("vi");
+    mockApi({ ...base, "GET /user/get-me": signedOut });
+    renderApp(`/join/${TOKEN}`);
+    await userEvent.click(await main().findByRole("link", { name: "Đăng nhập" }));
+    expect(await screen.findByText(/Đăng nhập bằng Google\?/)).toBeInTheDocument();
   });
 });

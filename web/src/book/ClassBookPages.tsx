@@ -3,7 +3,7 @@ import { memo, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { ClassBook, ClassBookMember, ClassBookPage } from "../api/classBook";
 import { ProfilePages } from "./BookPages";
-import { memberBook, memberPrefix, pageKey } from "./classBook";
+import { COVER_KEY, memberBook, memberPrefix, pageKey } from "./classBook";
 import { BookEnvProvider, Sheet, useBookEnv } from "./env";
 import { FitScope, FitText } from "./fit";
 import type { PageSize } from "./sizes";
@@ -15,7 +15,7 @@ function Cover({ cls }: { cls: ClassBook["class"] }) {
   return (
     <Sheet label="class-cover">
       <div className="bk-cover bk-cover-plain">
-        <FitText fitKey="cc:title" className="bk-title" style={{ fontSize: 56 }}>
+        <FitText fitKey={COVER_KEY} className="bk-title" style={{ fontSize: 56 }}>
           {cls.name}
         </FitText>
         {cls.school_name && <p className="bk-sub">{cls.school_name}</p>}

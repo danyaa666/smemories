@@ -43,6 +43,8 @@ export async function serveBook(page, book, classBook = null) {
       seen.bookData++;
       return route.fulfill(ok(book));
     }
+    if (u.pathname === "/api/class/get" && classBook) // the print screen reads the class first: only an admin gets the book (T-134)
+      return route.fulfill(ok({ ...classBook.class, my_role: "admin", page_linked: false, created_at: 1, updated_at: 1 }));
     if (u.pathname === "/api/class-book/get" && classBook) {
       seen.classBook++;
       return route.fulfill(ok(classBook));

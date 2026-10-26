@@ -21,6 +21,10 @@ export const listClasses = (next?: string) =>
 export const getClass = (id: string) => request<SchoolClass>(`/class/get?id=${enc(id)}`);
 export const createClass = (body: ClassInput) => postJson<SchoolClass>("/class/create", body);
 
+export const updateClass = (id: string, body: ClassInput) =>
+  postJson<SchoolClass>("/class/update", { id, ...body });
+export const deleteClass = (id: string) => postJson<void>("/class/delete", { id });
+
 export const leaveClass = (classId: string) =>
   postJson<void>("/class-member/leave", { class_id: classId });
 /** Link one of the caller's own yearbooks as their page, or `null` to clear it. */

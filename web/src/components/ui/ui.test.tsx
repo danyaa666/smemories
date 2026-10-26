@@ -95,6 +95,11 @@ describe("TextField and TextArea", () => {
     expect(screen.getByLabelText("Quote")).toHaveAccessibleDescription("5/10");
   });
 
+  it("counts runes like the server: 10 emoji are 10, not 20", () => {
+    render(<TextArea label="Quote" maxLength={4000} counter value={"😀".repeat(10)} readOnly />);
+    expect(screen.getByText("10/4000")).toBeInTheDocument();
+  });
+
   it("does not show a counter without maxLength", () => {
     render(<TextField label="Name" counter value="abc" readOnly />);
     expect(screen.queryByText(/\//)).not.toBeInTheDocument();

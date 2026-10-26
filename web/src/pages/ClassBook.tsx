@@ -2,10 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { flushSync } from "react-dom";
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { getClassBook, type ClassBook as ClassBookData } from "../api/classBook";
 import { retryOnce } from "../api/notes";
 import { errorText } from "../auth/errors";
+import { AdminOnly } from "../classes/AdminOnly";
 import { ClassBookPages } from "../book/ClassBookPages";
 import {
   PAGE_BUDGET,
@@ -27,8 +28,11 @@ import { useStageScale } from "./Book";
 
 /** Preview and print of the class book (E07, T-130): the admin's view of every student's approved pages, printed by the browser. */
 export function ClassBook() {
+  return <AdminOnly>{(classId) => <ClassBookView id={classId} />}</AdminOnly>;
+}
+
+function ClassBookView({ id }: { id: string }) {
   const { t } = useTranslation();
-  const { id = "" } = useParams();
   const q = useQuery({
     queryKey: ["class-book", id],
     queryFn: () => getClassBook(id),
@@ -165,6 +169,7 @@ function ClassBookScreen({ book, classId }: { book: ClassBookData; classId: stri
             })}
           </Banner>
         )}
+        {summary.coverCut && <Banner variant="warning">{t("classBook.coverCut")}</Banner>}
         {summary.cutPages.length > 0 && (
           <Banner variant="warning">
             {t("classBook.cutPages", {
