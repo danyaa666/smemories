@@ -10,18 +10,18 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 11 | T-023, T-024, T-025, T-031, T-050, T-127, T-129, T-130, T-131, T-133, T-134 |
+| BACKLOG | 9 | T-023, T-024, T-025, T-031, T-050, T-129, T-130, T-131, T-134 |
+| TODO | 2 | T-127, T-133 |
 | IN_QA | 1 | T-128 |
-| QA_PASS | 1 | T-027 |
-| MERGED | 2 | T-125, T-126 |
+| MERGED | 3 | T-027, T-125, T-126 |
 | DONE | 111 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-132 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-125 ([E07] Class invites: create, revoke, lookup, accept); T-126 ([E07] A student's page: link a personal yearbook to the class)
+**Awaiting your review (MERGED):** T-027 ([E07] Class book data API and the admin's read-only media access); T-125 ([E07] Class invites: create, revoke, lookup, accept); T-126 ([E07] A student's page: link a personal yearbook to the class)
 
-**Open questions for you:** Q-059 (Approve merge of T-027 (class book API and the admin's read-only photo access, PR #125)?)
+**Open questions for you:** none
 
-_Board last written 2026-10-26 09:57Z_
+_Board last written 2026-10-26 09:58Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -640,7 +640,7 @@ Recommendation: A, with C as the fallback if the inputs take more than a few day
 - **Answer:** _(pending)_
 
 ### Q-059 — Approve merge of T-027 (class book API and the admin's read-only photo access, PR #125)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-26 09:38Z
 - **Blocks:** T-027
 - **Recommendation:** approve
@@ -1817,18 +1817,18 @@ Class space owned by an admin (teacher or monitor), invite links/emails for stud
 - 2026-10-26 07:13Z · human · accepted by owner
 
 ### T-027 — [E07] Class book data API and the admin's read-only media access
-- **Status:** QA_PASS
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
 - **Depends-on:** T-126
 - **Risk:** high
 - **Rework:** 0
-- **Owner-approved:** —
-- **Assignee:** leader
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-027-e07-class-book-data-api-and-the-admin-s-
 - **PR:** https://github.com/danyaa666/smemories/pull/125
-- **Updated:** 2026-10-26 09:37Z by qa
+- **Updated:** 2026-10-26 09:58Z by leader
 - **Comments-seen:** 5
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E07-class-yearbook/02-class-book-assembly-many-profiles-per-book.md`
@@ -1860,6 +1860,8 @@ Book with many student profiles in a chosen order, class-level pages (intro, tea
   3. Size, maximal case: one note can hold 60+40+60+2000+5x500 = 4660 characters (up to 4 bytes each, emoji) plus a 3 KiB signature = about 22 KB, so 60 x 40 maximal notes is roughly 50 MiB (dev's 40 MiB is the 3-byte figure). Reachable only by about 60 colluding verified accounts in one class (a single student contributes at most about 0.9 MB), and the admin is the class creator, so a hostile user can build it for themselves. Cost: WriteJSON marshals the whole body then copies it (append), so peak is roughly 2-3x, i.e. 100-150 MB of server memory per request, and class-book/get has no rate limiter (reads are not limited). Recommendation (follow-up, not for this PR): put a per-user read limiter on class-book/get (a few calls per minute) and, if the 120-page budget is meant to be a hard rule, a cap on total bytes or lower per-member cap (notes.MaxClassBookNotes); realistic classes stay at about 1.2 MB so no change is needed for normal use.
   4. Unverified-email owners: book-data/get refuses them (T-013 rule), class-book/get does not check the owner's verified flag by design (documented in ClassBookNotes). Unverified users cannot have approved notes today, so no effect.
 - 2026-10-26 09:38Z · leader · Leader review OK on head 195656b (unchanged since QA): read the whole readable SQL (admin of a class where the media's yearbook is the member's own linked page, and only the owner profile photo or a photo of an approved note of that yearbook; owned() still used by every write); one caller path; guard test mutation-checked; CI run 40297998394 green on the production code of this head (second commit tests/docs only). Non-blocking, moved to new task T-133: read limiter, 8 MiB response cap with truncated list, admin photo no-store. Accepted: admin can open photos of approved notes beyond the 40 cap (documented there). Awaiting owner: team approve T-027. Not run locally: integration tests and newman (Docker down).
+- 2026-10-26 09:58Z · human · owner approved merge
+- 2026-10-26 09:58Z · leader · merged 3e1dea3 (owner-approved). Review: read the whole readable SQL (admin of a class where the media's yearbook is the member's linked page; owner profile photo or approved-note photo only; writes still owner-only); route-list guard test mutation-checked; CI run 40297998394 green on the production code. For owner to check: docs/class-permissions.md media read path; newman not run (Docker down); T-133 adds read limiter, 8 MiB cap, no-store for admin photos.
 
 ### T-028 — [E01] T-001 follow-ups: log route not path, lint scope and findings, OpenAPI 404/405
 - **Status:** DONE
@@ -5747,7 +5749,7 @@ Spec: .team/epics/E07-class-yearbook/04-student-page-link.md (read it from the m
 - 2026-10-26 08:59Z · leader · merged 1bc9845 (owner-approved). Review: link is a pointer only, owner_id check under yearbook row lock, 409 for a second class, delete clears link, per-IP budgets raised; full CI run 40291645124 green on head f88609f. For owner to check: docs/class-permissions.md page section; newman not run (Docker down); T-027 carries the media/create guard.
 
 ### T-127 — [E07] Class pages and book order (API)
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
@@ -5758,12 +5760,13 @@ Spec: .team/epics/E07-class-yearbook/04-student-page-link.md (read it from the m
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-26 02:17Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-26 09:58Z by leader
+- **Comments-seen:** 1
 
 Spec: .team/epics/E07-class-yearbook/05-class-pages-and-order.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.
 
 #### Comments
+- 2026-10-26 09:58Z · leader · T-027 merged (3e1dea3)
 
 ### T-128 — [E07] Web: classes, invites, joining and the student's page
 - **Status:** IN_QA
@@ -5873,7 +5876,7 @@ Spec: .team/epics/E06-go-live/15-ci-pause-integration-and-e2e.md. Owner decision
 - 2026-10-26 07:13Z · human · accepted by owner
 
 ### T-133 — [E07] Class book: read limiter, response size cap and admin photo caching
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P3
 - **Type:** hardening
 - **Milestone:** M3
@@ -5884,12 +5887,13 @@ Spec: .team/epics/E06-go-live/15-ci-pause-integration-and-e2e.md. Owner decision
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-26 09:38Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-26 09:58Z by leader
+- **Comments-seen:** 1
 
 Spec: .team/epics/E07-class-yearbook/10-class-book-limits-and-caching.md. QA follow-ups from T-027: class-book/get has no read limiter, a maximal class book is about 50 MiB, and an admin's cached photo outlives a hidden note by up to an hour.
 
 #### Comments
+- 2026-10-26 09:58Z · leader · T-027 merged (3e1dea3)
 
 ### T-134 — [E07] Web: edit and delete a class, link an existing yearbook as the page
 - **Status:** BACKLOG
