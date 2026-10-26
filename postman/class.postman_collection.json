@@ -1,0 +1,2263 @@
+{
+  "info": {
+    "name": "SMemories - class yearbook: classes, memberships and roles (E07, T-026)",
+    "description": "Classes, the two roles and the permission matrix (docs/class-permissions.md). Run against an API started with SMEM_ENV=dev and SMEM_DEV_FIXED_OTP set (.env.example does: 123123), because the flow verifies its two fresh accounts with the dev email code; the session token is read from the register response's Set-Cookie header and sent in an explicit Cookie header, so users A (teacher, admin) and B (not in A's class) act in one run. Each run registers 2 users (the register limit is 5 per hour per IP: run `make reset-limits` before a third run within the hour) and every run uses new accounts, so it can run twice in a row. Run the whole collection in order: the Edge cases folder reuses the users from the Full flow. What it cannot cover yet: members other than the creator (a student, a second admin) need invites (T-125); the student 403s, the roster for several members and the last-admin race with two admins are covered by internal/class/*_integration_test.go and get a Postman step when T-125 lands.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "origin",
+      "value": "http://localhost:5173"
+    },
+    {
+      "key": "termsVersion",
+      "value": "2026-10-21"
+    },
+    {
+      "key": "emailA",
+      "value": ""
+    },
+    {
+      "key": "emailB",
+      "value": ""
+    },
+    {
+      "key": "password",
+      "value": ""
+    },
+    {
+      "key": "nameA",
+      "value": ""
+    },
+    {
+      "key": "nameB",
+      "value": ""
+    },
+    {
+      "key": "tokenA",
+      "value": ""
+    },
+    {
+      "key": "tokenB",
+      "value": ""
+    },
+    {
+      "key": "classId",
+      "value": ""
+    },
+    {
+      "key": "classIdB",
+      "value": ""
+    },
+    {
+      "key": "memberId",
+      "value": ""
+    },
+    {
+      "key": "notFoundMessage",
+      "value": ""
+    },
+    {
+      "key": "pageTokenB",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Full flow",
+      "item": [
+        {
+          "name": "Register user A (teacher)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{emailA}}\",\"password\":\"{{password}}\",\"display_name\":\"{{nameA}}\",\"accept_terms_version\":\"{{termsVersion}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const m = /smem_session=([^;]+)/.exec(pm.response.headers.get('Set-Cookie') || '');",
+                  "pm.test('session cookie issued', () => pm.expect(m).to.not.be.null);",
+                  "pm.collectionVariables.set('tokenA', m ? m[1] : '');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify A's email with the dev code (needs SMEM_DEV_FIXED_OTP)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/verify-email",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "verify-email"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"code\":\"123123\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register user B (stranger to the class)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{emailB}}\",\"password\":\"{{password}}\",\"display_name\":\"{{nameB}}\",\"accept_terms_version\":\"{{termsVersion}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const m = /smem_session=([^;]+)/.exec(pm.response.headers.get('Set-Cookie') || '');",
+                  "pm.test('session cookie issued', () => pm.expect(m).to.not.be.null);",
+                  "pm.collectionVariables.set('tokenB', m ? m[1] : '');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B creates a class before verifying the email - 403 ERROR_EMAIL_NOT_VERIFIED",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"Not yet\",\"language\":\"en\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 403', () => pm.response.to.have.status(403));",
+                  "pm.test('code ERROR_EMAIL_NOT_VERIFIED', () => pm.expect(pm.response.json().status).to.eql('ERROR_EMAIL_NOT_VERIFIED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify B's email with the dev code (needs SMEM_DEV_FIXED_OTP)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/verify-email",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "verify-email"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"code\":\"123123\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A creates a class and becomes its admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"  L\\u1edbp 12A1 \",\"school_name\":\"THPT Chu V\\u0103n An\",\"graduation_year\":2026,\"language\":\"vi\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                  "const c = pm.response.json().data;",
+                  "pm.test('class shape', () => { pm.expect(c.id).to.match(/^[0-9A-Z]{26}$/); pm.expect(c.name).to.eql('L\\u1edbp 12A1'); pm.expect(c.my_role).to.eql('admin'); pm.expect(c.page_linked).to.eql(false); pm.expect(c.graduation_year).to.eql(2026); });",
+                  "pm.test('no internal ids', () => pm.expect(c).to.not.have.any.keys('created_by', 'owner_id', 'internal_id'));",
+                  "pm.collectionVariables.set('classId', c.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A lists the classes: the new one, as admin",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class/get-list",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class",
+                "get-list"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('page shape', () => { pm.expect(d.items).to.be.an('array'); pm.expect(d.next_id).to.eql(''); });",
+                  "pm.test('the class is listed with my role', () => { const c = d.items.find(x => x.id === pm.collectionVariables.get('classId')); pm.expect(c).to.not.be.undefined; pm.expect(c.my_role).to.eql('admin'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A reads the class (no roster in the answer)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class/get?id={{classId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{classId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                  "pm.test('my role', () => pm.expect(pm.response.json().data.my_role).to.eql('admin'));",
+                  "pm.test('no roster in the class answer', () => pm.expect(pm.response.json().data).to.not.have.any.keys('members', 'roster', 'students', 'admins'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A replaces the class details (the school is cleared)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class/update",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class",
+                "update"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{classId}}\",\"name\":\"Class 12A1\",\"language\":\"en\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                  "const c = pm.response.json().data;",
+                  "pm.test('replaced', () => { pm.expect(c.name).to.eql('Class 12A1'); pm.expect(c.school_name).to.eql(''); pm.expect(c.graduation_year).to.eql(null); pm.expect(c.language).to.eql('en'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A reads the roster: one row, A, admin",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-member/get-list?class_id={{classId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-member",
+                "get-list"
+              ],
+              "query": [
+                {
+                  "key": "class_id",
+                  "value": "{{classId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('one admin', () => { pm.expect(d.items).to.have.lengthOf(1); pm.expect(d.items[0].role).to.eql('admin'); pm.expect(d.items[0].name).to.eql(pm.collectionVariables.get('nameA')); pm.expect(d.items[0].id).to.match(/^[0-9A-Z]{26}$/); });",
+                  "pm.test('no email or user id', () => pm.expect(d.items[0]).to.not.have.any.keys('email', 'user_id'));",
+                  "pm.collectionVariables.set('memberId', d.items[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A, the last admin, cannot leave - 403 ERROR_LAST_ADMIN",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-member/leave",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-member",
+                "leave"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\":\"{{classId}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 403', () => pm.response.to.have.status(403));",
+                  "pm.test('code ERROR_LAST_ADMIN', () => pm.expect(pm.response.json().status).to.eql('ERROR_LAST_ADMIN'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A cannot remove self as the last admin - 403 ERROR_LAST_ADMIN",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-member/remove",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-member",
+                "remove"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\":\"{{classId}}\",\"member_id\":\"{{memberId}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 403', () => pm.response.to.have.status(403));",
+                  "pm.test('code ERROR_LAST_ADMIN', () => pm.expect(pm.response.json().status).to.eql('ERROR_LAST_ADMIN'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A cannot demote self as the last admin - 403 ERROR_LAST_ADMIN",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-member/update-role",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-member",
+                "update-role"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\":\"{{classId}}\",\"member_id\":\"{{memberId}}\",\"role\":\"student\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 403', () => pm.response.to.have.status(403));",
+                  "pm.test('code ERROR_LAST_ADMIN', () => pm.expect(pm.response.json().status).to.eql('ERROR_LAST_ADMIN'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A sets an unknown role - 400 ERROR_INVALID_ROLE",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-member/update-role",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-member",
+                "update-role"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\":\"{{classId}}\",\"member_id\":\"{{memberId}}\",\"role\":\"owner\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code ERROR_INVALID_ROLE', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_ROLE'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B (not a member) reads the class - 404, the same as a class that does not exist",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class/get?id={{classId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{classId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));",
+                  "pm.collectionVariables.set('notFoundMessage', pm.response.json().error_message);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B reads a class that does not exist - same 404, same message",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class/get?id=01K7Q8W3ZR5N2M4X6V8B0C1D2E",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "01K7Q8W3ZR5N2M4X6V8B0C1D2E"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));",
+                  "pm.test('same message as for a class B is not in', () => pm.expect(pm.response.json().error_message).to.eql(pm.collectionVariables.get('notFoundMessage')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B reads the roster - 404",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-member/get-list?class_id={{classId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-member",
+                "get-list"
+              ],
+              "query": [
+                {
+                  "key": "class_id",
+                  "value": "{{classId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B updates the class - 404",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class/update",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class",
+                "update"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{classId}}\",\"name\":\"Mine now\",\"language\":\"en\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B deletes the class - 404",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class/delete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class",
+                "delete"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{classId}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B removes A - 404",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-member/remove",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-member",
+                "remove"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\":\"{{classId}}\",\"member_id\":\"{{memberId}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B promotes A - 404",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-member/update-role",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-member",
+                "update-role"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\":\"{{classId}}\",\"member_id\":\"{{memberId}}\",\"role\":\"admin\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B leaves a class B is not in - 404",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-member/leave",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-member",
+                "leave"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\":\"{{classId}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B lists the classes: A's class is not there",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class/get-list",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class",
+                "get-list"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                  "pm.test('empty', () => pm.expect(pm.response.json().data.items).to.eql([]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B creates a class of their own - any verified user may",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"B class\",\"language\":\"en\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                  "pm.collectionVariables.set('classIdB', pm.response.json().data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A deletes the class",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class/delete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class",
+                "delete"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{classId}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                  "pm.test('empty data', () => pm.expect(pm.response.json().data).to.eql({}));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A reads the deleted class - 404",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class/get?id={{classId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{classId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Folder scripts run before every request in the folder, so generate only before the first one: the whole flow then uses",
+              "// one consistent pair of accounts, and every new run gets fresh ones (no collision with data from older runs).",
+              "if (pm.info.requestName.startsWith('Register user A')) {",
+              "  const n = Date.now() + '-' + Math.floor(Math.random() * 1e6);",
+              "  pm.collectionVariables.set('emailA', 'newman-class-a-' + n + '@example.com');",
+              "  pm.collectionVariables.set('emailB', 'newman-class-b-' + n + '@example.com');",
+              "  pm.collectionVariables.set('password', 'Fake-Newman-pw-' + n);",
+              "  pm.collectionVariables.set('nameA', 'Newman Teacher \\u0110\\u1eb7ng');",
+              "  pm.collectionVariables.set('nameB', 'Newman Stranger');",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Edge cases",
+      "item": [
+        {
+          "name": "Create without a session - 401",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"x\",\"language\":\"en\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 401', () => pm.response.to.have.status(401));",
+                  "pm.test('code ERROR_UNAUTHORIZED', () => pm.expect(pm.response.json().status).to.eql('ERROR_UNAUTHORIZED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List without a session - 401",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class/get-list",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class",
+                "get-list"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 401', () => pm.response.to.have.status(401));",
+                  "pm.test('code ERROR_UNAUTHORIZED', () => pm.expect(pm.response.json().status).to.eql('ERROR_UNAUTHORIZED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Read a class without a session - 401",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class/get?id={{classId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{classId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 401', () => pm.response.to.have.status(401));",
+                  "pm.test('code ERROR_UNAUTHORIZED', () => pm.expect(pm.response.json().status).to.eql('ERROR_UNAUTHORIZED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Roster without a session - 401",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-member/get-list?class_id={{classId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-member",
+                "get-list"
+              ],
+              "query": [
+                {
+                  "key": "class_id",
+                  "value": "{{classId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 401', () => pm.response.to.have.status(401));",
+                  "pm.test('code ERROR_UNAUTHORIZED', () => pm.expect(pm.response.json().status).to.eql('ERROR_UNAUTHORIZED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete without a session - 401",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class/delete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class",
+                "delete"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{classIdB}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 401', () => pm.response.to.have.status(401));",
+                  "pm.test('code ERROR_UNAUTHORIZED', () => pm.expect(pm.response.json().status).to.eql('ERROR_UNAUTHORIZED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Leave without a session - 401",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-member/leave",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-member",
+                "leave"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\":\"{{classIdB}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 401', () => pm.response.to.have.status(401));",
+                  "pm.test('code ERROR_UNAUTHORIZED', () => pm.expect(pm.response.json().status).to.eql('ERROR_UNAUTHORIZED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create with an empty name - 400 ERROR_INVALID_NAME",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"  \",\"language\":\"en\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code ERROR_INVALID_NAME', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_NAME'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create with a name of 121 characters - 400 ERROR_INVALID_NAME",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\",\"language\":\"en\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code ERROR_INVALID_NAME', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_NAME'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create with a name of exactly 120 characters is fine",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\\u0110\",\"language\":\"vi\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create with an unknown language - 400 ERROR_INVALID_LANGUAGE",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"x\",\"language\":\"fr\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code ERROR_INVALID_LANGUAGE', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_LANGUAGE'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create with a graduation year of 1949 - 400 ERROR_INVALID_GRADUATION_YEAR",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"x\",\"graduation_year\":1949,\"language\":\"en\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code ERROR_INVALID_GRADUATION_YEAR', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_GRADUATION_YEAR'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create with an unknown field - 400 ERROR_PARAM",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"x\",\"language\":\"en\",\"my_role\":\"admin\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Read a class with a lower-case id - 400 ERROR_PARAM",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class/get?id=01k7q8w3zr5n2m4x6v8b0c1d2e",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "01k7q8w3zr5n2m4x6v8b0c1d2e"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Read a class with a short id - 400 ERROR_PARAM",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class/get?id=01K7Q8W3ZR",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "01K7Q8W3ZR"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Read a class with no id - 400 ERROR_PARAM",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class/get",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class",
+                "get"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List with limit 0 - 400 ERROR_PARAM",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class/get-list?limit=0",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class",
+                "get-list"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "0"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List with a made-up next_id - 400 ERROR_PARAM",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class/get-list?next_id=AAAA",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class",
+                "get-list"
+              ],
+              "query": [
+                {
+                  "key": "next_id",
+                  "value": "AAAA"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List one at a time: a page token, and it is refused for another user",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class/get-list?limit=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class",
+                "get-list"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('B has more than one class, so there is a next page', () => pm.expect(d.next_id).to.not.eql(''));",
+                  "pm.collectionVariables.set('pageTokenB', d.next_id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A uses B's page token - 400 ERROR_PARAM (tokens are bound to the list)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class/get-list?next_id={{pageTokenB}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class",
+                "get-list"
+              ],
+              "query": [
+                {
+                  "key": "next_id",
+                  "value": "{{pageTokenB}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B uses the page token on its own list - 200",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class/get-list?limit=1&next_id={{pageTokenB}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class",
+                "get-list"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "1"
+                },
+                {
+                  "key": "next_id",
+                  "value": "{{pageTokenB}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B creates the 11th class as admin - 409 ERROR_LIMIT_REACHED",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"One too many\",\"language\":\"en\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Fill B's admin slots: create classes one after the other until the API refuses (at most 12 tries), so the request itself is the one over the cap.",
+                  "const base = pm.collectionVariables.get('baseUrl');",
+                  "const cookie = 'smem_session=' + pm.collectionVariables.get('tokenB');",
+                  "let tries = 12;",
+                  "const next = () => { if (tries-- <= 0) return;",
+                  "  pm.sendRequest({url: base + '/api/class/create', method: 'POST', header: {Cookie: cookie, Origin: pm.collectionVariables.get('origin'), 'Content-Type': 'application/json'}, body: {mode: 'raw', raw: JSON.stringify({name: 'Filler', language: 'en'})}},",
+                  "    (err, res) => { if (!err && res.code === 200) { next(); } }); };",
+                  "next();"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 409', () => pm.response.to.have.status(409));",
+                  "pm.test('code ERROR_LIMIT_REACHED', () => pm.expect(pm.response.json().status).to.eql('ERROR_LIMIT_REACHED'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -89,7 +89,11 @@ var userTables = []string{"user_identity_tab", "user_tab"}
 // globalTables belong to no book and no user (anonymous counters, T-061), so a book delete must leave them alone too.
 var globalTables = []string{"print_feedback_tab"}
 
-// tabTables lists the *_tab tables of the test database except userTables and globalTables, which must all exist.
+// classTables are the class yearbook tables (T-026). A book delete keeps them: it only clears the link from a member row to the
+// deleted book (class_member_tab.yearbook_id), which internal/class tests (TestDeletingTheYearbookClearsTheLink).
+var classTables = []string{"class_member_tab", "class_tab"}
+
+// tabTables lists the *_tab tables of the test database except userTables, globalTables and classTables, which must all exist.
 func (e *env) tabTables() []string {
 	e.t.Helper()
 	rows, err := e.db.Query(`SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME LIKE '%\_tab' ORDER BY TABLE_NAME`)
@@ -103,11 +107,11 @@ func (e *env) tabTables() []string {
 		if err := rows.Scan(&n); err != nil {
 			e.t.Fatal(err)
 		}
-		if !slices.Contains(userTables, n) && !slices.Contains(globalTables, n) {
+		if !slices.Contains(userTables, n) && !slices.Contains(globalTables, n) && !slices.Contains(classTables, n) {
 			out = append(out, n)
 		}
 	}
-	for _, n := range append(slices.Clone(userTables), globalTables...) {
+	for _, n := range slices.Concat(userTables, globalTables, classTables) {
 		if e.count(`SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '`+n+`'`) != 1 {
 			e.t.Fatalf("user table %s is missing: update userTables", n)
 		}
