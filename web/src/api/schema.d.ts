@@ -784,6 +784,186 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/class/create": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a class (the caller becomes its admin)
+         * @description Called by a signed-in user with a verified email (the new-class form). Creates the class and makes the caller its first member with the role `admin`. `name` and `language` are required; `school_name` and `graduation_year` are optional. A user can be admin of at most 10 classes (`ERROR_LIMIT_REACHED`). An unverified email is `ERROR_EMAIL_NOT_VERIFIED` and nothing is created. Unknown fields and a body that is not a JSON object are `ERROR_PARAM`. Text fields are normalised to NFC and trimmed; control characters (Cc), format characters (Cf, except U+200D) and line/paragraph separators are rejected. Not idempotent: repeating a lost request creates a second class. A request with the session cookie must come from an allowed Origin.
+         */
+        post: operations["createClass"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/class/get-list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the classes the caller is a member of
+         * @description Called by the signed-in user (the class list). Only classes the caller belongs to, newest membership first, each with the caller's own role and page status; never a roster. Keyset paginated: pass the `next_id` of a page back as the `next_id` query parameter; it is the empty string on the last page. `next_id` is an opaque, tamper-evident token bound to the caller's list: a changed, truncated or foreign token is `ERROR_PARAM`. A `limit` outside 1..50 is `ERROR_PARAM`.
+         */
+        get: operations["listClasses"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/class/get": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read one class with the caller's role
+         * @description Called by any member (the class screen). Returns the class, the caller's role in it (`my_role`) and whether the caller has chosen their class page (`page_linked`). It never carries the roster, whatever the role: admins read it from `/api/class-member/get-list`. A class that does not exist and a class the caller is not a member of both answer `ERROR_NOT_FOUND` with the same body. A missing or non-canonical `id` is `ERROR_PARAM`.
+         */
+        get: operations["getClass"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/class/update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Replace the editable fields of a class (admin)
+         * @description Called by an admin of the class (the class settings). Replaces every editable field, so an absent `school_name` or `graduation_year` is cleared; `name` and `language` are required. A member who is not an admin gets `ERROR_FORBIDDEN`; a non-member and an unknown class get `ERROR_NOT_FOUND`. Unknown fields and a missing `id` are `ERROR_PARAM`. A request with the session cookie must come from an allowed Origin. Idempotent: repeating it leaves the same class (apart from `updated_at`).
+         */
+        post: operations["updateClass"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/class/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Delete a class (admin)
+         * @description Called by an admin of the class. Removes the class and every membership in one transaction. It never touches a member's yearbook: only the link from the class to it goes. A member who is not an admin gets `ERROR_FORBIDDEN`; a non-member and an unknown class get `ERROR_NOT_FOUND`. Not idempotent: a class that is already deleted answers `ERROR_NOT_FOUND`. A request with the session cookie must come from an allowed Origin.
+         */
+        post: operations["deleteClass"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/class-member/get-list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the members of a class (admin)
+         * @description Called by an admin of the class (the roster screen). Returns the members oldest first with display name, role, join time and whether they have chosen a class page (`page_linked`; nothing about its content). A class has at most 60 members, so the default and maximum `limit` is 60. Keyset paginated like every list; `next_id` is bound to this class and this caller. A member who is not an admin gets `ERROR_FORBIDDEN`; a non-member and an unknown class get `ERROR_NOT_FOUND`.
+         */
+        get: operations["listClassMembers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/class-member/update-role": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Promote or demote a member (admin)
+         * @description Called by an admin of the class. Sets the role of one member to `admin` or `student`; setting the role a member already has changes nothing. The last admin cannot be demoted (`ERROR_LAST_ADMIN`), also when two admins try at the same moment: membership changes of one class are serialised. A member who is not an admin gets `ERROR_FORBIDDEN`; a non-member and an unknown class get `ERROR_NOT_FOUND`; a member id that is not in this class is `ERROR_NOT_FOUND` too.
+         */
+        post: operations["updateClassMemberRole"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/class-member/remove": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Remove a member from a class (admin)
+         * @description Called by an admin of the class. Removes one member (an admin may remove themselves while another admin remains). The member's yearbook is untouched. The last admin cannot be removed (`ERROR_LAST_ADMIN`), also under concurrent requests. A member who is not an admin gets `ERROR_FORBIDDEN`; a non-member and an unknown class get `ERROR_NOT_FOUND`; a member id that is not in this class is `ERROR_NOT_FOUND` too.
+         */
+        post: operations["removeClassMember"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/class-member/leave": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Leave a class
+         * @description Called by any member to leave the class; their yearbook is untouched. The last admin cannot leave (`ERROR_LAST_ADMIN`): promote another member first or delete the class. Two admins leaving at the same moment leave exactly one. A non-member and an unknown class both get `ERROR_NOT_FOUND`.
+         */
+        post: operations["leaveClass"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1615,6 +1795,147 @@ export interface components {
             data: {
                 /** @description Note ULID. */
                 id: string;
+            };
+        };
+        /** @description A class as its caller sees it, with the caller's own membership. Never carries the roster. */
+        Class: {
+            /** @description Class ULID. */
+            id: string;
+            /** @description 1 to 120 characters. */
+            name: string;
+            /** @description Up to 120 characters; empty when unset. */
+            school_name: string;
+            /** @description Year from 1950 to 2100; `null` when unset. */
+            graduation_year: number | null;
+            /**
+             * @description Language of the class book: `en` English, `vi` Vietnamese.
+             * @enum {string}
+             */
+            language: "en" | "vi";
+            /**
+             * @description The caller's role in this class: `admin` (teacher or monitor) or `student`.
+             * @enum {string}
+             */
+            my_role: "admin" | "student";
+            /** @description True when the caller has chosen which of their yearbooks is their page in the class book. */
+            page_linked: boolean;
+            /**
+             * Format: int64
+             * @description When the class was created, Unix ms.
+             */
+            created_at: number;
+            /**
+             * Format: int64
+             * @description When the class was last changed, Unix ms.
+             */
+            updated_at: number;
+        };
+        ClassResponse: {
+            /**
+             * @description Always `OK` on success.
+             * @constant
+             */
+            status: "OK";
+            data: components["schemas"]["Class"];
+        };
+        ClassListResponse: {
+            /**
+             * @description Always `OK` on success.
+             * @constant
+             */
+            status: "OK";
+            /** @description One page of the caller's classes. */
+            data: {
+                /** @description The classes of this page, newest membership first; an empty array when the caller is in none. */
+                items: components["schemas"]["Class"][];
+                /** @description Opaque page token for the next page; the empty string on the last page. */
+                next_id: string;
+            };
+        };
+        ClassInput: {
+            /** @description Required. 1 to 120 characters after trimming. */
+            name: string;
+            /** @description Optional, up to 120 characters; default empty. */
+            school_name?: string;
+            /** @description Optional year from 1950 to 2100; default null. */
+            graduation_year?: number | null;
+            /**
+             * @description Required. Language of the class book: `en` English, `vi` Vietnamese.
+             * @enum {string}
+             */
+            language: "en" | "vi";
+        };
+        ClassUpdateRequest: {
+            /** @description Required. ULID of the class. */
+            id: string;
+            /** @description Required. 1 to 120 characters after trimming. */
+            name: string;
+            /** @description Optional, up to 120 characters; absent clears it. */
+            school_name?: string;
+            /** @description Optional year from 1950 to 2100; absent or null clears it. */
+            graduation_year?: number | null;
+            /**
+             * @description Required. `en` English, `vi` Vietnamese.
+             * @enum {string}
+             */
+            language: "en" | "vi";
+        };
+        ClassIdRequest: {
+            /** @description Required. ULID of the class. */
+            id: string;
+        };
+        ClassLeaveRequest: {
+            /** @description Required. ULID of the class to leave. */
+            class_id: string;
+        };
+        ClassMemberRequest: {
+            /** @description Required. ULID of the class. */
+            class_id: string;
+            /** @description Required. ULID of the member (the `id` of a roster row, not a user id). */
+            member_id: string;
+        };
+        ClassMemberRoleRequest: {
+            /** @description Required. ULID of the class. */
+            class_id: string;
+            /** @description Required. ULID of the member (the `id` of a roster row, not a user id). */
+            member_id: string;
+            /**
+             * @description Required. The new role: `admin` or `student`.
+             * @enum {string}
+             */
+            role: "admin" | "student";
+        };
+        /** @description One row of the roster, seen by admins only. Carries no email, user id or page content. */
+        ClassMember: {
+            /** @description Member ULID; use it as `member_id`. Not the user's id. */
+            id: string;
+            /** @description The member's display name. */
+            name: string;
+            /**
+             * @description `admin` or `student`.
+             * @enum {string}
+             */
+            role: "admin" | "student";
+            /**
+             * Format: int64
+             * @description When the member joined, Unix ms.
+             */
+            joined_at: number;
+            /** @description True when the member has chosen a class page. Nothing about its content. */
+            page_linked: boolean;
+        };
+        ClassMemberListResponse: {
+            /**
+             * @description Always `OK` on success.
+             * @constant
+             */
+            status: "OK";
+            /** @description One page of the roster. */
+            data: {
+                /** @description The members of this page, oldest first. */
+                items: components["schemas"]["ClassMember"][];
+                /** @description Opaque page token for the next page; the empty string on the last page. */
+                next_id: string;
             };
         };
     };
@@ -3069,6 +3390,296 @@ export interface operations {
             500: components["responses"]["ApiInternal"];
             502: components["responses"]["ApiBadGateway"];
             503: components["responses"]["ApiBusy"];
+        };
+    };
+    createClass: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClassInput"];
+            };
+        };
+        responses: {
+            /** @description The new class with the caller as admin. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClassResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            409: components["responses"]["ApiConflict"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            429: components["responses"]["ApiRateLimited"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    listClasses: {
+        parameters: {
+            query?: {
+                /** @description Page size, default 20, maximum 50. */
+                limit?: number;
+                /** @description Opaque token from the previous page; omit it for the first page. */
+                next_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of classes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClassListResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    getClass: {
+        parameters: {
+            query: {
+                /** @description Class ULID. */
+                id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The class. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClassResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    updateClass: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClassUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description The updated class. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClassResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            429: components["responses"]["ApiRateLimited"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    deleteClass: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClassIdRequest"];
+            };
+        };
+        responses: {
+            /** @description Deleted. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmptyResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            429: components["responses"]["ApiRateLimited"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    listClassMembers: {
+        parameters: {
+            query: {
+                /** @description Class ULID. */
+                class_id: string;
+                /** @description Page size, default and maximum 60. */
+                limit?: number;
+                /** @description Opaque token from the previous page; omit it for the first page. */
+                next_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of members. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClassMemberListResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    updateClassMemberRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClassMemberRoleRequest"];
+            };
+        };
+        responses: {
+            /** @description The role is set. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmptyResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            429: components["responses"]["ApiRateLimited"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    removeClassMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClassMemberRequest"];
+            };
+        };
+        responses: {
+            /** @description The member is removed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmptyResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            429: components["responses"]["ApiRateLimited"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    leaveClass: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClassLeaveRequest"];
+            };
+        };
+        responses: {
+            /** @description The caller is no longer a member. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmptyResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            429: components["responses"]["ApiRateLimited"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
         };
     };
 }

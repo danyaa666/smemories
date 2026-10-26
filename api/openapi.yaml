@@ -1821,6 +1821,410 @@ paths:
         "500": {$ref: "#/components/responses/ApiInternal"}
         "502": {$ref: "#/components/responses/ApiBadGateway"}
         "503": {$ref: "#/components/responses/ApiBusy"}
+  /api/class/create:
+    post:
+      operationId: createClass
+      tags: [class]
+      summary: Create a class (the caller becomes its admin)
+      description: >-
+        Called by a signed-in user with a verified email (the new-class form). Creates the class and makes the caller its first member with the role `admin`.
+        `name` and `language` are required; `school_name` and `graduation_year` are optional. A user can be admin of at most 10 classes (`ERROR_LIMIT_REACHED`).
+        An unverified email is `ERROR_EMAIL_NOT_VERIFIED` and nothing is created. Unknown fields and a body that is not a JSON object are `ERROR_PARAM`. Text fields are normalised to NFC and trimmed; control characters (Cc), format characters (Cf, except U+200D) and line/paragraph separators are rejected.
+        Not idempotent: repeating a lost request creates a second class. A request with the session cookie must come from an allowed Origin.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_EMAIL_NOT_VERIFIED, description: The caller's email address is not verified yet; nothing was created.}
+        - {code: ERROR_INVALID_NAME, description: "Field `name`: missing, empty after trimming, over 120 characters, or containing control characters."}
+        - {code: ERROR_INVALID_SCHOOL_NAME, description: "Field `school_name`: over 120 characters or containing control characters."}
+        - {code: ERROR_INVALID_GRADUATION_YEAR, description: "Field `graduation_year`: not a whole year from 1950 to 2100."}
+        - {code: ERROR_INVALID_LANGUAGE, description: "Field `language`: missing, or not `en` or `vi`."}
+        - {code: ERROR_LIMIT_REACHED, description: The user is already admin of 10 classes.}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+        - {code: ERROR_RATE_LIMITED, description: "More than 120 class writes by this user in an hour. Retry after `Retry-After`."}
+        - {code: ERROR_UNAVAILABLE, description: "The write rate limiter in Redis did not answer, so the write fails closed. Retry after `Retry-After`."}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/ClassInput"}
+            examples:
+              example:
+                value: {name: "Lớp 12A1", school_name: "THPT Chu Văn An", graduation_year: 2026, language: vi}
+      responses:
+        "200":
+          description: The new class with the caller as admin.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ClassResponse"}
+              examples:
+                ok:
+                  value:
+                    status: OK
+                    data: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, name: "Lớp 12A1", school_name: "THPT Chu Văn An", graduation_year: 2026, language: vi, my_role: admin, page_linked: false, created_at: 1760000000000, updated_at: 1760000000000}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "409": {$ref: "#/components/responses/ApiConflict"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "429": {$ref: "#/components/responses/ApiRateLimited"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/class/get-list:
+    get:
+      operationId: listClasses
+      tags: [class]
+      summary: List the classes the caller is a member of
+      description: >-
+        Called by the signed-in user (the class list). Only classes the caller belongs to, newest membership first, each with the caller's own role and page status; never a roster.
+        Keyset paginated: pass the `next_id` of a page back as the `next_id` query parameter; it is the empty string on the last page. `next_id` is an opaque, tamper-evident token bound to the caller's list: a changed, truncated or foreign token is `ERROR_PARAM`. A `limit` outside 1..50 is `ERROR_PARAM`.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
+      security:
+        - sessionCookie: []
+      parameters:
+        - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 50, default: 20}, description: "Page size, default 20, maximum 50."}
+        - {name: next_id, in: query, required: false, schema: {type: string}, description: "Opaque token from the previous page; omit it for the first page."}
+      responses:
+        "200":
+          description: A page of classes.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ClassListResponse"}
+              examples:
+                ok:
+                  value:
+                    status: OK
+                    data:
+                      items:
+                        - {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, name: "Lớp 12A1", school_name: "THPT Chu Văn An", graduation_year: 2026, language: vi, my_role: admin, page_linked: false, created_at: 1760000000000, updated_at: 1760000000000}
+                      next_id: ""
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/class/get:
+    get:
+      operationId: getClass
+      tags: [class]
+      summary: Read one class with the caller's role
+      description: >-
+        Called by any member (the class screen). Returns the class, the caller's role in it (`my_role`) and whether the caller has chosen their class page (`page_linked`). It never carries the roster, whatever the role: admins read it from `/api/class-member/get-list`.
+        A class that does not exist and a class the caller is not a member of both answer `ERROR_NOT_FOUND` with the same body. A missing or non-canonical `id` is `ERROR_PARAM`.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: "The class does not exist or the caller is not a member of it; the two cannot be told apart."}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
+      security:
+        - sessionCookie: []
+      parameters:
+        - {name: id, in: query, required: true, schema: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$'}, description: Class ULID.}
+      responses:
+        "200":
+          description: The class.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ClassResponse"}
+              examples:
+                ok:
+                  value:
+                    status: OK
+                    data: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, name: "Lớp 12A1", school_name: "THPT Chu Văn An", graduation_year: 2026, language: vi, my_role: admin, page_linked: false, created_at: 1760000000000, updated_at: 1760000000000}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/class/update:
+    post:
+      operationId: updateClass
+      tags: [class]
+      summary: Replace the editable fields of a class (admin)
+      description: >-
+        Called by an admin of the class (the class settings). Replaces every editable field, so an absent `school_name` or `graduation_year` is cleared; `name` and `language` are required. A member who is not an admin gets `ERROR_FORBIDDEN`; a non-member and an unknown class get `ERROR_NOT_FOUND`.
+        Unknown fields and a missing `id` are `ERROR_PARAM`. A request with the session cookie must come from an allowed Origin. Idempotent: repeating it leaves the same class (apart from `updated_at`).
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: "The class does not exist or the caller is not a member of it; the two cannot be told apart."}
+        - {code: ERROR_FORBIDDEN, description: "The caller is a member but not an admin of this class."}
+        - {code: ERROR_INVALID_NAME, description: "Field `name`: missing, empty after trimming, over 120 characters, or containing control characters."}
+        - {code: ERROR_INVALID_SCHOOL_NAME, description: "Field `school_name`: over 120 characters or containing control characters."}
+        - {code: ERROR_INVALID_GRADUATION_YEAR, description: "Field `graduation_year`: not a whole year from 1950 to 2100."}
+        - {code: ERROR_INVALID_LANGUAGE, description: "Field `language`: missing, or not `en` or `vi`."}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+        - {code: ERROR_RATE_LIMITED, description: "More than 120 class writes by this user in an hour. Retry after `Retry-After`."}
+        - {code: ERROR_UNAVAILABLE, description: "The write rate limiter in Redis did not answer, so the write fails closed. Retry after `Retry-After`."}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/ClassUpdateRequest"}
+            examples:
+              example:
+                value: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, name: "Lớp 12A1", school_name: "THPT Chu Văn An", graduation_year: 2026, language: vi}
+      responses:
+        "200":
+          description: The updated class.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ClassResponse"}
+              examples:
+                ok:
+                  value:
+                    status: OK
+                    data: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, name: "Lớp 12A1", school_name: "THPT Chu Văn An", graduation_year: 2026, language: vi, my_role: admin, page_linked: false, created_at: 1760000000000, updated_at: 1760000000000}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "429": {$ref: "#/components/responses/ApiRateLimited"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/class/delete:
+    post:
+      operationId: deleteClass
+      tags: [class]
+      summary: Delete a class (admin)
+      description: >-
+        Called by an admin of the class. Removes the class and every membership in one transaction. It never touches a member's yearbook: only the link from the class to it goes. A member who is not an admin gets `ERROR_FORBIDDEN`; a non-member and an unknown class get `ERROR_NOT_FOUND`.
+        Not idempotent: a class that is already deleted answers `ERROR_NOT_FOUND`. A request with the session cookie must come from an allowed Origin.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: "The class does not exist or the caller is not a member of it; the two cannot be told apart."}
+        - {code: ERROR_FORBIDDEN, description: "The caller is a member but not an admin of this class."}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+        - {code: ERROR_RATE_LIMITED, description: "More than 120 class writes by this user in an hour. Retry after `Retry-After`."}
+        - {code: ERROR_UNAVAILABLE, description: "The write rate limiter in Redis did not answer, so the write fails closed. Retry after `Retry-After`."}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/ClassIdRequest"}
+            examples:
+              example:
+                value: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E}
+      responses:
+        "200":
+          description: Deleted.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/EmptyResponse"}
+              examples:
+                ok:
+                  value:
+                    {status: OK, data: {}}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "429": {$ref: "#/components/responses/ApiRateLimited"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/class-member/get-list:
+    get:
+      operationId: listClassMembers
+      tags: [class]
+      summary: List the members of a class (admin)
+      description: >-
+        Called by an admin of the class (the roster screen). Returns the members oldest first with display name, role, join time and whether they have chosen a class page (`page_linked`; nothing about its content). A class has at most 60 members, so the default and maximum `limit` is 60. Keyset paginated like every list; `next_id` is bound to this class and this caller.
+        A member who is not an admin gets `ERROR_FORBIDDEN`; a non-member and an unknown class get `ERROR_NOT_FOUND`.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: "The class does not exist or the caller is not a member of it; the two cannot be told apart."}
+        - {code: ERROR_FORBIDDEN, description: "The caller is a member but not an admin of this class."}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
+      security:
+        - sessionCookie: []
+      parameters:
+        - {name: class_id, in: query, required: true, schema: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$'}, description: Class ULID.}
+        - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 60, default: 60}, description: "Page size, default and maximum 60."}
+        - {name: next_id, in: query, required: false, schema: {type: string}, description: "Opaque token from the previous page; omit it for the first page."}
+      responses:
+        "200":
+          description: A page of members.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ClassMemberListResponse"}
+              examples:
+                ok:
+                  value:
+                    status: OK
+                    data:
+                      items:
+                        - {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2G, name: "Nguyễn Thị Hồng", role: admin, joined_at: 1760000000000, page_linked: false}
+                      next_id: ""
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/class-member/update-role:
+    post:
+      operationId: updateClassMemberRole
+      tags: [class]
+      summary: Promote or demote a member (admin)
+      description: >-
+        Called by an admin of the class. Sets the role of one member to `admin` or `student`; setting the role a member already has changes nothing. The last admin cannot be demoted (`ERROR_LAST_ADMIN`), also when two admins try at the same moment: membership changes of one class are serialised.
+        A member who is not an admin gets `ERROR_FORBIDDEN`; a non-member and an unknown class get `ERROR_NOT_FOUND`; a member id that is not in this class is `ERROR_NOT_FOUND` too.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: "The class does not exist or the caller is not a member of it; the two cannot be told apart."}
+        - {code: ERROR_FORBIDDEN, description: "The caller is a member but not an admin of this class."}
+        - {code: ERROR_INVALID_ROLE, description: "Field `role`: not `admin` or `student`."}
+        - {code: ERROR_LAST_ADMIN, description: The member is the only admin of the class and would stop being one.}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+        - {code: ERROR_RATE_LIMITED, description: "More than 120 class writes by this user in an hour. Retry after `Retry-After`."}
+        - {code: ERROR_UNAVAILABLE, description: "The write rate limiter in Redis did not answer, so the write fails closed. Retry after `Retry-After`."}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/ClassMemberRoleRequest"}
+            examples:
+              example:
+                value: {class_id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, member_id: 01K7Q8W3ZR5N2M4X6V8B0C1D2G, role: admin}
+      responses:
+        "200":
+          description: The role is set.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/EmptyResponse"}
+              examples:
+                ok:
+                  value:
+                    {status: OK, data: {}}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "429": {$ref: "#/components/responses/ApiRateLimited"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/class-member/remove:
+    post:
+      operationId: removeClassMember
+      tags: [class]
+      summary: Remove a member from a class (admin)
+      description: >-
+        Called by an admin of the class. Removes one member (an admin may remove themselves while another admin remains). The member's yearbook is untouched. The last admin cannot be removed (`ERROR_LAST_ADMIN`), also under concurrent requests.
+        A member who is not an admin gets `ERROR_FORBIDDEN`; a non-member and an unknown class get `ERROR_NOT_FOUND`; a member id that is not in this class is `ERROR_NOT_FOUND` too.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: "The class does not exist or the caller is not a member of it; the two cannot be told apart."}
+        - {code: ERROR_FORBIDDEN, description: "The caller is a member but not an admin of this class."}
+        - {code: ERROR_LAST_ADMIN, description: The member is the only admin of the class.}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+        - {code: ERROR_RATE_LIMITED, description: "More than 120 class writes by this user in an hour. Retry after `Retry-After`."}
+        - {code: ERROR_UNAVAILABLE, description: "The write rate limiter in Redis did not answer, so the write fails closed. Retry after `Retry-After`."}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/ClassMemberRequest"}
+            examples:
+              example:
+                value: {class_id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, member_id: 01K7Q8W3ZR5N2M4X6V8B0C1D2G}
+      responses:
+        "200":
+          description: The member is removed.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/EmptyResponse"}
+              examples:
+                ok:
+                  value:
+                    {status: OK, data: {}}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "429": {$ref: "#/components/responses/ApiRateLimited"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/class-member/leave:
+    post:
+      operationId: leaveClass
+      tags: [class]
+      summary: Leave a class
+      description: >-
+        Called by any member to leave the class; their yearbook is untouched. The last admin cannot leave (`ERROR_LAST_ADMIN`): promote another member first or delete the class. Two admins leaving at the same moment leave exactly one.
+        A non-member and an unknown class both get `ERROR_NOT_FOUND`.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: "The class does not exist or the caller is not a member of it; the two cannot be told apart."}
+        - {code: ERROR_LAST_ADMIN, description: The caller is the only admin of the class.}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+        - {code: ERROR_RATE_LIMITED, description: "More than 120 class writes by this user in an hour. Retry after `Retry-After`."}
+        - {code: ERROR_UNAVAILABLE, description: "The write rate limiter in Redis did not answer, so the write fails closed. Retry after `Retry-After`."}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/ClassLeaveRequest"}
+            examples:
+              example:
+                value: {class_id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E}
+      responses:
+        "200":
+          description: The caller is no longer a member.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/EmptyResponse"}
+              examples:
+                ok:
+                  value:
+                    {status: OK, data: {}}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "429": {$ref: "#/components/responses/ApiRateLimited"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
 components:
   securitySchemes:
     sessionCookie:
@@ -2657,3 +3061,109 @@ components:
           required: [id]
           properties:
             id: {type: string, description: Note ULID.}
+    Class:
+      type: object
+      description: A class as its caller sees it, with the caller's own membership. Never carries the roster.
+      required: [id, name, school_name, graduation_year, language, my_role, page_linked, created_at, updated_at]
+      properties:
+        id: {type: string, description: Class ULID.}
+        name: {type: string, description: "1 to 120 characters."}
+        school_name: {type: string, description: "Up to 120 characters; empty when unset."}
+        graduation_year: {type: [integer, "null"], description: "Year from 1950 to 2100; `null` when unset."}
+        language: {type: string, enum: [en, vi], description: "Language of the class book: `en` English, `vi` Vietnamese."}
+        my_role: {type: string, enum: [admin, student], description: "The caller's role in this class: `admin` (teacher or monitor) or `student`."}
+        page_linked: {type: boolean, description: "True when the caller has chosen which of their yearbooks is their page in the class book."}
+        created_at: {type: integer, format: int64, description: "When the class was created, Unix ms."}
+        updated_at: {type: integer, format: int64, description: "When the class was last changed, Unix ms."}
+    ClassResponse:
+      type: object
+      required: [status, data]
+      properties:
+        status: {type: string, const: OK, description: Always `OK` on success.}
+        data: {$ref: "#/components/schemas/Class"}
+    ClassListResponse:
+      type: object
+      required: [status, data]
+      properties:
+        status: {type: string, const: OK, description: Always `OK` on success.}
+        data:
+          type: object
+          description: One page of the caller's classes.
+          required: [items, next_id]
+          properties:
+            items:
+              type: array
+              description: The classes of this page, newest membership first; an empty array when the caller is in none.
+              items: {$ref: "#/components/schemas/Class"}
+            next_id: {type: string, description: "Opaque page token for the next page; the empty string on the last page."}
+    ClassInput:
+      type: object
+      additionalProperties: false
+      required: [name, language]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 120, description: "Required. 1 to 120 characters after trimming."}
+        school_name: {type: string, maxLength: 120, description: "Optional, up to 120 characters; default empty."}
+        graduation_year: {type: [integer, "null"], minimum: 1950, maximum: 2100, description: "Optional year from 1950 to 2100; default null."}
+        language: {type: string, enum: [en, vi], description: "Required. Language of the class book: `en` English, `vi` Vietnamese."}
+    ClassUpdateRequest:
+      type: object
+      additionalProperties: false
+      required: [id, name, language]
+      properties:
+        id: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$', description: "Required. ULID of the class."}
+        name: {type: string, minLength: 1, maxLength: 120, description: "Required. 1 to 120 characters after trimming."}
+        school_name: {type: string, maxLength: 120, description: "Optional, up to 120 characters; absent clears it."}
+        graduation_year: {type: [integer, "null"], minimum: 1950, maximum: 2100, description: "Optional year from 1950 to 2100; absent or null clears it."}
+        language: {type: string, enum: [en, vi], description: "Required. `en` English, `vi` Vietnamese."}
+    ClassIdRequest:
+      type: object
+      additionalProperties: false
+      required: [id]
+      properties:
+        id: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$', description: "Required. ULID of the class."}
+    ClassLeaveRequest:
+      type: object
+      additionalProperties: false
+      required: [class_id]
+      properties:
+        class_id: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$', description: "Required. ULID of the class to leave."}
+    ClassMemberRequest:
+      type: object
+      additionalProperties: false
+      required: [class_id, member_id]
+      properties:
+        class_id: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$', description: "Required. ULID of the class."}
+        member_id: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$', description: "Required. ULID of the member (the `id` of a roster row, not a user id)."}
+    ClassMemberRoleRequest:
+      type: object
+      additionalProperties: false
+      required: [class_id, member_id, role]
+      properties:
+        class_id: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$', description: "Required. ULID of the class."}
+        member_id: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$', description: "Required. ULID of the member (the `id` of a roster row, not a user id)."}
+        role: {type: string, enum: [admin, student], description: "Required. The new role: `admin` or `student`."}
+    ClassMember:
+      type: object
+      description: One row of the roster, seen by admins only. Carries no email, user id or page content.
+      required: [id, name, role, joined_at, page_linked]
+      properties:
+        id: {type: string, description: "Member ULID; use it as `member_id`. Not the user's id."}
+        name: {type: string, description: The member's display name.}
+        role: {type: string, enum: [admin, student], description: "`admin` or `student`."}
+        joined_at: {type: integer, format: int64, description: "When the member joined, Unix ms."}
+        page_linked: {type: boolean, description: "True when the member has chosen a class page. Nothing about its content."}
+    ClassMemberListResponse:
+      type: object
+      required: [status, data]
+      properties:
+        status: {type: string, const: OK, description: Always `OK` on success.}
+        data:
+          type: object
+          description: One page of the roster.
+          required: [items, next_id]
+          properties:
+            items:
+              type: array
+              description: The members of this page, oldest first.
+              items: {$ref: "#/components/schemas/ClassMember"}
+            next_id: {type: string, description: "Opaque page token for the next page; the empty string on the last page."}
