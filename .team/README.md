@@ -11,16 +11,16 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 13 | T-023, T-024, T-025, T-027, T-031, T-050, T-125, T-126, T-127, T-128, T-129, T-130, T-131 |
-| READY_FOR_QA | 1 | T-132 |
 | QA_PASS | 1 | T-026 |
+| MERGED | 1 | T-132 |
 | DONE | 109 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** nothing
+**Awaiting your review (MERGED):** T-132 ([E06] CI: pause the go-integration and e2e jobs (owner decision D-37))
 
 **Open questions for you:** Q-056 (Approve merge of T-026 (class foundation API, PR #121)?)
 
-_Board last written 2026-10-26 03:08Z_
+_Board last written 2026-10-26 03:10Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -5754,7 +5754,7 @@ Spec: .team/epics/E07-class-yearbook/09-privacy-review-and-e2e.md (read it from 
 #### Comments
 
 ### T-132 — [E06] CI: pause the go-integration and e2e jobs (owner decision D-37)
-- **Status:** READY_FOR_QA
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** ci
 - **Milestone:** M2
@@ -5765,13 +5765,21 @@ Spec: .team/epics/E07-class-yearbook/09-privacy-review-and-e2e.md (read it from 
 - **Assignee:** —
 - **Branch:** task/t-132-e06-ci-pause-the-go-integration-and-e2e-
 - **PR:** 122
-- **Updated:** 2026-10-26 03:08Z by dev
+- **Updated:** 2026-10-26 03:10Z by leader
 - **Comments-seen:** 0
 
 Spec: .team/epics/E06-go-live/15-ci-pause-integration-and-e2e.md. Owner decision D-37 (2026-10-26): CI takes 8-10 min; the go-integration and e2e jobs (the latter includes print-check) stop running on pushes and pull requests, but stay in the file and can be run by hand.
 
 #### Comments
 - 2026-10-26 03:08Z · dev · PR #122 head 946e3de. ci.yml: workflow_dispatch + job-level if on go-integration and e2e (D-37 comments), docs in README, docs/ci.md, docs/e2e.md. On the PR: both skipped, go/web/security/image pass. Manual run https://github.com/danyaa666/smemories/actions/runs/40261726624: all 6 jobs success. actionlint not installed locally (not run).
+- 2026-10-26 03:09Z · qa · QA_PASS on PR #122 head 946e3dee6a942f14c4bbfc0b90dd0cec38f94c05 (local branch fetched; Docker down so no local make test-integration, not required for a CI-only change).
+  AC1: gh pr view 122 statusCheckRollup: go, web, security, image SUCCESS; go-integration, e2e SKIPPED; mergeable=MERGEABLE, mergeStateStatus=CLEAN; required contexts on develop = go, go-integration, web, security (gh api branches/develop/protection/required_status_checks). PASS.
+  AC2: run 40261726624 event=workflow_dispatch, headBranch=task/t-132-..., headSha=946e3dee... (= PR head), conclusion success; go, go-integration, web, security, image, e2e all success, 0 failed steps in the two paused jobs. PASS.
+  AC3: git diff origin/develop...branch -- ci.yml = 5 added lines only: 'workflow_dispatch:' in on:, and for each of go-integration and e2e one D-37 comment plus 'if: ${{ github.event_name == "workflow_dispatch" }}'. No job removed/renamed (jobs: go, go-integration, e2e, image, web, security), no step changed, no 'needs:' anywhere (so skipped jobs cannot skip others; image passed on the PR). YAML parses (ruby YAML; on: = pull_request, push, workflow_dispatch). actionlint not installed, not run. Concurrency group uses github.sha for non-PR events so a manual run is not cancelled. PASS.
+  AC4: README.md (CI scope D-37 paragraph), docs/ci.md (Paused jobs paragraph), docs/e2e.md (e2e job paused) each name 'gh workflow run ci.yml --ref <branch>', say skipped on PR, QA runs commands locally; CLAUDE.md 'CI scope' section exists. Grepped README/docs/ci.md/docs/e2e.md for other claims that the jobs run on every PR: none stale. PASS.
+  Req 6: diff touches only ci.yml, README.md, docs/ci.md, docs/e2e.md; nothing under .team/. PASS.
+  Non-blocking: the header comment of ci.yml line 1 still lists 'Go integration' among what CI runs (cosmetic).
+- 2026-10-26 03:10Z · leader · merged 9be9475. Review: diff is 5 lines in ci.yml (workflow_dispatch + job-level if on go-integration and e2e), docs updated; PR shows both jobs skipped, others green; manual run 40261726624 passed all 6 jobs. For owner to check: the next PR on develop shows go-integration and e2e as skipped and stays mergeable; first line of ci.yml still lists Go integration (cosmetic).
 
 <!-- tasks:end -->
 
@@ -5823,3 +5831,4 @@ Spec: .team/epics/E06-go-live/15-ci-pause-integration-and-e2e.md. Owner decision
 - 2026-10-17 — T-021 (SES mailer behind a provider-neutral interface, PR #82, owner-approved) merged ce35645; real SES send deferred to the go-live phase. Decision D-31: everything that needs a domain or AWS credentials (T-023, T-024, T-025, T-031, T-050, live SES, deploy) waits for the go-live phase (E06 PRD). T-088 merged 8d91020. T-089 awaiting a develop merge by dev, then QA. T-090 (P2) TODO.
 - 2026-10-17 — T-089 (image scan, SBOM, secret hygiene, config hardening, PR #81, owner-approved) merged b328d1f. T-088 and T-021 accepted by the owner. First-phase code work left: T-090 (go-live fixes, P2) and T-029.
 - 2026-10-17 — T-090 merged in two PRs (#83 39a66f9, #84 39ea415): migrate/smoke/hygiene fixes and the SES go-live fixes (loud sandbox/unverified-sender errors, bounded shutdown drain, resend refund cap). Item 9 waits for the go-live phase. T-089 accepted? pending. First-phase code work left: T-029 (MinIO image) and the small T-091 leftovers.
+- 2026-10-26 — Owner chose the class yearbook (E07) before go-live (D-36); nine specs written (T-026, T-125..T-131, T-027). T-026 (class foundation API, PR #121, head 98571b3) passed QA and my review, awaiting `team approve` (Q-056). Owner asked to pause `go-integration` and `e2e` in CI (D-37); T-132 merged 9be9475: both jobs run by hand only, QA runs them locally (CLAUDE.md "CI scope").
