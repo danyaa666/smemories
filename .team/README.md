@@ -10,9 +10,9 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 7 | T-023, T-024, T-025, T-031, T-050, T-131, T-134 |
-| TODO | 1 | T-133 |
-| READY_FOR_QA | 1 | T-130 |
+| BACKLOG | 6 | T-023, T-024, T-025, T-031, T-050, T-131 |
+| TODO | 2 | T-133, T-134 |
+| IN_QA | 1 | T-130 |
 | MERGED | 6 | T-027, T-125, T-126, T-127, T-128, T-129 |
 | DONE | 111 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-132 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
@@ -21,7 +21,7 @@
 
 **Open questions for you:** none
 
-_Board last written 2026-10-26 13:54Z_
+_Board last written 2026-10-26 13:55Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -5844,7 +5844,7 @@ Spec: .team/epics/E07-class-yearbook/07-web-assembly-ui.md (read it from the mai
 - 2026-10-26 13:34Z · leader · merged b7171c4. Review: web-only (14 files under web/src), keyboard reorder with focus and live region, full-list update-order payload, bodies rendered as text, 400/409 reload, student/stranger NotFound with no requests; QA browser pass at 375 px en+vi. For owner to check: reorder with a real mouse drag and on a phone (not covered); emoji counter counts UTF-16 units (cosmetic, in T-134).
 
 ### T-130 — [E07] Web: print the class book (many profiles, 120 pages)
-- **Status:** READY_FOR_QA
+- **Status:** IN_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
@@ -5852,10 +5852,10 @@ Spec: .team/epics/E07-class-yearbook/07-web-assembly-ui.md (read it from the mai
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** qa
 - **Branch:** task/t-130-e07-web-print-the-class-book-many-profil
 - **PR:** https://github.com/danyaa666/smemories/pull/129
-- **Updated:** 2026-10-26 13:54Z by dev
+- **Updated:** 2026-10-26 13:55Z by qa
 - **Comments-seen:** 3
 
 Spec: .team/epics/E07-class-yearbook/08-web-class-book-print.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.
@@ -5934,7 +5934,7 @@ Spec: .team/epics/E07-class-yearbook/10-class-book-limits-and-caching.md. QA fol
 - 2026-10-26 09:58Z · leader · T-027 merged (3e1dea3)
 
 ### T-134 — [E07] Web: edit and delete a class, link an existing yearbook as the page
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
@@ -5945,12 +5945,13 @@ Spec: .team/epics/E07-class-yearbook/10-class-book-limits-and-caching.md. QA fol
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-26 13:54Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-26 13:55Z by leader
+- **Comments-seen:** 1
 
 Spec: .team/epics/E07-class-yearbook/11-web-class-edit-delete-and-existing-page.md. Gaps left by T-128: no UI to rename or delete a class (API exists), no way to pick an existing yearbook as the page, and Google sign-in is hidden on the join path.
 
 #### Comments
+- 2026-10-26 13:55Z · leader · T-128 merged; now P2 because T-131 needs the print link
 
 <!-- tasks:end -->
 
