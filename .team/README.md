@@ -10,8 +10,8 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 10 | T-023, T-024, T-025, T-031, T-050, T-127, T-129, T-130, T-131, T-133 |
-| IN_PROGRESS | 1 | T-128 |
+| BACKLOG | 11 | T-023, T-024, T-025, T-031, T-050, T-127, T-129, T-130, T-131, T-133, T-134 |
+| IN_QA | 1 | T-128 |
 | QA_PASS | 1 | T-027 |
 | MERGED | 2 | T-125, T-126 |
 | DONE | 111 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-132 |
@@ -21,7 +21,7 @@
 
 **Open questions for you:** Q-059 (Approve merge of T-027 (class book API and the admin's read-only photo access, PR #125)?)
 
-_Board last written 2026-10-26 09:38Z_
+_Board last written 2026-10-26 09:57Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -5766,7 +5766,7 @@ Spec: .team/epics/E07-class-yearbook/05-class-pages-and-order.md (read it from t
 #### Comments
 
 ### T-128 — [E07] Web: classes, invites, joining and the student's page
-- **Status:** IN_PROGRESS
+- **Status:** IN_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
@@ -5774,16 +5774,17 @@ Spec: .team/epics/E07-class-yearbook/05-class-pages-and-order.md (read it from t
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** qa
 - **Branch:** task/t-128-e07-web-classes-invites-joining-and-the-
-- **PR:** —
-- **Updated:** 2026-10-26 09:31Z by dev
-- **Comments-seen:** 1
+- **PR:** https://github.com/danyaa666/smemories/pull/126
+- **Updated:** 2026-10-26 09:57Z by qa
+- **Comments-seen:** 2
 
 Spec: .team/epics/E07-class-yearbook/06-web-classes-join-and-student-page.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.
 
 #### Comments
 - 2026-10-26 09:00Z · leader · T-126 merged; web can start after T-027 (one dev at a time)
+- 2026-10-26 09:56Z · dev · PR #126 head e2a02ba. Web: /classes, /classes/new, /classes/:id (admin: invites+roster; student: own page only), /join/:token. vitest 533 pass, lint/typecheck/build/i18n/check:api green; PR CI go/web/security/image pass. Manual full CI run 40301323364 (touched Register/Login/VerifyEmail/nav): all jobs green (e2e first attempt failed on playwright apt install, rerun green). Verify: student view makes no roster/invite calls; token never in query/storage/console; Google button hidden on login/register when coming from /join. Gaps (not in spec): class edit/delete, choosing an existing yearbook as page. Register/Login/VerifyEmail now honour state.from.
 
 ### T-129 — [E07] Web: assemble the class book (order, class pages)
 - **Status:** BACKLOG
@@ -5887,6 +5888,25 @@ Spec: .team/epics/E06-go-live/15-ci-pause-integration-and-e2e.md. Owner decision
 - **Comments-seen:** 0
 
 Spec: .team/epics/E07-class-yearbook/10-class-book-limits-and-caching.md. QA follow-ups from T-027: class-book/get has no read limiter, a maximal class book is about 50 MiB, and an admin's cached photo outlives a hidden note by up to an hour.
+
+#### Comments
+
+### T-134 — [E07] Web: edit and delete a class, link an existing yearbook as the page
+- **Status:** BACKLOG
+- **Priority:** P3
+- **Type:** feature
+- **Milestone:** M3
+- **Depends-on:** T-128
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-26 09:57Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E07-class-yearbook/11-web-class-edit-delete-and-existing-page.md. Gaps left by T-128: no UI to rename or delete a class (API exists), no way to pick an existing yearbook as the page, and Google sign-in is hidden on the join path.
 
 #### Comments
 
