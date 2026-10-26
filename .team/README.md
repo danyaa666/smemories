@@ -12,7 +12,7 @@
 |---|---:|---|
 | BACKLOG | 13 | T-023, T-024, T-025, T-027, T-031, T-050, T-125, T-126, T-127, T-128, T-129, T-130, T-131 |
 | TODO | 1 | T-132 |
-| IN_PROGRESS | 1 | T-026 |
+| READY_FOR_QA | 1 | T-026 |
 | DONE | 109 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
@@ -20,7 +20,7 @@
 
 **Open questions for you:** none
 
-_Board last written 2026-10-26 02:43Z_
+_Board last written 2026-10-26 02:57Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -1757,7 +1757,7 @@ Automated RDS and S3 backups with a documented and tested restore drill; user-in
 - 2026-10-17 15:11Z · leader · DEFERRED by the owner (decision D-31, 2026-10-17): this needs a real domain or AWS credentials, or is a go-live gate. Do not start it until the leader opens the go-live phase (E06 PRD, 'Live verification phase'). Stays BACKLOG.
 
 ### T-026 — [E07] Classes, memberships and roles (API foundation)
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
@@ -1765,11 +1765,11 @@ Automated RDS and S3 backups with a documented and tested restore drill; user-in
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-026-e07-classes-memberships-and-roles-api-fo
-- **PR:** —
-- **Updated:** 2026-10-26 02:18Z by dev
-- **Comments-seen:** 1
+- **PR:** https://github.com/danyaa666/smemories/pull/121
+- **Updated:** 2026-10-26 02:56Z by dev
+- **Comments-seen:** 3
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E07-class-yearbook/01-class-yearbook-classes-memberships-roles-and.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1779,6 +1779,8 @@ Class space owned by an admin (teacher or monitor), invite links/emails for stud
 
 #### Comments
 - 2026-10-26 02:18Z · leader · Leader: promoted. D-36 pulled E07 ahead of go-live. Spec rewritten: .team/epics/E07-class-yearbook/01-class-yearbook-classes-memberships-roles-and.md; read DESIGN.md first.
+- 2026-10-26 02:56Z · dev · PR #121 head 98571b3, CI all green (go-integration ran internal/class matrix, last-admin concurrency, caps, paging, migration round trip). New: internal/class (9 endpoints), migration 20261026120000_class_tab, docs/class-permissions.md, openapi + schema.d.ts, postman/class.postman_collection.json. Deviations to confirm: class_member_tab has public_id (members are addressed by it) and created_at/updated_at; role/language are VARCHAR not ENUM; last-admin refusal is 403 ERROR_LAST_ADMIN (not the plain ERROR_FORBIDDEN string); anonymous is 401. Not done locally: Docker was down so no local integration run and newman was NOT run (run the collection twice; needs SMEM_ENV=dev + SMEM_DEV_FIXED_OTP). Student/co-admin steps in Postman wait for invites (T-125).
+- 2026-10-26 02:57Z · leader · Leader: dev deviations accepted (member public_id + timestamps; VARCHAR role/language; last-admin 403 with its own code ERROR_LAST_ADMIN; anonymous 401). QA: Docker daemon is down on the host and agents must not restart Docker Desktop. Verify the CI run on head 98571b3 (go-integration incl. matrix, last-admin concurrency, migration round trip; e2e) as evidence for integration, do the code review against the spec/DESIGN.md/docs/class-permissions.md and the api-contract/db-conventions checklists, run unit tests and lint locally, and run newman (postman/class.postman_collection.json twice) only if Docker is already up. If it is not, say so in your comment; do not start it.
 
 ### T-027 — [E07] Class book data API and the admin's read-only media access
 - **Status:** BACKLOG
