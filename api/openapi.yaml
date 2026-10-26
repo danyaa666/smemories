@@ -1916,7 +1916,7 @@ paths:
       tags: [class]
       summary: Read one class with the caller's role
       description: >-
-        Called by any member (the class screen). Returns the class, the caller's role in it (`my_role`) and whether the caller has chosen their class page (`page_linked`). It never carries the roster, whatever the role: admins read it from `/api/class-member/get-list`.
+        Called by any member (the class screen). Returns the class, the caller's role in it (`my_role`), whether the caller has chosen their class page (`page_linked`) and, in `page`, the caller's own page status (the linked yearbook and two flags about it). Nobody else's page status is ever returned here. It never carries the roster, whatever the role: admins read it from `/api/class-member/get-list`.
         A class that does not exist and a class the caller is not a member of both answer `ERROR_NOT_FOUND` with the same body. A missing or non-canonical `id` is `ERROR_PARAM`.
       x-auth: required
       x-error-codes:
@@ -1936,7 +1936,7 @@ paths:
                 ok:
                   value:
                     status: OK
-                    data: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, name: "Lớp 12A1", school_name: "THPT Chu Văn An", graduation_year: 2026, language: vi, my_role: admin, page_linked: false, created_at: 1760000000000, updated_at: 1760000000000}
+                    data: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, name: "Lớp 12A1", school_name: "THPT Chu Văn An", graduation_year: 2026, language: vi, my_role: admin, page_linked: true, page: {linked: true, yearbook_id: 01K7Q8W3ZR5N2M4X6V8B0C1D2H, profile_complete: true, approved_notes: 12}, created_at: 1760000000000, updated_at: 1760000000000}
         "400": {$ref: "#/components/responses/ApiBadRequest"}
         "401": {$ref: "#/components/responses/ApiUnauthorized"}
         "403": {$ref: "#/components/responses/ApiForbidden"}
@@ -2048,7 +2048,7 @@ paths:
       tags: [class]
       summary: List the members of a class (admin)
       description: >-
-        Called by an admin of the class (the roster screen). Returns the members oldest first with display name, role, join time and whether they have chosen a class page (`page_linked`; nothing about its content). A class has at most 60 members, so the default and maximum `limit` is 60. Keyset paginated like every list; `next_id` is bound to this class and this caller.
+        Called by an admin of the class (the roster screen). Returns the members oldest first with display name, role, join time, whether they have chosen a class page (`page_linked`) and two numbers about it: `profile_complete` (the owner profile has a name and a photo) and `approved_notes` (how many notes the student approved). Counts and flags only: no profile text, no note text, no photo or yearbook id, and never the pending or hidden count. A class has at most 60 members, so the default and maximum `limit` is 60. Keyset paginated like every list; `next_id` is bound to this class and this caller.
         A member who is not an admin gets `ERROR_FORBIDDEN`; a non-member and an unknown class get `ERROR_NOT_FOUND`.
       x-auth: required
       x-error-codes:
@@ -2073,7 +2073,7 @@ paths:
                     status: OK
                     data:
                       items:
-                        - {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2G, name: "Nguyễn Thị Hồng", role: admin, joined_at: 1760000000000, page_linked: false}
+                        - {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2G, name: "Nguyễn Thị Hồng", role: admin, joined_at: 1760000000000, page_linked: false, profile_complete: false, approved_notes: 0}
                       next_id: ""
         "400": {$ref: "#/components/responses/ApiBadRequest"}
         "401": {$ref: "#/components/responses/ApiUnauthorized"}
@@ -2225,6 +2225,57 @@ paths:
         "429": {$ref: "#/components/responses/ApiRateLimited"}
         "500": {$ref: "#/components/responses/ApiInternal"}
         "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/class-member/set-book:
+    post:
+      operationId: setClassMemberBook
+      tags: [class]
+      summary: Choose which of my yearbooks is my page in the class
+      description: >-
+        Called by any member (student or admin) for their own membership only: there is no way to name another member. `yearbook_id` must be a yearbook the caller owns; another user's yearbook and an unknown one both answer `ERROR_NOT_FOUND` (`yearbook not found`), like everywhere else. Setting it again replaces the link; `null` clears it. A yearbook can be the page of at most one class: linking it to a second class is `ERROR_CONFLICT`.
+        The link is a pointer and nothing else: it gives the class admin no right over the yearbook, its notes or its photos. Deleting the yearbook clears the link; leaving the class or being removed leaves the yearbook untouched. Returns the new page status.
+        A non-member and an unknown class both get `ERROR_NOT_FOUND` (`class not found`) whichever yearbook is sent.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: "The class does not exist or the caller is not a member of it (the two cannot be told apart), or the yearbook is unknown or not the caller's."}
+        - {code: ERROR_CONFLICT, description: "The yearbook is already the page of a class (this one for another membership of the caller's, or another)."}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+        - {code: ERROR_RATE_LIMITED, description: "More than 120 class writes by this user in an hour. Retry after `Retry-After`."}
+        - {code: ERROR_UNAVAILABLE, description: "The write rate limiter in Redis did not answer, so the write fails closed. Retry after `Retry-After`."}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/ClassSetBookRequest"}
+            examples:
+              link:
+                value: {class_id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, yearbook_id: 01K7Q8W3ZR5N2M4X6V8B0C1D2H}
+              unlink:
+                value: {class_id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, yearbook_id: null}
+      responses:
+        "200":
+          description: The new page status of the caller.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ClassPageStatusResponse"}
+              examples:
+                linked:
+                  value:
+                    {status: OK, data: {linked: true, yearbook_id: 01K7Q8W3ZR5N2M4X6V8B0C1D2H, profile_complete: false, approved_notes: 0}}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "409": {$ref: "#/components/responses/ApiConflict"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "429": {$ref: "#/components/responses/ApiRateLimited"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
   /api/class-invite/create:
     post:
       operationId: createClassInvite
@@ -2371,7 +2422,7 @@ paths:
       summary: Preview a join link (public)
       description: >-
         Called by the join page (`/join/<token>`) before the visitor signs in. No session is needed and none is read. Returns only the class name and school of an **active** link. An unknown, malformed, empty, expired or revoked `token` all answer the same `ERROR_NOT_FOUND`, byte for byte, and take the same code path (one lookup by SHA-256).
-        A `POST` although it only reads, and the one exception to "GET reads": the token is a bearer secret and travels in the body, never in a URL that a proxy or access log could record. Every request counts against 120 per client IP per 10 minutes, and a request that misses also against 20 per 10 minutes (a hit is refunded); past either limit the answer is `ERROR_RATE_LIMITED` with `Retry-After`. The limiters fail open: a 256-bit token cannot be guessed, they bound load.
+        A `POST` although it only reads, and the one exception to "GET reads": the token is a bearer secret and travels in the body, never in a URL that a proxy or access log could record. Every request counts against 600 per client IP per 10 minutes (a whole class can share one school address), and a request that misses also against 20 per 10 minutes (a hit is refunded); past either limit the answer is `ERROR_RATE_LIMITED` with `Retry-After`. The limiters fail open: a 256-bit token cannot be guessed, they bound load.
         The preview does not say whether the class is full, nor how many members it has.
       x-auth: public
       x-error-codes:
@@ -2411,9 +2462,9 @@ paths:
       tags: [class]
       summary: Join a class with a join link
       description: >-
-        Called by the join page for a signed-in user with a verified email who accepted the Terms. Adds the caller to the class as a `student` and returns the class as `/api/class/get` does. Idempotent: a caller who is already a member gets their membership back and **keeps their role** (an admin is never downgraded, a promoted student never demoted).
+        Called by the join page for a signed-in user with a verified email who accepted the Terms. Adds the caller to the class as a `student` and returns the class as `/api/class/get` does, without `page`. Idempotent: a caller who is already a member gets their membership back and **keeps their role** (an admin is never downgraded, a promoted student never demoted).
         An unknown, malformed, empty, expired or revoked `token` answers `ERROR_NOT_FOUND`, byte for byte as `lookup` does, also for a caller who is already a member. A class with 60 members refuses a new member with `ERROR_CLASS_FULL`; the cap is checked under the class lock, so ten simultaneous accepts of the last seat add exactly one member.
-        Accepting is a write: it counts against the caller's 120 class writes an hour (a wrong token too, which bounds guessing per user) and against 60 accepts per client IP per hour. An unverified email is `ERROR_EMAIL_NOT_VERIFIED` and nothing is joined. A request with the session cookie must come from an allowed Origin.
+        Accepting is a write: it counts against the caller's 120 class writes an hour (a wrong token too, which bounds guessing per user) and against 300 accepts per client IP per hour (a whole class can share one school address). An unverified email is `ERROR_EMAIL_NOT_VERIFIED` and nothing is joined. A request with the session cookie must come from an allowed Origin.
       x-auth: required
       x-error-codes:
         - {code: ERROR_NOT_FOUND, description: "The token is missing, malformed, unknown, expired or revoked; the five cannot be told apart."}
@@ -2422,7 +2473,7 @@ paths:
         - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
         - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
         - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
-        - {code: ERROR_RATE_LIMITED, description: "More than 120 class writes by this user in an hour, or 60 accepts from this client IP. Retry after `Retry-After`."}
+        - {code: ERROR_RATE_LIMITED, description: "More than 120 class writes by this user in an hour, or 300 accepts from this client IP. Retry after `Retry-After`."}
         - {code: ERROR_UNAVAILABLE, description: "The write rate limiter in Redis did not answer, so the write fails closed. Retry after `Retry-After`."}
         - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
       security:
@@ -3304,8 +3355,31 @@ components:
         language: {type: string, enum: [en, vi], description: "Language of the class book: `en` English, `vi` Vietnamese."}
         my_role: {type: string, enum: [admin, student], description: "The caller's role in this class: `admin` (teacher or monitor) or `student`."}
         page_linked: {type: boolean, description: "True when the caller has chosen which of their yearbooks is their page in the class book."}
+        page: {$ref: "#/components/schemas/ClassPageStatus"}
         created_at: {type: integer, format: int64, description: "When the class was created, Unix ms."}
         updated_at: {type: integer, format: int64, description: "When the class was last changed, Unix ms."}
+    ClassPageStatus:
+      type: object
+      description: "The caller's own page in the class (T-126), as returned by `class/get` and `class-member/set-book`. Never about another member."
+      required: [linked, yearbook_id, profile_complete, approved_notes]
+      properties:
+        linked: {type: boolean, description: "True when the caller has chosen one of their own yearbooks as their page."}
+        yearbook_id: {type: [string, "null"], description: "ULID of the caller's own linked yearbook; `null` when not linked."}
+        profile_complete: {type: boolean, description: "True when the owner profile of that yearbook has a name and a photo."}
+        approved_notes: {type: integer, minimum: 0, description: "How many notes the owner approved in that yearbook."}
+    ClassPageStatusResponse:
+      type: object
+      required: [status, data]
+      properties:
+        status: {type: string, const: OK, description: Always `OK` on success.}
+        data: {$ref: "#/components/schemas/ClassPageStatus"}
+    ClassSetBookRequest:
+      type: object
+      additionalProperties: false
+      required: [class_id, yearbook_id]
+      properties:
+        class_id: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$', description: "Required. ULID of the class."}
+        yearbook_id: {type: [string, "null"], pattern: '^[0-9A-HJKMNP-TV-Z]{26}$', description: "Required. ULID of one of the caller's own yearbooks, or `null` to clear the link. Absent is refused so a mistake cannot unlink silently."}
     ClassResponse:
       type: object
       required: [status, data]
@@ -3376,13 +3450,15 @@ components:
     ClassMember:
       type: object
       description: One row of the roster, seen by admins only. Carries no email, user id or page content.
-      required: [id, name, role, joined_at, page_linked]
+      required: [id, name, role, joined_at, page_linked, profile_complete, approved_notes]
       properties:
         id: {type: string, description: "Member ULID; use it as `member_id`. Not the user's id."}
         name: {type: string, description: The member's display name.}
         role: {type: string, enum: [admin, student], description: "`admin` or `student`."}
         joined_at: {type: integer, format: int64, description: "When the member joined, Unix ms."}
-        page_linked: {type: boolean, description: "True when the member has chosen a class page. Nothing about its content."}
+        page_linked: {type: boolean, description: "True when the member has chosen a class page that they own. Nothing about its content."}
+        profile_complete: {type: boolean, description: "True when the owner profile of the member's page has a name and a photo. False when no page is chosen."}
+        approved_notes: {type: integer, minimum: 0, description: "How many notes the member approved in their page. 0 when no page is chosen. The pending and hidden counts are never exposed."}
     ClassMemberListResponse:
       type: object
       required: [status, data]

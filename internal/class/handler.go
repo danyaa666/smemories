@@ -1,6 +1,7 @@
 package class
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -38,6 +39,7 @@ func (h *Handler) Routes(mux *http.ServeMux) {
 	mux.Handle("POST /api/class-member/update-role", write(h.updateRole))
 	mux.Handle("POST /api/class-member/remove", write(h.removeMember))
 	mux.Handle("POST /api/class-member/leave", write(h.leave))
+	mux.Handle("POST /api/class-member/set-book", write(h.setBook))
 	mux.Handle("POST /api/class-invite/create", write(h.createInvite))
 	mux.Handle("GET /api/class-invite/get-list", read(h.invites))
 	mux.Handle("POST /api/class-invite/revoke", write(h.revokeInvite))
@@ -65,6 +67,10 @@ type (
 	roleInput struct {
 		memberInput
 		Role string `json:"role"`
+	}
+	setBookInput struct {
+		ClassID    string          `json:"class_id"`
+		YearbookID json.RawMessage `json:"yearbook_id"` // a yearbook id, or null to unlink; absent is refused
 	}
 	createInviteInput struct {
 		ClassID   string `json:"class_id"`
@@ -202,6 +208,27 @@ func (h *Handler) leave(w http.ResponseWriter, r *http.Request) {
 	if httpx.DecodeJSON(w, r, &in) && validID(w, r, in.ClassID, "class_id") {
 		respond(w, r, nil, h.svc.Leave(r.Context(), u.InternalID, in.ClassID))
 	}
+}
+
+func (h *Handler) setBook(w http.ResponseWriter, r *http.Request) {
+	u, ok := auth.MustUser(w, r)
+	if !ok {
+		return
+	}
+	var in setBookInput
+	if !httpx.DecodeJSON(w, r, &in) || !validID(w, r, in.ClassID, "class_id") {
+		return
+	}
+	var book *string
+	if len(in.YearbookID) == 0 || json.Unmarshal(in.YearbookID, &book) != nil {
+		fail(w, r, apperr.New(apperr.Param, "yearbook_id is required: a yearbook id, or null to unlink"))
+		return
+	}
+	if book != nil && !validID(w, r, *book, "yearbook_id") {
+		return
+	}
+	st, err := h.svc.SetBook(r.Context(), u.InternalID, in.ClassID, book)
+	respond(w, r, st, err)
 }
 
 func (h *Handler) createInvite(w http.ResponseWriter, r *http.Request) {

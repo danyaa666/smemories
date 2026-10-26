@@ -833,7 +833,7 @@ export interface paths {
         };
         /**
          * Read one class with the caller's role
-         * @description Called by any member (the class screen). Returns the class, the caller's role in it (`my_role`) and whether the caller has chosen their class page (`page_linked`). It never carries the roster, whatever the role: admins read it from `/api/class-member/get-list`. A class that does not exist and a class the caller is not a member of both answer `ERROR_NOT_FOUND` with the same body. A missing or non-canonical `id` is `ERROR_PARAM`.
+         * @description Called by any member (the class screen). Returns the class, the caller's role in it (`my_role`), whether the caller has chosen their class page (`page_linked`) and, in `page`, the caller's own page status (the linked yearbook and two flags about it). Nobody else's page status is ever returned here. It never carries the roster, whatever the role: admins read it from `/api/class-member/get-list`. A class that does not exist and a class the caller is not a member of both answer `ERROR_NOT_FOUND` with the same body. A missing or non-canonical `id` is `ERROR_PARAM`.
          */
         get: operations["getClass"];
         put?: never;
@@ -893,7 +893,7 @@ export interface paths {
         };
         /**
          * List the members of a class (admin)
-         * @description Called by an admin of the class (the roster screen). Returns the members oldest first with display name, role, join time and whether they have chosen a class page (`page_linked`; nothing about its content). A class has at most 60 members, so the default and maximum `limit` is 60. Keyset paginated like every list; `next_id` is bound to this class and this caller. A member who is not an admin gets `ERROR_FORBIDDEN`; a non-member and an unknown class get `ERROR_NOT_FOUND`.
+         * @description Called by an admin of the class (the roster screen). Returns the members oldest first with display name, role, join time, whether they have chosen a class page (`page_linked`) and two numbers about it: `profile_complete` (the owner profile has a name and a photo) and `approved_notes` (how many notes the student approved). Counts and flags only: no profile text, no note text, no photo or yearbook id, and never the pending or hidden count. A class has at most 60 members, so the default and maximum `limit` is 60. Keyset paginated like every list; `next_id` is bound to this class and this caller. A member who is not an admin gets `ERROR_FORBIDDEN`; a non-member and an unknown class get `ERROR_NOT_FOUND`.
          */
         get: operations["listClassMembers"];
         put?: never;
@@ -958,6 +958,26 @@ export interface paths {
          * @description Called by any member to leave the class; their yearbook is untouched. The last admin cannot leave (`ERROR_LAST_ADMIN`): promote another member first or delete the class. Two admins leaving at the same moment leave exactly one. A non-member and an unknown class both get `ERROR_NOT_FOUND`.
          */
         post: operations["leaveClass"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/class-member/set-book": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Choose which of my yearbooks is my page in the class
+         * @description Called by any member (student or admin) for their own membership only: there is no way to name another member. `yearbook_id` must be a yearbook the caller owns; another user's yearbook and an unknown one both answer `ERROR_NOT_FOUND` (`yearbook not found`), like everywhere else. Setting it again replaces the link; `null` clears it. A yearbook can be the page of at most one class: linking it to a second class is `ERROR_CONFLICT`. The link is a pointer and nothing else: it gives the class admin no right over the yearbook, its notes or its photos. Deleting the yearbook clears the link; leaving the class or being removed leaves the yearbook untouched. Returns the new page status. A non-member and an unknown class both get `ERROR_NOT_FOUND` (`class not found`) whichever yearbook is sent.
+         */
+        post: operations["setClassMemberBook"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1035,7 +1055,7 @@ export interface paths {
         put?: never;
         /**
          * Preview a join link (public)
-         * @description Called by the join page (`/join/<token>`) before the visitor signs in. No session is needed and none is read. Returns only the class name and school of an **active** link. An unknown, malformed, empty, expired or revoked `token` all answer the same `ERROR_NOT_FOUND`, byte for byte, and take the same code path (one lookup by SHA-256). A `POST` although it only reads, and the one exception to "GET reads": the token is a bearer secret and travels in the body, never in a URL that a proxy or access log could record. Every request counts against 120 per client IP per 10 minutes, and a request that misses also against 20 per 10 minutes (a hit is refunded); past either limit the answer is `ERROR_RATE_LIMITED` with `Retry-After`. The limiters fail open: a 256-bit token cannot be guessed, they bound load. The preview does not say whether the class is full, nor how many members it has.
+         * @description Called by the join page (`/join/<token>`) before the visitor signs in. No session is needed and none is read. Returns only the class name and school of an **active** link. An unknown, malformed, empty, expired or revoked `token` all answer the same `ERROR_NOT_FOUND`, byte for byte, and take the same code path (one lookup by SHA-256). A `POST` although it only reads, and the one exception to "GET reads": the token is a bearer secret and travels in the body, never in a URL that a proxy or access log could record. Every request counts against 600 per client IP per 10 minutes (a whole class can share one school address), and a request that misses also against 20 per 10 minutes (a hit is refunded); past either limit the answer is `ERROR_RATE_LIMITED` with `Retry-After`. The limiters fail open: a 256-bit token cannot be guessed, they bound load. The preview does not say whether the class is full, nor how many members it has.
          */
         post: operations["lookupClassInvite"];
         delete?: never;
@@ -1055,7 +1075,7 @@ export interface paths {
         put?: never;
         /**
          * Join a class with a join link
-         * @description Called by the join page for a signed-in user with a verified email who accepted the Terms. Adds the caller to the class as a `student` and returns the class as `/api/class/get` does. Idempotent: a caller who is already a member gets their membership back and **keeps their role** (an admin is never downgraded, a promoted student never demoted). An unknown, malformed, empty, expired or revoked `token` answers `ERROR_NOT_FOUND`, byte for byte as `lookup` does, also for a caller who is already a member. A class with 60 members refuses a new member with `ERROR_CLASS_FULL`; the cap is checked under the class lock, so ten simultaneous accepts of the last seat add exactly one member. Accepting is a write: it counts against the caller's 120 class writes an hour (a wrong token too, which bounds guessing per user) and against 60 accepts per client IP per hour. An unverified email is `ERROR_EMAIL_NOT_VERIFIED` and nothing is joined. A request with the session cookie must come from an allowed Origin.
+         * @description Called by the join page for a signed-in user with a verified email who accepted the Terms. Adds the caller to the class as a `student` and returns the class as `/api/class/get` does, without `page`. Idempotent: a caller who is already a member gets their membership back and **keeps their role** (an admin is never downgraded, a promoted student never demoted). An unknown, malformed, empty, expired or revoked `token` answers `ERROR_NOT_FOUND`, byte for byte as `lookup` does, also for a caller who is already a member. A class with 60 members refuses a new member with `ERROR_CLASS_FULL`; the cap is checked under the class lock, so ten simultaneous accepts of the last seat add exactly one member. Accepting is a write: it counts against the caller's 120 class writes an hour (a wrong token too, which bounds guessing per user) and against 300 accepts per client IP per hour (a whole class can share one school address). An unverified email is `ERROR_EMAIL_NOT_VERIFIED` and nothing is joined. A request with the session cookie must come from an allowed Origin.
          */
         post: operations["acceptClassInvite"];
         delete?: never;
@@ -1919,6 +1939,7 @@ export interface components {
             my_role: "admin" | "student";
             /** @description True when the caller has chosen which of their yearbooks is their page in the class book. */
             page_linked: boolean;
+            page?: components["schemas"]["ClassPageStatus"];
             /**
              * Format: int64
              * @description When the class was created, Unix ms.
@@ -1929,6 +1950,31 @@ export interface components {
              * @description When the class was last changed, Unix ms.
              */
             updated_at: number;
+        };
+        /** @description The caller's own page in the class (T-126), as returned by `class/get` and `class-member/set-book`. Never about another member. */
+        ClassPageStatus: {
+            /** @description True when the caller has chosen one of their own yearbooks as their page. */
+            linked: boolean;
+            /** @description ULID of the caller's own linked yearbook; `null` when not linked. */
+            yearbook_id: string | null;
+            /** @description True when the owner profile of that yearbook has a name and a photo. */
+            profile_complete: boolean;
+            /** @description How many notes the owner approved in that yearbook. */
+            approved_notes: number;
+        };
+        ClassPageStatusResponse: {
+            /**
+             * @description Always `OK` on success.
+             * @constant
+             */
+            status: "OK";
+            data: components["schemas"]["ClassPageStatus"];
+        };
+        ClassSetBookRequest: {
+            /** @description Required. ULID of the class. */
+            class_id: string;
+            /** @description Required. ULID of one of the caller's own yearbooks, or `null` to clear the link. Absent is refused so a mistake cannot unlink silently. */
+            yearbook_id: string | null;
         };
         ClassResponse: {
             /**
@@ -2021,8 +2067,12 @@ export interface components {
              * @description When the member joined, Unix ms.
              */
             joined_at: number;
-            /** @description True when the member has chosen a class page. Nothing about its content. */
+            /** @description True when the member has chosen a class page that they own. Nothing about its content. */
             page_linked: boolean;
+            /** @description True when the owner profile of the member's page has a name and a photo. False when no page is chosen. */
+            profile_complete: boolean;
+            /** @description How many notes the member approved in their page. 0 when no page is chosen. The pending and hidden counts are never exposed. */
+            approved_notes: number;
         };
         ClassMemberListResponse: {
             /**
@@ -3860,6 +3910,40 @@ export interface operations {
             401: components["responses"]["ApiUnauthorized"];
             403: components["responses"]["ApiForbidden"];
             404: components["responses"]["ApiNotFound"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            429: components["responses"]["ApiRateLimited"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    setClassMemberBook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClassSetBookRequest"];
+            };
+        };
+        responses: {
+            /** @description The new page status of the caller. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClassPageStatusResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            409: components["responses"]["ApiConflict"];
             413: components["responses"]["ApiTooLarge"];
             415: components["responses"]["ApiUnsupportedMediaType"];
             429: components["responses"]["ApiRateLimited"];

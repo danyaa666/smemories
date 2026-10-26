@@ -33,6 +33,7 @@ A class always has at least one admin. Roles are per class: the same person can 
 | Promote or demote a member (`class-member/update-role`) | 200 (last admin protected) | **403** | 404 | 404 | 401 |
 | Remove a member (`class-member/remove`) | 200 (last admin protected) | **403** | 404 | 404 | 401 |
 | Leave the class (`class-member/leave`) | 200 unless last admin | 200 | 404 | 404 | 401 |
+| Link or clear **my own** page (`class-member/set-book`; T-126) | 200, own yearbook only | 200, own yearbook only | 404 | 404 | 401 |
 | Create, list, revoke invites (`class-invite/create`, `get-list`, `revoke`; T-125) | 200 | **403** | 404 | 404 | 401 |
 | Preview an invite link (`class-invite/lookup`, public; T-125) | 200 for a live token, else 404 | same | same | same | same (no session needed) |
 | Join with an invite (`class-invite/accept`, verified email; T-125) | 200, keeps `admin` | 200, keeps `student` | 200, becomes student | 200, becomes student | 401 |
@@ -58,7 +59,8 @@ Rows marked with a ticket id are enforced by that ticket; this file is the contr
    promote someone else first, or delete the class. The rule holds under concurrency: all membership changes of one class take the
    class row lock first, so two admins leaving at once leave exactly one.
 5. **Members are named by an opaque member id** (`class_member_tab.public_id`, a ULID), never by the user id or email. The roster shows
-   the display name, role, join time and whether a class page is chosen (`page_linked`); no email, no user id, no page content.
+   the display name, role, join time, whether a class page is chosen (`page_linked`), and two numbers about it, `profile_complete` and `approved_notes`
+   (T-126, below); no email, no user id, no page content.
 6. **Students never see the roster.** `class/get` returns the class and the caller's own role only, for every role.
 7. **Deleting is local.** Deleting a class removes the class and membership rows and nothing else; a member's yearbook is never touched.
    Deleting a yearbook clears the link in `class_member_tab.yearbook_id` and keeps the membership. Leaving or being removed never touches
@@ -85,8 +87,8 @@ live link may join as a `student`; the link is a bearer secret, so:
    byte for byte, on `lookup` and on `accept`, also for a caller who already belongs to the class. All take the same code path (one lookup by
    hash, then a constant-time compare of the hash); the state is judged afterwards.
 4. **Lookup shows the class name and school** and nothing else (not the member count, not whether the class is full). Rate limits per
-   client IP: 120 requests and 20 misses per 10 minutes (a live link is not a miss), fail open because a 256-bit token cannot be guessed.
-5. **Accept is a write and is idempotent.** It counts against the user's 120 writes an hour and against 60 accepts per IP an hour (a wrong
+   client IP: 600 requests and 20 misses per 10 minutes (a live link is not a miss), fail open because a 256-bit token cannot be guessed.
+5. **Accept is a write and is idempotent.** It counts against the user's 120 writes an hour and against 300 accepts per IP an hour (a wrong
    token costs a write too), fails closed if the limiter store is down, and never changes an existing member's role: an admin who opens
    an invite stays admin, a promoted student stays promoted. A new member is always a `student`.
 6. **Caps are checked under the class row lock** (the same lock as every membership change): 5 active (unrevoked, unexpired) invites,
@@ -96,6 +98,44 @@ live link may join as a `student`; the link is a bearer secret, so:
 8. Revoking a link removes nobody who joined with it; removing a member does not revoke the link. Deleting a class deletes its invites.
 9. An invite or member id is looked up inside the class named in the request, so an admin of class A who sends an id of class B gets 404
    and nothing changes (matrix test `TestCrossClassIDsChangeNothing`).
+
+## The student's page (T-126)
+
+A member picks which of their own yearbooks is their page in the class book with `class-member/set-book` (`{class_id, yearbook_id}`; `yearbook_id: null`
+clears it, an absent key is refused so a typo cannot unlink). The link is a pointer in `class_member_tab.yearbook_id` and nothing else.
+
+1. **Only the owner, only their own membership.** The caller is always the member: the body cannot name another member (an unknown field is
+   400), so an admin cannot set or clear a student's link. The yearbook is looked up as `public_id = ? AND owner_id = <caller> FOR UPDATE`, the
+   same ownership check as everywhere: someone else's yearbook and a missing one are the same 404 (`yearbook not found`). A caller who is not a
+   member gets the class 404 first, whichever yearbook they send.
+2. **One yearbook, at most one class.** Linking a yearbook that is already the page of another membership (of the same user in another class)
+   is 409 `ERROR_CONFLICT`; the check runs under the yearbook row lock and the unique key `uq_class_member_tab_yearbook` is the backstop.
+   Setting the same link again is a no-op 200; setting another yearbook replaces the link.
+3. **Lock order: yearbook row, class row, member row.** A yearbook delete takes the yearbook row and then clears the member row
+   (`ChildPurger`); `set-book` takes the same order, so a link racing a delete either loses (404, the book is gone) or is cleared by the
+   delete in the same transaction. No member row ever points at a missing yearbook. The rest of the class code never takes a yearbook
+   row, so there is no cycle.
+4. **Linking changes no permission.** Every `yearbook/*`, `note-collection/*`, `note/*`, `media/*`, `book-data/*` and `book-export/*` endpoint
+   still checks `owner_id = caller`, so the class admin gets 404 on all of them for a student's linked book (tested endpoint by endpoint in
+   `page_integration_test.go`); the one exception is `media/delete`, which by design answers 200 and does nothing for a photo that is not the
+   caller's, so repeating a delete is harmless and nothing leaks. Leaving the class or being removed never touches the yearbook; deleting the yearbook keeps the membership.
+5. **What the member sees** (`class/get`, and the answer of `set-book`): `page: {linked, yearbook_id, profile_complete, approved_notes}` for their
+   own row only. **What the admin sees** (`class-member/get-list`): per member `page_linked`, `profile_complete`, `approved_notes` and nothing
+   else: no profile text, no note text, no photo id, no yearbook id, and not the pending or hidden count. A link to a yearbook the member does not
+   own (the API cannot make one) counts as not linked.
+6. **Definitions.** `profile_complete`: the owner profile of the linked yearbook has a non-empty name and a photo. `approved_notes`: the notes
+   of that yearbook in status `approved`. Both are 0/false while nothing is linked. The roster reads them for the whole page in two grouped
+   queries, whatever the page size.
+
+## Client IP behind the proxy
+
+Per-IP limits (invite lookup and accept, and the other public endpoints) key on `httpx.ResolveClientIP`. By default it is the host of
+`RemoteAddr`. With `SMEM_TRUST_PROXY=true` it is the **last** `X-Forwarded-For` hop, the one our own load balancer appended (earlier hops are
+client-controlled), and IPv6 is keyed by its /64. In production the API must be reachable only through the ALB with `SMEM_TRUST_PROXY=true`;
+otherwise every student shares the ALB's address and the limits lock the whole class out together (or, with the flag on and the task reachable
+directly, the address can be forged). See [production-config.md](production-config.md#client-ip-and-smem_trust_proxy); T-023 must set the flag and
+keep the task behind the ALB only. A class of 60 on one school network (one NAT address) therefore shares one budget, which is why the invite
+budgets are generous (600 lookups per 10 minutes, 300 accepts per hour; only the miss limiter of 20 per 10 minutes is tight).
 
 ## Limits
 
@@ -116,6 +156,7 @@ in T-131, which also has the owner sign off before production use.
 
 `internal/class/matrix_integration_test.go` (the matrix above, one fresh class per cell, plus the 404 equality), `class_integration_test.go`
 (last admin under concurrency, caps, validation, canonical ids, paging, rate limit, deleting a class or a yearbook),
+`page_integration_test.go` (the student's page: set-book matrix, one yearbook one class, link racing delete, roster keys, the admin's 404 on the whole book stack, 60 students from one IP),
 `invite_integration_test.go` (invites: matrix cells, caps, concurrency, dead tokens, the log grep, the cross-class ids and the promotion cap),
 `internal/db/class_tab_integration_test.go` (migration round trips and the keys), and `postman/class.postman_collection.json` (the
 same flows over HTTP, newman).

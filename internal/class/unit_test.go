@@ -113,3 +113,10 @@ func TestInviteToken(t *testing.T) {
 		}
 	}
 }
+
+// A class of 60 shares one school address: the per-IP budgets keep room for it (T-125 QA), the guessing limit stays small.
+func TestPerIPBudgetsFitAClassOnOneNetwork(t *testing.T) {
+	if lookupAllPerWindow < 600 || acceptPerIPWindow < 300 || lookupMissesPerWindow != 20 {
+		t.Fatalf("lookups %d, accepts %d, misses %d", lookupAllPerWindow, acceptPerIPWindow, lookupMissesPerWindow)
+	}
+}
