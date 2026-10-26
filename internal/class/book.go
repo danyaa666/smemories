@@ -2,7 +2,10 @@ package class
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"io"
+	"strconv"
 
 	"github.com/danyaa666/smemories/internal/apperr"
 	"github.com/danyaa666/smemories/internal/bookdata"
@@ -60,12 +63,63 @@ type BookMember struct {
 	Truncated     bool                  `json:"truncated"`      // approved_total is more than the notes returned
 }
 
+// MaxBookBytes is the most bytes class-book/get ever answers, envelope included (T-133). A maximal class (60 members x 40 notes of
+// the longest text in four-byte characters) is about 50 MiB, which the server must neither build nor send to one request.
+const MaxBookBytes = 8 << 20
+
+const (
+	// strippedMemberMax is the most a member costs once their notes are dropped: the profile at its longest (1250 characters, six
+	// bytes each when every one is "<"), the name, the style and the keys. Every member after the one that does not fit is reserved
+	// this much, so the cut itself can never push the body over MaxBookBytes. A unit test builds the worst member and checks it.
+	strippedMemberMax = 12 << 10
+	// bookFrameBytes covers the envelope, the keys and the list of truncated members (60 ids of 26 characters).
+	bookFrameBytes = 1<<10 + MaxMembers*idJSONBytes
+	idJSONBytes    = 26 + 3 // a ULID in quotes, and the comma
+)
+
 // ClassBook is the response of GET /api/class-book/get. The class pages (intro, teachers, ...) are in the stored order (T-127).
+// Members are encoded one by one as they are read, so the whole body exists once, never twice, and never above MaxBookBytes
+// (Encode writes it straight to the response). Truncated lists the members whose notes were left out to stay within the cap.
 type ClassBook struct {
-	Class      BookClass    `json:"class"`
-	FrontPages []Page       `json:"front_pages"`
-	Members    []BookMember `json:"members"`
-	BackPages  []Page       `json:"back_pages"`
+	Class      BookClass         `json:"class"`
+	FrontPages []Page            `json:"front_pages"`
+	Members    []json.RawMessage `json:"members"` // each one an encoded BookMember, in book order
+	BackPages  []Page            `json:"back_pages"`
+	Truncated  []string          `json:"truncated"` // member ids whose notes did not fit in MaxBookBytes; [] for a normal class
+}
+
+// Encode writes the book as JSON to w piece by piece: the same bytes as json.Marshal, without a second copy of the body.
+func (b *ClassBook) Encode(w io.Writer) (err error) {
+	str := func(s string) {
+		if err == nil {
+			_, err = io.WriteString(w, s)
+		}
+	}
+	val := func(v any) {
+		j, _ := json.Marshal(v) // plain structs and strings: cannot fail
+		if err == nil {
+			_, err = w.Write(j)
+		}
+	}
+	str(`{"class":`)
+	val(b.Class)
+	str(`,"front_pages":`)
+	val(b.FrontPages)
+	str(`,"members":[`)
+	for i, m := range b.Members {
+		if i > 0 {
+			str(",")
+		}
+		if err == nil {
+			_, err = w.Write(m)
+		}
+	}
+	str(`],"back_pages":`)
+	val(b.BackPages)
+	str(`,"truncated":`)
+	val(b.Truncated)
+	str("}")
+	return err
 }
 
 // bookMember is a roster row of the class book: the member, and the public id of the yearbook they own and linked ("" if none).
@@ -110,6 +164,9 @@ func (s *Service) Book(ctx context.Context, userID uint64, classID string) (*Cla
 	if s.books == nil || s.notes == nil {
 		return nil, apperr.New(apperr.Internal, "class book is not wired")
 	}
+	if err := s.throttleRead(ctx, userID, c.ID); err != nil {
+		return nil, err
+	}
 	members, err := s.store.bookMembers(ctx, c.internalID)
 	if err != nil {
 		return nil, err
@@ -120,7 +177,7 @@ func (s *Service) Book(ctx context.Context, userID uint64, classID string) (*Cla
 	}
 	out := &ClassBook{
 		Class:      BookClass{ID: c.ID, Name: c.Name, SchoolName: c.SchoolName, GraduationYear: c.GraduationYear, Language: c.Language},
-		FrontPages: []Page{}, Members: make([]BookMember, 0, len(members)), BackPages: []Page{},
+		FrontPages: []Page{}, BackPages: []Page{},
 	}
 	for _, p := range pages { // front first, then back, each in book order
 		if p.Placement == PlacementFront {
@@ -129,14 +186,57 @@ func (s *Service) Book(ctx context.Context, userID uint64, classID string) (*Cla
 			out.BackPages = append(out.BackPages, p)
 		}
 	}
-	for _, m := range members {
-		bm, err := s.bookMember(ctx, m)
-		if err != nil {
-			return nil, err
-		}
-		out.Members = append(out.Members, bm)
+	front, _ := json.Marshal(out.FrontPages)
+	back, _ := json.Marshal(out.BackPages)
+	class, _ := json.Marshal(out.Class)
+	out.Members, out.Truncated, err = s.encodeMembers(ctx, members, MaxBookBytes-bookFrameBytes-len(class)-len(front)-len(back))
+	if err != nil {
+		return nil, err
 	}
 	return out, nil
+}
+
+// encodeMembers reads the members in book order and encodes each one, keeping the encoded sizes under budget. The first member
+// whose notes would pass the budget loses them, and so does every later one (earlier members stay complete); their ids are the
+// second result. A cut member keeps its profile and approved_total and has truncated=true and no notes. Memory is the encoded
+// members (at most the budget) plus one member's notes, never the whole class.
+func (s *Service) encodeMembers(ctx context.Context, members []bookMember, budget int) ([]json.RawMessage, []string, error) {
+	out, cut, used := make([]json.RawMessage, 0, len(members)), []string{}, 0
+	over := false
+	for i, m := range members {
+		bm, err := s.bookMember(ctx, m)
+		if err != nil {
+			return nil, nil, err
+		}
+		var raw []byte
+		if !over {
+			raw, _ = json.Marshal(bm) // a plain struct plus raw JSON the notes service validated: cannot fail
+			over = used+len(raw)+1+(len(members)-i-1)*strippedMemberMax > budget
+		}
+		if over {
+			if len(bm.Notes) > 0 {
+				cut = append(cut, bm.MemberID)
+				bm.Notes, bm.NoteCount, bm.Truncated = []*notes.BookNote{}, 0, true
+			}
+			raw, _ = json.Marshal(bm)
+		}
+		used += len(raw) + 1
+		out = append(out, raw)
+	}
+	return out, cut, nil
+}
+
+// throttleRead takes one read of class-book/get from the user's budget for this class: a *RetryAfterError when it is used up, the
+// limiter's own error (503, fail closed) when the limiter store is down. It is taken after Authorize, so only members count.
+func (s *Service) throttleRead(ctx context.Context, userID uint64, classID string) error {
+	ok, wait, err := s.bookReads.Take(ctx, strconv.FormatUint(userID, 10)+":"+classID)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return &RetryAfterError{Err: apperr.New(apperr.RateLimited, "too many requests, try again later"), After: wait}
+	}
+	return nil
 }
 
 func (s *Service) bookMember(ctx context.Context, m bookMember) (BookMember, error) {

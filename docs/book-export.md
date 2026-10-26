@@ -67,11 +67,21 @@ note_count, approved_total, truncated}`. Permissions and privacy: [class-permiss
 - **Budget.** The book keeps the page budget of about 120 pages: at most **60 members and 40 approved notes per member** (`notes.MaxClassBookNotes`). A student with more approved notes is cut at 40 in
   their own order, with `truncated: true` and the real `approved_total` (never silent).
 - **Cost.** One query for the class, one for the members, then per linked member the book, its profile (and the photo ids) and the notes with their photo links: a handful of queries per member,
-  none per note (`TestClassBookQueryCountIsPerMember`). No limiter: it is an admin read, and the 60 x 5 queries are indexed (`TestClassBookQueriesUseIndexes`).
-- **Size.** Measured by `TestClassBookFullClass` (60 members x 40 notes of about 230 characters, two photo ids each): **1.14 MiB** (`TestClassBookSizeOfAFullClass` computes it without a database; the integration test fails above 4 MiB on the real answer). The class pages add at most 30 x (4000-character body + 120-character title), at worst about 0.8 MiB when every character needs a JSON escape (the unit test includes them), so a full class stays under 2 MiB. The budget is 4 MiB.
-  The theoretical worst case is far larger: one note may hold about 4.7 thousand characters of answers (up to 3 bytes each in Vietnamese) and a signature of up to 3 KiB, so 60 x 40 maximal notes would be about 40 MiB. Nobody writes that
-  (the cap of 500 characters on five of the nine fields and 2000 on the message is a ceiling, a note is typically a few hundred bytes), and a book of 2400 maximal notes is not 120 pages either; the 4 MiB target holds for
-  realistic notes, not as a hard limit. If it ever matters, the lever is the per-member cap (`notes.MaxClassBookNotes`), not a response-size check.
+  none per note (`TestClassBookQueryCountIsPerMember`). The 60 x 5 queries are indexed (`TestClassBookQueriesUseIndexes`).
+- **Read limit (T-133).** 30 reads per user and class per hour (`bookReadsPerWindow` in `internal/class/service.go`, the one constant to tune), counted after the admin check, so only an admin's successful
+  authorization takes from the budget. Over it: `429 ERROR_RATE_LIMITED` with `Retry-After`. The limiter is the closed kind (like the class write limiter): when Redis does not answer, `503 ERROR_UNAVAILABLE`
+  (`TestClassBookReadLimiter`).
+- **Size.** Measured by `TestClassBookFullClass` (60 members x 40 notes of about 230 characters, two photo ids each): about **1.1 MiB**; the class pages add at most 30 x (4000-character body + 120-character title),
+  at worst about 0.8 MiB when every character needs a JSON escape. A realistic class is never near the cap below.
+- **Hard cap: 8 MiB (T-133).** The theoretical worst case is far larger: one note may hold about 4.7 thousand characters of answers (up to 4 bytes each) and a signature of up to 3 KiB, so 60 x 40 maximal notes are about
+  50 MiB, which the server would build twice (marshal, then copy) for every request. The body therefore **never exceeds `class.MaxBookBytes` = 8 MiB (8388608 bytes), envelope included.** The members are read and encoded one by one in book
+  order and their encoded size is added up. The first member whose notes would pass the cap loses **all** of them (a member is complete or has none), and so does every later member; they keep their profile, `approved_total`,
+  `truncated: true`, `note_count: 0`, `notes: []`, and their ids are listed in the top-level `truncated` array (a member without notes is never listed). Members before the cut are complete. A class that fits has `truncated: []`.
+  The cap leaves room for the worst case of what follows: the class, the pages, the list of cut ids and `strippedMemberMax` (12 KiB, the profile at its longest with every character escaped) for each member still to come,
+  so the cut itself cannot break the cap (`TestClassBookStaysUnderTheCap`, `TestStrippedMemberFitsItsReserve`, `TestClassBookIsCutAtTheCap`).
+  The web print route (T-130) ignores the field; it still names the members whose notes are missing from its own `approved_total` and `note_count`.
+- **No second copy.** `ClassBook.Members` holds the encoded members (at most the cap, once); the handler writes the envelope and the pieces straight to the response (`httpx.OKStream`, `ClassBook.Encode`), with no `Marshal` of the whole body and no
+  copy of it. Peak memory for the maximal class is measured at about 1.2 x the response and asserted below 3 x (`TestMaximalClassPeakAllocation`, run under `-race`). All the reading that can fail is done before the first byte, so an error is still a clean error envelope.
 - **Photos.** The images are fetched by the admin with `media/get-content?variant=print`, which accepts exactly the profile photo and the approved notes' photos of the linked books (one SQL statement, see class-permissions.md).
 - The data is not cached and not exported as text in v1; the admin prints the book in the browser.
 

@@ -429,7 +429,12 @@ func (h *Handler) content(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer func() { _ = obj.Close() }()
-	writeContent(h.paced(w), r, m, obj, ct, variant, "private, max-age=3600")
+	cc := "private, max-age=3600"
+	if m.ByClassAdmin {
+		// A class admin's browser must not keep a photo the student can hide at any moment (T-133): the owner's own copy may be cached.
+		cc = "private, no-store"
+	}
+	writeContent(h.paced(w), r, m, obj, ct, variant, cc)
 }
 
 // writeContent sends the bytes of a photo: Content-Type from the database (never from the uploader), nosniff, the given

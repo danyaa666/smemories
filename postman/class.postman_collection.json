@@ -1,6 +1,6 @@
 {
   "info": {
-    "name": "SMemories - class yearbook: classes, memberships and roles (E07, T-026, T-125, T-126, T-027, T-127)",
+    "name": "SMemories - class yearbook: classes, memberships and roles (E07, T-026, T-125, T-126, T-027, T-127, T-133)",
     "description": "Classes, the two roles and the permission matrix (docs/class-permissions.md). Run against an API started with SMEM_ENV=dev and SMEM_DEV_FIXED_OTP set (.env.example does: 123123), because the flow verifies its two fresh accounts with the dev email code; the session token is read from the register response's Set-Cookie header and sent in an explicit Cookie header, so users A (teacher, admin) and B (not in A's class) act in one run. Each run registers 3 users (the register limit is 5 per hour per IP: run `make reset-limits` before a second run within the hour) and every run uses new accounts, so it can run twice in a row. Run the whole collection in order: the Edge cases folder reuses the users from the Full flow. What it cannot cover: the last-admin race with two admins, the 60-member cap and the concurrent accepts are covered by internal/class/*_integration_test.go (a Postman run is one client). T-125 adds the invite flow (create, list, revoke, public lookup, accept; the token is a secret and is never echoed after creation) and its edge cases. The invite flow needs users A and B and B's class from the full flow, so run the folders in order. Lookup misses count against 20 per 10 minutes per client IP and accepts against 60 per hour: `make reset-limits` between runs. (The server budgets are 600 lookups per 10 minutes and 300 accepts per hour since T-126; a Newman run stays far below them.) T-126 adds the Student page flow (set-book: only the owner links their own yearbook, one yearbook one class, roster counts and flags only, the admin still gets 404 on the student's yearbook, notes and photos, deleting the yearbook clears the link) and its edge cases; it needs users A and B from the full flow and uses two new classes it deletes at the end. T-027 adds the Class book flow (class-book/get: approved notes only, in the student's order; the admin opens exactly the approved notes' photos and nothing else; a student, a non-member and a hidden note all get 403 or 404) and uses users A, B and C from the earlier folders; it sends two public notes with photos (fixtures/media, so run Newman from the postman folder) and deletes its class at the end. T-127 adds the Class pages and order flow (class-page/create, update, delete, get-list and class-book/update-order: admin only, students 403, non-members 404; the body is plain text and comes back unchanged; the order must be a full permutation and a refused one changes nothing; deleting the class deletes its pages). It uses users A, B and C from the earlier folders and deletes its class at the end. The 30-page cap and the concurrent reorders are covered by internal/class/pages_integration_test.go (a Postman run is one client).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
@@ -219,6 +219,10 @@
     },
     {
       "key": "pgLower",
+      "value": ""
+    },
+    {
+      "key": "cbLimitClass",
       "value": ""
     }
   ],
@@ -5517,6 +5521,7 @@
                   "pm.test('member keys', () => pm.expect(Object.keys(b).sort()).to.eql(['approved_total', 'linked', 'member_id', 'name', 'note_count', 'notes', 'profile', 'truncated', 'yearbook']));",
                   "pm.test('linked, with the book style and a profile without a birthday', () => { pm.expect(b.linked).to.eql(true); pm.expect(Object.keys(b.yearbook).sort()).to.eql(['language', 'page_size', 'template_id']); pm.expect(Object.keys(b.profile).sort()).to.eql(['full_name', 'future_plans', 'hobbies', 'nickname', 'photo_media_id', 'quote']); });",
                   "pm.test('one approved note with its photo, in order', () => { pm.expect(b.notes).to.have.length(1); pm.expect(b.notes[0].id).to.eql(pm.collectionVariables.get('cbNote1')); pm.expect(b.notes[0].photo_ids).to.eql([pm.collectionVariables.get('cbPhoto1')]); pm.expect(b.note_count).to.eql(1); pm.expect(b.approved_total).to.eql(1); pm.expect(b.truncated).to.eql(false); });",
+                  "pm.test('nothing left out for a class that fits: truncated is []', () => pm.expect(d.truncated).to.eql([]));",
                   "const text = pm.response.text();",
                   "pm.test('the pending note and its photo are not in the book', () => { pm.expect(text).to.not.include('second note'); pm.expect(text).to.not.include(pm.collectionVariables.get('cbNote2')); pm.expect(text).to.not.include(pm.collectionVariables.get('cbPhoto2')); pm.expect(text).to.not.include('@'); });"
                 ]
@@ -5525,7 +5530,7 @@
           ]
         },
         {
-          "name": "Book: A opens the approved note's photo - 200, private cache",
+          "name": "Book: A opens the approved note's photo - 200, private and no-store for an admin",
           "request": {
             "method": "GET",
             "header": [
@@ -5568,7 +5573,56 @@
                 "exec": [
                   "pm.test('status 200', () => pm.response.to.have.status(200));",
                   "pm.test('an image', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/^image\\//));",
-                  "pm.test('private cache, nosniff', () => { pm.expect(pm.response.headers.get('Cache-Control')).to.eql('private, max-age=3600'); pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'); });"
+                  "pm.test('admin: private, no-store, nosniff', () => { pm.expect(pm.response.headers.get('Cache-Control')).to.eql('private, no-store'); pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Book: B (the owner) opens the same photo - 200, the owner's cache header is unchanged",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/media/get-content?id={{cbPhoto1}}&variant=print",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "media",
+                "get-content"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{cbPhoto1}}"
+                },
+                {
+                  "key": "variant",
+                  "value": "print"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('owner: private, max-age=3600', () => pm.expect(pm.response.headers.get('Cache-Control')).to.eql('private, max-age=3600'));"
                 ]
               }
             }
@@ -6345,6 +6399,115 @@
                 "exec": [
                   "pm.test('status 404', () => pm.response.to.have.status(404));",
                   "pm.test('code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Book: the 31st read of an hour - 429 ERROR_RATE_LIMITED with Retry-After",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-book/get?class_id={{cbLimitClass}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-book",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "class_id",
+                  "value": "{{cbLimitClass}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// A fresh class, then 30 reads of its book (the hourly budget of this user and class); the request itself is the 31st.",
+                  "const base = pm.variables.get('baseUrl'), cookie = 'smem_session=' + pm.collectionVariables.get('tokenA'), origin = pm.variables.get('origin');",
+                  "pm.sendRequest({ url: base + '/api/class/create', method: 'POST', header: { Cookie: cookie, Origin: origin, 'Content-Type': 'application/json' }, body: { mode: 'raw', raw: JSON.stringify({ name: 'Limit class', school_name: 'THPT', graduation_year: 2026, language: 'vi' }) } }, (err, res) => {",
+                  "  const id = res.json().data.id;",
+                  "  pm.collectionVariables.set('cbLimitClass', id);",
+                  "  const read = n => { if (n === 0) return; pm.sendRequest({ url: base + '/api/class-book/get?class_id=' + id, method: 'GET', header: { Cookie: cookie, Origin: origin } }, (e, r) => { if (e || r.code !== 200) throw new Error('read ' + n + ' failed: ' + (e || r.code)); read(n - 1); }); };",
+                  "  read(30);",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 429', () => pm.response.to.have.status(429));",
+                  "pm.test('code ERROR_RATE_LIMITED', () => pm.expect(pm.response.json().status).to.eql('ERROR_RATE_LIMITED'));",
+                  "pm.test('Retry-After is a number of seconds', () => pm.expect(Number(pm.response.headers.get('Retry-After'))).to.be.above(0));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Book: A deletes the limiter class",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class/delete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class",
+                "delete"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{cbLimitClass}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));"
                 ]
               }
             }

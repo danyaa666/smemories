@@ -257,7 +257,11 @@ func (h *Handler) book(w http.ResponseWriter, r *http.Request) {
 	}
 	if id := r.URL.Query().Get("class_id"); validID(w, r, id, "class_id") {
 		b, err := h.svc.Book(r.Context(), u.InternalID, id)
-		respond(w, r, b, err)
+		if err != nil {
+			fail(w, r, err)
+			return
+		}
+		httpx.OKStream(w, b.Encode) // up to MaxBookBytes: written as it is, never copied
 	}
 }
 

@@ -43,6 +43,8 @@ type Media struct {
 	SHA256      string
 	CreatedAt   int64 // Unix ms
 	RowID       int64 // internal id, set by insert; for rows that refer to the media (note photos)
+	// ByClassAdmin is set by readable only: the caller reads this photo as an admin of a class, not as the owner (T-133).
+	ByClassAdmin bool
 	// Set by list only.
 	UploaderKind string
 	seq          uint64 // the database id, the keyset cursor position; never leaves the package
@@ -163,10 +165,11 @@ func (s *Store) yearbookByRow(ctx context.Context, id uint64) (ownerID uint64, p
 
 const mediaCols = `m.id, m.public_id, m.object_key, m.thumb_key, m.print_key, m.content_type, m.bytes, m.width, m.height, m.sha256, m.created_at`
 
-func scanMedia(row *sql.Row) (*Media, error) {
+// scanMedia reads mediaCols; extra are further columns the query selected after them.
+func scanMedia(row *sql.Row, extra ...any) (*Media, error) {
 	m := new(Media)
 	var printKey sql.NullString
-	err := row.Scan(&m.RowID, &m.ID, &m.ObjectKey, &m.ThumbKey, &printKey, &m.ContentType, &m.Bytes, &m.Width, &m.Height, &m.SHA256, &m.CreatedAt)
+	err := row.Scan(append([]any{&m.RowID, &m.ID, &m.ObjectKey, &m.ThumbKey, &printKey, &m.ContentType, &m.Bytes, &m.Width, &m.Height, &m.SHA256, &m.CreatedAt}, extra...)...)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -192,8 +195,9 @@ const ClassAdminRole = "admin"
 // pending or hidden note, not a photo that no note uses, not a yearbook of a removed member or of another class. One statement, so
 // a note hidden a moment ago is already a 404. Read only: Delete and every write keep using owned.
 func (s *Store) readable(ctx context.Context, userID uint64, publicID string) (*Media, error) {
-	return scanMedia(s.db.QueryRowContext(ctx,
-		`SELECT `+mediaCols+` FROM media_tab m JOIN yearbook_tab y ON y.id = m.yearbook_id
+	var owner bool
+	m, err := scanMedia(s.db.QueryRowContext(ctx,
+		`SELECT `+mediaCols+`, y.owner_id = ? FROM media_tab m JOIN yearbook_tab y ON y.id = m.yearbook_id
 		 WHERE m.public_id = ? AND (y.owner_id = ? OR EXISTS (
 		   SELECT 1 FROM class_member_tab cm
 		   JOIN class_member_tab adm ON adm.class_id = cm.class_id AND adm.user_id = ? AND adm.role = ?
@@ -201,7 +205,11 @@ func (s *Store) readable(ctx context.Context, userID uint64, publicID string) (*
 		     AND (EXISTS (SELECT 1 FROM profile_tab p WHERE p.yearbook_id = y.id AND p.is_owner = 1 AND p.photo_media_id = m.id)
 		       OR EXISTS (SELECT 1 FROM note_photo_tab np JOIN note_tab n ON n.id = np.note_id
 		                  WHERE np.media_id = m.id AND n.yearbook_id = y.id AND n.status = ?))))`,
-		publicID, userID, userID, ClassAdminRole, ShareableNoteStatus))
+		userID, publicID, userID, userID, ClassAdminRole, ShareableNoteStatus), &owner)
+	if m != nil {
+		m.ByClassAdmin = !owner
+	}
+	return m, err
 }
 
 // ShareableNoteStatus is the status a note must have for its photos to be reachable through a public link. It is

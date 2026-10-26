@@ -26,15 +26,19 @@ const (
 
 	writesPerWindow = 120 // class writes per user and window
 	writeWindow     = time.Hour
+
+	bookReadsPerWindow = 30 // class-book/get per user and class and window (T-133); an admin laying out a book needs a handful
+	bookReadWindow     = time.Hour
 )
 
 // Service holds every rule of the class domain: validation, limits, the role checks and the last-admin rule. The handler
 // only decodes and maps; the store only runs SQL.
 type Service struct {
-	store  *Store
-	tokens Tokens
-	writes ratelimit.Limiter
-	now    func() time.Time
+	store     *Store
+	tokens    Tokens
+	writes    ratelimit.Limiter
+	bookReads ratelimit.Limiter // class-book/get, per user and class (closed)
+	now       func() time.Time
 
 	lookupAll, lookupMisses ratelimit.Limiter // class-invite/lookup, per client IP (open: they bound load, not guessing)
 	acceptIP                ratelimit.Limiter // class-invite/accept, per client IP (closed, like every write)
@@ -50,6 +54,7 @@ func NewService(store *Store, tokens Tokens, limiters *ratelimit.Factory, now fu
 		now = time.Now
 	}
 	return &Service{store: store, tokens: tokens, writes: limiters.Closed("class_write", writesPerWindow, writeWindow), now: now,
+		bookReads: limiters.Closed("class_book_read", bookReadsPerWindow, bookReadWindow),
 		lookupAll: limiters.Open("class_invite_lookup", lookupAllPerWindow, lookupWindow), lookupMisses: limiters.Open("class_invite_lookup_miss", lookupMissesPerWindow, lookupWindow),
 		acceptIP: limiters.Closed("class_invite_accept_ip", acceptPerIPWindow, acceptWindow)}
 }

@@ -155,6 +155,20 @@ func OK(w http.ResponseWriter, _ *http.Request, data any) {
 	WriteJSON(w, http.StatusOK, okEnvelope{Status: statusOK, Data: data})
 }
 
+// OKStream writes HTTP 200 {"status":"OK","data":<what write emits>}\n straight to w, for a body too big to copy (T-133). write
+// must emit exactly one JSON value and must have done everything that can fail before it writes: once the first byte is out,
+// the status is 200 and an error can only end the stream. A write error (the client went away) is not worth more than that.
+func OKStream(w http.ResponseWriter, write func(io.Writer) error) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	if _, err := io.WriteString(w, `{"status":"OK","data":`); err != nil {
+		return
+	}
+	if write(w) == nil {
+		_, _ = io.WriteString(w, "}\n")
+	}
+}
+
 // genericMessage is all a client learns about a server-side failure.
 const genericMessage = "internal server error"
 
