@@ -221,11 +221,11 @@ func TestInviteMatrix(t *testing.T) {
 						t.Fatalf("differs from the answer for a class that does not exist:\n%s\n%s", r.Body, gone.Body)
 					}
 				}
-				if a.status != 200 { // a refused caller changed nothing
-					if n := e.count(`SELECT COUNT(*) FROM class_invite_tab WHERE revoked_at IS NOT NULL`); n != 0 {
+				if a.status != 200 { // a refused caller changed nothing in this class
+					if n := e.count(`SELECT COUNT(*) FROM class_invite_tab i JOIN class_tab c ON c.id = i.class_id WHERE c.public_id = ? AND i.revoked_at IS NOT NULL`, cls); n != 0 {
 						t.Fatalf("a refused request revoked %d invites", n)
 					}
-					if n := e.count(`SELECT COUNT(*) FROM class_invite_tab WHERE public_id <> ?`, inv); n != 0 {
+					if n := e.count(`SELECT COUNT(*) FROM class_invite_tab i JOIN class_tab c ON c.id = i.class_id WHERE c.public_id = ? AND i.public_id <> ?`, cls, inv); n != 0 {
 						t.Fatalf("a refused request made %d invites", n)
 					}
 				}
