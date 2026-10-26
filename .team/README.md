@@ -20,7 +20,7 @@
 
 **Open questions for you:** none
 
-_Board last written 2026-10-26 06:48Z_
+_Board last written 2026-10-26 07:13Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -1776,7 +1776,7 @@ Automated RDS and S3 backups with a documented and tested restore drill; user-in
 - **Branch:** task/t-026-e07-classes-memberships-and-roles-api-fo
 - **PR:** https://github.com/danyaa666/smemories/pull/121
 - **Updated:** 2026-10-26 06:47Z by leader
-- **Comments-seen:** 5
+- **Comments-seen:** 7
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E07-class-yearbook/01-class-yearbook-classes-memberships-roles-and.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -5633,8 +5633,8 @@ Spec: .team/epics/E12-security-hardening/15-download-cap-tests-under-load.md (re
 - **Owner-approved:** —
 - **Assignee:** dev
 - **Branch:** task/t-125-e07-class-invites-create-revoke-lookup-a
-- **PR:** —
-- **Updated:** 2026-10-26 06:48Z by dev
+- **PR:** https://github.com/danyaa666/smemories/pull/123
+- **Updated:** 2026-10-26 07:05Z by dev
 - **Comments-seen:** 1
 
 Spec: .team/epics/E07-class-yearbook/03-class-invites.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.
