@@ -12,11 +12,10 @@
 |---|---:|---|
 | BACKLOG | 12 | T-023, T-024, T-025, T-027, T-031, T-050, T-126, T-127, T-128, T-129, T-130, T-131 |
 | IN_PROGRESS | 1 | T-125 |
-| MERGED | 2 | T-026, T-132 |
-| DONE | 109 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124 |
+| DONE | 111 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-132 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-026 ([E07] Classes, memberships and roles (API foundation)); T-132 ([E06] CI: pause the go-integration and e2e jobs (owner decision D-37))
+**Awaiting your review (MERGED):** nothing
 
 **Open questions for you:** none
 
@@ -1764,7 +1763,7 @@ Automated RDS and S3 backups with a documented and tested restore drill; user-in
 - 2026-10-17 15:11Z · leader · DEFERRED by the owner (decision D-31, 2026-10-17): this needs a real domain or AWS credentials, or is a go-live gate. Do not start it until the leader opens the go-live phase (E06 PRD, 'Live verification phase'). Stays BACKLOG.
 
 ### T-026 — [E07] Classes, memberships and roles (API foundation)
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
@@ -1775,7 +1774,7 @@ Automated RDS and S3 backups with a documented and tested restore drill; user-in
 - **Assignee:** —
 - **Branch:** task/t-026-e07-classes-memberships-and-roles-api-fo
 - **PR:** https://github.com/danyaa666/smemories/pull/121
-- **Updated:** 2026-10-26 06:47Z by leader
+- **Updated:** 2026-10-26 07:13Z by human
 - **Comments-seen:** 7
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E07-class-yearbook/01-class-yearbook-classes-memberships-roles-and.md`
@@ -1792,6 +1791,7 @@ Class space owned by an admin (teacher or monitor), invite links/emails for stud
 - 2026-10-26 03:01Z · leader · Leader review OK on head 98571b3 (unchanged since QA): spec and DESIGN followed, one SQL join per access check, 404 vs 403 correct, last-admin under the class row lock, expand-only migration with Down, no FK, no .team changes, CI green incl. integration. Non-blocking items (admin-class cap on update-role, 60/5 caps, cross-class member cell) moved into the T-125 spec. Awaiting owner: team approve T-026. Not run locally: newman (Docker down).
 - 2026-10-26 06:47Z · human · owner approved merge
 - 2026-10-26 06:47Z · leader · merged 4b8105e (owner-approved). Review: one SQL join per access check, 404 vs 403, last-admin under class row lock, expand-only migration, CI green at head 98571b3. For owner to check: docs/class-permissions.md matrix; newman (postman/class.postman_collection.json) not yet run locally because Docker was down; caps and cross-class cell carried into T-125.
+- 2026-10-26 07:13Z · human · accepted by owner
 
 ### T-027 — [E07] Class book data API and the admin's read-only media access
 - **Status:** BACKLOG
@@ -5757,7 +5757,7 @@ Spec: .team/epics/E07-class-yearbook/09-privacy-review-and-e2e.md (read it from 
 #### Comments
 
 ### T-132 — [E06] CI: pause the go-integration and e2e jobs (owner decision D-37)
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** ci
 - **Milestone:** M2
@@ -5768,7 +5768,7 @@ Spec: .team/epics/E07-class-yearbook/09-privacy-review-and-e2e.md (read it from 
 - **Assignee:** —
 - **Branch:** task/t-132-e06-ci-pause-the-go-integration-and-e2e-
 - **PR:** 122
-- **Updated:** 2026-10-26 03:10Z by leader
+- **Updated:** 2026-10-26 07:13Z by human
 - **Comments-seen:** 3
 
 Spec: .team/epics/E06-go-live/15-ci-pause-integration-and-e2e.md. Owner decision D-37 (2026-10-26): CI takes 8-10 min; the go-integration and e2e jobs (the latter includes print-check) stop running on pushes and pull requests, but stay in the file and can be run by hand.
@@ -5783,6 +5783,7 @@ Spec: .team/epics/E06-go-live/15-ci-pause-integration-and-e2e.md. Owner decision
   Req 6: diff touches only ci.yml, README.md, docs/ci.md, docs/e2e.md; nothing under .team/. PASS.
   Non-blocking: the header comment of ci.yml line 1 still lists 'Go integration' among what CI runs (cosmetic).
 - 2026-10-26 03:10Z · leader · merged 9be9475. Review: diff is 5 lines in ci.yml (workflow_dispatch + job-level if on go-integration and e2e), docs updated; PR shows both jobs skipped, others green; manual run 40261726624 passed all 6 jobs. For owner to check: the next PR on develop shows go-integration and e2e as skipped and stays mergeable; first line of ci.yml still lists Go integration (cosmetic).
+- 2026-10-26 07:13Z · human · accepted by owner
 
 <!-- tasks:end -->
 
