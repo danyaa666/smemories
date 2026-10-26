@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "SMemories - class yearbook: classes, memberships and roles (E07, T-026, T-125, T-126, T-027)",
-    "description": "Classes, the two roles and the permission matrix (docs/class-permissions.md). Run against an API started with SMEM_ENV=dev and SMEM_DEV_FIXED_OTP set (.env.example does: 123123), because the flow verifies its two fresh accounts with the dev email code; the session token is read from the register response's Set-Cookie header and sent in an explicit Cookie header, so users A (teacher, admin) and B (not in A's class) act in one run. Each run registers 3 users (the register limit is 5 per hour per IP: run `make reset-limits` before a second run within the hour) and every run uses new accounts, so it can run twice in a row. Run the whole collection in order: the Edge cases folder reuses the users from the Full flow. What it cannot cover: the last-admin race with two admins, the 60-member cap and the concurrent accepts are covered by internal/class/*_integration_test.go (a Postman run is one client). T-125 adds the invite flow (create, list, revoke, public lookup, accept; the token is a secret and is never echoed after creation) and its edge cases. The invite flow needs users A and B and B's class from the full flow, so run the folders in order. Lookup misses count against 20 per 10 minutes per client IP and accepts against 60 per hour: `make reset-limits` between runs. (The server budgets are 600 lookups per 10 minutes and 300 accepts per hour since T-126; a Newman run stays far below them.) T-126 adds the Student page flow (set-book: only the owner links their own yearbook, one yearbook one class, roster counts and flags only, the admin still gets 404 on the student's yearbook, notes and photos, deleting the yearbook clears the link) and its edge cases; it needs users A and B from the full flow and uses two new classes it deletes at the end. T-027 adds the Class book flow (class-book/get: approved notes only, in the student's order; the admin opens exactly the approved notes' photos and nothing else; a student, a non-member and a hidden note all get 403 or 404) and uses users A, B and C from the earlier folders; it sends two public notes with photos (fixtures/media, so run Newman from the postman folder) and deletes its class at the end.",
+    "name": "SMemories - class yearbook: classes, memberships and roles (E07, T-026, T-125, T-126, T-027, T-127)",
+    "description": "Classes, the two roles and the permission matrix (docs/class-permissions.md). Run against an API started with SMEM_ENV=dev and SMEM_DEV_FIXED_OTP set (.env.example does: 123123), because the flow verifies its two fresh accounts with the dev email code; the session token is read from the register response's Set-Cookie header and sent in an explicit Cookie header, so users A (teacher, admin) and B (not in A's class) act in one run. Each run registers 3 users (the register limit is 5 per hour per IP: run `make reset-limits` before a second run within the hour) and every run uses new accounts, so it can run twice in a row. Run the whole collection in order: the Edge cases folder reuses the users from the Full flow. What it cannot cover: the last-admin race with two admins, the 60-member cap and the concurrent accepts are covered by internal/class/*_integration_test.go (a Postman run is one client). T-125 adds the invite flow (create, list, revoke, public lookup, accept; the token is a secret and is never echoed after creation) and its edge cases. The invite flow needs users A and B and B's class from the full flow, so run the folders in order. Lookup misses count against 20 per 10 minutes per client IP and accepts against 60 per hour: `make reset-limits` between runs. (The server budgets are 600 lookups per 10 minutes and 300 accepts per hour since T-126; a Newman run stays far below them.) T-126 adds the Student page flow (set-book: only the owner links their own yearbook, one yearbook one class, roster counts and flags only, the admin still gets 404 on the student's yearbook, notes and photos, deleting the yearbook clears the link) and its edge cases; it needs users A and B from the full flow and uses two new classes it deletes at the end. T-027 adds the Class book flow (class-book/get: approved notes only, in the student's order; the admin opens exactly the approved notes' photos and nothing else; a student, a non-member and a hidden note all get 403 or 404) and uses users A, B and C from the earlier folders; it sends two public notes with photos (fixtures/media, so run Newman from the postman folder) and deletes its class at the end. T-127 adds the Class pages and order flow (class-page/create, update, delete, get-list and class-book/update-order: admin only, students 403, non-members 404; the body is plain text and comes back unchanged; the order must be a full permutation and a refused one changes nothing; deleting the class deletes its pages). It uses users A, B and C from the earlier folders and deletes its class at the end. The 30-page cap and the concurrent reorders are covered by internal/class/pages_integration_test.go (a Postman run is one client).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -179,6 +179,46 @@
     },
     {
       "key": "cbNoPhotoMessage",
+      "value": ""
+    },
+    {
+      "key": "pgClassId",
+      "value": ""
+    },
+    {
+      "key": "pgInviteToken",
+      "value": ""
+    },
+    {
+      "key": "pgMemberA",
+      "value": ""
+    },
+    {
+      "key": "pgMemberB",
+      "value": ""
+    },
+    {
+      "key": "pgPage1",
+      "value": ""
+    },
+    {
+      "key": "pgPage2",
+      "value": ""
+    },
+    {
+      "key": "pgPage3",
+      "value": ""
+    },
+    {
+      "key": "pgPage4",
+      "value": ""
+    },
+    {
+      "key": "pgLongBody",
+      "value": ""
+    },
+    {
+      "key": "pgLower",
       "value": ""
     }
   ],
@@ -6293,6 +6333,1970 @@
                 {
                   "key": "class_id",
                   "value": "{{cbClassId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Class pages and order flow",
+      "item": [
+        {
+          "name": "Pages: A creates a class for the pages flow",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"Pages class\",\"school_name\":\"THPT\",\"graduation_year\":2026,\"language\":\"vi\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                  "pm.collectionVariables.set('pgClassId', pm.response.json().data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pages: A creates an invite",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-invite/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-invite",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\":\"{{pgClassId}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                  "pm.collectionVariables.set('pgInviteToken', pm.response.json().data.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pages: B accepts the invite and becomes a student",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-invite/accept",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-invite",
+                "accept"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"token\":\"{{pgInviteToken}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                  "pm.test('student', () => pm.expect(pm.response.json().data.my_role).to.eql('student'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pages: A reads the roster to learn the member ids",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-member/get-list?class_id={{pgClassId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-member",
+                "get-list"
+              ],
+              "query": [
+                {
+                  "key": "class_id",
+                  "value": "{{pgClassId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                  "const items = pm.response.json().data.items;",
+                  "const a = items.find(i => i.role === 'admin'), b = items.find(i => i.role === 'student');",
+                  "pm.test('A and B are in the roster', () => { pm.expect(a).to.be.an('object'); pm.expect(b).to.be.an('object'); });",
+                  "pm.collectionVariables.set('pgMemberA', a.id);",
+                  "pm.collectionVariables.set('pgMemberB', b.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pages: B (a student) creates a page - 403 ERROR_FORBIDDEN",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-page/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-page",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\":\"{{pgClassId}}\",\"kind\":\"custom\",\"title\":\"t\",\"body\":\"\",\"placement\":\"front\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 403', () => pm.response.to.have.status(403));",
+                  "pm.test('code ERROR_FORBIDDEN', () => pm.expect(pm.response.json().status).to.eql('ERROR_FORBIDDEN'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pages: B (a student) lists the pages - 403 ERROR_FORBIDDEN",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-page/get-list?class_id={{pgClassId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-page",
+                "get-list"
+              ],
+              "query": [
+                {
+                  "key": "class_id",
+                  "value": "{{pgClassId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 403', () => pm.response.to.have.status(403));",
+                  "pm.test('code ERROR_FORBIDDEN', () => pm.expect(pm.response.json().status).to.eql('ERROR_FORBIDDEN'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pages: B (a student) orders the book - 403 ERROR_FORBIDDEN",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-book/update-order",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-book",
+                "update-order"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\":\"{{pgClassId}}\",\"member_ids\":[\"{{pgMemberB}}\",\"{{pgMemberA}}\"],\"front_page_ids\":[],\"back_page_ids\":[]}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 403', () => pm.response.to.have.status(403));",
+                  "pm.test('code ERROR_FORBIDDEN', () => pm.expect(pm.response.json().status).to.eql('ERROR_FORBIDDEN'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pages: C (not a member) creates a page - 404 ERROR_NOT_FOUND",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenC}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-page/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-page",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\":\"{{pgClassId}}\",\"kind\":\"custom\",\"title\":\"t\",\"body\":\"\",\"placement\":\"front\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pages: C (not a member) lists the pages - 404 ERROR_NOT_FOUND",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenC}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-page/get-list?class_id={{pgClassId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-page",
+                "get-list"
+              ],
+              "query": [
+                {
+                  "key": "class_id",
+                  "value": "{{pgClassId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pages: C (not a member) orders the book - 404 ERROR_NOT_FOUND",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenC}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-book/update-order",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-book",
+                "update-order"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\":\"{{pgClassId}}\",\"member_ids\":[],\"front_page_ids\":[],\"back_page_ids\":[]}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pages: no session creates a page - 401",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-page/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-page",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\":\"{{pgClassId}}\",\"kind\":\"custom\",\"title\":\"t\",\"body\":\"\",\"placement\":\"front\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 401', () => pm.response.to.have.status(401));",
+                  "pm.test('code ERROR_UNAUTHORIZED', () => pm.expect(pm.response.json().status).to.eql('ERROR_UNAUTHORIZED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pages: no session orders the book - 401",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-book/update-order",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-book",
+                "update-order"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\":\"{{pgClassId}}\",\"member_ids\":[]}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 401', () => pm.response.to.have.status(401));",
+                  "pm.test('code ERROR_UNAUTHORIZED', () => pm.expect(pm.response.json().status).to.eql('ERROR_UNAUTHORIZED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pages: A creates a front page whose body looks like HTML - stored as typed",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-page/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-page",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\":\"{{pgClassId}}\",\"kind\":\"intro\",\"title\":\"Gửi cả lớp\",\"body\":\"<script>alert('x')</script>\\nSecond line & \\\"quotes\\\"\",\"placement\":\"front\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('the body comes back unchanged', () => pm.expect(d.body).to.eql(\"<script>alert('x')</script>\\nSecond line & \\\"quotes\\\"\"));",
+                  "pm.test('the page has no sort_order or class id', () => pm.expect(Object.keys(d).sort().join()).to.eql('body,created_at,id,kind,placement,title,updated_at'));",
+                  "pm.collectionVariables.set('pgPage1', d.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pages: A creates a back page",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-page/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-page",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\":\"{{pgClassId}}\",\"kind\":\"teachers\",\"title\":\"Thầy cô\",\"body\":\"Cô Lan\",\"placement\":\"back\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                  "pm.collectionVariables.set('pgPage2', pm.response.json().data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pages: A creates a second front page",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-page/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-page",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\":\"{{pgClassId}}\",\"kind\":\"events\",\"title\":\"Sự kiện\",\"body\":\"Dã ngoại\",\"placement\":\"front\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                  "pm.collectionVariables.set('pgPage3', pm.response.json().data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pages: A lists the pages - front first, then back, in creation order",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-page/get-list?class_id={{pgClassId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-page",
+                "get-list"
+              ],
+              "query": [
+                {
+                  "key": "class_id",
+                  "value": "{{pgClassId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('three pages in order', () => pm.expect(d.items.map(i => i.id)).to.eql([pm.collectionVariables.get('pgPage1'), pm.collectionVariables.get('pgPage3'), pm.collectionVariables.get('pgPage2')]));",
+                  "pm.test('no next page', () => pm.expect(d.next_id).to.eql(''));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pages: create with an unknown kind - 400 ERROR_INVALID_KIND",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-page/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-page",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\":\"{{pgClassId}}\",\"kind\":\"poem\",\"title\":\"t\",\"body\":\"\",\"placement\":\"front\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code ERROR_INVALID_KIND', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_KIND'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pages: create with an empty title - 400 ERROR_INVALID_TITLE",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-page/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-page",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\":\"{{pgClassId}}\",\"kind\":\"custom\",\"title\":\"\",\"body\":\"\",\"placement\":\"front\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code ERROR_INVALID_TITLE', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_TITLE'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pages: create with a body of 4001 characters - 400 ERROR_INVALID_BODY",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-page/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-page",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\":\"{{pgClassId}}\",\"kind\":\"custom\",\"title\":\"t\",\"body\":\"{{pgLongBody}}\",\"placement\":\"front\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('pgLongBody', 'a'.repeat(4001));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code ERROR_INVALID_BODY', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_BODY'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pages: create with a body of exactly 4000 characters is fine",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-page/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-page",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\":\"{{pgClassId}}\",\"kind\":\"custom\",\"title\":\"max\",\"body\":\"{{pgLongBody}}\",\"placement\":\"back\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('pgLongBody', 'a'.repeat(4000));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                  "pm.collectionVariables.set('pgPage4', pm.response.json().data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pages: create with an unknown placement - 400 ERROR_INVALID_PLACEMENT",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-page/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-page",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\":\"{{pgClassId}}\",\"kind\":\"custom\",\"title\":\"t\",\"body\":\"\",\"placement\":\"middle\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code ERROR_INVALID_PLACEMENT', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_PLACEMENT'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pages: create with an unknown field - 400 ERROR_PARAM",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-page/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-page",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\":\"{{pgClassId}}\",\"kind\":\"custom\",\"title\":\"t\",\"body\":\"\",\"placement\":\"front\",\"sort_order\":1}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pages: create with a lower-case class id - 400 ERROR_PARAM",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-page/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-page",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\":\"{{pgLower}}\",\"kind\":\"custom\",\"title\":\"t\",\"body\":\"\",\"placement\":\"front\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('pgLower', pm.collectionVariables.get('pgClassId').toLowerCase());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pages: A moves the second front page to the back",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-page/update",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-page",
+                "update"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\":\"{{pgClassId}}\",\"kind\":\"events\",\"title\":\"Sự kiện\",\"body\":\"Dã ngoại\",\"placement\":\"back\",\"id\":\"{{pgPage3}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                  "pm.test('moved', () => pm.expect(pm.response.json().data.placement).to.eql('back'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pages: A updates a page id that is not in the class - 404 ERROR_NOT_FOUND",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-page/update",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-page",
+                "update"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\":\"{{pgClassId}}\",\"kind\":\"custom\",\"title\":\"t\",\"body\":\"\",\"placement\":\"front\",\"id\":\"01K7Q8W3ZR5N2M4X6V8B0C1D2E\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pages: A lists the pages - the moved page is last",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-page/get-list?class_id={{pgClassId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-page",
+                "get-list"
+              ],
+              "query": [
+                {
+                  "key": "class_id",
+                  "value": "{{pgClassId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                  "const ids = pm.response.json().data.items.map(i => i.id), v = n => pm.collectionVariables.get(n);",
+                  "pm.test('p1, then p2, p4, p3', () => pm.expect(ids).to.eql([v('pgPage1'), v('pgPage2'), v('pgPage4'), v('pgPage3')]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pages: A orders the book: B first, the back pages reversed",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-book/update-order",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-book",
+                "update-order"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\":\"{{pgClassId}}\",\"member_ids\":[\"{{pgMemberB}}\",\"{{pgMemberA}}\"],\"front_page_ids\":[\"{{pgPage1}}\"],\"back_page_ids\":[\"{{pgPage3}}\",\"{{pgPage4}}\",\"{{pgPage2}}\"]}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pages: the class book follows the order",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-book/get?class_id={{pgClassId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-book",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "class_id",
+                  "value": "{{pgClassId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                  "const d = pm.response.json().data, v = n => pm.collectionVariables.get(n);",
+                  "pm.test('members', () => pm.expect(d.members.map(m => m.member_id)).to.eql([v('pgMemberB'), v('pgMemberA')]));",
+                  "pm.test('front pages', () => pm.expect(d.front_pages.map(p => p.id)).to.eql([v('pgPage1')]));",
+                  "pm.test('back pages', () => pm.expect(d.back_pages.map(p => p.id)).to.eql([v('pgPage3'), v('pgPage4'), v('pgPage2')]));",
+                  "pm.test('the HTML-looking body is plain text', () => pm.expect(d.front_pages[0].body).to.eql(\"<script>alert('x')</script>\\nSecond line & \\\"quotes\\\"\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pages: order with a member missing - 400 ERROR_INVALID_MEMBER_IDS",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-book/update-order",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-book",
+                "update-order"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\":\"{{pgClassId}}\",\"member_ids\":[\"{{pgMemberA}}\"],\"front_page_ids\":[\"{{pgPage1}}\"],\"back_page_ids\":[\"{{pgPage2}}\",\"{{pgPage3}}\",\"{{pgPage4}}\"]}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code ERROR_INVALID_MEMBER_IDS', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_MEMBER_IDS'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pages: order with a member twice - 400 ERROR_INVALID_MEMBER_IDS",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-book/update-order",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-book",
+                "update-order"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\":\"{{pgClassId}}\",\"member_ids\":[\"{{pgMemberA}}\",\"{{pgMemberA}}\"],\"front_page_ids\":[\"{{pgPage1}}\"],\"back_page_ids\":[\"{{pgPage2}}\",\"{{pgPage3}}\",\"{{pgPage4}}\"]}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code ERROR_INVALID_MEMBER_IDS', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_MEMBER_IDS'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pages: order with an id that is nobody's - 400 ERROR_INVALID_MEMBER_IDS",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-book/update-order",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-book",
+                "update-order"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\":\"{{pgClassId}}\",\"member_ids\":[\"{{pgMemberA}}\",\"01K7Q8W3ZR5N2M4X6V8B0C1D2E\"],\"front_page_ids\":[\"{{pgPage1}}\"],\"back_page_ids\":[\"{{pgPage2}}\",\"{{pgPage3}}\",\"{{pgPage4}}\"]}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code ERROR_INVALID_MEMBER_IDS', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_MEMBER_IDS'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pages: order with a back page in the front list - 400 ERROR_INVALID_FRONT_PAGE_IDS",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-book/update-order",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-book",
+                "update-order"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\":\"{{pgClassId}}\",\"member_ids\":[\"{{pgMemberA}}\",\"{{pgMemberB}}\"],\"front_page_ids\":[\"{{pgPage1}}\",\"{{pgPage2}}\"],\"back_page_ids\":[\"{{pgPage2}}\",\"{{pgPage3}}\",\"{{pgPage4}}\"]}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code ERROR_INVALID_FRONT_PAGE_IDS', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_FRONT_PAGE_IDS'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pages: order with a back page missing - 400 ERROR_INVALID_BACK_PAGE_IDS",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-book/update-order",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-book",
+                "update-order"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\":\"{{pgClassId}}\",\"member_ids\":[\"{{pgMemberA}}\",\"{{pgMemberB}}\"],\"front_page_ids\":[\"{{pgPage1}}\"],\"back_page_ids\":[\"{{pgPage2}}\",\"{{pgPage3}}\"]}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code ERROR_INVALID_BACK_PAGE_IDS', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_BACK_PAGE_IDS'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pages: order with a malformed page id - 400 ERROR_INVALID_BACK_PAGE_IDS",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-book/update-order",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-book",
+                "update-order"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\":\"{{pgClassId}}\",\"member_ids\":[\"{{pgMemberA}}\",\"{{pgMemberB}}\"],\"front_page_ids\":[\"{{pgPage1}}\"],\"back_page_ids\":[\"nope\",\"{{pgPage3}}\",\"{{pgPage4}}\"]}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code ERROR_INVALID_BACK_PAGE_IDS', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_BACK_PAGE_IDS'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pages: order with an unknown field - 400 ERROR_PARAM",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-book/update-order",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-book",
+                "update-order"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\":\"{{pgClassId}}\",\"member_ids\":[\"{{pgMemberA}}\",\"{{pgMemberB}}\"],\"front_page_ids\":[\"{{pgPage1}}\"],\"back_page_ids\":[\"{{pgPage2}}\",\"{{pgPage3}}\",\"{{pgPage4}}\"],\"sort\":1}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pages: the refused orders changed nothing",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-book/get?class_id={{pgClassId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-book",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "class_id",
+                  "value": "{{pgClassId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                  "const d = pm.response.json().data, v = n => pm.collectionVariables.get(n);",
+                  "pm.test('members unchanged', () => pm.expect(d.members.map(m => m.member_id)).to.eql([v('pgMemberB'), v('pgMemberA')]));",
+                  "pm.test('back pages unchanged', () => pm.expect(d.back_pages.map(p => p.id)).to.eql([v('pgPage3'), v('pgPage4'), v('pgPage2')]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pages: A deletes a page",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-page/delete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-page",
+                "delete"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\":\"{{pgClassId}}\",\"id\":\"{{pgPage4}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pages: A deletes it again - 404 ERROR_NOT_FOUND",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-page/delete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-page",
+                "delete"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\":\"{{pgClassId}}\",\"id\":\"{{pgPage4}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pages: the order with the deleted page is stale - 400 ERROR_INVALID_BACK_PAGE_IDS",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-book/update-order",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-book",
+                "update-order"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\":\"{{pgClassId}}\",\"member_ids\":[\"{{pgMemberB}}\",\"{{pgMemberA}}\"],\"front_page_ids\":[\"{{pgPage1}}\"],\"back_page_ids\":[\"{{pgPage3}}\",\"{{pgPage4}}\",\"{{pgPage2}}\"]}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code ERROR_INVALID_BACK_PAGE_IDS', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_BACK_PAGE_IDS'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pages: A deletes the class: its pages go with it",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class/delete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class",
+                "delete"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{pgClassId}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pages: A lists the pages of the deleted class - 404",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-page/get-list?class_id={{pgClassId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-page",
+                "get-list"
+              ],
+              "query": [
+                {
+                  "key": "class_id",
+                  "value": "{{pgClassId}}"
                 }
               ]
             }

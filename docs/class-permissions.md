@@ -41,7 +41,8 @@ A class always has at least one admin. Roles are per class: the same person can 
 | Open a photo of a member's linked book (`media/get-content`; T-027) | 200 for the profile photo and the photos of **approved** notes only, else 404 | 404 | 404 | 404 | 401 |
 | Read a student's pending or hidden notes, their photos, note-link tokens, the cover or any other photo | **never** | own only, via the normal yearbook endpoints | no | no | no |
 | Edit a student's yearbook | **never** | own only | no | no | no |
-| Edit class pages, order the book (T-128) | yes | 403 | 404 | 404 | 401 |
+| List, create, change, delete class pages (`class-page/get-list`, `create`, `update`, `delete`; T-127) | 200 | **403** | 404 | 404 | 401 |
+| Order the members and the class pages (`class-book/update-order`; T-127) | 200 | **403** | 404 | 404 | 401 |
 
 Rows marked with a ticket id are enforced by that ticket; this file is the contract they implement.
 
@@ -138,7 +139,7 @@ yearbooks (`internal/class/book.go`); nothing is copied, so moderation is applie
    a user id. The notes come from `notes.Service.ClassBookNotes`, the same query as the owner's `book-data/get` (`approvedNotes`), read **as the book's owner**
    (the member row's user), not as the admin: moderation rules stay in one place and the admin never passes an ownership check of the book stack.
 2. **Order.** Members: `class_member_tab.sort_order`, then joining order (member row id). A member's notes: that student's own order, exactly as in
-   their `book-data/get` (`note_tab.sort_order`, then creation). The admin cannot reorder a student's notes; T-128 adds the member order.
+   their `book-data/get` (`note_tab.sort_order`, then creation). The admin cannot reorder a student's notes; the member order and the class pages are T-127 (below).
 3. **Cap.** At most 60 members (the class cap) and **40 approved notes per member** (`notes.MaxClassBookNotes`), which keeps the book near the 120-page budget.
    A student with more has `truncated: true` and the real `approved_total`; the cut is never silent. Query count: `1 + 1 + 5 per linked member`
    whatever the notes (test `TestClassBookQueryCountIsPerMember`).
@@ -157,6 +158,33 @@ yearbooks (`internal/class/book.go`); nothing is copied, so moderation is applie
    such a route is not in that table (or the table names a route that is not in the file). `media/get-content` is the only route on which an admin may succeed, and
    only for the two kinds of photo above (`TestAdminMediaReadPath`, `TestClassBookFollowsModeration`).
 
+## Class pages and the book order (T-127)
+
+The class pages (`class-page/*`: intro, teachers, events, superlatives, custom) are written by the admin for the whole class and printed before
+(`front`) or after (`back`) the students' pages. `class-book/update-order` sets the order of the members and of the pages. All five endpoints are
+admin only, for reads too: a student is 403, a non-member 404 (the class 404, byte for byte), anonymous 401.
+
+1. **Plain text.** `body` is 0 to 4000 characters, newlines kept (`\r\n` becomes `\n`), `title` 1 to 120 characters on one line; both go through
+   the same text clean-up as every field (Unicode NFC, surrounding spaces trimmed, no control or invisible formatting characters). The server never
+   escapes, strips or parses HTML: a `<script>` string is stored and returned as typed, and the web shows it as text (T-130 checks the rendering).
+   `kind` is `intro|teachers|events|superlatives|custom`, `placement` is `front|back`; bad values are `ERROR_INVALID_<FIELD>` (400).
+2. **At most 30 pages per class**, counted under the class row lock (409 `ERROR_LIMIT_REACHED`), so parallel creates cannot pass the cap.
+   A new page goes to the end of its placement; `update` replaces every field and a page that changes side goes to the end of the new side.
+   A page id is looked up inside the class named in the request: a page of another class is 404 `page not found`, like an unknown one, and nothing changes.
+3. **The order is a full permutation.** The body lists `member_ids` (every member), `front_page_ids` and `back_page_ids` (every page of that side),
+   each once. A missing, extra, repeated, malformed or foreign id (another class's member or page, a back page in the front list) is
+   `ERROR_INVALID_MEMBER_IDS`, `ERROR_INVALID_FRONT_PAGE_IDS` or `ERROR_INVALID_BACK_PAGE_IDS` (400) and **nothing is written**; a list that was right a
+   moment ago and is stale now (someone joined, a page was deleted) is refused the same way and the client reloads. Lists longer than 60 or 30 are refused
+   before any query.
+4. **One transaction under the class lock.** The class row `FOR UPDATE` and the caller's member row (re-checking the admin role, as every class write),
+   then the member and page rows `FOR UPDATE`; the comparison and the three `UPDATE` statements run inside it. Two admins ordering at the same moment queue
+   on the class row and the book ends in exactly one of the two orders, never a mix (`TestConcurrentReordersEndInOneOfTheTwo`, 20 rounds, under `-race`).
+   The page writes take the same locks in the same order, so a reorder racing a create, a delete or a membership change cannot deadlock.
+5. **A member who joins later goes to the end** of the book: `class-invite/accept` gives a new member the next `sort_order`, so an order the admin
+   set is not shuffled by a latecomer landing at position 0.
+6. **`class-book/get`** returns the pages in `front_pages` and `back_pages` in the stored order, the members by `sort_order`, then joining order.
+   Deleting a class deletes its pages (zero rows left, `dbtest.AssertNoOrphans`); no page ever refers to a yearbook.
+
 ## Client IP behind the proxy
 
 Per-IP limits (invite lookup and accept, and the other public endpoints) key on `httpx.ResolveClientIP`. By default it is the host of
@@ -170,7 +198,7 @@ budgets are generous (600 lookups per 10 minutes, 300 accepts per hour; only the
 ## Limits
 
 Classes per user as admin: 10 (create and promotion). Members per class: 60 (`class-invite/accept`). Active invites per class: 5.
-Invite lifetime: 14 days by default, 30 at most. Class pages per class: 30 (T-128). A class name is 1 to 120 characters; the school 0 to 120; the graduation year 1950 to 2100;
+Invite lifetime: 14 days by default, 30 at most. Class pages per class: 30 (T-127), a title of 1 to 120 characters and a body of at most 4000. A class name is 1 to 120 characters; the school 0 to 120; the graduation year 1950 to 2100;
 the language `en` or `vi`.
 
 ## Privacy statement
@@ -188,6 +216,7 @@ in T-131, which also has the owner sign off before production use.
 (last admin under concurrency, caps, validation, canonical ids, paging, rate limit, deleting a class or a yearbook),
 `book_integration_test.go` (the class book: matrix, approved-only content and order, the cap, the dangling photo id, the media read path and its negatives, moderation taking effect at once, query count, the 60 x 40 fixture, EXPLAIN, and the OpenAPI route guard),
 `page_integration_test.go` (the student's page: set-book matrix, one yearbook one class, link racing delete, roster keys, the admin's 404 on the whole book stack, 60 students from one IP),
+`pages_integration_test.go` (class pages and the order: the matrix, the lifecycle, plain-text body, validation, the 30 cap in parallel, every kind of bad permutation, 20 concurrent reorders, a latecomer going last, deleting the class),
 `invite_integration_test.go` (invites: matrix cells, caps, concurrency, dead tokens, the log grep, the cross-class ids and the promotion cap),
 `internal/db/class_tab_integration_test.go` (migration round trips and the keys), and `postman/class.postman_collection.json` (the
 same flows over HTTP, newman).

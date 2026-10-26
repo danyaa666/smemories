@@ -2285,7 +2285,7 @@ paths:
         Called by an admin of the class (the class book screen, which lays out and prints the book in the browser). The book is assembled on every call from the members' own yearbooks: nothing is copied, so a note approved a moment ago is in the next answer and a note hidden a moment ago is gone.
         **Approved content only.** For each member who chose a class page (`class-member/set-book`) the answer holds the page's owner profile (the same shape as `book-data/get`, no birthday), the style of that yearbook (`template_id`, `page_size`, `language`) and its approved notes with their answers, signatures and photo ids. Never a pending or hidden note, a note-link token or label, an unapproved photo, the cover, an email or a user id, and nothing of another class.
         **Order.** `members` follow the book order (`class_member_tab.sort_order`, then joining order); each member's `notes` follow that student's own order (the order of their `book-data/get`: `sort_order`, then creation). At most 40 notes per member are returned; `truncated` is true and `approved_total` is the real number when a student has more, so the cut is never silent. A member with no page, or whose page is empty (no profile text, no photo, no approved note), has `linked: false`, `yearbook: null`, `profile: null` and no notes.
-        `front_pages` and `back_pages` are the class pages (intro, teachers, events); they are empty arrays until the class pages arrive (T-128).
+        `front_pages` and `back_pages` are the class pages (intro, teachers, events, ...) of `class-page/*`, each in book order; `body` is plain text, to be shown as text. The order of the members and of the pages is set with `/api/class-book/update-order`.
         **Size.** At most 60 members, 40 notes each. A realistic full class (60 members, 40 notes of about 230 characters, two photos each) is about 1.2 MB (1.14 MiB, `TestClassBookSizeOfAFullClass`), under the 4 MiB target; see docs/book-export.md "Class book".
         **Photos.** Fetch the images with `GET /api/media/get-content?id=&variant=print`. An admin can open exactly the `profile.photo_media_id` and the `photo_ids` of approved notes returned here; any other photo id is `ERROR_NOT_FOUND`, exactly as for a photo that does not exist.
         A member who is not an admin (a student) gets `ERROR_FORBIDDEN`; a non-member, a member of another class only, and an unknown class get `ERROR_NOT_FOUND`.
@@ -2328,6 +2328,254 @@ paths:
         "401": {$ref: "#/components/responses/ApiUnauthorized"}
         "403": {$ref: "#/components/responses/ApiForbidden"}
         "404": {$ref: "#/components/responses/ApiNotFound"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/class-page/create:
+    post:
+      operationId: createClassPage
+      tags: [class]
+      summary: Add a class page (admin)
+      description: >-
+        Called by an admin of the class (the class pages screen). A class page is a page for the whole class, such as the intro or the teachers, printed before (`front`) or after (`back`) the students' pages. The new page goes to the end of its placement; change the order with `/api/class-book/update-order`.
+        `kind` is `intro`, `teachers`, `events`, `superlatives` or `custom`. `title` is 1 to 120 characters. `body` is **plain text**, 0 to 4000 characters, newlines kept; it is stored and returned as typed (after the usual text clean-up: Unicode NFC, surrounding spaces trimmed, `\r\n` as `\n`) and is never interpreted as HTML by the server. Show it as text, never as markup. A class has at most 30 pages: the 31st is `ERROR_LIMIT_REACHED` (409), counted under the class lock so parallel creates cannot exceed it.
+        A member who is not an admin gets `ERROR_FORBIDDEN`; a non-member and an unknown class get `ERROR_NOT_FOUND`. Not idempotent. A request with the session cookie must come from an allowed Origin.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: "The class does not exist or the caller is not a member of it; the two cannot be told apart."}
+        - {code: ERROR_FORBIDDEN, description: "The caller is a member but not an admin of this class."}
+        - {code: ERROR_INVALID_KIND, description: "Field `kind`: not one of intro, teachers, events, superlatives, custom."}
+        - {code: ERROR_INVALID_TITLE, description: "Field `title`: empty, longer than 120 characters, or holding a control character."}
+        - {code: ERROR_INVALID_BODY, description: "Field `body`: longer than 4000 characters, or holding a control character other than a newline."}
+        - {code: ERROR_INVALID_PLACEMENT, description: "Field `placement`: not `front` or `back`."}
+        - {code: ERROR_LIMIT_REACHED, description: The class already has 30 pages.}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+        - {code: ERROR_RATE_LIMITED, description: "More than 120 class writes by this user in an hour. Retry after `Retry-After`."}
+        - {code: ERROR_UNAVAILABLE, description: "The write rate limiter in Redis did not answer, so the write fails closed. Retry after `Retry-After`."}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/ClassPageCreateRequest"}
+            examples:
+              example:
+                value: {class_id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, kind: intro, title: "Gửi cả lớp", body: "Ba năm qua thật đáng nhớ.", placement: front}
+      responses:
+        "200":
+          description: The new page.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ClassPageResponse"}
+              examples:
+                ok:
+                  value:
+                    status: OK
+                    data: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2P, kind: intro, title: "Gửi cả lớp", body: "Ba năm qua thật đáng nhớ.\nChúc cả lớp thành công.", placement: front, created_at: 1760000000000, updated_at: 1760000000000}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "409": {$ref: "#/components/responses/ApiConflict"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "429": {$ref: "#/components/responses/ApiRateLimited"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/class-page/update:
+    post:
+      operationId: updateClassPage
+      tags: [class]
+      summary: Change a class page (admin)
+      description: >-
+        Called by an admin of the class. Replaces `kind`, `title`, `body` and `placement` (same rules as create). A page that stays on its side keeps its place; a page that moves to the other side goes to the end of it. A page id that is not in this class (an id of another class included) is `ERROR_NOT_FOUND` and nothing changes.
+        A member who is not an admin gets `ERROR_FORBIDDEN`; a non-member and an unknown class get `ERROR_NOT_FOUND`. A request with the session cookie must come from an allowed Origin.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: "The class does not exist or the caller is not a member of it; the two cannot be told apart."}
+        - {code: ERROR_FORBIDDEN, description: "The caller is a member but not an admin of this class."}
+        - {code: ERROR_NOT_FOUND, description: "(Also) the page id is not a page of this class."}
+        - {code: ERROR_INVALID_KIND, description: "Field `kind`: not one of intro, teachers, events, superlatives, custom."}
+        - {code: ERROR_INVALID_TITLE, description: "Field `title`: empty, longer than 120 characters, or holding a control character."}
+        - {code: ERROR_INVALID_BODY, description: "Field `body`: longer than 4000 characters, or holding a control character other than a newline."}
+        - {code: ERROR_INVALID_PLACEMENT, description: "Field `placement`: not `front` or `back`."}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+        - {code: ERROR_RATE_LIMITED, description: "More than 120 class writes by this user in an hour. Retry after `Retry-After`."}
+        - {code: ERROR_UNAVAILABLE, description: "The write rate limiter in Redis did not answer, so the write fails closed. Retry after `Retry-After`."}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/ClassPageUpdateRequest"}
+            examples:
+              example:
+                value: {class_id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, id: 01K7Q8W3ZR5N2M4X6V8B0C1D2P, kind: intro, title: "Gửi cả lớp", body: "Ba năm qua thật đáng nhớ.", placement: front}
+      responses:
+        "200":
+          description: The page as it is now.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ClassPageResponse"}
+              examples:
+                ok:
+                  value:
+                    status: OK
+                    data: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2P, kind: intro, title: "Gửi cả lớp", body: "Ba năm qua thật đáng nhớ.\nChúc cả lớp thành công.", placement: front, created_at: 1760000000000, updated_at: 1760000000000}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "429": {$ref: "#/components/responses/ApiRateLimited"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/class-page/delete:
+    post:
+      operationId: deleteClassPage
+      tags: [class]
+      summary: Delete a class page (admin)
+      description: >-
+        Called by an admin of the class. A page id that is not in this class (an id of another class included), or that was already deleted, is `ERROR_NOT_FOUND` and nothing changes.
+        A member who is not an admin gets `ERROR_FORBIDDEN`; a non-member and an unknown class get `ERROR_NOT_FOUND`. A request with the session cookie must come from an allowed Origin.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: "The class does not exist or the caller is not a member of it; the two cannot be told apart."}
+        - {code: ERROR_FORBIDDEN, description: "The caller is a member but not an admin of this class."}
+        - {code: ERROR_NOT_FOUND, description: "(Also) the page id is not a page of this class."}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+        - {code: ERROR_RATE_LIMITED, description: "More than 120 class writes by this user in an hour. Retry after `Retry-After`."}
+        - {code: ERROR_UNAVAILABLE, description: "The write rate limiter in Redis did not answer, so the write fails closed. Retry after `Retry-After`."}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/ClassPageDeleteRequest"}
+            examples:
+              example:
+                value: {class_id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, id: 01K7Q8W3ZR5N2M4X6V8B0C1D2P}
+      responses:
+        "200":
+          description: The page is deleted.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/EmptyResponse"}
+              examples:
+                ok:
+                  value:
+                    {status: OK, data: {}}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "429": {$ref: "#/components/responses/ApiRateLimited"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/class-page/get-list:
+    get:
+      operationId: listClassPages
+      tags: [class]
+      summary: List the class pages (admin)
+      description: >-
+        Called by an admin of the class. Returns every page (at most 30, so one answer and an empty `next_id`): the `front` pages first, then the `back` pages, each in book order.
+        A member who is not an admin gets `ERROR_FORBIDDEN`; a non-member and an unknown class get `ERROR_NOT_FOUND`.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: "The class does not exist or the caller is not a member of it; the two cannot be told apart."}
+        - {code: ERROR_FORBIDDEN, description: "The caller is a member but not an admin of this class."}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
+      security:
+        - sessionCookie: []
+      parameters:
+        - {name: class_id, in: query, required: true, schema: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$'}, description: Class ULID.}
+      responses:
+        "200":
+          description: The pages.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ClassPageListResponse"}
+              examples:
+                ok:
+                  value:
+                    status: OK
+                    data:
+                      items:
+                        - {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2P, kind: intro, title: "Gửi cả lớp", body: "Ba năm qua thật đáng nhớ.\nChúc cả lớp thành công.", placement: front, created_at: 1760000000000, updated_at: 1760000000000}
+                      next_id: ""
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/class-book/update-order:
+    post:
+      operationId: updateClassBookOrder
+      tags: [class]
+      summary: Order the members and the class pages (admin)
+      description: >-
+        Called by an admin of the class (the class book screen). The body is the whole new order: `member_ids` (every member, in book order), `front_page_ids` and `back_page_ids` (every page of that placement, in book order). Each list must be a **permutation of the current set**: a missing, extra, repeated, malformed or foreign id (an id of another class, or a back page in the front list) is `ERROR_INVALID_MEMBER_IDS`, `ERROR_INVALID_FRONT_PAGE_IDS` or `ERROR_INVALID_BACK_PAGE_IDS` (400) and nothing changes. A class that has no pages on a side sends `[]` (or leaves the field out) for it. A member who joined, was removed, or a page that was added or deleted since the screen loaded makes the list stale: load `class-book/get` again.
+        The three lists are applied in one transaction under the class lock, so two admins ordering at the same moment end in one of the two orders, never a mix. `class-book/get` and `class-page/get-list` follow the order at once. A page cannot change side here: use `class-page/update`. A member who joins later goes to the end of the book.
+        A member who is not an admin gets `ERROR_FORBIDDEN`; a non-member and an unknown class get `ERROR_NOT_FOUND`. A request with the session cookie must come from an allowed Origin.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: "The class does not exist or the caller is not a member of it; the two cannot be told apart."}
+        - {code: ERROR_FORBIDDEN, description: "The caller is a member but not an admin of this class."}
+        - {code: ERROR_INVALID_MEMBER_IDS, description: "Field `member_ids`: not exactly the current members, each once (at most 60)."}
+        - {code: ERROR_INVALID_FRONT_PAGE_IDS, description: "Field `front_page_ids`: not exactly the current front pages, each once (at most 30)."}
+        - {code: ERROR_INVALID_BACK_PAGE_IDS, description: "Field `back_page_ids`: not exactly the current back pages, each once (at most 30)."}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+        - {code: ERROR_RATE_LIMITED, description: "More than 120 class writes by this user in an hour. Retry after `Retry-After`."}
+        - {code: ERROR_UNAVAILABLE, description: "The write rate limiter in Redis did not answer, so the write fails closed. Retry after `Retry-After`."}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/ClassBookOrderRequest"}
+            examples:
+              example:
+                value:
+                  class_id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E
+                  member_ids: [01K7Q8W3ZR5N2M4X6V8B0C1D2H, 01K7Q8W3ZR5N2M4X6V8B0C1D2G]
+                  front_page_ids: [01K7Q8W3ZR5N2M4X6V8B0C1D2P]
+                  back_page_ids: []
+      responses:
+        "200":
+          description: The new order is stored.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/EmptyResponse"}
+              examples:
+                ok:
+                  value:
+                    {status: OK, data: {}}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "429": {$ref: "#/components/responses/ApiRateLimited"}
         "500": {$ref: "#/components/responses/ApiInternal"}
         "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
   /api/class-invite/create:
@@ -3550,8 +3798,8 @@ components:
                 language: {type: string, enum: [en, vi], description: "Language of the class: `en` or `vi`."}
             front_pages:
               type: array
-              description: Class pages placed before the students' pages. Empty until the class pages arrive (T-128).
-              items: {type: object}
+              description: "The class pages placed before the students' pages (`placement` front), in book order."
+              items: {$ref: "#/components/schemas/ClassPage"}
             members:
               type: array
               description: "Every member, in book order (`sort_order`, then joining order), at most 60."
@@ -3559,8 +3807,79 @@ components:
               items: {$ref: "#/components/schemas/ClassBookMember"}
             back_pages:
               type: array
-              description: Class pages placed after the students' pages. Empty until the class pages arrive (T-128).
-              items: {type: object}
+              description: "The class pages placed after the students' pages (`placement` back), in book order."
+              items: {$ref: "#/components/schemas/ClassPage"}
+    ClassPage:
+      type: object
+      description: A class page (intro, teachers, ...). Plain text, never HTML.
+      required: [id, kind, title, body, placement, created_at, updated_at]
+      properties:
+        id: {type: string, description: Page ULID.}
+        kind: {type: string, enum: [intro, teachers, events, superlatives, custom], description: What the page is.}
+        title: {type: string, minLength: 1, maxLength: 120, description: "1 to 120 characters."}
+        body: {type: string, maxLength: 4000, description: "Plain text, 0 to 4000 characters, newlines kept. Stored and returned as typed; show it as text, never as markup."}
+        placement: {type: string, enum: [front, back], description: "`front` is printed before the students' pages, `back` after them."}
+        created_at: {type: integer, format: int64, description: "Unix ms."}
+        updated_at: {type: integer, format: int64, description: "Unix ms."}
+    ClassPageCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [class_id, kind, title, placement]
+      properties:
+        class_id: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$', description: "Required. ULID of the class."}
+        kind: {type: string, enum: [intro, teachers, events, superlatives, custom], description: Required.}
+        title: {type: string, minLength: 1, maxLength: 120, description: "Required. 1 to 120 characters, one line."}
+        body: {type: string, maxLength: 4000, description: "Plain text, 0 to 4000 characters, newlines kept. An absent body is empty."}
+        placement: {type: string, enum: [front, back], description: "Required. `front` or `back`."}
+    ClassPageUpdateRequest:
+      type: object
+      additionalProperties: false
+      required: [class_id, id, kind, title, placement]
+      properties:
+        class_id: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$', description: "Required. ULID of the class."}
+        id: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$', description: "Required. ULID of the page to change."}
+        kind: {type: string, enum: [intro, teachers, events, superlatives, custom], description: Required.}
+        title: {type: string, minLength: 1, maxLength: 120, description: "Required. 1 to 120 characters, one line."}
+        body: {type: string, maxLength: 4000, description: "Plain text, 0 to 4000 characters, newlines kept. An absent body is empty."}
+        placement: {type: string, enum: [front, back], description: "Required. `front` or `back`."}
+    ClassPageDeleteRequest:
+      type: object
+      additionalProperties: false
+      required: [class_id, id]
+      properties:
+        class_id: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$', description: "Required. ULID of the class."}
+        id: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$', description: "Required. ULID of the page."}
+    ClassPageResponse:
+      type: object
+      required: [status, data]
+      properties:
+        status: {type: string, const: OK, description: Always `OK` on success.}
+        data: {$ref: "#/components/schemas/ClassPage"}
+    ClassPageListResponse:
+      type: object
+      required: [status, data]
+      properties:
+        status: {type: string, const: OK, description: Always `OK` on success.}
+        data:
+          type: object
+          description: All the class pages (at most 30).
+          required: [items, next_id]
+          properties:
+            items:
+              type: array
+              maxItems: 30
+              description: "The front pages, then the back pages, each in book order."
+              items: {$ref: "#/components/schemas/ClassPage"}
+            next_id: {type: string, description: "Always the empty string: a class has at most 30 pages, so there is one page of results."}
+    ClassBookOrderRequest:
+      type: object
+      additionalProperties: false
+      required: [class_id, member_ids]
+      properties:
+        class_id: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$', description: "Required. ULID of the class."}
+        member_ids: {type: array, maxItems: 60, items: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$'}, description: "Required. Every member of the class (the `member_id` of `class-book/get`), each once, in the new book order."}
+        front_page_ids: {type: array, maxItems: 30, items: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$'}, description: "Every front page, each once, in the new order. Empty or absent when there are none."}
+        back_page_ids: {type: array, maxItems: 30, items: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$'}, description: "Every back page, each once, in the new order. Empty or absent when there are none."}
     ClassBookMember:
       type: object
       description: One student's pages. Approved content only.

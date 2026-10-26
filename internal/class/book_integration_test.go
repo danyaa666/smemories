@@ -694,7 +694,7 @@ func TestClassBookQueriesUseIndexes(t *testing.T) {
 
 // routesWithIDs lists the routes of api/openapi.yaml that take a yearbook, note or media id (a query parameter or a request body
 // property named id, ids, yearbook_id, media_id or note_id), without /api/. The namespaces whose id is not one of those are skipped:
-// auth and user (no ids), template, print-feedback, the public routes (a link token), class and class-invite (their own ids; the class
+// auth and user (no ids), template, print-feedback, the public routes (a link token), class, class-invite and class-page (their own ids; the class
 // matrix is TestPermissionMatrix and the invite matrix is in invite_integration_test.go).
 func routesWithIDs(t *testing.T) []string {
 	t.Helper()
@@ -744,7 +744,7 @@ func routesWithIDs(t *testing.T) []string {
 		}
 		return false
 	}
-	skip := []string{"auth/", "user/", "class/", "class-invite/", "template/", "print-feedback/", "public-"}
+	skip := []string{"auth/", "user/", "class/", "class-invite/", "class-page/", "template/", "print-feedback/", "public-"}
 	var out []string
 	for path, item := range doc["paths"].(map[string]any) {
 		route := strings.TrimPrefix(path, "/api/")

@@ -62,13 +62,13 @@ response is `Cache-Control: no-store`, and neither the text nor a link is ever l
 
 `GET /api/class-book/get?class_id=` (package `internal/class`, session, class admin only) is the data of the class book for the browser renderer, the class counterpart of
 `book-data/get`: `{class, front_pages, members[], back_pages}`; each member is `{member_id, name, linked, yearbook{template_id, page_size, language}, profile, notes[],
-note_count, approved_total, truncated}`. Permissions and privacy: [class-permissions.md](class-permissions.md). The class pages (T-128) arrive in the two arrays; until then they are empty.
+note_count, approved_total, truncated}`. Permissions and privacy: [class-permissions.md](class-permissions.md). The class pages (T-127) are in the two arrays, each `{id, kind, title, body, placement, created_at, updated_at}`, `body` plain text to be shown as text; an empty side is `[]`.
 
 - **Budget.** The book keeps the page budget of about 120 pages: at most **60 members and 40 approved notes per member** (`notes.MaxClassBookNotes`). A student with more approved notes is cut at 40 in
   their own order, with `truncated: true` and the real `approved_total` (never silent).
 - **Cost.** One query for the class, one for the members, then per linked member the book, its profile (and the photo ids) and the notes with their photo links: a handful of queries per member,
   none per note (`TestClassBookQueryCountIsPerMember`). No limiter: it is an admin read, and the 60 x 5 queries are indexed (`TestClassBookQueriesUseIndexes`).
-- **Size.** Measured by `TestClassBookFullClass` (60 members x 40 notes of about 230 characters, two photo ids each): **1.14 MiB** (`TestClassBookSizeOfAFullClass` computes it without a database; the integration test fails above 4 MiB on the real answer). The budget is 4 MiB.
+- **Size.** Measured by `TestClassBookFullClass` (60 members x 40 notes of about 230 characters, two photo ids each): **1.14 MiB** (`TestClassBookSizeOfAFullClass` computes it without a database; the integration test fails above 4 MiB on the real answer). The class pages add at most 30 x (4000-character body + 120-character title), at worst about 0.8 MiB when every character needs a JSON escape (the unit test includes them), so a full class stays under 2 MiB. The budget is 4 MiB.
   The theoretical worst case is far larger: one note may hold about 4.7 thousand characters of answers (up to 3 bytes each in Vietnamese) and a signature of up to 3 KiB, so 60 x 40 maximal notes would be about 40 MiB. Nobody writes that
   (the cap of 500 characters on five of the nine fields and 2000 on the message is a ceiling, a note is typically a few hundred bytes), and a book of 2400 maximal notes is not 120 pages either; the 4 MiB target holds for
   realistic notes, not as a hard limit. If it ever matters, the lever is the per-member cap (`notes.MaxClassBookNotes`), not a response-size check.

@@ -233,7 +233,7 @@ func (s *Store) update(ctx context.Context, userID uint64, publicID string, in *
 	})
 }
 
-// remove deletes the class, its member rows and its invites (admin only). Yearbooks are never touched: a member row only points at one.
+// remove deletes the class, its member rows, invites and pages (admin only). Yearbooks are never touched: a member row only points at one.
 func (s *Store) remove(ctx context.Context, userID uint64, publicID string) error {
 	return s.inTx(ctx, func(tx *sql.Tx) error {
 		classID, _, err := lockMembership(ctx, tx, userID, publicID, RoleAdmin)
@@ -245,6 +245,9 @@ func (s *Store) remove(ctx context.Context, userID uint64, publicID string) erro
 		}
 		if _, err := tx.ExecContext(ctx, `DELETE FROM class_invite_tab WHERE class_id = ?`, classID); err != nil {
 			return dbErr(err, "delete invites")
+		}
+		if _, err := tx.ExecContext(ctx, `DELETE FROM class_page_tab WHERE class_id = ?`, classID); err != nil {
+			return dbErr(err, "delete pages")
 		}
 		_, err = tx.ExecContext(ctx, `DELETE FROM class_tab WHERE id = ?`, classID)
 		return dbErr(err, "delete class")
