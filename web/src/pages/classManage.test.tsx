@@ -146,8 +146,8 @@ describe("edit and delete a class", () => {
 });
 
 describe("print link", () => {
-  it("points the admin to the book from the class and from the assemble screen", async () => {
-    mockApi({
+  it("points the admin to the book from the class and from the assemble screen, and the route opens", async () => {
+    const calls = mockApi({
       "GET /user/get-me": () => ok(user()),
       [CLASS]: ok(cls({ my_role: "admin" })),
       [`GET /class-member/get-list?class_id=${CID}`]: list([]),
@@ -169,12 +169,20 @@ describe("print link", () => {
     const link = await screen.findByRole("link", { name: "Print the class book" });
     expect(link).toHaveAttribute("href", `/classes/${CID}/book`);
     await userEvent.click(screen.getByRole("link", { name: "Assemble the class book" }));
-    expect(await screen.findByRole("link", { name: "Print the class book" })).toHaveAttribute(
-      "href",
-      `/classes/${CID}/book`,
-    );
+    const printLink = await screen.findByRole("link", { name: "Print the class book" });
+    expect(printLink).toHaveAttribute("href", `/classes/${CID}/book`);
     // the two plain links get a 44 px target through these classes (styles.css)
     expect(screen.getByRole("link", { name: "Back to the class" })).toHaveClass("back-link");
+    await userEvent.click(printLink);
+    await waitFor(() => expect(where()).toBe(`/classes/${CID}/book`));
+    expect(
+      await screen.findByRole("heading", { name: "Print the class book" }),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(document.querySelector('section[data-page="class-cover"]')).not.toBeNull(),
+    );
+    expect(screen.queryByRole("heading", { name: "Page not found" })).not.toBeInTheDocument();
+    expect(calls.some((c) => c.path.startsWith("/class-book/get"))).toBe(true);
   });
 });
 

@@ -588,6 +588,7 @@
     "unnamed": "Bạn chưa có tên",
     "overBudget": "Cuốn sách này có {{pages}} trang, nhiều hơn {{budget}} trang dự kiến cho sách lớp. Vẫn in được, nhưng hãy hỏi tiệm in về chi phí.",
     "noPage": "Các bạn chưa có trang nên không có gì được in cho các bạn này ({{count}}): {{names}}.",
+    "coverCut": "Tên lớp quá dài so với bìa và bị cắt khi in.",
     "cutPages": "Các trang của lớp quá dài so với chỗ có và bị cắt khi in ({{count}}): {{titles}}.",
     "issuesTitle": "Số bạn có trang bị cắt: {{count}}",
     "issuesHelp": "Những nội dung đã duyệt này không vừa hết khi in. Bạn đó có thể ẩn bớt một lời nhắn, hoặc nhờ bạn bè viết ngắn hơn.",

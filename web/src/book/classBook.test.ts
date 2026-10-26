@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ClassBook, ClassBookMember } from "../api/classBook";
 import {
+  COVER_KEY,
   classPageCount,
   classSummary,
   commonSize,
@@ -94,6 +95,14 @@ describe("what the summary names", () => {
       ["S3", 0, 1, 0],
       ["S4", 0, 0, 1],
     ]);
+  });
+  it("flags a class name that is cut off on the cover", () => {
+    const b = book([m(1)]);
+    expect(classSummary(b, "A5", { [COVER_KEY]: cut }).coverCut).toBe(true);
+    expect(classSummary(b, "A5", {}).coverCut).toBe(false);
+    expect(classSummary(b, "A5", { [COVER_KEY]: { state: "ok", base: 56, px: 56 } }).coverCut).toBe(
+      false,
+    );
   });
   it("names a class page that is cut off", () => {
     const b = book([m(1)]);

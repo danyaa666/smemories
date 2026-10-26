@@ -588,6 +588,7 @@
     "unnamed": "Student without a name",
     "overBudget": "This book has {{pages}} pages, more than the {{budget}} pages the class book is planned for. It still prints, but check the cost with your printer.",
     "noPage": "Students with no page, so nothing is printed for them ({{count}}): {{names}}.",
+    "coverCut": "The class name is too long for the cover and is cut off in the printout.",
     "cutPages": "Class pages that are too long for their space and are cut off in the printout ({{count}}): {{titles}}.",
     "issuesTitle": "Students whose pages are cut: {{count}}",
     "issuesHelp": "These approved texts do not all fit in the printout. The student can hide a note, or ask a friend to write a shorter one.",

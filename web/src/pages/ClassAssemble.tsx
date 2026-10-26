@@ -1,16 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useParams } from "react-router-dom";
-import {
-  deleteClassPage,
-  getClass,
-  getClassBook,
-  updateOrder,
-  type ClassPage,
-} from "../api/classes";
+import { Link } from "react-router-dom";
+import { deleteClassPage, getClassBook, updateOrder, type ClassPage } from "../api/classes";
 import { ApiError } from "../api/client";
 import { errorText } from "../auth/errors";
+import { AdminOnly } from "../classes/AdminOnly";
 import { classErrorText } from "../classes/classErrors";
 import { OrderList, type OrderItem } from "../classes/OrderList";
 import { PageEditor } from "../classes/PageEditor";
@@ -18,28 +13,10 @@ import { orderOf, orderPayload, reconcile, sameOrder, type BookOrder } from "../
 import { Banner } from "../components/ui/Banner";
 import { Button, buttonClass } from "../components/ui/Button";
 import { Dialog } from "../components/ui/Dialog";
-import { NotFound } from "./NotFound";
 
 /** /classes/:id/assemble. Admins only: a student (or a stranger) gets the same not-found screen as any unknown address. */
 export function ClassAssemble() {
-  const { t } = useTranslation();
-  const { id = "" } = useParams();
-  const q = useQuery({ queryKey: ["class", id], queryFn: () => getClass(id) });
-  if (q.isPending) return <p role="status">{t("auth.loading")}</p>;
-  if (q.isError) {
-    if (q.error instanceof ApiError && (q.error.status === 404 || q.error.status === 400))
-      return <NotFound />;
-    return (
-      <>
-        <p role="alert" className="error">
-          {errorText(t, q.error)}
-        </p>
-        <Button onClick={() => void q.refetch()}>{t("auth.retry")}</Button>
-      </>
-    );
-  }
-  if (q.data.my_role !== "admin") return <NotFound />;
-  return <Assemble classId={q.data.id} />;
+  return <AdminOnly>{(classId) => <Assemble classId={classId} />}</AdminOnly>;
 }
 
 function Assemble({ classId }: { classId: string }) {

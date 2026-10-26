@@ -11,6 +11,8 @@ export const PAGE_BUDGET = 120;
 
 /** The keys of the fit report: one prefix per student, one per class page. */
 export const memberPrefix = (m: ClassBookMember) => `m:${m.member_id}:`;
+/** The fit key of the class name on the cover. */
+export const COVER_KEY = "cc:title";
 export const pageKey = (id: string) => `cp:${id}`;
 
 /** The student's own yearbook as the existing templates want it (`tpl.Profile`, `tpl.Notes`); null when nothing is printed for them. */
@@ -88,6 +90,8 @@ export type ClassSummary = {
   noPage: ClassBookMember[];
   /** Students whose notes were cut by the limit or by the template's floor, or whose profile text was cut. */
   issues: StudentIssue[];
+  /** The class name on the cover is cut off at the smallest size. */
+  coverCut: boolean;
   /** Class pages whose text is cut off at the smallest size. */
   cutPages: ClassBook["front_pages"];
 };
@@ -126,5 +130,5 @@ export function classSummary(
   const cutPages = [...book.front_pages, ...book.back_pages].filter(
     (p) => states[pageKey(p.id)]?.state === "overflow",
   );
-  return { noPage, issues, cutPages };
+  return { noPage, issues, coverCut: states[COVER_KEY]?.state === "overflow", cutPages };
 }
