@@ -89,9 +89,9 @@ var userTables = []string{"user_identity_tab", "user_tab"}
 // globalTables belong to no book and no user (anonymous counters, T-061), so a book delete must leave them alone too.
 var globalTables = []string{"print_feedback_tab"}
 
-// classTables are the class yearbook tables (T-026, T-125). A book delete keeps them: it only clears the link from a member row to the
+// classTables are the class yearbook tables (T-026, T-125, T-127). A book delete keeps them: it only clears the link from a member row to the
 // deleted book (class_member_tab.yearbook_id), which internal/class tests (TestDeletingTheYearbookClearsTheLink).
-var classTables = []string{"class_invite_tab", "class_member_tab", "class_tab"}
+var classTables = []string{"class_invite_tab", "class_member_tab", "class_page_tab", "class_tab"}
 
 // tabTables lists the *_tab tables of the test database except userTables, globalTables and classTables, which must all exist.
 func (e *env) tabTables() []string {

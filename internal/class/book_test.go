@@ -108,7 +108,7 @@ func TestClassBookSizeOfAFullClass(t *testing.T) {
 	msg := strings.Repeat("Lời nhắn thân thương. ", 10)
 	id := "01K7Q8W3ZR5N2M4X6V8B0C1D2E"
 	photo := id
-	b := ClassBook{Class: BookClass{ID: id, Name: "Lớp 12A1", Language: "vi"}, FrontPages: []any{}, BackPages: []any{}}
+	b := ClassBook{Class: BookClass{ID: id, Name: "Lớp 12A1", Language: "vi"}, FrontPages: []Page{}, BackPages: []Page{}}
 	for range MaxMembers {
 		m := BookMember{MemberID: id, Name: "Nguyễn Thị Hồng", Linked: true, Yearbook: &BookStyle{PageSize: "A4", Language: "vi"},
 			Profile: &bookdata.ProfileInfo{FullName: "Nguyễn Thị Hồng", Quote: msg, PhotoMediaID: &photo}, NoteCount: notes.MaxClassBookNotes, ApprovedTotal: notes.MaxClassBookNotes}
@@ -117,6 +117,11 @@ func TestClassBookSizeOfAFullClass(t *testing.T) {
 			m.Notes = append(m.Notes, &notes.BookNote{ID: id, Answers: ans, PhotoIDs: []string{id, id}})
 		}
 		b.Members = append(b.Members, m)
+	}
+	// T-127: the 30 pages at their longest; "<" is the worst character, JSON writes it as the six bytes \u003c.
+	worst := Page{ID: id, Kind: "custom", Title: strings.Repeat("<", maxPageTitle), Body: strings.Repeat("<", maxPageBody), Placement: PlacementFront}
+	for range MaxPages {
+		b.FrontPages = append(b.FrontPages, worst)
 	}
 	out, _ := json.Marshal(b)
 	t.Logf("full class book: %d bytes (%.2f MiB)", len(out), float64(len(out))/(1<<20))

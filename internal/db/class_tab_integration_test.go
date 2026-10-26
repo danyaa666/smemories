@@ -4,6 +4,7 @@ package db_test
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/danyaa666/smemories/internal/db"
@@ -91,16 +92,55 @@ func TestMigrateClassInviteTable(t *testing.T) {
 	if err := invite("I3", "t3"); err != nil {
 		t.Error(err)
 	}
-	if err := db.MigrateDown(ctx, d); err != nil {
-		t.Fatalf("down: %v", err)
+	for i := 0; i < 10 && exists() != "0"; i++ { // newer migrations go down first
+		if err := db.MigrateDown(ctx, d); err != nil {
+			t.Fatalf("down: %v", err)
+		}
 	}
 	if exists() != "0" || dump(t, ctx, d, `SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'class_tab'`)[0] != "1" {
-		t.Fatal("down must drop only class_invite_tab")
+		t.Fatal("down must drop class_invite_tab and keep class_tab")
 	}
 	if err := db.MigrateUp(ctx, d); err != nil {
 		t.Fatalf("up again: %v", err)
 	}
 	if exists() != "1" {
+		t.Fatal("up again did not create the table")
+	}
+}
+
+// T-127 (E07): the class page table keeps one row per public id, takes a 4000-character body of any text, and goes down and up on its own.
+func TestMigrateClassPageTable(t *testing.T) {
+	ctx := context.Background()
+	d := dbtest.New(t)
+	exists := func(table string) string {
+		return dump(t, ctx, d, `SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '`+table+`'`)[0]
+	}
+	page := func(pid, body string) error {
+		_, err := d.ExecContext(ctx, `INSERT INTO class_page_tab (public_id, class_id, kind, title, body, placement, sort_order, created_at, updated_at) VALUES (?,1,'intro','Title',?,'front',1,1,1)`, pid, body)
+		return err
+	}
+	if exists("class_page_tab") != "1" {
+		t.Fatal("the test database lacks class_page_tab")
+	}
+	if err := page("P1", strings.Repeat("🎓", 4000)); err != nil { // 4000 four-byte characters
+		t.Fatal(err)
+	}
+	if err := page("P1", "again"); err == nil {
+		t.Error("two pages with the same public id")
+	}
+	if got := dump(t, ctx, d, `SELECT CHAR_LENGTH(body) FROM class_page_tab WHERE public_id = 'P1'`)[0]; got != "4000" {
+		t.Errorf("the body was cut: %s characters", got)
+	}
+	if err := db.MigrateDown(ctx, d); err != nil {
+		t.Fatalf("down: %v", err)
+	}
+	if exists("class_page_tab") != "0" || exists("class_invite_tab") != "1" {
+		t.Fatal("down must drop only class_page_tab")
+	}
+	if err := db.MigrateUp(ctx, d); err != nil {
+		t.Fatalf("up again: %v", err)
+	}
+	if exists("class_page_tab") != "1" {
 		t.Fatal("up again did not create the table")
 	}
 }

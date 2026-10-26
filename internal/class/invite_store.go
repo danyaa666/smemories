@@ -167,16 +167,17 @@ func (s *Store) accept(ctx context.Context, userID uint64, hash [sha256.Size]byt
 		var member uint64
 		err = tx.QueryRowContext(ctx, `SELECT id FROM class_member_tab WHERE class_id = ? AND user_id = ? FOR UPDATE`, classRow, userID).Scan(&member)
 		if errors.Is(err, sql.ErrNoRows) {
-			var n int
-			if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM class_member_tab WHERE class_id = ? FOR UPDATE`, classRow).Scan(&n); err != nil {
+			// A new member goes to the end of the book order, also after an admin has ordered the others (T-127).
+			var n, last int
+			if err := tx.QueryRowContext(ctx, `SELECT COUNT(*), COALESCE(MAX(sort_order), 0) FROM class_member_tab WHERE class_id = ? FOR UPDATE`, classRow).Scan(&n, &last); err != nil {
 				return dbErr(err, "count members")
 			}
 			if n >= MaxMembers {
 				return ErrClassFull
 			}
 			_, err = tx.ExecContext(ctx,
-				`INSERT INTO class_member_tab (public_id, class_id, user_id, role, joined_at, created_at, updated_at) VALUES (?,?,?,?,?,?,?)`,
-				memberID, classRow, userID, RoleStudent, nowMs, nowMs, nowMs)
+				`INSERT INTO class_member_tab (public_id, class_id, user_id, role, sort_order, joined_at, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?)`,
+				memberID, classRow, userID, RoleStudent, last+1, nowMs, nowMs, nowMs)
 			if err != nil {
 				return dbErr(err, "insert member")
 			}

@@ -41,6 +41,11 @@ func (h *Handler) Routes(mux *http.ServeMux) {
 	mux.Handle("POST /api/class-member/leave", write(h.leave))
 	mux.Handle("POST /api/class-member/set-book", write(h.setBook))
 	mux.Handle("GET /api/class-book/get", read(h.book))
+	mux.Handle("POST /api/class-book/update-order", write(h.updateOrder))
+	mux.Handle("POST /api/class-page/create", write(h.createPage))
+	mux.Handle("POST /api/class-page/update", write(h.updatePage))
+	mux.Handle("POST /api/class-page/delete", write(h.deletePage))
+	mux.Handle("GET /api/class-page/get-list", read(h.pages))
 	mux.Handle("POST /api/class-invite/create", write(h.createInvite))
 	mux.Handle("GET /api/class-invite/get-list", read(h.invites))
 	mux.Handle("POST /api/class-invite/revoke", write(h.revokeInvite))
@@ -80,6 +85,19 @@ type (
 	revokeInviteInput struct {
 		ClassID string `json:"class_id"`
 		ID      string `json:"id"`
+	}
+	createPageInput struct {
+		ClassID string `json:"class_id"`
+		PageInput
+	}
+	updatePageInput struct {
+		ClassID string `json:"class_id"`
+		ID      string `json:"id"`
+		PageInput
+	}
+	orderInput struct {
+		ClassID string `json:"class_id"`
+		OrderInput
 	}
 	tokenInput struct {
 		Token string `json:"token"`
@@ -240,6 +258,63 @@ func (h *Handler) book(w http.ResponseWriter, r *http.Request) {
 	if id := r.URL.Query().Get("class_id"); validID(w, r, id, "class_id") {
 		b, err := h.svc.Book(r.Context(), u.InternalID, id)
 		respond(w, r, b, err)
+	}
+}
+
+func (h *Handler) pages(w http.ResponseWriter, r *http.Request) {
+	u, ok := auth.MustUser(w, r)
+	if !ok {
+		return
+	}
+	if id := r.URL.Query().Get("class_id"); validID(w, r, id, "class_id") {
+		items, err := h.svc.Pages(r.Context(), u.InternalID, id)
+		respond(w, r, httpx.Page[Page]{Items: items}, err) // at most MaxPages: one page, next_id stays empty
+	}
+}
+
+func (h *Handler) createPage(w http.ResponseWriter, r *http.Request) {
+	u, ok := auth.MustUser(w, r)
+	if !ok {
+		return
+	}
+	var in createPageInput
+	if httpx.DecodeJSON(w, r, &in) && validID(w, r, in.ClassID, "class_id") {
+		p, err := h.svc.CreatePage(r.Context(), u.InternalID, in.ClassID, &in.PageInput)
+		respond(w, r, p, err)
+	}
+}
+
+func (h *Handler) updatePage(w http.ResponseWriter, r *http.Request) {
+	u, ok := auth.MustUser(w, r)
+	if !ok {
+		return
+	}
+	var in updatePageInput
+	if httpx.DecodeJSON(w, r, &in) && validID(w, r, in.ClassID, "class_id") && validID(w, r, in.ID, "id") {
+		p, err := h.svc.UpdatePage(r.Context(), u.InternalID, in.ClassID, in.ID, &in.PageInput)
+		respond(w, r, p, err)
+	}
+}
+
+func (h *Handler) deletePage(w http.ResponseWriter, r *http.Request) {
+	u, ok := auth.MustUser(w, r)
+	if !ok {
+		return
+	}
+	var in revokeInviteInput // {class_id, id}
+	if httpx.DecodeJSON(w, r, &in) && validID(w, r, in.ClassID, "class_id") && validID(w, r, in.ID, "id") {
+		respond(w, r, nil, h.svc.DeletePage(r.Context(), u.InternalID, in.ClassID, in.ID))
+	}
+}
+
+func (h *Handler) updateOrder(w http.ResponseWriter, r *http.Request) {
+	u, ok := auth.MustUser(w, r)
+	if !ok {
+		return
+	}
+	var in orderInput
+	if httpx.DecodeJSON(w, r, &in) && validID(w, r, in.ClassID, "class_id") {
+		respond(w, r, nil, h.svc.UpdateOrder(r.Context(), u.InternalID, in.ClassID, &in.OrderInput))
 	}
 }
 

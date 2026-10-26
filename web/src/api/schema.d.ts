@@ -993,11 +993,111 @@ export interface paths {
         };
         /**
          * Read the class book (admin)
-         * @description Called by an admin of the class (the class book screen, which lays out and prints the book in the browser). The book is assembled on every call from the members' own yearbooks: nothing is copied, so a note approved a moment ago is in the next answer and a note hidden a moment ago is gone. **Approved content only.** For each member who chose a class page (`class-member/set-book`) the answer holds the page's owner profile (the same shape as `book-data/get`, no birthday), the style of that yearbook (`template_id`, `page_size`, `language`) and its approved notes with their answers, signatures and photo ids. Never a pending or hidden note, a note-link token or label, an unapproved photo, the cover, an email or a user id, and nothing of another class. **Order.** `members` follow the book order (`class_member_tab.sort_order`, then joining order); each member's `notes` follow that student's own order (the order of their `book-data/get`: `sort_order`, then creation). At most 40 notes per member are returned; `truncated` is true and `approved_total` is the real number when a student has more, so the cut is never silent. A member with no page, or whose page is empty (no profile text, no photo, no approved note), has `linked: false`, `yearbook: null`, `profile: null` and no notes. `front_pages` and `back_pages` are the class pages (intro, teachers, events); they are empty arrays until the class pages arrive (T-128). **Size.** At most 60 members, 40 notes each. A realistic full class (60 members, 40 notes of about 230 characters, two photos each) is about 1.2 MB (1.14 MiB, `TestClassBookSizeOfAFullClass`), under the 4 MiB target; see docs/book-export.md "Class book". **Photos.** Fetch the images with `GET /api/media/get-content?id=&variant=print`. An admin can open exactly the `profile.photo_media_id` and the `photo_ids` of approved notes returned here; any other photo id is `ERROR_NOT_FOUND`, exactly as for a photo that does not exist. A member who is not an admin (a student) gets `ERROR_FORBIDDEN`; a non-member, a member of another class only, and an unknown class get `ERROR_NOT_FOUND`.
+         * @description Called by an admin of the class (the class book screen, which lays out and prints the book in the browser). The book is assembled on every call from the members' own yearbooks: nothing is copied, so a note approved a moment ago is in the next answer and a note hidden a moment ago is gone. **Approved content only.** For each member who chose a class page (`class-member/set-book`) the answer holds the page's owner profile (the same shape as `book-data/get`, no birthday), the style of that yearbook (`template_id`, `page_size`, `language`) and its approved notes with their answers, signatures and photo ids. Never a pending or hidden note, a note-link token or label, an unapproved photo, the cover, an email or a user id, and nothing of another class. **Order.** `members` follow the book order (`class_member_tab.sort_order`, then joining order); each member's `notes` follow that student's own order (the order of their `book-data/get`: `sort_order`, then creation). At most 40 notes per member are returned; `truncated` is true and `approved_total` is the real number when a student has more, so the cut is never silent. A member with no page, or whose page is empty (no profile text, no photo, no approved note), has `linked: false`, `yearbook: null`, `profile: null` and no notes. `front_pages` and `back_pages` are the class pages (intro, teachers, events, ...) of `class-page/*`, each in book order; `body` is plain text, to be shown as text. The order of the members and of the pages is set with `/api/class-book/update-order`. **Size.** At most 60 members, 40 notes each. A realistic full class (60 members, 40 notes of about 230 characters, two photos each) is about 1.2 MB (1.14 MiB, `TestClassBookSizeOfAFullClass`), under the 4 MiB target; see docs/book-export.md "Class book". **Photos.** Fetch the images with `GET /api/media/get-content?id=&variant=print`. An admin can open exactly the `profile.photo_media_id` and the `photo_ids` of approved notes returned here; any other photo id is `ERROR_NOT_FOUND`, exactly as for a photo that does not exist. A member who is not an admin (a student) gets `ERROR_FORBIDDEN`; a non-member, a member of another class only, and an unknown class get `ERROR_NOT_FOUND`.
          */
         get: operations["getClassBook"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/class-page/create": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add a class page (admin)
+         * @description Called by an admin of the class (the class pages screen). A class page is a page for the whole class, such as the intro or the teachers, printed before (`front`) or after (`back`) the students' pages. The new page goes to the end of its placement; change the order with `/api/class-book/update-order`. `kind` is `intro`, `teachers`, `events`, `superlatives` or `custom`. `title` is 1 to 120 characters. `body` is **plain text**, 0 to 4000 characters, newlines kept; it is stored and returned as typed (after the usual text clean-up: Unicode NFC, surrounding spaces trimmed, `\r\n` as `\n`) and is never interpreted as HTML by the server. Show it as text, never as markup. A class has at most 30 pages: the 31st is `ERROR_LIMIT_REACHED` (409), counted under the class lock so parallel creates cannot exceed it. A member who is not an admin gets `ERROR_FORBIDDEN`; a non-member and an unknown class get `ERROR_NOT_FOUND`. Not idempotent. A request with the session cookie must come from an allowed Origin.
+         */
+        post: operations["createClassPage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/class-page/update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Change a class page (admin)
+         * @description Called by an admin of the class. Replaces `kind`, `title`, `body` and `placement` (same rules as create). A page that stays on its side keeps its place; a page that moves to the other side goes to the end of it. A page id that is not in this class (an id of another class included) is `ERROR_NOT_FOUND` and nothing changes. A member who is not an admin gets `ERROR_FORBIDDEN`; a non-member and an unknown class get `ERROR_NOT_FOUND`. A request with the session cookie must come from an allowed Origin.
+         */
+        post: operations["updateClassPage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/class-page/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Delete a class page (admin)
+         * @description Called by an admin of the class. A page id that is not in this class (an id of another class included), or that was already deleted, is `ERROR_NOT_FOUND` and nothing changes. A member who is not an admin gets `ERROR_FORBIDDEN`; a non-member and an unknown class get `ERROR_NOT_FOUND`. A request with the session cookie must come from an allowed Origin.
+         */
+        post: operations["deleteClassPage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/class-page/get-list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the class pages (admin)
+         * @description Called by an admin of the class. Returns every page (at most 30, so one answer and an empty `next_id`): the `front` pages first, then the `back` pages, each in book order. A member who is not an admin gets `ERROR_FORBIDDEN`; a non-member and an unknown class get `ERROR_NOT_FOUND`.
+         */
+        get: operations["listClassPages"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/class-book/update-order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Order the members and the class pages (admin)
+         * @description Called by an admin of the class (the class book screen). The body is the whole new order: `member_ids` (every member, in book order), `front_page_ids` and `back_page_ids` (every page of that placement, in book order). Each list must be a **permutation of the current set**: a missing, extra, repeated, malformed or foreign id (an id of another class, or a back page in the front list) is `ERROR_INVALID_MEMBER_IDS`, `ERROR_INVALID_FRONT_PAGE_IDS` or `ERROR_INVALID_BACK_PAGE_IDS` (400) and nothing changes. A class that has no pages on a side sends `[]` (or leaves the field out) for it. A member who joined, was removed, or a page that was added or deleted since the screen loaded makes the list stale: load `class-book/get` again. The three lists are applied in one transaction under the class lock, so two admins ordering at the same moment end in one of the two orders, never a mix. `class-book/get` and `class-page/get-list` follow the order at once. A page cannot change side here: use `class-page/update`. A member who joins later goes to the end of the book. A member who is not an admin gets `ERROR_FORBIDDEN`; a non-member and an unknown class get `ERROR_NOT_FOUND`. A request with the session cookie must come from an allowed Origin.
+         */
+        post: operations["updateClassBookOrder"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2132,13 +2232,118 @@ export interface components {
                      */
                     language: "en" | "vi";
                 };
-                /** @description Class pages placed before the students' pages. Empty until the class pages arrive (T-128). */
-                front_pages: Record<string, never>[];
+                /** @description The class pages placed before the students' pages (`placement` front), in book order. */
+                front_pages: components["schemas"]["ClassPage"][];
                 /** @description Every member, in book order (`sort_order`, then joining order), at most 60. */
                 members: components["schemas"]["ClassBookMember"][];
-                /** @description Class pages placed after the students' pages. Empty until the class pages arrive (T-128). */
-                back_pages: Record<string, never>[];
+                /** @description The class pages placed after the students' pages (`placement` back), in book order. */
+                back_pages: components["schemas"]["ClassPage"][];
             };
+        };
+        /** @description A class page (intro, teachers, ...). Plain text, never HTML. */
+        ClassPage: {
+            /** @description Page ULID. */
+            id: string;
+            /**
+             * @description What the page is.
+             * @enum {string}
+             */
+            kind: "intro" | "teachers" | "events" | "superlatives" | "custom";
+            /** @description 1 to 120 characters. */
+            title: string;
+            /** @description Plain text, 0 to 4000 characters, newlines kept. Stored and returned as typed; show it as text, never as markup. */
+            body: string;
+            /**
+             * @description `front` is printed before the students' pages, `back` after them.
+             * @enum {string}
+             */
+            placement: "front" | "back";
+            /**
+             * Format: int64
+             * @description Unix ms.
+             */
+            created_at: number;
+            /**
+             * Format: int64
+             * @description Unix ms.
+             */
+            updated_at: number;
+        };
+        ClassPageCreateRequest: {
+            /** @description Required. ULID of the class. */
+            class_id: string;
+            /**
+             * @description Required.
+             * @enum {string}
+             */
+            kind: "intro" | "teachers" | "events" | "superlatives" | "custom";
+            /** @description Required. 1 to 120 characters, one line. */
+            title: string;
+            /** @description Plain text, 0 to 4000 characters, newlines kept. An absent body is empty. */
+            body?: string;
+            /**
+             * @description Required. `front` or `back`.
+             * @enum {string}
+             */
+            placement: "front" | "back";
+        };
+        ClassPageUpdateRequest: {
+            /** @description Required. ULID of the class. */
+            class_id: string;
+            /** @description Required. ULID of the page to change. */
+            id: string;
+            /**
+             * @description Required.
+             * @enum {string}
+             */
+            kind: "intro" | "teachers" | "events" | "superlatives" | "custom";
+            /** @description Required. 1 to 120 characters, one line. */
+            title: string;
+            /** @description Plain text, 0 to 4000 characters, newlines kept. An absent body is empty. */
+            body?: string;
+            /**
+             * @description Required. `front` or `back`.
+             * @enum {string}
+             */
+            placement: "front" | "back";
+        };
+        ClassPageDeleteRequest: {
+            /** @description Required. ULID of the class. */
+            class_id: string;
+            /** @description Required. ULID of the page. */
+            id: string;
+        };
+        ClassPageResponse: {
+            /**
+             * @description Always `OK` on success.
+             * @constant
+             */
+            status: "OK";
+            data: components["schemas"]["ClassPage"];
+        };
+        ClassPageListResponse: {
+            /**
+             * @description Always `OK` on success.
+             * @constant
+             */
+            status: "OK";
+            /** @description All the class pages (at most 30). */
+            data: {
+                /** @description The front pages, then the back pages, each in book order. */
+                items: components["schemas"]["ClassPage"][];
+                /** @description Always the empty string: a class has at most 30 pages, so there is one page of results. */
+                next_id: string;
+            };
+        };
+        ClassBookOrderRequest: {
+            /** @description Required. ULID of the class. */
+            class_id: string;
+            /** @description Required. Every member of the class (the `member_id` of `class-book/get`), each once, in the new book order. */
+            member_ids: string[];
+            /** @description Every front page, each once, in the new order. Empty or absent when there are none. */
+            front_page_ids?: string[];
+            /** @description Every back page, each once, in the new order. Empty or absent when there are none. */
+            back_page_ids?: string[];
         };
         /** @description One student's pages. Approved content only. */
         ClassBookMember: {
@@ -4086,6 +4291,168 @@ export interface operations {
             401: components["responses"]["ApiUnauthorized"];
             403: components["responses"]["ApiForbidden"];
             404: components["responses"]["ApiNotFound"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    createClassPage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClassPageCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description The new page. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClassPageResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            409: components["responses"]["ApiConflict"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            429: components["responses"]["ApiRateLimited"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    updateClassPage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClassPageUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description The page as it is now. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClassPageResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            429: components["responses"]["ApiRateLimited"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    deleteClassPage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClassPageDeleteRequest"];
+            };
+        };
+        responses: {
+            /** @description The page is deleted. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmptyResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            429: components["responses"]["ApiRateLimited"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    listClassPages: {
+        parameters: {
+            query: {
+                /** @description Class ULID. */
+                class_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The pages. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClassPageListResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    updateClassBookOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClassBookOrderRequest"];
+            };
+        };
+        responses: {
+            /** @description The new order is stored. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmptyResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            429: components["responses"]["ApiRateLimited"];
             500: components["responses"]["ApiInternal"];
             503: components["responses"]["ApiSessionStoreUnavailable"];
         };

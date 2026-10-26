@@ -60,13 +60,12 @@ type BookMember struct {
 	Truncated     bool                  `json:"truncated"`      // approved_total is more than the notes returned
 }
 
-// ClassBook is the response of GET /api/class-book/get. The class pages (intro, teachers, ...) arrive with T-128; until then the
-// two arrays are empty.
+// ClassBook is the response of GET /api/class-book/get. The class pages (intro, teachers, ...) are in the stored order (T-127).
 type ClassBook struct {
 	Class      BookClass    `json:"class"`
-	FrontPages []any        `json:"front_pages"`
+	FrontPages []Page       `json:"front_pages"`
 	Members    []BookMember `json:"members"`
-	BackPages  []any        `json:"back_pages"`
+	BackPages  []Page       `json:"back_pages"`
 }
 
 // bookMember is a roster row of the class book: the member, and the public id of the yearbook they own and linked ("" if none).
@@ -115,9 +114,20 @@ func (s *Service) Book(ctx context.Context, userID uint64, classID string) (*Cla
 	if err != nil {
 		return nil, err
 	}
+	pages, err := s.store.pages(ctx, c.internalID)
+	if err != nil {
+		return nil, err
+	}
 	out := &ClassBook{
 		Class:      BookClass{ID: c.ID, Name: c.Name, SchoolName: c.SchoolName, GraduationYear: c.GraduationYear, Language: c.Language},
-		FrontPages: []any{}, Members: make([]BookMember, 0, len(members)), BackPages: []any{},
+		FrontPages: []Page{}, Members: make([]BookMember, 0, len(members)), BackPages: []Page{},
+	}
+	for _, p := range pages { // front first, then back, each in book order
+		if p.Placement == PlacementFront {
+			out.FrontPages = append(out.FrontPages, p)
+		} else {
+			out.BackPages = append(out.BackPages, p)
+		}
 	}
 	for _, m := range members {
 		bm, err := s.bookMember(ctx, m)
