@@ -33,19 +33,26 @@ flowchart LR
 ## Decisions taken (D-36, owner, 2026-10-26)
 - **Audience 18+ only.** No minors, no parental consent, no teacher-gated accounts. A school pilot with minors is a separate later epic.
 - **A student needs an account.** The invite link leads to sign-up (email code or Google); the account owns the student's page.
-- **Visibility:** the page owner and the class admin see a student's notes and photos. Students never see each other's notes or private photos. The permission matrix (written in the T-126 spec) is tested on every endpoint.
+- **Visibility:** the page owner and the class admin see a student's notes and photos. Students never see each other's notes or private photos. The permission matrix ([DESIGN.md](DESIGN.md), then docs/class-permissions.md from T-026) is tested on every endpoint.
 
 ## Risks and open questions
 - Privacy review: many students' personal data and photos in one book; the owner signs off before any production use (exit criteria).
-- An admin who leaves or is removed: who owns the class and the data? (decided in the T-126 spec: a class always has at least one admin; the last admin cannot leave.)
-- Invite abuse: links must expire, be revocable and be capped (T-126 spec).
+- An admin who leaves or is removed: who owns the class and the data? (decided: a class always has at least one admin; the last admin cannot leave, be removed or be demoted; see T-026.)
+- Invite abuse: links must expire, be revocable and be capped (T-125).
 
 ## Exit criteria ("stable" for this epic)
 - A class of at least 30 students produces one exported book from a staging environment; the permission matrix is tested; the privacy review is signed off by the owner.
 
 ## Task index
-Specs live next to this file; **status lives only on the board** (`L list`), never here, so it cannot drift.
+Design first: [DESIGN.md](DESIGN.md). Specs live next to this file; **status lives only on the board** (`L list`), never here, so it cannot drift.
 | Task | Spec file | Depends on |
 |---|---|---|
-| T-026 Class yearbook: classes, memberships, roles and invites | `01-class-yearbook-classes-memberships-roles-and.md` | — |
-| T-027 Class book assembly: many profiles per book, class pages and templates | `02-class-book-assembly-many-profiles-per-book.md` | — |
+| T-026 Classes, memberships and roles (API foundation) | `01-class-yearbook-classes-memberships-roles-and.md` | none |
+| T-125 Class invites | `03-class-invites.md` | T-026 |
+| T-126 A student's page: link a personal yearbook | `04-student-page-link.md` | T-125 |
+| T-027 Class book data API and the admin's read-only media access | `02-class-book-assembly-many-profiles-per-book.md` | T-126 |
+| T-127 Class pages and book order (API) | `05-class-pages-and-order.md` | T-027 |
+| T-128 Web: classes, invites, joining and the student's page | `06-web-classes-join-and-student-page.md` | T-126 |
+| T-129 Web: assemble the class book | `07-web-assembly-ui.md` | T-127, T-128 |
+| T-130 Web: print the class book | `08-web-class-book-print.md` | T-127, T-128 |
+| T-131 Privacy review, legal texts and the class journey (e2e) | `09-privacy-review-and-e2e.md` | T-129, T-130 |

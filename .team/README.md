@@ -10,7 +10,8 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 7 | T-023, T-024, T-025, T-026, T-027, T-031, T-050 |
+| BACKLOG | 13 | T-023, T-024, T-025, T-027, T-031, T-050, T-125, T-126, T-127, T-128, T-129, T-130, T-131 |
+| TODO | 1 | T-026 |
 | DONE | 109 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
@@ -18,7 +19,7 @@
 
 **Open questions for you:** Q-030 (Approve merge of T-071 (auth/user API v2, PR #58)?); Q-031 (Approve merge of T-081 (username API + user_tab migration, PR #62)?); Q-033 (Which email provider sends the sign-up and reset codes in production, and which domain do we send from?); Q-034 (Which licence for the public repository (it has none today)?); Q-037 (Which domain will SMemories send email from and be served on, and who can edit its DNS?); Q-055 (What should the team build after E11 signatures: go-live (M2) or the class yearbook (M3)?)
 
-_Board last written 2026-10-26 02:13Z_
+_Board last written 2026-10-26 02:18Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -1753,9 +1754,9 @@ Automated RDS and S3 backups with a documented and tested restore drill; user-in
 #### Comments
 - 2026-10-17 15:11Z · leader · DEFERRED by the owner (decision D-31, 2026-10-17): this needs a real domain or AWS credentials, or is a go-live gate. Do not start it until the leader opens the go-live phase (E06 PRD, 'Live verification phase'). Stays BACKLOG.
 
-### T-026 — [E07] Class yearbook: classes, memberships, roles and invites
-- **Status:** BACKLOG
-- **Priority:** P3
+### T-026 — [E07] Classes, memberships and roles (API foundation)
+- **Status:** TODO
+- **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
 - **Depends-on:** —
@@ -1765,8 +1766,8 @@ Automated RDS and S3 backups with a documented and tested restore drill; user-in
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-26 02:18Z by leader
+- **Comments-seen:** 1
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E07-class-yearbook/01-class-yearbook-classes-memberships-roles-and.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -1775,20 +1776,21 @@ Automated RDS and S3 backups with a documented and tested restore drill; user-in
 Class space owned by an admin (teacher or monitor), invite links/emails for students, roles (admin, student), permissions on who edits which profile page.
 
 #### Comments
+- 2026-10-26 02:18Z · leader · Leader: promoted. D-36 pulled E07 ahead of go-live. Spec rewritten: .team/epics/E07-class-yearbook/01-class-yearbook-classes-memberships-roles-and.md; read DESIGN.md first.
 
-### T-027 — [E07] Class book assembly: many profiles per book, class pages and templates
+### T-027 — [E07] Class book data API and the admin's read-only media access
 - **Status:** BACKLOG
-- **Priority:** P3
+- **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
-- **Depends-on:** —
-- **Risk:** low
+- **Depends-on:** T-126
+- **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-09 02:28Z by leader
+- **Updated:** 2026-10-26 02:18Z by leader
 - **Comments-seen:** 0
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E07-class-yearbook/02-class-book-assembly-many-profiles-per-book.md`
@@ -5604,6 +5606,139 @@ Spec: .team/epics/E12-security-hardening/15-download-cap-tests-under-load.md (re
 - 2026-10-23 19:48Z · qa · QA_PASS (PR #120 head 080d15e, CI green: go, go-integration, e2e, web, image, security). Evidence: AC1/req1 diff = +8 lines in internal/media/download_integration_test.go (holdPace {Idle:1h,Total:1h} on the 3 cap tests); no sleeps/retries/longer timeouts; tests still wait on the gauge via waitInflight (10 s, Fatalf with got/want). Root cause: read handler.go takeDownload/tryDownload/release (deferred, per-client map under mutex) and httpx.PaceWriter: accounting and the 500 ms grace are correct; default 10 s idle write pace drops a held download by design, and under load holding 64 takes longer. No product gap. Reproduction (my own compose project t124qa, SeaweedFS, race, GOMAXPROCS=2, 24 busy loops): OLD develop full package run 1 FAILED 'TestDownloadAtTheCapWaitsForAFreedSlot: downloads in progress: 19, want 64' (the 3 tests alone, 3 runs, passed on old code: only the full package contention fails; I stopped after 1 run, 36 min per run). NEW head, same load, -count=20 per test: Public 20/20, WaitsForAFreedSlot 20/20, Owner 19/20; 1 failure 'another account: 502' (object store GET for the other account's thumb, ERROR_STORAGE_ERROR, not slot accounting); diagnostic rerun Owner -count=40 under load: 40/40. One full-package run under load on new head: the 3 cap tests passed; 2 unrelated tests failed (TestPublicAllLimiter, TestPublicLimitersFailOpen; the latter uses 200 ms Redis timeouts, load-sensitive by design); both pass alone. Check 4 (residual): WaitsForAFreedSlot needs the close at +100 ms to free the slot within 500 ms of the 65th request reaching the handler; it needs ~400 ms of scheduling starvation of the freed-slot unwind to flake. 20/20 under load, so no flake observed. A fix would need a product hook (downloadGrace as a Handler field like dlPace, test sets 30 s) or a waiter gauge so the test closes only after the 65th is parked; test-only cannot make it deterministic. Check 5 leak: temporary probe (deleted, not committed) ran the 3 tests as subtests under -race: fds before=3 after=3, goroutines 2->8 = 3 idle net/http client keep-alive pairs (persistConn readLoop/writeLoop from the register/upload helpers), no handler or held-connection goroutine left; the 1 h pace does not leak (cleanup closes client conns and srv.CloseClientConnections). Non-blocking: (a) rare 502 from the store in Owner test under heavy load, 1 of ~60 runs; if it recurs make a follow-up to log/inspect the store error; (b) AC1 asks 3/3 full-package runs under load; I did 1 (time box 30 min), dev reported 3/3; (c) full package under load takes ~36 min/run. All load processes stopped (pgrep clean), compose project t124qa removed with down -v.
 - 2026-10-23 19:59Z · leader · Merged PR #120 as ed897ed (QA_PASS on 080d15e; tests only). Not filed as tasks, because they have never failed in CI or in normal runs: TestPublicAllLimiter and TestPublicLimitersFailOpen under 24 busy loops with GOMAXPROCS=2, a rare 1-in-60 store 502, and the 500 ms grace dependency in TestDownloadAtTheCapWaitsForAFreedSlot. File a task if any of them fails in CI.
 - 2026-10-26 02:06Z · human · accepted by owner
+
+### T-125 — [E07] Class invites: create, revoke, lookup, accept
+- **Status:** BACKLOG
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M3
+- **Depends-on:** T-026
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-26 02:17Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E07-class-yearbook/03-class-invites.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.
+
+#### Comments
+
+### T-126 — [E07] A student's page: link a personal yearbook to the class
+- **Status:** BACKLOG
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M3
+- **Depends-on:** T-125
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-26 02:17Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E07-class-yearbook/04-student-page-link.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.
+
+#### Comments
+
+### T-127 — [E07] Class pages and book order (API)
+- **Status:** BACKLOG
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M3
+- **Depends-on:** T-027
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-26 02:17Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E07-class-yearbook/05-class-pages-and-order.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.
+
+#### Comments
+
+### T-128 — [E07] Web: classes, invites, joining and the student's page
+- **Status:** BACKLOG
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M3
+- **Depends-on:** T-126
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-26 02:17Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E07-class-yearbook/06-web-classes-join-and-student-page.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.
+
+#### Comments
+
+### T-129 — [E07] Web: assemble the class book (order, class pages)
+- **Status:** BACKLOG
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M3
+- **Depends-on:** T-127, T-128
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-26 02:17Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E07-class-yearbook/07-web-assembly-ui.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.
+
+#### Comments
+
+### T-130 — [E07] Web: print the class book (many profiles, 120 pages)
+- **Status:** BACKLOG
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M3
+- **Depends-on:** T-127, T-128
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-26 02:17Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E07-class-yearbook/08-web-class-book-print.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.
+
+#### Comments
+
+### T-131 — [E07] Privacy review, legal texts and the class journey (e2e)
+- **Status:** BACKLOG
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M3
+- **Depends-on:** T-129, T-130
+- **Risk:** high
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-26 02:17Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E07-class-yearbook/09-privacy-review-and-e2e.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.
+
+#### Comments
 
 <!-- tasks:end -->
 
