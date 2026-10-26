@@ -14,6 +14,8 @@ var (
 	CodeEmailNotVerified = apperr.NewCode("ERROR_EMAIL_NOT_VERIFIED", 403)
 	// CodeLastAdmin: the last admin of a class can neither leave, be removed nor be demoted (403).
 	CodeLastAdmin = apperr.NewCode("ERROR_LAST_ADMIN", 403)
+	// CodeClassFull: the class already has MaxMembers members, so an invite cannot be accepted (409).
+	CodeClassFull = apperr.NewCode("ERROR_CLASS_FULL", 409)
 )
 
 var (
@@ -24,10 +26,17 @@ var (
 	ErrMemberNotFound = apperr.New(apperr.NotFound, "member not found")
 	// ErrForbidden is a member whose role is too low for the action.
 	ErrForbidden = apperr.New(apperr.Forbidden, "this action needs the admin role")
-	// ErrLimitReached is the 11th class as admin.
+	// ErrLimitReached is the 11th class as admin, whether by creating one or by being promoted in one.
 	ErrLimitReached = apperr.New(CodeLimitReached, "at most 10 classes as admin per user")
-	// ErrEmailNotVerified is class/create from an account whose email is not verified yet.
-	ErrEmailNotVerified = apperr.New(CodeEmailNotVerified, "verify your email before creating a class")
+	// ErrInviteLimit is the 6th active invite of a class.
+	ErrInviteLimit = apperr.New(CodeLimitReached, "at most 5 active invites per class")
+	// ErrClassFull is accepting an invite into a class that has MaxMembers members.
+	ErrClassFull = apperr.New(CodeClassFull, "the class is full")
+	// ErrInviteNotFound is the one answer for a token that is unknown, malformed, expired or revoked, and for an invite id that is
+	// not in this class: the caller cannot tell them apart, and the bodies are byte-identical apart from the request id.
+	ErrInviteNotFound = apperr.New(apperr.NotFound, "invite not found")
+	// ErrEmailNotVerified is class/create or class-invite/accept from an account whose email is not verified yet.
+	ErrEmailNotVerified = apperr.New(CodeEmailNotVerified, "verify your email first")
 	// ErrLastAdmin protects the class from being left without an admin.
 	ErrLastAdmin = apperr.New(CodeLastAdmin, "a class needs at least one admin")
 )

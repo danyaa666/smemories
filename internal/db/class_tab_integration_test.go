@@ -49,8 +49,10 @@ func TestMigrateClassTables(t *testing.T) {
 		}
 	}
 
-	if err := db.MigrateDown(ctx, d); err != nil { // the class migration is the newest
-		t.Fatalf("down: %v", err)
+	for i := 0; i < 10 && hasTables() != "0"; i++ { // newer migrations go down first
+		if err := db.MigrateDown(ctx, d); err != nil {
+			t.Fatalf("down: %v", err)
+		}
 	}
 	if hasTables() != "0" {
 		t.Fatal("down left the tables behind")
@@ -60,5 +62,45 @@ func TestMigrateClassTables(t *testing.T) {
 	}
 	if hasTables() != "2" {
 		t.Fatal("up again did not create the tables")
+	}
+}
+
+// T-125 (E07): the invite table keeps one row per token hash and per public id, and goes down and up again on its own.
+func TestMigrateClassInviteTable(t *testing.T) {
+	ctx := context.Background()
+	d := dbtest.New(t)
+	exists := func() string {
+		return dump(t, ctx, d, `SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'class_invite_tab'`)[0]
+	}
+	invite := func(pid, hash string) error {
+		_, err := d.ExecContext(ctx, `INSERT INTO class_invite_tab (public_id, class_id, token_hash, created_by, expires_at, created_at, updated_at) VALUES (?,1,UNHEX(SHA2(?,256)),1,2,1,1)`, pid, hash)
+		return err
+	}
+	if exists() != "1" {
+		t.Fatal("the test database lacks class_invite_tab")
+	}
+	if err := invite("I1", "t1"); err != nil {
+		t.Fatal(err)
+	}
+	if err := invite("I2", "t1"); err == nil {
+		t.Error("two invites with the same token hash")
+	}
+	if err := invite("I1", "t2"); err == nil {
+		t.Error("two invites with the same public id")
+	}
+	if err := invite("I3", "t3"); err != nil {
+		t.Error(err)
+	}
+	if err := db.MigrateDown(ctx, d); err != nil {
+		t.Fatalf("down: %v", err)
+	}
+	if exists() != "0" || dump(t, ctx, d, `SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'class_tab'`)[0] != "1" {
+		t.Fatal("down must drop only class_invite_tab")
+	}
+	if err := db.MigrateUp(ctx, d); err != nil {
+		t.Fatalf("up again: %v", err)
+	}
+	if exists() != "1" {
+		t.Fatal("up again did not create the table")
 	}
 }

@@ -35,6 +35,10 @@ type Service struct {
 	tokens Tokens
 	writes ratelimit.Limiter
 	now    func() time.Time
+
+	lookupAll, lookupMisses ratelimit.Limiter // class-invite/lookup, per client IP (open: they bound load, not guessing)
+	acceptIP                ratelimit.Limiter // class-invite/accept, per client IP (closed, like every write)
+	baseURL                 string            // origin of the invite links, see SetPublicBaseURL
 }
 
 // NewService builds the service. limiters is required: class writes are rate-limited per user and, if the limiter store is
@@ -43,7 +47,9 @@ func NewService(store *Store, tokens Tokens, limiters *ratelimit.Factory, now fu
 	if now == nil {
 		now = time.Now
 	}
-	return &Service{store: store, tokens: tokens, writes: limiters.Closed("class_write", writesPerWindow, writeWindow), now: now}
+	return &Service{store: store, tokens: tokens, writes: limiters.Closed("class_write", writesPerWindow, writeWindow), now: now,
+		lookupAll: limiters.Open("class_invite_lookup", lookupAllPerWindow, lookupWindow), lookupMisses: limiters.Open("class_invite_lookup_miss", lookupMissesPerWindow, lookupWindow),
+		acceptIP: limiters.Closed("class_invite_accept_ip", acceptPerIPWindow, acceptWindow)}
 }
 
 // throttle takes one write from the user's budget: a *RetryAfterError when it is used up, the limiter's own error (503) when

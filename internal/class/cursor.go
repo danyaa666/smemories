@@ -20,6 +20,10 @@ func memberListScope(userID uint64, classID string) string {
 	return "class-member/get-list:" + classID + ":" + strconv.FormatUint(userID, 10)
 }
 
+func inviteListScope(userID uint64, classID string) string {
+	return "class-invite/get-list:" + classID + ":" + strconv.FormatUint(userID, 10)
+}
+
 // sealPos returns the token for the page that follows row ("" when row is 0: no further page).
 func sealPos(t Tokens, scope string, row uint64) string {
 	if row == 0 {

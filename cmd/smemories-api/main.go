@@ -180,10 +180,11 @@ func main() {
 	notesSvc := notes.NewService(notesStore, mediaSvc, cursors, limiters, logger, nil)
 	mediaSvc.SetRefClearer(bookStore, notesSvc) // the yearbook store first: it locks the photo's book
 	classSvc := class.NewService(class.NewStore(d), cursors, limiters, nil)
+	classSvc.SetPublicBaseURL(cfg.PublicBaseURL)
 	bookSvc := yearbook.NewService(bookStore, cursors, mediaSvc, nil, mediaSvc, notesSvc, classSvc) // classSvc clears a deleted book's class link
 	bookSvc.SetLimiters(limiters)
 	bookH := yearbook.NewHandler(bookSvc, authH.RequireUser, cfg.AllowedOrigins)
-	classH := class.NewHandler(classSvc, authH.RequireUser, cfg.AllowedOrigins)
+	classH := class.NewHandler(classSvc, authH.RequireUser, cfg.AllowedOrigins, authH.ClientIP)
 	bookDataH := bookdata.NewHandler(bookdata.NewService(bookSvc, notesSvc), authH.RequireUser)
 	bookExportH := bookexport.NewHandler(bookexport.NewService(bookSvc, notesSvc, linkSigner, cfg.PublicBaseURL, limiters, nil), authH.RequireUser)
 	templateH := templateapi.NewHandler(authH.RequireUser)

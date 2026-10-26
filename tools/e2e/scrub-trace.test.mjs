@@ -16,7 +16,7 @@ function fixture() {
   const root = mkdtempSync(join(tmpdir(), 'scrub-'));
   const src = join(root, 'src');
   mkdirSync(join(src, 'resources'), { recursive: true });
-  writeFileSync(join(src, 'trace.network'), `{"url":"http://x/api/photos/get-content?token=${TOKEN}","h":"/c/${TOKEN}"}\n`);
+  writeFileSync(join(src, 'trace.network'), `{"url":"http://x/api/photos/get-content?token=${TOKEN}","h":"/c/${TOKEN}","j":"http://x/join/${TOKEN}"}\n`);
   writeFileSync(join(src, 'resources', 'r.txt'), `{"token":"${TOKEN}"} __Host-smem_session=${TOKEN};\n`);
   const results = join(root, 'results', 'run1');
   mkdirSync(results, { recursive: true });
@@ -35,6 +35,7 @@ test('redacts the secrets and repacks without directory entries', () => {
     const all = entries.map((e) => execFileSync('unzip', ['-p', f.zip, e]).toString()).join('');
     assert.ok(!all.includes(TOKEN), 'a token survived');
     assert.match(all, /token=REDACTED/);
+    assert.match(all, /\/join\/REDACTED/);
   } finally {
     rmSync(f.root, { recursive: true, force: true });
   }

@@ -964,6 +964,106 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/class-invite/create": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Make a join link for a class (admin)
+         * @description Called by an admin of the class (the invite screen). Returns the link **once**: the `token` is a bearer secret (32 random bytes, 43 base64url characters) that lets whoever holds it join the class as a `student`; the server keeps only its SHA-256, so it cannot be shown again. Show `link` (`<public base URL>/join/<token>`) to the admin to copy; there is no invite email. `expires_at` (Unix ms) is optional: it defaults to 14 days from now and must be in the future and at most 30 days away. A class has at most 5 active invites (not revoked, not expired); the 6th is `ERROR_LIMIT_REACHED`, counted under the class lock so parallel creates cannot exceed it. A member who is not an admin gets `ERROR_FORBIDDEN`; a non-member and an unknown class get `ERROR_NOT_FOUND`. Not idempotent: repeating a lost request makes a second link. A request with the session cookie must come from an allowed Origin.
+         */
+        post: operations["createClassInvite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/class-invite/get-list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the join links of a class (admin)
+         * @description Called by an admin of the class. Newest first; revoked and expired links are listed too, with `active` false. It never carries a token or a link: those were shown once, by `/api/class-invite/create`. Keyset paginated like every list; `next_id` is bound to this class and this caller. A `limit` outside 1..50 is `ERROR_PARAM`. A member who is not an admin gets `ERROR_FORBIDDEN`; a non-member and an unknown class get `ERROR_NOT_FOUND`.
+         */
+        get: operations["listClassInvites"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/class-invite/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revoke a join link (admin)
+         * @description Called by an admin of the class. The link stops working at once; members who already joined with it stay, and removing a member never revokes a link. Revoking a revoked link succeeds and changes nothing. An invite id that is not in this class (an id of another class included) is `ERROR_NOT_FOUND` and nothing changes. A member who is not an admin gets `ERROR_FORBIDDEN`; a non-member and an unknown class get `ERROR_NOT_FOUND`.
+         */
+        post: operations["revokeClassInvite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/class-invite/lookup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview a join link (public)
+         * @description Called by the join page (`/join/<token>`) before the visitor signs in. No session is needed and none is read. Returns only the class name and school of an **active** link. An unknown, malformed, empty, expired or revoked `token` all answer the same `ERROR_NOT_FOUND`, byte for byte, and take the same code path (one lookup by SHA-256). A `POST` although it only reads, and the one exception to "GET reads": the token is a bearer secret and travels in the body, never in a URL that a proxy or access log could record. Every request counts against 120 per client IP per 10 minutes, and a request that misses also against 20 per 10 minutes (a hit is refunded); past either limit the answer is `ERROR_RATE_LIMITED` with `Retry-After`. The limiters fail open: a 256-bit token cannot be guessed, they bound load. The preview does not say whether the class is full, nor how many members it has.
+         */
+        post: operations["lookupClassInvite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/class-invite/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Join a class with a join link
+         * @description Called by the join page for a signed-in user with a verified email who accepted the Terms. Adds the caller to the class as a `student` and returns the class as `/api/class/get` does. Idempotent: a caller who is already a member gets their membership back and **keeps their role** (an admin is never downgraded, a promoted student never demoted). An unknown, malformed, empty, expired or revoked `token` answers `ERROR_NOT_FOUND`, byte for byte as `lookup` does, also for a caller who is already a member. A class with 60 members refuses a new member with `ERROR_CLASS_FULL`; the cap is checked under the class lock, so ten simultaneous accepts of the last seat add exactly one member. Accepting is a write: it counts against the caller's 120 class writes an hour (a wrong token too, which bounds guessing per user) and against 60 accepts per client IP per hour. An unverified email is `ERROR_EMAIL_NOT_VERIFIED` and nothing is joined. A request with the session cookie must come from an allowed Origin.
+         */
+        post: operations["acceptClassInvite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1937,6 +2037,91 @@ export interface components {
                 /** @description Opaque page token for the next page; the empty string on the last page. */
                 next_id: string;
             };
+        };
+        ClassInviteCreateRequest: {
+            /** @description Required. ULID of the class. */
+            class_id: string;
+            /**
+             * Format: int64
+             * @description Optional, Unix ms: when the link stops working. Default 14 days from now; must be in the future and at most 30 days away.
+             */
+            expires_at?: number | null;
+        };
+        ClassInviteRevokeRequest: {
+            /** @description Required. ULID of the class. */
+            class_id: string;
+            /** @description Required. ULID of the invite (the `id` of a list row), not the token. */
+            id: string;
+        };
+        ClassInviteTokenRequest: {
+            /** @description The link token, a bearer secret of 43 base64url characters (the last part of `/join/<token>`). A missing, empty or malformed one is `ERROR_NOT_FOUND`, like an unknown one. */
+            token?: string;
+        };
+        /** @description A join link as an admin sees it. Never carries the token or the link. */
+        ClassInvite: {
+            /** @description Invite ULID; use it as `id` to revoke. Not the token. */
+            id: string;
+            /**
+             * Format: int64
+             * @description When the link was made, Unix ms.
+             */
+            created_at: number;
+            /**
+             * Format: int64
+             * @description When the link stops working, Unix ms.
+             */
+            expires_at: number;
+            /**
+             * Format: int64
+             * @description When an admin revoked it, Unix ms; `null` while not revoked.
+             */
+            revoked_at: number | null;
+            /** @description True when the link is neither revoked nor expired now. Only active links count against the cap of 5. */
+            active: boolean;
+        };
+        /** @description A new join link. The only answer that carries the token. */
+        ClassInviteCreated: components["schemas"]["ClassInvite"] & {
+            /** @description The bearer secret, 43 base64url characters. Shown once; the server keeps only its SHA-256. */
+            token: string;
+            /** @description `<public base URL>/join/<token>`, ready to copy. Treat it like a password: never log or store it. */
+            link: string;
+        };
+        ClassInviteCreatedResponse: {
+            /**
+             * @description Always `OK` on success.
+             * @constant
+             */
+            status: "OK";
+            data: components["schemas"]["ClassInviteCreated"];
+        };
+        ClassInviteListResponse: {
+            /**
+             * @description Always `OK` on success.
+             * @constant
+             */
+            status: "OK";
+            /** @description One page of the class's invites. */
+            data: {
+                /** @description The invites of this page, newest first, revoked and expired ones included. */
+                items: components["schemas"]["ClassInvite"][];
+                /** @description Opaque page token for the next page; the empty string on the last page. */
+                next_id: string;
+            };
+        };
+        /** @description All a visitor with a valid link learns about the class. */
+        ClassInvitePreview: {
+            /** @description The class name. */
+            name: string;
+            /** @description The school; empty when unset. */
+            school_name: string;
+        };
+        ClassInvitePreviewResponse: {
+            /**
+             * @description Always `OK` on success.
+             * @constant
+             */
+            status: "OK";
+            data: components["schemas"]["ClassInvitePreview"];
         };
     };
     responses: {
@@ -3675,6 +3860,170 @@ export interface operations {
             401: components["responses"]["ApiUnauthorized"];
             403: components["responses"]["ApiForbidden"];
             404: components["responses"]["ApiNotFound"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            429: components["responses"]["ApiRateLimited"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    createClassInvite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClassInviteCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description The new invite with its token and link, shown only here. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClassInviteCreatedResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            409: components["responses"]["ApiConflict"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            429: components["responses"]["ApiRateLimited"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    listClassInvites: {
+        parameters: {
+            query: {
+                /** @description Class ULID. */
+                class_id: string;
+                /** @description Page size, default 20, maximum 50. */
+                limit?: number;
+                /** @description Opaque token from the previous page; omit it for the first page. */
+                next_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of invites. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClassInviteListResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    revokeClassInvite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClassInviteRevokeRequest"];
+            };
+        };
+        responses: {
+            /** @description The invite is revoked. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmptyResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            429: components["responses"]["ApiRateLimited"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    lookupClassInvite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClassInviteTokenRequest"];
+            };
+        };
+        responses: {
+            /** @description The link is active. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClassInvitePreviewResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            404: components["responses"]["ApiNotFound"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            429: components["responses"]["ApiRateLimited"];
+            500: components["responses"]["ApiInternal"];
+        };
+    };
+    acceptClassInvite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClassInviteTokenRequest"];
+            };
+        };
+        responses: {
+            /** @description The caller is a member of the class. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClassResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            409: components["responses"]["ApiConflict"];
             413: components["responses"]["ApiTooLarge"];
             415: components["responses"]["ApiUnsupportedMediaType"];
             429: components["responses"]["ApiRateLimited"];
