@@ -97,7 +97,7 @@ func (e *env) userWith(name string, verified bool) person {
 	e.t.Helper()
 	e.mu.Lock()
 	e.n++
-	email := name + strconv.Itoa(e.n) + "@example.com"
+	email := strings.ToLower(name) + strconv.Itoa(e.n) + "@example.com" // user_tab keeps the normalised (lower-case) address
 	e.mu.Unlock()
 	b, _ := json.Marshal(map[string]string{"email": email, "password": testPW, "display_name": name, "accept_terms_version": legal.CurrentVersion})
 	rec := httptest.NewRecorder()
