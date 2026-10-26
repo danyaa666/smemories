@@ -11,7 +11,7 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 7 | T-023, T-024, T-025, T-031, T-050, T-131, T-135 |
-| IN_PROGRESS | 1 | T-133 |
+| READY_FOR_QA | 1 | T-133 |
 | MERGED | 8 | T-027, T-125, T-126, T-127, T-128, T-129, T-130, T-134 |
 | DONE | 111 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-132 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
@@ -20,7 +20,7 @@
 
 **Open questions for you:** none
 
-_Board last written 2026-10-26 14:50Z_
+_Board last written 2026-10-26 15:19Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -5924,7 +5924,7 @@ Spec: .team/epics/E06-go-live/15-ci-pause-integration-and-e2e.md. Owner decision
 - 2026-10-26 07:13Z · human · accepted by owner
 
 ### T-133 — [E07] Class book: read limiter, response size cap and admin photo caching
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P3
 - **Type:** hardening
 - **Milestone:** M3
@@ -5932,16 +5932,18 @@ Spec: .team/epics/E06-go-live/15-ci-pause-integration-and-e2e.md. Owner decision
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-133-e07-class-book-read-limiter-response-siz
-- **PR:** —
-- **Updated:** 2026-10-26 14:41Z by dev
-- **Comments-seen:** 1
+- **PR:** https://github.com/danyaa666/smemories/pull/131
+- **Updated:** 2026-10-26 15:19Z by dev
+- **Comments-seen:** 3
 
 Spec: .team/epics/E07-class-yearbook/10-class-book-limits-and-caching.md. QA follow-ups from T-027: class-book/get has no read limiter, a maximal class book is about 50 MiB, and an admin's cached photo outlives a hidden note by up to an hour.
 
 #### Comments
 - 2026-10-26 09:58Z · leader · T-027 merged (3e1dea3)
+- 2026-10-26 15:19Z · dev · PR #131, head b0a331a. Docker daemon was down (not started by me), so integration ran by hand: gh workflow run ci.yml --ref the branch, run 40346073037 = success (go, go-integration incl. ./internal/class and ./internal/media, e2e, web, security, image all green); the first dispatch (40343885258) failed only on wantKeys of TestClassBookHasApprovedContentOnly (new key truncated), fixed. Local: go test -race ./... , golangci-lint, vet (+integration tag), tsc, vitest, check:api green. Changes: read limiter 30/h per user+class (closed, 429 Retry-After, 503 ERROR_UNAVAILABLE); 8 MiB cap = MaxBookBytes, member-atomic cut, top-level truncated (ids) , members encoded once and streamed via new httpx.OKStream/ClassBook.Encode; media Store.readable flags class-admin reads -> Cache-Control private, no-store (owner unchanged); docs, openapi, schema.d.ts, postman Class book flow. Verify: TestClassBookReadLimiter, TestClassBookIsCutAtTheCap, TestClassBookStaysUnderTheCap (maximal class 7.35 MiB, 52 cut), TestMaximalClassPeakAllocation under -race (peak ~1.2x, limit 3x), TestPhotoCacheControlByReader. Notes: truncated is optional in openapi (additive) so web typecheck passes; one stale test line in web/src/pages/classBook.test.tsx edited (it faked truncated:true). Newman not run (no stack).
+- 2026-10-26 15:19Z · leader · Leader: whole-member cut (a cut member loses all its notes; earlier members stay complete) accepted as the reading of the spec. QA: usage window is full until about 18:12Z; run when the gate allows. Verify manual CI run 40346073037 is on PR head b0a331a, the web test line changed in web/src/pages/classBook.test.tsx (watch for a conflict with merged T-134), limiter placement after the admin check, 429/503 behaviour, the allocation test, and the photo header by reader. The print screen listing of 'truncated' students is moved to T-135.
 
 ### T-134 — [E07] Web: edit and delete a class, link an existing yearbook as the page
 - **Status:** MERGED
@@ -5979,7 +5981,7 @@ Spec: .team/epics/E07-class-yearbook/11-web-class-edit-delete-and-existing-page.
   NOT CHECKED: real API/DB (stubbed /api only, Docker down, no make e2e locally, relied on CI e2e run 40340038450 for that); invite accept POST in browser; real Google flow; screen reader beyond role/aria assertions; Safari. Processes started (vite on 5188, chromium) stopped; no files added to the repo.
 - 2026-10-26 14:50Z · leader · merged a3e40b2. Review: web + print-check harness only; print link resolves; edit/delete/page picker; AdminOnly guard gives NotFound with no class-book/get request; token only in existing POST bodies; manual full CI run 40340038450 green on head ef2f382; QA browser pass ~60 checks at 375 px en+vi. For owner to check: a real class end to end on a phone; emoji text stops at 2000 characters (native maxLength counts UTF-16, T-135).
 
-### T-135 — [E07] Web: text fields count characters (not UTF-16 units) and the join hint matches the build
+### T-135 — [E07] Web: character-counted text fields, join hint per build, show cut students on the print screen
 - **Status:** BACKLOG
 - **Priority:** P3
 - **Type:** bug
@@ -5991,7 +5993,7 @@ Spec: .team/epics/E07-class-yearbook/11-web-class-edit-delete-and-existing-page.
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-26 14:50Z by leader
+- **Updated:** 2026-10-26 15:19Z by leader
 - **Comments-seen:** 0
 
 Spec: .team/epics/E07-class-yearbook/12-web-maxlength-runes-and-join-hint.md. From T-134 QA: native maxLength stops emoji text at 2000 of 4000, and the Google hint on /login and /register (from /join/) mentions a button that does not exist when VITE_GOOGLE_SIGNIN is unset.

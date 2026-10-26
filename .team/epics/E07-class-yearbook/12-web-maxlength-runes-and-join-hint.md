@@ -1,4 +1,4 @@
-# E07_T-135 — Web: text fields count characters, and the join hint matches the build
+# E07_T-135 — Web: text fields count characters, the join hint matches the build, the print screen shows cut students
 
 **Epic:** E07-class-yearbook · **Milestone:** M3 · **Risk:** low · **Priority:** P3 · **Type:** bug
 **Depends on:** none (T-134 merged). **Read first:** the shared `TextArea` and text inputs in `web/src/ui/`, `NoteForm`, the class page editor and class form, the T-134 QA comment on the board, `web/src/pages/Login.tsx` and `Register.tsx` (the Google hint).
@@ -7,10 +7,12 @@
 1. The server counts runes (Unicode characters) for every text limit, the visible counter now does too, but the native `maxLength` attribute counts UTF-16 units. Text with emoji stops at about half the limit (2000 of 4000) while the counter reads 2000/4000.
 2. On `/login` and `/register` reached from `/join/`, the hint "Signed in with Google? Sign in first, then open your invite link again." also shows in builds without Google sign-in (`VITE_GOOGLE_SIGNIN` unset), where it mentions a button that does not exist.
 
+3. (From T-133, 2026-10-26) `class-book/get` now returns `truncated` (member public ids whose notes were left out because the response hit the 8 MiB cap; empty for a normal class). The print route `/classes/:id/book` (T-130 ignores the field) must list those students by name in the overflow summary with a clear warning, and must keep the Print button disabled until the admin acknowledges that these students' notes will be missing; the assemble screen shows the same warning. Test with a fixture where `truncated` has two ids.
+
 #### Requirements (SHALL)
 1. Remove the native `maxLength` from the shared text components that have a rune counter and enforce the limit in the change handler by rune (truncate pasted text at the limit, never split a surrogate pair). The server stays the authority. One shared helper, used by every field that shows the counter (note body, class page body and title, class form, any other).
 2. Show the Google hint only when Google sign-in is enabled in the build; keep the rest of its behaviour (only from `/join/`, token never stored).
-3. Tests: 4000 emoji accepted, the 4001st rune refused, a paste of 5000 emoji cut at exactly 4000, Vietnamese text unchanged; the hint present with the flag on and absent with it off. Both locales, i18n parity, no new dependency, no API change.
+4. Tests: 4000 emoji accepted, the 4001st rune refused, a paste of 5000 emoji cut at exactly 4000, Vietnamese text unchanged; the hint present with the flag on and absent with it off. Both locales, i18n parity, no new dependency, no API change.
 
 #### Acceptance criteria
 - [ ] AC1 — An emoji-only body can be 4000 characters long and the counter agrees.
