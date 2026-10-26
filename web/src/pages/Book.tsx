@@ -73,7 +73,7 @@ export function Book() {
 }
 
 /** Pages scaled to the width of the stage on screen, never above MAX_SCALE. */
-function useStageScale(size: keyof typeof SIZES) {
+export function useStageScale(size: keyof typeof SIZES) {
   const ref = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
   useLayoutEffect(() => {

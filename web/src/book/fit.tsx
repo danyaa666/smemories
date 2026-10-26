@@ -67,6 +67,19 @@ export function useFitReport() {
 }
 
 /**
+ * Gives the boxes below it their own names in the summary: a key that is not a friend's note ("note:<id>", unique already) gets `prefix`.
+ * The class book (T-130) draws many profiles, each with a "profile:quote" box of its own.
+ */
+export function FitScope({ prefix, children }: { prefix: string; children: ReactNode }) {
+  const parent = useContext(FitContext);
+  const report = useMemo<Report | null>(
+    () => parent && ((key, info) => parent(key.startsWith("note:") ? key : prefix + key, info)),
+    [parent, prefix],
+  );
+  return <FitContext value={report}>{children}</FitContext>;
+}
+
+/**
  * A box of fixed size whose text shrinks to fit (JavaScript, not CSS) and reports the outcome. `fitKey` names the text in the
  * summary: "note:<id>" or "note:<id>:<field>" for a friend's note (a note may have several boxes), anything else for the owner's own pages. Re-fits when web fonts finish loading,
  * because the fallback font has other metrics. Children are React nodes: user text is always escaped.

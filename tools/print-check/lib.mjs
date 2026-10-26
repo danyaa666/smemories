@@ -3,7 +3,7 @@ import { execFileSync, spawn } from "node:child_process";
 import { readFileSync, rmSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { BOOK_ID, photoId } from "./fixture.mjs";
+import { BOOK_ID, CLASS_ID, photoId } from "./fixture.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const ROOT = path.resolve(HERE, "../..");
@@ -32,8 +32,8 @@ export async function startServer() {
 const ok = (data) => ({ status: 200, contentType: "application/json", body: JSON.stringify({ status: "OK", data }) });
 
 /** Serves the signed-in owner, the book and its photos; every other API call is a 404. Counts book-data and media requests. */
-export async function serveBook(page, book) {
-  const seen = { bookData: 0, media: 0 };
+export async function serveBook(page, book, classBook = null) {
+  const seen = { bookData: 0, media: 0, classBook: 0 };
   const files = new Map(Array.from({ length: 30 }, (_, i) => [photoId(i + 1), `photo-${String((i % 30) + 1).padStart(2, "0")}.jpg`]));
   await page.route(/^https?:\/\/[^/]+\/api\//, (route) => { // only the API, not the dev server's /src/api/*.ts modules
     const u = new URL(route.request().url());
@@ -42,6 +42,10 @@ export async function serveBook(page, book) {
     if (u.pathname === "/api/book-data/get") {
       seen.bookData++;
       return route.fulfill(ok(book));
+    }
+    if (u.pathname === "/api/class-book/get" && classBook) {
+      seen.classBook++;
+      return route.fulfill(ok(classBook));
     }
     if (u.pathname === "/api/media/get-content") {
       seen.media++;
@@ -60,6 +64,14 @@ export async function open(page) {
   await page.goto(`${BASE}/yearbooks/${BOOK_ID}/book`);
   await page.waitForSelector("html[data-book-ready]", { timeout: 60000 });
   return { readyMs: Math.round(performance.now() - t0) };
+}
+
+/** Opens the class book screen (T-130) on one paper size and waits until it allows printing. */
+export async function openClassBook(page, size) {
+  const t0 = performance.now();
+  await page.goto(`${BASE}/classes/${CLASS_ID}/book?size=${size}`);
+  await page.waitForSelector("html[data-book-ready]", { timeout: 90000 });
+  return { readyMs: Math.round(performance.now() - t0), pages: Number(await page.evaluate(() => document.documentElement.dataset.bookReady)) };
 }
 
 /** page.pdf() with what "Save as PDF" gives with margins none and backgrounds on: CSS @page decides the size. */

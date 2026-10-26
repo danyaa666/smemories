@@ -579,6 +579,22 @@
       "preview": "Ảnh xem trước bìa của mẫu {{name}}"
     }
   },
+  "classBook": {
+    "title": "In sách lớp",
+    "loading": "Đang tải sách lớp...",
+    "back": "Về lớp",
+    "size": "Khổ giấy",
+    "sizeHelp": "Một khổ giấy cho cả cuốn. Trang của mỗi bạn giữ mẫu và ngôn ngữ riêng.",
+    "unnamed": "Bạn chưa có tên",
+    "overBudget": "Cuốn sách này có {{pages}} trang, nhiều hơn {{budget}} trang dự kiến cho sách lớp. Vẫn in được, nhưng hãy hỏi tiệm in về chi phí.",
+    "noPage": "Các bạn chưa có trang nên không có gì được in cho các bạn này ({{count}}): {{names}}.",
+    "cutPages": "Các trang của lớp quá dài so với chỗ có và bị cắt khi in ({{count}}): {{titles}}.",
+    "issuesTitle": "Số bạn có trang bị cắt: {{count}}",
+    "issuesHelp": "Những nội dung đã duyệt này không vừa hết khi in. Bạn đó có thể ẩn bớt một lời nhắn, hoặc nhờ bạn bè viết ngắn hơn.",
+    "dropped": "Chỉ {{shown}} trong {{total}} lời nhắn đã duyệt được đưa vào sách lớp.",
+    "cutNotes": "Lời nhắn quá dài và bị cắt: {{count}}.",
+    "cutProfile": "Đoạn trong hồ sơ quá dài và bị cắt: {{count}}."
+  },
   "legal": {
     "terms": "Điều khoản sử dụng",
     "privacy": "Chính sách quyền riêng tư",
