@@ -159,7 +159,7 @@ func TestLastAdminRule(t *testing.T) {
 	a, b, s := e.user("A"), e.user("B"), e.user("S")
 	cls, m := e.seedClass([]person{a}, s)
 	m[999999] = "01K7Q8W3ZR5N2M4X6V8B0C1D2E" // a member id that is in no class
-	m[b.row] = "01K7Q8W3ZR5N2M4X6V8B0C1D2F"   // b has no membership here
+	m[b.row] = "01K7Q8W3ZR5N2M4X6V8B0C1D2F"  // b has no membership here
 	leave := func(p person) resp { return e.do(p, "POST", "/api/class-member/leave", body("class_id", cls)) }
 	remove := func(p person, of uint64) resp {
 		return e.do(p, "POST", "/api/class-member/remove", body("class_id", cls, "member_id", m[of]))
