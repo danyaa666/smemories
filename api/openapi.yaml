@@ -1007,7 +1007,7 @@ paths:
         transparency; always `image/jpeg` for `variant=thumb`), `X-Content-Type-Options: nosniff` and `Cache-Control: private, max-age=3600`
         are set, and the `ETag` differs per variant. Honours `HEAD`, `Range` (206) and `If-None-Match` (304). On failure the answer is the
         usual JSON error envelope with the matching HTTP status and `Cache-Control: no-store`, so an error is never cached in place of the
-        image; an `<img>` tag only needs the status. Only the owner may read (`ERROR_NOT_FOUND` for anyone else, and for an unknown id).
+        image; an `<img>` tag only needs the status. Only the owner may read (`ERROR_NOT_FOUND` for anyone else, and for an unknown id), with one exception: an admin of a class may read, read only, the owner profile photo and the photos of approved notes of a yearbook that a member of that class chose as their class page (`class-book/get` lists them); a pending or hidden note's photo, the cover, any other photo of that yearbook, a yearbook that is no class page, a removed member's yearbook and another class's are `ERROR_NOT_FOUND` for the admin, exactly as for a photo that does not exist.
         `variant=print` is the 1800 px version for the print renderer; a photo uploaded before it existed, and not yet reached by the
         backfill (`smemories-media-backfill`), is answered in display size. The route may take up to 2 minutes for a slow client; a client that reads
         slower than 16 KiB/s (after 15 s) or stops reading for 10 s is disconnected. The bytes are streamed from the object store (T-107). One account may
@@ -2276,6 +2276,60 @@ paths:
         "429": {$ref: "#/components/responses/ApiRateLimited"}
         "500": {$ref: "#/components/responses/ApiInternal"}
         "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/class-book/get:
+    get:
+      operationId: getClassBook
+      tags: [class]
+      summary: Read the class book (admin)
+      description: >-
+        Called by an admin of the class (the class book screen, which lays out and prints the book in the browser). The book is assembled on every call from the members' own yearbooks: nothing is copied, so a note approved a moment ago is in the next answer and a note hidden a moment ago is gone.
+        **Approved content only.** For each member who chose a class page (`class-member/set-book`) the answer holds the page's owner profile (the same shape as `book-data/get`, no birthday), the style of that yearbook (`template_id`, `page_size`, `language`) and its approved notes with their answers, signatures and photo ids. Never a pending or hidden note, a note-link token or label, an unapproved photo, the cover, an email or a user id, and nothing of another class.
+        **Order.** `members` follow the book order (`class_member_tab.sort_order`, then joining order); each member's `notes` follow that student's own order (the order of their `book-data/get`: `sort_order`, then creation). At most 40 notes per member are returned; `truncated` is true and `approved_total` is the real number when a student has more, so the cut is never silent. A member with no page, or whose page is empty (no profile text, no photo, no approved note), has `linked: false`, `yearbook: null`, `profile: null` and no notes.
+        `front_pages` and `back_pages` are the class pages (intro, teachers, events); they are empty arrays until the class pages arrive (T-128).
+        **Size.** At most 60 members, 40 notes each. A realistic full class (60 members, 40 notes of about 230 characters, two photos each) is about 1.5 MB; the answer stays under 4 MiB for notes of that size, see docs/book-export.md "Class book".
+        **Photos.** Fetch the images with `GET /api/media/get-content?id=&variant=print`. An admin can open exactly the `profile.photo_media_id` and the `photo_ids` of approved notes returned here; any other photo id is `ERROR_NOT_FOUND`, exactly as for a photo that does not exist.
+        A member who is not an admin (a student) gets `ERROR_FORBIDDEN`; a non-member, a member of another class only, and an unknown class get `ERROR_NOT_FOUND`.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: "The class does not exist or the caller is not a member of it; the two cannot be told apart."}
+        - {code: ERROR_FORBIDDEN, description: "The caller is a member but not an admin of this class."}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
+      security:
+        - sessionCookie: []
+      parameters:
+        - {name: class_id, in: query, required: true, schema: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$'}, description: Class ULID.}
+      responses:
+        "200":
+          description: The class book.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ClassBookResponse"}
+              examples:
+                ok:
+                  value:
+                    status: OK
+                    data:
+                      class: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, name: "Lớp 12A1", school_name: "THPT Chu Văn An", graduation_year: 2026, language: vi}
+                      front_pages: []
+                      members:
+                        - member_id: 01K7Q8W3ZR5N2M4X6V8B0C1D2G
+                          name: "Nguyễn Thị Hồng"
+                          linked: true
+                          yearbook: {template_id: null, page_size: A4, language: vi}
+                          profile: {full_name: "Nguyễn Thị Hồng", nickname: "Hồng", quote: "", hobbies: "", future_plans: "", photo_media_id: 01K7QC5D6E7F8G9H0J1K2M3N4P}
+                          notes:
+                            - {id: 01K7QD1A2B3C4D5E6F7G8H9J0K, answers: {name: "Linh", message: "Chúc bạn thật nhiều niềm vui."}, signature: null, photo_ids: []}
+                          note_count: 1
+                          approved_total: 1
+                          truncated: false
+                        - {member_id: 01K7Q8W3ZR5N2M4X6V8B0C1D2H, name: "Trần Văn An", linked: false, yearbook: null, profile: null, notes: [], note_count: 0, approved_total: 0, truncated: false}
+                      back_pages: []
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
   /api/class-invite/create:
     post:
       operationId: createClassInvite
@@ -3474,6 +3528,95 @@ components:
               description: The members of this page, oldest first.
               items: {$ref: "#/components/schemas/ClassMember"}
             next_id: {type: string, description: "Opaque page token for the next page; the empty string on the last page."}
+    ClassBookResponse:
+      type: object
+      required: [status, data]
+      properties:
+        status: {type: string, const: OK, description: Always `OK` on success.}
+        data:
+          type: object
+          description: The class book, assembled on read from the members' approved content.
+          required: [class, front_pages, members, back_pages]
+          properties:
+            class:
+              type: object
+              description: The class, for the cover.
+              required: [id, name, school_name, graduation_year, language]
+              properties:
+                id: {type: string, description: Class ULID.}
+                name: {type: string, description: Class name.}
+                school_name: {type: string, description: School name; empty when unset.}
+                graduation_year: {type: [integer, "null"], description: Graduation year; null when unset.}
+                language: {type: string, enum: [en, vi], description: "Language of the class: `en` or `vi`."}
+            front_pages:
+              type: array
+              description: Class pages placed before the students' pages. Empty until the class pages arrive (T-128).
+              items: {type: object}
+            members:
+              type: array
+              description: "Every member, in book order (`sort_order`, then joining order), at most 60."
+              maxItems: 60
+              items: {$ref: "#/components/schemas/ClassBookMember"}
+            back_pages:
+              type: array
+              description: Class pages placed after the students' pages. Empty until the class pages arrive (T-128).
+              items: {type: object}
+    ClassBookMember:
+      type: object
+      description: One student's pages. Approved content only.
+      required: [member_id, name, linked, yearbook, profile, notes, note_count, approved_total, truncated]
+      properties:
+        member_id: {type: string, description: "Member ULID (the `id` of a roster row). Not a user id."}
+        name: {type: string, description: The member's display name, as in the roster.}
+        linked: {type: boolean, description: "False when the member has no class page or the page is empty (no profile text, no photo, no approved note); then `yearbook` and `profile` are null and `notes` is empty."}
+        yearbook:
+          description: How the page is drawn, from the member's own yearbook; null when `linked` is false.
+          oneOf:
+            - type: object
+              required: [template_id, page_size, language]
+              properties:
+                template_id: {type: [string, "null"], description: Template id; null when none was chosen.}
+                page_size: {type: string, enum: [A5, A4, Letter], description: "Page size: `A5`, `A4` or `Letter`."}
+                language: {type: string, enum: [en, vi], description: "Language of the page: `en` or `vi`."}
+            - {type: "null"}
+        profile:
+          description: The owner profile of the page, as in `book-data/get` (no birthday); null when `linked` is false.
+          oneOf:
+            - type: object
+              required: [full_name, nickname, quote, hobbies, future_plans, photo_media_id]
+              properties:
+                full_name: {type: string, description: Full name.}
+                nickname: {type: string, description: Nickname; empty when unset.}
+                quote: {type: string, description: Favourite quote; empty when unset.}
+                hobbies: {type: string, description: Hobbies; empty when unset.}
+                future_plans: {type: string, description: Future plans; empty when unset.}
+                photo_media_id: {type: [string, "null"], description: "Public id of the profile photo; null when there is none or the photo no longer exists. Readable by the class admin."}
+            - {type: "null"}
+        notes:
+          type: array
+          description: The approved notes in the student's own order, at most 40.
+          maxItems: 40
+          items:
+            type: object
+            required: [id, answers, signature, photo_ids]
+            properties:
+              id: {type: string, description: "The note's public id, a ULID."}
+              answers:
+                type: object
+                description: The friend's answers as stored, field id to text (docs/note-fields.md). Plain text; never render it as HTML.
+                additionalProperties: {type: string}
+              signature:
+                description: The note's handwritten signature, or null when the friend did not sign. Integers only.
+                oneOf:
+                  - {$ref: "#/components/schemas/Signature"}
+                  - {type: "null"}
+              photo_ids:
+                type: array
+                description: Public ids of the note's photos, in order; the class admin can fetch them with `media/get-content`.
+                items: {type: string}
+        note_count: {type: integer, minimum: 0, maximum: 40, description: The number of notes returned.}
+        approved_total: {type: integer, minimum: 0, description: Every approved note of the page; more than `note_count` when it was cut.}
+        truncated: {type: boolean, description: "True when `approved_total` is more than the notes returned (the cap is 40 per student)."}
     ClassInviteCreateRequest:
       type: object
       additionalProperties: false

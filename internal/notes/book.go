@@ -41,6 +41,17 @@ func (s *Service) ApprovedNotes(ctx context.Context, ownerID uint64, verified bo
 	return s.mod.approvedNotes(ctx, ownerID, bookID, maxBookNotes)
 }
 
+// MaxClassBookNotes is the most approved notes one student contributes to the class book (E07, T-027): 60 members x 40 notes keeps
+// the class book near the 120-page budget. The cut is never silent: the caller gets the real approved count next to the notes.
+const MaxClassBookNotes = 40
+
+// ClassBookNotes is ApprovedNotes for the class book: the same rows in the same order (sort_order, then creation) and the same
+// query, cut at MaxClassBookNotes. The caller is the class service, which passes the book's own owner and public id from the class
+// member row; the verified-email rule is the book owner's, not the class admin's, so it is not checked here.
+func (s *Service) ClassBookNotes(ctx context.Context, ownerID uint64, bookID string) ([]*BookNote, int, error) {
+	return s.mod.approvedNotes(ctx, ownerID, bookID, MaxClassBookNotes)
+}
+
 // MaxExportNotes bounds the text export of a book (T-093): more than the book-data cap, because no browser has to draw it.
 const MaxExportNotes = 1000
 

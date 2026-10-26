@@ -467,7 +467,7 @@ export interface paths {
         };
         /**
          * Download a photo
-         * @description Called by the browser for every `<img src>` of the signed-in owner (session cookie, same origin). Binary: on success the body is the stored image with **no envelope**; `Content-Type` comes from the stored record (`image/jpeg`, or `image/png` for a photo with transparency; always `image/jpeg` for `variant=thumb`), `X-Content-Type-Options: nosniff` and `Cache-Control: private, max-age=3600` are set, and the `ETag` differs per variant. Honours `HEAD`, `Range` (206) and `If-None-Match` (304). On failure the answer is the usual JSON error envelope with the matching HTTP status and `Cache-Control: no-store`, so an error is never cached in place of the image; an `<img>` tag only needs the status. Only the owner may read (`ERROR_NOT_FOUND` for anyone else, and for an unknown id). `variant=print` is the 1800 px version for the print renderer; a photo uploaded before it existed, and not yet reached by the backfill (`smemories-media-backfill`), is answered in display size. The route may take up to 2 minutes for a slow client; a client that reads slower than 16 KiB/s (after 15 s) or stops reading for 10 s is disconnected. The bytes are streamed from the object store (T-107). One account may have at most 64 downloads in progress; the 65th waits up to 0.5 s for a slot and is then `429 ERROR_RATE_LIMITED` with `Retry-After`, answered before anything is read.
+         * @description Called by the browser for every `<img src>` of the signed-in owner (session cookie, same origin). Binary: on success the body is the stored image with **no envelope**; `Content-Type` comes from the stored record (`image/jpeg`, or `image/png` for a photo with transparency; always `image/jpeg` for `variant=thumb`), `X-Content-Type-Options: nosniff` and `Cache-Control: private, max-age=3600` are set, and the `ETag` differs per variant. Honours `HEAD`, `Range` (206) and `If-None-Match` (304). On failure the answer is the usual JSON error envelope with the matching HTTP status and `Cache-Control: no-store`, so an error is never cached in place of the image; an `<img>` tag only needs the status. Only the owner may read (`ERROR_NOT_FOUND` for anyone else, and for an unknown id), with one exception: an admin of a class may read, read only, the owner profile photo and the photos of approved notes of a yearbook that a member of that class chose as their class page (`class-book/get` lists them); a pending or hidden note's photo, the cover, any other photo of that yearbook, a yearbook that is no class page, a removed member's yearbook and another class's are `ERROR_NOT_FOUND` for the admin, exactly as for a photo that does not exist. `variant=print` is the 1800 px version for the print renderer; a photo uploaded before it existed, and not yet reached by the backfill (`smemories-media-backfill`), is answered in display size. The route may take up to 2 minutes for a slow client; a client that reads slower than 16 KiB/s (after 15 s) or stops reading for 10 s is disconnected. The bytes are streamed from the object store (T-107). One account may have at most 64 downloads in progress; the 65th waits up to 0.5 s for a slot and is then `429 ERROR_RATE_LIMITED` with `Retry-After`, answered before anything is read.
          */
         get: operations["getMediaContent"];
         put?: never;
@@ -978,6 +978,26 @@ export interface paths {
          * @description Called by any member (student or admin) for their own membership only: there is no way to name another member. `yearbook_id` must be a yearbook the caller owns; another user's yearbook and an unknown one both answer `ERROR_NOT_FOUND` (`yearbook not found`), like everywhere else. Setting it again replaces the link; `null` clears it. A yearbook can be the page of at most one class: linking it to a second class is `ERROR_CONFLICT`. The link is a pointer and nothing else: it gives the class admin no right over the yearbook, its notes or its photos. Deleting the yearbook clears the link; leaving the class or being removed leaves the yearbook untouched. Returns the new page status. A non-member and an unknown class both get `ERROR_NOT_FOUND` (`class not found`) whichever yearbook is sent.
          */
         post: operations["setClassMemberBook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/class-book/get": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the class book (admin)
+         * @description Called by an admin of the class (the class book screen, which lays out and prints the book in the browser). The book is assembled on every call from the members' own yearbooks: nothing is copied, so a note approved a moment ago is in the next answer and a note hidden a moment ago is gone. **Approved content only.** For each member who chose a class page (`class-member/set-book`) the answer holds the page's owner profile (the same shape as `book-data/get`, no birthday), the style of that yearbook (`template_id`, `page_size`, `language`) and its approved notes with their answers, signatures and photo ids. Never a pending or hidden note, a note-link token or label, an unapproved photo, the cover, an email or a user id, and nothing of another class. **Order.** `members` follow the book order (`class_member_tab.sort_order`, then joining order); each member's `notes` follow that student's own order (the order of their `book-data/get`: `sort_order`, then creation). At most 40 notes per member are returned; `truncated` is true and `approved_total` is the real number when a student has more, so the cut is never silent. A member with no page, or whose page is empty (no profile text, no photo, no approved note), has `linked: false`, `yearbook: null`, `profile: null` and no notes. `front_pages` and `back_pages` are the class pages (intro, teachers, events); they are empty arrays until the class pages arrive (T-128). **Size.** At most 60 members, 40 notes each. A realistic full class (60 members, 40 notes of about 230 characters, two photos each) is about 1.5 MB; the answer stays under 4 MiB for notes of that size, see docs/book-export.md "Class book". **Photos.** Fetch the images with `GET /api/media/get-content?id=&variant=print`. An admin can open exactly the `profile.photo_media_id` and the `photo_ids` of approved notes returned here; any other photo id is `ERROR_NOT_FOUND`, exactly as for a photo that does not exist. A member who is not an admin (a student) gets `ERROR_FORBIDDEN`; a non-member, a member of another class only, and an unknown class get `ERROR_NOT_FOUND`.
+         */
+        get: operations["getClassBook"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2087,6 +2107,96 @@ export interface components {
                 /** @description Opaque page token for the next page; the empty string on the last page. */
                 next_id: string;
             };
+        };
+        ClassBookResponse: {
+            /**
+             * @description Always `OK` on success.
+             * @constant
+             */
+            status: "OK";
+            /** @description The class book, assembled on read from the members' approved content. */
+            data: {
+                /** @description The class, for the cover. */
+                class: {
+                    /** @description Class ULID. */
+                    id: string;
+                    /** @description Class name. */
+                    name: string;
+                    /** @description School name; empty when unset. */
+                    school_name: string;
+                    /** @description Graduation year; null when unset. */
+                    graduation_year: number | null;
+                    /**
+                     * @description Language of the class: `en` or `vi`.
+                     * @enum {string}
+                     */
+                    language: "en" | "vi";
+                };
+                /** @description Class pages placed before the students' pages. Empty until the class pages arrive (T-128). */
+                front_pages: Record<string, never>[];
+                /** @description Every member, in book order (`sort_order`, then joining order), at most 60. */
+                members: components["schemas"]["ClassBookMember"][];
+                /** @description Class pages placed after the students' pages. Empty until the class pages arrive (T-128). */
+                back_pages: Record<string, never>[];
+            };
+        };
+        /** @description One student's pages. Approved content only. */
+        ClassBookMember: {
+            /** @description Member ULID (the `id` of a roster row). Not a user id. */
+            member_id: string;
+            /** @description The member's display name */
+            name: string;
+            /** @description False when the member has no class page or the page is empty (no profile text, no photo, no approved note); then `yearbook` and `profile` are null and `notes` is empty. */
+            linked: boolean;
+            /** @description How the page is drawn, from the member's own yearbook; null when `linked` is false. */
+            yearbook: {
+                /** @description Template id; null when none was chosen. */
+                template_id: string | null;
+                /**
+                 * @description Page size: `A5`, `A4` or `Letter`.
+                 * @enum {string}
+                 */
+                page_size: "A5" | "A4" | "Letter";
+                /**
+                 * @description Language of the page: `en` or `vi`.
+                 * @enum {string}
+                 */
+                language: "en" | "vi";
+            } | null;
+            /** @description The owner profile of the page, as in `book-data/get` (no birthday); null when `linked` is false. */
+            profile: {
+                /** @description Full name. */
+                full_name: string;
+                /** @description Nickname; empty when unset. */
+                nickname: string;
+                /** @description Favourite quote; empty when unset. */
+                quote: string;
+                /** @description Hobbies; empty when unset. */
+                hobbies: string;
+                /** @description Future plans; empty when unset. */
+                future_plans: string;
+                /** @description Public id of the profile photo; null when there is none or the photo no longer exists. Readable by the class admin. */
+                photo_media_id: string | null;
+            } | null;
+            /** @description The approved notes in the student's own order, at most 40. */
+            notes: {
+                /** @description The note's public id, a ULID. */
+                id: string;
+                /** @description The friend's answers as stored, field id to text (docs/note-fields.md). Plain text; never render it as HTML. */
+                answers: {
+                    [key: string]: string;
+                };
+                /** @description The note's handwritten signature, or null when the friend did not sign. Integers only. */
+                signature: components["schemas"]["Signature"] | null;
+                /** @description Public ids of the note's photos, in order; the class admin can fetch them with `media/get-content`. */
+                photo_ids: string[];
+            }[];
+            /** @description The number of notes returned. */
+            note_count: number;
+            /** @description Every approved note of the page; more than `note_count` when it was cut. */
+            approved_total: number;
+            /** @description True when `approved_total` is more than the notes returned (the cap is 40 per student). */
+            truncated: boolean;
         };
         ClassInviteCreateRequest: {
             /** @description Required. ULID of the class. */
@@ -3947,6 +4057,35 @@ export interface operations {
             413: components["responses"]["ApiTooLarge"];
             415: components["responses"]["ApiUnsupportedMediaType"];
             429: components["responses"]["ApiRateLimited"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    getClassBook: {
+        parameters: {
+            query: {
+                /** @description Class ULID. */
+                class_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The class book. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClassBookResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
             500: components["responses"]["ApiInternal"];
             503: components["responses"]["ApiSessionStoreUnavailable"];
         };

@@ -161,14 +161,12 @@ func (s *Store) yearbookByRow(ctx context.Context, id uint64) (ownerID uint64, p
 	return ownerID, publicID, nil
 }
 
-// owned returns the media with that public id if its yearbook belongs to the user.
-func (s *Store) owned(ctx context.Context, ownerID uint64, publicID string) (*Media, error) {
+const mediaCols = `m.id, m.public_id, m.object_key, m.thumb_key, m.print_key, m.content_type, m.bytes, m.width, m.height, m.sha256, m.created_at`
+
+func scanMedia(row *sql.Row) (*Media, error) {
 	m := new(Media)
 	var printKey sql.NullString
-	err := s.db.QueryRowContext(ctx,
-		`SELECT m.id, m.public_id, m.object_key, m.thumb_key, m.print_key, m.content_type, m.bytes, m.width, m.height, m.sha256, m.created_at
-		 FROM media_tab m JOIN yearbook_tab y ON y.id = m.yearbook_id WHERE y.owner_id = ? AND m.public_id = ?`, ownerID, publicID).
-		Scan(&m.RowID, &m.ID, &m.ObjectKey, &m.ThumbKey, &printKey, &m.ContentType, &m.Bytes, &m.Width, &m.Height, &m.SHA256, &m.CreatedAt)
+	err := row.Scan(&m.RowID, &m.ID, &m.ObjectKey, &m.ThumbKey, &printKey, &m.ContentType, &m.Bytes, &m.Width, &m.Height, &m.SHA256, &m.CreatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -177,6 +175,33 @@ func (s *Store) owned(ctx context.Context, ownerID uint64, publicID string) (*Me
 	}
 	m.PrintKey = printKey.String
 	return m, nil
+}
+
+// owned returns the media with that public id if its yearbook belongs to the user.
+func (s *Store) owned(ctx context.Context, ownerID uint64, publicID string) (*Media, error) {
+	return scanMedia(s.db.QueryRowContext(ctx,
+		`SELECT `+mediaCols+` FROM media_tab m JOIN yearbook_tab y ON y.id = m.yearbook_id WHERE y.owner_id = ? AND m.public_id = ?`, ownerID, publicID))
+}
+
+// ClassAdminRole repeats class.RoleAdmin (class sits above media); a class unit test pins them together.
+const ClassAdminRole = "admin"
+
+// readable is owned plus the one read path of a class admin (E07, T-027, docs/class-permissions.md): the media is also readable
+// when the caller is an admin of a class in which the media's yearbook is a member's linked page (the member owns it), and the media
+// is that yearbook's owner profile photo or a photo of one of its approved notes. Nothing else: not the cover, not a photo of a
+// pending or hidden note, not a photo that no note uses, not a yearbook of a removed member or of another class. One statement, so
+// a note hidden a moment ago is already a 404. Read only: Delete and every write keep using owned.
+func (s *Store) readable(ctx context.Context, userID uint64, publicID string) (*Media, error) {
+	return scanMedia(s.db.QueryRowContext(ctx,
+		`SELECT `+mediaCols+` FROM media_tab m JOIN yearbook_tab y ON y.id = m.yearbook_id
+		 WHERE m.public_id = ? AND (y.owner_id = ? OR EXISTS (
+		   SELECT 1 FROM class_member_tab cm
+		   JOIN class_member_tab adm ON adm.class_id = cm.class_id AND adm.user_id = ? AND adm.role = ?
+		   WHERE cm.yearbook_id = y.id AND cm.user_id = y.owner_id
+		     AND (EXISTS (SELECT 1 FROM profile_tab p WHERE p.yearbook_id = y.id AND p.is_owner = 1 AND p.photo_media_id = m.id)
+		       OR EXISTS (SELECT 1 FROM note_photo_tab np JOIN note_tab n ON n.id = np.note_id
+		                  WHERE np.media_id = m.id AND n.yearbook_id = y.id AND n.status = ?))))`,
+		publicID, userID, userID, ClassAdminRole, ShareableNoteStatus))
 }
 
 // ShareableNoteStatus is the status a note must have for its photos to be reachable through a public link. It is

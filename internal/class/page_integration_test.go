@@ -325,6 +325,48 @@ func TestRosterHasCountsAndFlagsOnly(t *testing.T) {
 	}
 }
 
+// adminCalls is the admin-404 matrix: every route of api/openapi.yaml that takes a yearbook, note or media id, called as the class admin
+// on a student's linked book. The key is the route (without /api/); a suffix after a space tells variants of one route apart.
+// TestAdminRoutesAreAllInTheMatrix fails when a route of the OpenAPI file that takes such an id is missing from this table.
+func (e *env) adminCalls(admin person, cls, book, coll, note, media string) map[string]func() resp {
+	return map[string]func() resp{
+		"yearbook/get": func() resp { return e.do(admin, "GET", "/api/yearbook/get?id="+book, "") },
+		"yearbook/update": func() resp {
+			return e.do(admin, "POST", "/api/yearbook/update", body("id", book, "title", "Hijacked", "language", "en", "page_size", "A5"))
+		},
+		"yearbook/update-profile": func() resp {
+			return e.do(admin, "POST", "/api/yearbook/update-profile", body("yearbook_id", book, "full_name", "Hijacked"))
+		},
+		"yearbook/revoke-photo-links": func() resp { return e.do(admin, "POST", "/api/yearbook/revoke-photo-links", body("id", book)) },
+		"yearbook/delete":             func() resp { return e.do(admin, "POST", "/api/yearbook/delete", body("id", book)) },
+		"note-collection/create": func() resp {
+			return e.do(admin, "POST", "/api/note-collection/create", body("yearbook_id", book, "label", "mine"))
+		},
+		"note-collection/get-list": func() resp { return e.do(admin, "GET", "/api/note-collection/get-list?yearbook_id="+book, "") },
+		"note-collection/revoke":   func() resp { return e.do(admin, "POST", "/api/note-collection/revoke", body("id", coll)) },
+		"note/get-list":            func() resp { return e.do(admin, "GET", "/api/note/get-list?yearbook_id="+book+"&status=pending", "") },
+		"note/get-list approved":   func() resp { return e.do(admin, "GET", "/api/note/get-list?yearbook_id="+book+"&status=approved", "") },
+		"note/batch-update-status": func() resp {
+			return e.do(admin, "POST", "/api/note/batch-update-status", `{"yearbook_id":"`+book+`","ids":["`+note+`"],"status":"approved"}`)
+		},
+		"note/reorder": func() resp {
+			return e.do(admin, "POST", "/api/note/reorder", `{"yearbook_id":"`+book+`","ids":["`+note+`"]}`)
+		},
+		"note/batch-delete": func() resp {
+			return e.do(admin, "POST", "/api/note/batch-delete", `{"yearbook_id":"`+book+`","ids":["`+note+`"]}`)
+		},
+		"media/create":          func() resp { return e.upload(admin, book) },
+		"media/get-list":        func() resp { return e.do(admin, "GET", "/api/media/get-list?yearbook_id="+book, "") },
+		"media/get-content":     func() resp { return e.do(admin, "GET", "/api/media/get-content?id="+media, "") },
+		"media/delete":          func() resp { return e.do(admin, "POST", "/api/media/delete", body("id", media)) },
+		"class-member/set-book": func() resp { return e.setBook(admin, cls, book) }, // the admin cannot link a student's book as their own page
+		"book-data/get":         func() resp { return e.do(admin, "GET", "/api/book-data/get?yearbook_id="+book, "") },
+		"book-export/get-text": func() resp {
+			return e.do(admin, "GET", "/api/book-export/get-text?yearbook_id="+book, "")
+		},
+	}
+}
+
 // AC4: linking changes no permission. The admin of the class gets 404 on every endpoint of the student's yearbook, notes and
 // photos (media/delete answers 200 and does nothing, by design), with the book linked, and nothing of the student's changes.
 func TestAdminStillHasNoRightsOverAStudentsBook(t *testing.T) {
@@ -362,40 +404,7 @@ func TestAdminStillHasNoRightsOverAStudentsBook(t *testing.T) {
 	}
 	snapshot := before()
 
-	calls := map[string]func() resp{
-		"yearbook/get": func() resp { return e.do(admin, "GET", "/api/yearbook/get?id="+book, "") },
-		"yearbook/update": func() resp {
-			return e.do(admin, "POST", "/api/yearbook/update", body("id", book, "title", "Hijacked", "language", "en", "page_size", "A5"))
-		},
-		"yearbook/update-profile": func() resp {
-			return e.do(admin, "POST", "/api/yearbook/update-profile", body("yearbook_id", book, "full_name", "Hijacked"))
-		},
-		"yearbook/revoke-photo-links": func() resp { return e.do(admin, "POST", "/api/yearbook/revoke-photo-links", body("id", book)) },
-		"yearbook/delete":             func() resp { return e.do(admin, "POST", "/api/yearbook/delete", body("id", book)) },
-		"note-collection/create": func() resp {
-			return e.do(admin, "POST", "/api/note-collection/create", body("yearbook_id", book, "label", "mine"))
-		},
-		"note-collection/get-list": func() resp { return e.do(admin, "GET", "/api/note-collection/get-list?yearbook_id="+book, "") },
-		"note-collection/revoke":   func() resp { return e.do(admin, "POST", "/api/note-collection/revoke", body("id", coll)) },
-		"note/get-list":            func() resp { return e.do(admin, "GET", "/api/note/get-list?yearbook_id="+book+"&status=pending", "") },
-		"note/get-list approved":   func() resp { return e.do(admin, "GET", "/api/note/get-list?yearbook_id="+book+"&status=approved", "") },
-		"note/batch-update-status": func() resp {
-			return e.do(admin, "POST", "/api/note/batch-update-status", `{"yearbook_id":"`+book+`","ids":["`+note+`"],"status":"approved"}`)
-		},
-		"note/reorder": func() resp {
-			return e.do(admin, "POST", "/api/note/reorder", `{"yearbook_id":"`+book+`","ids":["`+note+`"]}`)
-		},
-		"note/batch-delete": func() resp {
-			return e.do(admin, "POST", "/api/note/batch-delete", `{"yearbook_id":"`+book+`","ids":["`+note+`"]}`)
-		},
-		"media/get-list":    func() resp { return e.do(admin, "GET", "/api/media/get-list?yearbook_id="+book, "") },
-		"media/get-content": func() resp { return e.do(admin, "GET", "/api/media/get-content?id="+media, "") },
-		"media/delete":      func() resp { return e.do(admin, "POST", "/api/media/delete", body("id", media)) },
-		"book-data/get":     func() resp { return e.do(admin, "GET", "/api/book-data/get?yearbook_id="+book, "") },
-		"book-export/get-text": func() resp {
-			return e.do(admin, "GET", "/api/book-export/get-text?yearbook_id="+book, "")
-		},
-	}
+	calls := e.adminCalls(admin, cls, book, coll, note, media)
 	// the answer a user gets for a yearbook that does not exist: the admin's answers must be the same kind (404)
 	for name, call := range calls {
 		r := call()
@@ -414,6 +423,11 @@ func TestAdminStillHasNoRightsOverAStudentsBook(t *testing.T) {
 		t.Fatalf("the admin's calls changed the student's book:\n%s\n%s", snapshot, after)
 	}
 	e.do(student, "GET", "/api/yearbook/get?id="+book, "").status(200, "OK") // and the owner still has it
+	// media/create above was a well-formed upload: the owner's identical request works, so the admin's 404 was the ownership check
+	e.upload(student, book).status(200, "OK")
+	if !e.linked(student, cls) || e.linked(admin, cls) {
+		t.Fatal("the admin's set-book changed a link")
+	}
 }
 
 // The carried-over budget (T-125 QA): a whole class on one school network (one NAT address) joins without hitting the per-IP

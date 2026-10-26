@@ -183,6 +183,7 @@ func main() {
 	classSvc.SetPublicBaseURL(cfg.PublicBaseURL)
 	bookSvc := yearbook.NewService(bookStore, cursors, mediaSvc, nil, mediaSvc, notesSvc, classSvc) // classSvc clears a deleted book's class link
 	bookSvc.SetLimiters(limiters)
+	classSvc.SetBookSources(bookSvc, notesSvc) // the class book reads each member's own book and approved notes
 	bookH := yearbook.NewHandler(bookSvc, authH.RequireUser, cfg.AllowedOrigins)
 	classH := class.NewHandler(classSvc, authH.RequireUser, cfg.AllowedOrigins, authH.ClientIP)
 	bookDataH := bookdata.NewHandler(bookdata.NewService(bookSvc, notesSvc), authH.RequireUser)

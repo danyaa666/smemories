@@ -39,6 +39,8 @@ type Service struct {
 	lookupAll, lookupMisses ratelimit.Limiter // class-invite/lookup, per client IP (open: they bound load, not guessing)
 	acceptIP                ratelimit.Limiter // class-invite/accept, per client IP (closed, like every write)
 	baseURL                 string            // origin of the invite links, see SetPublicBaseURL
+	books                   Books             // the class book's sources, see SetBookSources
+	notes                   ApprovedNotes
 }
 
 // NewService builds the service. limiters is required: class writes are rate-limited per user and, if the limiter store is

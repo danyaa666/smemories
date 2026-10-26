@@ -55,6 +55,7 @@ type env struct {
 	db    *sql.DB
 	h     http.Handler
 	svc   *Service
+	store storage.Storage // the object store behind the media service
 	mu    sync.Mutex
 	clock time.Time
 	n     int
@@ -102,7 +103,8 @@ func newEnv(t *testing.T) *env {
 	e.svc.SetPublicBaseURL(baseURL)
 	ch := NewHandler(e.svc, ah.RequireUser, []string{origin}, ah.ClientIP)
 	// The whole book stack, wired as in cmd/smemories-api, so the tests can show that a class link gives no right over any of it.
-	mediaSvc := media.NewService(media.NewStore(d), storage.NewMemory(), 2, limiters, e.now)
+	e.store = storage.NewMemory()
+	mediaSvc := media.NewService(media.NewStore(d), e.store, 2, limiters, e.now)
 	signer, _ := medialink.New([]byte(strings.Repeat("L", medialink.MinSecretBytes)))
 	mediaSvc.SetPublicLinks(signer)
 	bookStore := yearbook.NewStore(d)
@@ -110,6 +112,7 @@ func newEnv(t *testing.T) *env {
 	mediaSvc.SetRefClearer(bookStore, notesSvc)
 	bookSvc := yearbook.NewService(bookStore, cursors, mediaSvc, e.now, mediaSvc, notesSvc, e.svc)
 	bookSvc.SetLimiters(limiters)
+	e.svc.SetBookSources(bookSvc, notesSvc)
 	yh := yearbook.NewHandler(bookSvc, ah.RequireUser, []string{origin})
 	mh := media.NewHandler(mediaSvc, 10<<20, ah.RequireUser, []string{origin}, cursors, logger)
 	nh := notes.NewHandler(notesSvc, 10<<20, ah.RequireUser, []string{origin}, ah.ClientIP, logger)

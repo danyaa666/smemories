@@ -40,6 +40,7 @@ func (h *Handler) Routes(mux *http.ServeMux) {
 	mux.Handle("POST /api/class-member/remove", write(h.removeMember))
 	mux.Handle("POST /api/class-member/leave", write(h.leave))
 	mux.Handle("POST /api/class-member/set-book", write(h.setBook))
+	mux.Handle("GET /api/class-book/get", read(h.book))
 	mux.Handle("POST /api/class-invite/create", write(h.createInvite))
 	mux.Handle("GET /api/class-invite/get-list", read(h.invites))
 	mux.Handle("POST /api/class-invite/revoke", write(h.revokeInvite))
@@ -229,6 +230,17 @@ func (h *Handler) setBook(w http.ResponseWriter, r *http.Request) {
 	}
 	st, err := h.svc.SetBook(r.Context(), u.InternalID, in.ClassID, book)
 	respond(w, r, st, err)
+}
+
+func (h *Handler) book(w http.ResponseWriter, r *http.Request) {
+	u, ok := auth.MustUser(w, r)
+	if !ok {
+		return
+	}
+	if id := r.URL.Query().Get("class_id"); validID(w, r, id, "class_id") {
+		b, err := h.svc.Book(r.Context(), u.InternalID, id)
+		respond(w, r, b, err)
+	}
 }
 
 func (h *Handler) createInvite(w http.ResponseWriter, r *http.Request) {

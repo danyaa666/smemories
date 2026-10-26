@@ -284,11 +284,11 @@ func printKey(objectKey string) string {
 	return strings.TrimSuffix(objectKey, ext) + "-print" + ext
 }
 
-// Content opens the stored object of a photo the user owns in one of the Size* versions, with the size actually
+// Content opens the stored object of a photo the user owns (or, for a class admin, the one read path of Store.readable) in one of the Size* versions, with the size actually
 // served: a photo that has no print object yet (the backfill has not reached it) is served in display size.
 // The object is a stream (T-107): the caller closes it.
 func (s *Service) Content(ctx context.Context, ownerID uint64, mediaID, size string) (*Media, io.ReadSeekCloser, string, string, error) {
-	m, err := s.store.owned(ctx, ownerID, mediaID)
+	m, err := s.store.readable(ctx, ownerID, mediaID)
 	if err != nil {
 		return nil, nil, "", "", err
 	}

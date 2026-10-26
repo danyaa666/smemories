@@ -37,8 +37,9 @@ A class always has at least one admin. Roles are per class: the same person can 
 | Create, list, revoke invites (`class-invite/create`, `get-list`, `revoke`; T-125) | 200 | **403** | 404 | 404 | 401 |
 | Preview an invite link (`class-invite/lookup`, public; T-125) | 200 for a live token, else 404 | same | same | same | same (no session needed) |
 | Join with an invite (`class-invite/accept`, verified email; T-125) | 200, keeps `admin` | 200, keeps `student` | 200, becomes student | 200, becomes student | 401 |
-| Read class book data: profiles, approved notes, class pages (T-126) | yes | **no (403)** | 404 | 404 | 401 |
-| Read a student's pending or hidden notes, note-link tokens, unapproved photos | **never** | own only, via the normal yearbook endpoints | no | no | no |
+| Read class book data: profiles, approved notes, class pages (`class-book/get`; T-027) | 200, approved content only | **403** | 404 | 404 | 401 |
+| Open a photo of a member's linked book (`media/get-content`; T-027) | 200 for the profile photo and the photos of **approved** notes only, else 404 | 404 | 404 | 404 | 401 |
+| Read a student's pending or hidden notes, their photos, note-link tokens, the cover or any other photo | **never** | own only, via the normal yearbook endpoints | no | no | no |
 | Edit a student's yearbook | **never** | own only | no | no | no |
 | Edit class pages, order the book (T-128) | yes | 403 | 404 | 404 | 401 |
 
@@ -127,6 +128,35 @@ clears it, an absent key is refused so a typo cannot unlink). The link is a poin
    of that yearbook in status `approved`. Both are 0/false while nothing is linked. The roster reads them for the whole page in two grouped
    queries, whatever the page size.
 
+## The class book and the admin's photo access (T-027)
+
+`GET /api/class-book/get?class_id=` (admin only) returns `{class, front_pages, members, back_pages}`. It is assembled on every call from the members' own
+yearbooks (`internal/class/book.go`); nothing is copied, so moderation is applied the moment the student does it.
+
+1. **Approved content only.** Per member who linked a page: the owner profile (the `book-data/get` shape, no birthday), the yearbook's template, page size
+   and language, and the approved notes with answers, signature and photo ids. Never a pending or hidden note, a note-link token or label, a cover, an email or
+   a user id. The notes come from `notes.Service.ClassBookNotes`, the same query as the owner's `book-data/get` (`approvedNotes`), read **as the book's owner**
+   (the member row's user), not as the admin: moderation rules stay in one place and the admin never passes an ownership check of the book stack.
+2. **Order.** Members: `class_member_tab.sort_order`, then joining order (member row id). A member's notes: that student's own order, exactly as in
+   their `book-data/get` (`note_tab.sort_order`, then creation). The admin cannot reorder a student's notes; T-128 adds the member order.
+3. **Cap.** At most 60 members (the class cap) and **40 approved notes per member** (`notes.MaxClassBookNotes`), which keeps the book near the 120-page budget.
+   A student with more has `truncated: true` and the real `approved_total`; the cut is never silent. Query count: `1 + 1 + 5 per linked member`
+   whatever the notes (test `TestClassBookQueryCountIsPerMember`).
+4. **Who is listed with no content.** A member with no page, or whose page is empty (no profile text, no photo, no approved note), has `linked: false`,
+   `yearbook: null`, `profile: null`, `notes: []`. The name is the display name the roster shows. A profile photo id that points at nothing
+   (`profile_complete` only checks the column) comes back as `photo_media_id: null` and never errors (`TestClassBookToleratesADanglingPhotoID`).
+5. **The one read path into a member's photos** (`media.Store.readable`, one SQL statement, read only): the caller is an admin of a class in which the media's
+   yearbook is a member's linked page **and the member owns it**, and the media is that yearbook's owner profile photo or a photo attached to one of its
+   **approved** notes. Everything else is the 404 of a photo that does not exist, byte for byte: a pending or hidden note's photo, the cover, a photo no
+   note uses, an unlinked yearbook, a removed member's or a former member's yearbook, a book linked to another class, and the same photo for an admin of another
+   class or for a student. A note hidden, deleted or un-approved, a replaced profile photo, a member who leaves or is removed, and a demoted admin take effect on the next
+   request (no cache on the server; the browser keeps an image it already got for the `private, max-age=3600` it has always had). Writes are untouched:
+   `media/delete`, `media/create` and everything else keep `owner_id = caller`. The download caps per account (64 in flight) apply to the admin's reads too.
+6. **The admin-404 matrix covers every route.** `TestAdminStillHasNoRightsOverAStudentsBook` calls, as the admin on a student's linked book, every route of
+   `api/openapi.yaml` that takes a yearbook, note or media id (`env.adminCalls`), and `TestAdminRoutesAreAllInTheMatrix` reads the OpenAPI file and fails when
+   such a route is not in that table (or the table names a route that is not in the file). `media/get-content` is the only route on which an admin may succeed, and
+   only for the two kinds of photo above (`TestAdminMediaReadPath`, `TestClassBookFollowsModeration`).
+
 ## Client IP behind the proxy
 
 Per-IP limits (invite lookup and accept, and the other public endpoints) key on `httpx.ResolveClientIP`. By default it is the host of
@@ -156,6 +186,7 @@ in T-131, which also has the owner sign off before production use.
 
 `internal/class/matrix_integration_test.go` (the matrix above, one fresh class per cell, plus the 404 equality), `class_integration_test.go`
 (last admin under concurrency, caps, validation, canonical ids, paging, rate limit, deleting a class or a yearbook),
+`book_integration_test.go` (the class book: matrix, approved-only content and order, the cap, the dangling photo id, the media read path and its negatives, moderation taking effect at once, query count, the 60 x 40 fixture, EXPLAIN, and the OpenAPI route guard),
 `page_integration_test.go` (the student's page: set-book matrix, one yearbook one class, link racing delete, roster keys, the admin's 404 on the whole book stack, 60 students from one IP),
 `invite_integration_test.go` (invites: matrix cells, caps, concurrency, dead tokens, the log grep, the cross-class ids and the promotion cap),
 `internal/db/class_tab_integration_test.go` (migration round trips and the keys), and `postman/class.postman_collection.json` (the
