@@ -11,6 +11,10 @@
 5. Linking does not change any yearbook permission: the admin gets **no** new rights on the yearbook; verify with a test that every `yearbook/*`, `note-*`, `media/*` endpoint still answers 404 to the admin for a student's book.
 6. openapi, `schema.d.ts`, Postman, docs/class-permissions.md updated.
 
+#### Carried over from T-125 QA and review (2026-10-26, required here)
+- **School Wi-Fi budget:** `internal/class/invite.go` limits public lookups to 120 per 10 minutes and accepts to 60 per hour **per client IP**. A class of up to 60 students on one school network (one NAT address) has no retry margin, and a refresh or a second attempt would lock the rest out. Raise the per-IP budgets to at least 600 lookups per 10 minutes and 300 accepts per hour (a 256-bit token is not guessable, so these limits only bound load), keep the per-user write budget and the miss limiter (20 misses per 10 minutes) as they are, and add a test that 60 different users accepting from one IP all succeed.
+- Confirm in the same change how the client IP is derived behind the production proxy (document it in `docs/class-permissions.md`; the answer feeds T-023).
+
 #### Acceptance criteria
 - [ ] AC1 — Matrix test extended: only the member can set or clear their own link; admin cannot set a student's link; non-members get 404.
 - [ ] AC2 — Same yearbook in two classes refused; deleting the yearbook clears the link; a concurrent delete and link leaves no dangling link.
