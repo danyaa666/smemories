@@ -12,15 +12,14 @@
 |---|---:|---|
 | BACKLOG | 7 | T-023, T-024, T-025, T-031, T-050, T-131, T-135 |
 | READY_FOR_QA | 1 | T-133 |
-| MERGED | 8 | T-027, T-125, T-126, T-127, T-128, T-129, T-130, T-134 |
-| DONE | 111 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-132 |
+| DONE | 119 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-132, T-134 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-027 ([E07] Class book data API and the admin's read-only media access); T-125 ([E07] Class invites: create, revoke, lookup, accept); T-126 ([E07] A student's page: link a personal yearbook to the class); T-127 ([E07] Class pages and book order (API)); T-128 ([E07] Web: classes, invites, joining and the student's page); T-129 ([E07] Web: assemble the class book (order, class pages)); T-130 ([E07] Web: print the class book (many profiles, 120 pages)); T-134 ([E07] Web: edit and delete a class, link an existing yearbook as the page)
+**Awaiting your review (MERGED):** nothing
 
 **Open questions for you:** none
 
-_Board last written 2026-10-26 15:19Z_
+_Board last written 2026-10-27 02:06Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -1816,7 +1815,7 @@ Class space owned by an admin (teacher or monitor), invite links/emails for stud
 - 2026-10-26 07:13Z · human · accepted by owner
 
 ### T-027 — [E07] Class book data API and the admin's read-only media access
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
@@ -1827,7 +1826,7 @@ Class space owned by an admin (teacher or monitor), invite links/emails for stud
 - **Assignee:** —
 - **Branch:** task/t-027-e07-class-book-data-api-and-the-admin-s-
 - **PR:** https://github.com/danyaa666/smemories/pull/125
-- **Updated:** 2026-10-26 09:58Z by leader
+- **Updated:** 2026-10-27 02:06Z by human
 - **Comments-seen:** 7
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E07-class-yearbook/02-class-book-assembly-many-profiles-per-book.md`
@@ -1861,6 +1860,7 @@ Book with many student profiles in a chosen order, class-level pages (intro, tea
 - 2026-10-26 09:38Z · leader · Leader review OK on head 195656b (unchanged since QA): read the whole readable SQL (admin of a class where the media's yearbook is the member's own linked page, and only the owner profile photo or a photo of an approved note of that yearbook; owned() still used by every write); one caller path; guard test mutation-checked; CI run 40297998394 green on the production code of this head (second commit tests/docs only). Non-blocking, moved to new task T-133: read limiter, 8 MiB response cap with truncated list, admin photo no-store. Accepted: admin can open photos of approved notes beyond the 40 cap (documented there). Awaiting owner: team approve T-027. Not run locally: integration tests and newman (Docker down).
 - 2026-10-26 09:58Z · human · owner approved merge
 - 2026-10-26 09:58Z · leader · merged 3e1dea3 (owner-approved). Review: read the whole readable SQL (admin of a class where the media's yearbook is the member's linked page; owner profile photo or approved-note photo only; writes still owner-only); route-list guard test mutation-checked; CI run 40297998394 green on the production code. For owner to check: docs/class-permissions.md media read path; newman not run (Docker down); T-133 adds read limiter, 8 MiB cap, no-store for admin photos.
+- 2026-10-27 02:06Z · human · accepted by owner
 
 ### T-028 — [E01] T-001 follow-ups: log route not path, lint scope and findings, OpenAPI 404/405
 - **Status:** DONE
@@ -5669,7 +5669,7 @@ Spec: .team/epics/E12-security-hardening/15-download-cap-tests-under-load.md (re
 - 2026-10-26 02:06Z · human · accepted by owner
 
 ### T-125 — [E07] Class invites: create, revoke, lookup, accept
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
@@ -5680,7 +5680,7 @@ Spec: .team/epics/E12-security-hardening/15-download-cap-tests-under-load.md (re
 - **Assignee:** —
 - **Branch:** task/t-125-e07-class-invites-create-revoke-lookup-a
 - **PR:** https://github.com/danyaa666/smemories/pull/123
-- **Updated:** 2026-10-26 07:57Z by leader
+- **Updated:** 2026-10-27 02:06Z by human
 - **Comments-seen:** 7
 
 Spec: .team/epics/E07-class-yearbook/03-class-invites.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.
@@ -5708,9 +5708,10 @@ Spec: .team/epics/E07-class-yearbook/03-class-invites.md (read it from the main 
 - 2026-10-26 07:29Z · leader · Leader review OK on head 1d9074b (unchanged since QA): token 256-bit, only SHA-256 stored, never in URL/log/error; garbage and dead tokens share one code path; caps under class row lock; accept idempotent and verified-email only; expand-only migration with Down, no FK; CI run 40284520659 green on this head. Non-blocking, moved to the T-126 spec: per-IP lookup/accept budgets too tight for a class on one school network. Accepted as is: faster unknown-token accept (256-bit token), rejoin with a live link (spec). Awaiting owner: team approve T-125. Not run locally: integration tests and newman (Docker down).
 - 2026-10-26 07:56Z · human · owner approved merge
 - 2026-10-26 07:57Z · leader · merged a968301 (owner-approved). Review: 256-bit token, hash only, POST body, one 404 path for dead tokens, caps under class row lock, idempotent verified-only accept; full CI run 40284520659 green on head 1d9074b. For owner to check: docs/class-permissions.md invite section; newman not run (Docker down); per-IP budgets raised in T-126.
+- 2026-10-27 02:06Z · human · accepted by owner
 
 ### T-126 — [E07] A student's page: link a personal yearbook to the class
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
@@ -5721,7 +5722,7 @@ Spec: .team/epics/E07-class-yearbook/03-class-invites.md (read it from the main 
 - **Assignee:** —
 - **Branch:** task/t-126-e07-a-student-s-page-link-a-personal-yea
 - **PR:** 124
-- **Updated:** 2026-10-26 08:59Z by leader
+- **Updated:** 2026-10-27 02:06Z by human
 - **Comments-seen:** 7
 
 Spec: .team/epics/E07-class-yearbook/04-student-page-link.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.
@@ -5746,9 +5747,10 @@ Spec: .team/epics/E07-class-yearbook/04-student-page-link.md (read it from the m
 - 2026-10-26 08:38Z · leader · Leader review OK on head f88609f (unchanged since QA): link is a pointer only, set/clear by the owner with owner_id check under the yearbook row lock (yearbook, class, member order, no cycle seen), second class 409, delete clears the link, 404 for foreign or missing yearbook, per-IP budgets raised with a 60-users-one-IP test, no migration, no .team changes; full CI run 40291645124 green on this head. Non-blocking, moved to T-027: media/create missing from the admin-404 endpoint test (add a route-list guard), dangling photo id tolerance. Awaiting owner: team approve T-126. Not run locally: integration tests and newman (Docker down).
 - 2026-10-26 08:59Z · human · owner approved merge
 - 2026-10-26 08:59Z · leader · merged 1bc9845 (owner-approved). Review: link is a pointer only, owner_id check under yearbook row lock, 409 for a second class, delete clears link, per-IP budgets raised; full CI run 40291645124 green on head f88609f. For owner to check: docs/class-permissions.md page section; newman not run (Docker down); T-027 carries the media/create guard.
+- 2026-10-27 02:06Z · human · accepted by owner
 
 ### T-127 — [E07] Class pages and book order (API)
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
@@ -5759,7 +5761,7 @@ Spec: .team/epics/E07-class-yearbook/04-student-page-link.md (read it from the m
 - **Assignee:** —
 - **Branch:** task/t-127-e07-class-pages-and-book-order-api
 - **PR:** https://github.com/danyaa666/smemories/pull/127
-- **Updated:** 2026-10-26 13:16Z by leader
+- **Updated:** 2026-10-27 02:06Z by human
 - **Comments-seen:** 5
 
 Spec: .team/epics/E07-class-yearbook/05-class-pages-and-order.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.
@@ -5772,9 +5774,10 @@ Spec: .team/epics/E07-class-yearbook/05-class-pages-and-order.md (read it from t
   Evidence by item: (1) all five routes use Authorize/lockMembership with RoleAdmin; TestPageMatrix covers each route x admin/student 403/non-member 404/anonymous 401; page and member ids are looked up scoped by class_id (updatePage/deletePage/permutation), TestPageIDsOfAnotherClassChangeNothing. (2) update-order: pre-lock checks (len cap 60/30, malformed id, duplicate) then under class lock compares exact sets with len + membership, 400 per list, all 3 UPDATEs in one tx; tests cover missing/extra/foreign/dup/malformed/empty/oversized/cross-side/unknown field. Lock order: class row, caller member row, members by id, pages by id; accept/remove/leave/set-book/class-delete/page writes all take the class row first, setBook takes yearbook then class (no cycle, noted in store.go); I found no deadlock path. (3) accept holds the class row lock, then COUNT/MAX FOR UPDATE, so concurrent accepts cannot get equal sort_order; update-order checks by public id not by sort_order, so gaps or old ties (default 0 rows) cannot break the permutation, and book order is sort_order,id so ties and gaps are deterministic; only other member INSERT is class/create (first member). (4) body: textx.CleanMultiline (CRLF->LF, NFC, trim, runes 0..4000) and title Clean 1..120; no HTML handling; test with <script> and 4-byte emoji; cap 30 counted under lock, parallel test 12 creates -> 5 ok, 7 409. (5) class remove deletes pages in the same tx; orphan pair registered; TestDeletingTheClassRemovesItsPages. (6) class-book/get uses ORDER BY placement=back, sort_order, id; TestUpdateOrder checks get follows order; size test adds 30 worst-case pages. (7) migration: one new table, no FK, Down drops it, round-trip test; openapi + schema.d.ts in sync (check:api); routesWithIDs skip of class-page/ is right (page id, not a yearbook/note/media id) and the routes are in TestPageMatrix.
   Non-blocking: a tab in a page body is refused (control char rule shared with other multiline fields), which may surprise someone pasting an indented list; response size cap stays with T-133; newman folder not executed by anyone (41 requests, syntax only).
 - 2026-10-26 13:16Z · leader · merged 2db5ede. Review: admin-only writes, ids resolved inside the class, update-order exact permutation in one transaction under the class lock, new members get a unique sort_order under the same lock, plain-text bodies, 30-page cap under lock; full CI run 40306717433 green on head ba6b13e. For owner to check: docs/class-permissions.md pages and order; newman not run (Docker down).
+- 2026-10-27 02:06Z · human · accepted by owner
 
 ### T-128 — [E07] Web: classes, invites, joining and the student's page
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
@@ -5785,7 +5788,7 @@ Spec: .team/epics/E07-class-yearbook/05-class-pages-and-order.md (read it from t
 - **Assignee:** —
 - **Branch:** task/t-128-e07-web-classes-invites-joining-and-the-
 - **PR:** https://github.com/danyaa666/smemories/pull/126
-- **Updated:** 2026-10-26 10:02Z by leader
+- **Updated:** 2026-10-27 02:06Z by human
 - **Comments-seen:** 4
 
 Spec: .team/epics/E07-class-yearbook/06-web-classes-join-and-student-page.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.
@@ -5808,9 +5811,10 @@ Spec: .team/epics/E07-class-yearbook/06-web-classes-join-and-student-page.md (re
   3. An admin's own roster row offers "Remove" and "Make student" (server enforces last-admin); fine, just noting.
   NOT checked: real API/DB (Docker down; join, accept, rate limits and server-side 404 uniformity were taken from the OpenAPI contract and dev's/CI results, not exercised); real Google OIDC; real screen reader (only role/label/focus-order inspection); e2e is T-131.
 - 2026-10-26 10:02Z · leader · merged d0b3e25. Review: token only in the path, POST bodies and in-memory router state (QA browser pass at 375 px, en+vi); no storage/console use outside test assertions; student view makes only get-me and class/get; safePath on state.from; full CI run 40301323364 green on head e2a02ba. For owner to check: sign up through an invite link on a real device; Google-only students are not told what to do yet (T-134 adds the hint).
+- 2026-10-27 02:06Z · human · accepted by owner
 
 ### T-129 — [E07] Web: assemble the class book (order, class pages)
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
@@ -5821,7 +5825,7 @@ Spec: .team/epics/E07-class-yearbook/06-web-classes-join-and-student-page.md (re
 - **Assignee:** —
 - **Branch:** task/t-129-e07-web-assemble-the-class-book-order-cl
 - **PR:** https://github.com/danyaa666/smemories/pull/128
-- **Updated:** 2026-10-26 13:34Z by leader
+- **Updated:** 2026-10-27 02:06Z by human
 - **Comments-seen:** 4
 
 Spec: .team/epics/E07-class-yearbook/07-web-assembly-ui.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.
@@ -5841,9 +5845,10 @@ Spec: .team/epics/E07-class-yearbook/07-web-assembly-ui.md (read it from the mai
   Non-blocking observations (none violates an AC): (a) the shared TextArea counter uses string .length (UTF-16), so 10 emoji show 20/4000 and maxLength stops at 2000 emoji, while the server counts runes; Vietnamese NFC text counts correctly (34 chars = 34). Same behaviour in NoteForm; if rune-exact is wanted, count [...value].length in TextArea (a separate small task, not this PR). (b) The plain links 'SMemories' (header) and 'Back to the class' render 24x167 and 20x134 px, under 44 px; same link style as the rest of the app, not new. (c) the stranger case fires class/get 4 times (react-query retry on 404), harmless.
   Could not check: real server/DB (Docker down, API stubbed), real pointer drag, Safari/Firefox.
 - 2026-10-26 13:34Z · leader · merged b7171c4. Review: web-only (14 files under web/src), keyboard reorder with focus and live region, full-list update-order payload, bodies rendered as text, 400/409 reload, student/stranger NotFound with no requests; QA browser pass at 375 px en+vi. For owner to check: reorder with a real mouse drag and on a phone (not covered); emoji counter counts UTF-16 units (cosmetic, in T-134).
+- 2026-10-27 02:06Z · human · accepted by owner
 
 ### T-130 — [E07] Web: print the class book (many profiles, 120 pages)
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
@@ -5854,7 +5859,7 @@ Spec: .team/epics/E07-class-yearbook/07-web-assembly-ui.md (read it from the mai
 - **Assignee:** —
 - **Branch:** task/t-130-e07-web-print-the-class-book-many-profil
 - **PR:** https://github.com/danyaa666/smemories/pull/129
-- **Updated:** 2026-10-26 14:01Z by leader
+- **Updated:** 2026-10-27 02:06Z by human
 - **Comments-seen:** 5
 
 Spec: .team/epics/E07-class-yearbook/08-web-class-book-print.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.
@@ -5874,6 +5879,7 @@ Spec: .team/epics/E07-class-yearbook/08-web-class-book-print.md (read it from th
   Req6: ?size= goes through Object.hasOwn(SIZES, s) else the common size; pageCss only interpolates SIZES numbers, so no injection; common size, tie to A5 covered in vitest. Locales en/vi parity ok, no package/api/.team change in the diff.
   Non-blocking: (a) route is not gated client-side like /classes/:id/assemble: a student or stranger triggers one class-book/get request and sees the error banner (403/404 from the server, no data, plus a Retry button) instead of the NotFound screen; docs/book-export.md says so on purpose. Consider NotFound for 403/404 in a later task. (b) the class cover title (FitText cc:title) cut at the floor would not be listed in the summary (a very long class name). (c) no link to the route from class screens: T-134.
 - 2026-10-26 14:01Z · leader · merged 44c2767. Review: ProfilePages extracted from BookPages with the personal book unchanged, ready waits for every photo, one paper size per class book (default = most chosen, ?size= validated), overflow summary; manual full CI run 40333150101 green on head 5277637 incl. print-check 69/69; QA read the real A5 PDF of a 30-student class (77 pages, right order, no blank pages). For owner to check: print a real class to PDF in Chrome; students on /classes/:id/book see an error banner, not NotFound (in T-134).
+- 2026-10-27 02:06Z · human · accepted by owner
 
 ### T-131 — [E07] Privacy review, legal texts and the class journey (e2e)
 - **Status:** BACKLOG
@@ -5946,7 +5952,7 @@ Spec: .team/epics/E07-class-yearbook/10-class-book-limits-and-caching.md. QA fol
 - 2026-10-26 15:19Z · leader · Leader: whole-member cut (a cut member loses all its notes; earlier members stay complete) accepted as the reading of the spec. QA: usage window is full until about 18:12Z; run when the gate allows. Verify manual CI run 40346073037 is on PR head b0a331a, the web test line changed in web/src/pages/classBook.test.tsx (watch for a conflict with merged T-134), limiter placement after the admin check, 429/503 behaviour, the allocation test, and the photo header by reader. The print screen listing of 'truncated' students is moved to T-135.
 
 ### T-134 — [E07] Web: edit and delete a class, link an existing yearbook as the page
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
@@ -5957,7 +5963,7 @@ Spec: .team/epics/E07-class-yearbook/10-class-book-limits-and-caching.md. QA fol
 - **Assignee:** —
 - **Branch:** task/t-134-e07-web-edit-and-delete-a-class-link-an-
 - **PR:** https://github.com/danyaa666/smemories/pull/130
-- **Updated:** 2026-10-26 14:50Z by leader
+- **Updated:** 2026-10-27 02:06Z by human
 - **Comments-seen:** 7
 
 Spec: .team/epics/E07-class-yearbook/11-web-class-edit-delete-and-existing-page.md. Gaps left by T-128: no UI to rename or delete a class (API exists), no way to pick an existing yearbook as the page, and Google sign-in is hidden on the join path.
@@ -5980,6 +5986,7 @@ Spec: .team/epics/E07-class-yearbook/11-web-class-edit-delete-and-existing-page.
   NON-BLOCKING: (a) known gap confirmed: native maxLength counts UTF-16, so a body of astral chars (emoji) stops at 2000 chars while the counter reads 2000/4000 (typed 3 more emoji after 2000: blocked). BMP text incl. Vietnamese is not affected (4000 'a' reaches 4000/4000), server limit is not exceeded; only an edge case for >2000 emoji in one class-page body. Fix when convenient: drop the native maxLength on TextArea and validate by runes. (b) The Google hint on join shows even when the build has no Google sign-in (VITE_GOOGLE_SIGNIN unset): then it mentions a button that does not exist. Harmless if production always sets the flag. (c) Pre-existing: header user-chip 40 px wide.
   NOT CHECKED: real API/DB (stubbed /api only, Docker down, no make e2e locally, relied on CI e2e run 40340038450 for that); invite accept POST in browser; real Google flow; screen reader beyond role/aria assertions; Safari. Processes started (vite on 5188, chromium) stopped; no files added to the repo.
 - 2026-10-26 14:50Z · leader · merged a3e40b2. Review: web + print-check harness only; print link resolves; edit/delete/page picker; AdminOnly guard gives NotFound with no class-book/get request; token only in existing POST bodies; manual full CI run 40340038450 green on head ef2f382; QA browser pass ~60 checks at 375 px en+vi. For owner to check: a real class end to end on a phone; emoji text stops at 2000 characters (native maxLength counts UTF-16, T-135).
+- 2026-10-27 02:06Z · human · accepted by owner
 
 ### T-135 — [E07] Web: character-counted text fields, join hint per build, show cut students on the print screen
 - **Status:** BACKLOG
