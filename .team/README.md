@@ -10,7 +10,8 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 7 | T-023, T-024, T-025, T-031, T-050, T-131, T-135 |
+| BACKLOG | 5 | T-023, T-024, T-025, T-031, T-050 |
+| TODO | 2 | T-131, T-135 |
 | READY_FOR_QA | 1 | T-133 |
 | DONE | 119 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-132, T-134 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
@@ -19,7 +20,7 @@
 
 **Open questions for you:** none
 
-_Board last written 2026-10-27 02:06Z_
+_Board last written 2026-10-29 08:03Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -1827,7 +1828,7 @@ Class space owned by an admin (teacher or monitor), invite links/emails for stud
 - **Branch:** task/t-027-e07-class-book-data-api-and-the-admin-s-
 - **PR:** https://github.com/danyaa666/smemories/pull/125
 - **Updated:** 2026-10-27 02:06Z by human
-- **Comments-seen:** 7
+- **Comments-seen:** 8
 
 **Spec — read this first, it is the source of truth:** `.team/epics/E07-class-yearbook/02-class-book-assembly-many-profiles-per-book.md`
 (read it from the repo root, i.e. the main checkout, where the leader keeps it current; not from a task worktree).
@@ -5681,7 +5682,7 @@ Spec: .team/epics/E12-security-hardening/15-download-cap-tests-under-load.md (re
 - **Branch:** task/t-125-e07-class-invites-create-revoke-lookup-a
 - **PR:** https://github.com/danyaa666/smemories/pull/123
 - **Updated:** 2026-10-27 02:06Z by human
-- **Comments-seen:** 7
+- **Comments-seen:** 8
 
 Spec: .team/epics/E07-class-yearbook/03-class-invites.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.
 
@@ -5723,7 +5724,7 @@ Spec: .team/epics/E07-class-yearbook/03-class-invites.md (read it from the main 
 - **Branch:** task/t-126-e07-a-student-s-page-link-a-personal-yea
 - **PR:** 124
 - **Updated:** 2026-10-27 02:06Z by human
-- **Comments-seen:** 7
+- **Comments-seen:** 8
 
 Spec: .team/epics/E07-class-yearbook/04-student-page-link.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.
 
@@ -5762,7 +5763,7 @@ Spec: .team/epics/E07-class-yearbook/04-student-page-link.md (read it from the m
 - **Branch:** task/t-127-e07-class-pages-and-book-order-api
 - **PR:** https://github.com/danyaa666/smemories/pull/127
 - **Updated:** 2026-10-27 02:06Z by human
-- **Comments-seen:** 5
+- **Comments-seen:** 6
 
 Spec: .team/epics/E07-class-yearbook/05-class-pages-and-order.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.
 
@@ -5789,7 +5790,7 @@ Spec: .team/epics/E07-class-yearbook/05-class-pages-and-order.md (read it from t
 - **Branch:** task/t-128-e07-web-classes-invites-joining-and-the-
 - **PR:** https://github.com/danyaa666/smemories/pull/126
 - **Updated:** 2026-10-27 02:06Z by human
-- **Comments-seen:** 4
+- **Comments-seen:** 5
 
 Spec: .team/epics/E07-class-yearbook/06-web-classes-join-and-student-page.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.
 
@@ -5826,7 +5827,7 @@ Spec: .team/epics/E07-class-yearbook/06-web-classes-join-and-student-page.md (re
 - **Branch:** task/t-129-e07-web-assemble-the-class-book-order-cl
 - **PR:** https://github.com/danyaa666/smemories/pull/128
 - **Updated:** 2026-10-27 02:06Z by human
-- **Comments-seen:** 4
+- **Comments-seen:** 5
 
 Spec: .team/epics/E07-class-yearbook/07-web-assembly-ui.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.
 
@@ -5860,7 +5861,7 @@ Spec: .team/epics/E07-class-yearbook/07-web-assembly-ui.md (read it from the mai
 - **Branch:** task/t-130-e07-web-print-the-class-book-many-profil
 - **PR:** https://github.com/danyaa666/smemories/pull/129
 - **Updated:** 2026-10-27 02:06Z by human
-- **Comments-seen:** 5
+- **Comments-seen:** 6
 
 Spec: .team/epics/E07-class-yearbook/08-web-class-book-print.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.
 
@@ -5882,7 +5883,7 @@ Spec: .team/epics/E07-class-yearbook/08-web-class-book-print.md (read it from th
 - 2026-10-27 02:06Z · human · accepted by owner
 
 ### T-131 — [E07] Privacy review, legal texts and the class journey (e2e)
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
@@ -5893,12 +5894,13 @@ Spec: .team/epics/E07-class-yearbook/08-web-class-book-print.md (read it from th
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-26 13:54Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-29 08:03Z by leader
+- **Comments-seen:** 1
 
 Spec: .team/epics/E07-class-yearbook/09-privacy-review-and-e2e.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.
 
 #### Comments
+- 2026-10-29 08:03Z · leader · T-129, T-130, T-134 are DONE; T-133 is independent
 
 ### T-132 — [E06] CI: pause the go-integration and e2e jobs (owner decision D-37)
 - **Status:** DONE
@@ -5964,7 +5966,7 @@ Spec: .team/epics/E07-class-yearbook/10-class-book-limits-and-caching.md. QA fol
 - **Branch:** task/t-134-e07-web-edit-and-delete-a-class-link-an-
 - **PR:** https://github.com/danyaa666/smemories/pull/130
 - **Updated:** 2026-10-27 02:06Z by human
-- **Comments-seen:** 7
+- **Comments-seen:** 8
 
 Spec: .team/epics/E07-class-yearbook/11-web-class-edit-delete-and-existing-page.md. Gaps left by T-128: no UI to rename or delete a class (API exists), no way to pick an existing yearbook as the page, and Google sign-in is hidden on the join path.
 
@@ -5989,7 +5991,7 @@ Spec: .team/epics/E07-class-yearbook/11-web-class-edit-delete-and-existing-page.
 - 2026-10-27 02:06Z · human · accepted by owner
 
 ### T-135 — [E07] Web: character-counted text fields, join hint per build, show cut students on the print screen
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P3
 - **Type:** bug
 - **Milestone:** M3
@@ -6000,12 +6002,13 @@ Spec: .team/epics/E07-class-yearbook/11-web-class-edit-delete-and-existing-page.
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-26 15:19Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-29 08:03Z by leader
+- **Comments-seen:** 1
 
 Spec: .team/epics/E07-class-yearbook/12-web-maxlength-runes-and-join-hint.md. From T-134 QA: native maxLength stops emoji text at 2000 of 4000, and the Google hint on /login and /register (from /join/) mentions a button that does not exist when VITE_GOOGLE_SIGNIN is unset.
 
 #### Comments
+- 2026-10-29 08:03Z · leader · ready
 
 <!-- tasks:end -->
 
