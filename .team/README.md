@@ -11,8 +11,8 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 5 | T-023, T-024, T-025, T-031, T-050 |
-| IN_PROGRESS | 1 | T-138 |
-| CHANGES_REQUESTED | 1 | T-137 |
+| IN_PROGRESS | 1 | T-137 |
+| IN_QA | 1 | T-138 |
 | DONE | 123 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
@@ -20,7 +20,7 @@
 
 **Open questions for you:** Q-060 (Class privacy: minors (18+), a notice on the friend note form, and a departed admin's invite links); Q-062 (What should the team build next: go live, guided customisation, or the free-layout editor?)
 
-_Board last written 2026-10-29 09:23Z_
+_Board last written 2026-10-29 09:35Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -6117,7 +6117,7 @@ Spec: .team/epics/E06-go-live/16-go-jose-cve-2026-116587.md. The image job (make
 - 2026-10-29 08:53Z · human · accepted by owner
 
 ### T-137 — [E06] CI: pause the image job (owner decision D-38)
-- **Status:** CHANGES_REQUESTED
+- **Status:** IN_PROGRESS
 - **Priority:** P1
 - **Type:** ci
 - **Milestone:** M2
@@ -6125,10 +6125,10 @@ Spec: .team/epics/E06-go-live/16-go-jose-cve-2026-116587.md. The image job (make
 - **Risk:** low
 - **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** dev
 - **Branch:** task/t-137-e06-ci-pause-the-image-job-owner-decisio
 - **PR:** https://github.com/danyaa666/smemories/pull/135
-- **Updated:** 2026-10-29 09:22Z by leader
+- **Updated:** 2026-10-29 09:35Z by dev
 - **Comments-seen:** 1
 
 Spec: .team/epics/E06-go-live/17-ci-pause-image.md. Owner decision D-38 (2026-10-29): the image job (build, smoke, Trivy, SBOM) stops running on pushes and pull requests but stays in ci.yml and can be run by hand.
@@ -6139,7 +6139,7 @@ Spec: .team/epics/E06-go-live/17-ci-pause-image.md. Owner decision D-38 (2026-10
 - 2026-10-29 09:22Z · leader · QA_PASS stands, one change: narrow paths-ignore on the push trigger to .team/**, CLAUDE.md and README.md only. Drop docs/** and **/*.md: docs/legal/{privacy,terms}.{en,vi}.md are imported ?raw into the web build, and docs/design/notes/tokens.css, docs/production-config.md, docs/templates.md and docs/class-privacy-review.md feed tests, so a docs-only direct push would skip checks that read them. The spec is updated (requirement 5). Update the docs text to match, rerun the manual full CI, then READY_FOR_QA (QA only needs to re-check the paths-ignore list and the run).
 
 ### T-138 — [E07] Web: keep the caret in place when a full text field cuts the input
-- **Status:** IN_PROGRESS
+- **Status:** IN_QA
 - **Priority:** P3
 - **Type:** bug
 - **Milestone:** M3
@@ -6147,16 +6147,17 @@ Spec: .team/epics/E06-go-live/17-ci-pause-image.md. Owner decision D-38 (2026-10
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** qa
 - **Branch:** task/t-138-e07-web-keep-the-caret-in-place-when-a-f
-- **PR:** —
-- **Updated:** 2026-10-29 09:21Z by dev
-- **Comments-seen:** 1
+- **PR:** https://github.com/danyaa666/smemories/pull/136
+- **Updated:** 2026-10-29 09:35Z by qa
+- **Comments-seen:** 2
 
 From T-135 QA: typing in the middle of a field that is already at its character limit moves the caret to the end. Fix in the shared cutRunes change handler (web/src/ui): when the cut text equals the previous value, restore the selection start/end; add a test with a full field and a caret in the middle; the acknowledgement checkbox on the print screen also needs a little more space under its warning text. No spec file: this is the whole spec.
 
 #### Comments
 - 2026-10-29 09:17Z · leader · pipeline is empty; small P3 fix
+- 2026-10-29 09:34Z · dev · PR #136 head d3d4f74. byRune (TextField+TextArea) saves selectionStart before cutting and restores it clamped, synchronously in the handler (no layout effect needed: React finds node.value==props.value and leaves the selection alone). Vitest: typing, paste, emoji on full field (fail without fix). CSS: .banner .legal-consent margin-top. Also fixed a CI flake in classBook.test.tsx (waitFor on the print button). Local: lint, tsc, i18n, check:api, build, vitest 600 green; CI go/web/security/image green. Verify: type in the middle of a full counter field, caret stays.
 
 <!-- tasks:end -->
 
