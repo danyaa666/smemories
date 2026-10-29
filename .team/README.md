@@ -19,7 +19,7 @@
 
 **Open questions for you:** Q-060 (Class privacy: minors (18+), a notice on the friend note form, and a departed admin's invite links); Q-062 (What should the team build next: go live, guided customisation, or the free-layout editor?)
 
-_Board last written 2026-10-29 09:50Z_
+_Board last written 2026-10-29 09:51Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -6128,7 +6128,7 @@ Spec: .team/epics/E06-go-live/16-go-jose-cve-2026-116587.md. The image job (make
 - **Branch:** task/t-137-e06-ci-pause-the-image-job-owner-decisio
 - **PR:** https://github.com/danyaa666/smemories/pull/135
 - **Updated:** 2026-10-29 09:50Z by leader
-- **Comments-seen:** 6
+- **Comments-seen:** 7
 
 Spec: .team/epics/E06-go-live/17-ci-pause-image.md. Owner decision D-38 (2026-10-29): the image job (build, smoke, Trivy, SBOM) stops running on pushes and pull requests but stays in ci.yml and can be run by hand.
 
@@ -6139,6 +6139,7 @@ Spec: .team/epics/E06-go-live/17-ci-pause-image.md. Owner decision D-38 (2026-10
 - 2026-10-29 09:48Z · dev · Rework: push paths-ignore narrowed to exactly .team/**, CLAUDE.md, README.md (docs/** and **/*.md removed); README, docs/ci.md, ci.yml comments updated (e2e.md and container.md have no list). develop merged (no force-push). PR #135 head fbb87b7. Manual full run https://github.com/danyaa666/smemories/actions/runs/40850900265 on that head: go, web, security, go-integration, e2e, image all success. PR run: go/web/security pass, 3 skipped. Re-check: paths-ignore list and the run.
 - 2026-10-29 09:49Z · qa · RE-CHECK PASS, PR #135 head fbb87b7de0fb8115a5ec0355653efd12b568fcd8 (earlier pass was 5ecdf16). Evidence: (1) git diff origin/develop...fbb87b7 -- ci.yml: paths-ignore only under push, exactly .team/**, CLAUDE.md, README.md; nothing under pull_request; docs/** and **/*.md gone. image has 'if: github.event_name == workflow_dispatch' with D-38 comment; go/web/security have no if; go-integration/e2e keep theirs. Ruby YAML.load_file parses; jobs go, go-integration, e2e, image, web, security (none removed or renamed, no step touched). Header comment matches (go/web/security run; go-integration, e2e, image paused; .team/CLAUDE.md/README.md pushes start no run). (2) gh pr diff 135 --name-only = 5 files (ci.yml, README.md, docs/ci.md, docs/container.md, docs/e2e.md), nothing under .team/. README and docs/ci.md state the narrow list correctly (ci.md explains why docs/** is not ignored: docs/legal/*.md ?raw, tokens.css, production-config.md, templates.md, class-privacy-review.md feed tests, and why pull_request has no filter); container.md and e2e.md say image/e2e are manual, no contradiction. (3) Manual run 40850900265: headSha = fbb87b7, event workflow_dispatch, conclusion success, all six jobs success (go, web, go-integration, e2e, image, security). (4) PR run 40850907549: go, web, security pass; e2e, go-integration, image skipped; mergeable MERGEABLE, mergeStateStatus CLEAN; required checks on develop = [go, go-integration, web, security], unchanged. (5) git grep at fbb87b7 for README.md, CLAUDE.md, .team/ in non-md code (Go, TS, scripts, Makefile, Dockerfile, .dockerignore allow-list): no build, test or embed reads root README.md, CLAUDE.md or .team/ (only comments, and web/src/book/book.test.ts reads fonts/README.md, which is not root and not matched by the patterns, since the pattern is root README.md only). Nothing blocking. NOT CHECKED: the push paths-ignore filter itself stays unproven until a push to develop touches only those paths (the PR run cannot exercise it); I did not run the Go or web suites locally (no code change; CI run above covers them); Docker not started, per instruction.  Non-blocking: ci.yml line 62 comment 'Keep the version in step with README.md' is a human note, not a read.
 - 2026-10-29 09:50Z · leader · merged b0bfbf5. Review: image job has the D-38 if (manual runs only), paths-ignore on push only (.team/**, CLAUDE.md, README.md), PR jobs go/web/security green, manual full CI run 40850900265 green on head fbb87b7; image is not a required check. For owner to check: the push filter is proven only by a push to develop that touches just those paths (next board commit tests it).
+- 2026-10-29 09:51Z · leader · Leader: the push filter is proven. Commit 0f008ae (changes only .team/, no [skip ci]) was pushed to develop and no ci run started for it within 45 s; the only run in progress was b0bfbf5 (the T-137 merge itself, which changes ci.yml). [skip ci] stays the rule for commits that touch docs/.
 
 ### T-138 — [E07] Web: keep the caret in place when a full text field cuts the input
 - **Status:** DONE
