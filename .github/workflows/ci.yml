@@ -1,6 +1,6 @@
 # Continuous integration. On pull requests and pushes this runs go, web and security; go-integration (MySQL, Valkey,
 # SeaweedFS S3), e2e and image are paused (D-37, D-38) and run by hand only (gh workflow run ci.yml --ref <branch>).
-# Pushes that only touch docs or board files start no run (D-38, paths-ignore below). Details and the required-check
+# Pushes that only touch .team/, CLAUDE.md or README.md start no run (D-38, paths-ignore below). Details and the required-check
 # names for branch protection: docs/ci.md.
 # No repository secrets are used anywhere in this file; keep it that way (public repo, and
 # pull requests from forks must be able to run it).
@@ -10,13 +10,13 @@ on:
   pull_request:
   push:
     branches: [develop, main]
-    # D-38 (T-137): a push that changes only these paths starts no run. Never add this to pull_request: a path filter there
+    # D-38 (T-137): a push that changes only these paths starts no run (leader commits that touch docs/ carry [skip ci]). Never add this to pull_request: a path filter there
     # leaves the required checks pending and blocks doc-only PRs.
     paths-ignore:
+      # Not docs/** or **/*.md: docs/legal/*.md is imported ?raw into the web build and other docs files feed tests.
       - ".team/**"
-      - "docs/**"
-      - "**/*.md"
       - "CLAUDE.md"
+      - "README.md"
   workflow_dispatch:
 
 # Least privilege: every job only reads the repository.
