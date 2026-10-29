@@ -11,14 +11,15 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 5 | T-023, T-024, T-025, T-031, T-050 |
+| TODO | 2 | T-139, T-140 |
 | DONE | 125 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-137, T-138 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
 **Awaiting your review (MERGED):** nothing
 
-**Open questions for you:** Q-060 (Class privacy: minors (18+), a notice on the friend note form, and a departed admin's invite links); Q-062 (What should the team build next: go live, guided customisation, or the free-layout editor?)
+**Open questions for you:** none
 
-_Board last written 2026-10-29 10:17Z_
+_Board last written 2026-10-29 18:56Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -644,11 +645,11 @@ Recommendation: A, with C as the fallback if the inputs take more than a few day
 - **Answer:** _(pending)_
 
 ### Q-060 — Class privacy: minors (18+), a notice on the friend note form, and a departed admin's invite links
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-29 08:33Z
 - **Blocks:** T-131
 - **Recommendation:** A (keep 18+ and say so on class screens), A (add the sentence to the friend form), B (auto-revoke a departed admin's invites)
-- **Answer:** _(pending)_
+- **Answer:** Yes to all three: (a) keep 18+ and say so on the class create and join screens, (b) add one sentence to the friend note form, (c) auto-revoke a departed admin's invites. Owner answer in chat 2026-10-30.
 
 Context: the class privacy review (docs/class-privacy-review.md section 7, T-131) found three points that are the owner's to decide. Each is small to implement once decided.
 
@@ -668,11 +669,11 @@ If you answer "A, A, B" I will turn 2 and 3 into one small task each.
 - **Answer:** _(pending)_
 
 ### Q-062 — What should the team build next: go live, guided customisation, or the free-layout editor?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-29 09:17Z
 - **Blocks:** —
 - **Recommendation:** A: go live (needs your domain, AWS account and region, cost tier and final legal texts)
-- **Answer:** _(pending)_
+- **Answer:** B: guided customisation (M1b, epic E09 stage 1) next. Owner answer in chat 2026-10-30.
 
 Context: the class yearbook (E07, D-36) is built and merged; the only open pieces are your answers on Q-060 and your sign-off of the class privacy review (section 8). The pipeline now holds only small P3 fixes. What should the team build next? I need your direction before I write specs, because each option needs inputs only you have.
 
@@ -729,6 +730,8 @@ Owner decisions (2026-10-06, `/team-init` interview). "Rejected" lists the optio
 | D-36 | **Class yearbook (E07) is built before go-live; this replaces the D-11 order for now.** Rules for E07: 18+ only (D-01 stands); a student needs an account (invite link, then email code or Google); inside a class only the page owner and the admin see a student's notes and photos; students never see each other's notes. | Owner answered Q-055 on 2026-10-26 ("class yearbook only", then the three scope questions). The team had nothing else to build and the go-live inputs (domain, AWS account, cost tier) were not ready. | Both in parallel; go-live only; minors in a class (needs consent work); no-account students (a shared link would be the credential); whole-class visibility | Go-live inputs arrive (the team switches back to E06 after E07's first slice); a school pilot with minors is planned (new epic); a leaked-invite incident |
 | D-37 | **CI no longer runs `go-integration` and `e2e` (journey and print-check) on pushes and pull requests; they run by hand (`workflow_dispatch`).** QA runs the same checks locally and puts the result on the board. | Owner request 2026-10-26: a full CI run takes 8-10 min (integration 8.4-10, e2e 6.2). Done by T-132 with job-level `if:` so the required check `go-integration` reports skipped, not missing. `go`, `web`, `security` and `image` keep running. | Run only the race detector on unit packages; shard integration and print-check (about 4-5 min) | Permission-matrix, migration, concurrency and print regressions reach `develop` unseen unless QA ran the local commands; undo = delete the two `if:` lines |
 | D-38 | **CI no longer runs the `image` job (image build, smoke, Trivy scan, SBOM) on pushes and pull requests; it runs by hand (`workflow_dispatch`), like `go-integration` and `e2e` (D-37).** | Owner request 2026-10-29, right after a new Trivy HIGH (CVE-2026-116587) turned the job red on every branch. Done by T-137 with a job-level `if:`; `image` is not a required check. `go`, `web` and `security` (govulncheck, npm audit) keep running. | Keep it on and fix each CVE as it appears (what T-136 did) | A vulnerable dependency or a broken Dockerfile reaches `develop` unseen; the deploy pipeline (T-023) must therefore build, smoke-test and scan the image itself before any deploy; undo = delete the `if:` line |
+| D-39 | **Next milestone: M1b guided customisation (epic E09 stage 1), before go-live.** Go-live (M2) waits; the free-layout editor (M4) comes later. | Owner answer to Q-062 on 2026-10-30 (the leader had recommended go-live first). Stage 1 needs nothing from the owner; it keeps the HTML print export (D-24): the design copy drives the web templates and the browser prints it. | Go live first | Go-live inputs (domain, AWS account, final legal texts) stay open longer; real users arrive later, so feedback on the product arrives later |
+| D-40 | **Class privacy points settled:** (a) 18+ stays and is stated on the class create and join screens; (b) the friend note form tells the friend that a class admin may see the note if it goes into a class book; (c) a departed (left, removed or demoted) admin's active invite links are revoked automatically. | Owner answer to Q-060 on 2026-10-30, all three leader recommendations taken. Tasks T-139 (a, b) and T-140 (c). The sign-off of `docs/class-privacy-review.md` section 8 stays with the owner until go-live. | (a) allow younger users with parental consent; (b) leave it to the privacy policy; (c) leave links live until they expire | A younger user may still sign up by ignoring the line (the terms forbid it); b adds one sentence to maintain in two languages |
 
 Leader decisions (low-risk, inside the approved stack):
 
@@ -6171,6 +6174,44 @@ From T-135 QA: typing in the middle of a field that is already at its character 
   Not checked: Safari/iOS and a real mobile keyboard/IME (Chromium + CDP IME emulation only); go-integration/e2e/print-check not run (not needed, D-37/D-38).
 - 2026-10-29 09:42Z · leader · merged 598c2b1. Review: caret saved and restored in byRune (TextField/TextArea), QA real-Chromium 24/24 with the fix and 18 failures without it (emoji, Vietnamese, IME events); spacing 3 to 14 px, 44 px target unchanged; the waitFor in classBook.test.tsx fixes a real race in the test (print enables after three font checks), 20/20 runs. For owner to check: Ctrl+Z on a full cut field does nothing (same as before); Safari/iOS and a real phone keyboard untested.
 - 2026-10-29 09:48Z · human · accepted by owner
+
+### T-139 — [E07] Web: say 18+ on the class screens and tell friends a class admin may see their note
+- **Status:** TODO
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M3
+- **Depends-on:** —
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-29 18:56Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E07-class-yearbook/13-web-age-line-and-friend-note-notice.md. Owner decision D-40 (a, b).
+
+#### Comments
+
+### T-140 — [E07] Revoke a departed admin's invite links automatically
+- **Status:** TODO
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M3
+- **Depends-on:** —
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-29 18:56Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E07-class-yearbook/14-revoke-departed-admin-invites.md. Owner decision D-40 (c).
+
+#### Comments
 
 <!-- tasks:end -->
 
