@@ -12,16 +12,16 @@
 |---|---:|---|
 | BACKLOG | 5 | T-023, T-024, T-025, T-031, T-050 |
 | TODO | 2 | T-135, T-136 |
-| IN_PROGRESS | 1 | T-131 |
+| READY_FOR_QA | 1 | T-131 |
 | MERGED | 1 | T-133 |
 | DONE | 119 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-132, T-134 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
 **Awaiting your review (MERGED):** T-133 ([E07] Class book: read limiter, response size cap and admin photo caching)
 
-**Open questions for you:** none
+**Open questions for you:** Q-060 (Class privacy: minors (18+), a notice on the friend note form, and a departed admin's invite links)
 
-_Board last written 2026-10-29 08:17Z_
+_Board last written 2026-10-29 08:33Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -645,6 +645,23 @@ Recommendation: A, with C as the fallback if the inputs take more than a few day
 - **Blocks:** T-027
 - **Recommendation:** approve
 - **Answer:** _(pending)_
+
+### Q-060 — Class privacy: minors (18+), a notice on the friend note form, and a departed admin's invite links
+- **Status:** OPEN
+- **Asked:** 2026-10-29 08:33Z
+- **Blocks:** T-131
+- **Recommendation:** A (keep 18+ and say so on class screens), A (add the sentence to the friend form), B (auto-revoke a departed admin's invites)
+- **Answer:** _(pending)_
+
+Context: the class privacy review (docs/class-privacy-review.md section 7, T-131) found three points that are the owner's to decide. Each is small to implement once decided.
+
+1. Minors. Our terms say 18 or older (D-01, D-36), but school classes are often younger. Options: (A) keep 18+ for v1 and say it plainly on the class create and join screens (one line, both languages); (B) allow 16+ with parental consent (needs a legal review and a new decision); (C) a school-managed flow for minors (large, out of scope). Recommendation: A.
+
+2. Friend note form. The public form where a friend writes a note does not say that, if the yearbook owner puts the note in a class book, the class admin can see it. Options: (A) add one sentence to the form's existing notice, in both languages; (B) leave it (the privacy policy covers it). Recommendation: A.
+
+3. A departed admin's invite links. When an admin leaves, is removed or is demoted, the invite links they created stay live until they expire (14 days by default, 30 at most) or another admin revokes them. Options: (A) leave as is; (B) revoke that admin's active invites automatically when they stop being an admin. Recommendation: B.
+
+If you answer "A, A, B" I will turn 2 and 3 into one small task each.
 
 <!-- questions:end -->
 
@@ -5884,7 +5901,7 @@ Spec: .team/epics/E07-class-yearbook/08-web-class-book-print.md (read it from th
 - 2026-10-27 02:06Z · human · accepted by owner
 
 ### T-131 — [E07] Privacy review, legal texts and the class journey (e2e)
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
@@ -5892,16 +5909,18 @@ Spec: .team/epics/E07-class-yearbook/08-web-class-book-print.md (read it from th
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-131-e07-privacy-review-legal-texts-and-the-c
-- **PR:** —
-- **Updated:** 2026-10-29 08:04Z by dev
-- **Comments-seen:** 1
+- **PR:** https://github.com/danyaa666/smemories/pull/132
+- **Updated:** 2026-10-29 08:32Z by dev
+- **Comments-seen:** 3
 
 Spec: .team/epics/E07-class-yearbook/09-privacy-review-and-e2e.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.
 
 #### Comments
 - 2026-10-29 08:03Z · leader · T-129, T-130, T-134 are DONE; T-133 is independent
+- 2026-10-29 08:32Z · dev · PR #132, head f7c6ab6, rebased on develop with T-133. Manual CI run 40841596718 (workflow_dispatch): go, web, security, go-integration, e2e SUCCESS; class journey passed in CI (9.7 s; e2e job 6 passed). image FAILED only on go-jose CVE-2026-116587 (T-136, already on develop, not mine). PR run 40841597896: go/web/security green, image the same CVE. Local: make e2e 6 passed (class journey 7.8 s, own compose project t131stack, ports 33131/36131/39131, removed afterwards); go test -race -tags integration legal/auth/class/db ok; vitest 586 ok; web lint+tsc ok. Deliberate break (approvedPage also returns pending notes) fails journey step 7 'a pending note reached the admin printout'; reverted. scripts/check-class-matrix.sh runs in the go job (negative run exits 1). Legal version 2026-10-21 -> 2026-10-29 (Go constant, openapi, schema.d.ts regenerated, Postman termsVersion, 2 auth test bodies); owner sign-off block unchecked; DRAFT kept. FOR THE LEADER: (1) add this bullet to the E06 go-live review list (T-023/PRD): 'Class yearbook: owner has signed docs/class-privacy-review.md section 8 (minors decision, friend warning on the note form, departed admin invites), legal texts v2026-10-29 finalised, check-class-matrix green'. (2) Open points in review section 7 need owner decisions: minors vs the 18+ terms; the friend note form does not warn that a class admin may see the note; a removed/departed admin's invite links stay live until expiry or revoke (another admin can revoke). (3) The 3 e2e specs register exactly 5 accounts = the 5/hour registration limit; make e2e resets it, direct scripts/e2e.sh reruns need make reset-limits.
+- 2026-10-29 08:32Z · dev · PR #132 head f7c6ab6: review doc + check script + legal v2026-10-29 + class.spec.mjs; manual CI e2e and go-integration green; QA: make test-integration, make e2e, read docs/class-privacy-review.md against code
 
 ### T-132 — [E06] CI: pause the go-integration and e2e jobs (owner decision D-37)
 - **Status:** DONE

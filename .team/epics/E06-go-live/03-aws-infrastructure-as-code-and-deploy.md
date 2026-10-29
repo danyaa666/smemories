@@ -31,3 +31,6 @@ Provision ElastiCache (Valkey or Redis OSS, decide by price) in the private subn
 
 #### Leader note from T-125 (2026-10-26): invite links are secrets in the path
 The class invite link is `/join/<token>`; the token is a bearer secret. The CDN, load balancer and web-server access logs must not record the path of `/join/*` (log it as `/join/[redacted]` or drop the path), and no analytics or error-reporting tool may capture it. `docs/class-permissions.md` states the rule; `tools/e2e/scrub-trace.sh` already scrubs it from traces. Add a check to the deploy verification (a request to `/join/TESTTOKEN` must not appear verbatim in any log group after the smoke test).
+
+#### Leader note from T-131 (2026-10-29): class yearbook go-live check
+Add to the go-live review list: "Class yearbook: the owner has signed `docs/class-privacy-review.md` section 8, the legal texts (version 2026-10-29) are finalised, `scripts/check-class-matrix.sh` is green, and no invite or class-book path appears in the edge logs."
