@@ -3,7 +3,7 @@ import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, Navigate, useLocation } from "react-router-dom";
 import { register } from "../api/auth";
-import { GoogleButton } from "../components/GoogleButton";
+import { GoogleButton, googleEnabled } from "../components/GoogleButton";
 import { LegalConsent } from "../components/LegalConsent";
 import { TERMS_VERSION } from "../legal/legal";
 import { TextField } from "../components/TextField";
@@ -86,7 +86,7 @@ export function Register() {
       </form>
       {/* Google sign-in would carry the path in a query string, and a join path holds a secret: say so instead. */}
       {joining ? (
-        <p>{t("classes.join.googleHint")}</p>
+        googleEnabled() && <p>{t("classes.join.googleHint")}</p>
       ) : (
         <GoogleButton label={t("register.google")} returnTo="/account" />
       )}

@@ -11,16 +11,16 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 5 | T-023, T-024, T-025, T-031, T-050 |
-| TODO | 1 | T-137 |
-| READY_FOR_QA | 1 | T-135 |
-| DONE | 122 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-136 |
+| IN_PROGRESS | 1 | T-138 |
+| CHANGES_REQUESTED | 1 | T-137 |
+| DONE | 123 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
 **Awaiting your review (MERGED):** nothing
 
-**Open questions for you:** Q-060 (Class privacy: minors (18+), a notice on the friend note form, and a departed admin's invite links)
+**Open questions for you:** Q-060 (Class privacy: minors (18+), a notice on the friend note form, and a departed admin's invite links); Q-062 (What should the team build next: go live, guided customisation, or the free-layout editor?)
 
-_Board last written 2026-10-29 09:09Z_
+_Board last written 2026-10-29 09:23Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -668,6 +668,22 @@ If you answer "A, A, B" I will turn 2 and 3 into one small task each.
 - **Blocks:** T-131
 - **Recommendation:** approve (the legal texts stay DRAFT and the section 8 sign-off stays open until go-live)
 - **Answer:** _(pending)_
+
+### Q-062 — What should the team build next: go live, guided customisation, or the free-layout editor?
+- **Status:** OPEN
+- **Asked:** 2026-10-29 09:17Z
+- **Blocks:** —
+- **Recommendation:** A: go live (needs your domain, AWS account and region, cost tier and final legal texts)
+- **Answer:** _(pending)_
+
+Context: the class yearbook (E07, D-36) is built and merged; the only open pieces are your answers on Q-060 and your sign-off of the class privacy review (section 8). The pipeline now holds only small P3 fixes. What should the team build next? I need your direction before I write specs, because each option needs inputs only you have.
+
+A. Go live (M2, epic E06). The code side is nearly done (Docker image, production config, SES mailer, security hardening, legal drafts). What is left: T-050 (delete the fixed email code, breaks the e2e shortcut so it comes last), T-023 (AWS infrastructure as code and deploy pipeline), T-024 (alarms and logs), T-025 (backups, restore drill, data export and deletion), T-031 (auth hardening at the edge). It needs from you: the domain name and who can edit its DNS, the AWS account and region, the cost tier you accept (a small always-on setup costs roughly tens of USD a month; I will give a number once the region is chosen), and final legal texts (operator name, contact, retention days, governing law, a native Vietnamese review).
+B. Guided customisation first (M1b, epic E09 stage 1). Per-book design copy with colours, fonts, page order and visibility, and a PDF preview. Pure product work, no inputs needed from you.
+C. Free-layout editor (M4, epic E09 stage 2). The Canva-style editor. Large, and best after B.
+D. Something else (tell me).
+
+My recommendation: A. Everything users can touch is built; going live turns the work into something you can show and test with real friends, and the feedback should steer B and C. If you want to keep building for a while before the AWS setup, B is the next best, because it needs nothing from you.
 
 <!-- questions:end -->
 
@@ -5920,7 +5936,7 @@ Spec: .team/epics/E07-class-yearbook/08-web-class-book-print.md (read it from th
 - **Branch:** task/t-131-e07-privacy-review-legal-texts-and-the-c
 - **PR:** https://github.com/danyaa666/smemories/pull/132
 - **Updated:** 2026-10-29 08:53Z by human
-- **Comments-seen:** 5
+- **Comments-seen:** 8
 
 Spec: .team/epics/E07-class-yearbook/09-privacy-review-and-e2e.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.
 
@@ -5981,7 +5997,7 @@ Spec: .team/epics/E06-go-live/15-ci-pause-integration-and-e2e.md. Owner decision
 - **Branch:** task/t-133-e07-class-book-read-limiter-response-siz
 - **PR:** https://github.com/danyaa666/smemories/pull/131
 - **Updated:** 2026-10-29 08:53Z by human
-- **Comments-seen:** 5
+- **Comments-seen:** 6
 
 Spec: .team/epics/E07-class-yearbook/10-class-book-limits-and-caching.md. QA follow-ups from T-027: class-book/get has no read limiter, a maximal class book is about 50 MiB, and an admin's cached photo outlives a hidden note by up to an hour.
 
@@ -6039,7 +6055,7 @@ Spec: .team/epics/E07-class-yearbook/11-web-class-edit-delete-and-existing-page.
 - 2026-10-27 02:06Z · human · accepted by owner
 
 ### T-135 — [E07] Web: character-counted text fields, join hint per build, show cut students on the print screen
-- **Status:** READY_FOR_QA
+- **Status:** DONE
 - **Priority:** P3
 - **Type:** bug
 - **Milestone:** M3
@@ -6050,8 +6066,8 @@ Spec: .team/epics/E07-class-yearbook/11-web-class-edit-delete-and-existing-page.
 - **Assignee:** —
 - **Branch:** task/t-135-e07-web-character-counted-text-fields-jo
 - **PR:** 134
-- **Updated:** 2026-10-29 09:09Z by dev
-- **Comments-seen:** 3
+- **Updated:** 2026-10-29 09:23Z by human
+- **Comments-seen:** 5
 
 Spec: .team/epics/E07-class-yearbook/12-web-maxlength-runes-and-join-hint.md. From T-134 QA: native maxLength stops emoji text at 2000 of 4000, and the Google hint on /login and /register (from /join/) mentions a button that does not exist when VITE_GOOGLE_SIGNIN is unset.
 
@@ -6059,6 +6075,17 @@ Spec: .team/epics/E07-class-yearbook/12-web-maxlength-runes-and-join-hint.md. Fr
 - 2026-10-29 08:03Z · leader · ready
 - 2026-10-29 09:09Z · dev · PR #134, head 5f50463 (merged origin/develop to pick up T-136, so image is green; the pushed code is unchanged since the manual run). Manual full CI on the previous head (same code): run 40845662459 - web, go, go-integration, security, e2e green; e2e: class journey class.spec.mjs passed (6 passed, 21.9s); image red on that run only because the branch predated T-136. PR jobs now: go, web, security, image green; go-integration/e2e skipped (D-37). Local: lint, typecheck, build, vitest 596, lint:i18n, check:api green. Decisions: native maxLength is dropped only on fields with a counter (CodeField keeps its native 6-digit limit); the class page title got a counter so it can use the rune limit; the class form has no client-side limit, nothing to change. To verify: paste emoji/Vietnamese in note body, link label, class page title/body; build with and without VITE_GOOGLE_SIGNIN on /join/ -> sign-in/sign-up; print screen with truncated ids (needs a fixture, no real class reaches 8 MiB). Not run here: manual 375 px visual check of the new acknowledgement checkbox (reuses .legal-consent).
 - 2026-10-29 09:09Z · dev · PR #134 head 5f50463; see comment
+- 2026-10-29 09:15Z · qa · QA_PASS T-135, PR #134, head 5f50463 (worktree == PR head, clean). CI: PR run 40846903458 on 5f50463: go, web, security, image green; go-integration/e2e skipped (D-37). Manual run 40845662459 was on 5332b01 (code head); diff 5332b01..5f50463 = only merged develop (go.mod/go.sum T-136, .team, CLAUDE.md), so its go-integration + e2e (class journey) green apply to the same product/test code; image red there only for the pre-T-136 go.mod. I did NOT re-run make e2e / test-integration locally (no compose stack up; no Go change in the PR; risk low); journey covered by the CI run only.
+  LOCAL: lint (eslint+prettier), typecheck, build, vitest 596/596, lint:i18n ok, check:api ok. No package.json/lock, api/openapi.yaml, schema.d.ts or .team change in the PR (git diff origin/develop...HEAD).
+  REAL BROWSER (Chromium 375x800, Vite dev from the PR worktree on ports 5198 (flag unset) and 5199 (VITE_GOOGLE_SIGNIN=true), /api stubbed with page.route; servers stopped after; scripts in my scratchpad, not committed): 
+  1 Rune limits. PageEditor body: no native maxlength; fill 4000 emoji -> 4000 and counter 4000/4000; 4001st (insertText + 'a') refused; paste 5000 emoji -> exactly 4000 (UTF-16 length 8000, isWellFormed true); typing at the start of a full field refused. Title: 120 emoji ok, 121st refused, paste 500 -> 120. Note form (/c/abc): body 2000 emoji ok, 2001st refused, paste 5000 -> 2000; short field paste 100 -> 60. ZWJ family x1000 paste: cut at 4000 runes, mid-sequence (ends 👩 ZWJ 👧), no lone surrogate - matches the documented rune rule. Vietnamese NFC and NFD (combining marks) pasted unchanged. CodeField keeps native maxLength=CODE_LENGTH (code, unchanged). Every field that passes maxLength with counter (PageEditor x2, NoteForm, NoteLinks) is covered by the shared TextField/TextArea helper cutRunes; no other field has maxLength.
+  2 Google hint. From /join/ via the in-main Sign in / Create account links, en+vi, /login+/register: flag unset -> no hint, no Google button; flag true -> hint shown (correct locale text), no Google button, URL stays /login or /register; plain /login and /register: no hint, Google button only with the flag. Invite token: not in any URL after /join/, localStorage, sessionStorage, cookies, console, or any request URL other than the /join/ page itself.
+  3 Cut students. /classes/:id/book and /assemble with truncated=[2 ids] (one member has a blank name): warning lists both by name (blank -> 'Student without a name' / 'Bạn chưa có tên'), en and vi. Book: Print disabled until the labelled checkbox is ticked (focus ring visible, Space toggles, untick disables again, 24px target, no horizontal overflow at 375). truncated=[]: no warning, no checkbox, Print enabled; assemble shows the warning only when truncated.
+  4 e2e hygiene: reviewed the diff; token (full link, path, last segment) is pushed to secrets before any parse/assert, in step 2 and the note-link step. Forced failure in a throwaway spec reusing the real step()/scrub and the exact step-2 lines (bad token shape, two variants): the printed message and stack contain neither the token nor the path ('the invite link has the shape /join/<43 characters>'). Journey itself: CI run 40845662459 passed (6 passed).
+  5 en/vi parity ok; unit tests added (ui.test, classBook, classAssemble, join, noteForm).
+  Non-blocking: (a) typing in the middle of a full field moves the caret to the end (value assigned programmatically in the change handler); (b) ZWJ emoji can be cut inside the sequence (by design, the server counts runes too); (c) the ack checkbox sits tight under the warning text (cosmetic); (d) other forms (profile, book, class forms) keep no counter and no maxLength, untouched.
+- 2026-10-29 09:16Z · leader · merged 71de10e. Review: rune-counted fields (cutRunes), Google hint only from /join/ and only with the Google flag, truncated students listed with an acknowledgement before Print, e2e token registered before assertions; QA browser pass at 375 px (flag on and off, en+vi); manual full CI run 40845662459 green (same code, before merging develop for T-136), PR jobs green on 5f50463. For owner to check: caret jumps to the end when typing in the middle of a full field (minor, T-138).
+- 2026-10-29 09:23Z · human · accepted by owner
 
 ### T-136 — [E06] Deps: bump go-jose/v4 to 4.1.6 (Trivy HIGH CVE-2026-116587 fails the image job)
 - **Status:** DONE
@@ -6073,7 +6100,7 @@ Spec: .team/epics/E07-class-yearbook/12-web-maxlength-runes-and-join-hint.md. Fr
 - **Branch:** task/t-136-e06-deps-bump-go-jose-v4-to-4-1-6-trivy-
 - **PR:** https://github.com/danyaa666/smemories/pull/133
 - **Updated:** 2026-10-29 08:53Z by human
-- **Comments-seen:** 3
+- **Comments-seen:** 4
 
 Spec: .team/epics/E06-go-live/16-go-jose-cve-2026-116587.md. The image job (make image-scan, Trivy HIGH) went red on 2026-10-29 for every branch: go-jose v4.1.4 (indirect) has a DoS when parsing JWKs with RSA keys, fixed in 4.1.6.
 
@@ -6090,23 +6117,46 @@ Spec: .team/epics/E06-go-live/16-go-jose-cve-2026-116587.md. The image job (make
 - 2026-10-29 08:53Z · human · accepted by owner
 
 ### T-137 — [E06] CI: pause the image job (owner decision D-38)
-- **Status:** TODO
+- **Status:** CHANGES_REQUESTED
 - **Priority:** P1
 - **Type:** ci
 - **Milestone:** M2
 - **Depends-on:** —
 - **Risk:** low
-- **Rework:** 0
+- **Rework:** 1
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-29 08:54Z by leader
-- **Comments-seen:** 0
+- **Branch:** task/t-137-e06-ci-pause-the-image-job-owner-decisio
+- **PR:** https://github.com/danyaa666/smemories/pull/135
+- **Updated:** 2026-10-29 09:22Z by leader
+- **Comments-seen:** 1
 
 Spec: .team/epics/E06-go-live/17-ci-pause-image.md. Owner decision D-38 (2026-10-29): the image job (build, smoke, Trivy, SBOM) stops running on pushes and pull requests but stays in ci.yml and can be run by hand.
 
 #### Comments
+- 2026-10-29 09:20Z · dev · PR #135 head 5ecdf16. image/go-integration/e2e skipped on PR; go, web, security pass. Manual run https://github.com/danyaa666/smemories/actions/runs/40847574682: all 6 jobs success. Required checks on develop: go, go-integration, web, security (image not required). paths-ignore on push only; cannot be proven from a task branch (push filter is develop/main), first doc-only push to develop proves it; details in PR body. Docs: README, ci.md, e2e.md, container.md. CLAUDE.md untouched (already has D-38).
+- 2026-10-29 09:22Z · qa · QA_PASS T-137, PR #135 head 5ecdf163035817cabaf9e2a7fb577719e10ff806 (re-checked mergeable=MERGEABLE, state CLEAN). Evidence: (1) PR run 40847578185: go pass, web pass, security pass; image, go-integration, e2e skipping. Required checks on develop (gh api ...required_status_checks): go, go-integration, web, security, strict=false; image not required. (2) Manual run 40847574682: headSha == 5ecdf16..., conclusion success, jobs image/go/go-integration/security/web/e2e all success. (3) git diff origin/develop...5ecdf16 -- ci.yml: only header comment, paths-ignore under push (.team/**, docs/**, **/*.md, CLAUDE.md; none under pull_request), image if: workflow_dispatch + D-38 comment. No job/step removed, renamed or changed. (4) ruby YAML parse OK: on.pull_request nil, on.push {branches, paths-ignore}; if: only on go-integration, e2e, image. (5) Docs (README, ci.md, e2e.md, container.md) accurate and consistent with ci.yml; CLAUDE.md already has D-38. (6) No .team/ file in the diff (5 files: ci.yml, README.md, docs/ci.md, docs/container.md, docs/e2e.md). Not run: Docker is down so no local make test-integration/e2e (CI-only change, no source). NOT PROVEN: paths-ignore (push filter covers only develop/main); first doc-only push to develop without [skip ci] proves it, and the merge of this PR itself (touches ci.yml) should start a go/web/security run on develop. MAJOR NON-BLOCKING OBSERVATION (spec requirement 5 mandates these patterns, so not a dev defect; leader decides): path-ignored files that feed build or tests, so a docs-only PUSH to develop/main will skip the checks that read them: docs/legal/{privacy,terms}.{en,vi}.md (imported ?raw by web/src/legal/legal.ts, bundled into the web build); docs/design/notes/tokens.css (web/src/styles/tokens.test.ts); docs/production-config.md (internal/config/prod_test.go:287); docs/templates.md (internal/templates/templates_test.go:181); docs/class-privacy-review.md (scripts/check-class-matrix.sh, run in the go job). Mitigation: pull_request has no filter, so every PR touching these files still runs go/web/security before merge; only the post-merge push run is skipped. Gap = direct pushes to develop of those docs, or a docs-only PR merged while a code PR it interacts with is not up to date (strict=false). go:embed users (auth/emails/*.tmpl, templates/embed, fonts .ttf, migrations/*.sql) are not under ignored patterns; the two fonts README.md files are not embedded. If the leader wants it tighter: drop docs/** from paths-ignore (keep .team/**, **/*.md, CLAUDE.md; still hits docs/legal) or exclude docs/legal and the files above via a paths list instead.
+- 2026-10-29 09:22Z · leader · QA_PASS stands, one change: narrow paths-ignore on the push trigger to .team/**, CLAUDE.md and README.md only. Drop docs/** and **/*.md: docs/legal/{privacy,terms}.{en,vi}.md are imported ?raw into the web build, and docs/design/notes/tokens.css, docs/production-config.md, docs/templates.md and docs/class-privacy-review.md feed tests, so a docs-only direct push would skip checks that read them. The spec is updated (requirement 5). Update the docs text to match, rerun the manual full CI, then READY_FOR_QA (QA only needs to re-check the paths-ignore list and the run).
+
+### T-138 — [E07] Web: keep the caret in place when a full text field cuts the input
+- **Status:** IN_PROGRESS
+- **Priority:** P3
+- **Type:** bug
+- **Milestone:** M3
+- **Depends-on:** —
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** dev
+- **Branch:** task/t-138-e07-web-keep-the-caret-in-place-when-a-f
+- **PR:** —
+- **Updated:** 2026-10-29 09:21Z by dev
+- **Comments-seen:** 1
+
+From T-135 QA: typing in the middle of a field that is already at its character limit moves the caret to the end. Fix in the shared cutRunes change handler (web/src/ui): when the cut text equals the previous value, restore the selection start/end; add a test with a full field and a caret in the middle; the acknowledgement checkbox on the print screen also needs a little more space under its warning text. No spec file: this is the whole spec.
+
+#### Comments
+- 2026-10-29 09:17Z · leader · pipeline is empty; small P3 fix
 
 <!-- tasks:end -->
 

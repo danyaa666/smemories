@@ -594,7 +594,9 @@
     "issuesHelp": "These approved texts do not all fit in the printout. The student can hide a note, or ask a friend to write a shorter one.",
     "dropped": "Only {{shown}} of {{total}} approved notes are in the class book.",
     "cutNotes": "Notes too long for their space and cut off: {{count}}.",
-    "cutProfile": "Profile texts too long for their space and cut off: {{count}}."
+    "cutProfile": "Profile texts too long for their space and cut off: {{count}}.",
+    "leftOut": "These students' notes are left out of the class book because it would be too large ({{count}}): {{names}}. Their profile pages are still printed, but none of their notes.",
+    "leftOutAck": "I understand that these students' notes will be missing from the printout"
   },
   "legal": {
     "terms": "Terms of Use",

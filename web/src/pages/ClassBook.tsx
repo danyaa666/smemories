@@ -7,6 +7,7 @@ import { getClassBook, type ClassBook as ClassBookData } from "../api/classBook"
 import { retryOnce } from "../api/notes";
 import { errorText } from "../auth/errors";
 import { AdminOnly } from "../classes/AdminOnly";
+import { LeftOutNotice, leftOut } from "../classes/LeftOutNotice";
 import { ClassBookPages } from "../book/ClassBookPages";
 import {
   PAGE_BUDGET,
@@ -98,6 +99,12 @@ function ClassBookScreen({ book, classId }: { book: ClassBookData; classId: stri
   const [eager, setEager] = useState(false);
   const [loading, setLoading] = useState(0); // photos on the pages that have not settled yet
   const track = useCallback((delta: number) => setLoading((n) => n + delta), []);
+  // Notes left out of the answer (8 MiB cap): printing needs the admin's yes, asked again if the list changes.
+  const cutKey = leftOut(book)
+    .map((m) => m.member_id)
+    .join(",");
+  const [acked, setAcked] = useState("");
+  const ackOk = cutKey === "" || acked === cutKey;
   const ready = fonts && photos.settled && loading === 0;
 
   // The print dialog lays the page out as soon as the event handler returns: load every image first.
@@ -161,6 +168,11 @@ function ClassBookScreen({ book, classId }: { book: ClassBookData; classId: stri
         {photos.failed > 0 && (
           <Banner variant="warning">{t("print.photosFailed", { count: photos.failed })}</Banner>
         )}
+        <LeftOutNotice
+          book={book}
+          acked={acked === cutKey}
+          onAck={(v) => setAcked(v ? cutKey : "")}
+        />
         {summary.noPage.length > 0 && (
           <Banner variant="warning">
             {t("classBook.noPage", {
@@ -203,7 +215,7 @@ function ClassBookScreen({ book, classId }: { book: ClassBookData; classId: stri
             ? t("print.ready", { pages })
             : t("print.preparing", { done: photos.loaded + photos.failed, total: photos.total })}
         </p>
-        <Button variant="primary" disabled={!ready} onClick={() => window.print()}>
+        <Button variant="primary" disabled={!ready || !ackOk} onClick={() => window.print()}>
           {t("print.print")}
         </Button>
         <PrintGuide size={size} />

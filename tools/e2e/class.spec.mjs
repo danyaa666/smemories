@@ -109,9 +109,11 @@ test("class journey: admin, invite, two students, assemble, print, and nobody se
   await step("2. the admin makes an invite link and reads it once", async () => {
     await admin.getByRole("button", { name: "Create invite link" }).click();
     const shown = await admin.getByLabel("Invite link", { exact: true }).inputValue();
+    secrets.push(shown); // a secret before anything reads, parses or asserts on it
     invitePath = new URL(shown).pathname;
-    expect(invitePath).toMatch(/^\/join\/[\w-]{43}$/);
-    secrets.push(invitePath.split("/").pop());
+    secrets.push(invitePath, invitePath.split("/").pop());
+    // `toBe(true)`, not `toMatch`: a failure must not print the path or the token
+    expect(/^\/join\/[\w-]{43}$/.test(invitePath), "the invite link has the shape /join/<43 characters>").toBe(true);
     await admin.getByRole("button", { name: "Done, hide the link" }).click();
     await expect(admin.getByLabel("Invite link", { exact: true })).toHaveCount(0); // shown once, then gone
   });
@@ -146,8 +148,10 @@ test("class journey: admin, invite, two students, assemble, print, and nobody se
     await p.getByLabel("Name (optional)").fill("Class chat");
     await p.getByRole("button", { name: "Create link" }).click();
     await expect(p.getByRole("heading", { name: "Your link is ready" })).toBeVisible();
-    const link = new URL(await p.getByLabel("Link for Class chat").inputValue()).pathname;
-    secrets.push(link.split("/").pop());
+    const shown = await p.getByLabel("Link for Class chat").inputValue();
+    secrets.push(shown);
+    const link = new URL(shown).pathname;
+    secrets.push(link, link.split("/").pop());
     await p.getByRole("button", { name: "Done" }).click();
     for (const note of [n.approved, n.pending]) {
       await friend.goto(link);

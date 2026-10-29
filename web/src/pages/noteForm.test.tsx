@@ -121,7 +121,7 @@ describe("public note form", () => {
     expect(await screen.findByRole("heading", { name: "Linh's yearbook" })).toBeInTheDocument();
     expect(screen.getByLabelText("Your name")).toHaveAttribute("placeholder", "e.g. Minh Khoa");
     expect(screen.getByLabelText("Your relationship (optional)")).toBeInTheDocument();
-    expect(screen.getByLabelText("Your message")).toHaveAttribute("maxlength", "2000");
+    expect(screen.getByLabelText("Your message")).not.toHaveAttribute("maxlength");
     expect(screen.getByText("0/2000")).toBeInTheDocument();
     expect(screen.getByText(/Only Linh will see your note/)).toBeInTheDocument();
     await act(() => i18n.changeLanguage("vi"));
