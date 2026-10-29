@@ -278,7 +278,10 @@ describe("print the class book (T-130)", () => {
     open();
     await waitFor(() => expect(labels()).toContain("class-cover"));
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Print or save as PDF" })).toBeEnabled();
+    // the button is enabled a moment after the cover shows (flaked in CI), so wait for it
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Print or save as PDF" })).toBeEnabled(),
+    );
   });
 
   it("another paper size is chosen on the screen and in the address; the default is the size most students use", async () => {
