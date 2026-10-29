@@ -5,7 +5,9 @@ and on pushes to `develop` and `main`; a newer push to the same pull request can
 read-only (`contents: read`), no job uses a repository secret, and every third-party action is pinned to a full
 commit SHA with the version in a comment (Dependabot keeps them current, see below).
 
-**Paused jobs (D-37, T-132):** `go-integration` and `e2e` carry `if: ${{ github.event_name == 'workflow_dispatch' }}`, so on pushes and pull requests they report *skipped* (counted as passing, so the required check `go-integration` stays satisfied) and they run only by hand: `gh workflow run ci.yml --ref <branch>`. QA runs the same commands locally. To switch them back on, delete the two `if:` lines.
+**Paused jobs (D-37, T-132; D-38, T-137):** `go-integration`, `e2e` and `image` carry `if: ${{ github.event_name == 'workflow_dispatch' }}`, so on pushes and pull requests they report *skipped* (counted as passing, so the required check `go-integration` stays satisfied) and they run only by hand: `gh workflow run ci.yml --ref <branch>`. QA runs the integration and e2e commands locally; dev and QA run `make image-smoke` and `make image-scan` locally when they change the Dockerfile, `go.mod`/`go.sum` or anything the image copies. The deploy pipeline (T-023) must build, smoke-test and scan the image itself. To switch a job back on, delete its `if:` line. So on a pull request only `go`, `web` and `security` run.
+
+**Doc-only pushes (D-38, T-137):** the `push` trigger has `paths-ignore` for `.team/**`, `docs/**`, `**/*.md` and `CLAUDE.md`: a push to `develop` or `main` that changes nothing but those paths starts no run. A push that also touches any other path runs everything that is not paused. `pull_request` has no path filter on purpose: a filter there would leave the required checks pending and block doc-only pull requests.
 
 ## Required checks (branch protection on `develop` and `main`)
 
@@ -19,7 +21,7 @@ Require exactly these four status checks; the names are the job names and are st
 | `security` | `govulncheck ./...` (blocking); `npm audit --audit-level=high --omit=dev` (reported, not blocking: see the comment in the workflow) | `go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...` and `cd web && npm audit --audit-level=high --omit=dev` |
 
 A fifth job, `image` (T-022, T-089: builds the production image, runs `make image-smoke`, `make image-hygiene`, the Trivy scan `make image-scan` and its self-test, and uploads the SBOM as the artifact `image-sbom`, see [container.md](container.md)), is not a required
-check yet; the owner decides when to add it.
+check, and since D-38 it runs by hand only (see above).
 
 Recommended settings for both branches: require a pull request, require the four checks above and an up-to-date
 branch, no force pushes, no deletions. Do not require the `ci` workflow name; only the job names matter.

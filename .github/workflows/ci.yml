@@ -1,5 +1,7 @@
-# Continuous integration: Go, Go integration (MySQL, Valkey, SeaweedFS S3), web, security. Details and the
-# required-check names for branch protection: docs/ci.md.
+# Continuous integration. On pull requests and pushes this runs go, web and security; go-integration (MySQL, Valkey,
+# SeaweedFS S3), e2e and image are paused (D-37, D-38) and run by hand only (gh workflow run ci.yml --ref <branch>).
+# Pushes that only touch docs or board files start no run (D-38, paths-ignore below). Details and the required-check
+# names for branch protection: docs/ci.md.
 # No repository secrets are used anywhere in this file; keep it that way (public repo, and
 # pull requests from forks must be able to run it).
 name: ci
@@ -8,6 +10,13 @@ on:
   pull_request:
   push:
     branches: [develop, main]
+    # D-38 (T-137): a push that changes only these paths starts no run. Never add this to pull_request: a path filter there
+    # leaves the required checks pending and blocks doc-only PRs.
+    paths-ignore:
+      - ".team/**"
+      - "docs/**"
+      - "**/*.md"
+      - "CLAUDE.md"
   workflow_dispatch:
 
 # Least privilege: every job only reads the repository.
@@ -281,6 +290,8 @@ jobs:
   # containers it starts itself), then the secret-hygiene check, the Trivy scan (pinned image, fails on a fixable HIGH/CRITICAL
   # vulnerability) and the SBOM artifact. Not a required check until the owner adds it.
   image:
+    # D-38 (T-137): paused on push and pull request, runs by hand only (gh workflow run ci.yml --ref <branch>); delete this `if:` to switch it back on.
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
