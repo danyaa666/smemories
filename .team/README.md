@@ -11,15 +11,14 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 5 | T-023, T-024, T-025, T-031, T-050 |
-| MERGED | 1 | T-137 |
-| DONE | 124 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-138 |
+| DONE | 125 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-137, T-138 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-137 ([E06] CI: pause the image job (owner decision D-38))
+**Awaiting your review (MERGED):** nothing
 
 **Open questions for you:** Q-060 (Class privacy: minors (18+), a notice on the friend note form, and a departed admin's invite links); Q-062 (What should the team build next: go live, guided customisation, or the free-layout editor?)
 
-_Board last written 2026-10-29 09:51Z_
+_Board last written 2026-10-29 09:57Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -6116,7 +6115,7 @@ Spec: .team/epics/E06-go-live/16-go-jose-cve-2026-116587.md. The image job (make
 - 2026-10-29 08:53Z · human · accepted by owner
 
 ### T-137 — [E06] CI: pause the image job (owner decision D-38)
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** ci
 - **Milestone:** M2
@@ -6127,7 +6126,7 @@ Spec: .team/epics/E06-go-live/16-go-jose-cve-2026-116587.md. The image job (make
 - **Assignee:** —
 - **Branch:** task/t-137-e06-ci-pause-the-image-job-owner-decisio
 - **PR:** https://github.com/danyaa666/smemories/pull/135
-- **Updated:** 2026-10-29 09:50Z by leader
+- **Updated:** 2026-10-29 09:57Z by human
 - **Comments-seen:** 7
 
 Spec: .team/epics/E06-go-live/17-ci-pause-image.md. Owner decision D-38 (2026-10-29): the image job (build, smoke, Trivy, SBOM) stops running on pushes and pull requests but stays in ci.yml and can be run by hand.
@@ -6140,6 +6139,7 @@ Spec: .team/epics/E06-go-live/17-ci-pause-image.md. Owner decision D-38 (2026-10
 - 2026-10-29 09:49Z · qa · RE-CHECK PASS, PR #135 head fbb87b7de0fb8115a5ec0355653efd12b568fcd8 (earlier pass was 5ecdf16). Evidence: (1) git diff origin/develop...fbb87b7 -- ci.yml: paths-ignore only under push, exactly .team/**, CLAUDE.md, README.md; nothing under pull_request; docs/** and **/*.md gone. image has 'if: github.event_name == workflow_dispatch' with D-38 comment; go/web/security have no if; go-integration/e2e keep theirs. Ruby YAML.load_file parses; jobs go, go-integration, e2e, image, web, security (none removed or renamed, no step touched). Header comment matches (go/web/security run; go-integration, e2e, image paused; .team/CLAUDE.md/README.md pushes start no run). (2) gh pr diff 135 --name-only = 5 files (ci.yml, README.md, docs/ci.md, docs/container.md, docs/e2e.md), nothing under .team/. README and docs/ci.md state the narrow list correctly (ci.md explains why docs/** is not ignored: docs/legal/*.md ?raw, tokens.css, production-config.md, templates.md, class-privacy-review.md feed tests, and why pull_request has no filter); container.md and e2e.md say image/e2e are manual, no contradiction. (3) Manual run 40850900265: headSha = fbb87b7, event workflow_dispatch, conclusion success, all six jobs success (go, web, go-integration, e2e, image, security). (4) PR run 40850907549: go, web, security pass; e2e, go-integration, image skipped; mergeable MERGEABLE, mergeStateStatus CLEAN; required checks on develop = [go, go-integration, web, security], unchanged. (5) git grep at fbb87b7 for README.md, CLAUDE.md, .team/ in non-md code (Go, TS, scripts, Makefile, Dockerfile, .dockerignore allow-list): no build, test or embed reads root README.md, CLAUDE.md or .team/ (only comments, and web/src/book/book.test.ts reads fonts/README.md, which is not root and not matched by the patterns, since the pattern is root README.md only). Nothing blocking. NOT CHECKED: the push paths-ignore filter itself stays unproven until a push to develop touches only those paths (the PR run cannot exercise it); I did not run the Go or web suites locally (no code change; CI run above covers them); Docker not started, per instruction.  Non-blocking: ci.yml line 62 comment 'Keep the version in step with README.md' is a human note, not a read.
 - 2026-10-29 09:50Z · leader · merged b0bfbf5. Review: image job has the D-38 if (manual runs only), paths-ignore on push only (.team/**, CLAUDE.md, README.md), PR jobs go/web/security green, manual full CI run 40850900265 green on head fbb87b7; image is not a required check. For owner to check: the push filter is proven only by a push to develop that touches just those paths (next board commit tests it).
 - 2026-10-29 09:51Z · leader · Leader: the push filter is proven. Commit 0f008ae (changes only .team/, no [skip ci]) was pushed to develop and no ci run started for it within 45 s; the only run in progress was b0bfbf5 (the T-137 merge itself, which changes ci.yml). [skip ci] stays the rule for commits that touch docs/.
+- 2026-10-29 09:57Z · human · accepted by owner
 
 ### T-138 — [E07] Web: keep the caret in place when a full text field cuts the input
 - **Status:** DONE
