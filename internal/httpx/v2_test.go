@@ -5,9 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -388,5 +390,28 @@ func TestRouterClientIPTrust(t *testing.T) {
 		if got != want {
 			t.Errorf("trust=%v: %q, want %q", trust, got, want)
 		}
+	}
+}
+
+// OKStream writes the same bytes as OK for the same value, and nothing but the envelope's opening when write fails.
+func TestOKStream(t *testing.T) {
+	v := map[string]any{"a": []int{1, 2}, "b": "<x>"}
+	want := httptest.NewRecorder()
+	OK(want, nil, v)
+	got := httptest.NewRecorder()
+	OKStream(got, func(w io.Writer) error { return json.NewEncoder(w).Encode(v) })
+	// json.Encoder ends its value with a newline, which the stream's closing brace follows: compare the decoded envelopes
+	var a, b any
+	if err := json.Unmarshal(want.Body.Bytes(), &a); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(got.Body.Bytes(), &b); err != nil || !reflect.DeepEqual(a, b) || got.Code != 200 ||
+		got.Header().Get("Content-Type") != "application/json; charset=utf-8" || !bytes.HasSuffix(got.Body.Bytes(), []byte("}\n")) {
+		t.Fatalf("got %d %q, want %q", got.Code, got.Body, want.Body)
+	}
+	failed := httptest.NewRecorder()
+	OKStream(failed, func(io.Writer) error { return io.ErrClosedPipe })
+	if failed.Body.String() != `{"status":"OK","data":` {
+		t.Fatalf("a failed stream wrote %q: it must not look like a complete answer", failed.Body)
 	}
 }

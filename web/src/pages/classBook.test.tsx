@@ -270,8 +270,8 @@ describe("print the class book (T-130)", () => {
     expect(calls.some((c) => c.path.startsWith("/class-book/get"))).toBe(false);
   });
 
-  it("ignores fields it does not know (a later API may add truncated, ...)", async () => {
-    const book = { ...classBook([member(1)]), truncated: true, budget: { bytes: 1 } };
+  it("ignores fields it does not know (a later API may add budget, ...)", async () => {
+    const book = { ...classBook([member(1)]), budget: { bytes: 1 } };
     serve(book as ClassBook);
     open();
     await waitFor(() => expect(labels()).toContain("class-cover"));

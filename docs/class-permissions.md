@@ -143,6 +143,9 @@ yearbooks (`internal/class/book.go`); nothing is copied, so moderation is applie
 3. **Cap.** At most 60 members (the class cap) and **40 approved notes per member** (`notes.MaxClassBookNotes`), which keeps the book near the 120-page budget.
    A student with more has `truncated: true` and the real `approved_total`; the cut is never silent. Query count: `1 + 1 + 5 per linked member`
    whatever the notes (test `TestClassBookQueryCountIsPerMember`).
+   **Size and rate (T-133).** The body is never more than **8 MiB** (`class.MaxBookBytes`): when the notes of a member would pass it, that member and every later one are
+   returned without notes and listed in the top-level `truncated` (member ids), the earlier members stay complete (rule and numbers: [book-export.md](book-export.md), "Class book").
+   The read limiter is 30 per user and class per hour, fail closed (429 with `Retry-After`; 503 when the limiter store is down).
 4. **Who is listed with no content.** A member with no page, or whose page is empty (no profile text, no photo, no approved note), has `linked: false`,
    `yearbook: null`, `profile: null`, `notes: []`. The name is the display name the roster shows. A profile photo id that points at nothing
    (`profile_complete` only checks the column) comes back as `photo_media_id: null` and never errors (`TestClassBookToleratesADanglingPhotoID`).
@@ -151,12 +154,17 @@ yearbooks (`internal/class/book.go`); nothing is copied, so moderation is applie
    **approved** notes. Everything else is the 404 of a photo that does not exist, byte for byte: a pending or hidden note's photo, the cover, a photo no
    note uses, an unlinked yearbook, a removed member's or a former member's yearbook, a book linked to another class, and the same photo for an admin of another
    class or for a student. A note hidden, deleted or un-approved, a replaced profile photo, a member who leaves or is removed, and a demoted admin take effect on the next
-   request (no cache on the server; the browser keeps an image it already got for the `private, max-age=3600` it has always had). Writes are untouched:
+   request (no cache on the server). A photo served to a class admin through this path is `Cache-Control: private, no-store` (T-133): the student can hide a note at any moment and the
+   admin's browser must not keep showing its photo for the hour `max-age=3600` would allow; the owner's own response keeps `private, max-age=3600` (`TestPhotoCacheControlByReader`).
+   Writes are untouched:
    `media/delete`, `media/create` and everything else keep `owner_id = caller`. The download caps per account (64 in flight) apply to the admin's reads too.
 6. **The admin-404 matrix covers every route.** `TestAdminStillHasNoRightsOverAStudentsBook` calls, as the admin on a student's linked book, every route of
    `api/openapi.yaml` that takes a yearbook, note or media id (`env.adminCalls`), and `TestAdminRoutesAreAllInTheMatrix` reads the OpenAPI file and fails when
    such a route is not in that table (or the table names a route that is not in the file). `media/get-content` is the only route on which an admin may succeed, and
    only for the two kinds of photo above (`TestAdminMediaReadPath`, `TestClassBookFollowsModeration`).
+7. **Photos beyond the 40-note cap (decision, T-133).** The book never returns a note past the 40th of a student, but the photos of an approved note beyond it are still readable through the path of item 5 by an admin who has the media id
+   (`class-book/get` does not list them): they are approved content of a page the member linked to the class, so the admin sees nothing the student has not approved for this class, and the cap exists
+   for the page budget, not for secrecy. Allowed on purpose; no code change.
 
 ## Class pages and the book order (T-127)
 

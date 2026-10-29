@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"image"
 	"image/png"
 	"io"
@@ -26,11 +27,13 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/danyaa666/smemories/internal/auth"
+	"github.com/danyaa666/smemories/internal/config"
 	"github.com/danyaa666/smemories/internal/db/dbtest"
 	"github.com/danyaa666/smemories/internal/httpx"
 	"github.com/danyaa666/smemories/internal/media"
 	"github.com/danyaa666/smemories/internal/notes"
 	"github.com/danyaa666/smemories/internal/ratelimit"
+	"github.com/danyaa666/smemories/internal/redis"
 	"github.com/danyaa666/smemories/internal/redis/redistest"
 	"github.com/danyaa666/smemories/internal/ulid"
 	"github.com/danyaa666/smemories/internal/yearbook"
@@ -245,7 +248,7 @@ func TestClassBookHasApprovedContentOnly(t *testing.T) {
 
 	r := e.classBook(admin, cls).status(200, "OK")
 	d := r.data()
-	wantKeys(t, "class-book/get", d, "class", "front_pages", "members", "back_pages")
+	wantKeys(t, "class-book/get", d, "class", "front_pages", "members", "back_pages", "truncated")
 	wantKeys(t, "class", d["class"].(map[string]any), "id", "name", "school_name", "graduation_year", "language")
 	if len(d["front_pages"].([]any)) != 0 || len(d["back_pages"].([]any)) != 0 {
 		t.Fatalf("pages: %v %v", d["front_pages"], d["back_pages"])
@@ -799,6 +802,111 @@ func TestAdminRoutesAreAllInTheMatrix(t *testing.T) {
 	for r := range matrix {
 		if !slices.Contains(routes, r) {
 			t.Errorf("adminCalls has %s, which is not a route taking an id in api/openapi.yaml", r)
+		}
+	}
+}
+
+// ---- T-133: the read limiter, the size cap and the photo cache header -----------------------------------------------------
+
+// AC1: the 31st read of an hour is a 429 with Retry-After; another class or another user is not affected; with the limiter store
+// down the read is a 503 (fail closed).
+func TestClassBookReadLimiter(t *testing.T) {
+	e := newEnv(t)
+	admin, admin2, student := e.user("Admin"), e.user("Admin2"), e.user("Student")
+	cls, _ := e.seedClass([]person{admin, admin2}, student)
+	other, _ := e.seedClass([]person{admin})
+	for range bookReadsPerWindow {
+		e.classBook(admin, cls).status(200, "OK")
+	}
+	if r := e.classBook(admin, cls).status(429, "ERROR_RATE_LIMITED"); r.Header().Get("Retry-After") == "" {
+		t.Fatal("no Retry-After")
+	}
+	e.classBook(admin2, cls).status(200, "OK")               // another user of the same class
+	e.classBook(admin, other).status(200, "OK")              // the same user in another class
+	e.classBook(student, cls).status(403, "ERROR_FORBIDDEN") // a refused read does not take from anyone's budget
+	e.advance(time.Hour + time.Minute)
+	e.classBook(admin, cls).status(200, "OK")
+
+	dead, err := redis.New(config.Config{Env: "test", RedisURL: "redis://127.0.0.1:1/0",
+		RedisDialTimeout: 200 * time.Millisecond, RedisReadTimeout: 200 * time.Millisecond, RedisWriteTimeout: 200 * time.Millisecond, RedisPoolSize: 2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = dead.Close() }()
+	e.svc.bookReads = ratelimit.NewFactory(dead, slog.New(slog.DiscardHandler), nil).Closed("class_book_read", bookReadsPerWindow, bookReadWindow)
+	e.classBook(admin, cls).status(503, "ERROR_UNAVAILABLE")
+}
+
+// AC2: members whose notes do not fit in 8 MiB lose them all and are listed; the earlier members are complete; the body is within the
+// cap and valid JSON. A class that fits has truncated [].
+func TestClassBookIsCutAtTheCap(t *testing.T) {
+	e := newEnv(t)
+	admin := e.user("Admin")
+	students := []person{e.user("S1"), e.user("S2"), e.user("S3"), e.user("S4")}
+	cls, members := e.seedClass([]person{admin}, students...)
+	small := e.classBook(admin, cls).status(200, "OK").data()
+	if tr, ok := small["truncated"].([]any); !ok || len(tr) != 0 {
+		t.Fatalf("truncated = %#v, want []", small["truncated"])
+	}
+	huge := strings.Repeat("\U0001F600", 20000) // 80 KB of four-byte characters: 40 of them are 3.2 MB
+	for _, s := range students {
+		book := e.newBook(s)
+		e.profile(book, "Student", "")
+		for j := 1; j <= notes.MaxClassBookNotes; j++ {
+			e.note(book, "approved", j, huge)
+		}
+		e.setBook(s, cls, book).status(200, "OK")
+	}
+	r := e.classBook(admin, cls).status(200, "OK")
+	if r.Body.Len() > MaxBookBytes {
+		t.Fatalf("%d bytes is over the cap", r.Body.Len())
+	}
+	d := r.data()
+	got := map[string]int{}
+	for _, x := range d["members"].([]any) {
+		m := x.(map[string]any)
+		got[m["member_id"].(string)] = len(m["notes"].([]any))
+	}
+	var full, cut []string
+	for _, s := range students {
+		switch n := got[members[s.row]]; n {
+		case notes.MaxClassBookNotes:
+			full = append(full, members[s.row])
+		case 0:
+			cut = append(cut, members[s.row])
+		default:
+			t.Fatalf("member %s has %d notes: a member is complete or has none", members[s.row], n)
+		}
+	}
+	if len(full) != 2 || len(cut) != 2 || fmt.Sprint(d["truncated"]) != fmt.Sprint([]any{cut[0], cut[1]}) {
+		t.Fatalf("full %v, cut %v, truncated %v", full, cut, d["truncated"])
+	}
+	for _, x := range d["members"].([]any) {
+		if m := x.(map[string]any); slices.Contains(cut, m["member_id"].(string)) && (m["truncated"] != true || m["approved_total"] != float64(40) || m["profile"] == nil || m["note_count"] != float64(0)) {
+			t.Fatalf("cut member %v", m)
+		}
+	}
+}
+
+// AC4: a class admin's photo response is no-store (the student can hide the note at any moment), the owner's keeps its header.
+func TestPhotoCacheControlByReader(t *testing.T) {
+	e := newEnv(t)
+	admin, student := e.user("Admin"), e.user("Student")
+	cls, _ := e.seedClass([]person{admin}, student)
+	book := e.newBook(student)
+	pp, np := e.photo(book), e.photo(book)
+	e.profile(book, "Linh", pp)
+	e.note(book, "approved", 1, "n", np)
+	e.setBook(student, cls, book).status(200, "OK")
+	for _, id := range []string{pp, np} {
+		for _, variant := range []string{"display", "thumb", "print"} {
+			path := "/api/media/get-content?id=" + id + "&variant=" + variant
+			for who, want := range map[string]string{"admin": "private, no-store", "owner": "private, max-age=3600"} {
+				r := e.do(map[string]person{"admin": admin, "owner": student}[who], "GET", path, "")
+				if r.Code != 200 || r.Header().Get("Cache-Control") != want {
+					t.Fatalf("%s %s: %d Cache-Control %q, want %q", who, variant, r.Code, r.Header().Get("Cache-Control"), want)
+				}
+			}
 		}
 	}
 }
