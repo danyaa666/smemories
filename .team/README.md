@@ -11,16 +11,15 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 5 | T-023, T-024, T-025, T-031, T-050 |
-| IN_PROGRESS | 1 | T-137 |
-| MERGED | 1 | T-138 |
-| DONE | 123 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136 |
+| READY_FOR_QA | 1 | T-137 |
+| DONE | 124 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-138 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-138 ([E07] Web: keep the caret in place when a full text field cuts the input)
+**Awaiting your review (MERGED):** nothing
 
 **Open questions for you:** Q-060 (Class privacy: minors (18+), a notice on the friend note form, and a departed admin's invite links); Q-062 (What should the team build next: go live, guided customisation, or the free-layout editor?)
 
-_Board last written 2026-10-29 09:47Z_
+_Board last written 2026-10-29 09:48Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -6117,7 +6116,7 @@ Spec: .team/epics/E06-go-live/16-go-jose-cve-2026-116587.md. The image job (make
 - 2026-10-29 08:53Z · human · accepted by owner
 
 ### T-137 — [E06] CI: pause the image job (owner decision D-38)
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P1
 - **Type:** ci
 - **Milestone:** M2
@@ -6125,10 +6124,10 @@ Spec: .team/epics/E06-go-live/16-go-jose-cve-2026-116587.md. The image job (make
 - **Risk:** low
 - **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-137-e06-ci-pause-the-image-job-owner-decisio
 - **PR:** https://github.com/danyaa666/smemories/pull/135
-- **Updated:** 2026-10-29 09:35Z by dev
+- **Updated:** 2026-10-29 09:48Z by dev
 - **Comments-seen:** 3
 
 Spec: .team/epics/E06-go-live/17-ci-pause-image.md. Owner decision D-38 (2026-10-29): the image job (build, smoke, Trivy, SBOM) stops running on pushes and pull requests but stays in ci.yml and can be run by hand.
@@ -6137,9 +6136,10 @@ Spec: .team/epics/E06-go-live/17-ci-pause-image.md. Owner decision D-38 (2026-10
 - 2026-10-29 09:20Z · dev · PR #135 head 5ecdf16. image/go-integration/e2e skipped on PR; go, web, security pass. Manual run https://github.com/danyaa666/smemories/actions/runs/40847574682: all 6 jobs success. Required checks on develop: go, go-integration, web, security (image not required). paths-ignore on push only; cannot be proven from a task branch (push filter is develop/main), first doc-only push to develop proves it; details in PR body. Docs: README, ci.md, e2e.md, container.md. CLAUDE.md untouched (already has D-38).
 - 2026-10-29 09:22Z · qa · QA_PASS T-137, PR #135 head 5ecdf163035817cabaf9e2a7fb577719e10ff806 (re-checked mergeable=MERGEABLE, state CLEAN). Evidence: (1) PR run 40847578185: go pass, web pass, security pass; image, go-integration, e2e skipping. Required checks on develop (gh api ...required_status_checks): go, go-integration, web, security, strict=false; image not required. (2) Manual run 40847574682: headSha == 5ecdf16..., conclusion success, jobs image/go/go-integration/security/web/e2e all success. (3) git diff origin/develop...5ecdf16 -- ci.yml: only header comment, paths-ignore under push (.team/**, docs/**, **/*.md, CLAUDE.md; none under pull_request), image if: workflow_dispatch + D-38 comment. No job/step removed, renamed or changed. (4) ruby YAML parse OK: on.pull_request nil, on.push {branches, paths-ignore}; if: only on go-integration, e2e, image. (5) Docs (README, ci.md, e2e.md, container.md) accurate and consistent with ci.yml; CLAUDE.md already has D-38. (6) No .team/ file in the diff (5 files: ci.yml, README.md, docs/ci.md, docs/container.md, docs/e2e.md). Not run: Docker is down so no local make test-integration/e2e (CI-only change, no source). NOT PROVEN: paths-ignore (push filter covers only develop/main); first doc-only push to develop without [skip ci] proves it, and the merge of this PR itself (touches ci.yml) should start a go/web/security run on develop. MAJOR NON-BLOCKING OBSERVATION (spec requirement 5 mandates these patterns, so not a dev defect; leader decides): path-ignored files that feed build or tests, so a docs-only PUSH to develop/main will skip the checks that read them: docs/legal/{privacy,terms}.{en,vi}.md (imported ?raw by web/src/legal/legal.ts, bundled into the web build); docs/design/notes/tokens.css (web/src/styles/tokens.test.ts); docs/production-config.md (internal/config/prod_test.go:287); docs/templates.md (internal/templates/templates_test.go:181); docs/class-privacy-review.md (scripts/check-class-matrix.sh, run in the go job). Mitigation: pull_request has no filter, so every PR touching these files still runs go/web/security before merge; only the post-merge push run is skipped. Gap = direct pushes to develop of those docs, or a docs-only PR merged while a code PR it interacts with is not up to date (strict=false). go:embed users (auth/emails/*.tmpl, templates/embed, fonts .ttf, migrations/*.sql) are not under ignored patterns; the two fonts README.md files are not embedded. If the leader wants it tighter: drop docs/** from paths-ignore (keep .team/**, **/*.md, CLAUDE.md; still hits docs/legal) or exclude docs/legal and the files above via a paths list instead.
 - 2026-10-29 09:22Z · leader · QA_PASS stands, one change: narrow paths-ignore on the push trigger to .team/**, CLAUDE.md and README.md only. Drop docs/** and **/*.md: docs/legal/{privacy,terms}.{en,vi}.md are imported ?raw into the web build, and docs/design/notes/tokens.css, docs/production-config.md, docs/templates.md and docs/class-privacy-review.md feed tests, so a docs-only direct push would skip checks that read them. The spec is updated (requirement 5). Update the docs text to match, rerun the manual full CI, then READY_FOR_QA (QA only needs to re-check the paths-ignore list and the run).
+- 2026-10-29 09:48Z · dev · Rework: push paths-ignore narrowed to exactly .team/**, CLAUDE.md, README.md (docs/** and **/*.md removed); README, docs/ci.md, ci.yml comments updated (e2e.md and container.md have no list). develop merged (no force-push). PR #135 head fbb87b7. Manual full run https://github.com/danyaa666/smemories/actions/runs/40850900265 on that head: go, web, security, go-integration, e2e, image all success. PR run: go/web/security pass, 3 skipped. Re-check: paths-ignore list and the run.
 
 ### T-138 — [E07] Web: keep the caret in place when a full text field cuts the input
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P3
 - **Type:** bug
 - **Milestone:** M3
@@ -6150,7 +6150,7 @@ Spec: .team/epics/E06-go-live/17-ci-pause-image.md. Owner decision D-38 (2026-10
 - **Assignee:** —
 - **Branch:** task/t-138-e07-web-keep-the-caret-in-place-when-a-f
 - **PR:** https://github.com/danyaa666/smemories/pull/136
-- **Updated:** 2026-10-29 09:42Z by leader
+- **Updated:** 2026-10-29 09:48Z by human
 - **Comments-seen:** 4
 
 From T-135 QA: typing in the middle of a field that is already at its character limit moves the caret to the end. Fix in the shared cutRunes change handler (web/src/ui): when the cut text equals the previous value, restore the selection start/end; add a test with a full field and a caret in the middle; the acknowledgement checkbox on the print screen also needs a little more space under its warning text. No spec file: this is the whole spec.
@@ -6167,6 +6167,7 @@ From T-135 QA: typing in the middle of a field that is already at its character 
   Local in worktree: lint (eslint+prettier) exit 0; typecheck 0; lint:i18n ok; check:api ok; build ok; vitest 32 files / 600 tests pass.
   Not checked: Safari/iOS and a real mobile keyboard/IME (Chromium + CDP IME emulation only); go-integration/e2e/print-check not run (not needed, D-37/D-38).
 - 2026-10-29 09:42Z · leader · merged 598c2b1. Review: caret saved and restored in byRune (TextField/TextArea), QA real-Chromium 24/24 with the fix and 18 failures without it (emoji, Vietnamese, IME events); spacing 3 to 14 px, 44 px target unchanged; the waitFor in classBook.test.tsx fixes a real race in the test (print enables after three font checks), 20/20 runs. For owner to check: Ctrl+Z on a full cut field does nothing (same as before); Safari/iOS and a real phone keyboard untested.
+- 2026-10-29 09:48Z · human · accepted by owner
 
 <!-- tasks:end -->
 
