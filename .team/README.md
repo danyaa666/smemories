@@ -12,15 +12,15 @@
 |---|---:|---|
 | BACKLOG | 5 | T-023, T-024, T-025, T-031, T-050 |
 | IN_PROGRESS | 1 | T-137 |
-| IN_QA | 1 | T-138 |
+| MERGED | 1 | T-138 |
 | DONE | 123 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** nothing
+**Awaiting your review (MERGED):** T-138 ([E07] Web: keep the caret in place when a full text field cuts the input)
 
 **Open questions for you:** Q-060 (Class privacy: minors (18+), a notice on the friend note form, and a departed admin's invite links); Q-062 (What should the team build next: go live, guided customisation, or the free-layout editor?)
 
-_Board last written 2026-10-29 09:35Z_
+_Board last written 2026-10-29 09:42Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -6139,7 +6139,7 @@ Spec: .team/epics/E06-go-live/17-ci-pause-image.md. Owner decision D-38 (2026-10
 - 2026-10-29 09:22Z · leader · QA_PASS stands, one change: narrow paths-ignore on the push trigger to .team/**, CLAUDE.md and README.md only. Drop docs/** and **/*.md: docs/legal/{privacy,terms}.{en,vi}.md are imported ?raw into the web build, and docs/design/notes/tokens.css, docs/production-config.md, docs/templates.md and docs/class-privacy-review.md feed tests, so a docs-only direct push would skip checks that read them. The spec is updated (requirement 5). Update the docs text to match, rerun the manual full CI, then READY_FOR_QA (QA only needs to re-check the paths-ignore list and the run).
 
 ### T-138 — [E07] Web: keep the caret in place when a full text field cuts the input
-- **Status:** IN_QA
+- **Status:** MERGED
 - **Priority:** P3
 - **Type:** bug
 - **Milestone:** M3
@@ -6147,17 +6147,26 @@ Spec: .team/epics/E06-go-live/17-ci-pause-image.md. Owner decision D-38 (2026-10
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** —
 - **Branch:** task/t-138-e07-web-keep-the-caret-in-place-when-a-f
 - **PR:** https://github.com/danyaa666/smemories/pull/136
-- **Updated:** 2026-10-29 09:35Z by qa
-- **Comments-seen:** 2
+- **Updated:** 2026-10-29 09:42Z by leader
+- **Comments-seen:** 4
 
 From T-135 QA: typing in the middle of a field that is already at its character limit moves the caret to the end. Fix in the shared cutRunes change handler (web/src/ui): when the cut text equals the previous value, restore the selection start/end; add a test with a full field and a caret in the middle; the acknowledgement checkbox on the print screen also needs a little more space under its warning text. No spec file: this is the whole spec.
 
 #### Comments
 - 2026-10-29 09:17Z · leader · pipeline is empty; small P3 fix
 - 2026-10-29 09:34Z · dev · PR #136 head d3d4f74. byRune (TextField+TextArea) saves selectionStart before cutting and restores it clamped, synchronously in the handler (no layout effect needed: React finds node.value==props.value and leaves the selection alone). Vitest: typing, paste, emoji on full field (fail without fix). CSS: .banner .legal-consent margin-top. Also fixed a CI flake in classBook.test.tsx (waitFor on the print button). Local: lint, tsc, i18n, check:api, build, vitest 600 green; CI go/web/security/image green. Verify: type in the middle of a full counter field, caret stays.
+- 2026-10-29 09:42Z · qa · QA_PASS, PR #136 head d3d4f748b6018a1dc7aa90e860a316a1d22d7968 (worktree clean, equals PR head). CI go/web/security/image green; go-integration/e2e skipped per D-37/D-38 (no auth/e2e/print code touched beyond notice spacing, so no manual full run).
+  1 Caret: real Chromium 375px, Vite dev server on the PR worktree, /api stubbed, note form /c/:token with max_length 20 + counter, TextField and TextArea, 12 cases each, same script run against the fix and a no-fix build. FIX 24/24 pass. NO-FIX (TextField.tsx and styles.css reverted): 18 fail, caret jumps to the end (s=20, emoji s=40). On the fix: full field type X at 5 -> cut by character, caret 6, next key lands at 7; paste 'abc' mid -> caret 6; paste longer than limit -> caret clamped to 20; 20 emoji full, insert emoji after 2 -> 20 chars, caret 6 (UTF-16), paste 3 emoji -> caret 10, no split pair; Vietnamese NFC and NFD (combining marks) full -> inserted at caret, cut by code point; not-full field identical to before (caret 6, 11 chars); IME via CDP Input.imeSetComposition/insertText and synthetic compositionstart/end on a full field -> no page errors, value <= limit, typing works afterwards; nothing lost before the caret. Undo (Ctrl+Z): not-full field undo works as before; on a FULL cut field undo does nothing in BOTH fix and no-fix builds (programmatic value write drops Chromium's undo stack; pre-existing, not a regression, non-blocking).
+  2 The 4 new vitest cases (ui.test.tsx) fail without the fix: TextField.tsx reverted to origin/develop in a throwaway worktree -> 4 failed / 37 passed (TextArea type, TextField type, paste, emoji); worktree removed.
+  3 .banner .legal-consent (only user: LeftOutNotice, print screen), measured at 375 and 1280, en and vi, fix vs develop: gap warning text -> checkbox label 3px -> 14px; label height unchanged (72/48 px at 375, 28 at 1280), checkbox 24px, no horizontal overflow; bottom margin 16 -> 0. Screenshots (en 375, vi 1280) look clean. 44px tap target at 375 unchanged.
+  4 classBook.test.tsx waitFor is honest: ready = fonts && photos.settled && loading===0; useFontsLoaded needs 3 consecutive 'loaded' checks 100ms apart (async by design) while the cover label is already on screen, so asserting enabled right after the cover shows was a race in the test, not the component. ready only goes false->true for a given book/size (fonts key changes with data/size only), no flicker; that test has no photos. That test 20/20 green; whole vitest suite 5 more runs green.
+  5 No .team, package.json/lock, locale or API changes (4 files: TextField.tsx, ui.test.tsx, classBook.test.tsx, styles.css).
+  Local in worktree: lint (eslint+prettier) exit 0; typecheck 0; lint:i18n ok; check:api ok; build ok; vitest 32 files / 600 tests pass.
+  Not checked: Safari/iOS and a real mobile keyboard/IME (Chromium + CDP IME emulation only); go-integration/e2e/print-check not run (not needed, D-37/D-38).
+- 2026-10-29 09:42Z · leader · merged 598c2b1. Review: caret saved and restored in byRune (TextField/TextArea), QA real-Chromium 24/24 with the fix and 18 failures without it (emoji, Vietnamese, IME events); spacing 3 to 14 px, 44 px target unchanged; the waitFor in classBook.test.tsx fixes a real race in the test (print enables after three font checks), 20/20 runs. For owner to check: Ctrl+Z on a full cut field does nothing (same as before); Safari/iOS and a real phone keyboard untested.
 
 <!-- tasks:end -->
 
