@@ -11,17 +11,16 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 5 | T-023, T-024, T-025, T-031, T-050 |
-| TODO | 1 | T-135 |
-| READY_FOR_QA | 1 | T-136 |
-| MERGED | 2 | T-131, T-133 |
-| DONE | 119 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-132, T-134 |
+| TODO | 1 | T-137 |
+| IN_PROGRESS | 1 | T-135 |
+| DONE | 122 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-136 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-131 ([E07] Privacy review, legal texts and the class journey (e2e)); T-133 ([E07] Class book: read limiter, response size cap and admin photo caching)
+**Awaiting your review (MERGED):** nothing
 
 **Open questions for you:** Q-060 (Class privacy: minors (18+), a notice on the friend note form, and a departed admin's invite links)
 
-_Board last written 2026-10-29 08:49Z_
+_Board last written 2026-10-29 08:54Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -715,6 +714,7 @@ Owner decisions (2026-10-06, `/team-init` interview). "Rejected" lists the optio
 | D-35 | **Terms of Use and Privacy Policy (EN and VI), accepted with a required checkbox at sign-up, stored by version, re-accepted when the text changes; a notice on the public friend form.** | Owner request and answers 2026-10-21 (leader recommendations taken: leader drafts the texts, checkbox + version; extras chosen: Privacy Policy page and the friend-form notice that the owner may share photos by link, which closes the D-32 open item; no separate 18+ checkbox, the terms state 18+). Drafts in `docs/legal/` are not legal advice: the owner or a lawyer reviews them and fills every [bracketed] item before go-live. Epic E13 (T-111 API, T-112 web). | Link-only consent; owner-written text first | The texts are reviewed, or a regulator or partner asks for more |
 | D-36 | **Class yearbook (E07) is built before go-live; this replaces the D-11 order for now.** Rules for E07: 18+ only (D-01 stands); a student needs an account (invite link, then email code or Google); inside a class only the page owner and the admin see a student's notes and photos; students never see each other's notes. | Owner answered Q-055 on 2026-10-26 ("class yearbook only", then the three scope questions). The team had nothing else to build and the go-live inputs (domain, AWS account, cost tier) were not ready. | Both in parallel; go-live only; minors in a class (needs consent work); no-account students (a shared link would be the credential); whole-class visibility | Go-live inputs arrive (the team switches back to E06 after E07's first slice); a school pilot with minors is planned (new epic); a leaked-invite incident |
 | D-37 | **CI no longer runs `go-integration` and `e2e` (journey and print-check) on pushes and pull requests; they run by hand (`workflow_dispatch`).** QA runs the same checks locally and puts the result on the board. | Owner request 2026-10-26: a full CI run takes 8-10 min (integration 8.4-10, e2e 6.2). Done by T-132 with job-level `if:` so the required check `go-integration` reports skipped, not missing. `go`, `web`, `security` and `image` keep running. | Run only the race detector on unit packages; shard integration and print-check (about 4-5 min) | Permission-matrix, migration, concurrency and print regressions reach `develop` unseen unless QA ran the local commands; undo = delete the two `if:` lines |
+| D-38 | **CI no longer runs the `image` job (image build, smoke, Trivy scan, SBOM) on pushes and pull requests; it runs by hand (`workflow_dispatch`), like `go-integration` and `e2e` (D-37).** | Owner request 2026-10-29, right after a new Trivy HIGH (CVE-2026-116587) turned the job red on every branch. Done by T-137 with a job-level `if:`; `image` is not a required check. `go`, `web` and `security` (govulncheck, npm audit) keep running. | Keep it on and fix each CVE as it appears (what T-136 did) | A vulnerable dependency or a broken Dockerfile reaches `develop` unseen; the deploy pipeline (T-023) must therefore build, smoke-test and scan the image itself before any deploy; undo = delete the `if:` line |
 
 Leader decisions (low-risk, inside the approved stack):
 
@@ -5908,7 +5908,7 @@ Spec: .team/epics/E07-class-yearbook/08-web-class-book-print.md (read it from th
 - 2026-10-27 02:06Z · human · accepted by owner
 
 ### T-131 — [E07] Privacy review, legal texts and the class journey (e2e)
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
@@ -5919,7 +5919,7 @@ Spec: .team/epics/E07-class-yearbook/08-web-class-book-print.md (read it from th
 - **Assignee:** —
 - **Branch:** task/t-131-e07-privacy-review-legal-texts-and-the-c
 - **PR:** https://github.com/danyaa666/smemories/pull/132
-- **Updated:** 2026-10-29 08:49Z by leader
+- **Updated:** 2026-10-29 08:53Z by human
 - **Comments-seen:** 5
 
 Spec: .team/epics/E07-class-yearbook/09-privacy-review-and-e2e.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.
@@ -5937,6 +5937,7 @@ Spec: .team/epics/E07-class-yearbook/09-privacy-review-and-e2e.md (read it from 
 - 2026-10-29 08:45Z · leader · Leader review OK on head f7c6ab6 (unchanged since QA): privacy review lists all 21 class operations with real tests and an unchecked owner sign-off; check-class-matrix.sh fails when a row is removed and runs in the go job; legal texts (en/vi) match the design (admin sees profile and approved notes and photos of linked pages, students never see each other, leaving removes access; DRAFT kept; version 2026-10-29 flows to Go, openapi, schema.d.ts, web); journey passes in CI and in QA's own stack and fails on the deliberate break; no go.mod change. Go-live bullet added to the T-023 spec. Open for the owner: Q-060 (minors, friend-form notice, departed admin's invites) and the section 8 sign-off (not part of the merge). Minor e2e hygiene (token printed if a regex fails) moved to T-135. Awaiting owner: team approve T-131. image job red = T-136 (not this PR).
 - 2026-10-29 08:49Z · human · owner approved merge
 - 2026-10-29 08:49Z · leader · merged eed1612 (owner-approved). Review: privacy review lists 21 class operations with real tests; check-class-matrix.sh in the go job; legal texts en/vi v2026-10-29 (DRAFT kept); class journey passes in CI and on QA's own stack, fails on the deliberate break; manual full CI run 40841596718 green on head f7c6ab6 except the image job (go-jose CVE, T-136, PR #133). For owner to check: section 8 sign-off of docs/class-privacy-review.md (open), Q-060, the legal drafts.
+- 2026-10-29 08:53Z · human · accepted by owner
 
 ### T-132 — [E06] CI: pause the go-integration and e2e jobs (owner decision D-37)
 - **Status:** DONE
@@ -5968,7 +5969,7 @@ Spec: .team/epics/E06-go-live/15-ci-pause-integration-and-e2e.md. Owner decision
 - 2026-10-26 07:13Z · human · accepted by owner
 
 ### T-133 — [E07] Class book: read limiter, response size cap and admin photo caching
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P3
 - **Type:** hardening
 - **Milestone:** M3
@@ -5979,7 +5980,7 @@ Spec: .team/epics/E06-go-live/15-ci-pause-integration-and-e2e.md. Owner decision
 - **Assignee:** —
 - **Branch:** task/t-133-e07-class-book-read-limiter-response-siz
 - **PR:** https://github.com/danyaa666/smemories/pull/131
-- **Updated:** 2026-10-29 08:17Z by leader
+- **Updated:** 2026-10-29 08:53Z by human
 - **Comments-seen:** 5
 
 Spec: .team/epics/E07-class-yearbook/10-class-book-limits-and-caching.md. QA follow-ups from T-027: class-book/get has no read limiter, a maximal class book is about 50 MiB, and an admin's cached photo outlives a hidden note by up to an hour.
@@ -5998,6 +5999,7 @@ Spec: .team/epics/E07-class-yearbook/10-class-book-limits-and-caching.md. QA fol
   AC5: no migration; docs (class-permissions, book-export), openapi and Postman class folder (429 entry, no-store/owner header entries, cleanup) updated; no .team/ changes in the diff.
   Non-blocking observations: (a) OKStream sends 200 before the body, so an encode/write error halfway leaves a 200 with a body cut short and no closing braces (invalid JSON, the client's parse fails); acceptable because all DB reading happens before the first byte and Encode can only fail on a write error (client gone); TestOKStream asserts the unfinished envelope. (b) The cap is conservative: the reserve makes the maximal class stop at ~7.35 MiB, not 8. (c) TestMaximalClassPeakAllocation uses a 100 KiB frame placeholder, so its body is 8.5 MB, a bit above the cap; harmless for a ratio test. (d) The old TestClassBookSizeOfAFullClass 4 MiB realistic-size guard was removed; the integration TestClassBookFullClass still covers it.
 - 2026-10-29 08:17Z · leader · merged 1b19ea6. Review: limiter after the admin check, 429/503, whole-member cut at 8 MiB (worst case 7.35 MiB, 52 members cut), streamed body, admin photos no-store, owner header unchanged; QA added a boundary test (4fcbc36, test-only); manual full CI run 40346073037 green on b0a331a, go/web/security green on 4fcbc36. The image job on 4fcbc36 is red from a NEW Trivy HIGH (CVE-2026-116587 in go-jose v4.1.4, indirect), not from this PR (go.mod untouched): T-136. For owner to check: nothing beyond docs/class-permissions.md.
+- 2026-10-29 08:53Z · human · accepted by owner
 
 ### T-134 — [E07] Web: edit and delete a class, link an existing yearbook as the page
 - **Status:** DONE
@@ -6037,7 +6039,7 @@ Spec: .team/epics/E07-class-yearbook/11-web-class-edit-delete-and-existing-page.
 - 2026-10-27 02:06Z · human · accepted by owner
 
 ### T-135 — [E07] Web: character-counted text fields, join hint per build, show cut students on the print screen
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P3
 - **Type:** bug
 - **Milestone:** M3
@@ -6045,10 +6047,10 @@ Spec: .team/epics/E07-class-yearbook/11-web-class-edit-delete-and-existing-page.
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-135-e07-web-character-counted-text-fields-jo
 - **PR:** —
-- **Updated:** 2026-10-29 08:03Z by leader
+- **Updated:** 2026-10-29 08:50Z by dev
 - **Comments-seen:** 1
 
 Spec: .team/epics/E07-class-yearbook/12-web-maxlength-runes-and-join-hint.md. From T-134 QA: native maxLength stops emoji text at 2000 of 4000, and the Google hint on /login and /register (from /join/) mentions a button that does not exist when VITE_GOOGLE_SIGNIN is unset.
@@ -6057,7 +6059,7 @@ Spec: .team/epics/E07-class-yearbook/12-web-maxlength-runes-and-join-hint.md. Fr
 - 2026-10-29 08:03Z · leader · ready
 
 ### T-136 — [E06] Deps: bump go-jose/v4 to 4.1.6 (Trivy HIGH CVE-2026-116587 fails the image job)
-- **Status:** READY_FOR_QA
+- **Status:** DONE
 - **Priority:** P1
 - **Type:** deps
 - **Milestone:** M2
@@ -6068,13 +6070,41 @@ Spec: .team/epics/E07-class-yearbook/12-web-maxlength-runes-and-join-hint.md. Fr
 - **Assignee:** —
 - **Branch:** task/t-136-e06-deps-bump-go-jose-v4-to-4-1-6-trivy-
 - **PR:** https://github.com/danyaa666/smemories/pull/133
-- **Updated:** 2026-10-29 08:49Z by dev
-- **Comments-seen:** 1
+- **Updated:** 2026-10-29 08:53Z by human
+- **Comments-seen:** 3
 
 Spec: .team/epics/E06-go-live/16-go-jose-cve-2026-116587.md. The image job (make image-scan, Trivy HIGH) went red on 2026-10-29 for every branch: go-jose v4.1.4 (indirect) has a DoS when parsing JWKs with RSA keys, fixed in 4.1.6.
 
 #### Comments
 - 2026-10-29 08:49Z · dev · go-jose/v4 4.1.4->4.1.6 (go.mod 1 line + go.sum only), parent go-oidc v3.21.0 (internal/auth) needs no bump. PR #133 head 477598f: go/web/security/image green (Trivy 0). Manual full CI run 40843549004 (go-integration, e2e) success. Local: build, vet, test -race ok; image-scan ok; govulncheck local (go1.26.1) shows only stdlib vulns, none for go-jose.
+- 2026-10-29 08:51Z · qa · QA_PASS head 477598f7b4c66a58c1f5081031c6120b66e4a3f6 (worktree == PR head).
+  AC1 diff: gh pr diff 133 + pr files = go.mod (1 line, go-jose/v4 v4.1.4->v4.1.6 indirect) and go.sum (go-jose h1 + go.mod lines only); no source, nothing under .team/. go list -m all develop vs PR: exactly one line differs (go-jose/v4 4.1.4 -> 4.1.6); go mod verify: all modules verified. go mod why -m go-jose/v4: internal/auth -> github.com/coreos/go-oidc/v3/oidc -> go-jose/v4 (go-oidc v3.21.0 unchanged).
+  AC2 PR checks (run 40843539212, head 477598f): go, web, security, image SUCCESS; go-integration, e2e SKIPPED (D-37). image job log: Trivy 0.76.0 table smemories-api gobinary 0, smemories-media-backfill gobinary 0; 'ok - no fixable HIGH or CRITICAL vulnerability in smemories:local'; selftest ok.
+  AC3 D-37: gh run view 40843549004: headSha 477598f7..., completed/success, jobs e2e, security, go, web, image, go-integration all success.
+  AC4 local (go1.26.1): go build ./... OK; go vet ./... OK; go test -race ./... all ok (full list); go test -race -count=1 ./internal/auth/... ./api/... ok (OIDC tests, uncached). I did not run make test-integration / e2e / print-check locally (no source change, and CI manual run 40843549004 ran go-integration + e2e on this exact head; Docker not started); govulncheck not installed locally, not run by me; CI security job (run 40843539212) ran govulncheck@v1.8.0 on go1.26.10: 'No vulnerabilities found'.
+  Stdlib findings (GO-2026-6809, GO-2026-6617, seen by dev on local go1.26.1): cannot reach production. go.mod has 'go 1.26.0' floor, no toolchain line; CI setup-go uses minor 1.26 with check-latest + go-newest-patch action -> go1.26.10 in the job log (GOTOOLCHAIN go1.26.10); Dockerfile builds on golang:1.26-bookworm@sha256:632dff73... (comment: 1.26.10 when pinned), and Trivy scans the built gobinaries (0 vulns incl. stdlib). Only the local 1.26.1 toolchain is behind; non-blocking, suggest updating local Go.
+  Not run by me: newman (no endpoint change), image build locally (Docker down, not started).
+- 2026-10-29 08:52Z · leader · merged efa7053. Review: go.mod one line + go.sum only (go-jose/v4 4.1.4 to 4.1.6, via go-oidc/v3 used by internal/auth); image job green with Trivy 0 findings for both binaries; manual full CI run 40843549004 green on head 477598f; stdlib findings seen locally come from the old local Go 1.26.1, CI uses 1.26.10 and the Dockerfile base is digest-pinned. For owner to check: update your local Go to 1.26.10 or later.
+- 2026-10-29 08:53Z · human · accepted by owner
+
+### T-137 — [E06] CI: pause the image job (owner decision D-38)
+- **Status:** TODO
+- **Priority:** P1
+- **Type:** ci
+- **Milestone:** M2
+- **Depends-on:** —
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-29 08:54Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E06-go-live/17-ci-pause-image.md. Owner decision D-38 (2026-10-29): the image job (build, smoke, Trivy, SBOM) stops running on pushes and pull requests but stays in ci.yml and can be run by hand.
+
+#### Comments
 
 <!-- tasks:end -->
 

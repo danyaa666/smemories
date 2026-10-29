@@ -34,3 +34,6 @@ The class invite link is `/join/<token>`; the token is a bearer secret. The CDN,
 
 #### Leader note from T-131 (2026-10-29): class yearbook go-live check
 Add to the go-live review list: "Class yearbook: the owner has signed `docs/class-privacy-review.md` section 8, the legal texts (version 2026-10-29) are finalised, `scripts/check-class-matrix.sh` is green, and no invite or class-book path appears in the edge logs."
+
+#### Leader note from D-38 (2026-10-29)
+The `image` CI job (build, smoke test, Trivy scan, SBOM) is paused on pushes and pull requests. The deploy pipeline must therefore run `make image-smoke` and `make image-scan` (or the same steps) on the exact image it is about to deploy, fail on Trivy HIGH/CRITICAL with a fix available, and keep the SBOM as a build artifact.
