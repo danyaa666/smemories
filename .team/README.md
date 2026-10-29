@@ -11,17 +11,16 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 5 | T-023, T-024, T-025, T-031, T-050 |
-| TODO | 1 | T-135 |
-| READY_FOR_QA | 1 | T-136 |
-| MERGED | 2 | T-131, T-133 |
+| IN_PROGRESS | 1 | T-135 |
+| MERGED | 3 | T-131, T-133, T-136 |
 | DONE | 119 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-132, T-134 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-131 ([E07] Privacy review, legal texts and the class journey (e2e)); T-133 ([E07] Class book: read limiter, response size cap and admin photo caching)
+**Awaiting your review (MERGED):** T-131 ([E07] Privacy review, legal texts and the class journey (e2e)); T-133 ([E07] Class book: read limiter, response size cap and admin photo caching); T-136 ([E06] Deps: bump go-jose/v4 to 4.1.6 (Trivy HIGH CVE-2026-116587 fails the image job))
 
 **Open questions for you:** Q-060 (Class privacy: minors (18+), a notice on the friend note form, and a departed admin's invite links)
 
-_Board last written 2026-10-29 08:49Z_
+_Board last written 2026-10-29 08:52Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -6037,7 +6036,7 @@ Spec: .team/epics/E07-class-yearbook/11-web-class-edit-delete-and-existing-page.
 - 2026-10-27 02:06Z · human · accepted by owner
 
 ### T-135 — [E07] Web: character-counted text fields, join hint per build, show cut students on the print screen
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P3
 - **Type:** bug
 - **Milestone:** M3
@@ -6045,10 +6044,10 @@ Spec: .team/epics/E07-class-yearbook/11-web-class-edit-delete-and-existing-page.
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-135-e07-web-character-counted-text-fields-jo
 - **PR:** —
-- **Updated:** 2026-10-29 08:03Z by leader
+- **Updated:** 2026-10-29 08:50Z by dev
 - **Comments-seen:** 1
 
 Spec: .team/epics/E07-class-yearbook/12-web-maxlength-runes-and-join-hint.md. From T-134 QA: native maxLength stops emoji text at 2000 of 4000, and the Google hint on /login and /register (from /join/) mentions a button that does not exist when VITE_GOOGLE_SIGNIN is unset.
@@ -6057,7 +6056,7 @@ Spec: .team/epics/E07-class-yearbook/12-web-maxlength-runes-and-join-hint.md. Fr
 - 2026-10-29 08:03Z · leader · ready
 
 ### T-136 — [E06] Deps: bump go-jose/v4 to 4.1.6 (Trivy HIGH CVE-2026-116587 fails the image job)
-- **Status:** READY_FOR_QA
+- **Status:** MERGED
 - **Priority:** P1
 - **Type:** deps
 - **Milestone:** M2
@@ -6068,13 +6067,21 @@ Spec: .team/epics/E07-class-yearbook/12-web-maxlength-runes-and-join-hint.md. Fr
 - **Assignee:** —
 - **Branch:** task/t-136-e06-deps-bump-go-jose-v4-to-4-1-6-trivy-
 - **PR:** https://github.com/danyaa666/smemories/pull/133
-- **Updated:** 2026-10-29 08:49Z by dev
-- **Comments-seen:** 1
+- **Updated:** 2026-10-29 08:52Z by leader
+- **Comments-seen:** 3
 
 Spec: .team/epics/E06-go-live/16-go-jose-cve-2026-116587.md. The image job (make image-scan, Trivy HIGH) went red on 2026-10-29 for every branch: go-jose v4.1.4 (indirect) has a DoS when parsing JWKs with RSA keys, fixed in 4.1.6.
 
 #### Comments
 - 2026-10-29 08:49Z · dev · go-jose/v4 4.1.4->4.1.6 (go.mod 1 line + go.sum only), parent go-oidc v3.21.0 (internal/auth) needs no bump. PR #133 head 477598f: go/web/security/image green (Trivy 0). Manual full CI run 40843549004 (go-integration, e2e) success. Local: build, vet, test -race ok; image-scan ok; govulncheck local (go1.26.1) shows only stdlib vulns, none for go-jose.
+- 2026-10-29 08:51Z · qa · QA_PASS head 477598f7b4c66a58c1f5081031c6120b66e4a3f6 (worktree == PR head).
+  AC1 diff: gh pr diff 133 + pr files = go.mod (1 line, go-jose/v4 v4.1.4->v4.1.6 indirect) and go.sum (go-jose h1 + go.mod lines only); no source, nothing under .team/. go list -m all develop vs PR: exactly one line differs (go-jose/v4 4.1.4 -> 4.1.6); go mod verify: all modules verified. go mod why -m go-jose/v4: internal/auth -> github.com/coreos/go-oidc/v3/oidc -> go-jose/v4 (go-oidc v3.21.0 unchanged).
+  AC2 PR checks (run 40843539212, head 477598f): go, web, security, image SUCCESS; go-integration, e2e SKIPPED (D-37). image job log: Trivy 0.76.0 table smemories-api gobinary 0, smemories-media-backfill gobinary 0; 'ok - no fixable HIGH or CRITICAL vulnerability in smemories:local'; selftest ok.
+  AC3 D-37: gh run view 40843549004: headSha 477598f7..., completed/success, jobs e2e, security, go, web, image, go-integration all success.
+  AC4 local (go1.26.1): go build ./... OK; go vet ./... OK; go test -race ./... all ok (full list); go test -race -count=1 ./internal/auth/... ./api/... ok (OIDC tests, uncached). I did not run make test-integration / e2e / print-check locally (no source change, and CI manual run 40843549004 ran go-integration + e2e on this exact head; Docker not started); govulncheck not installed locally, not run by me; CI security job (run 40843539212) ran govulncheck@v1.8.0 on go1.26.10: 'No vulnerabilities found'.
+  Stdlib findings (GO-2026-6809, GO-2026-6617, seen by dev on local go1.26.1): cannot reach production. go.mod has 'go 1.26.0' floor, no toolchain line; CI setup-go uses minor 1.26 with check-latest + go-newest-patch action -> go1.26.10 in the job log (GOTOOLCHAIN go1.26.10); Dockerfile builds on golang:1.26-bookworm@sha256:632dff73... (comment: 1.26.10 when pinned), and Trivy scans the built gobinaries (0 vulns incl. stdlib). Only the local 1.26.1 toolchain is behind; non-blocking, suggest updating local Go.
+  Not run by me: newman (no endpoint change), image build locally (Docker down, not started).
+- 2026-10-29 08:52Z · leader · merged efa7053. Review: go.mod one line + go.sum only (go-jose/v4 4.1.4 to 4.1.6, via go-oidc/v3 used by internal/auth); image job green with Trivy 0 findings for both binaries; manual full CI run 40843549004 green on head 477598f; stdlib findings seen locally come from the old local Go 1.26.1, CI uses 1.26.10 and the Dockerfile base is digest-pinned. For owner to check: update your local Go to 1.26.10 or later.
 
 <!-- tasks:end -->
 
