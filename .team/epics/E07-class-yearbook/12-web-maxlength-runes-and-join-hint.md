@@ -9,10 +9,12 @@
 
 3. (From T-133, 2026-10-26) `class-book/get` now returns `truncated` (member public ids whose notes were left out because the response hit the 8 MiB cap; empty for a normal class). The print route `/classes/:id/book` (T-130 ignores the field) must list those students by name in the overflow summary with a clear warning, and must keep the Print button disabled until the admin acknowledges that these students' notes will be missing; the assemble screen shows the same warning. Test with a fixture where `truncated` has two ids.
 
+4. (From T-131 QA) In `tools/e2e/class.spec.mjs` step 2, an `expect` runs on the invite path before the token is added to the `secrets` list, so a failed regex match would print the token in the assertion message. Register the token as a secret first, then assert, and assert with a message that does not include the path.
+
 #### Requirements (SHALL)
 1. Remove the native `maxLength` from the shared text components that have a rune counter and enforce the limit in the change handler by rune (truncate pasted text at the limit, never split a surrogate pair). The server stays the authority. One shared helper, used by every field that shows the counter (note body, class page body and title, class form, any other).
 2. Show the Google hint only when Google sign-in is enabled in the build; keep the rest of its behaviour (only from `/join/`, token never stored).
-4. Tests: 4000 emoji accepted, the 4001st rune refused, a paste of 5000 emoji cut at exactly 4000, Vietnamese text unchanged; the hint present with the flag on and absent with it off. Both locales, i18n parity, no new dependency, no API change.
+5. Tests: 4000 emoji accepted, the 4001st rune refused, a paste of 5000 emoji cut at exactly 4000, Vietnamese text unchanged; the hint present with the flag on and absent with it off. Both locales, i18n parity, no new dependency, no API change.
 
 #### Acceptance criteria
 - [ ] AC1 — An emoji-only body can be 4000 characters long and the counter agrees.
