@@ -39,7 +39,8 @@ The heartbeat fires every 30 minutes and the leader's context is large, so every
    questions, what dev and qa would pick, open PRs with head, mergeable and CI) instead of separate summary, unread, questions, next and
    `gh` calls. Read a task in full (`board.py get T-xxx`) only when it needs a decision, and cap long output (`| cut -c1-400`, `| tail -n 20`).
 4. **Batch Bash:** acknowledge, regenerate the index, commit and push in one call. Commit with a path limit (`git commit -- .team docs`)
-   because the owner may have unrelated staged files.
+   because the owner may have unrelated staged files. **Every leader commit that only changes `.team/`, `docs/` or `CLAUDE.md` carries `[skip ci]` in its subject**
+   (owner request 2026-10-29: a board or doc push must not start a full CI run; GitHub honours the marker on the head commit of a push).
 5. **Dispatch only what `orient.py` lists as PICK or REWORK**, after a fresh `get_usage` + `gate.py`. Do not spawn dev for a task whose
    PR conflicts with develop (send it back with a note), and every dispatch prompt ends with: "Final report to the leader: at most 8 lines
    (status, PR and head, what to verify, blockers); details go on the board."
