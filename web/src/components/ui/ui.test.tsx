@@ -154,6 +154,57 @@ describe("TextField and TextArea", () => {
     });
   });
 
+  describe("a full field keeps the caret where the user typed", () => {
+    const Full = ({
+      as: Tag,
+      start,
+    }: {
+      as: typeof TextArea | typeof TextField;
+      start: string;
+    }) => {
+      const [v, setV] = useState(start);
+      return (
+        <Tag label="Body" maxLength={10} counter value={v} onChange={(e) => setV(e.target.value)} />
+      );
+    };
+    const caret = () => (screen.getByLabelText("Body") as HTMLTextAreaElement).selectionStart;
+    const value = () => (screen.getByLabelText("Body") as HTMLTextAreaElement).value;
+    const at = (n: number) => ({ initialSelectionStart: n, initialSelectionEnd: n });
+
+    it.each([
+      ["TextArea", TextArea],
+      ["TextField", TextField],
+    ])(
+      "%s: typing in the middle of a full field cuts the tail and keeps the caret",
+      async (_n, Tag) => {
+        render(<Full as={Tag} start="0123456789" />);
+        await userEvent.type(screen.getByLabelText("Body"), "X", at(4));
+        expect(value()).toBe("0123X45678");
+        expect(caret()).toBe(5);
+      },
+    );
+
+    it("pasting into the middle of a full field puts the caret after the paste, clamped to the cut text", async () => {
+      render(<Full as={TextArea} start="0123456789" />);
+      const el = screen.getByLabelText("Body") as HTMLTextAreaElement;
+      el.focus();
+      el.setSelectionRange(3, 3);
+      await userEvent.paste("XY");
+      expect(value()).toBe("012XY34567");
+      expect(caret()).toBe(5);
+      await userEvent.paste("0123456789"); // longer than the room left: the caret is clamped to the new end
+      expect(value()).toBe("012XY01234");
+      expect(caret()).toBe(10);
+    });
+
+    it("counts emoji as one character and never leaves the caret inside a pair", async () => {
+      render(<Full as={TextArea} start={"😀".repeat(10)} />);
+      await userEvent.type(screen.getByLabelText("Body"), "X", at(4)); // after two emoji (UTF-16 index 4)
+      expect(value()).toBe("😀😀X" + "😀".repeat(7));
+      expect(caret()).toBe(5);
+    });
+  });
+
   it("does not show a counter without maxLength", () => {
     render(<TextField label="Name" counter value="abc" readOnly />);
     expect(screen.queryByText(/\//)).not.toBeInTheDocument();

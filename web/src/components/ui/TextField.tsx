@@ -30,7 +30,13 @@ function byRune<E extends HTMLInputElement | HTMLTextAreaElement>(
 ) {
   if (max === undefined) return onChange;
   return (e: ChangeEvent<E>) => {
-    e.target.value = cutRunes(e.target.value, max); // a paste is cut at the limit before the handler reads it
+    const el = e.target;
+    const typed = el.value;
+    const at = el.selectionStart ?? typed.length;
+    el.value = cutRunes(typed, max); // a paste is cut at the limit before the handler reads it
+    // Assigning value sends the caret to the end; put it back where the user typed (clamped), before React re-renders.
+    if (el.value !== typed)
+      el.setSelectionRange(Math.min(at, el.value.length), Math.min(at, el.value.length));
     onChange?.(e);
   };
 }

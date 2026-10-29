@@ -439,6 +439,11 @@ form + .btn {
   margin-bottom: var(--space-4);
 }
 
+/* The print-screen acknowledgement sits inside a warning banner: room between the warning text and the checkbox. */
+.banner .legal-consent {
+  margin: var(--space-3) 0 0;
+}
+
 .legal-consent input {
   flex: none;
   width: 24px;
