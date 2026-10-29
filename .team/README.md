@@ -11,16 +11,17 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 5 | T-023, T-024, T-025, T-031, T-050 |
-| TODO | 2 | T-131, T-135 |
-| READY_FOR_QA | 1 | T-133 |
+| TODO | 2 | T-135, T-136 |
+| IN_PROGRESS | 1 | T-131 |
+| MERGED | 1 | T-133 |
 | DONE | 119 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-132, T-134 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** nothing
+**Awaiting your review (MERGED):** T-133 ([E07] Class book: read limiter, response size cap and admin photo caching)
 
 **Open questions for you:** none
 
-_Board last written 2026-10-29 08:03Z_
+_Board last written 2026-10-29 08:17Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -5883,7 +5884,7 @@ Spec: .team/epics/E07-class-yearbook/08-web-class-book-print.md (read it from th
 - 2026-10-27 02:06Z · human · accepted by owner
 
 ### T-131 — [E07] Privacy review, legal texts and the class journey (e2e)
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
@@ -5891,10 +5892,10 @@ Spec: .team/epics/E07-class-yearbook/08-web-class-book-print.md (read it from th
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-131-e07-privacy-review-legal-texts-and-the-c
 - **PR:** —
-- **Updated:** 2026-10-29 08:03Z by leader
+- **Updated:** 2026-10-29 08:04Z by dev
 - **Comments-seen:** 1
 
 Spec: .team/epics/E07-class-yearbook/09-privacy-review-and-e2e.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.
@@ -5932,7 +5933,7 @@ Spec: .team/epics/E06-go-live/15-ci-pause-integration-and-e2e.md. Owner decision
 - 2026-10-26 07:13Z · human · accepted by owner
 
 ### T-133 — [E07] Class book: read limiter, response size cap and admin photo caching
-- **Status:** READY_FOR_QA
+- **Status:** MERGED
 - **Priority:** P3
 - **Type:** hardening
 - **Milestone:** M3
@@ -5943,8 +5944,8 @@ Spec: .team/epics/E06-go-live/15-ci-pause-integration-and-e2e.md. Owner decision
 - **Assignee:** —
 - **Branch:** task/t-133-e07-class-book-read-limiter-response-siz
 - **PR:** https://github.com/danyaa666/smemories/pull/131
-- **Updated:** 2026-10-26 15:19Z by dev
-- **Comments-seen:** 3
+- **Updated:** 2026-10-29 08:17Z by leader
+- **Comments-seen:** 5
 
 Spec: .team/epics/E07-class-yearbook/10-class-book-limits-and-caching.md. QA follow-ups from T-027: class-book/get has no read limiter, a maximal class book is about 50 MiB, and an admin's cached photo outlives a hidden note by up to an hour.
 
@@ -5952,6 +5953,16 @@ Spec: .team/epics/E07-class-yearbook/10-class-book-limits-and-caching.md. QA fol
 - 2026-10-26 09:58Z · leader · T-027 merged (3e1dea3)
 - 2026-10-26 15:19Z · dev · PR #131, head b0a331a. Docker daemon was down (not started by me), so integration ran by hand: gh workflow run ci.yml --ref the branch, run 40346073037 = success (go, go-integration incl. ./internal/class and ./internal/media, e2e, web, security, image all green); the first dispatch (40343885258) failed only on wantKeys of TestClassBookHasApprovedContentOnly (new key truncated), fixed. Local: go test -race ./... , golangci-lint, vet (+integration tag), tsc, vitest, check:api green. Changes: read limiter 30/h per user+class (closed, 429 Retry-After, 503 ERROR_UNAVAILABLE); 8 MiB cap = MaxBookBytes, member-atomic cut, top-level truncated (ids) , members encoded once and streamed via new httpx.OKStream/ClassBook.Encode; media Store.readable flags class-admin reads -> Cache-Control private, no-store (owner unchanged); docs, openapi, schema.d.ts, postman Class book flow. Verify: TestClassBookReadLimiter, TestClassBookIsCutAtTheCap, TestClassBookStaysUnderTheCap (maximal class 7.35 MiB, 52 cut), TestMaximalClassPeakAllocation under -race (peak ~1.2x, limit 3x), TestPhotoCacheControlByReader. Notes: truncated is optional in openapi (additive) so web typecheck passes; one stale test line in web/src/pages/classBook.test.tsx edited (it faked truncated:true). Newman not run (no stack).
 - 2026-10-26 15:19Z · leader · Leader: whole-member cut (a cut member loses all its notes; earlier members stay complete) accepted as the reading of the spec. QA: usage window is full until about 18:12Z; run when the gate allows. Verify manual CI run 40346073037 is on PR head b0a331a, the web test line changed in web/src/pages/classBook.test.tsx (watch for a conflict with merged T-134), limiter placement after the admin check, 429/503 behaviour, the allocation test, and the photo header by reader. The print screen listing of 'truncated' students is moved to T-135.
+- 2026-10-29 08:08Z · qa · QA_PASS T-133. Verified head b0a331a (PR #131, MERGEABLE/CLEAN, 5 behind develop, 2 ahead). I added one test-only commit on top: 4fcbc36 (internal/class/book_cap_boundary_test.go); production code is unchanged from b0a331a.
+  CI: manual run 40346073037 headSha=b0a331aead35fd10 = PR head, completed/success, jobs go, go-integration, e2e, web, security, image all success (this is the D-37 integration+e2e evidence; I could NOT run them locally: no compose stack is running and the shared .env is stale/denied to me (S3_ROOT_USER missing), so make test-integration, e2e, print-check and newman did not run here. Docker daemon is up.)
+  Merged result (git merge origin/develop into the branch, uncommitted, then aborted; only web/src/pages/classBook.test.tsx auto-merged, no conflict): go build, go vet, go vet -tags integration, golangci-lint (0 issues), go test -race ./... all green; web tsc, eslint, prettier, check:api, vitest 585/585 green.
+  AC1 limiter: Service.Book calls Authorize(RoleAdmin) BEFORE throttleRead (student 403 / non-member 404 never touch the limiter); key userID:classID; Closed limiter (503 ERROR_UNAVAILABLE on outage), 429 + Retry-After via fail(). Evidence: integration TestClassBookReadLimiter (31st=429, other admin and other class 200, student 403 does not spend, reset after 1h, dead Redis=503) green in CI run 40346073037.
+  AC2 cap: MaxBookBytes=8 MiB incl. envelope; member-atomic cut; later members reserved strippedMemberMax (12 KiB) so the cut cannot push over the cap. Ran -count=3: maximal class 60x40 maximal notes = 7,704,087 bytes (7.35 MiB), 52 members cut, earlier 8 complete, cut ones notes [] note_count 0 truncated true approved_total 40; truncated=[] for a normal class (TestNormalClassIsNotCut, integration); Encode == json.Marshal bytes. My boundary test TestClassBookCapBoundary: budget == exact size -> no cut; size-1 -> only the last member cut; zero-note member after a cut is never listed; pass under -race. openapi + schema.d.ts have truncated (check:api ok).
+  AC3: TestMaximalClassPeakAllocation x10 with -race: 10/10 pass, peak 1.07x to 1.23x of the response (limit 3x), not flaky. Encode streams the pieces to the writer, no second full copy.
+  AC4: Store.readable now also selects y.owner_id = caller; ByClassAdmin = !owner; the ONLY caller is Service.Content -> media handler content (grep), owner (even if also admin) keeps private, max-age=3600, class admin gets private, no-store; public link and every other path untouched. TestPhotoCacheControlByReader (3 variants x 2 photos x admin/owner) green in CI.
+  AC5: no migration; docs (class-permissions, book-export), openapi and Postman class folder (429 entry, no-store/owner header entries, cleanup) updated; no .team/ changes in the diff.
+  Non-blocking observations: (a) OKStream sends 200 before the body, so an encode/write error halfway leaves a 200 with a body cut short and no closing braces (invalid JSON, the client's parse fails); acceptable because all DB reading happens before the first byte and Encode can only fail on a write error (client gone); TestOKStream asserts the unfinished envelope. (b) The cap is conservative: the reserve makes the maximal class stop at ~7.35 MiB, not 8. (c) TestMaximalClassPeakAllocation uses a 100 KiB frame placeholder, so its body is 8.5 MB, a bit above the cap; harmless for a ratio test. (d) The old TestClassBookSizeOfAFullClass 4 MiB realistic-size guard was removed; the integration TestClassBookFullClass still covers it.
+- 2026-10-29 08:17Z · leader · merged 1b19ea6. Review: limiter after the admin check, 429/503, whole-member cut at 8 MiB (worst case 7.35 MiB, 52 members cut), streamed body, admin photos no-store, owner header unchanged; QA added a boundary test (4fcbc36, test-only); manual full CI run 40346073037 green on b0a331a, go/web/security green on 4fcbc36. The image job on 4fcbc36 is red from a NEW Trivy HIGH (CVE-2026-116587 in go-jose v4.1.4, indirect), not from this PR (go.mod untouched): T-136. For owner to check: nothing beyond docs/class-permissions.md.
 
 ### T-134 — [E07] Web: edit and delete a class, link an existing yearbook as the page
 - **Status:** DONE
@@ -6009,6 +6020,25 @@ Spec: .team/epics/E07-class-yearbook/12-web-maxlength-runes-and-join-hint.md. Fr
 
 #### Comments
 - 2026-10-29 08:03Z · leader · ready
+
+### T-136 — [E06] Deps: bump go-jose/v4 to 4.1.6 (Trivy HIGH CVE-2026-116587 fails the image job)
+- **Status:** TODO
+- **Priority:** P1
+- **Type:** deps
+- **Milestone:** M2
+- **Depends-on:** —
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-29 08:17Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E06-go-live/16-go-jose-cve-2026-116587.md. The image job (make image-scan, Trivy HIGH) went red on 2026-10-29 for every branch: go-jose v4.1.4 (indirect) has a DoS when parsing JWKs with RSA keys, fixed in 4.1.6.
+
+#### Comments
 
 <!-- tasks:end -->
 
