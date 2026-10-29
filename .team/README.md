@@ -13,15 +13,14 @@
 | BACKLOG | 5 | T-023, T-024, T-025, T-031, T-050 |
 | IN_PROGRESS | 1 | T-138 |
 | CHANGES_REQUESTED | 1 | T-137 |
-| MERGED | 1 | T-135 |
-| DONE | 122 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-136 |
+| DONE | 123 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-135 ([E07] Web: character-counted text fields, join hint per build, show cut students on the print screen)
+**Awaiting your review (MERGED):** nothing
 
 **Open questions for you:** Q-060 (Class privacy: minors (18+), a notice on the friend note form, and a departed admin's invite links); Q-062 (What should the team build next: go live, guided customisation, or the free-layout editor?)
 
-_Board last written 2026-10-29 09:22Z_
+_Board last written 2026-10-29 09:23Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -6056,7 +6055,7 @@ Spec: .team/epics/E07-class-yearbook/11-web-class-edit-delete-and-existing-page.
 - 2026-10-27 02:06Z · human · accepted by owner
 
 ### T-135 — [E07] Web: character-counted text fields, join hint per build, show cut students on the print screen
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P3
 - **Type:** bug
 - **Milestone:** M3
@@ -6067,7 +6066,7 @@ Spec: .team/epics/E07-class-yearbook/11-web-class-edit-delete-and-existing-page.
 - **Assignee:** —
 - **Branch:** task/t-135-e07-web-character-counted-text-fields-jo
 - **PR:** 134
-- **Updated:** 2026-10-29 09:16Z by leader
+- **Updated:** 2026-10-29 09:23Z by human
 - **Comments-seen:** 5
 
 Spec: .team/epics/E07-class-yearbook/12-web-maxlength-runes-and-join-hint.md. From T-134 QA: native maxLength stops emoji text at 2000 of 4000, and the Google hint on /login and /register (from /join/) mentions a button that does not exist when VITE_GOOGLE_SIGNIN is unset.
@@ -6086,6 +6085,7 @@ Spec: .team/epics/E07-class-yearbook/12-web-maxlength-runes-and-join-hint.md. Fr
   5 en/vi parity ok; unit tests added (ui.test, classBook, classAssemble, join, noteForm).
   Non-blocking: (a) typing in the middle of a full field moves the caret to the end (value assigned programmatically in the change handler); (b) ZWJ emoji can be cut inside the sequence (by design, the server counts runes too); (c) the ack checkbox sits tight under the warning text (cosmetic); (d) other forms (profile, book, class forms) keep no counter and no maxLength, untouched.
 - 2026-10-29 09:16Z · leader · merged 71de10e. Review: rune-counted fields (cutRunes), Google hint only from /join/ and only with the Google flag, truncated students listed with an acknowledgement before Print, e2e token registered before assertions; QA browser pass at 375 px (flag on and off, en+vi); manual full CI run 40845662459 green (same code, before merging develop for T-136), PR jobs green on 5f50463. For owner to check: caret jumps to the end when typing in the middle of a full field (minor, T-138).
+- 2026-10-29 09:23Z · human · accepted by owner
 
 ### T-136 — [E06] Deps: bump go-jose/v4 to 4.1.6 (Trivy HIGH CVE-2026-116587 fails the image job)
 - **Status:** DONE
