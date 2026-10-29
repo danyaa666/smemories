@@ -49,11 +49,12 @@ The heartbeat fires every 30 minutes and the leader's context is large, so every
 
 ## CI scope (owner decision D-37, 2026-10-26)
 
-From T-132 on, CI runs `go`, `web`, `security` and `image` on every push and pull request. **`go-integration` and `e2e` (journey and print-check) are paused**:
+From T-132 on, CI runs `go`, `web`, `security` and `image` on every push and pull request. **`go-integration` and `e2e` (journey and print-check) are paused**; from T-137 on (D-38) **`image` (image build, smoke test, Trivy scan, SBOM) is paused too**, so only `go`, `web` and `security` run on PRs. The paused jobs:
 they run only by hand (`gh workflow run ci.yml --ref <branch>`) and show as *skipped* on a PR. Because of that:
 - **Dev** runs `make test-integration` for the packages it touched, and the e2e/print-check commands from `docs/e2e.md` when it changes the web book, print or auth flows, before it sets READY_FOR_QA.
 - **QA** runs the full `make test-integration` and the e2e and print-check commands locally on the PR head, and writes the result lines (pass/fail counts, head SHA) in its board comment. A QA_PASS without them is not valid for risk-high tasks or anything touching permissions, migrations, concurrency or print.
 - **Leader** does not merge a high-risk task whose QA comment lacks those lines, and may start the manual CI run (`gh workflow run`) on a branch it is unsure about.
+- **Image** (D-38): dev runs `make image-smoke` and `make image-scan` when it changes the Dockerfile, `go.mod`/`go.sum` or anything the image copies, if Docker is up; otherwise it starts the manual CI run. Dependency PRs (`go.mod`, `go.sum`) always get a manual full run. The deploy pipeline (T-023) must build, smoke-test and scan the image before any deploy.
 - Where a spec says "CI green" for integration, race-integration, e2e or print-check, read it as "QA ran it locally and reported it" until the jobs are switched back on (delete the two `if:` lines in `ci.yml`).
 
 ## Local stack (since 2026-10-07)

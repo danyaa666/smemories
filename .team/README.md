@@ -11,6 +11,7 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 5 | T-023, T-024, T-025, T-031, T-050 |
+| TODO | 1 | T-137 |
 | IN_PROGRESS | 1 | T-135 |
 | DONE | 122 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-136 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
@@ -19,7 +20,7 @@
 
 **Open questions for you:** Q-060 (Class privacy: minors (18+), a notice on the friend note form, and a departed admin's invite links)
 
-_Board last written 2026-10-29 08:53Z_
+_Board last written 2026-10-29 08:54Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -713,6 +714,7 @@ Owner decisions (2026-10-06, `/team-init` interview). "Rejected" lists the optio
 | D-35 | **Terms of Use and Privacy Policy (EN and VI), accepted with a required checkbox at sign-up, stored by version, re-accepted when the text changes; a notice on the public friend form.** | Owner request and answers 2026-10-21 (leader recommendations taken: leader drafts the texts, checkbox + version; extras chosen: Privacy Policy page and the friend-form notice that the owner may share photos by link, which closes the D-32 open item; no separate 18+ checkbox, the terms state 18+). Drafts in `docs/legal/` are not legal advice: the owner or a lawyer reviews them and fills every [bracketed] item before go-live. Epic E13 (T-111 API, T-112 web). | Link-only consent; owner-written text first | The texts are reviewed, or a regulator or partner asks for more |
 | D-36 | **Class yearbook (E07) is built before go-live; this replaces the D-11 order for now.** Rules for E07: 18+ only (D-01 stands); a student needs an account (invite link, then email code or Google); inside a class only the page owner and the admin see a student's notes and photos; students never see each other's notes. | Owner answered Q-055 on 2026-10-26 ("class yearbook only", then the three scope questions). The team had nothing else to build and the go-live inputs (domain, AWS account, cost tier) were not ready. | Both in parallel; go-live only; minors in a class (needs consent work); no-account students (a shared link would be the credential); whole-class visibility | Go-live inputs arrive (the team switches back to E06 after E07's first slice); a school pilot with minors is planned (new epic); a leaked-invite incident |
 | D-37 | **CI no longer runs `go-integration` and `e2e` (journey and print-check) on pushes and pull requests; they run by hand (`workflow_dispatch`).** QA runs the same checks locally and puts the result on the board. | Owner request 2026-10-26: a full CI run takes 8-10 min (integration 8.4-10, e2e 6.2). Done by T-132 with job-level `if:` so the required check `go-integration` reports skipped, not missing. `go`, `web`, `security` and `image` keep running. | Run only the race detector on unit packages; shard integration and print-check (about 4-5 min) | Permission-matrix, migration, concurrency and print regressions reach `develop` unseen unless QA ran the local commands; undo = delete the two `if:` lines |
+| D-38 | **CI no longer runs the `image` job (image build, smoke, Trivy scan, SBOM) on pushes and pull requests; it runs by hand (`workflow_dispatch`), like `go-integration` and `e2e` (D-37).** | Owner request 2026-10-29, right after a new Trivy HIGH (CVE-2026-116587) turned the job red on every branch. Done by T-137 with a job-level `if:`; `image` is not a required check. `go`, `web` and `security` (govulncheck, npm audit) keep running. | Keep it on and fix each CVE as it appears (what T-136 did) | A vulnerable dependency or a broken Dockerfile reaches `develop` unseen; the deploy pipeline (T-023) must therefore build, smoke-test and scan the image itself before any deploy; undo = delete the `if:` line |
 
 Leader decisions (low-risk, inside the approved stack):
 
@@ -6084,6 +6086,25 @@ Spec: .team/epics/E06-go-live/16-go-jose-cve-2026-116587.md. The image job (make
   Not run by me: newman (no endpoint change), image build locally (Docker down, not started).
 - 2026-10-29 08:52Z · leader · merged efa7053. Review: go.mod one line + go.sum only (go-jose/v4 4.1.4 to 4.1.6, via go-oidc/v3 used by internal/auth); image job green with Trivy 0 findings for both binaries; manual full CI run 40843549004 green on head 477598f; stdlib findings seen locally come from the old local Go 1.26.1, CI uses 1.26.10 and the Dockerfile base is digest-pinned. For owner to check: update your local Go to 1.26.10 or later.
 - 2026-10-29 08:53Z · human · accepted by owner
+
+### T-137 — [E06] CI: pause the image job (owner decision D-38)
+- **Status:** TODO
+- **Priority:** P1
+- **Type:** ci
+- **Milestone:** M2
+- **Depends-on:** —
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-29 08:54Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E06-go-live/17-ci-pause-image.md. Owner decision D-38 (2026-10-29): the image job (build, smoke, Trivy, SBOM) stops running on pushes and pull requests but stays in ci.yml and can be run by hand.
+
+#### Comments
 
 <!-- tasks:end -->
 
