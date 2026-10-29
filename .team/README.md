@@ -20,7 +20,7 @@
 
 **Open questions for you:** Q-060 (Class privacy: minors (18+), a notice on the friend note form, and a departed admin's invite links); Q-062 (What should the team build next: go live, guided customisation, or the free-layout editor?)
 
-_Board last written 2026-10-29 09:42Z_
+_Board last written 2026-10-29 09:47Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -6067,7 +6067,7 @@ Spec: .team/epics/E07-class-yearbook/11-web-class-edit-delete-and-existing-page.
 - **Branch:** task/t-135-e07-web-character-counted-text-fields-jo
 - **PR:** 134
 - **Updated:** 2026-10-29 09:23Z by human
-- **Comments-seen:** 5
+- **Comments-seen:** 6
 
 Spec: .team/epics/E07-class-yearbook/12-web-maxlength-runes-and-join-hint.md. From T-134 QA: native maxLength stops emoji text at 2000 of 4000, and the Google hint on /login and /register (from /join/) mentions a button that does not exist when VITE_GOOGLE_SIGNIN is unset.
 
@@ -6129,7 +6129,7 @@ Spec: .team/epics/E06-go-live/16-go-jose-cve-2026-116587.md. The image job (make
 - **Branch:** task/t-137-e06-ci-pause-the-image-job-owner-decisio
 - **PR:** https://github.com/danyaa666/smemories/pull/135
 - **Updated:** 2026-10-29 09:35Z by dev
-- **Comments-seen:** 1
+- **Comments-seen:** 3
 
 Spec: .team/epics/E06-go-live/17-ci-pause-image.md. Owner decision D-38 (2026-10-29): the image job (build, smoke, Trivy, SBOM) stops running on pushes and pull requests but stays in ci.yml and can be run by hand.
 
