@@ -9,7 +9,7 @@ import { Dialog } from "./Dialog";
 import { EmptyState } from "./EmptyState";
 import { PhotoTile } from "./PhotoTile";
 import { Skeleton } from "./Skeleton";
-import { TextArea, TextField } from "./TextField";
+import { TextArea, TextField, cutRunes } from "./TextField";
 import { Toast } from "./Toast";
 
 describe("Button", () => {
@@ -98,6 +98,60 @@ describe("TextField and TextArea", () => {
   it("counts runes like the server: 10 emoji are 10, not 20", () => {
     render(<TextArea label="Quote" maxLength={4000} counter value={"😀".repeat(10)} readOnly />);
     expect(screen.getByText("10/4000")).toBeInTheDocument();
+  });
+
+  describe("the limit is enforced by character, not by UTF-16 unit", () => {
+    function Wrapper({ as: Tag }: { as: typeof TextArea | typeof TextField }) {
+      const [v, setV] = useState("");
+      return (
+        <Tag
+          label="Body"
+          maxLength={4000}
+          counter
+          value={v}
+          onChange={(e) => setV(e.target.value)}
+        />
+      );
+    }
+    const field = () => screen.getByLabelText("Body") as HTMLTextAreaElement;
+    const paste = (text: string) => {
+      field().focus();
+      return userEvent.paste(text);
+    };
+
+    it.each([
+      ["TextArea", TextArea],
+      ["TextField", TextField],
+    ])(
+      "%s: 4000 emoji are accepted, the 4001st is refused, and there is no native maxlength",
+      async (_n, Tag) => {
+        render(<Wrapper as={Tag} />);
+        expect(field()).not.toHaveAttribute("maxlength");
+        await paste("😀".repeat(4000));
+        expect(screen.getByText("4000/4000")).toBeInTheDocument();
+        await paste("😀");
+        await paste("a");
+        expect(field().value).toBe("😀".repeat(4000));
+        expect(screen.getByText("4000/4000")).toBeInTheDocument();
+      },
+    );
+
+    it("cuts a paste of 5000 emoji at exactly 4000, never inside a surrogate pair", async () => {
+      render(<Wrapper as={TextArea} />);
+      await paste("😀".repeat(5000));
+      expect(field().value).toBe("😀".repeat(4000));
+      expect(field().value.length).toBe(8000);
+      expect(screen.getByText("4000/4000")).toBeInTheDocument();
+    });
+
+    it("cuts a mixed paste on a character boundary and leaves Vietnamese text as typed", async () => {
+      render(<Wrapper as={TextArea} />);
+      await paste("ấ".repeat(3999) + "😀😀");
+      expect([...field().value]).toHaveLength(4000);
+      expect(field().value.endsWith("ấ😀")).toBe(true);
+      expect(field().value.at(-1)).toBe("\ude00"); // the pair is whole
+      expect(cutRunes("Nguyễn Thị Hồng Ánh, lớp 12A1", 4000)).toBe("Nguyễn Thị Hồng Ánh, lớp 12A1");
+    });
   });
 
   it("does not show a counter without maxLength", () => {

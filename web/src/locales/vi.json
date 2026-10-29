@@ -594,7 +594,9 @@
     "issuesHelp": "Những nội dung đã duyệt này không vừa hết khi in. Bạn đó có thể ẩn bớt một lời nhắn, hoặc nhờ bạn bè viết ngắn hơn.",
     "dropped": "Chỉ {{shown}} trong {{total}} lời nhắn đã duyệt được đưa vào sách lớp.",
     "cutNotes": "Lời nhắn quá dài và bị cắt: {{count}}.",
-    "cutProfile": "Đoạn trong hồ sơ quá dài và bị cắt: {{count}}."
+    "cutProfile": "Đoạn trong hồ sơ quá dài và bị cắt: {{count}}.",
+    "leftOut": "Lời nhắn của các bạn sau bị bỏ khỏi sách lớp vì sách quá lớn ({{count}}): {{names}}. Trang giới thiệu của các bạn vẫn được in, nhưng không có lời nhắn nào.",
+    "leftOutAck": "Tôi hiểu rằng lời nhắn của các bạn này sẽ không có trong bản in"
   },
   "legal": {
     "terms": "Điều khoản sử dụng",

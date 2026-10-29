@@ -236,6 +236,51 @@ describe("print the class book (T-130)", () => {
     expect(print).toHaveBeenCalledTimes(1);
   });
 
+  it("names the students whose notes were left out and keeps Print disabled until the admin acknowledges", async () => {
+    const id = (n: number) => `01J9Z3K6V8Q4M7N2P5R8T0M${String(n).padStart(3, "0")}`;
+    const cut = (n: number) =>
+      member(
+        n,
+        { member_id: id(n), approved_total: 5, truncated: true, notes: [], note_count: 0 },
+        0,
+      );
+    const members = [
+      member(1, { member_id: id(1) }),
+      cut(2),
+      member(3, { member_id: id(3) }),
+      cut(4),
+    ];
+    const book = classBook(members, { truncated: [id(2), id(4)] });
+    const print = vi.spyOn(window, "print").mockImplementation(() => {});
+    serve(book);
+    open();
+    expect(await screen.findByText(/Học sinh 2, Học sinh 4/)).toBeVisible();
+    expect(screen.getByText(/left out of the class book.*\(2\)/)).toBeVisible();
+    const button = screen.getByRole("button", { name: "Print or save as PDF" });
+    await waitFor(() => expect(screen.getByText(/Ready to print/)).toBeVisible());
+    expect(button).toBeDisabled();
+    const ack = screen.getByRole("checkbox", { name: /notes will be missing/ });
+    await userEvent.click(ack);
+    expect(button).toBeEnabled();
+    await userEvent.click(button);
+    expect(print).toHaveBeenCalledTimes(1);
+    await userEvent.click(ack);
+    expect(button).toBeDisabled();
+  });
+
+  it("shows no warning, and no checkbox, when nothing was left out (empty or missing list)", async () => {
+    serve(classBook([member(1)], { truncated: [] }));
+    const { unmount } = open();
+    await waitFor(() => expect(labels()).toContain("class-cover"));
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    unmount();
+    serve(classBook([member(1)]));
+    open();
+    await waitFor(() => expect(labels()).toContain("class-cover"));
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Print or save as PDF" })).toBeEnabled();
+  });
+
   it("another paper size is chosen on the screen and in the address; the default is the size most students use", async () => {
     serve(
       classBook([

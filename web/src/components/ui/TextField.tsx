@@ -1,5 +1,6 @@
 import {
   useId,
+  type ChangeEvent,
   type InputHTMLAttributes,
   type ReactNode,
   type Ref,
@@ -17,6 +18,22 @@ type Common = {
 
 /** The server counts characters (runes), not UTF-16 units: an emoji is 1, not 2. */
 const runes = (s: string) => [...s].length;
+
+/** First `max` characters; spreading a string walks code points, so a surrogate pair is never split. */
+export const cutRunes = (s: string, max: number) =>
+  runes(s) > max ? [...s].slice(0, max).join("") : s;
+
+/** Native maxLength counts UTF-16 units: a field with a counter does not get it, and the limit is enforced here, by character. */
+function byRune<E extends HTMLInputElement | HTMLTextAreaElement>(
+  max: number | undefined,
+  onChange: ((e: ChangeEvent<E>) => void) | undefined,
+) {
+  if (max === undefined) return onChange;
+  return (e: ChangeEvent<E>) => {
+    e.target.value = cutRunes(e.target.value, max); // a paste is cut at the limit before the handler reads it
+    onChange?.(e);
+  };
+}
 
 type Parts = Common & { max?: number | undefined };
 
@@ -68,9 +85,17 @@ type InputProps = Common &
     ref?: Ref<HTMLInputElement>;
   };
 
-export function TextField({ label, help, error, counter, ...input }: InputProps) {
+export function TextField({
+  label,
+  help,
+  error,
+  counter,
+  maxLength,
+  onChange,
+  ...input
+}: InputProps) {
   const id = useId();
-  const c = { label, help, error, counter, max: input.maxLength };
+  const c = { label, help, error, counter, max: maxLength };
   return (
     <Shell {...c} id={id} length={runes(input.value)}>
       <input
@@ -78,6 +103,8 @@ export function TextField({ label, help, error, counter, ...input }: InputProps)
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy(id, c)}
         {...input}
+        maxLength={counter ? undefined : maxLength}
+        onChange={byRune(counter ? maxLength : undefined, onChange)}
       />
     </Shell>
   );
@@ -89,9 +116,18 @@ type AreaProps = Common &
     ref?: Ref<HTMLTextAreaElement>;
   };
 
-export function TextArea({ label, help, error, counter, rows = 3, ...area }: AreaProps) {
+export function TextArea({
+  label,
+  help,
+  error,
+  counter,
+  rows = 3,
+  maxLength,
+  onChange,
+  ...area
+}: AreaProps) {
   const id = useId();
-  const c = { label, help, error, counter, max: area.maxLength };
+  const c = { label, help, error, counter, max: maxLength };
   return (
     <Shell {...c} id={id} length={runes(area.value)}>
       <textarea
@@ -100,6 +136,8 @@ export function TextArea({ label, help, error, counter, rows = 3, ...area }: Are
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy(id, c)}
         {...area}
+        maxLength={counter ? undefined : maxLength}
+        onChange={byRune(counter ? maxLength : undefined, onChange)}
       />
     </Shell>
   );

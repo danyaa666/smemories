@@ -86,6 +86,7 @@ export function PageEditor({
         value={title}
         onChange={(e) => setTitle(tabsToSpaces(e.target.value))}
         maxLength={TITLE_MAX}
+        counter
         autoComplete="off"
       />
       <TextArea
