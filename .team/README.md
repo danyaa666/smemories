@@ -10,7 +10,8 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 6 | T-023, T-024, T-025, T-031, T-050, T-138 |
+| BACKLOG | 5 | T-023, T-024, T-025, T-031, T-050 |
+| TODO | 1 | T-138 |
 | IN_PROGRESS | 1 | T-137 |
 | MERGED | 1 | T-135 |
 | DONE | 122 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-136 |
@@ -18,9 +19,9 @@
 
 **Awaiting your review (MERGED):** T-135 ([E07] Web: character-counted text fields, join hint per build, show cut students on the print screen)
 
-**Open questions for you:** Q-060 (Class privacy: minors (18+), a notice on the friend note form, and a departed admin's invite links)
+**Open questions for you:** Q-060 (Class privacy: minors (18+), a notice on the friend note form, and a departed admin's invite links); Q-062 (What should the team build next: go live, guided customisation, or the free-layout editor?)
 
-_Board last written 2026-10-29 09:16Z_
+_Board last written 2026-10-29 09:17Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -668,6 +669,22 @@ If you answer "A, A, B" I will turn 2 and 3 into one small task each.
 - **Blocks:** T-131
 - **Recommendation:** approve (the legal texts stay DRAFT and the section 8 sign-off stays open until go-live)
 - **Answer:** _(pending)_
+
+### Q-062 — What should the team build next: go live, guided customisation, or the free-layout editor?
+- **Status:** OPEN
+- **Asked:** 2026-10-29 09:17Z
+- **Blocks:** —
+- **Recommendation:** A: go live (needs your domain, AWS account and region, cost tier and final legal texts)
+- **Answer:** _(pending)_
+
+Context: the class yearbook (E07, D-36) is built and merged; the only open pieces are your answers on Q-060 and your sign-off of the class privacy review (section 8). The pipeline now holds only small P3 fixes. What should the team build next? I need your direction before I write specs, because each option needs inputs only you have.
+
+A. Go live (M2, epic E06). The code side is nearly done (Docker image, production config, SES mailer, security hardening, legal drafts). What is left: T-050 (delete the fixed email code, breaks the e2e shortcut so it comes last), T-023 (AWS infrastructure as code and deploy pipeline), T-024 (alarms and logs), T-025 (backups, restore drill, data export and deletion), T-031 (auth hardening at the edge). It needs from you: the domain name and who can edit its DNS, the AWS account and region, the cost tier you accept (a small always-on setup costs roughly tens of USD a month; I will give a number once the region is chosen), and final legal texts (operator name, contact, retention days, governing law, a native Vietnamese review).
+B. Guided customisation first (M1b, epic E09 stage 1). Per-book design copy with colours, fonts, page order and visibility, and a PDF preview. Pure product work, no inputs needed from you.
+C. Free-layout editor (M4, epic E09 stage 2). The Canva-style editor. Large, and best after B.
+D. Something else (tell me).
+
+My recommendation: A. Everything users can touch is built; going live turns the work into something you can show and test with real friends, and the feedback should steer B and C. If you want to keep building for a while before the AWS setup, B is the next best, because it needs nothing from you.
 
 <!-- questions:end -->
 
@@ -5920,7 +5937,7 @@ Spec: .team/epics/E07-class-yearbook/08-web-class-book-print.md (read it from th
 - **Branch:** task/t-131-e07-privacy-review-legal-texts-and-the-c
 - **PR:** https://github.com/danyaa666/smemories/pull/132
 - **Updated:** 2026-10-29 08:53Z by human
-- **Comments-seen:** 5
+- **Comments-seen:** 8
 
 Spec: .team/epics/E07-class-yearbook/09-privacy-review-and-e2e.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.
 
@@ -5981,7 +5998,7 @@ Spec: .team/epics/E06-go-live/15-ci-pause-integration-and-e2e.md. Owner decision
 - **Branch:** task/t-133-e07-class-book-read-limiter-response-siz
 - **PR:** https://github.com/danyaa666/smemories/pull/131
 - **Updated:** 2026-10-29 08:53Z by human
-- **Comments-seen:** 5
+- **Comments-seen:** 6
 
 Spec: .team/epics/E07-class-yearbook/10-class-book-limits-and-caching.md. QA follow-ups from T-027: class-book/get has no read limiter, a maximal class book is about 50 MiB, and an admin's cached photo outlives a hidden note by up to an hour.
 
@@ -6083,7 +6100,7 @@ Spec: .team/epics/E07-class-yearbook/12-web-maxlength-runes-and-join-hint.md. Fr
 - **Branch:** task/t-136-e06-deps-bump-go-jose-v4-to-4-1-6-trivy-
 - **PR:** https://github.com/danyaa666/smemories/pull/133
 - **Updated:** 2026-10-29 08:53Z by human
-- **Comments-seen:** 3
+- **Comments-seen:** 4
 
 Spec: .team/epics/E06-go-live/16-go-jose-cve-2026-116587.md. The image job (make image-scan, Trivy HIGH) went red on 2026-10-29 for every branch: go-jose v4.1.4 (indirect) has a DoS when parsing JWKs with RSA keys, fixed in 4.1.6.
 
@@ -6119,7 +6136,7 @@ Spec: .team/epics/E06-go-live/17-ci-pause-image.md. Owner decision D-38 (2026-10
 #### Comments
 
 ### T-138 — [E07] Web: keep the caret in place when a full text field cuts the input
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P3
 - **Type:** bug
 - **Milestone:** M3
@@ -6130,12 +6147,13 @@ Spec: .team/epics/E06-go-live/17-ci-pause-image.md. Owner decision D-38 (2026-10
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-29 09:16Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-29 09:17Z by leader
+- **Comments-seen:** 1
 
 From T-135 QA: typing in the middle of a field that is already at its character limit moves the caret to the end. Fix in the shared cutRunes change handler (web/src/ui): when the cut text equals the previous value, restore the selection start/end; add a test with a full field and a caret in the middle; the acknowledgement checkbox on the print screen also needs a little more space under its warning text. No spec file: this is the whole spec.
 
 #### Comments
+- 2026-10-29 09:17Z · leader · pipeline is empty; small P3 fix
 
 <!-- tasks:end -->
 
