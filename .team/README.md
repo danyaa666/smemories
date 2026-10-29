@@ -10,17 +10,17 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 5 | T-023, T-024, T-025, T-031, T-050 |
-| TODO | 1 | T-137 |
-| READY_FOR_QA | 1 | T-135 |
+| BACKLOG | 6 | T-023, T-024, T-025, T-031, T-050, T-138 |
+| IN_PROGRESS | 1 | T-137 |
+| MERGED | 1 | T-135 |
 | DONE | 122 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-136 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** nothing
+**Awaiting your review (MERGED):** T-135 ([E07] Web: character-counted text fields, join hint per build, show cut students on the print screen)
 
 **Open questions for you:** Q-060 (Class privacy: minors (18+), a notice on the friend note form, and a departed admin's invite links)
 
-_Board last written 2026-10-29 09:09Z_
+_Board last written 2026-10-29 09:16Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -6039,7 +6039,7 @@ Spec: .team/epics/E07-class-yearbook/11-web-class-edit-delete-and-existing-page.
 - 2026-10-27 02:06Z · human · accepted by owner
 
 ### T-135 — [E07] Web: character-counted text fields, join hint per build, show cut students on the print screen
-- **Status:** READY_FOR_QA
+- **Status:** MERGED
 - **Priority:** P3
 - **Type:** bug
 - **Milestone:** M3
@@ -6050,8 +6050,8 @@ Spec: .team/epics/E07-class-yearbook/11-web-class-edit-delete-and-existing-page.
 - **Assignee:** —
 - **Branch:** task/t-135-e07-web-character-counted-text-fields-jo
 - **PR:** 134
-- **Updated:** 2026-10-29 09:09Z by dev
-- **Comments-seen:** 3
+- **Updated:** 2026-10-29 09:16Z by leader
+- **Comments-seen:** 5
 
 Spec: .team/epics/E07-class-yearbook/12-web-maxlength-runes-and-join-hint.md. From T-134 QA: native maxLength stops emoji text at 2000 of 4000, and the Google hint on /login and /register (from /join/) mentions a button that does not exist when VITE_GOOGLE_SIGNIN is unset.
 
@@ -6059,6 +6059,16 @@ Spec: .team/epics/E07-class-yearbook/12-web-maxlength-runes-and-join-hint.md. Fr
 - 2026-10-29 08:03Z · leader · ready
 - 2026-10-29 09:09Z · dev · PR #134, head 5f50463 (merged origin/develop to pick up T-136, so image is green; the pushed code is unchanged since the manual run). Manual full CI on the previous head (same code): run 40845662459 - web, go, go-integration, security, e2e green; e2e: class journey class.spec.mjs passed (6 passed, 21.9s); image red on that run only because the branch predated T-136. PR jobs now: go, web, security, image green; go-integration/e2e skipped (D-37). Local: lint, typecheck, build, vitest 596, lint:i18n, check:api green. Decisions: native maxLength is dropped only on fields with a counter (CodeField keeps its native 6-digit limit); the class page title got a counter so it can use the rune limit; the class form has no client-side limit, nothing to change. To verify: paste emoji/Vietnamese in note body, link label, class page title/body; build with and without VITE_GOOGLE_SIGNIN on /join/ -> sign-in/sign-up; print screen with truncated ids (needs a fixture, no real class reaches 8 MiB). Not run here: manual 375 px visual check of the new acknowledgement checkbox (reuses .legal-consent).
 - 2026-10-29 09:09Z · dev · PR #134 head 5f50463; see comment
+- 2026-10-29 09:15Z · qa · QA_PASS T-135, PR #134, head 5f50463 (worktree == PR head, clean). CI: PR run 40846903458 on 5f50463: go, web, security, image green; go-integration/e2e skipped (D-37). Manual run 40845662459 was on 5332b01 (code head); diff 5332b01..5f50463 = only merged develop (go.mod/go.sum T-136, .team, CLAUDE.md), so its go-integration + e2e (class journey) green apply to the same product/test code; image red there only for the pre-T-136 go.mod. I did NOT re-run make e2e / test-integration locally (no compose stack up; no Go change in the PR; risk low); journey covered by the CI run only.
+  LOCAL: lint (eslint+prettier), typecheck, build, vitest 596/596, lint:i18n ok, check:api ok. No package.json/lock, api/openapi.yaml, schema.d.ts or .team change in the PR (git diff origin/develop...HEAD).
+  REAL BROWSER (Chromium 375x800, Vite dev from the PR worktree on ports 5198 (flag unset) and 5199 (VITE_GOOGLE_SIGNIN=true), /api stubbed with page.route; servers stopped after; scripts in my scratchpad, not committed): 
+  1 Rune limits. PageEditor body: no native maxlength; fill 4000 emoji -> 4000 and counter 4000/4000; 4001st (insertText + 'a') refused; paste 5000 emoji -> exactly 4000 (UTF-16 length 8000, isWellFormed true); typing at the start of a full field refused. Title: 120 emoji ok, 121st refused, paste 500 -> 120. Note form (/c/abc): body 2000 emoji ok, 2001st refused, paste 5000 -> 2000; short field paste 100 -> 60. ZWJ family x1000 paste: cut at 4000 runes, mid-sequence (ends 👩 ZWJ 👧), no lone surrogate - matches the documented rune rule. Vietnamese NFC and NFD (combining marks) pasted unchanged. CodeField keeps native maxLength=CODE_LENGTH (code, unchanged). Every field that passes maxLength with counter (PageEditor x2, NoteForm, NoteLinks) is covered by the shared TextField/TextArea helper cutRunes; no other field has maxLength.
+  2 Google hint. From /join/ via the in-main Sign in / Create account links, en+vi, /login+/register: flag unset -> no hint, no Google button; flag true -> hint shown (correct locale text), no Google button, URL stays /login or /register; plain /login and /register: no hint, Google button only with the flag. Invite token: not in any URL after /join/, localStorage, sessionStorage, cookies, console, or any request URL other than the /join/ page itself.
+  3 Cut students. /classes/:id/book and /assemble with truncated=[2 ids] (one member has a blank name): warning lists both by name (blank -> 'Student without a name' / 'Bạn chưa có tên'), en and vi. Book: Print disabled until the labelled checkbox is ticked (focus ring visible, Space toggles, untick disables again, 24px target, no horizontal overflow at 375). truncated=[]: no warning, no checkbox, Print enabled; assemble shows the warning only when truncated.
+  4 e2e hygiene: reviewed the diff; token (full link, path, last segment) is pushed to secrets before any parse/assert, in step 2 and the note-link step. Forced failure in a throwaway spec reusing the real step()/scrub and the exact step-2 lines (bad token shape, two variants): the printed message and stack contain neither the token nor the path ('the invite link has the shape /join/<43 characters>'). Journey itself: CI run 40845662459 passed (6 passed).
+  5 en/vi parity ok; unit tests added (ui.test, classBook, classAssemble, join, noteForm).
+  Non-blocking: (a) typing in the middle of a full field moves the caret to the end (value assigned programmatically in the change handler); (b) ZWJ emoji can be cut inside the sequence (by design, the server counts runes too); (c) the ack checkbox sits tight under the warning text (cosmetic); (d) other forms (profile, book, class forms) keep no counter and no maxLength, untouched.
+- 2026-10-29 09:16Z · leader · merged 71de10e. Review: rune-counted fields (cutRunes), Google hint only from /join/ and only with the Google flag, truncated students listed with an acknowledgement before Print, e2e token registered before assertions; QA browser pass at 375 px (flag on and off, en+vi); manual full CI run 40845662459 green (same code, before merging develop for T-136), PR jobs green on 5f50463. For owner to check: caret jumps to the end when typing in the middle of a full field (minor, T-138).
 
 ### T-136 — [E06] Deps: bump go-jose/v4 to 4.1.6 (Trivy HIGH CVE-2026-116587 fails the image job)
 - **Status:** DONE
@@ -6090,7 +6100,7 @@ Spec: .team/epics/E06-go-live/16-go-jose-cve-2026-116587.md. The image job (make
 - 2026-10-29 08:53Z · human · accepted by owner
 
 ### T-137 — [E06] CI: pause the image job (owner decision D-38)
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P1
 - **Type:** ci
 - **Milestone:** M2
@@ -6098,13 +6108,32 @@ Spec: .team/epics/E06-go-live/16-go-jose-cve-2026-116587.md. The image job (make
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-137-e06-ci-pause-the-image-job-owner-decisio
 - **PR:** —
-- **Updated:** 2026-10-29 08:54Z by leader
+- **Updated:** 2026-10-29 09:09Z by dev
 - **Comments-seen:** 0
 
 Spec: .team/epics/E06-go-live/17-ci-pause-image.md. Owner decision D-38 (2026-10-29): the image job (build, smoke, Trivy, SBOM) stops running on pushes and pull requests but stays in ci.yml and can be run by hand.
+
+#### Comments
+
+### T-138 — [E07] Web: keep the caret in place when a full text field cuts the input
+- **Status:** BACKLOG
+- **Priority:** P3
+- **Type:** bug
+- **Milestone:** M3
+- **Depends-on:** —
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-29 09:16Z by leader
+- **Comments-seen:** 0
+
+From T-135 QA: typing in the middle of a field that is already at its character limit moves the caret to the end. Fix in the shared cutRunes change handler (web/src/ui): when the cut text equals the previous value, restore the selection start/end; add a test with a full field and a caret in the middle; the acknowledgement checkbox on the print screen also needs a little more space under its warning text. No spec file: this is the whole spec.
 
 #### Comments
 
