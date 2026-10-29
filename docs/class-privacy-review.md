@@ -86,7 +86,7 @@ Logs: the API's access log records the route only, never a query string or body,
 | **Someone attaches an unrelated yearbook** | not possible | `set-book` accepts only the caller's own yearbook (404 otherwise); one yearbook belongs to at most one class (409) |
 | **A student crafts a class id or member id of another class** | nothing changes | every id is looked up inside the class named in the request (`TestCrossClassIDsChangeNothing`, `TestPageIDsOfAnotherClassChangeNothing`) |
 | **Script in a class page or a note** | shown as text, not run | the server stores plain text; the web renders it as React text (T-130 checks this) |
-| **Flooding** | refused | writes limited to 120 an hour per user and fail closed; caps: 10 classes per admin, 60 members, 5 live links, 30 class pages, 40 notes per student in the book; class-book reads are limited by T-133 |
+| **Flooding** | refused | writes limited to 120 an hour per user and fail closed; caps: 10 classes per admin, 60 members, 5 live links, 30 class pages, 40 notes per student in the book; class-book reads are limited to 30 an hour per user and cut at 8 MiB (`TestClassBookReadLimiter`, `TestClassBookIsCutAtTheCap`) |
 
 ## 6. Endpoints that expose class data, and the test that proves each role check
 
