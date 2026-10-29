@@ -341,6 +341,18 @@ func capAdminClasses(ctx context.Context, tx *sql.Tx, userID uint64) error {
 	return nil
 }
 
+// revokeInvitesOf revokes the active invites of the class that userID made, when userID stops being an admin of it (leave,
+// removal or demotion; D-40 c). It runs in the membership change's transaction, after the class and member locks, so the invite
+// row locks come last (the order accept uses too). Members who joined with those links stay; other admins' links are untouched.
+func revokeInvitesOf(ctx context.Context, tx *sql.Tx, classID, userID uint64, role string, nowMs int64) error {
+	if role != RoleAdmin {
+		return nil
+	}
+	_, err := tx.ExecContext(ctx, `UPDATE class_invite_tab SET revoked_at = ?, updated_at = ? WHERE class_id = ? AND created_by = ? AND revoked_at IS NULL AND expires_at > ?`,
+		nowMs, nowMs, classID, userID, nowMs)
+	return dbErr(err, "revoke invites")
+}
+
 // setRole gives the member memberID the role newRole (admin only). Demoting the last admin is ErrLastAdmin.
 func (s *Store) setRole(ctx context.Context, userID uint64, publicID, memberID, newRole string, nowMs int64) error {
 	return s.inTx(ctx, func(tx *sql.Tx) error {
@@ -363,33 +375,40 @@ func (s *Store) setRole(ctx context.Context, userID uint64, publicID, memberID, 
 				return err
 			}
 		}
-		_, err = tx.ExecContext(ctx, `UPDATE class_member_tab SET role = ?, updated_at = ? WHERE id = ?`, newRole, nowMs, row)
-		return dbErr(err, "update role")
+		if _, err = tx.ExecContext(ctx, `UPDATE class_member_tab SET role = ?, updated_at = ? WHERE id = ?`, newRole, nowMs, row); err != nil {
+			return dbErr(err, "update role")
+		}
+		if newRole == RoleAdmin {
+			return nil
+		}
+		return revokeInvitesOf(ctx, tx, classID, memberUser, role, nowMs)
 	})
 }
 
 // removeMember deletes the member memberID from the class (admin only). Removing the last admin is ErrLastAdmin. The
 // member's yearbook is untouched.
-func (s *Store) removeMember(ctx context.Context, userID uint64, publicID, memberID string) error {
+func (s *Store) removeMember(ctx context.Context, userID uint64, publicID, memberID string, nowMs int64) error {
 	return s.inTx(ctx, func(tx *sql.Tx) error {
 		classID, _, err := lockMembership(ctx, tx, userID, publicID, RoleAdmin)
 		if err != nil {
 			return err
 		}
-		row, _, role, err := target(ctx, tx, classID, memberID)
+		row, memberUser, role, err := target(ctx, tx, classID, memberID)
 		if err != nil {
 			return err
 		}
 		if err := keepAnAdmin(ctx, tx, classID, role); err != nil {
 			return err
 		}
-		_, err = tx.ExecContext(ctx, `DELETE FROM class_member_tab WHERE id = ?`, row)
-		return dbErr(err, "delete member")
+		if _, err = tx.ExecContext(ctx, `DELETE FROM class_member_tab WHERE id = ?`, row); err != nil {
+			return dbErr(err, "delete member")
+		}
+		return revokeInvitesOf(ctx, tx, classID, memberUser, role, nowMs)
 	})
 }
 
 // leave removes the caller from the class (any member). The last admin cannot leave.
-func (s *Store) leave(ctx context.Context, userID uint64, publicID string) error {
+func (s *Store) leave(ctx context.Context, userID uint64, publicID string, nowMs int64) error {
 	return s.inTx(ctx, func(tx *sql.Tx) error {
 		classID, role, err := lockMembership(ctx, tx, userID, publicID, RoleStudent)
 		if err != nil {
@@ -398,8 +417,10 @@ func (s *Store) leave(ctx context.Context, userID uint64, publicID string) error
 		if err := keepAnAdmin(ctx, tx, classID, role); err != nil {
 			return err
 		}
-		_, err = tx.ExecContext(ctx, `DELETE FROM class_member_tab WHERE class_id = ? AND user_id = ?`, classID, userID)
-		return dbErr(err, "delete member")
+		if _, err = tx.ExecContext(ctx, `DELETE FROM class_member_tab WHERE class_id = ? AND user_id = ?`, classID, userID); err != nil {
+			return dbErr(err, "delete member")
+		}
+		return revokeInvitesOf(ctx, tx, classID, userID, role, nowMs)
 	})
 }
 

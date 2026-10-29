@@ -739,3 +739,61 @@ func TestDeletingTheClassRemovesItsInvites(t *testing.T) {
 	e.lookup(token).status(404, "ERROR_NOT_FOUND")
 	dbtest.AssertNoOrphans(t, e.db)
 }
+
+// A student who leaves revokes nothing, and promoting someone does not touch the promoter's links.
+func TestStudentLeavingRevokesNothing(t *testing.T) {
+	e := newEnv(t)
+	admin, student := e.user("Admin"), e.user("Student")
+	cls, _ := e.seedClass([]person{admin}, student)
+	_, token := e.createInvite(admin, cls)
+	e.do(student, "POST", "/api/class-member/leave", body("class_id", cls)).status(200, "OK")
+	e.lookup(token).status(200, "OK")
+	if n := e.count(`SELECT COUNT(*) FROM class_invite_tab WHERE revoked_at IS NOT NULL`); n != 0 {
+		t.Fatalf("%d invites revoked", n)
+	}
+	// promoting someone does not touch the promoter's links either
+	other := e.user("Other")
+	e.accept(other, token).status(200, "OK")
+	e.do(admin, "POST", "/api/class-member/update-role", body("class_id", cls, "member_id", e.memberID(cls, other), "role", RoleAdmin)).status(200, "OK")
+	e.lookup(token).status(200, "OK")
+}
+
+// An accept racing the creator's exit is either before it (the kid is in, with a live link at that moment) or after it
+// (refused as a dead link); never a member that was added after the link was revoked. Run with -count=20 under -race.
+func TestInviteAcceptRacingTheCreatorLeaving(t *testing.T) {
+	e := newEnv(t)
+	owner, gone := e.user("Owner"), e.user("Gone")
+	var kids []person
+	for i := range 8 {
+		kids = append(kids, e.user("Kid"+strconv.Itoa(i)))
+	}
+	cls, _ := e.seedClass([]person{owner, gone})
+	_, token := e.createInvite(gone, cls)
+	rs := parallel(len(kids)+1, func(i int) resp {
+		if i == len(kids) {
+			return e.do(gone, "POST", "/api/class-member/leave", body("class_id", cls))
+		}
+		return e.accept(kids[i], token)
+	})
+	joined := 0
+	for i, r := range rs {
+		switch {
+		case i == len(kids):
+			r.status(200, "OK")
+		case r.Code == 200:
+			joined++
+		case r.Code != 404:
+			t.Fatalf("accept answered %d %s", r.Code, r.Body)
+		}
+	}
+	if got := e.members(cls) - 1; got != joined { // minus the owner; the leaver is gone
+		t.Fatalf("%d members in the class, but %d accepts said OK", got, joined)
+	}
+	if n := e.count(`SELECT COUNT(*) FROM class_invite_tab WHERE revoked_at IS NULL`); n != 0 {
+		t.Fatal("the leaver's link is still live")
+	}
+	e.accept(kids[0], token).status(404, "ERROR_NOT_FOUND")
+	if after := e.members(cls) - 1; after != joined {
+		t.Fatalf("someone joined after the exit (%d, then %d)", joined, after)
+	}
+}
