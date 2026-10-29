@@ -12,17 +12,16 @@
 |---|---:|---|
 | BACKLOG | 5 | T-023, T-024, T-025, T-031, T-050 |
 | TODO | 1 | T-135 |
-| IN_PROGRESS | 1 | T-136 |
-| QA_PASS | 1 | T-131 |
-| MERGED | 1 | T-133 |
+| READY_FOR_QA | 1 | T-136 |
+| MERGED | 2 | T-131, T-133 |
 | DONE | 119 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-132, T-134 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-133 ([E07] Class book: read limiter, response size cap and admin photo caching)
+**Awaiting your review (MERGED):** T-131 ([E07] Privacy review, legal texts and the class journey (e2e)); T-133 ([E07] Class book: read limiter, response size cap and admin photo caching)
 
-**Open questions for you:** Q-060 (Class privacy: minors (18+), a notice on the friend note form, and a departed admin's invite links); Q-061 (Approve merge of T-131 (privacy review, legal texts v2026-10-29, class journey, PR #132)?)
+**Open questions for you:** Q-060 (Class privacy: minors (18+), a notice on the friend note form, and a departed admin's invite links)
 
-_Board last written 2026-10-29 08:45Z_
+_Board last written 2026-10-29 08:49Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -665,7 +664,7 @@ Context: the class privacy review (docs/class-privacy-review.md section 7, T-131
 If you answer "A, A, B" I will turn 2 and 3 into one small task each.
 
 ### Q-061 — Approve merge of T-131 (privacy review, legal texts v2026-10-29, class journey, PR #132)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-29 08:45Z
 - **Blocks:** T-131
 - **Recommendation:** approve (the legal texts stay DRAFT and the section 8 sign-off stays open until go-live)
@@ -5909,18 +5908,18 @@ Spec: .team/epics/E07-class-yearbook/08-web-class-book-print.md (read it from th
 - 2026-10-27 02:06Z · human · accepted by owner
 
 ### T-131 — [E07] Privacy review, legal texts and the class journey (e2e)
-- **Status:** QA_PASS
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
 - **Depends-on:** T-129,T-130,T-134
 - **Risk:** high
 - **Rework:** 0
-- **Owner-approved:** —
-- **Assignee:** leader
+- **Owner-approved:** yes
+- **Assignee:** —
 - **Branch:** task/t-131-e07-privacy-review-legal-texts-and-the-c
 - **PR:** https://github.com/danyaa666/smemories/pull/132
-- **Updated:** 2026-10-29 08:45Z by qa
+- **Updated:** 2026-10-29 08:49Z by leader
 - **Comments-seen:** 5
 
 Spec: .team/epics/E07-class-yearbook/09-privacy-review-and-e2e.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.
@@ -5936,6 +5935,8 @@ Spec: .team/epics/E07-class-yearbook/09-privacy-review-and-e2e.md (read it from 
   Mechanical (head f7c6ab6): go build, go vet (+integration tag), gofmt clean; go test -race -count=1 -tags integration ./... on my own stack: ALL packages ok, 0 FAIL (class 251 s, auth 344 s, notes 290 s, db 211 s, yearbook 146 s, media 174 s). web: eslint+prettier, tsc, lint:i18n, check:api ok; vitest 585/586 on first run with one timeout (classBook.test.tsx 'warns past the 120-page budget', 5 s) while the integration suite was hogging the CPU; rerun of that file alone 10/10 pass. Print-check not run: this PR touches no print/renderer code (print route only exercised by the e2e step 7).
   Non-blocking: (a) class.spec step 2 asserts the invite path with expect(...).toMatch before pushing the token into secrets, so a regex mismatch would print the token in the error; push first. (b) classBook.test.tsx 5 s default timeout is tight under load (flake risk). (c) Requirement 4 (E06 go-live bullet) is leader-owned: dev gave the text in its comment; the leader must add it. (d) Owner decisions open (doc section 7/8): minors vs 18+, friend warning on the note form, departed admin's invites. Not run: Newman for class postman collection (edits are only the termsVersion variable), manual CI re-run.
 - 2026-10-29 08:45Z · leader · Leader review OK on head f7c6ab6 (unchanged since QA): privacy review lists all 21 class operations with real tests and an unchecked owner sign-off; check-class-matrix.sh fails when a row is removed and runs in the go job; legal texts (en/vi) match the design (admin sees profile and approved notes and photos of linked pages, students never see each other, leaving removes access; DRAFT kept; version 2026-10-29 flows to Go, openapi, schema.d.ts, web); journey passes in CI and in QA's own stack and fails on the deliberate break; no go.mod change. Go-live bullet added to the T-023 spec. Open for the owner: Q-060 (minors, friend-form notice, departed admin's invites) and the section 8 sign-off (not part of the merge). Minor e2e hygiene (token printed if a regex fails) moved to T-135. Awaiting owner: team approve T-131. image job red = T-136 (not this PR).
+- 2026-10-29 08:49Z · human · owner approved merge
+- 2026-10-29 08:49Z · leader · merged eed1612 (owner-approved). Review: privacy review lists 21 class operations with real tests; check-class-matrix.sh in the go job; legal texts en/vi v2026-10-29 (DRAFT kept); class journey passes in CI and on QA's own stack, fails on the deliberate break; manual full CI run 40841596718 green on head f7c6ab6 except the image job (go-jose CVE, T-136, PR #133). For owner to check: section 8 sign-off of docs/class-privacy-review.md (open), Q-060, the legal drafts.
 
 ### T-132 — [E06] CI: pause the go-integration and e2e jobs (owner decision D-37)
 - **Status:** DONE
@@ -6056,7 +6057,7 @@ Spec: .team/epics/E07-class-yearbook/12-web-maxlength-runes-and-join-hint.md. Fr
 - 2026-10-29 08:03Z · leader · ready
 
 ### T-136 — [E06] Deps: bump go-jose/v4 to 4.1.6 (Trivy HIGH CVE-2026-116587 fails the image job)
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P1
 - **Type:** deps
 - **Milestone:** M2
@@ -6064,15 +6065,16 @@ Spec: .team/epics/E07-class-yearbook/12-web-maxlength-runes-and-join-hint.md. Fr
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-136-e06-deps-bump-go-jose-v4-to-4-1-6-trivy-
-- **PR:** —
-- **Updated:** 2026-10-29 08:33Z by dev
-- **Comments-seen:** 0
+- **PR:** https://github.com/danyaa666/smemories/pull/133
+- **Updated:** 2026-10-29 08:49Z by dev
+- **Comments-seen:** 1
 
 Spec: .team/epics/E06-go-live/16-go-jose-cve-2026-116587.md. The image job (make image-scan, Trivy HIGH) went red on 2026-10-29 for every branch: go-jose v4.1.4 (indirect) has a DoS when parsing JWKs with RSA keys, fixed in 4.1.6.
 
 #### Comments
+- 2026-10-29 08:49Z · dev · go-jose/v4 4.1.4->4.1.6 (go.mod 1 line + go.sum only), parent go-oidc v3.21.0 (internal/auth) needs no bump. PR #133 head 477598f: go/web/security/image green (Trivy 0). Manual full CI run 40843549004 (go-integration, e2e) success. Local: build, vet, test -race ok; image-scan ok; govulncheck local (go1.26.1) shows only stdlib vulns, none for go-jose.
 
 <!-- tasks:end -->
 
