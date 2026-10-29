@@ -11,8 +11,9 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 5 | T-023, T-024, T-025, T-031, T-050 |
-| TODO | 2 | T-135, T-136 |
-| READY_FOR_QA | 1 | T-131 |
+| TODO | 1 | T-135 |
+| IN_PROGRESS | 1 | T-136 |
+| IN_QA | 1 | T-131 |
 | MERGED | 1 | T-133 |
 | DONE | 119 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-132, T-134 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
@@ -5901,7 +5902,7 @@ Spec: .team/epics/E07-class-yearbook/08-web-class-book-print.md (read it from th
 - 2026-10-27 02:06Z · human · accepted by owner
 
 ### T-131 — [E07] Privacy review, legal texts and the class journey (e2e)
-- **Status:** READY_FOR_QA
+- **Status:** IN_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
@@ -5909,10 +5910,10 @@ Spec: .team/epics/E07-class-yearbook/08-web-class-book-print.md (read it from th
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** qa
 - **Branch:** task/t-131-e07-privacy-review-legal-texts-and-the-c
 - **PR:** https://github.com/danyaa666/smemories/pull/132
-- **Updated:** 2026-10-29 08:32Z by dev
+- **Updated:** 2026-10-29 08:33Z by qa
 - **Comments-seen:** 3
 
 Spec: .team/epics/E07-class-yearbook/09-privacy-review-and-e2e.md (read it from the main checkout). Design: .team/epics/E07-class-yearbook/DESIGN.md. Decision D-36.
@@ -6041,7 +6042,7 @@ Spec: .team/epics/E07-class-yearbook/12-web-maxlength-runes-and-join-hint.md. Fr
 - 2026-10-29 08:03Z · leader · ready
 
 ### T-136 — [E06] Deps: bump go-jose/v4 to 4.1.6 (Trivy HIGH CVE-2026-116587 fails the image job)
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P1
 - **Type:** deps
 - **Milestone:** M2
@@ -6049,10 +6050,10 @@ Spec: .team/epics/E07-class-yearbook/12-web-maxlength-runes-and-join-hint.md. Fr
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-136-e06-deps-bump-go-jose-v4-to-4-1-6-trivy-
 - **PR:** —
-- **Updated:** 2026-10-29 08:17Z by leader
+- **Updated:** 2026-10-29 08:33Z by dev
 - **Comments-seen:** 0
 
 Spec: .team/epics/E06-go-live/16-go-jose-cve-2026-116587.md. The image job (make image-scan, Trivy HIGH) went red on 2026-10-29 for every branch: go-jose v4.1.4 (indirect) has a DoS when parsing JWKs with RSA keys, fixed in 4.1.6.
