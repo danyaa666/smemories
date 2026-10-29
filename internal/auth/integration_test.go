@@ -397,7 +397,7 @@ func TestRegisterBadBodies(t *testing.T) {
 		"wrong type":     `{"email":1,"password":"x","display_name":"y"}`,
 		"trailing data":  `{"email":"a@example.com"} {"x":1}`,
 		"truncated json": `{"email":"a@exam`,
-		"unknown field":  `{"email":"a@example.com","password":"x","display_name":"y","accept_terms_version":"2026-10-21","admin":true}`, // auth bodies are strict since T-072
+		"unknown field":  `{"email":"a@example.com","password":"x","display_name":"y","accept_terms_version":"2026-10-29","admin":true}`, // auth bodies are strict since T-072
 	} {
 		rec := e.do(req{method: "POST", path: "/api/auth/register", body: b})
 		if rec.Code != 400 || errCode(t, rec) != "ERROR_PARAM" {

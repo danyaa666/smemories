@@ -88,7 +88,7 @@ paths:
             schema: {$ref: "#/components/schemas/RegisterRequest"}
             examples:
               register:
-                value: {email: lan@example.com, password: correct-horse-battery, display_name: "Nguyễn Thị Lan", locale: vi, accept_terms_version: "2026-10-21"}
+                value: {email: lan@example.com, password: correct-horse-battery, display_name: "Nguyễn Thị Lan", locale: vi, accept_terms_version: "2026-10-29"}
       responses:
         "200":
           description: Account created; the session cookie is set.
@@ -458,7 +458,7 @@ paths:
               schema: {$ref: "#/components/schemas/MeResponse"}
               examples:
                 me:
-                  value: {status: OK, data: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, email: lan@example.com, email_verified: true, display_name: "Nguyễn Thị Lan", locale: vi, created_at: 1760000000000, username: user-8b0c1d2e, username_next_change_at: null, terms: {accepted_version: "2026-10-21", current_version: "2026-10-21", required: false}}}
+                  value: {status: OK, data: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, email: lan@example.com, email_verified: true, display_name: "Nguyễn Thị Lan", locale: vi, created_at: 1760000000000, username: user-8b0c1d2e, username_next_change_at: null, terms: {accepted_version: "2026-10-29", current_version: "2026-10-29", required: false}}}
         "401": {$ref: "#/components/responses/ApiUnauthorized"}
         "500": {$ref: "#/components/responses/ApiInternal"}
         "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
@@ -541,7 +541,7 @@ paths:
             schema: {$ref: "#/components/schemas/AcceptTermsRequest"}
             examples:
               accept:
-                value: {version: "2026-10-21"}
+                value: {version: "2026-10-29"}
       responses:
         "200":
           description: The version is stored; the body is the same object as `get-me` (with `terms.required` false).
@@ -550,7 +550,7 @@ paths:
               schema: {$ref: "#/components/schemas/MeResponse"}
               examples:
                 accepted:
-                  value: {status: OK, data: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, email: lan@example.com, email_verified: true, display_name: "Nguyễn Thị Lan", locale: vi, created_at: 1760000000000, username: user-8b0c1d2e, username_next_change_at: null, terms: {accepted_version: "2026-10-21", current_version: "2026-10-21", required: false}}}
+                  value: {status: OK, data: {id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, email: lan@example.com, email_verified: true, display_name: "Nguyễn Thị Lan", locale: vi, created_at: 1760000000000, username: user-8b0c1d2e, username_next_change_at: null, terms: {accepted_version: "2026-10-29", current_version: "2026-10-29", required: false}}}
         "400": {$ref: "#/components/responses/ApiBadRequest"}
         "401": {$ref: "#/components/responses/ApiUnauthorized"}
         "403": {$ref: "#/components/responses/ApiForbidden"}
@@ -2966,7 +2966,7 @@ components:
       description: Where the signed-in user stands on the Terms of Use and Privacy Policy (D-35).
       required: [accepted_version, current_version, required]
       properties:
-        accepted_version: {type: [string, "null"], description: "The version the user accepted (the date of the texts in `docs/legal`, e.g. `2026-10-21`); `null` = never accepted."}
+        accepted_version: {type: [string, "null"], description: "The version the user accepted (the date of the texts in `docs/legal`, e.g. `2026-10-29`); `null` = never accepted."}
         current_version: {type: string, description: "The version in force now."}
         required: {type: boolean, description: "True when `accepted_version` is not `current_version`: the user must call `/api/user/accept-terms` before any other signed-in endpoint works."}
     Me:
@@ -2991,7 +2991,7 @@ components:
         version:
           type: string
           description: "Required. The version the user was shown; it must equal the current version, otherwise `ERROR_PARAM` (a stale page). A non-string is `ERROR_PARAM`."
-          examples: ["2026-10-21"]
+          examples: ["2026-10-29"]
     UpdateUsernameRequest:
       type: object
       additionalProperties: false
@@ -3028,9 +3028,9 @@ components:
         accept_terms_version:
           type: string
           description: >-
-            Required. The version of the Terms of Use and Privacy Policy the sign-up form showed (the current one, `2026-10-21` at the time of writing; the web has it from the same
+            Required. The version of the Terms of Use and Privacy Policy the sign-up form showed (the current one, `2026-10-29` at the time of writing; the web has it from the same
             constant as the texts in `docs/legal`). Missing, empty or another version is `ERROR_TERMS_REQUIRED` (HTTP 400) and nothing is created.
-          examples: ["2026-10-21"]
+          examples: ["2026-10-29"]
         email:
           type: string
           maxLength: 254

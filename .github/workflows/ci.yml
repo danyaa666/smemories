@@ -45,6 +45,8 @@ jobs:
         run: |
           out="$(gofmt -l .)"
           if [ -n "$out" ]; then echo "gofmt needed on:"; echo "$out"; exit 1; fi
+      - name: Class privacy review lists every class endpoint (T-131)
+        run: scripts/check-class-matrix.sh
       - run: go vet ./...
       - run: go vet -tags integration ./...
       # .golangci.yml enables errcheck, govet, staticcheck, ineffassign, unused, gosec, bodyclose

@@ -1241,7 +1241,7 @@ export interface components {
         };
         /** @description Where the signed-in user stands on the Terms of Use and Privacy Policy (D-35). */
         Terms: {
-            /** @description The version the user accepted (the date of the texts in `docs/legal`, e.g. `2026-10-21`); `null` = never accepted. */
+            /** @description The version the user accepted (the date of the texts in `docs/legal`, e.g. `2026-10-29`); `null` = never accepted. */
             accepted_version: string | null;
             /** @description The version in force now. */
             current_version: string;
@@ -1263,7 +1263,7 @@ export interface components {
         AcceptTermsRequest: {
             /**
              * @description Required. The version the user was shown; it must equal the current version, otherwise `ERROR_PARAM` (a stale page). A non-string is `ERROR_PARAM`.
-             * @example 2026-10-21
+             * @example 2026-10-29
              */
             version: string;
         };
@@ -1296,8 +1296,8 @@ export interface components {
         };
         RegisterRequest: {
             /**
-             * @description Required. The version of the Terms of Use and Privacy Policy the sign-up form showed (the current one, `2026-10-21` at the time of writing; the web has it from the same constant as the texts in `docs/legal`). Missing, empty or another version is `ERROR_TERMS_REQUIRED` (HTTP 400) and nothing is created.
-             * @example 2026-10-21
+             * @description Required. The version of the Terms of Use and Privacy Policy the sign-up form showed (the current one, `2026-10-29` at the time of writing; the web has it from the same constant as the texts in `docs/legal`). Missing, empty or another version is `ERROR_TERMS_REQUIRED` (HTTP 400) and nothing is created.
+             * @example 2026-10-29
              */
             accept_terms_version: string;
             /** @description Required. Trimmed, lower-cased and normalised to Unicode NFC, so NFC and NFD spellings of one address are the same account (also at login). The local part (before the last `@`) is at most 64 bytes, and the address contains no control (Cc) or format (Cf) characters; otherwise `ERROR_INVALID_EMAIL`. */

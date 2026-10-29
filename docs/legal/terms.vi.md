@@ -1,13 +1,13 @@
 ---
 document: terms
 language: vi
-version: 2026-10-21
+version: 2026-10-29
 status: BẢN NHÁP - do trưởng nhóm dự án soạn dựa trên những gì sản phẩm làm; không phải tư vấn pháp lý. Chủ sở hữu (và tốt nhất là luật sư) cần rà soát và thay mọi mục [trong ngoặc vuông] trước khi ra mắt. Bản dịch tiếng Việt cũng cần người bản ngữ rà soát.
 ---
 
 # Điều khoản sử dụng
 
-**Phiên bản 2026-10-21 (bản nháp).** Điều khoản này áp dụng cho mọi người dùng SMemories: người có tài khoản ("chủ sổ") và người viết lời nhắn qua liên kết ("bạn bè").
+**Phiên bản 2026-10-29 (bản nháp).** Điều khoản này áp dụng cho mọi người dùng SMemories: người có tài khoản ("chủ sổ") và người viết lời nhắn qua liên kết ("bạn bè").
 
 ## 1. Chúng tôi là ai
 SMemories do [tên đơn vị vận hành], [địa chỉ] vận hành. Liên hệ: [email liên hệ].
@@ -28,29 +28,35 @@ Chủ sổ tạo sổ lưu bút, nhận lời nhắn và ảnh từ bạn bè qu
 - Bạn giữ quyền đối với những gì bạn tải lên và viết. Bạn bè cũng vậy với lời nhắn và ảnh của họ.
 - Bạn cho phép chúng tôi lưu trữ, xử lý và hiển thị nội dung đó chỉ trong phạm vi cần thiết để vận hành SMemories cho bạn (ví dụ tạo bản ảnh nhỏ hơn và dựng bản xem trước để in). Chúng tôi không bán nội dung và không dùng cho quảng cáo.
 - Chỉ tải lên những gì bạn có quyền chia sẻ. Không tải lên nội dung trái pháp luật, thù ghét, khiêu dâm, bạo lực, hoặc thể hiện, mô tả người khác theo cách họ không đồng ý.
-- Là chủ sổ, bạn quyết định lời nhắn nào của bạn bè xuất hiện trong sổ. Bạn chịu trách nhiệm về những gì bạn duyệt, in và chia sẻ.
+- Là chủ sổ, bạn quyết định lời nhắn nào của bạn bè xuất hiện trong sổ. Bạn chịu trách nhiệm về những gì bạn duyệt, in và chia sẻ, kể cả những gì quản trị viên lớp xem được khi bạn đưa sổ vào lớp.
 
-## 6. Liên kết nhận lời nhắn và liên kết ảnh
+## 6. Lớp học
+- Lớp là không gian chung do một quản trị viên (ví dụ giáo viên hoặc lớp trưởng) tạo ra và học sinh tham gia bằng liên kết mời. Chỉ chia sẻ liên kết mời với những người bạn muốn đưa vào lớp; bất kỳ ai có liên kết đều tham gia được cho đến khi liên kết hết hạn hoặc quản trị viên tắt nó.
+- Nếu bạn tham gia một lớp và chọn một sổ lưu bút của mình làm trang của bạn, quản trị viên lớp xem được phần giới thiệu, các lời nhắn đã duyệt và ảnh trong sổ đó (kể cả tên, lời nhắn và ảnh của bạn bè), và có thể in chúng trong sổ lớp. Học sinh không bao giờ thấy trang hay lời nhắn của nhau, và quản trị viên lớp không thấy được lời nhắn bạn chưa duyệt cũng như không sửa được sổ của bạn.
+- Chỉ chọn và duyệt những gì bạn sẵn lòng để quản trị viên lớp xem và in. Nếu bạn rời lớp, bị xóa khỏi lớp hoặc bỏ chọn trang của mình, quản trị viên lớp mất quyền xem trang của bạn ngay lập tức; sổ lưu bút vẫn là của bạn.
+- Quản trị viên lớp chịu trách nhiệm về cách họ dùng những gì họ thấy và in, và không được chia sẻ cho người không có quyền xem.
+
+## 7. Liên kết nhận lời nhắn và liên kết ảnh
 - Liên kết nhận lời nhắn cho phép bất kỳ ai có nó gửi lời nhắn cho bạn. Chỉ chia sẻ với những người bạn muốn nhận lời nhắn. Bạn có thể tắt liên kết bất cứ lúc nào.
 - Nếu bạn xuất sổ dưới dạng văn bản, mỗi ảnh trong đó trở thành một liên kết mà bất kỳ ai có liên kết đều mở được mà không cần đăng nhập. Bạn có thể tắt tất cả liên kết ảnh của một sổ bất cứ lúc nào; các liên kết đã chia sẻ sẽ ngừng hoạt động (bản lưu tạm có thể còn trong vài phút).
-- Bạn bè: chủ sổ mà bạn viết lời nhắn có thể chia sẻ ảnh trong lời nhắn của bạn theo cách này.
+- Bạn bè: chủ sổ mà bạn viết lời nhắn có thể chia sẻ ảnh trong lời nhắn của bạn theo cách này. Nếu chủ sổ đã đưa sổ vào một lớp, quản trị viên lớp cũng xem và in được lời nhắn của bạn sau khi chủ sổ duyệt.
 
-## 7. Những điều không được phép
+## 8. Những điều không được phép
 Dùng SMemories để quấy rối, đe dọa hoặc lừa dối người khác; gửi thư rác hoặc yêu cầu tự động; tìm cách truy cập tài khoản hay dữ liệu không phải của bạn; tấn công, làm quá tải hoặc sao chép dịch vụ; hoặc vi phạm pháp luật.
 
-## 8. Dịch vụ của chúng tôi
+## 9. Dịch vụ của chúng tôi
 - SMemories còn mới và có thể thay đổi. Chúng tôi cố gắng giữ dịch vụ hoạt động và dữ liệu của bạn an toàn, nhưng không thể cam kết dịch vụ luôn sẵn sàng hay không có lỗi.
 - Chúng tôi có thể tạm khóa hoặc đóng tài khoản vi phạm điều khoản này và gỡ nội dung vi phạm. Khi có thể, chúng tôi sẽ báo trước cho bạn.
 - Bạn có thể xóa sổ lưu bút của mình bất cứ lúc nào. [Xóa tài khoản và xuất dữ liệu: mô tả khi có.]
 
-## 9. Trách nhiệm
+## 10. Trách nhiệm
 Trong phạm vi pháp luật cho phép, SMemories được cung cấp "nguyên trạng", và chúng tôi không chịu trách nhiệm về thiệt hại gián tiếp hay về nội dung do chủ sổ hoặc bạn bè tạo ra. Không điều nào trong điều khoản này hạn chế các quyền mà pháp luật không cho phép hạn chế.
 
-## 10. Thay đổi điều khoản
+## 11. Thay đổi điều khoản
 Khi thay đổi điều khoản, chúng tôi công bố phiên bản mới kèm ngày mới. Nếu thay đổi có ảnh hưởng đến bạn, chúng tôi sẽ đề nghị bạn chấp nhận phiên bản mới ở lần đăng nhập tiếp theo.
 
-## 11. Luật áp dụng
+## 12. Luật áp dụng
 Điều khoản này được điều chỉnh bởi pháp luật [quốc gia]. [Tòa án hoặc cách giải quyết tranh chấp.]
 
-## 12. Liên hệ
+## 13. Liên hệ
 [email liên hệ]

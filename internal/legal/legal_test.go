@@ -46,3 +46,27 @@ func TestFrontVersionReadsTheValue(t *testing.T) {
 		t.Fatalf("got %q", got)
 	}
 }
+
+// T-131 (E07): the class feature changed what is shown to whom, so the version moved on from 2026-10-21 and the four texts say who
+// sees what in a class. Removing the class text, or going back to the old version, must fail here.
+func TestClassDataIsInTheTextsAndTheVersionMovedOn(t *testing.T) {
+	if CurrentVersion <= "2026-10-21" {
+		t.Fatalf("CurrentVersion %q is not later than 2026-10-21, the last version without class data", CurrentVersion)
+	}
+	for name, words := range map[string][]string{
+		"privacy.en.md": {"Class admins", "approved notes", "never see the other students"},
+		"privacy.vi.md": {"Quản trị viên lớp", "lời nhắn đã duyệt", "không bao giờ thấy trang"},
+		"terms.en.md":   {"## 6. Classes", "class admin can see", "Students never see each other"},
+		"terms.vi.md":   {"## 6. Lớp học", "quản trị viên lớp xem được", "Học sinh không bao giờ thấy"},
+	} {
+		b, err := os.ReadFile(filepath.Join("..", "..", "docs", "legal", name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, w := range words {
+			if !strings.Contains(string(b), w) {
+				t.Errorf("%s does not contain %q", name, w)
+			}
+		}
+	}
+}
