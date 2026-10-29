@@ -8,6 +8,7 @@ import { errorText } from "../auth/errors";
 import { AdminOnly } from "../classes/AdminOnly";
 import { classErrorText } from "../classes/classErrors";
 import { OrderList, type OrderItem } from "../classes/OrderList";
+import { LeftOutNotice } from "../classes/LeftOutNotice";
 import { PageEditor } from "../classes/PageEditor";
 import { orderOf, orderPayload, reconcile, sameOrder, type BookOrder } from "../classes/ordering";
 import { Banner } from "../components/ui/Banner";
@@ -138,6 +139,7 @@ function Assemble({ classId }: { classId: string }) {
       </p>
       <h1>{t("assemble.title", { name: data.class.name })}</h1>
       <p>{t("assemble.help")}</p>
+      <LeftOutNotice book={data} />
       {stale && <Banner variant="error">{t("assemble.stale")}</Banner>}
       {save.error && !conflict && (
         <p role="alert" className="error">

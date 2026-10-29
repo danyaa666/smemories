@@ -50,6 +50,7 @@ function fake(
     front?: ClassPage[];
     back?: ClassPage[];
     role?: "admin" | "student";
+    truncated?: string[];
   } = {},
 ) {
   let members = Array.from({ length: opts.members ?? 4 }, (_, i) => member(i + 1));
@@ -71,6 +72,7 @@ function fake(
         front_pages: front,
         members,
         back_pages: back,
+        ...(opts.truncated && { truncated: opts.truncated }),
       }),
     "POST /class-book/update-order": (c: Call) => {
       if (fail.order) return fail.order.clone();
@@ -129,6 +131,21 @@ describe("assemble the class book", () => {
     renderApp(`/classes/${CID}/assemble`);
     expect(await screen.findByRole("heading", { name: /not found/i })).toBeInTheDocument();
     expect(f.calls.some((c) => c.path.startsWith("/class-book/get"))).toBe(false);
+  });
+
+  it("names the students whose notes were left out of the book, and says nothing otherwise", async () => {
+    fake({ truncated: [mid(2), mid(4)] });
+    await open();
+    expect(
+      screen.getByText(/left out of the class book.*\(2\): Student 2, Student 4/),
+    ).toBeVisible();
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument(); // the acknowledgement is asked on the print screen
+  });
+
+  it("shows no left-out warning for a class that fits", async () => {
+    fake();
+    await open();
+    expect(screen.queryByText(/left out of the class book/)).not.toBeInTheDocument();
   });
 
   it("lists the students with the page state and the approved notes", async () => {

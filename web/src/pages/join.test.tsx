@@ -295,7 +295,21 @@ describe("Google sign-in hint on the join path", () => {
     }
   });
 
+  it.each([
+    ["Sign in", "Email"],
+    ["Create account", "Your name"],
+  ])("is absent when the build has no Google sign-in (%s)", async (link, field) => {
+    vi.stubEnv("VITE_GOOGLE_SIGNIN", "");
+    mockApi({ ...base, "GET /user/get-me": signedOut });
+    renderApp(`/join/${TOKEN}`, { browser: true });
+    await userEvent.click(await main().findByRole("link", { name: link }));
+    await screen.findByLabelText(field);
+    expect(screen.queryByText(HINT)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Google/)).not.toBeInTheDocument();
+  });
+
   it("is translated", async () => {
+    vi.stubEnv("VITE_GOOGLE_SIGNIN", "true");
     await i18n.changeLanguage("vi");
     mockApi({ ...base, "GET /user/get-me": signedOut });
     renderApp(`/join/${TOKEN}`);
