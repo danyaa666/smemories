@@ -20,6 +20,17 @@ const ACCEPTED = {
 };
 
 describe("legal texts", () => {
+  it("T-131: every text says what a class admin sees, and all four stay drafts until the owner finalises them", () => {
+    for (const name of ["terms", "privacy"] as const) {
+      for (const lang of ["en", "vi"] as const) {
+        const d = legalDoc(name, lang);
+        expect(d.draft).toBe(true);
+        const text = JSON.stringify(d.blocks);
+        expect(text).toMatch(lang === "en" ? /class admin/i : /quản trị viên lớp/i);
+      }
+    }
+  });
+
   it("the four documents carry the version the API enforces (internal/legal/legal.go)", () => {
     const go = readFileSync(resolve(process.cwd(), "../internal/legal/legal.go"), "utf8");
     expect(/CurrentVersion = "([^"]+)"/.exec(go)?.[1]).toBe(TERMS_VERSION);

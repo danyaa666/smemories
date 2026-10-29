@@ -1,13 +1,13 @@
 ---
 document: privacy
 language: vi
-version: 2026-10-21
+version: 2026-10-29
 status: BẢN NHÁP - do trưởng nhóm dự án soạn dựa trên những gì sản phẩm làm; không phải tư vấn pháp lý. Chủ sở hữu (và tốt nhất là luật sư) cần rà soát và thay mọi mục [trong ngoặc vuông] trước khi ra mắt; đối chiếu với Nghị định 13/2023/NĐ-CP về bảo vệ dữ liệu cá nhân. Bản dịch tiếng Việt cũng cần người bản ngữ rà soát.
 ---
 
 # Chính sách quyền riêng tư
 
-**Phiên bản 2026-10-21 (bản nháp).** Chính sách này giải thích SMemories lưu những gì, vì sao, và bạn có thể làm gì.
+**Phiên bản 2026-10-29 (bản nháp).** Chính sách này giải thích SMemories lưu những gì, vì sao, và bạn có thể làm gì.
 
 ## 1. Ai chịu trách nhiệm
 [tên đơn vị vận hành], [địa chỉ], [email liên hệ].
@@ -21,6 +21,10 @@ status: BẢN NHÁP - do trưởng nhóm dự án soạn dựa trên những gì
 **Nếu bạn viết lời nhắn qua liên kết (bạn bè):**
 - những gì bạn nhập vào biểu mẫu (ví dụ tên, mối quan hệ với chủ sổ và lời nhắn) và tối đa ba ảnh.
 
+**Nếu bạn tham gia một lớp (thành viên lớp):**
+- việc bạn là thành viên của lớp, vai trò của bạn (học sinh hoặc quản trị viên), thời điểm tham gia, và sổ lưu bút nào bạn chọn làm trang của mình trong sổ lớp;
+- nếu bạn là quản trị viên lớp: các liên kết mời bạn tạo (chỉ lưu dạng đã băm của liên kết, kèm thời hạn).
+
 **Dữ liệu kỹ thuật:**
 - một cookie đăng nhập để giữ bạn ở trạng thái đã đăng nhập (không có cookie quảng cáo hay theo dõi, không có công cụ phân tích);
 - địa chỉ mạng của bạn, chỉ dùng trong thời gian ngắn để hạn chế lạm dụng (ví dụ đăng nhập sai quá nhiều lần); địa chỉ này không được ghi vào nhật ký;
@@ -32,6 +36,9 @@ status: BẢN NHÁP - do trưởng nhóm dự án soạn dựa trên những gì
 ## 4. Ai nhìn thấy dữ liệu
 - **Chủ sổ** xem lời nhắn và ảnh bạn bè gửi vào sổ của mình và quyết định cái nào được đưa vào sổ.
 - **Bạn bè** không xem được lời nhắn của nhau.
+- **Quản trị viên lớp** (giáo viên hoặc lớp trưởng) xem danh sách thành viên của lớp mình: tên, vai trò, thời điểm tham gia, và thành viên đã chọn trang hay chưa. Với mỗi thành viên đã chọn một sổ lưu bút làm trang của lớp, quản trị viên lớp còn xem được phần giới thiệu, các lời nhắn đã duyệt và ảnh của sổ đó (và vì vậy cả tên, lời nhắn, ảnh của những bạn bè đã viết các lời nhắn này), và có thể in chúng trong sổ lớp. Quản trị viên lớp không bao giờ thấy lời nhắn bạn chưa duyệt, lời nhắn đã ẩn, liên kết lời nhắn, ảnh bìa hay địa chỉ email của bạn, và không thể sửa sổ của bạn.
+- **Học sinh** trong lớp chỉ thấy vị trí của chính mình. Họ không bao giờ thấy trang, lời nhắn, ảnh của học sinh khác, hay danh sách thành viên.
+- **Rời lớp:** nếu bạn rời lớp, bị xóa khỏi lớp hoặc bỏ chọn trang của mình, quản trị viên lớp mất quyền xem trang của bạn ngay lập tức. Sổ lưu bút của bạn không bị xóa. Những trang quản trị viên đã in hoặc đã lưu ngoài SMemories nằm ngoài khả năng kiểm soát của chúng tôi.
 - **Liên kết ảnh:** nếu chủ sổ xuất sổ dưới dạng văn bản, ảnh trong sổ trở thành liên kết mà bất kỳ ai có liên kết đều mở được cho đến khi chủ sổ tắt chúng.
 - **Nhà cung cấp dịch vụ** vận hành SMemories cho chúng tôi: Amazon Web Services (máy chủ, lưu trữ và email, khu vực [khu vực]) và Google (chỉ khi bạn đăng nhập bằng Google). Họ chỉ xử lý dữ liệu theo chỉ dẫn của chúng tôi.
 - **Cơ quan có thẩm quyền**, chỉ khi pháp luật yêu cầu.
@@ -43,6 +50,7 @@ Trên máy chủ của Amazon Web Services tại [khu vực]. [Nếu khu vực n
 - Chừng nào tài khoản hoặc sổ lưu bút của bạn còn tồn tại.
 - Khi bạn xóa một sổ lưu bút, lời nhắn và ảnh của sổ đó bị xóa. Các bản sao lưu còn chứa chúng sẽ bị xóa trong vòng [N] ngày.
 - Lời nhắn của bạn bè được giữ cho đến khi chủ sổ xóa lời nhắn hoặc xóa sổ.
+- Tư cách thành viên lớp được giữ cho đến khi bạn rời lớp, quản trị viên xóa bạn, hoặc lớp bị xóa. Xóa lớp sẽ xóa danh sách thành viên, liên kết mời và các trang của lớp, nhưng không bao giờ xóa sổ lưu bút của ai. Xóa một sổ lưu bút sẽ gỡ sổ đó khỏi sổ lớp. Liên kết mời ngừng hoạt động khi hết hạn hoặc khi quản trị viên thu hồi.
 
 ## 7. Quyền của bạn
 Bạn có thể xem, sửa và xóa dữ liệu của mình trong ứng dụng, và [xuất dữ liệu: khi có]. Bạn cũng có thể đề nghị chúng tôi qua [email liên hệ] cho truy cập, sửa, xóa dữ liệu hoặc ngừng sử dụng dữ liệu của bạn. Bạn bè có thể đề nghị chủ sổ hoặc chúng tôi gỡ lời nhắn của mình.

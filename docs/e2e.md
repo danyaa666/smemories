@@ -23,6 +23,18 @@ media, link, public form, moderation, book data, renderer, PDF, text export and 
    links, confirm, and the same link is now 404. The photo token is scrubbed from every error like the collection token.
 10. Revoke the link: the friend's page is a dead end after exactly one lookup request; sign out and the protected pages redirect to sign-in.
 
+## The class journey (T-131)
+
+`tools/e2e/class.spec.mjs` runs in the same `make e2e` (about 8 s). It registers three accounts (an admin and students A and B, each with the fixed development code) and checks the privacy promise of
+`docs/class-privacy-review.md` in a browser: (1) the admin creates a class, (2) makes an invite link and reads it once, (3-4) each student opens the link, signs up on the way, joins, creates the page and fills the profile,
+(5) each student makes a note link, an anonymous friend sends two notes, and the student approves one and leaves one pending, (6) the admin adds an intro page, moves B before A and saves the order, (7) the print route holds the
+intro page, both students and their approved notes in that order and **no pending note**, (8) `class-book/get` as the admin has the approved notes only (no pending note, token or email) and the admin gets 404 on the students' own yearbook,
+note and book-data routes, (9) as student A: none of B's notes, name or email appears on any screen A can open (the class, the admin screens, B's book address), and direct API calls return 404 for B's yearbook, notes and book data and
+403 for `class-book/get`, the roster and the class pages. The markers in the notes are unique per run, so a leak is found by a text search. A deliberate break (the class book query also returning pending notes) fails step 7.
+
+Registration is limited to 5 per address and hour and the three specs together register exactly 5 accounts (M1: 1, the gallery check: 1, the class journey: 3), so a new account in any of them needs the limit raised for tests: `make e2e` resets the limits first; after a direct `scripts/e2e.sh` run
+use `make reset-limits SMEM_ENV=test`. `class-book/get` is limited to 30 reads an hour per user once T-133 is in; the journey reads it about five times. The run deletes the class and the students' yearbooks at the end (the accounts stay).
+
 ## The gallery check over HTTP/2 (T-107)
 
 `tools/e2e/h2-gallery.spec.mjs` runs in the same `make e2e`: it registers a second account, uploads one photo, starts a small TLS proxy (throwaway certificate from `openssl`, HTTP/2 and
