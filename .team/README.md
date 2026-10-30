@@ -10,19 +10,20 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 7 | T-023, T-024, T-025, T-031, T-050, T-146, T-147 |
-| TODO | 2 | T-145, T-148 |
-| MERGED | 3 | T-142, T-143, T-144 |
+| BACKLOG | 6 | T-023, T-024, T-025, T-031, T-050, T-147 |
+| TODO | 1 | T-146 |
+| READY_FOR_QA | 1 | T-148 |
+| MERGED | 4 | T-142, T-143, T-144, T-145 |
 | DONE | 128 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-137, T-138, T-139, T-140, T-141 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Epics (done/total):** E09-customisation-editor 0/1; (unfiled) 131/147
+**Epics (done/total):** E09-customisation-editor 0/1; (unfiled) 132/147
 
-**Awaiting your review (MERGED):** T-142 ([E09] Web runtime: colour themes and font sets (Memory Book pilot)); T-143 ([E09] Web runtime: sections, texts and images (Memory Book pilot)); T-144 ([E09] Web: the customise screen)
+**Awaiting your review (MERGED):** T-142 ([E09] Web runtime: colour themes and font sets (Memory Book pilot)); T-143 ([E09] Web runtime: sections, texts and images (Memory Book pilot)); T-144 ([E09] Web: the customise screen); T-145 ([E09] Navy Classic becomes customisable)
 
 **Open questions for you:** none
 
-_Board last written 2026-10-30 08:17Z_
+_Board last written 2026-10-30 08:56Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -6370,7 +6371,7 @@ Spec: .team/epics/E09-customisation-editor/04-web-customise-screen.md.
 - 2026-10-30 08:17Z · leader · merged 9bf8b25. Review: customise screen, web only plus back.pact max 18 (Go test, docs); QA ran make test-integration 31 ok/0 FAIL, print-check 112/112, e2e 6 passed, vitest 659, browser walk at 1280/768/375 in en+vi; go/web/security green on de02b6e. For owner to check: open /yearbooks/:id/customise on a real yearbook. Known gaps (QA major, not blocker, cosmetic data): browser/phone Back drops unsaved edits, template change drops them silently, non-owner waits 8-10 s for NotFound -> follow-up T-148 (P3).
 
 ### T-145 — [E09] Navy Classic becomes customisable
-- **Status:** TODO
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1b
@@ -6379,18 +6380,26 @@ Spec: .team/epics/E09-customisation-editor/04-web-customise-screen.md.
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-30 08:17Z by leader
-- **Comments-seen:** 1
+- **Branch:** task/t-145-e09-navy-classic-becomes-customisable
+- **PR:** https://github.com/danyaa666/smemories/pull/143
+- **Updated:** 2026-10-30 08:56Z by leader
+- **Comments-seen:** 4
 
 Spec: .team/epics/E09-customisation-editor/05-navy-classic-customisable.md.
 
 #### Comments
 - 2026-10-30 08:17Z · leader · Dependency T-144 merged (9bf8b25). Read the spec again before you start.
+- 2026-10-30 08:35Z · dev · PR #143, head b57f949. Navy Classic design block (themes navy/burgundy/forest, fonts classic/modern, 4 sections, 5 texts, no images). Default parity: 18/18 PNGs byte-identical vs develop fdeb9c1 (A5/A4/Letter). Local: go test + integration (bookdesign, templates, bookdata, yearbook, no media involved) green, make lint, web lint/typecheck/i18n/check:api/build, vitest 671, print-check 161 pass (49 new). make e2e not run (journeys use memory-book/class book). Generic fix to the customise screen: template declares swatch for chips/sample. Go tests that said navy has no design now use classic/modern. Known: modern uses font-size-adjust; classic keeps old-style figures (parity). T-148 not started: usage gate said SLEEP (stale cache) before the second task.
+- 2026-10-30 08:55Z · qa · QA_PASS T-145, PR #143, head b57f949. CI on that head: go pass, web pass, security pass (e2e/go-integration/image skipped by D-37/38).
+  AC1 parity: rendered develop fdeb9c1 vs head to PDF on A5/A4/Letter, 50dpi raster, md5 of all pages: navy-classic default (21 notes + long note), with signatures, stress, basic, class book A5/A4 (77 pages) = 15 of 17 files byte-identical; memory-book A5/A4 differ on page 1 only, max 8/255 per channel in the rotated cover photo (antialias noise, same fonts/pages; not a layout change). A design explicitly set to navy/classic is identical to no design on all 3 sizes. (Note for later QA: a baseline worktree needs a real node_modules, a symlinked one blocks the @fontsource files and fakes a diff.)
+  AC2: 3 themes x 2 font sets x A5/A4/Letter = 18 books x (normal + stress) rendered: 9 pages / 5 pages, same page counts as default, data-fit overflow only the intentional 2000-char note (1 on A5/A4, 2 on Letter, identical to develop default), 0 in stress. Viewed contact sheet and a 110 dpi crop of modern: Nunito with font-size-adjust, Vietnamese diacritics (Hồng, Khóa, mình, Giới thiệu về mình) not clipped on cover/profile/notes/back. print-check: make print-check 161 pass 0 fail (49 new cases incl. signatures, hidden/reordered sections, max-length texts).
+  AC3: vitest customise.test.tsx + design.test.ts 53 pass (full vitest 671 per CI web job); customise screen drives navy-classic via template swatch config; saved design prints (print-check cases above).
+  AC4: make e2e (head b57f949, COMPOSE_PROJECT_NAME=awesomeproject1): guard-test 8/8, Playwright 6 passed 0 failed (class journey, h2 gallery x4, M1 journey). make test-integration (head b57f949): ok for bookdesign, templates, bookdata, bookexport, class, db, auth, yearbook, pdf, etc.; FAIL only internal/media, internal/notes, internal/storage, all 'object store unreachable ... CreateBucket 403 InvalidAccessKeyId'. Same storage failure reproduces on develop in the main checkout; the running container awesomeproject1-minio-1 is the old minio image, not the SeaweedFS s3 service of the current compose, so test defaults (smem_s3) do not match. Environmental, packages untouched by this PR (diff: bookdesign, templates, web, docs). Suggest owner runs make up to replace the store.
+  Non-blocking: .env was copied into the T-145 worktree (gitignored) to run e2e; nothing committed. No test files added.
+- 2026-10-30 08:56Z · leader · merged c0e3b68. Review: Navy Classic manifest design block, theme vars, font sets and replaceable headings; customise swatch made template-generic; diff limited to the task. QA: print-check 161/0, e2e 6 passed, default parity byte-identical (Navy A5/A4/Letter, class book), 3 themes x 2 font sets x 3 sizes render, vitest, go/web/security green on b57f949; test-integration passes for touched packages (media/notes/storage fail only on the stale local MinIO, same on develop). For owner to check: Navy Classic themes (navy, burgundy, forest) and fonts (classic, modern) on a real book.
 
 ### T-146 — [E09] Class book applies each student's design
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1b
@@ -6401,12 +6410,13 @@ Spec: .team/epics/E09-customisation-editor/05-navy-classic-customisable.md.
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-30 02:07Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-30 08:56Z by leader
+- **Comments-seen:** 1
 
 Spec: .team/epics/E09-customisation-editor/06-class-book-applies-designs.md.
 
 #### Comments
+- 2026-10-30 08:56Z · leader · Dependency T-145 merged (c0e3b68). Read the spec again before you start.
 
 ### T-147 — [E09] Customisation journey, print-check coverage and docs
 - **Status:** BACKLOG
