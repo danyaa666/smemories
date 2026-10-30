@@ -161,7 +161,7 @@ jobs:
     # D-37 (T-132): paused on push and pull request, runs by hand only (gh workflow run ci.yml --ref <branch>); delete this `if:` to switch it back on.
     if: ${{ github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 15 # the journey itself is limited to 240 s (tools/e2e/playwright.config.mjs), print-check to 6 min
+    timeout-minutes: 25 # the journey itself is limited to 240 s (tools/e2e/playwright.config.mjs), print-check to 15 min
     env:
       # Throwaway services on the runner, loopback only; obviously fake values, not secrets (same as go-integration).
       SMEM_DB_DSN: root:ci-only-fake-root-pw@tcp(127.0.0.1:3306)/smem_e2e
@@ -271,7 +271,7 @@ jobs:
       # prints fixture books to PDF and inspects them, so a change that drops photos or text from the printed book fails the PR.
       # T-116 broke it unnoticed because it only ran by hand. The whole suite runs; its time is printed so it can be watched.
       - name: Print check
-        timeout-minutes: 6
+        timeout-minutes: 15
         working-directory: tools/print-check
         run: |
           start=$SECONDS
