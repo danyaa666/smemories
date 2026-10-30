@@ -1,5 +1,6 @@
 import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
 import { ApiError } from "./api/client";
+import { isDenied } from "./auth/errors";
 import { ME_KEY } from "./auth/useMe";
 
 // networkMode "always": offline, a request fails at once (network_error) instead of pausing.
@@ -17,6 +18,10 @@ export const makeQueryClient = (retry: number | boolean = false) => {
       queries: { networkMode: "always", retry },
       mutations: { networkMode: "always" },
     },
+  });
+  // Every screen of /yearbooks/:id shares this query (the shell, Customise, edit): a missing or foreign book must show "not found" at once, not after 3 retries (7 s).
+  qc.setQueryDefaults(["yearbook"], {
+    retry: typeof retry === "number" ? (n: number, e: unknown) => !isDenied(e) && n < retry : retry,
   });
   return qc;
 };

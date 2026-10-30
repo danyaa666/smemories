@@ -669,14 +669,20 @@ describe("a template change with unsaved edits (T-148)", () => {
 
 describe("retries (T-148)", () => {
   const BOOK_GET = `GET /yearbook/get?id=${BOOK}`;
-  it("shows not-found at once for a 404 and a 403, without retrying", async () => {
-    for (const status of [404, 403]) {
+  // The shell (YearbookLayout) and the screen share one ["yearbook", id] query; the app's real defaults (retry 3) must not retry a 404 or a 403.
+  it("makes exactly one yearbook/get for a 404 and a 403, on the customise and the edit screen", async () => {
+    for (const [status, tail] of [
+      [404, "/customise"],
+      [403, "/customise"],
+      [404, ""],
+      [403, ""],
+    ] as const) {
       loaded.clear();
       const calls = mockApi({
         "GET /user/get-me": () => ok(user()),
         [BOOK_GET]: () => err(status, status === 404 ? "not_found" : "forbidden"),
       });
-      const view = renderApp(`/yearbooks/${BOOK}/customise`, { retry: 3 });
+      const view = renderApp(`/yearbooks/${BOOK}${tail}`, { retry: 3 });
       await waitFor(
         () => expect(calls.filter((c) => c.path.startsWith("/yearbook/get"))).toHaveLength(1),
         { timeout: 500 },
@@ -690,7 +696,7 @@ describe("retries (T-148)", () => {
       view.unmount();
       vi.unstubAllGlobals();
     }
-  });
+  }, 15000);
 
   it("still retries a 5xx", async () => {
     let n = 0;

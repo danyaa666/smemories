@@ -13,7 +13,7 @@ import {
 } from "../api/bookDesign";
 import { retryOnce } from "../api/notes";
 import { getYearbook } from "../api/yearbooks";
-import { errorText, isBookGone, retryUnlessDenied } from "../auth/errors";
+import { errorText, isBookGone } from "../auth/errors";
 import { CustomiseControls } from "../book/CustomiseControls";
 import { CustomisePreview } from "../book/CustomisePreview";
 import {
@@ -44,7 +44,6 @@ export function Customise() {
   const book = useQuery({
     queryKey: ["yearbook", id],
     queryFn: () => getYearbook(id),
-    retry: retryUnlessDenied,
   }); // the same request as the shell's: it tells who owns the book
   const data = useQuery({
     queryKey: ["book-data", id],
