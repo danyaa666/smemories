@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -547,5 +549,105 @@ describe("links to the screen", () => {
     renderApp(`/yearbooks/${BOOK}/book`);
     const link = await screen.findByRole("link", { name: "Customise the design" });
     expect(link).toHaveAttribute("href", `/yearbooks/${BOOK}/customise`);
+  });
+});
+
+// T-145: the same screen drives Navy Classic with no code of its own: the block is the real manifest's.
+describe("Navy Classic", () => {
+  const NAVY_BLOCK = (
+    JSON.parse(
+      readFileSync(resolve(process.cwd(), "../internal/templates/embed/navy-classic.json"), "utf8"),
+    ) as { design: DesignBlock }
+  ).design;
+  const pages = () => [...document.querySelectorAll<HTMLElement>(".bk-stage .nc-page")];
+
+  function serveNavy(hooks: Hooks = {}) {
+    return mockApi({
+      "GET /user/get-me": () => ok(user()),
+      [`GET /yearbook/get?id=${BOOK}`]: () => ok(yearbook({ template_id: "navy-classic" })),
+      [`GET /book-data/get?yearbook_id=${BOOK}`]: () =>
+        ok(bookData({ template_id: "navy-classic" })),
+      [`GET /book-design/get?yearbook_id=${BOOK}`]: () =>
+        ok(design(null, NAVY_BLOCK, "navy-classic")),
+      "GET /template/get-list?page_size=A5": () => ok({ items: [MEMORY, NAVY], next_id: "" }),
+      ...hooks,
+    });
+  }
+
+  it("offers its themes, font sets, sections and texts with their own names, and previews the default as today's look", async () => {
+    serveNavy();
+    open();
+    await loadedScreen();
+    const radios = (name: string) =>
+      within(screen.getByRole("group", { name }))
+        .getAllByRole("radio")
+        .map((r) => (r as HTMLInputElement).value);
+    expect(radios("Colours")).toEqual(["navy", "burgundy", "forest"]);
+    expect(radios("Fonts")).toEqual(["classic", "modern"]);
+    expect(screen.getByRole("radio", { name: /Navy and gold/ })).toBeChecked();
+    expect(screen.getByLabelText("Autographs: heading")).toHaveAttribute("placeholder", "Lưu bút");
+    expect(screen.getByText("0/80")).toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Cover paper" })).toBeNull(); // no picture slots
+    await waitFor(() => expect(sheets().length).toBe(4));
+    expect(new Set(pages().map((p) => `${p.dataset.theme}/${p.dataset.fonts}`))).toEqual(
+      new Set(["navy/classic"]),
+    );
+    // the colour chips and the font sample are drawn with the template's own variables
+    const chips = document.querySelector<HTMLElement>(".cu-chips.nc-page");
+    expect(chips?.dataset.theme).toBe("navy");
+    expect(chips?.querySelectorAll("i").length).toBe(4);
+    expect(document.querySelector(".cu-sample.nc-page .serif")).not.toBeNull();
+  });
+
+  it("applies a theme, a font set, hidden and moved sections and a text to the preview, and saves the document", async () => {
+    let body: unknown;
+    const u = userEvent.setup();
+    serveNavy({
+      "POST /book-design/update": (c) => {
+        body = c.body;
+        return ok(
+          design((c.body as { options: DesignOptions }).options, NAVY_BLOCK, "navy-classic"),
+        );
+      },
+    });
+    open();
+    await loadedScreen();
+    await u.click(screen.getByRole("radio", { name: /Burgundy/ }));
+    await u.click(screen.getByRole("radio", { name: /Modern sans/ }));
+    await waitFor(() =>
+      expect(new Set(pages().map((p) => `${p.dataset.theme}/${p.dataset.fonts}`))).toEqual(
+        new Set(["burgundy/modern"]),
+      ),
+    );
+    await u.click(screen.getByRole("switch", { name: "Print “A few words about me”" }));
+    await u.click(screen.getByRole("button", { name: "Move “Autographs” up" }));
+    const heading = screen.getByLabelText("Autographs: heading");
+    await u.type(heading, "Lưu bút 12A1");
+    await waitFor(() =>
+      expect([...sheets()].map((s) => s.getAttribute("data-page"))).toEqual(["notes"]),
+    ); // the focused control shows its own page
+    expect(document.querySelector(".bk-stage .nc-title-fit")?.textContent).toBe("Lưu bút 12A1");
+    await u.click(screen.getByRole("button", { name: "Save design" }));
+    await screen.findByText("Design saved.");
+    expect(body).toEqual({
+      yearbook_id: BOOK,
+      options: {
+        v: 1,
+        theme: "burgundy",
+        fonts: "modern",
+        sections: { order: ["cover", "notes", "profile", "back"], hidden: ["profile"] },
+        texts: { "notes.heading": "Lưu bút 12A1" },
+        images: {},
+      },
+    });
+  });
+
+  it("names its labels in Vietnamese", async () => {
+    await i18n.changeLanguage("vi");
+    serveNavy();
+    open();
+    await screen.findByRole("group", { name: "Màu sắc" });
+    expect(screen.getByRole("radio", { name: /Đỏ rượu vang/ })).toBeInTheDocument();
+    expect(screen.getByLabelText("Trang cuối: lời cảm ơn")).toBeInTheDocument();
   });
 });

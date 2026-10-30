@@ -497,6 +497,32 @@
             }
           }
         }
+      },
+      "navy-classic": {
+        "themes": {
+          "navy": "Xanh navy và vàng",
+          "burgundy": "Đỏ rượu vang",
+          "forest": "Xanh rừng"
+        },
+        "fonts": {
+          "classic": "Có chân cổ điển",
+          "modern": "Hiện đại không chân"
+        },
+        "fontSample": "Hẹn gặp lại, Lưu bút 2026",
+        "sections": {
+          "cover": "Bìa",
+          "profile": "Vài điều về mình",
+          "notes": "Lưu bút",
+          "back": "Trang cuối"
+        },
+        "texts": {
+          "profile_eyebrow": "Trang giới thiệu: dòng nhỏ",
+          "profile_heading": "Trang giới thiệu: tiêu đề",
+          "notes_eyebrow": "Trang lưu bút: dòng nhỏ",
+          "notes_heading": "Trang lưu bút: tiêu đề",
+          "back_thanks": "Trang cuối: lời cảm ơn"
+        },
+        "images": {}
       }
     }
   },

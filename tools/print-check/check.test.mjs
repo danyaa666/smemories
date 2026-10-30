@@ -511,6 +511,183 @@ describe("navy-classic template: 24 pages, 84 notes", () => {
   });
 });
 
+// T-145: the colour themes and font sets of the navy-classic (epic E09). Every theme x font set on A5 and A4 with the Vietnamese fixture. The default design
+// (navy, classic) is the book with no design: the cases above run it without one.
+describe("navy-classic themes x font sets, sections and texts (T-145)", () => {
+  const manifest = JSON.parse(readFileSync(path.join(path.dirname(new URL(import.meta.url).pathname), "../../internal/templates/embed/navy-classic.json"), "utf8")).design;
+  // The app's own screen also uses a family named Be Vietnam Pro (its toolbar), so that family's files are requested whatever the book's set is; Nunito and Cormorant Garamond are the book's alone.
+  const SETS = {
+    classic: { has: /CormorantGaramond.*BeVietnamPro|BeVietnamPro.*CormorantGaramond/s, hasNot: /Nunito/, files: /CormorantGaramond|BeVietnamPro/, filesNot: /Nunito/, family: "Cormorant Garamond" },
+    modern: { has: /Nunito/, hasNot: /CormorantGaramond|BeVietnamPro/, files: /Nunito/, filesNot: /CormorantGaramond/, family: "Nunito" },
+  };
+  const NOTES = 21; // 6 notes pages of four
+  for (const theme of ["navy", "burgundy", "forest"])
+    for (const fonts of ["classic", "modern"])
+      for (const size of ["A5", "A4"]) {
+        const set = SETS[fonts];
+        test(`${theme} + ${fonts}, ${size}: 9 pages, none blank, that set's fonts only, self-hosted`, async () => {
+          const r = await render(makeBook({ size, notes: NOTES, template: "navy-classic", longNote: 4, design: designOf(theme, fonts) }), `navy-${theme}-${fonts}-${size}`);
+          assert.equal(r.info.pages, 3 + Math.ceil(NOTES / 4));
+          for (const [i, want] of PT[size].entries()) assert.ok(Math.abs(r.info.sizePt[i] - want) < 1, `${size} page size ${r.info.sizePt}`);
+          assert.ok(r.info.allFontsEmbedded, "every font is embedded");
+          const names = r.info.fonts.map((f) => f.name).join(" ");
+          assert.match(names, set.has, `the fonts of ${fonts}: ${names}`);
+          assert.doesNotMatch(names, set.hasNot, `no font of the other set: ${names}`);
+          const files = r.urls.map((u) => new URL(u).pathname).filter((u) => /\.woff2/.test(u)).join(" ");
+          assert.match(files, set.files, "the active set's font files are requested");
+          assert.doesNotMatch(files, set.filesNot, `the font files of the other set are not requested: ${files}`);
+          assert.deepEqual([...r.hosts], [new URL(BASE).host], "no request to any other host");
+          const pages = r.t.split("\f").filter((_, i, a) => i < a.length - 1 || a[i].trim());
+          assert.equal(pages.length, r.info.pages);
+          assert.ok(pages.every((p) => p.trim().length > 20), "no blank page");
+          for (const s of ["Nguyễn Thị Hồng Ánh", "Đặng Ngọc Bích Trâm", "Giới thiệu về mình", "Lưu bút", "Chuyến dã ngoại ở Đà Lạt"]) assert.ok(squash(r.t).includes(squash(s)), `extracted text contains "${s}"`);
+          assert.ok(r.t.includes("😄"), "emoji are text");
+        });
+
+        test(`${theme} + ${fonts}, ${size}: long Vietnamese names and emoji everywhere: nothing is cut off and no text leaves its box`, async () => {
+          const page = await browser.newPage();
+          await serveBook(page, makeBook({ size, notes: 8, template: "navy-classic", stress: true, design: designOf(theme, fonts) }));
+          await open(page);
+          const res = await page.evaluate(([wantTheme, wantFonts, family]) => {
+            const sheetOf = (e) => e.closest(".bk-sheet").getBoundingClientRect();
+            const boxes = [...document.querySelectorAll(".bk-fit")];
+            return {
+              n: boxes.length,
+              fontsAtReady: {
+                status: document.fonts.status,
+                loading: [...document.fonts].filter((f) => f.status === "loading").map((f) => f.family),
+                set: [...document.fonts].some((f) => f.status === "loaded" && f.family.replace(/"/g, "") === family),
+              },
+              themed: [...document.querySelectorAll(".nc-page")].every((e) => e.dataset.theme === wantTheme && e.dataset.fonts === wantFonts),
+              overflow: boxes.filter((e) => e.dataset.fit === "overflow").map((e) => e.className),
+              outside: boxes
+                .filter((e) => {
+                  const r = e.getBoundingClientRect(), s = sheetOf(e);
+                  return r.left < s.left - 1 || r.right > s.right + 1 || r.top < s.top - 1 || r.bottom > s.bottom + 1;
+                })
+                .map((e) => e.className),
+              wide: boxes.filter((e) => e.scrollWidth > e.clientWidth + 1).map((e) => e.className),
+            };
+          }, [theme, fonts, set.family]);
+          assert.ok(res.n >= 30, `${res.n} text boxes`);
+          assert.deepEqual(res.fontsAtReady, { status: "loaded", loading: [], set: true }, "at ready the fonts of the set have loaded and none is still loading");
+          assert.ok(res.themed, "every page carries the theme and the font set");
+          assert.deepEqual(res.overflow, [], "no text is cut off");
+          assert.deepEqual(res.outside, [], "every text box is inside its page");
+          assert.deepEqual(res.wide, [], "no line runs out of its box");
+          await page.close();
+        });
+
+        // The default set keeps the signature cases above; every other combination runs them too (T-097 rules: the page count does not change, only messages may be cut off,
+        // and no text box meets a signature box).
+        if (theme !== "navy" || fonts !== "classic")
+          test(`${theme} + ${fonts}, ${size}: signatures keep the page count and never meet a text`, async () => {
+            const notes = 8;
+            const page = await browser.newPage();
+            await serveBook(page, makeBook({ size, notes, template: "navy-classic", longNote: 4, signatures: true, design: designOf(theme, fonts) }));
+            await open(page);
+            const cut = await page.locator("[data-fit=overflow]").evaluateAll((es) => es.map((e) => e.className));
+            assert.ok(cut.every((c) => /\bnc-msg\b/.test(c)), `only messages may be cut off, got ${cut.join(" | ")}`);
+            const sheets = await signatureBoxes(page);
+            const file = path.join(tmp, `navy-sig-${theme}-${fonts}-${size}.pdf`);
+            await savePdf(page, file);
+            await page.close();
+            assert.equal(inspect(file).pages, 3 + Math.ceil(notes / 4));
+            const signed = sheets.flatMap((s, p) => s.sigs.map((sig) => ({ p, sig, texts: s.texts })));
+            assert.equal(signed.length, 6, "3 of every 4 fixture notes are signed");
+            for (const { p, sig, texts } of signed)
+              for (const t of texts) {
+                const apart = t.x1 <= sig.x0 + 0.001 || t.x0 >= sig.x1 - 0.001 || t.y1 <= sig.y0 + 0.001 || t.y0 >= sig.y1 - 0.001;
+                assert.ok(apart, `page ${p + 1}: the text box "${t.text.slice(0, 20)}" overlaps the signature box`);
+              }
+            const pdfWords = words(file);
+            for (const { p, sig } of signed) {
+              const { w, h, words: ws } = pdfWords[p];
+              for (const x of ws) {
+                const cx = (x.x0 + x.x1) / 2 / w, cy = (x.y0 + x.y1) / 2 / h;
+                assert.ok(!(cx > sig.x0 && cx < sig.x1 && cy > sig.y0 && cy < sig.y1), `page ${p + 1}: the word "${x.t}" lies in the signature box`);
+              }
+            }
+          });
+      }
+
+  test("a design this build does not know draws the defaults", async () => {
+    const page = await browser.newPage();
+    await serveBook(page, makeBook({ size: "A5", notes: 1, template: "navy-classic", design: designOf("neon", "comic") }));
+    await open(page);
+    const set = await page.evaluate(() => [...new Set([...document.querySelectorAll(".nc-page")].map((e) => `${e.dataset.theme}/${e.dataset.fonts}`))]);
+    assert.deepEqual(set, ["navy/classic"]);
+    await page.close();
+  });
+
+  // Sections: hidden sections leave no page and the order follows the design. Every page carries a marker text of its kind (letter-spaced capitals come out of pdftotext with spaces: squash).
+  const KIND = [["notes", /ĐỂLẠIĐÔILỜI/], ["profile", /Giớithiệuvềmình/], ["back", /Cảmơnbạnđãlàmộtphần/], ["cover", /Khóa/]];
+  const kinds = (t) => t.split("\f").filter((_, i, a) => i < a.length - 1 || a[i].trim()).map((p) => KIND.find(([, re]) => re.test(squash(p)))?.[0] ?? "?");
+  const SECTION_NOTES = 5; // two notes pages
+  const CASES = {
+    "profile hidden": { design: { hidden: ["profile"] }, want: ["cover", "notes", "notes", "back"] },
+    "back hidden": { design: { hidden: ["back"] }, want: ["cover", "profile", "notes", "notes"] },
+    "profile and back hidden: cover and notes only": { design: { hidden: ["profile", "back"] }, want: ["cover", "notes", "notes"] },
+    "notes before profile": { design: { order: ["cover", "notes", "profile", "back"] }, want: ["cover", "notes", "notes", "profile", "back"] },
+    "notes before profile, back hidden": { design: { order: ["cover", "notes", "profile", "back"], hidden: ["back"] }, want: ["cover", "notes", "notes", "profile"] },
+  };
+  for (const size of ["A5", "A4"])
+    for (const [name, c] of Object.entries(CASES))
+      test(`${name}, ${size}: the pages that print, in order, none blank`, async () => {
+        const page = await browser.newPage();
+        const seen = await serveBook(page, makeBook({ size, notes: SECTION_NOTES, template: "navy-classic", design: designOf("burgundy", "modern", c.design) }));
+        await open(page);
+        assert.equal(await page.evaluate(() => document.documentElement.dataset.bookReady), String(c.want.length), "the page count of the ready signal");
+        const file = path.join(tmp, `navy-sections-${size}-${name.replace(/\W+/g, "-")}.pdf`);
+        await savePdf(page, file);
+        const info = inspect(file);
+        assert.equal(info.pages, c.want.length);
+        for (const [i, want] of PT[size].entries()) assert.ok(Math.abs(info.sizePt[i] - want) < 1, `${size} page size ${info.sizePt}`);
+        const t = text(file);
+        assert.deepEqual(kinds(t), c.want, "the kind of each page");
+        assert.ok(t.split("\f").filter((p) => p.trim()).every((p) => p.trim().length > 20), "no blank page");
+        // the owner's portrait is on the profile page only: a hidden profile does not even fetch it
+        assert.equal(seen.media, (c.design.hidden ?? []).includes("profile") ? 0 : 1, `${seen.media} media requests`);
+        assert.equal(await page.locator("[data-fit=overflow]").count(), 0, "no text is cut off");
+        await page.close();
+      });
+
+  // Every text at its maximum length, read from the manifest.
+  const filler = (marker, max) => [...`${marker} Chúc bạn thật nhiều sức khỏe 😄 Hẹn gặp lại ${"Ấ ".repeat(60)}`].slice(0, max).join("");
+  const MAX_TEXTS = Object.fromEntries(manifest.texts.map((t) => [t.id, filler(`<${t.id.slice(0, 1)}>`, t.max)]));
+  for (const size of ["A5", "A4"])
+    for (const fonts of ["classic", "modern"])
+      test(`every text at its maximum length (${fonts}), ${size}: all pages, fits or shrinks, nothing leaves its page, no HTML`, async () => {
+        const texts = { ...MAX_TEXTS, "back.thanks": `<script>alert("x")</script>${MAX_TEXTS["back.thanks"]}`.slice(0, 80) };
+        const page = await browser.newPage();
+        await serveBook(page, makeBook({ size, notes: 3, template: "navy-classic", stress: true, design: designOf("forest", fonts, { texts }) }));
+        await open(page);
+        const res = await page.evaluate(() => {
+          const sheetOf = (e) => e.closest(".bk-sheet").getBoundingClientRect();
+          const boxes = [...document.querySelectorAll(".bk-fit")];
+          return {
+            scripts: document.querySelectorAll("main script, .bk-sheet script").length,
+            overflow: boxes.filter((e) => e.dataset.fit === "overflow").map((e) => e.className),
+            shrunk: boxes.filter((e) => e.dataset.fit === "shrunk").length,
+            outside: boxes.filter((e) => { const r = e.getBoundingClientRect(), s = sheetOf(e); return r.left < s.left - 1 || r.right > s.right + 1 || r.top < s.top - 1 || r.bottom > s.bottom + 1; }).map((e) => e.className),
+            replaced: [...document.querySelectorAll(".nc-eyebrow-fit, .nc-title-fit, .nc-thanks-fit")].length,
+          };
+        });
+        assert.equal(res.scripts, 0, "a <script> text is text, not markup");
+        assert.equal(res.replaced, 5, "the five replaced texts are drawn in their fit boxes");
+        assert.deepEqual(res.overflow, [], "no text is cut off");
+        assert.deepEqual(res.outside, [], "every text box is inside its page");
+        assert.ok(res.shrunk > 0, "long texts shrink");
+        const file = path.join(tmp, `navy-texts-${fonts}-${size}.pdf`);
+        await savePdf(page, file);
+        const t = squash(text(file));
+        assert.equal(inspect(file).pages, 3 + 1);
+        for (const id of ["profile.eyebrow", "profile.heading", "notes.eyebrow", "notes.heading"]) assert.ok(t.toLowerCase().includes(squash(MAX_TEXTS[id]).toLowerCase()), `the PDF has the text ${id}`); // the eyebrows print as capitals
+        assert.ok(t.includes(squash('<script>alert("x")</script>')), "a <script> string prints literally");
+        await page.close();
+      });
+});
+
 // A note that is still too long at the smallest font is cut off at its box. In the printed PDF (not only on screen) no word of it may lie
 // outside that box: it must not run over the footer or off the page (T-059 QA). Two notes: 400 short lines, and 2000 characters in one paragraph.
 for (const template of ["memory-book", "navy-classic", "basic"]) {

@@ -285,3 +285,113 @@ describe("texts and images of the web are the manifest's", () => {
     ).toEqual(choices);
   });
 });
+
+// T-145: Navy Classic. The same pins as the memory-book's, for navy.tsx, navy.css and navy-classic.json.
+describe("navy-classic design", () => {
+  const navyCss = read("web/src/book/templates/navy.css");
+  const navySource = read("web/src/book/templates/navy.tsx");
+  const navy = JSON.parse(read("internal/templates/embed/navy-classic.json"))
+    .design as typeof manifest.design;
+  const tpl = getTemplate("navy-classic");
+  const vars = (attr: "theme" | "fonts") => {
+    const out: Record<string, Record<string, string>> = {};
+    for (const m of navyCss.matchAll(
+      new RegExp(`\\[data-${attr}="([a-z0-9-]+)"\\]\\s*\\{([^}]*)\\}`, "g"),
+    )) {
+      const v: Record<string, string> = {};
+      for (const x of (m[2] ?? "").matchAll(/--nc-([a-z0-9]+):\s*([^;]+);/g))
+        v[x[1] ?? ""] = (x[2] ?? "").trim();
+      out[m[1] ?? ""] = v;
+    }
+    return out;
+  };
+  const themes = vars("theme");
+  const sets = vars("fonts");
+
+  test("the web themes and font sets are the manifest's, default first; navy.css defines exactly those", () => {
+    expect(tpl.design?.themes).toEqual(navy.themes);
+    expect(tpl.design?.fonts).toEqual(navy.font_sets);
+    expect(Object.keys(themes).sort()).toEqual([...navy.themes].sort());
+    expect(Object.keys(sets).sort()).toEqual([...navy.font_sets].sort());
+    expect(navy.sections.map((s) => s.id)).toEqual(["cover", "profile", "notes", "back"]);
+    expect(navy.images).toEqual([]);
+  });
+
+  test("navy is exactly today's colours (the canvas)", () => {
+    expect(themes["navy"]).toEqual({
+      dark: "#1b2a4a",
+      light: "#f7f3ea",
+      gold: "#c9a86a",
+      bronze: "#7a5c2b",
+      photo: "#dcd6c9",
+      rule: "rgba(27, 42, 74, 0.22)",
+    });
+  });
+
+  test("every theme declares the same variables, and navy.css has no colour outside them", () => {
+    const keys = Object.keys(themes["navy"] ?? {}).sort();
+    for (const [id, v] of Object.entries(themes))
+      expect([id, Object.keys(v).sort()]).toEqual([id, keys]);
+    const rest = navyCss
+      .replace(/\[data-theme="[a-z]+"\]\s*\{[^}]*\}/g, "")
+      .replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(rest.match(/#[0-9a-fA-F]{3,8}\b|rgba?\(/g)).toBeNull();
+    expect(navySource.match(/#[0-9a-fA-F]{3,8}\b/g)).toBeNull();
+  });
+
+  // The pairs are listed in docs/templates.md ("Themes of navy-classic").
+  for (const id of ["navy", "burgundy", "forest"])
+    test(`${id}: light on dark, gold on dark, dark on light and bronze on light are at least 4.5:1`, () => {
+      const v = themes[id] ?? {};
+      for (const [fg, bg] of [
+        ["light", "dark"],
+        ["gold", "dark"],
+        ["dark", "light"],
+        ["bronze", "light"],
+      ] as const)
+        expect(
+          contrast(v[fg] ?? "", v[bg] ?? ""),
+          `${id}: ${fg} ${v[fg]} on ${bg} ${v[bg]}`,
+        ).toBeGreaterThanOrEqual(4.5);
+    });
+
+  test("classic is today's fonts; every family of a set is shipped with a Vietnamese subset; the sets share no family", () => {
+    expect(sets["classic"]).toEqual({
+      serif: '"Cormorant Garamond", serif',
+      caps: '"Be Vietnam Pro", sans-serif',
+      italic: "italic",
+    });
+    const faces = new Set([...fontsCss.matchAll(/font-family:\s*"([^"]+)"/g)].map((m) => m[1]));
+    const fam = (set: Record<string, string> = {}) =>
+      new Set(["serif", "caps"].map((k) => /^"?([^",]+)"?/.exec(set[k] ?? "")?.[1] ?? ""));
+    for (const [id, set] of Object.entries(sets))
+      for (const f of fam(set)) {
+        expect(faces.has(f), `${id}: ${f} has a @font-face`).toBe(true);
+        expect(
+          readdirSync(resolve(ROOT, "web/src/book/fonts")).some(
+            (x) => x.startsWith(`${f.replace(/ /g, "")}-`) && x.endsWith("-vietnamese.woff2"),
+          ),
+          `${id}: ${f} Vietnamese file`,
+        ).toBe(true);
+      }
+    for (const f of fam(sets["modern"])) expect(fam(sets["classic"]).has(f), f).toBe(false);
+  });
+
+  test("every fixed text of the manifest is a slot of the template, and only those; each has a default wording", () => {
+    const used = [...navySource.matchAll(/\bid[=:]\s*[{]?[`"]([a-z0-9$.{}]+)[`"]/g)].flatMap((m) =>
+      (m[1] ?? "").includes("${page}")
+        ? ["profile", "notes"].map((p) => (m[1] ?? "").replace("${page}", p))
+        : [m[1] ?? ""],
+    );
+    expect([...used].sort()).toEqual(navy.texts.map((t) => t.id).sort());
+    expect(Object.keys(tpl.textDefaults ?? {}).sort()).toEqual(navy.texts.map((t) => t.id).sort());
+  });
+
+  test("a design this build does not know draws the first theme and font set", () => {
+    const d = resolveDesign(
+      { theme: "neon", fonts: "comic", sections: { order: [], hidden: [] }, texts: {}, images: {} },
+      tpl.design,
+    );
+    expect([d.theme, d.fonts]).toEqual(["navy", "classic"]);
+  });
+});

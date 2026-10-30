@@ -1,6 +1,7 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import type { BookData, BookNote } from "../../api/book";
 import { BookSignature, hasSignature } from "../BookSignature";
+import { useDesign } from "../design";
 import { FitText } from "../fit";
 import { Photo, Sheet, useBookEnv } from "../env";
 import { designHeight } from "../sizes";
@@ -12,8 +13,56 @@ import "./navy.css";
 // (the "Autographs" page: four friends per page, two columns of two) and the back page (the cover's frame). Every user text goes
 // through React as text; texts that do not fit shrink (fit.tsx). Sizes, colours and positions are the canvas's (see navy.css).
 
-const GOLD = "#C9A86A";
-const DARK_GOLD = "#7A5C2B";
+// The colours are the custom properties of navy.css (a theme sets them on .nc-page); the SVG pieces read them as presentation attributes.
+const GOLD = "var(--nc-gold)";
+const DARK_GOLD = "var(--nc-bronze)";
+
+/** The page: the theme and the font set of the book's design (the first of each when it has none) are attributes of the element navy.css reads. */
+function Page({ tone, children }: { tone: "navy" | "cream"; children: ReactNode }) {
+  const { theme, fonts } = useDesign();
+  return (
+    <div
+      className={`nc-page nc-${tone}`}
+      data-theme={theme || undefined}
+      data-fonts={fonts || undefined}
+    >
+      {children}
+    </div>
+  );
+}
+
+/**
+ * A fixed text of the template, which the owner may replace (design texts, E09). The template's own wording keeps the plain markup it always had; a
+ * replacement is drawn in a box of the same one-line size (`fitClass`) that shrinks long text and reports it like any other box (fit.tsx).
+ */
+function Own({
+  id,
+  fallback,
+  fitKey,
+  className,
+  fitClass,
+  style,
+}: {
+  id: string;
+  fallback: string;
+  fitKey: string;
+  className: string;
+  fitClass: string;
+  style?: CSSProperties;
+}) {
+  const shown = useDesign().text(id, fallback);
+  if (shown === fallback)
+    return (
+      <div className={className} style={style}>
+        {fallback}
+      </div>
+    );
+  return (
+    <FitText fitKey={fitKey} className={`${className} ${fitClass}`} style={style} minScale={0.35}>
+      {shown}
+    </FitText>
+  );
+}
 
 /** Two thin gold frames, as on the cover and the autographs page of the canvas. */
 function Frame({ outer, inner }: { outer: number; inner: number }) {
@@ -58,11 +107,36 @@ function Cap() {
 }
 
 /** Small letter-spaced capitals over a title, then the diamond rule: the head of the profile and the notes page. */
-function Head({ eyebrow, top, children }: { eyebrow: string; top: number; children: ReactNode }) {
+function Head({
+  page,
+  eyebrow,
+  title,
+  top,
+}: {
+  /** The section: names the design texts (`<page>.eyebrow`, `<page>.heading`) and the fit boxes. */
+  page: "profile" | "notes";
+  eyebrow: string;
+  title: string;
+  top: number;
+}) {
   return (
     <div className="nc-head" style={{ top }}>
-      <div className="caps nc-eyebrow">{eyebrow}</div>
-      <div className="serif nc-title">{children}</div>
+      <Own
+        id={`${page}.eyebrow`}
+        fallback={eyebrow}
+        fitKey={`${page}:eyebrow`}
+        className="caps nc-eyebrow"
+        fitClass="nc-eyebrow-fit"
+        style={{ fontSize: 12 }}
+      />
+      <Own
+        id={`${page}.heading`}
+        fallback={title}
+        fitKey={`${page}:heading`}
+        className="serif nc-title"
+        fitClass="nc-title-fit"
+        style={{ fontSize: 68 }}
+      />
       <Divider width={220} color={DARK_GOLD} />
     </div>
   );
@@ -73,7 +147,7 @@ function Cover({ data }: { data: BookData }) {
   const y = data.yearbook;
   return (
     <Sheet label="cover">
-      <div className="nc-page nc-navy">
+      <Page tone="navy">
         <Frame outer={36} inner={44} />
         <div className="nc-cover-top">
           <Cap />
@@ -138,7 +212,7 @@ function Cover({ data }: { data: BookData }) {
             </FitText>
           )}
         </div>
-      </div>
+      </Page>
     </Sheet>
   );
 }
@@ -198,10 +272,13 @@ function Profile({ data }: { data: BookData }) {
   const scale = Math.min(1, room / paras.reduce((n, q) => n + paraHeight(q.text), 0));
   return (
     <Sheet label="profile">
-      <div className="nc-page nc-cream">
-        <Head eyebrow={t("bookPages.navy.profileEyebrow")} top={72}>
-          {t("bookPages.aboutMe")}
-        </Head>
+      <Page tone="cream">
+        <Head
+          page="profile"
+          eyebrow={t("bookPages.navy.profileEyebrow")}
+          title={t("bookPages.aboutMe")}
+          top={72}
+        />
         <div className="nc-letter">
           <div className="nc-letter-text">
             {paras.map((q) => (
@@ -243,7 +320,7 @@ function Profile({ data }: { data: BookData }) {
           </div>
           <div className="caps nc-footer-title">{y.title}</div>
         </div>
-      </div>
+      </Page>
     </Sheet>
   );
 }
@@ -305,11 +382,14 @@ function Notes({ notes, data }: { notes: BookNote[]; data: BookData }) {
   const y = data.yearbook;
   return (
     <Sheet label="notes">
-      <div className="nc-page nc-cream">
+      <Page tone="cream">
         <Frame outer={28} inner={34} />
-        <Head eyebrow={t("bookPages.navy.autographsEyebrow")} top={76}>
-          {t("bookPages.navy.autographs")}
-        </Head>
+        <Head
+          page="notes"
+          eyebrow={t("bookPages.navy.autographsEyebrow")}
+          title={t("bookPages.navy.autographs")}
+          top={76}
+        />
         <div className="nc-grid">
           {notes.map((n) => (
             <Autograph key={n.id} note={n} />
@@ -333,7 +413,7 @@ function Notes({ notes, data }: { notes: BookNote[]; data: BookData }) {
             </FitText>
           )}
         </div>
-      </div>
+      </Page>
     </Sheet>
   );
 }
@@ -344,7 +424,7 @@ function Back({ data }: { data: BookData }) {
   const y = data.yearbook;
   return (
     <Sheet label="back">
-      <div className="nc-page nc-navy">
+      <Page tone="navy">
         <Frame outer={36} inner={44} />
         <div className="nc-back">
           <Cap />
@@ -368,7 +448,14 @@ function Back({ data }: { data: BookData }) {
             {y.title}
           </FitText>
           <Divider width={260} color={GOLD} />
-          <div className="serif nc-thanks">{t("bookPages.thanks")}</div>
+          <Own
+            id="back.thanks"
+            fallback={t("bookPages.thanks")}
+            fitKey="back:thanks"
+            className="serif nc-thanks"
+            fitClass="nc-thanks-fit"
+            style={{ fontSize: 26 }}
+          />
         </div>
         {y.graduation_year !== null && (
           <div className="nc-cover-foot">
@@ -377,7 +464,7 @@ function Back({ data }: { data: BookData }) {
             </div>
           </div>
         )}
-      </div>
+      </Page>
     </Sheet>
   );
 }
@@ -387,6 +474,20 @@ export const navyClassic: Template = {
   notesPerPage: 4,
   // This design has no place for the cover photo or the friends' photos: do not fetch them.
   photos: { cover: false, notes: false },
+  design: { themes: ["navy", "burgundy", "forest"], fonts: ["classic", "modern"] },
+  swatch: {
+    root: "nc-page",
+    chips: ["--nc-dark", "--nc-gold", "--nc-light", "--nc-bronze"],
+    serif: "serif",
+  },
+  // the locale key of each text's own wording (the customise screen shows it as the placeholder); design.test.ts pins the ids to the manifest
+  textDefaults: {
+    "profile.eyebrow": "bookPages.navy.profileEyebrow",
+    "profile.heading": "bookPages.aboutMe",
+    "notes.eyebrow": "bookPages.navy.autographsEyebrow",
+    "notes.heading": "bookPages.navy.autographs",
+    "back.thanks": "bookPages.thanks",
+  },
   Cover,
   Profile,
   Notes,
