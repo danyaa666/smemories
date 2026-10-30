@@ -11,17 +11,17 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 11 | T-023, T-024, T-025, T-031, T-050, T-142, T-143, T-144, T-145, T-146, T-147 |
-| IN_PROGRESS | 1 | T-141 |
-| IN_QA | 1 | T-139 |
-| QA_PASS | 1 | T-140 |
+| IN_QA | 1 | T-141 |
+| CHANGES_REQUESTED | 1 | T-139 |
+| MERGED | 1 | T-140 |
 | DONE | 125 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-137, T-138 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** nothing
+**Awaiting your review (MERGED):** T-140 ([E07] Revoke a departed admin's invite links automatically)
 
 **Open questions for you:** none
 
-_Board last written 2026-10-30 02:12Z_
+_Board last written 2026-10-30 02:44Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -6179,27 +6179,38 @@ From T-135 QA: typing in the middle of a field that is already at its character 
 - 2026-10-29 09:48Z · human · accepted by owner
 
 ### T-139 — [E07] Web: say 18+ on the class screens and tell friends a class admin may see their note
-- **Status:** IN_QA
+- **Status:** CHANGES_REQUESTED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
 - **Depends-on:** —
 - **Risk:** low
-- **Rework:** 0
+- **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** —
 - **Branch:** task/t-139-e07-web-say-18-on-the-class-screens-and-
 - **PR:** https://github.com/danyaa666/smemories/pull/138
-- **Updated:** 2026-10-30 02:12Z by qa
-- **Comments-seen:** 1
+- **Updated:** 2026-10-30 02:44Z by leader
+- **Comments-seen:** 3
 
 Spec: .team/epics/E07-class-yearbook/13-web-age-line-and-friend-note-notice.md. Owner decision D-40 (a, b).
 
 #### Comments
 - 2026-10-30 02:09Z · dev · PR #138 head 7348649. 18+ line (classes.ageLine) under ClassNew form and before Join button (accept step only); legal.noticeClass appended in LegalNotice paragraph; privacy review s7 points 1,2 marked decided. Local: lint, typecheck, i18n, check:api, build, vitest 603 pass. QA: check /classes/new, /join/:token (signed in), /c/:token at 375px en+vi.
+- 2026-10-30 02:14Z · qa · QA_PASS, PR #138 head 7348649 (worktree == PR head). CI: go, web, security pass; e2e/go-integration/image skipped by D-37 (web-only task, no manual run needed).
+  Local (web/): lint+prettier ok, typecheck ok, lint:i18n ok, check:api ok, build ok, vitest 603/603.
+  Real browser (Playwright chromium 375x800, Vite dev server, /api stubbed via route; script outside repo; vite stopped, port 5199 free), en and vi, 38 checks all PASS:
+  - AC1 /classes/new: 18+ line exact spec wording (en and vi), plain <p class=note-muted> with no input/link/button, placed after the form; form still submits (POST /class/create, navigates to class). /join/:token signed in+verified: line shown before the Join button. Not shown on: signed-out join, unverified-email join, invalid-token join, class list.
+  - AC2 /c/:token: the new sentence is appended in the same <p> as the existing notice (single space), exact en/vi wording; existing notice text unchanged; first notice paragraph unchanged; no 18+ line there; form submits (POST submit-note).
+  - No horizontal overflow at 375 px on new, join (in and out), note form. Screenshots seen (join-vi).
+  - i18n parity ok (2 keys each: classes.ageLine, legal.noticeClass). LegalNotice used only by the note form. No .team/, package.json, api, docs/legal changes (diff: 9 files, web + class-privacy-review.md).
+  - docs s7: only points 1 and 2 get a 'Decided (D-40, T-139)' tail; true to the code (line under the send button of the note form).
+  Conflict: git merge-tree HEAD vs origin/task/t-140-... (PR #137): CONFLICT in docs/class-privacy-review.md only. Section 4 and the table auto-merge; the conflict is section 7 items 1-3 (adjacent lines: T-140 rewrites item 3, T-139 items 1 and 2). Trivial to resolve (keep both). Merge-tree against develop is clean, so whichever merges second must rebase/resolve.
+  Not checked: real API (stubbed); real-device Safari/Firefox (chromium only); Vietnamese native-language review. Non-blocking: none.
+- 2026-10-30 02:44Z · leader · QA_PASS stands. One change: docs/class-privacy-review.md section 7 now conflicts with develop (T-140, merged 587a444, rewrote item 3 next to your items 1 and 2). Merge origin/develop into your branch (no force-push), keep BOTH edits (items 1 and 2 decided by D-40 from T-139, item 3 decided by T-140), check the file reads correctly, rerun web checks, then READY_FOR_QA. QA only needs to re-check that file and that the PR is mergeable.
 
 ### T-140 — [E07] Revoke a departed admin's invite links automatically
-- **Status:** QA_PASS
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
@@ -6207,11 +6218,11 @@ Spec: .team/epics/E07-class-yearbook/13-web-age-line-and-friend-note-notice.md. 
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** leader
+- **Assignee:** —
 - **Branch:** task/t-140-e07-revoke-a-departed-admin-s-invite-lin
 - **PR:** 137
-- **Updated:** 2026-10-30 02:11Z by qa
-- **Comments-seen:** 2
+- **Updated:** 2026-10-30 02:44Z by leader
+- **Comments-seen:** 3
 
 Spec: .team/epics/E07-class-yearbook/14-revoke-departed-admin-invites.md. Owner decision D-40 (c).
 
@@ -6223,9 +6234,10 @@ Spec: .team/epics/E07-class-yearbook/14-revoke-departed-admin-invites.md. Owner 
   (2) dead token: lookup/accept of revoked tokens 404 ERROR_NOT_FOUND; my added test TestDepartedAdminOtherClassAndRepromotion asserts sameAnswer() is identical to a never-issued token for lookup and accept, that the leaver's link in ANOTHER class stays live and usable, and that re-promotion does not revive the old link (new test, passes).
   AC3: docs/class-permissions.md and class-privacy-review.md (sections 4, 6/7 open point 3 marked decided D-40 c) match the code; Postman 'Departed admin:' steps (8) valid JS/JSON. No migration, no .team/ changes (7 files, all in docs/, internal/class, postman).
   Non-blocking: Postman 'Departed admin' has no leave/remove variants (demote only), covered by Go tests. Leader: head is now 706ae63 (test-only); CI on PR will rerun go/web/security only.
+- 2026-10-30 02:44Z · leader · merged 587a444. Review: revokeInvitesOf runs in the same transaction after the class and member locks (leave, remove of an admin, demote); other admins/classes/already revoked rows untouched; race test 20/20 under -race; manual full CI run 40936653143 green on e9bcbd3, QA's extra commit is test-only (706ae63), PR jobs green. For owner to check: docs/class-privacy-review.md sections 4 and 7; Postman departed-admin steps cover demote only.
 
 ### T-141 — [E09] Design model and API: manifest design block, book_design_tab, book-design endpoints
-- **Status:** IN_PROGRESS
+- **Status:** IN_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1b
@@ -6233,15 +6245,16 @@ Spec: .team/epics/E07-class-yearbook/14-revoke-departed-admin-invites.md. Owner 
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** qa
 - **Branch:** task/t-141-e09-design-model-and-api-manifest-design
-- **PR:** —
-- **Updated:** 2026-10-30 02:10Z by dev
-- **Comments-seen:** 0
+- **PR:** https://github.com/danyaa666/smemories/pull/139
+- **Updated:** 2026-10-30 02:44Z by qa
+- **Comments-seen:** 1
 
 Spec: .team/epics/E09-customisation-editor/01-design-model-and-api.md. Plan: PRD 'Stage 1 plan', D-41.
 
 #### Comments
+- 2026-10-30 02:43Z · dev · PR #139, head 73ad5e5. Local: go test -race ./... green, golangci-lint 0, vet+integration vet clean; make test-integration equivalent (-race -tags integration) on bookdesign, bookdata, yearbook, templates, templateapi, notes, class, bookexport, db, api all ok; web typecheck/lint/check:api/test (600) green; newman book-design folder 60 req / 130 assertions / 0 failed. Full CI by hand (D-37): run 40992455178 on 73ad5e5 = success (go, go-integration, e2e, image, security, web); PR run = go, web, security success. To verify: IDOR on book-design/get|update|reset with a second account, cascade on yearbook delete + template change, options fuzz (docs/templates.md 'Design block and book designs'), book-data/get design. Deviations: memory-book texts follow what memory.tsx really prints (cover.belongs, cover.sticker, profile.heading, profile.subtitle, notes.heading, back.heading, back.subtitle, back.pact; cover.title is user data); image cover.pattern ships dots+plain only, waves NOT made (needs an image, ask owner/designer). movable=false means keeps its place in the template order. 4 web test fixtures + classBook.ts got design: null (schema now requires it).
 
 ### T-142 — [E09] Web runtime: colour themes and font sets (Memory Book pilot)
 - **Status:** BACKLOG

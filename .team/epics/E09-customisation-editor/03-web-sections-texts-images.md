@@ -5,10 +5,10 @@
 
 #### Requirements (SHALL)
 1. **Sections.** The book assembles its sections (`cover`, `profile`, `notes`, `back` for Memory Book) from `design.sections`: hidden ones are skipped, the order follows `design.sections.order` (fixed first/last are honoured). `pageCount` and `profilePageCount` count only what prints; page numbers/footers adapt. The class book (T-130, `ClassBookPages`) keeps working with the default design (T-146 applies each student's own).
-2. **Texts.** Every fixed text the manifest lists (`cover.title`, `cover.subtitle`, `profile.heading`, `notes.heading`, `back.message`) is read through `useDesign().text(id, fallback)`; empty or missing means the template's own (translated) default. Rendered as React text only; long values shrink through the existing fit rules and are reported like other overflow.
-3. **Images.** `cover.pattern` choices map to files shipped with the template (`dots` today, `plain` = none, a third if available); the book loads only the chosen file; photos of the book are unaffected.
+2. **Texts.** Every fixed text the manifest lists (T-141 built them from what memory.tsx really prints: `cover.belongs`, `cover.sticker`, `profile.heading`, `profile.subtitle`, `notes.heading`, `back.heading`, `back.subtitle`, `back.pact`; the cover title is user data and is not a text slot) is read through `useDesign().text(id, fallback)`; empty or missing means the template's own (translated) default. Rendered as React text only; long values shrink through the existing fit rules and are reported like other overflow.
+3. **Images.** `cover.pattern` choices map to files shipped with the template (`dots` today, `plain` = none (T-141 ships only these two)); the book loads only the chosen file; photos of the book are unaffected.
 4. **Default parity** as in T-142: no design or default design prints exactly as today (69 print-check cases and snapshots unchanged).
-5. **print-check**: add cases for hidden profile, hidden back, notes before profile, custom texts at their maximum length (Vietnamese, emoji), and the plain pattern, on A5 and A4; assert page counts, order, no blank pages, no text cut off beyond the summary, and every photo loaded before ready.
+5. **print-check**: add cases for hidden profile, hidden back, notes before profile, custom texts at their maximum length (Vietnamese, emoji; read the maxima from the manifest), and the plain pattern, on A5 and A4; assert page counts, order, no blank pages, no text cut off beyond the summary, and every photo loaded before ready.
 6. No new dependency; no API change.
 
 #### Acceptance criteria
