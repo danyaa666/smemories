@@ -22,7 +22,7 @@
 
 **Open questions for you:** none
 
-_Board last written 2026-10-30 09:54Z_
+_Board last written 2026-10-30 12:03Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -6286,7 +6286,7 @@ Spec: .team/epics/E09-customisation-editor/01-design-model-and-api.md. Plan: PRD
 - **Branch:** task/t-142-e09-web-runtime-colour-themes-and-font-s
 - **PR:** https://github.com/danyaa666/smemories/pull/140
 - **Updated:** 2026-10-30 09:54Z by human
-- **Comments-seen:** 5
+- **Comments-seen:** 6
 
 Spec: .team/epics/E09-customisation-editor/02-web-themes-and-font-sets.md.
 
@@ -6318,7 +6318,7 @@ Spec: .team/epics/E09-customisation-editor/02-web-themes-and-font-sets.md.
 - **Branch:** task/t-143-e09-web-runtime-sections-texts-and-image
 - **PR:** https://github.com/danyaa666/smemories/pull/141
 - **Updated:** 2026-10-30 09:54Z by human
-- **Comments-seen:** 4
+- **Comments-seen:** 5
 
 Spec: .team/epics/E09-customisation-editor/03-web-sections-texts-images.md.
 
@@ -6350,7 +6350,7 @@ Spec: .team/epics/E09-customisation-editor/03-web-sections-texts-images.md.
 - **Branch:** task/t-144-e09-web-the-customise-screen
 - **PR:** 142
 - **Updated:** 2026-10-30 09:54Z by human
-- **Comments-seen:** 4
+- **Comments-seen:** 5
 
 Spec: .team/epics/E09-customisation-editor/04-web-customise-screen.md.
 
@@ -6385,7 +6385,7 @@ Spec: .team/epics/E09-customisation-editor/04-web-customise-screen.md.
 - **Branch:** task/t-145-e09-navy-classic-becomes-customisable
 - **PR:** https://github.com/danyaa666/smemories/pull/143
 - **Updated:** 2026-10-30 09:54Z by human
-- **Comments-seen:** 4
+- **Comments-seen:** 5
 
 Spec: .team/epics/E09-customisation-editor/05-navy-classic-customisable.md.
 
