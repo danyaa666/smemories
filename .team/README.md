@@ -12,15 +12,14 @@
 |---|---:|---|
 | BACKLOG | 10 | T-023, T-024, T-025, T-031, T-050, T-143, T-144, T-145, T-146, T-147 |
 | READY_FOR_QA | 1 | T-142 |
-| MERGED | 1 | T-141 |
-| DONE | 127 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-137, T-138, T-139, T-140 |
+| DONE | 128 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-137, T-138, T-139, T-140, T-141 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-141 ([E09] Design model and API: manifest design block, book_design_tab, book-design endpoints)
+**Awaiting your review (MERGED):** nothing
 
 **Open questions for you:** none
 
-_Board last written 2026-10-30 03:32Z_
+_Board last written 2026-10-30 03:54Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -6243,7 +6242,7 @@ Spec: .team/epics/E07-class-yearbook/14-revoke-departed-admin-invites.md. Owner 
 - 2026-10-30 03:06Z · human · accepted by owner
 
 ### T-141 — [E09] Design model and API: manifest design block, book_design_tab, book-design endpoints
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1b
@@ -6254,7 +6253,7 @@ Spec: .team/epics/E07-class-yearbook/14-revoke-departed-admin-invites.md. Owner 
 - **Assignee:** —
 - **Branch:** task/t-141-e09-design-model-and-api-manifest-design
 - **PR:** https://github.com/danyaa666/smemories/pull/139
-- **Updated:** 2026-10-30 03:07Z by leader
+- **Updated:** 2026-10-30 03:54Z by human
 - **Comments-seen:** 3
 
 Spec: .team/epics/E09-customisation-editor/01-design-model-and-api.md. Plan: PRD 'Stage 1 plan', D-41.
@@ -6269,6 +6268,7 @@ Spec: .team/epics/E09-customisation-editor/01-design-model-and-api.md. Plan: PRD
   Deviations accepted by leader confirmed: memory-book text ids (8 ids match docs/templates.md), cover.pattern dots+plain. Unrelated test edits justified: notes registry/matrix tests must list the new *_tab table (and fill it), class admin matrix gets the 3 new routes (guard test requires it), username migration down loop 10 to 30 only raises the cap (loop exits as soon as the column is gone), bookdata/class/notes envs just pass the new constructor argument; none weakens an assertion. Migration: one new table, expand-only, Down drops it, no FK, VARCHAR(4096) with byte check in Go. Rate limit 60 writes/10 min/owner on update+reset with Retry-After (test). No .team/ files in the PR.
   Non-blocking: (1) running the Postman collection twice within 10 minutes hits the 60-writes limit (429) on the second run, because one run does about 40 writes; flush redis / make reset-limits or wait 10 min. Same behaviour as other limited collections, but a note in the collection description would help. (2) Go JSON matches keys case-insensitively, so {"Theme":"mint"} is accepted and stored normalised as theme; harmless. (3) the raw 4096 check counts whitespace as sent, so a normalised document that would fit is refused if the padding pushes it over; matches the 'as sent and as stored' wording.
 - 2026-10-30 03:07Z · leader · merged f9e202f. Review: manifest design block (html only), book_design_tab (expand-only, Down, no FK, cascade on yearbook delete and template change), owner-only book-design get/update/reset (404 for others and for class admins), options validated against the manifest, book-data/get carries the resolved design; manual full CI run 40992455178 green on 73ad5e5, QA's extra commit is test-only (9832c4f); QA ran full integration and 132 Postman assertions on its own stack. For owner to check: only two cover patterns exist (dots, plain); docs/templates.md section Design block and book designs.
+- 2026-10-30 03:54Z · human · accepted by owner
 
 ### T-142 — [E09] Web runtime: colour themes and font sets (Memory Book pilot)
 - **Status:** READY_FOR_QA
