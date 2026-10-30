@@ -1,20 +1,24 @@
 import { useEffect, useState } from "react";
+import type { BookData } from "../api/book";
 import { mediaUrl } from "../api/yearbooks";
 import { enqueue, loaded as cached } from "../components/imageQueue";
+import { printSections } from "./design";
 
-/** Public ids of every photo the book shows, once each. */
+/** Public ids of every photo the book shows, once each: the photos of a section the design hides are not fetched. */
 export function photoIds(
   d: {
     yearbook: { cover_media_id: string | null };
     profile: { photo_media_id: string | null };
     notes: { photo_ids: string[] }[];
+    design?: BookData["design"];
   },
   shown = { cover: true, notes: true },
 ): string[] {
+  const prints = printSections(d.design);
   const ids = [
-    shown.cover ? d.yearbook.cover_media_id : null,
-    d.profile.photo_media_id,
-    ...(shown.notes ? d.notes.flatMap((n) => n.photo_ids) : []),
+    shown.cover && prints.includes("cover") ? d.yearbook.cover_media_id : null,
+    prints.includes("profile") ? d.profile.photo_media_id : null,
+    ...(shown.notes && prints.includes("notes") ? d.notes.flatMap((n) => n.photo_ids) : []),
   ];
   return [...new Set(ids.filter((x): x is string => !!x))];
 }

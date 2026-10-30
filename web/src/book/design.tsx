@@ -19,6 +19,24 @@ export type Design = {
   image: (id: string) => string | undefined;
 };
 
+/** The page groups of a book in the template's own order: the cover, the owner's profile, the friends' notes and the back. */
+export const SECTION_IDS = ["cover", "profile", "notes", "back"] as const;
+export type SectionId = (typeof SECTION_IDS)[number];
+
+/**
+ * The sections that print, in print order: the design's order without its hidden sections. No design, or an order that is not exactly the four
+ * sections (a newer manifest than this build), prints them all in the template's own order.
+ */
+export function printSections(raw: BookData["design"] | undefined): readonly SectionId[] {
+  const order = raw?.sections.order;
+  const known =
+    order?.length === SECTION_IDS.length && SECTION_IDS.every((s) => order.includes(s))
+      ? (order as SectionId[])
+      : SECTION_IDS;
+  const hidden = raw?.sections.hidden ?? [];
+  return known.filter((s) => !hidden.includes(s));
+}
+
 export function resolveDesign(raw: BookData["design"] | undefined, ids?: DesignIds): Design {
   const pick = (list: readonly string[] | undefined, id: string | undefined) =>
     list === undefined ? "" : id !== undefined && list.includes(id) ? id : (list[0] ?? "");

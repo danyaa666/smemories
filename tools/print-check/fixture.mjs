@@ -120,13 +120,13 @@ export function makeBook({ notes = 84, size = "A5", truncatedOf = null, template
   return book;
 }
 
-/** The `design` of book-data/get (T-141) for a theme and a font set: no hidden section, no replaced text, the template's own picture choices. */
-export const designOf = (theme, fonts) => ({
+/** The `design` of book-data/get (T-141) for a theme and a font set: by default no hidden section, no replaced text, the template's own picture choices. */
+export const designOf = (theme, fonts, { order = ["cover", "profile", "notes", "back"], hidden = [], texts = {}, images = { "cover.pattern": "dots" } } = {}) => ({
   theme,
   fonts,
-  sections: { order: ["cover", "profile", "notes", "back"], hidden: [] },
-  texts: {},
-  images: { "cover.pattern": "dots" },
+  sections: { order, hidden },
+  texts,
+  images,
 });
 
 // ---- The class book (T-130): the answer of GET /api/class-book/get for 30 students ----

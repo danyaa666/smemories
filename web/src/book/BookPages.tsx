@@ -1,33 +1,52 @@
 import type { TFunction } from "i18next";
 import { memo, useMemo } from "react";
 import type { BookData } from "../api/book";
-import { DesignProvider } from "./design";
+import { DesignProvider, printSections, type SectionId } from "./design";
 import { BookEnvProvider } from "./env";
 import { paginate } from "./paginate";
 import type { PageSize } from "./sizes";
 import { getTemplate } from "./templates";
 
-/** The profile page and the notes pages of one person: 1 + ceil(notes / capacity) pages. */
+const notePages = (data: BookData) =>
+  paginate(data.notes, getTemplate(data.yearbook.template_id).notesPerPage).length;
+
+/** The profile page and the notes pages of one person, as far as the design lets them print: 1 + ceil(notes / capacity) pages by default. */
 export function profilePageCount(data: BookData): number {
-  const per = getTemplate(data.yearbook.template_id).notesPerPage;
-  return 1 + paginate(data.notes, per).length;
+  const s = printSections(data.design);
+  return (s.includes("profile") ? 1 : 0) + (s.includes("notes") ? notePages(data) : 0);
 }
 
-/** Cover, profile, the notes pages and the back: 3 + ceil(notes / capacity) pages. */
+/** Every page that prints: cover, profile, the notes pages and the back (3 + ceil(notes / capacity) by default), without the hidden sections. */
 export function pageCount(data: BookData): number {
-  return 2 + profilePageCount(data);
+  const s = printSections(data.design);
+  return profilePageCount(data) + (s.includes("cover") ? 1 : 0) + (s.includes("back") ? 1 : 0);
 }
 
-/** One person's group of pages (profile, then the notes pages) in their template. Needs a BookEnvProvider; the class book (T-130) repeats it per student. */
-export function ProfilePages({ data }: { data: BookData }) {
+/** The pages of one section of the book (the notes section is one page per group of notes). */
+function Section({ id, data }: { id: SectionId; data: BookData }) {
   const tpl = getTemplate(data.yearbook.template_id);
   const noteGroups = useMemo(() => paginate(data.notes, tpl.notesPerPage), [data.notes, tpl]);
+  if (id === "cover") return <tpl.Cover data={data} />;
+  if (id === "profile") return <tpl.Profile data={data} />;
+  if (id === "back") return <tpl.Back data={data} />;
   return (
     <>
-      <tpl.Profile data={data} />
       {noteGroups.map((g, gi) => (
         <tpl.Notes key={g[0]?.id} notes={g} data={data} first={gi * tpl.notesPerPage} />
       ))}
+    </>
+  );
+}
+
+/** One person's group of pages (profile, then the notes pages, or the order and visibility of their design) in their template. Needs a BookEnvProvider; the class book (T-130) repeats it per student. */
+export function ProfilePages({ data }: { data: BookData }) {
+  return (
+    <>
+      {printSections(data.design)
+        .filter((s) => s === "profile" || s === "notes")
+        .map((s) => (
+          <Section key={s} id={s} data={data} />
+        ))}
     </>
   );
 }
@@ -51,9 +70,9 @@ export const BookPages = memo(function BookPages({
   return (
     <BookEnvProvider value={env}>
       <DesignProvider design={data.design} ids={tpl.design}>
-        <tpl.Cover data={data} />
-        <ProfilePages data={data} />
-        <tpl.Back data={data} />
+        {printSections(data.design).map((s) => (
+          <Section key={s} id={s} data={data} />
+        ))}
       </DesignProvider>
     </BookEnvProvider>
   );

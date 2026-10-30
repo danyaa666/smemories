@@ -36,3 +36,5 @@ family of the canvas, already covers all of it. Same source and method as above.
 
 The `classic` font set of the memory-book (E09) is Cormorant Garamond (titles and handwriting lines, 500/600/700 and 500/600 italic) over Be Vietnam Pro (body). Both are shipped above with all of the
 Vietnamese alphabet, so no file was added; they are fetched only when a book uses that set (`memory.css`, `data-fonts="classic"`).
+Weights: the book's own files carry Be Vietnam Pro at 500 only, but the app's `@fontsource` faces of the same family (400, 500, 600, 700; `web/src/styles/fonts.css`) apply to the book too, so bold
+labels use the real Bold face and no weight is synthesised. Cormorant Garamond draws old-style figures (the digit 1 looks like a capital I), so the `classic` set turns on lining figures (`memory.css`).
