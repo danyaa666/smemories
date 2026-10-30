@@ -10,17 +10,19 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 8 | T-023, T-024, T-025, T-031, T-050, T-145, T-146, T-147 |
-| TODO | 1 | T-144 |
-| MERGED | 2 | T-142, T-143 |
+| BACKLOG | 7 | T-023, T-024, T-025, T-031, T-050, T-146, T-147 |
+| TODO | 2 | T-145, T-148 |
+| MERGED | 3 | T-142, T-143, T-144 |
 | DONE | 128 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-137, T-138, T-139, T-140, T-141 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-142 ([E09] Web runtime: colour themes and font sets (Memory Book pilot)); T-143 ([E09] Web runtime: sections, texts and images (Memory Book pilot))
+**Epics (done/total):** E09-customisation-editor 0/1; (unfiled) 131/147
+
+**Awaiting your review (MERGED):** T-142 ([E09] Web runtime: colour themes and font sets (Memory Book pilot)); T-143 ([E09] Web runtime: sections, texts and images (Memory Book pilot)); T-144 ([E09] Web: the customise screen)
 
 **Open questions for you:** none
 
-_Board last written 2026-10-30 07:35Z_
+_Board last written 2026-10-30 08:17Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -6334,7 +6336,7 @@ Spec: .team/epics/E09-customisation-editor/03-web-sections-texts-images.md.
 - 2026-10-30 07:35Z · leader · merged 762c586. Review: web book runtime only, diff limited to the task; QA print-check 112/112 (A5+A4, class book 77 pages unchanged), vitest 626, lint/tsc/build/i18n/check:api, go/web/security green on 046f4ef. For owner to check: hide/reorder and custom texts on a real book once the customise screen (T-144) exists. Follow-up: back.pact max lowered to 18 in T-144.
 
 ### T-144 — [E09] Web: the customise screen
-- **Status:** TODO
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1b
@@ -6343,18 +6345,32 @@ Spec: .team/epics/E09-customisation-editor/03-web-sections-texts-images.md.
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-30 07:35Z by leader
-- **Comments-seen:** 1
+- **Branch:** task/t-144-e09-web-the-customise-screen
+- **PR:** 142
+- **Updated:** 2026-10-30 08:17Z by leader
+- **Comments-seen:** 4
 
 Spec: .team/epics/E09-customisation-editor/04-web-customise-screen.md.
 
 #### Comments
 - 2026-10-30 07:35Z · leader · Spec updated: requirement 8 (lower back.pact max 30 -> 18 in memory-book.json, from T-143 QA). Read the spec again.
+- 2026-10-30 07:51Z · dev · PR #142 head de02b6e. Customise screen at /yearbooks/:id/customise (controls, live preview, save/reset, leave guard, template-change banner) + req 8 (back.pact max 18; Go test case 19 runes; docs). Verified: web lint/typecheck/vitest 659/i18n/check:api/build; go integration (bookdesign, templates, class) pass on local stack (I restarted the stopped awesomeproject1 containers); make print-check 112 pass. Not run: make e2e. QA: walk 1280/768/375 px both locales (phone has no horizontal scroll is CSS-only, untested in a browser); in-app Back button is not guarded (BrowserRouter has no useBlocker); longer saved pact rejected at next save only. Picking a template on this screen with unsaved edits drops them.
+- 2026-10-30 08:16Z · qa · QA_PASS T-144, PR #142, head de02b6e (CI on that head: go pass, web pass, security pass; go-integration/e2e/image skipped by D-37/38).
+  LOCAL RESULTS (head de02b6e): make test-integration: all packages ok, 31 ok / 0 FAIL (bookdesign, templates, class, yearbook, media, notes, storage included). make print-check: tests 112, pass 112, fail 0. make e2e: 6 passed, 0 failed (journey, class, h2 gallery). web: lint, typecheck, i18n, check:api ok; vitest 35 files / 659 tests pass.
+  ENV NOTE for the team: the running awesomeproject1 stack still has the OLD MinIO container (compose now defines a SeaweedFS service s3 with S3_* vars, T-029), so uploads/media/notes/storage tests fail with InvalidAccessKeyId and e2e uploads get 502. I ran SeaweedFS as a separate compose project on :19000 (since removed) with SMEM_S3_ENDPOINT / SMEM_TEST_S3_ENDPOINT overridden; the owner should run make up with an updated .env. Not a T-144 defect.
+  EVIDENCE (real Chromium via Playwright on the built head, real API, own DB):
+  AC1: Peach, Classic font, hide 'All about me', move Notes up, edit pact and sticker, Plain paper: preview colours/fonts/texts changed at once; Save sent exactly {v:1,theme:peach,fonts:classic,sections:{order:[cover,notes,profile,back],hidden:[profile]},texts:{back.pact,cover.sticker},images:{cover.pattern:plain}}. Print screen after in-app nav shows saved design without refetch. PDF (A5, 2 pages, fonts embedded, 'Xin chao!' and pact text present, profile page absent) matches the preview (Mint, Classic checked too).
+  AC2: reload shows the saved values; Reset (dialog names what is lost) returns to lavender/original order, status announced, reload confirms; unsaved edit + in-app link -> 'Leave without saving?' dialog (Stay keeps the text); unsaved + tab reload/close -> beforeunload prevented; clean state leaves without a prompt. GAP: browser Back with unsaved edits leaves silently (verified: no dialog, edits lost).
+  AC3: keyboard only: Space toggles section switch (announce '“All about me” will be left out.'); Enter on Move down: list reorders, focus stays on the moved item's button, live region says '“All about me” is now number 3 of 4.'; radios use arrows.
+  AC4: non-owner: shell yearbook/get 404 then 'This yearbook does not exist.'; requests made: get-me, yearbook/get, note/get-list only, NO book-design or book-data request. Phone: no horizontal scroll at 1280, 768, 375 in en and vi (scrollWidth == clientWidth, also after save and with the reset dialog open at 375, touch device).
+  Req 8: memory-book.json back.pact max 18; Go options_test case now 19 runes; docs/templates.md says 18; web test pins manifest max 18; print-check max-length case reads the manifest (112 pass); counter shows 0/18 in the UI. Longer saved pact is rejected at next save only (stated in PR).
+  Req 6: picking Navy Classic on the screen shows 'You changed the template, so the earlier design was reset' and 'cannot be customised' for that template; going back to Memory Book gives lavender defaults; the unsaved pact is dropped (disclosed).
+  JUDGEMENT on the Back-button gap: AC2 says 'leaving with unsaved changes asks first'. It is met for tab close, reload and every in-app link, NOT for the browser/phone Back button. I rate it MAJOR but NOT a blocker: risk low, data is a few cosmetic choices, nothing is corrupted, and the limitation is documented in the hook's own comment and the PR. A fix needs a data router (createBrowserRouter + useBlocker) or a popstate guard, a cross-cutting change. Recommend a follow-up task; leader can instead send it back if it wants the AC met literally.
+  NON-BLOCKING: (a) section switch label and radio cards are >=44 px but text inputs' labels are 24 px high (inputs themselves are taller; fine). (b) For a non-owner the NotFound text appears only after about 8-10 s because the shell's yearbook query retries 404 three times (existing shell behaviour, same on /book); 'Loading the design...' shows meanwhile. (c) Template-change banner text appears twice in the DOM in one case (two banners rendered). (d) Picking another template drops unsaved edits without asking (disclosed by dev).
+- 2026-10-30 08:17Z · leader · merged 9bf8b25. Review: customise screen, web only plus back.pact max 18 (Go test, docs); QA ran make test-integration 31 ok/0 FAIL, print-check 112/112, e2e 6 passed, vitest 659, browser walk at 1280/768/375 in en+vi; go/web/security green on de02b6e. For owner to check: open /yearbooks/:id/customise on a real yearbook. Known gaps (QA major, not blocker, cosmetic data): browser/phone Back drops unsaved edits, template change drops them silently, non-owner waits 8-10 s for NotFound -> follow-up T-148 (P3).
 
 ### T-145 — [E09] Navy Classic becomes customisable
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1b
@@ -6365,12 +6381,13 @@ Spec: .team/epics/E09-customisation-editor/04-web-customise-screen.md.
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-30 02:07Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-30 08:17Z by leader
+- **Comments-seen:** 1
 
 Spec: .team/epics/E09-customisation-editor/05-navy-classic-customisable.md.
 
 #### Comments
+- 2026-10-30 08:17Z · leader · Dependency T-144 merged (9bf8b25). Read the spec again before you start.
 
 ### T-146 — [E09] Class book applies each student's design
 - **Status:** BACKLOG
