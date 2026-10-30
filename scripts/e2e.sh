@@ -43,7 +43,8 @@ SMEM_ENV=test "$BIN/migrate" up >"$OUT/migrate.log" 2>&1 || { cat "$OUT/migrate.
 
 # The API: a test environment of its own (Redis keys smem:test:*), cookies and CSRF as in production, the registered dev shortcut on.
 export SMEM_DEV_FIXED_OTP="${SMEM_DEV_FIXED_OTP:-123123}" # DEV-SHORTCUT(otp)
-SMEM_ENV=test SMEM_RATE_REGISTER_PER_HOUR="${SMEM_RATE_REGISTER_PER_HOUR:-20}" SMEM_HTTP_ADDR="127.0.0.1:$API_PORT" SMEM_ALLOWED_ORIGINS="$ORIGIN" SMEM_PUBLIC_BASE_URL="$ORIGIN" \
+# SMEM_E2E_RATE_REGISTER_PER_HOUR, not SMEM_RATE_REGISTER_PER_HOUR: make exports .env (which has 5) and that would win over the default.
+SMEM_ENV=test SMEM_RATE_REGISTER_PER_HOUR="${SMEM_E2E_RATE_REGISTER_PER_HOUR:-20}" SMEM_HTTP_ADDR="127.0.0.1:$API_PORT" SMEM_ALLOWED_ORIGINS="$ORIGIN" SMEM_PUBLIC_BASE_URL="$ORIGIN" \
   SMEM_METRICS_ADDR="" SMEM_UPLOAD_TMP_DIR="$BIN" "$BIN/api" >"$OUT/api.log" 2>&1 &
 PIDS+=("$!")
 for i in $(seq 1 60); do

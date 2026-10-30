@@ -162,10 +162,10 @@ A template author does not need to read the runtime. For `<tpl>` (`memory-book`,
 **A theme** (a colour set):
 1. `internal/templates/embed/<tpl>.json`: add the id to `design.themes` (at most 8, `[a-z0-9._-]{1,40}`; the first is the default, so append).
 2. `<name>.css`: add a block `.<p>-page[data-theme="<id>"] { ... }` that defines **every** custom property the other theme blocks define (`--mb-*` or `--nc-*`). Nothing else in the CSS or the TSX may hold a colour (a unit test reads both files).
-3. **The contrast rule:** body text must reach 4.5:1 (WCAG 2.1 AA) on every surface it sits on: `memory-book` checks `ink` and `soft` on `paper`, `white` and the six pastels (16 pairs); `navy-classic` checks light on dark, gold on dark, dark on light and bronze on light. `design.test.ts` fails below 4.5; decoration (the accent colours, rules, shadows) is not held to it. Put your ratios in the table of the template's section above.
+3. **The contrast rule:** body text must reach 4.5:1 (WCAG 2.1 AA) on every surface it sits on: `memory-book` checks `ink` and `soft` on `paper`, `white` and the six pastels (16 pairs); `navy-classic` checks light on dark, gold on dark, dark on light and bronze on light. `design.test.ts` checks every theme the manifest declares and fails below 4.5; decoration (the accent colours, rules, shadows) is not held to it. Put your ratios in the table of the template's section above.
 4. `web/src/book/templates/<name>.tsx`: add the id to the template's `design.themes` array at the bottom of the file (the runtime and the customise screen read it; `design.test.ts` fails if it differs from the manifest or if the CSS lacks the block).
 5. `web/src/locales/en.json` and `vi.json`: `customise.tpl.<tpl>.themes.<id>` (the name on the chip; without it the id shows).
-6. `tools/print-check/check.test.mjs`: add the id to the theme loop of the template's "themes x font sets" describe (see "What print-check covers"), run `make print-check` and `cd web && npm test`.
+6. `tools/print-check/check.test.mjs`: add the id to the theme loop of the template's "themes x font sets" describe (see "What print-check covers"), run `make print-check` (it does not read the manifest, so a theme left out of this loop is not print-checked) and `cd web && npm test` (the contrast, id and CSS-block tests derive their theme list from the manifest, so nothing else to edit).
 
 **A font set:** the same six steps with `font_sets`, the `--<p>-body`/`--<p>-disp`/... properties under `[data-fonts="<id>"]`, `design.fonts`, `customise.tpl.<tpl>.fonts.<id>`, and a `SETS` entry in print-check. Only Vietnamese-capable OFL families (D-18), self-hosted woff2 under `web/src/book/fonts/` with the licence in its `README.md` and a `@font-face` in `fonts.css`; a font set must request only its own families' files.
 
@@ -175,7 +175,7 @@ A template author does not need to read the runtime. For `<tpl>` (`memory-book`,
 
 **A section:** the runtime knows four page kinds (`cover`, `profile`, `notes`, `back`; `SECTION_IDS` in `web/src/book/design.tsx`). A template can change which of them are `hideable`/`movable`/`fixed` in the manifest and add the name `customise.tpl.<tpl>.sections.<id>`; a new kind of page is a code change in `design.tsx` and `BookPages.tsx`, not a manifest edit.
 
-`go test ./internal/templates` validates the manifest (limits, unique ids, a Go-renderer template may not have a `design` block); `cd web && npm test && npm run lint:i18n` check the ids, the contrast and the locale keys. A retired id is not an error for a stored design: it is ignored and the default applies.
+`go test ./internal/templates` validates the manifest (limits, unique ids, a Go-renderer template may not have a `design` block; `design_test.go` pins only the default first, not the count); `cd web && npm test && npm run lint:i18n` check the ids, the contrast and the locale keys. A retired id is not an error for a stored design: it is ignored and the default applies.
 
 ### What print-check covers (T-147)
 
