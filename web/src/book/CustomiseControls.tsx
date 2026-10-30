@@ -42,14 +42,19 @@ export function CustomiseControls(p: Props) {
           items={p.block.themes.map((id) => ({
             id,
             label: name(`themes.${id}`, id),
-            extra: (
-              // the colours of the theme are the template's own custom properties (memory.css), read through the theme attribute
-              <span className="mb-page cu-chips" data-theme={id} aria-hidden="true">
-                {["a1", "a2", "a3", "lav", "mint"].map((c) => (
-                  <i key={c} style={{ background: `var(--mb-${c})` }} />
-                ))}
-              </span>
-            ),
+            extra:
+              // the colours of the theme are the template's own custom properties (memory.css, navy.css), read through the theme attribute
+              p.tpl.swatch && (
+                <span
+                  className={`${p.tpl.swatch.root} cu-chips`}
+                  data-theme={id}
+                  aria-hidden="true"
+                >
+                  {p.tpl.swatch.chips.map((c) => (
+                    <i key={c} style={{ background: `var(${c})` }} />
+                  ))}
+                </span>
+              ),
           }))}
         />
       </Group>
@@ -62,9 +67,9 @@ export function CustomiseControls(p: Props) {
           items={p.block.font_sets.map((id) => ({
             id,
             label: name(`fonts.${id}`, id),
-            extra: (
-              <span className="mb-page cu-sample" data-fonts={id} aria-hidden="true">
-                <span className="disp">{name("fontSample", "Aa")}</span>
+            extra: p.tpl.swatch && (
+              <span className={`${p.tpl.swatch.root} cu-sample`} data-fonts={id} aria-hidden="true">
+                <span className={p.tpl.swatch.serif}>{name("fontSample", "Aa")}</span>
               </span>
             ),
           }))}

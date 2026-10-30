@@ -709,6 +709,11 @@ export const memoryBook: Template = {
   id: "memory-book",
   notesPerPage: 1,
   design: { themes: ["lavender", "peach", "mint"], fonts: ["playful", "classic"] },
+  swatch: {
+    root: "mb-page",
+    chips: ["--mb-a1", "--mb-a2", "--mb-a3", "--mb-lav", "--mb-mint"],
+    serif: "disp",
+  },
   // the locale key of each text's own wording (the customise screen shows it as the placeholder); design.test.ts pins the ids to the manifest
   textDefaults: {
     "cover.belongs": "bookPages.memory.belongs",

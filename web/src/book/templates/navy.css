@@ -1,34 +1,82 @@
 /* Template navy-classic (templates/navy.tsx), drawn in the 816 px box of the sheet. Colours, sizes and positions are from design/canvas/temp2.html:
    navy #1B2A4A, gold #C9A86A, dark gold #7A5C2B, cream #F7F3EA; Cormorant Garamond for the serif, Be Vietnam Pro (a Vietnamese-capable
    lookalike of the canvas's Jost) for the small capitals. The pages are taller than the canvas on A4 and A5: the middle of a page takes the room. */
+/* Colour themes (T-145). Every colour of the page comes from these variables; the theme is data-theme on .nc-page. `navy` is the default and is exactly
+   the canvas's colours. dark = the cover and back background and the text on the cream pages; light = the cream pages and the text on the dark ones;
+   gold = frames and accents on the dark pages; bronze = small accents on the cream pages. Text pairs (light on dark, gold on dark, dark on light,
+   bronze on light) are all >= 4.5:1 (checked by design.test.ts, listed in docs/templates.md). */
+.nc-page,
+.nc-page[data-theme="navy"] {
+  --nc-dark: #1b2a4a;
+  --nc-light: #f7f3ea;
+  --nc-gold: #c9a86a;
+  --nc-bronze: #7a5c2b;
+  --nc-photo: #dcd6c9;
+  --nc-rule: rgba(27, 42, 74, 0.22);
+}
+.nc-page[data-theme="burgundy"] {
+  --nc-dark: #4a1a2b;
+  --nc-light: #faf3ee;
+  --nc-gold: #d9b57c;
+  --nc-bronze: #8a4a2e;
+  --nc-photo: #e6d6cf;
+  --nc-rule: rgba(74, 26, 43, 0.22);
+}
+.nc-page[data-theme="forest"] {
+  --nc-dark: #143a2f;
+  --nc-light: #f4f6ee;
+  --nc-gold: #cfb06e;
+  --nc-bronze: #6b5a1f;
+  --nc-photo: #d6dccb;
+  --nc-rule: rgba(20, 58, 47, 0.22);
+}
+
+/* Font sets (T-145), data-fonts on .nc-page. `classic` is the default: today's Cormorant Garamond over Be Vietnam Pro. `modern` is Nunito for both roles,
+   upright (no italics: Nunito has none, and a slanted copy would be synthesised). A @font-face is fetched only when text uses it, so the files of the set
+   that is not active are never requested. No other family in a stack: a family named there would be fetched for a character the first one lacks. */
+.nc-page,
+.nc-page[data-fonts="classic"] {
+  --nc-serif: "Cormorant Garamond", serif;
+  --nc-caps: "Be Vietnam Pro", sans-serif;
+  --nc-italic: italic;
+}
+.nc-page[data-fonts="modern"] {
+  --nc-serif: Nunito, sans-serif;
+  --nc-caps: Nunito, sans-serif;
+  --nc-italic: normal;
+  /* Nunito's letters are about 20 % taller and 30 % wider than Cormorant's at the same size; this brings them to Cormorant's x-height (0.4) so the layout the
+     template was drawn for (and the fit floors) holds. Browsers without the property show it larger and the fit shrinks it. */
+  font-size-adjust: 0.4;
+}
+
 .nc-page {
   position: absolute;
   inset: 0;
   overflow: hidden;
-  font-family: "Cormorant Garamond", Georgia, serif;
+  font-family: var(--nc-serif);
   font-weight: 500;
   line-height: normal;
 }
 .nc-navy {
-  background: #1b2a4a;
-  color: #f7f3ea;
+  background: var(--nc-dark);
+  color: var(--nc-light);
 }
 .nc-cream {
-  background: #f7f3ea;
-  color: #1b2a4a;
+  background: var(--nc-light);
+  color: var(--nc-dark);
 }
 .nc-page .serif {
-  font-family: "Cormorant Garamond", Georgia, serif;
+  font-family: var(--nc-serif);
 }
 .nc-page .caps {
-  font-family: "Be Vietnam Pro", sans-serif;
+  font-family: var(--nc-caps);
   text-transform: uppercase;
   letter-spacing: 0.28em;
   font-weight: 500;
 }
 .nc-frame {
   position: absolute;
-  border: 1px solid #c9a86a;
+  border: 1px solid var(--nc-gold);
 }
 
 /* Every text that shrinks to fit is a box whose size does not come from its text. In the PRINTED page a text taller than a box whose size comes
@@ -54,7 +102,7 @@
 }
 .nc-eyebrow {
   font-size: 12px;
-  color: #7a5c2b;
+  color: var(--nc-bronze);
 }
 .nc-title {
   font-size: 68px;
@@ -82,7 +130,7 @@
 .nc-class-of {
   margin-top: 18px;
   font-size: 64px;
-  font-style: italic;
+  font-style: var(--nc-italic);
   line-height: 1;
 }
 .nc-year {
@@ -90,7 +138,7 @@
   font-weight: 600;
   line-height: 0.82;
   letter-spacing: -0.01em;
-  color: #c9a86a;
+  color: var(--nc-gold);
 }
 .nc-sub {
   height: 26px;
@@ -99,7 +147,7 @@
 .nc-title-only {
   height: 84px;
   line-height: 84px;
-  font-style: italic;
+  font-style: var(--nc-italic);
 }
 .nc-cover-foot {
   position: absolute;
@@ -116,15 +164,15 @@
   height: 36px;
   line-height: 36px;
   font-size: 24px;
-  font-style: italic;
+  font-style: var(--nc-italic);
 }
 .nc-gold-caps {
   height: 20px;
   line-height: 20px;
-  color: #c9a86a;
+  color: var(--nc-gold);
 }
 .nc-gold-caps.nc-dark {
-  color: #7a5c2b;
+  color: var(--nc-bronze);
 }
 .nc-back {
   position: absolute;
@@ -144,7 +192,7 @@
 .nc-thanks {
   max-width: 520px;
   font-size: 26px;
-  font-style: italic;
+  font-style: var(--nc-italic);
   line-height: 1.4;
 }
 
@@ -176,7 +224,7 @@
   height: 20px;
   font-size: 12px;
   line-height: 20px;
-  color: #7a5c2b;
+  color: var(--nc-bronze);
 }
 .nc-para-text {
   flex: 1 1 0;
@@ -186,7 +234,7 @@
   overflow-wrap: anywhere;
 }
 .nc-italic {
-  font-style: italic;
+  font-style: var(--nc-italic);
 }
 .nc-sign {
   display: flex;
@@ -199,8 +247,8 @@
   height: 56px;
   line-height: 56px;
   font-size: 40px;
-  font-style: italic;
-  color: #7a5c2b;
+  font-style: var(--nc-italic);
+  color: var(--nc-bronze);
 }
 .nc-sign-line {
   height: 20px;
@@ -220,14 +268,14 @@
   width: 200px;
   height: 260px;
   border-radius: 50%;
-  outline: 1px solid #c9a86a;
+  outline: 1px solid var(--nc-gold);
   outline-offset: 8px;
-  background: #dcd6c9;
+  background: var(--nc-photo);
 }
 .nc-caption {
   margin-top: 8px;
   font-size: 17px;
-  font-style: italic;
+  font-style: var(--nc-italic);
   text-align: center;
 }
 .nc-footer {
@@ -239,10 +287,10 @@
   justify-content: space-between;
   gap: 12px;
   padding-top: 12px;
-  border-top: 1px solid #c9a86a;
+  border-top: 1px solid var(--nc-gold);
   font-size: 11px;
   line-height: 16px;
-  color: #1b2a4a;
+  color: var(--nc-dark);
 }
 .nc-footer-class {
   flex: none;
@@ -283,7 +331,7 @@
   background-image: repeating-linear-gradient(
     to bottom,
     transparent 0 calc(1lh - 1px),
-    rgba(27, 42, 74, 0.22) calc(1lh - 1px) 1lh
+    var(--nc-rule) calc(1lh - 1px) 1lh
   );
 }
 .nc-note-sign {
@@ -299,7 +347,7 @@
   letter-spacing: 0.12em;
   height: 16px;
   line-height: 16px;
-  color: #1b2a4a;
+  color: var(--nc-dark);
 }
 /* A drawn signature (T-097): at the right end of the name line, at most 24 x 9 mm on A5 (125 x 50 design px; 2.5:1 like the drawing).
    It fits the 58 px of the note's name block (6 padding + 50), so a signed note is as tall as an unsigned one. Ink only (navy). */
@@ -325,7 +373,7 @@
   flex: none;
   width: 125px;
   height: 50px;
-  color: #1b2a4a;
+  color: var(--nc-dark);
 }
 .nc-farewell {
   position: absolute;
@@ -340,6 +388,27 @@
 }
 .nc-farewell-text {
   font-size: 38px;
-  font-style: italic;
+  font-style: var(--nc-italic);
   line-height: 1.2;
+}
+
+/* A replaced heading (design texts): one line in a box of the default's size that shrinks long text. */
+.nc-eyebrow-fit {
+  width: 100%;
+  height: 20px;
+  line-height: 20px;
+  white-space: nowrap;
+}
+.nc-title-fit {
+  width: 100%;
+  height: 68px;
+  line-height: 68px;
+  white-space: nowrap;
+}
+/* The thanks line is up to three lines of the back page's width. */
+.nc-thanks-fit {
+  width: 520px;
+  max-width: 100%;
+  height: 110px;
+  overflow-wrap: anywhere;
 }

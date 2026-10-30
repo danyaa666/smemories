@@ -285,7 +285,7 @@ func TestRejectedDocumentsStoreNothing(t *testing.T) {
 func TestTemplateWithoutDesignBlock(t *testing.T) {
 	e := newEnv(t, nil)
 	alice := e.register("alice@example.com")
-	for _, tpl := range []string{"navy-classic", "classic"} {
+	for _, tpl := range []string{"classic", "modern"} {
 		id := e.book(alice, tpl)
 		d := e.call("GET", "/api/book-design/get?yearbook_id="+id, alice, "").status(200, "OK").data()
 		if d["template_id"] != tpl || d["design"] != nil || d["options"] != nil {
@@ -322,7 +322,7 @@ func TestRowFollowsTemplateChangeAndDelete(t *testing.T) {
 		t.Fatalf("%d rows after the template change, want 1", n)
 	}
 	d := e.call("GET", "/api/book-design/get?yearbook_id="+a, alice, "").status(200, "OK").data()
-	if d["options"] != nil || d["design"] != nil {
+	if th := d["design"].(map[string]any)["themes"].([]any); d["options"] != nil || d["template_id"] != "navy-classic" || len(th) != 3 || th[0] != "navy" {
 		t.Errorf("changed book: %v", d)
 	}
 	// Going back does not bring the old design back, and clearing the template drops it too.
@@ -401,10 +401,10 @@ func TestBookDataCarriesResolvedDesign(t *testing.T) {
 	}
 	// Someone else's book stays a 404; a book on a template without a design block has design null.
 	e.call("GET", "/api/book-data/get?yearbook_id="+id, bob, "").status(404, "ERROR_NOT_FOUND")
-	nid := e.book(alice, "navy-classic")
+	nid := e.book(alice, "classic")
 	nd := e.call("GET", "/api/book-data/get?yearbook_id="+nid, alice, "").status(200, "OK").data()
 	if v, ok := nd["design"]; !ok || v != nil {
-		t.Errorf("navy-classic design = %v (present %v), want null", v, ok)
+		t.Errorf("classic design = %v (present %v), want null", v, ok)
 	}
 }
 
@@ -467,4 +467,28 @@ func TestParallelWritesDoNotDeadlock(t *testing.T) {
 		t.Errorf("%d design rows left for a deleted book", n)
 	}
 	dbtest.AssertNoOrphans(t, e.db)
+}
+
+// T-145: Navy Classic takes its own ids (navy, burgundy, forest; classic, modern; five texts, no pictures) and refuses Memory Book's.
+func TestNavyClassicOptions(t *testing.T) {
+	e := newEnv(t, nil)
+	alice := e.register("alice@example.com")
+	id := e.book(alice, "navy-classic")
+	ok := `{"v":1,"theme":"forest","fonts":"modern","sections":{"order":["cover","notes","profile","back"],"hidden":["profile","back"]},"texts":{"notes.heading":"Lưu bút 12A1","back.thanks":"Cảm ơn nhé"}}`
+	e.call("POST", "/api/book-design/update", alice, update(id, ok)).status(200, "OK")
+	r := e.call("GET", "/api/book-data/get?yearbook_id="+id, alice, "").status(200, "OK").data()["design"].(map[string]any)
+	if r["theme"] != "forest" || r["fonts"] != "modern" || fmt.Sprint(r["sections"].(map[string]any)["hidden"]) != "[profile back]" || r["texts"].(map[string]any)["notes.heading"] != "Lưu bút 12A1" {
+		t.Errorf("book-data design = %v", r)
+	}
+	for _, bad := range []string{
+		`{"theme":"mint"}`,                                          // a Memory Book theme
+		`{"fonts":"playful"}`,                                       // a Memory Book font set
+		`{"texts":{"cover.belongs":"x"}}`,                           // a Memory Book text
+		`{"images":{"cover.pattern":"plain"}}`,                      // navy has no picture slots
+		`{"sections":{"order":["notes","cover","profile","back"]}}`, // the cover is fixed first
+		`{"sections":{"order":["cover","profile","notes","back"],"hidden":["notes"]}}`, // the friends' pages cannot be hidden
+		`{"texts":{"notes.heading":"` + strings.Repeat("x", 25) + `"}}`,                // over the maximum of 24
+	} {
+		e.call("POST", "/api/book-design/update", alice, update(id, bad)).status(400, "ERROR_INVALID_DESIGN")
+	}
 }
