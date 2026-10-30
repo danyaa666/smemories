@@ -8,6 +8,7 @@
 2. **Print-check** coverage summary: list in docs/templates.md every theme x font set x size case that print-check covers for both templates (generated or hand-written table) and how to add a theme.
 3. **Docs**: docs/templates.md "Design block and book designs" (already started in T-141) is complete: manifest keys, options document, limits, how a template author adds a theme/font set/section/text/image, the contrast rule; README product description gets two lines about customising the design; PRD exit criteria of stage 1 checked off in the board comment (the leader updates the PRD).
 4. **Exit check** (stage 1 "stable"): a student customises colours, fonts, section order and visibility, sees the preview, resets, and the printed PDF matches the preview; notes and photos survive a template change. State in the PR which of these the journey covers and which QA verified by hand.
+5. **Carry-overs (2026-10-30).** (a) `docs/e2e.md` does not mention T-146's new class journey step 7b (the design reaches the class admin only: students A and B get 403): add it. (b) T-149 raised the print-check CI step limit to 15 min; this task adds journey time, so quote the new journey duration and keep it within its 240 s limit.
 
 #### Acceptance criteria
 - [ ] AC1 — The journey passes in a manual full CI run and locally; a deliberate break (the print route ignores the design) makes it fail.

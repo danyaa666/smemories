@@ -45,6 +45,7 @@ type Service struct {
 	baseURL                 string            // origin of the invite links, see SetPublicBaseURL
 	books                   Books             // the class book's sources, see SetBookSources
 	notes                   ApprovedNotes
+	designs                 Designs
 }
 
 // NewService builds the service. limiters is required: class writes are rate-limited per user and, if the limiter store is

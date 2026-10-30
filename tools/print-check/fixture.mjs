@@ -147,7 +147,7 @@ export function makeClassBook({ students = 30 } = {}) {
   let photo = 0;
   const members = Array.from({ length: students }, (_, i) => {
     const base = { member_id: ulid("M", i + 1), name: studentName(i) };
-    if (i === CLASS_BOOK_CASES.noPage) return { ...base, linked: false, yearbook: null, profile: null, notes: [], note_count: 0, approved_total: 0, truncated: false };
+    if (i === CLASS_BOOK_CASES.noPage) return { ...base, linked: false, yearbook: null, profile: null, notes: [], note_count: 0, approved_total: 0, truncated: false, design: null };
     const template = i % 5 === 0 ? "memory-book" : i % 2 === 1 ? "navy-classic" : null;
     const count = i === CLASS_BOOK_CASES.limit ? 40 : template === "memory-book" ? 2 : 3;
     const notes = Array.from({ length: count }, (_, k) => ({
@@ -177,6 +177,7 @@ export function makeClassBook({ students = 30 } = {}) {
       note_count: notes.length,
       approved_total: i === CLASS_BOOK_CASES.limit ? 41 : notes.length,
       truncated: i === CLASS_BOOK_CASES.limit,
+      design: null, // T-146: the student's own design; null (the template's defaults) for the 30-student fixture
     };
   });
   const page = (n, placement, title, body) => ({ id: ulid("G", n), kind: "intro", title, body, placement, created_at: 1759276800000, updated_at: 1759276800000 });
@@ -188,8 +189,35 @@ export function makeClassBook({ students = 30 } = {}) {
   };
 }
 
-/** The pages the class book must have: cover, front pages, each linked student's profile and notes pages, back pages, back cover. */
+/** The pages the class book must have: cover, front pages, each linked student's profile and notes pages (less a profile their design hides), back pages, back cover. */
 export function classBookPages(cb) {
-  const students = cb.members.reduce((n, m) => (m.linked ? n + 1 + Math.ceil(m.notes.length / NOTES_PER_PAGE[m.yearbook.template_id ?? "basic"]) : n), 0);
+  const students = cb.members.reduce((n, m) => {
+    if (!m.linked) return n;
+    const profile = m.design?.sections.hidden.includes("profile") ? 0 : 1;
+    return n + profile + Math.ceil(m.notes.length / NOTES_PER_PAGE[m.yearbook.template_id ?? "basic"]);
+  }, 0);
   return 2 + cb.front_pages.length + students + cb.back_pages.length;
+}
+
+/**
+ * T-146: six students with their own designs, on top of the 30-student fixture's shapes: 0 memory-book lavender/classic with the profile hidden, 1 navy-classic burgundy/modern with the
+ * profile hidden, 2 built-in layout (no design block), 3 navy-classic forest/classic with a replaced title, 4 built-in layout, 5 memory-book mint/playful with the notes before the profile.
+ * Student 0 and 1 have no profile page; the profile quote is on the pages of the other four.
+ */
+export const HIDDEN_PHOTOS = [photoId(25), photoId(26)];
+export const DESIGN_TITLE = "Về mình Tmark";
+export function makeDesignClassBook() {
+  const cb = makeClassBook({ students: 6 });
+  const designs = [
+    designOf("lavender", "classic", { hidden: ["profile"] }),
+    designOf("burgundy", "modern", { hidden: ["profile"] }),
+    null,
+    designOf("forest", "classic", { texts: { "profile.heading": DESIGN_TITLE } }),
+    null,
+    designOf("mint", "playful", { order: ["cover", "notes", "profile", "back"] }),
+  ];
+  cb.members.forEach((m, i) => (m.design = designs[i]));
+  cb.members[0].profile.photo_media_id = HIDDEN_PHOTOS[0]; // a photo only a hidden profile shows: it must never be fetched
+  cb.members[1].profile.photo_media_id = HIDDEN_PHOTOS[1];
+  return cb;
 }

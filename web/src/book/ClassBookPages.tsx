@@ -3,10 +3,12 @@ import { memo, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { ClassBook, ClassBookMember, ClassBookPage } from "../api/classBook";
 import { ProfilePages } from "./BookPages";
+import { DesignProvider } from "./design";
 import { COVER_KEY, memberBook, memberPrefix, pageKey } from "./classBook";
 import { BookEnvProvider, Sheet, useBookEnv } from "./env";
 import { FitScope, FitText } from "./fit";
 import type { PageSize } from "./sizes";
+import { getTemplate } from "./templates";
 
 type Env = { size: PageSize; eager: boolean; track: (delta: number) => void };
 
@@ -53,7 +55,7 @@ function BackCover({ cls }: { cls: ClassBook["class"] }) {
   );
 }
 
-/** One student's profile and notes pages in their own template and language. Nothing is drawn for a student without a page. */
+/** One student's profile and notes pages in their own template, design and language (the class cover and pages keep the class look). Nothing is drawn for a student without a page. */
 const StudentPages = memo(function StudentPages({
   cls,
   member,
@@ -71,9 +73,11 @@ const StudentPages = memo(function StudentPages({
   if (!data) return null;
   return (
     <BookEnvProvider value={value}>
-      <FitScope prefix={memberPrefix(member)}>
-        <ProfilePages data={data} />
-      </FitScope>
+      <DesignProvider design={data.design} ids={getTemplate(data.yearbook.template_id).design}>
+        <FitScope prefix={memberPrefix(member)}>
+          <ProfilePages data={data} />
+        </FitScope>
+      </DesignProvider>
     </BookEnvProvider>
   );
 });

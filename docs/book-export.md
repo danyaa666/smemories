@@ -94,3 +94,7 @@ chose, or the one picked on the screen (`?size=A5|A4|Letter`); the cover and cla
 kept) shrunk to one page; the text of a page that still does not fit is cut and listed. The screen shows the page count (a warning above 120) and a summary naming the students with no page, the students whose
 approved notes were left out by the 40-note limit, whose notes or profile are cut at the template's smallest size, and the class pages that are cut. Ready (`html[data-book-ready]`, Print enabled) waits for the fonts and
 for **every** photo of every student's pages, through the shared queue of at most 16 requests in flight. `tools/print-check` prints a 30-student fixture (three templates, 77 pages) on A5 and A4 (about 10 s).
+
+**Each student's design (T-146).** `class-book/get` carries every member's resolved `design` (the `book-data/get` shape). `ClassBookPages` wraps each student's pages in a `DesignProvider`, so their theme, font set, hidden
+and moved sections, replaced texts and images apply to those pages only; the class cover, class pages and back cover keep the class look. A hidden section is not counted in the page count and its photos are
+not fetched. The ready signal also waits for the font sets in use (an unused set is never requested). `tools/print-check` has a second class fixture of 6 students with mixed themes, font sets and hidden sections on A5 and A4.

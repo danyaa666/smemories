@@ -27,6 +27,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/danyaa666/smemories/internal/auth"
+	"github.com/danyaa666/smemories/internal/bookdesign"
 	"github.com/danyaa666/smemories/internal/config"
 	"github.com/danyaa666/smemories/internal/db/dbtest"
 	"github.com/danyaa666/smemories/internal/httpx"
@@ -112,6 +113,14 @@ func (e *env) profile(book, name, photo string) {
 	e.exec(`UPDATE profile_tab SET full_name = ?, photo_media_id = (SELECT id FROM media_tab WHERE public_id = ?) WHERE yearbook_id = ? AND is_owner = 1`, name, photo, e.bookRow(book))
 }
 
+// design stores a design row for the book (as book-design/update would), and gives the book that template.
+func (e *env) design(book, template, options string) {
+	e.t.Helper()
+	id := e.bookRow(book)
+	e.exec(`UPDATE yearbook_tab SET template_id = ? WHERE id = ?`, template, id)
+	e.exec(`INSERT INTO book_design_tab (yearbook_id, template_id, options_json, created_at, updated_at) VALUES (?,?,?,1,1)`, id, template, options)
+}
+
 func (e *env) classBook(p person, cls string) resp {
 	e.t.Helper()
 	return e.do(p, "GET", "/api/class-book/get?class_id="+cls, "")
@@ -182,8 +191,17 @@ func TestClassBookMatrix(t *testing.T) {
 	ap := e.photo(book)
 	e.note(book, "approved", 1, "hello", ap)
 	e.setBook(student, cls, book).status(200, "OK")
+	e.design(book, "navy-classic", `{"v":1,"theme":"burgundy","texts":{"profile.heading":"DESIGN-TEXT"}}`)
 
 	r := e.classBook(admin, cls).status(200, "OK")
+	if !strings.Contains(r.Body.String(), "DESIGN-TEXT") {
+		t.Fatalf("the admin does not see the design: %s", r.Body)
+	}
+	for who, p := range map[string]person{"student": student, "classmate": classmate, "stranger": stranger, "admin of another class": outsider} {
+		if strings.Contains(e.classBook(p, cls).Body.String(), "DESIGN-TEXT") {
+			t.Fatalf("%s reads the design through class-book/get", who)
+		}
+	}
 	if !strings.Contains(r.Body.String(), ap) || !strings.Contains(r.Body.String(), pp) {
 		t.Fatalf("the admin does not see the photos: %s", r.Body)
 	}
@@ -270,7 +288,7 @@ func TestClassBookHasApprovedContentOnly(t *testing.T) {
 	by := map[string]map[string]any{}
 	for _, m := range ms {
 		mm := m.(map[string]any)
-		wantKeys(t, "member", mm, "member_id", "name", "linked", "yearbook", "profile", "notes", "note_count", "approved_total", "truncated")
+		wantKeys(t, "member", mm, "member_id", "name", "linked", "yearbook", "profile", "design", "notes", "note_count", "approved_total", "truncated")
 		by[mm["name"].(string)] = mm
 	}
 	l := by["Linh"]
@@ -306,6 +324,51 @@ func TestClassBookHasApprovedContentOnly(t *testing.T) {
 		if m["linked"] != false || m["yearbook"] != nil || m["profile"] != nil || len(m["notes"].([]any)) != 0 || m["note_count"] != float64(0) {
 			t.Fatalf("%s should have no content: %v", name, m)
 		}
+	}
+}
+
+// T-146: every member carries their own resolved design (the book-data/get shape); defaults when they have no row or an old row made
+// for another template; null when the template has no design block; null for a member with no page.
+func TestClassBookCarriesEachStudentsDesign(t *testing.T) {
+	e := newEnv(t)
+	admin, a, b, c, d, bare := e.user("Admin"), e.user("A"), e.user("B"), e.user("C"), e.user("D"), e.user("Bare")
+	cls, _ := e.seedClass([]person{admin}, a, b, c, d, bare)
+	books := map[string]string{}
+	for name, p := range map[string]person{"A": a, "B": b, "C": c, "D": d} {
+		books[name] = e.newBook(p)
+		e.profile(books[name], name, "")
+		e.setBook(p, cls, books[name]).status(200, "OK")
+	}
+	e.design(books["A"], "navy-classic", `{"v":1,"theme":"burgundy","fonts":"modern","sections":{"order":["notes","profile"],"hidden":["profile"]},"texts":{"profile.heading":"Về mình"}}`)
+	e.design(books["B"], "navy-classic", `{"v":1}`)
+	e.exec(`UPDATE yearbook_tab SET template_id = 'navy-classic' WHERE id = ?`, e.bookRow(books["C"])) // no row
+	e.design(books["D"], "memory-book", `{"v":1,"theme":"mint"}`)
+	e.exec(`UPDATE yearbook_tab SET template_id = 'navy-classic' WHERE id = ?`, e.bookRow(books["D"])) // the row is for another template now
+
+	got := map[string]map[string]any{}
+	for _, m := range e.classBook(admin, cls).status(200, "OK").data()["members"].([]any) {
+		mm := m.(map[string]any)
+		got[mm["name"].(string)] = mm
+	}
+	wantDesign := func(name, theme, fonts, text string, hidden []any) {
+		t.Helper()
+		ds, _ := got[name]["design"].(map[string]any)
+		if ds == nil || ds["theme"] != theme || ds["fonts"] != fonts || fmt.Sprint(ds["sections"].(map[string]any)["hidden"]) != fmt.Sprint(hidden) {
+			t.Fatalf("%s design: %v", name, got[name]["design"])
+		}
+		if tx := ds["texts"].(map[string]any)["profile.heading"]; (tx == nil && text != "") || (tx != nil && tx != text) {
+			t.Fatalf("%s text: %v", name, tx)
+		}
+	}
+	wantDesign("A", "burgundy", "modern", "Về mình", []any{"profile"})
+	if o := got["A"]["design"].(map[string]any)["sections"].(map[string]any)["order"]; fmt.Sprint(o) != "[cover notes profile back]" {
+		t.Fatalf("order %v", o)
+	}
+	wantDesign("B", "navy", "classic", "", []any{})
+	wantDesign("C", "navy", "classic", "", []any{})
+	wantDesign("D", "navy", "classic", "", []any{})
+	if got["Bare"]["design"] != nil {
+		t.Fatalf("a member with no page has a design: %v", got["Bare"]["design"])
 	}
 }
 
@@ -555,7 +618,7 @@ func (e *env) serviceOn(d *sql.DB) *Service {
 	notesSvc := notes.NewService(notes.NewStore(d), mediaSvc, cursors, limiters, logger, e.now)
 	bookSvc := yearbook.NewService(yearbook.NewStore(d), cursors, mediaSvc, e.now, mediaSvc, notesSvc)
 	s := NewService(NewStore(d), cursors, limiters, e.now)
-	s.SetBookSources(bookSvc, notesSvc)
+	s.SetBookSources(bookSvc, notesSvc, bookdesign.NewService(bookdesign.NewStore(d), nil, e.now))
 	return s
 }
 
@@ -852,6 +915,7 @@ func TestClassBookIsCutAtTheCap(t *testing.T) {
 	for _, s := range students {
 		book := e.newBook(s)
 		e.profile(book, "Student", "")
+		e.design(book, "navy-classic", `{"v":1,"theme":"forest","texts":{"back.thanks":"Cảm ơn"}}`) // T-146: the cap counts designs too
 		for j := 1; j <= notes.MaxClassBookNotes; j++ {
 			e.note(book, "approved", j, huge)
 		}
@@ -882,7 +946,7 @@ func TestClassBookIsCutAtTheCap(t *testing.T) {
 		t.Fatalf("full %v, cut %v, truncated %v", full, cut, d["truncated"])
 	}
 	for _, x := range d["members"].([]any) {
-		if m := x.(map[string]any); slices.Contains(cut, m["member_id"].(string)) && (m["truncated"] != true || m["approved_total"] != float64(40) || m["profile"] == nil || m["note_count"] != float64(0)) {
+		if m := x.(map[string]any); slices.Contains(cut, m["member_id"].(string)) && (m["truncated"] != true || m["approved_total"] != float64(40) || m["profile"] == nil || m["design"] == nil || m["note_count"] != float64(0)) {
 			t.Fatalf("cut member %v", m)
 		}
 	}
