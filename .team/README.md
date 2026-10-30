@@ -19,7 +19,7 @@
 
 **Open questions for you:** none
 
-_Board last written 2026-10-30 03:54Z_
+_Board last written 2026-10-30 07:03Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -6189,7 +6189,7 @@ From T-135 QA: typing in the middle of a field that is already at its character 
 - **Branch:** task/t-139-e07-web-say-18-on-the-class-screens-and-
 - **PR:** https://github.com/danyaa666/smemories/pull/138
 - **Updated:** 2026-10-30 03:06Z by human
-- **Comments-seen:** 8
+- **Comments-seen:** 9
 
 Spec: .team/epics/E07-class-yearbook/13-web-age-line-and-friend-note-notice.md. Owner decision D-40 (a, b).
 
@@ -6226,7 +6226,7 @@ Spec: .team/epics/E07-class-yearbook/13-web-age-line-and-friend-note-notice.md. 
 - **Branch:** task/t-140-e07-revoke-a-departed-admin-s-invite-lin
 - **PR:** 137
 - **Updated:** 2026-10-30 03:06Z by human
-- **Comments-seen:** 3
+- **Comments-seen:** 4
 
 Spec: .team/epics/E07-class-yearbook/14-revoke-departed-admin-invites.md. Owner decision D-40 (c).
 
@@ -6254,7 +6254,7 @@ Spec: .team/epics/E07-class-yearbook/14-revoke-departed-admin-invites.md. Owner 
 - **Branch:** task/t-141-e09-design-model-and-api-manifest-design
 - **PR:** https://github.com/danyaa666/smemories/pull/139
 - **Updated:** 2026-10-30 03:54Z by human
-- **Comments-seen:** 3
+- **Comments-seen:** 4
 
 Spec: .team/epics/E09-customisation-editor/01-design-model-and-api.md. Plan: PRD 'Stage 1 plan', D-41.
 
