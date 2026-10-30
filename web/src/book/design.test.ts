@@ -1,8 +1,11 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, test } from "vitest";
+import type { BookData } from "../api/book";
+import { pageCount, profilePageCount } from "./BookPages";
+import { printSections, resolveDesign } from "./design";
+import { photoIds } from "./ready";
 import { getTemplate } from "./templates";
-import { resolveDesign } from "./design";
 
 // T-142: the design runtime of the memory-book template. The ids the web draws must be the ids of the manifest the server validates against (T-141),
 // every theme must keep its text readable, and every font family of a font set must be one that is shipped (fonts.css) with Vietnamese.
@@ -14,7 +17,13 @@ const memoryCss = read("web/src/book/templates/memory.css");
 const manifest = JSON.parse(
   readFileSync(resolve(ROOT, "internal/templates/embed/memory-book.json"), "utf8"),
 ) as {
-  design: { themes: string[]; font_sets: string[]; images: { id: string; choices: string[] }[] };
+  design: {
+    themes: string[];
+    font_sets: string[];
+    sections: { id: string }[];
+    texts: { id: string; max: number }[];
+    images: { id: string; choices: string[] }[];
+  };
 };
 
 /** The custom properties declared for each `[data-theme="x"]` or `[data-fonts="x"]` block of memory.css. */
@@ -185,5 +194,94 @@ describe("resolveDesign", () => {
 
   test("a template with no choices has no theme", () => {
     expect([resolveDesign(raw).theme, resolveDesign(raw).fonts]).toEqual(["", ""]);
+  });
+});
+
+// T-143: sections, texts and images.
+const design = (order: string[], hidden: string[] = []): NonNullable<BookData["design"]> => ({
+  theme: "lavender",
+  fonts: "playful",
+  sections: { order, hidden },
+  texts: {},
+  images: { "cover.pattern": "dots" },
+});
+const book = (notes: number, d: BookData["design"]) =>
+  ({
+    yearbook: { template_id: "memory-book" },
+    notes: Array.from({ length: notes }, (_, i) => ({ id: `n${i}` })),
+    design: d,
+  }) as unknown as BookData;
+
+describe("sections", () => {
+  const all = ["cover", "profile", "notes", "back"];
+
+  test("no design, or the default one, prints every section in the template's order", () => {
+    expect(printSections(undefined)).toEqual(all);
+    expect(printSections(null)).toEqual(all);
+    expect(printSections(design(all))).toEqual(all);
+  });
+
+  test("the order is followed and hidden sections are left out", () => {
+    expect(printSections(design(["cover", "notes", "profile", "back"]))).toEqual([
+      "cover",
+      "notes",
+      "profile",
+      "back",
+    ]);
+    expect(printSections(design(all, ["profile", "back"]))).toEqual(["cover", "notes"]);
+  });
+
+  test("an order that is not exactly this build's four sections prints the default order", () => {
+    for (const order of [["cover", "back"], ["cover", "profile", "notes", "extra", "back"], []])
+      expect(printSections(design(order))).toEqual(all);
+  });
+
+  test("the sections of the web are the manifest's, in its order", () => {
+    expect(manifest.design.sections.map((s) => s.id)).toEqual(all);
+  });
+
+  test("pages that print: hidden sections do not count, notes pages are one per note", () => {
+    expect(pageCount(book(5, null))).toBe(8); // cover, profile, 5 notes, back
+    expect(profilePageCount(book(5, null))).toBe(6);
+    expect(pageCount(book(5, design(all, ["profile"])))).toBe(7);
+    expect(pageCount(book(5, design(all, ["back"])))).toBe(7);
+    expect(pageCount(book(5, design(all, ["profile", "back"])))).toBe(6);
+    expect(profilePageCount(book(5, design(all, ["profile", "back"])))).toBe(5);
+    expect(pageCount(book(5, design(["cover", "notes", "profile", "back"])))).toBe(8);
+    expect(pageCount(book(0, design(all, ["profile", "back"])))).toBe(1); // the cover alone
+  });
+});
+
+test("the photos of a hidden section are not fetched", () => {
+  const all = ["cover", "profile", "notes", "back"];
+  const b = {
+    yearbook: { cover_media_id: "C" },
+    profile: { photo_media_id: "P" },
+    notes: [{ photo_ids: ["N1", "N2"] }],
+  };
+  expect(photoIds({ ...b, design: null })).toEqual(["C", "P", "N1", "N2"]);
+  expect(photoIds({ ...b, design: design(all, ["profile"]) })).toEqual(["C", "N1", "N2"]);
+  expect(
+    photoIds({ ...b, design: design(all, ["profile", "back"]) }, { cover: false, notes: true }),
+  ).toEqual(["N1", "N2"]);
+});
+
+describe("texts and images of the web are the manifest's", () => {
+  const source = read("web/src/book/templates/memory.tsx");
+
+  test("every fixed text of the manifest is a slot of the template (Own, read through useDesign().text), and only those", () => {
+    const used = [...source.matchAll(/\bid[=:]\s*"([a-z0-9-]+\.[a-z0-9-]+)"/g)].map((m) => m[1]);
+    expect([...used].sort()).toEqual(manifest.design.texts.map((t) => t.id).sort()); // each once
+  });
+
+  test("the files of the cover.pattern choices are those of the manifest", () => {
+    const choices = manifest.design.images.find((i) => i.id === "cover.pattern")?.choices;
+    const m = /PATTERNS[^=]*=\s*\{([^}]*)\}/.exec(source);
+    expect(
+      m?.[1]
+        ?.split(",")
+        .map((x) => x.split(":")[0]?.trim())
+        .filter(Boolean),
+    ).toEqual(choices);
   });
 });

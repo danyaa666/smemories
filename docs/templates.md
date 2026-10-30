@@ -361,6 +361,17 @@ The three accent colours (`--mb-a1..a3`, the icons) are decoration, not text, an
 **Font sets** are `--mb-body`, `--mb-disp` and `--mb-cute` under `.mb-page[data-fonts="..."]`. `playful` is today's: Nunito, Baloo 2 (titles), Patrick Hand (handwriting). `classic` is Cormorant Garamond
 (titles, and the handwriting lines in italic) over Be Vietnam Pro (body): families already shipped in `web/src/book/fonts/` with the whole Vietnamese alphabet (OFL, `README.md` there), so no new file was added.
 A `@font-face` is fetched only when text uses it, so a book in one set never requests the other set's files (print check). The ready signal restarts when the font set changes
-(`Book.tsx` key) and waits until `document.fonts` has stayed loaded. Be Vietnam Pro ships one weight for the book (500): bold labels use the browser's synthetic bold, and the app's own
-`@fontsource` faces of the same family (regular and semibold, used by the app screens) also apply. Print check: every theme x font set on A5 and A4 with the Vietnamese fixture (24 pages, none blank,
+(`Book.tsx` key) and waits until `document.fonts` has stayed loaded. Be Vietnam Pro ships one weight in the book's own files (500), but the app's `@fontsource` faces of the same family (400, 500, 600 and 700, `web/src/styles/fonts.css`)
+also apply to the book, so a bold label is drawn with the real Bold face, not a synthetic bold. In `classic` the Cormorant roles (`.disp`, `.cute`) use lining figures (`font-variant-numeric: lining-nums`), because its old-style 1 looks like a capital I. Print check: every theme x font set on A5 and A4 with the Vietnamese fixture (24 pages, none blank,
 embedded fonts of that set only, long names and emoji everywhere not cut off, no request to another origin).
+
+### Sections, texts and images of `memory-book` (T-143)
+
+`BookPages` assembles the book from `design.sections` (`printSections` in `web/src/book/design.tsx`): the order of `sections.order` without the `hidden` ones, so `pageCount`, `profilePageCount`
+and the ready signal count only what prints, and the photos of a hidden section are not fetched. No design, or an order that is not exactly this build's four sections (`cover`, `profile`, `notes`, `back`), prints
+all four in the template's order. `ProfilePages` (the class book, T-130) follows the same function, so T-146 only has to hand it each student's design.
+The eight fixed texts are the slots `Own` in `memory.tsx` (`useDesign().text(id, fallback)`; a web test pins them to the manifest). The template's own wording keeps its plain markup; a replacement is drawn in a one-line
+box of the same size that shrinks it (`.mb-title-fit`, `.mb-sub-fit`, `.mb-belongs-fit`, `.mb-sticker-fit`, `.mb-pact-fit`) and is reported like other own boxes; the text is React text, never markup. A heading may take at most
+the width left of the "No." tag and the sparkle (`.mb-title` max-width), so a long one shrinks instead of running under them. `cover.pattern`: `dots` is the dotted paper (`memory-dots.png`), `plain` draws the cover
+without it; the other pages keep the paper, and a choice this build does not know draws `dots`. Print check: hidden profile, hidden back, both hidden, notes before profile (A5 and A4: page kinds in order, none blank, photos loaded at ready),
+every text at its maximum length in both font sets, the plain pattern, and a class name with a 1 in `classic`.

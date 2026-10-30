@@ -3,7 +3,7 @@
 //   make print-check        (or: cd tools/print-check && npm ci && npx playwright install chromium && npm test)
 // Needs pdfinfo, pdffonts, pdfimages and pdftotext (poppler) on the PATH.
 import assert from "node:assert/strict";
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { after, before, describe, test } from "node:test";
@@ -256,6 +256,134 @@ describe("memory-book themes x font sets (T-142)", () => {
     await open(page);
     const set = await page.evaluate(() => [...new Set([...document.querySelectorAll(".mb-page")].map((e) => `${e.dataset.theme}/${e.dataset.fonts}`))]);
     assert.deepEqual(set, ["lavender/playful"]);
+    await page.close();
+  });
+});
+
+// T-143: sections, texts and images of the memory-book (epic E09). Hidden sections leave no page; the order follows the design; a replaced text at its
+// maximum length (read from the manifest) fits or shrinks; the plain pattern leaves the cover without the dotted paper.
+describe("memory-book sections, texts and images (T-143)", () => {
+  const manifest = JSON.parse(readFileSync(path.join(path.dirname(new URL(import.meta.url).pathname), "../../internal/templates/embed/memory-book.json"), "utf8")).design;
+  /** Vietnamese and emoji, exactly `max` characters (runes, as the server counts them). */
+  const filler = (marker, max) => [...`${marker} Chúc bạn thật nhiều sức khỏe 😄 Hẹn gặp lại ${"Ấ ".repeat(40)}`].slice(0, max).join("");
+  const MAX_TEXTS = Object.fromEntries(manifest.texts.map((t) => [t.id, filler(`<${t.id}>`.slice(0, 6), t.max)]));
+  // what each page of the book says: the cover, the profile, a friend's page and the back
+  const KIND = [["cover", /cuốn lưu bút này là của/], ["profile", /Giới thiệu về mình/], ["notes", /Từ một người bạn/], ["back", /Giữ liên lạc nhé/]];
+  const kinds = (t) => t.split("\f").filter((_, i, a) => i < a.length - 1 || a[i].trim()).map((p) => KIND.find(([, re]) => re.test(p))?.[0] ?? "?");
+  const NOTES = 3;
+  const CASES = {
+    "profile hidden": { design: { hidden: ["profile"] }, want: ["cover", "notes", "notes", "notes", "back"] },
+    "back hidden": { design: { hidden: ["back"] }, want: ["cover", "profile", "notes", "notes", "notes"] },
+    "profile and back hidden: cover and notes only": { design: { hidden: ["profile", "back"] }, want: ["cover", "notes", "notes", "notes"] },
+    "notes before profile": { design: { order: ["cover", "notes", "profile", "back"] }, want: ["cover", "notes", "notes", "notes", "profile", "back"] },
+    "notes before profile, back hidden": { design: { order: ["cover", "notes", "profile", "back"], hidden: ["back"] }, want: ["cover", "notes", "notes", "notes", "profile"] },
+  };
+  for (const size of ["A5", "A4"])
+    for (const [name, c] of Object.entries(CASES))
+      test(`${name}, ${size}: the pages that print, in order, none blank, every photo loaded at ready`, async () => {
+        const page = await browser.newPage();
+        const book = makeBook({ size, notes: NOTES, template: "memory-book", design: designOf("lavender", "playful", c.design) });
+        const seen = await serveBook(page, book);
+        await open(page);
+        assert.equal(await page.evaluate(() => document.documentElement.dataset.bookReady), String(c.want.length), "the page count of the ready signal");
+        const imgs = await page.evaluate(() => [...document.querySelectorAll("img.bk-photo")].map((i) => ({ src: i.hasAttribute("src"), w: i.naturalWidth })));
+        assert.ok(imgs.length > 0 && imgs.every((i) => i.src && i.w > 0), `every photo on the pages has loaded at ready (${imgs.length})`);
+        const file = path.join(tmp, `sections-${size}-${name.replace(/\W+/g, "-")}.pdf`);
+        await savePdf(page, file);
+        const info = inspect(file);
+        assert.equal(info.pages, c.want.length);
+        for (const [i, want] of PT[size].entries()) assert.ok(Math.abs(info.sizePt[i] - want) < 1, `${size} page size ${info.sizePt}`);
+        const t = text(file);
+        assert.deepEqual(kinds(t), c.want, "the kind of each page");
+        assert.ok(t.split("\f").filter((p) => p.trim()).every((p) => p.trim().length > 20), "no blank page");
+        // the owner's portrait is on the profile page only: a hidden profile does not even fetch it
+        const hidden = (c.design.hidden ?? []).includes("profile");
+        assert.equal(seen.media <= 2 * (hidden ? 1 + NOTES : 2 + NOTES), true, `${seen.media} media requests`);
+        const own = await page.locator("[data-fit=overflow]").count();
+        assert.equal(own, 0, "no text is cut off");
+        await page.close();
+      });
+
+  for (const size of ["A5", "A4"])
+    for (const fonts of ["playful", "classic"]) {
+      test(`every text at its maximum length (${fonts}), ${size}: all pages, fits or shrinks, nothing leaves its page, no HTML`, async () => {
+        const texts = { ...MAX_TEXTS, "profile.subtitle": `<script>alert("x")</script>${MAX_TEXTS["profile.subtitle"]}`.slice(0, 50) };
+        const page = await browser.newPage();
+        const book = makeBook({ size, notes: NOTES, template: "memory-book", stress: true, design: designOf("peach", fonts, { texts }) });
+        await serveBook(page, book);
+        await open(page);
+        const res = await page.evaluate(() => {
+          const sheetOf = (e) => e.closest(".bk-sheet").getBoundingClientRect();
+          const boxes = [...document.querySelectorAll(".bk-fit")];
+          return {
+            scripts: document.querySelectorAll("main script, .bk-sheet script").length,
+            overflow: boxes.filter((e) => e.dataset.fit === "overflow").map((e) => e.className),
+            shrunk: boxes.filter((e) => e.dataset.fit === "shrunk").length,
+            outside: boxes.filter((e) => { const r = e.getBoundingClientRect(), s = sheetOf(e); return r.left < s.left - 1 || r.right > s.right + 1 || r.top < s.top - 1 || r.bottom > s.bottom + 1; }).map((e) => e.className),
+          };
+        });
+        assert.equal(res.scripts, 0, "a <script> text is text, not markup");
+        assert.deepEqual(res.overflow, [], "no text is cut off");
+        assert.deepEqual(res.outside, [], "every text box is inside its page");
+        assert.ok(res.shrunk > 0, "long texts shrink");
+        const file = path.join(tmp, `texts-${fonts}-${size}.pdf`);
+        await savePdf(page, file);
+        const t = squash(text(file));
+        assert.equal(inspect(file).pages, 2 + 1 + NOTES);
+        for (const id of ["cover.belongs", "profile.heading", "notes.heading", "back.heading", "back.subtitle", "back.pact"]) assert.ok(t.includes(squash(MAX_TEXTS[id])), `the PDF has the text ${id}`);
+        assert.ok(t.includes(squash('<script>alert("x")</script>')), "a <script> string prints literally");
+        await page.close();
+      });
+    }
+
+  for (const size of ["A5", "A4"])
+    test(`pattern plain, ${size}: the cover has no dotted paper, the other pages keep it`, async () => {
+      const page = await browser.newPage();
+      await serveBook(page, makeBook({ size, notes: 2, template: "memory-book", design: designOf("lavender", "playful", { images: { "cover.pattern": "plain" } }) }));
+      await open(page);
+      const bg = await page.evaluate(() => [...document.querySelectorAll(".mb-page")].map((e) => getComputedStyle(e).backgroundImage));
+      assert.equal(bg[0], "none", "the cover");
+      assert.ok(bg.slice(1).every((b) => /memory-dots/.test(b)), "the other pages");
+      await page.close();
+    });
+
+  test("an image choice this build does not know draws the dotted paper", async () => {
+    const page = await browser.newPage();
+    await serveBook(page, makeBook({ size: "A5", notes: 1, template: "memory-book", design: designOf("lavender", "playful", { images: { "cover.pattern": "stripes" } }) }));
+    await open(page);
+    assert.match(await page.evaluate(() => getComputedStyle(document.querySelector(".mb-page")).backgroundImage), /memory-dots/);
+    await page.close();
+  });
+
+  // T-143 carry-over from T-142 QA: Cormorant's old-style figures drew the digit 1 as a capital I ("Lớp I2AI" for 12A1).
+  test("classic: a class name with a 1 reads 12A1 (lining figures), the cover title at its maximum length fits", async () => {
+    const page = await browser.newPage();
+    const book = makeBook({ size: "A5", notes: 1, template: "memory-book", design: designOf("lavender", "classic") });
+    book.yearbook.class_name = "12A1";
+    book.yearbook.title = [..."Lớp 12A1 11A11 - THPT Chu Văn An 2011 ".repeat(4)].slice(0, 120).join("");
+    await serveBook(page, book);
+    await open(page);
+    // the figures as the book draws them, with lining figures forced and with old-style ones forced, as pictures: the book must draw the first, and the two must differ
+    const probe = async (variant) => {
+      await page.evaluate((v) => {
+        const e = document.createElement("span");
+        e.id = "probe";
+        e.className = "disp";
+        e.style.cssText = `position:fixed;left:0;top:0;z-index:99;background:#fff;font-size:100px;white-space:nowrap;${v ? `font-variant-numeric:${v}` : ""}`;
+        e.textContent = "1234567890 12A1";
+        document.querySelector(".mb-page").append(e);
+      }, variant);
+      const png = await page.locator("#probe").screenshot();
+      await page.evaluate(() => document.getElementById("probe").remove());
+      return png;
+    };
+    const res = { fit: await page.evaluate(() => document.querySelector(".mb-cover-title").dataset.fit), book: await probe(""), lining: await probe("lining-nums"), old: await probe("oldstyle-nums") };
+    assert.notEqual(Buffer.compare(res.lining, res.old), 0, "the font has lining figures that differ from its old-style ones");
+    assert.equal(Buffer.compare(res.book, res.lining), 0, "the book draws lining figures");
+    assert.notEqual(res.fit, "overflow", "the title at 120 characters is not cut off");
+    const file = path.join(tmp, "classic-lining.pdf");
+    await savePdf(page, file);
+    assert.ok(squash(text(file)).includes("12A1"), "12A1 is in the PDF text of the cover");
     await page.close();
   });
 });

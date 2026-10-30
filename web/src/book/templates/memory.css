@@ -73,6 +73,11 @@
 .mb-page[data-fonts="classic"] .cute {
   font-style: italic;
 }
+/* Cormorant draws old-style figures, in which the digit 1 looks like a capital I ("Lớp I2AI" for 12A1): lining figures in the two Cormorant roles. */
+.mb-page[data-fonts="classic"] .disp,
+.mb-page[data-fonts="classic"] .cute {
+  font-variant-numeric: lining-nums;
+}
 
 .mb-page {
   position: absolute;
@@ -131,6 +136,9 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  max-width: calc(
+    100% - 124px
+  ); /* clear of the "No." tag of a friend's page and the sparkle of the last page: a long heading shrinks instead of running under them */
 }
 .mb-title-text {
   font-size: 52px;
@@ -141,6 +149,25 @@
   font-size: 26px;
   color: var(--mb-soft);
   line-height: 1.1;
+}
+/* A replaced text (design texts, T-143) is drawn in a box of the height one line has (52 x 1.05, 26 x 1.1) that shrinks it. The padding with the opposite
+   negative margin changes no layout; it keeps the font's own line box (taller than the line height) and the tone marks above it inside the clipping box,
+   so a box counts as too small only when the text really is wider than the line. */
+.mb-title-fit {
+  box-sizing: content-box;
+  flex: 0 1 auto;
+  min-width: 0;
+  height: 54.6px;
+  padding-block: 8px;
+  margin-block: -8px;
+  white-space: nowrap;
+}
+.mb-sub-fit {
+  box-sizing: content-box;
+  height: 28.6px;
+  padding-block: 6px;
+  margin-block: -6px;
+  white-space: nowrap;
 }
 
 .mb-title-line {
@@ -468,6 +495,20 @@
   line-height: 1;
   white-space: pre-line;
 }
+.mb-sticker-fit {
+  display: flex;
+  flex-direction: column;
+  width: 124px; /* the square inside the circle */
+  height: 124px;
+  overflow-wrap: anywhere;
+}
+.mb-centered {
+  margin-block: auto; /* centred, and at the top when the text is taller than the box */
+}
+.mb-belongs-fit {
+  height: 43.75px; /* one line of 32 px Patrick Hand */
+  white-space: nowrap;
+}
 .mb-cover-foot {
   position: absolute;
   left: 96px;
@@ -541,6 +582,12 @@
   display: flex;
   align-items: center;
   gap: 8px;
+}
+.mb-pact-fit {
+  flex: 0 1 auto;
+  min-width: 0;
+  height: 35px; /* one line of 22 px Baloo 2 */
+  overflow-wrap: anywhere;
 }
 .mb-pact .mb-fields {
   justify-content: flex-start;

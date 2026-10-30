@@ -16,6 +16,9 @@ import "./memory.css";
 
 const SOFT = "var(--mb-soft)";
 
+/** The files of the `cover.pattern` choices (manifest ids); a choice this build does not know draws the first, today's. */
+const PATTERNS: Record<string, string | null> = { dots, plain: null };
+
 const ICONS = {
   heart:
     "M12 20.5C5 15.5 2.5 12 2.5 8.6 2.5 5.9 4.6 4 7 4c2.1 0 3.9 1.3 5 3 1.1-1.7 2.9-3 5-3 2.4 0 4.5 1.9 4.5 4.6 0 3.4-2.5 6.9-9.5 11.9z",
@@ -60,7 +63,18 @@ const MESSAGE_SIGNED_BASIS = 150;
  * The dotted paper is one picture (memory-dots.png), not the canvas's tiled gradient: Chromium prints a tiled gradient as a
  * 72 dpi raster and Firefox as black (ADR 0003, finding 5). The PDF stores the picture once.
  */
-function Page({ label, bg, children }: { label: string; bg: string; children: ReactNode }) {
+function Page({
+  label,
+  bg,
+  pattern = dots,
+  children,
+}: {
+  label: string;
+  bg: string;
+  /** The paper picture; null for none (the `plain` choice). */
+  pattern?: string | null;
+  children: ReactNode;
+}) {
   const { theme, fonts } = useDesign();
   return (
     <Sheet label={label}>
@@ -68,7 +82,7 @@ function Page({ label, bg, children }: { label: string; bg: string; children: Re
         className="mb-page"
         data-theme={theme || undefined}
         data-fonts={fonts || undefined}
-        style={{ backgroundColor: bg, backgroundImage: `url(${dots})` }}
+        style={{ backgroundColor: bg, backgroundImage: pattern ? `url(${pattern})` : undefined }}
       >
         {children}
       </div>
@@ -88,24 +102,75 @@ function Footer({ data }: { data: BookData }) {
   );
 }
 
+/**
+ * A fixed text of the template, which the owner may replace (design texts, E09). The template's own wording keeps the plain markup it always had; a
+ * replacement is drawn in a box of the same one-line size (`fitClass`) that shrinks long text and reports it like any other box (fit.tsx).
+ */
+function Own({
+  id,
+  fallback,
+  fitKey,
+  className,
+  fitClass,
+  style,
+  centered,
+}: {
+  id: string;
+  fallback: string;
+  fitKey: string;
+  className: string;
+  fitClass: string;
+  style?: CSSProperties;
+  centered?: boolean;
+}) {
+  const shown = useDesign().text(id, fallback);
+  if (shown === fallback)
+    return (
+      <div className={className} style={style}>
+        {fallback}
+      </div>
+    );
+  return (
+    <FitText fitKey={fitKey} className={`${className} ${fitClass}`} style={style}>
+      {centered ? <span className="mb-centered">{shown}</span> : shown}
+    </FitText>
+  );
+}
+
+type Slot = { id: string; fallback: string };
+
+/** A heading and its subtitle; a replaced one reports under `fitKey` and `fitKey:sub`. `subNode` is a subtitle that is not a text slot. */
 function Title({
-  children,
+  head,
   sub,
+  subNode,
   icon,
   color,
+  fitKey,
 }: {
-  children: string;
-  sub?: ReactNode;
+  head: Slot;
+  sub?: Slot;
+  subNode?: ReactNode;
   icon: Kind;
   color: string;
+  fitKey: string;
 }) {
   return (
     <div>
       <div className="mb-title">
-        <div className="disp mb-title-text">{children}</div>
+        <Own {...head} fitKey={fitKey} className="disp mb-title-text" fitClass="mb-title-fit" />
         <Icon kind={icon} size={34} stroke={color} />
       </div>
-      {typeof sub === "string" ? <div className="cute mb-title-sub">{sub}</div> : sub}
+      {sub ? (
+        <Own
+          {...sub}
+          fitKey={`${fitKey}:sub`}
+          className="cute mb-title-sub"
+          fitClass="mb-sub-fit"
+        />
+      ) : (
+        subNode
+      )}
     </div>
   );
 }
@@ -180,6 +245,8 @@ function Polaroid({
 
 function Cover({ data }: { data: BookData }) {
   const { t, size } = useBookEnv();
+  const { image } = useDesign();
+  const choice = image("cover.pattern") ?? "dots";
   const y = data.yearbook;
   const rings = Math.floor((designHeight(size) - 64 - 124) / 62) + 1;
   const line = [
@@ -190,15 +257,24 @@ function Cover({ data }: { data: BookData }) {
     .filter(Boolean)
     .join(" · ");
   return (
-    <Page label="cover" bg="var(--mb-lav)">
+    <Page
+      label="cover"
+      bg="var(--mb-lav)"
+      pattern={Object.hasOwn(PATTERNS, choice) ? PATTERNS[choice] : dots}
+    >
       <div className="mb-spine" />
       {Array.from({ length: rings }, (_, i) => (
         <div key={i} className="mb-ring" style={{ top: 64 + i * 62 }} />
       ))}
       <div className="mb-cover-head">
-        <div className="cute" style={{ fontSize: 32, color: SOFT }}>
-          {t("bookPages.memory.belongs")}
-        </div>
+        <Own
+          id="cover.belongs"
+          fallback={t("bookPages.memory.belongs")}
+          fitKey="cover:belongs"
+          className="cute"
+          fitClass="mb-belongs-fit"
+          style={{ fontSize: 32, color: SOFT }}
+        />
         <FitText
           fitKey="cover:owner"
           className="disp mb-cover-owner"
@@ -238,7 +314,14 @@ function Cover({ data }: { data: BookData }) {
         style={{ left: 310, top: 394, width: 140, height: 28, transform: "rotate(-5deg)" }}
       />
       <div className="mb-sticker" style={{ left: 560, top: 680 }}>
-        <div className="cute mb-sticker-text">{t("bookPages.memory.sticker")}</div>
+        <Own
+          id="cover.sticker"
+          fallback={t("bookPages.memory.sticker")}
+          fitKey="cover:sticker"
+          className="cute mb-sticker-text"
+          fitClass="mb-sticker-fit"
+          centered
+        />
       </div>
       <Icon
         kind="heart"
@@ -297,9 +380,13 @@ function Profile({ data }: { data: BookData }) {
   return (
     <Page label="profile" bg="var(--mb-paper)">
       <div className="mb-flow">
-        <Title sub={t("bookPages.memory.ownerOf")} icon="sparkle" color="var(--mb-a2)">
-          {t("bookPages.aboutMe")}
-        </Title>
+        <Title
+          fitKey="profile:heading"
+          head={{ id: "profile.heading", fallback: t("bookPages.aboutMe") }}
+          sub={{ id: "profile.subtitle", fallback: t("bookPages.memory.ownerOf") }}
+          icon="sparkle"
+          color="var(--mb-a2)"
+        />
         <div className="mb-head-row">
           <Polaroid id={p.photo_media_id} className="mb-profile-photo" />
           <div className="mb-fields" style={{ height: 280 }}>
@@ -418,9 +505,11 @@ function FriendPage({ note, number, data }: { note: BookNote; number: number; da
     <Page label="notes" bg="var(--mb-paper)">
       <div className="mb-flow">
         <Title
+          fitKey={`heading:${note.id}`}
+          head={{ id: "notes.heading", fallback: t("bookPages.memory.friendTitle") }}
           icon="heart"
           color="var(--mb-a1)"
-          sub={
+          subNode={
             <FitText
               fitKey={`sub:${note.id}`}
               className="cute mb-title-sub mb-title-line"
@@ -430,9 +519,7 @@ function FriendPage({ note, number, data }: { note: BookNote; number: number; da
                 t("bookPages.memory.forYou", { name: data.profile.full_name })}
             </FitText>
           }
-        >
-          {t("bookPages.memory.friendTitle")}
-        </Title>
+        />
         <div className={`mb-head-row${signed ? " mb-signed" : ""}`}>
           {note.photo_ids[0] ? (
             <Polaroid id={note.photo_ids[0]} className="mb-friend-photo" />
@@ -547,9 +634,13 @@ function Back({ data }: { data: BookData }) {
   return (
     <Page label="back" bg="var(--mb-paper)">
       <div className="mb-flow">
-        <Title sub={t("bookPages.memory.touchSub")} icon="heart" color="var(--mb-a1)">
-          {t("bookPages.memory.touchTitle")}
-        </Title>
+        <Title
+          fitKey="back:heading"
+          head={{ id: "back.heading", fallback: t("bookPages.memory.touchTitle") }}
+          sub={{ id: "back.subtitle", fallback: t("bookPages.memory.touchSub") }}
+          icon="heart"
+          color="var(--mb-a1)"
+        />
         <table className="mb-table">
           <thead>
             <tr>
@@ -576,9 +667,14 @@ function Back({ data }: { data: BookData }) {
           <div className="mb-pact-text">
             <div className="mb-pact-head">
               <Icon kind="star" size={22} stroke="var(--mb-a3)" />
-              <div className="disp" style={{ fontSize: 22, fontWeight: 600 }}>
-                {t("bookPages.memory.pact")}
-              </div>
+              <Own
+                id="back.pact"
+                fallback={t("bookPages.memory.pact")}
+                fitKey="back:pact"
+                className="disp"
+                fitClass="mb-pact-fit"
+                style={{ fontSize: 22, fontWeight: 600 }}
+              />
             </div>
             <div className="cute" style={{ fontSize: 22, lineHeight: 1.1 }}>
               {t("bookPages.memory.pactSub")}
