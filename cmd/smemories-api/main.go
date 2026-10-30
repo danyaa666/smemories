@@ -186,7 +186,7 @@ func main() {
 	bookStore.OnTemplateChange(designSvc.DeleteByYearbook)                                                     // a design is only valid for the template it was made for
 	bookSvc := yearbook.NewService(bookStore, cursors, mediaSvc, nil, mediaSvc, notesSvc, classSvc, designSvc) // classSvc clears a deleted book's class link
 	bookSvc.SetLimiters(limiters)
-	classSvc.SetBookSources(bookSvc, notesSvc) // the class book reads each member's own book and approved notes
+	classSvc.SetBookSources(bookSvc, notesSvc, designSvc) // the class book reads each member's own book, approved notes and design
 	bookH := yearbook.NewHandler(bookSvc, authH.RequireUser, cfg.AllowedOrigins)
 	classH := class.NewHandler(classSvc, authH.RequireUser, cfg.AllowedOrigins, authH.ClientIP)
 	designH := bookdesign.NewHandler(designSvc, authH.RequireUser, cfg.AllowedOrigins)

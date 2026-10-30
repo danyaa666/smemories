@@ -212,6 +212,39 @@ test("class journey: admin, invite, two students, assemble, print, and nobody se
     }
   });
 
+  // T-146 (QA): student A customises the book (template navy-classic, burgundy, modern fonts, profile hidden, a replaced back text); B keeps the default.
+  const DESIGN_TEXT = `Lời nhắn QA ${RUN}`;
+  await step("7b. student A customises their book; the class print applies that design to A's pages only", async () => {
+    const tpl = await a.request.post("/api/yearbook/update", { data: { id: book.a, template_id: "navy-classic" }, headers: { Origin: BASE } });
+    expect(tpl.ok(), `template change ${tpl.status()} ${await tpl.text()}`).toBe(true);
+    const up = await a.request.post("/api/book-design/update", {
+      headers: { Origin: BASE },
+      data: { yearbook_id: book.a, options: { v: 1, theme: "burgundy", fonts: "modern", sections: { hidden: ["profile"] }, texts: { "notes.heading": DESIGN_TEXT } } },
+    });
+    expect(up.ok(), `book-design/update ${await up.text()}`).toBe(true);
+    // the admin reads the design in class-book/get (own look per member); B has the template default or none
+    const cb = (await (await admin.request.get(`/api/class-book/get?class_id=${classId}`)).json()).data;
+    const ma = cb.members.find((m) => m.name === A.name);
+    expect(ma.design?.theme).toBe("burgundy");
+    expect(ma.design?.sections.hidden).toEqual(["profile"]);
+    expect(JSON.stringify(ma.design.texts)).toContain(DESIGN_TEXT);
+    await admin.goto(`/classes/${classId}/book`);
+    await admin.waitForFunction(() => document.documentElement.dataset.bookReady);
+    const looks = await admin.locator("[data-theme]").evaluateAll((els) => els.map((e) => `${e.dataset.theme}/${e.dataset.fonts}`));
+    expect(looks, "A's pages carry A's look").toContain("burgundy/modern");
+    expect(looks.every((l) => l === "burgundy/modern"), `only A's pages carry a design look (cover, class pages and B keep the class look): ${looks}`).toBe(true);
+    const text = await admin.locator(".bk-stage").textContent();
+    expect(text, "A's profile page is hidden").not.toContain(`Câu nói của ${A.name} ${RUN}`);
+    expect(text, "B's profile page is printed").toContain(`Câu nói của ${B.name} ${RUN}`);
+    expect(text, "A's own text is printed").toContain(DESIGN_TEXT);
+    // nobody but the admin gets it
+    for (const [who, ctx] of [["student A", a], ["student B", b]]) {
+      const r = await ctx.request.get(`/api/class-book/get?class_id=${classId}`);
+      expect(r.status(), `${who} reads class-book/get`).toBe(403);
+      expect(await r.text()).not.toContain(DESIGN_TEXT);
+    }
+  });
+
   await step("8. the admin's class-book answer holds the approved notes only, and the admin still has no right over a student's book", async () => {
     const res = await admin.request.get(`/api/class-book/get?class_id=${classId}`);
     expect(res.status()).toBe(200);

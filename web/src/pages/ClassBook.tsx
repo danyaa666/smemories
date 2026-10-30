@@ -15,6 +15,7 @@ import {
   classSummary,
   commonSize,
   memberBook,
+  fontSetsInUse,
   memberPhotoIds,
 } from "../book/classBook";
 import { useFitReport } from "../book/fit";
@@ -93,7 +94,9 @@ function ClassBookScreen({ book, classId }: { book: ClassBookData; classId: stri
   );
   const photos = usePhotoPreload(photoList);
   const pages = classPageCount(book, size);
-  const fonts = useFontsLoaded(`${book.class.id}|${book.members.length}|${size}|${pages}`);
+  const fonts = useFontsLoaded(
+    `${book.class.id}|${book.members.length}|${size}|${pages}|${fontSetsInUse(book)}`,
+  );
   const { states, Provider } = useFitReport();
   const { ref, scale } = useStageScale(size);
   const [eager, setEager] = useState(false);

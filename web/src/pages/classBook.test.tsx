@@ -36,6 +36,7 @@ function member(n: number, over: Partial<ClassBookMember> = {}, notes = 2): Clas
     note_count: list.length,
     approved_total: list.length,
     truncated: false,
+    design: null,
     ...over,
   };
 }
@@ -43,6 +44,7 @@ const nobody = (): Partial<ClassBookMember> => ({
   linked: false,
   yearbook: null,
   profile: null,
+  design: null,
   notes: [],
   note_count: 0,
   approved_total: 0,
@@ -141,6 +143,57 @@ describe("print the class book (T-130)", () => {
     const text = document.body.textContent ?? "";
     expect(text.indexOf("Họ tên 1")).toBeLessThan(text.indexOf("Họ tên 3"));
     expect(text).not.toContain("Họ tên 2");
+  });
+
+  it("applies each student's design to their own pages only: theme, fonts, hidden sections, texts and photos; the class pages keep the class look (T-146)", async () => {
+    const navy = { template_id: "navy-classic", page_size: "A5" as const, language: "vi" as const };
+    const design = (theme: string, fonts: string, hidden: string[], texts = {}) => ({
+      theme,
+      fonts,
+      sections: { order: ["cover", "profile", "notes", "back"], hidden },
+      texts,
+      images: {},
+    });
+    const withPhoto = (n: number) => ({
+      profile: { ...member(n).profile!, photo_media_id: PHOTO(n) },
+    });
+    serve(
+      classBook([
+        member(
+          1,
+          { yearbook: navy, ...withPhoto(1), design: design("burgundy", "modern", ["profile"]) },
+          1,
+        ),
+        member(2, { yearbook: navy, design: null }, 1), // no design: the template default
+        member(
+          3,
+          {
+            yearbook: navy,
+            design: design("forest", "classic", [], { "profile.heading": "Về mình" }),
+          },
+          1,
+        ),
+      ]),
+    );
+    open();
+    await waitFor(() => expect(labels().at(-1)).toBe("class-back"));
+    const themes = [...document.querySelectorAll<HTMLElement>(".nc-page")].map(
+      (e) => `${e.dataset.theme ?? ""}/${e.dataset.fonts ?? ""}`,
+    );
+    // student 1: notes only (profile hidden); student 2: defaults (first theme and font set), profile + notes; student 3: profile + notes
+    expect(themes).toEqual([
+      "burgundy/modern",
+      "navy/classic",
+      "navy/classic",
+      "forest/classic",
+      "forest/classic",
+    ]);
+    expect(labels().slice(2, -2)).toEqual(["notes", "profile", "notes", "profile", "notes"]);
+    expect(document.body.textContent).toContain("Về mình");
+    expect(document.querySelector('[data-page="class-cover"] [data-theme]')).toBeNull();
+    expect(document.querySelector('[data-page="class-page"] [data-theme]')).toBeNull();
+    await finishPhotos();
+    expect(photoImgs()).toHaveLength(0); // student 1's profile photo is not fetched: their design hides the profile
   });
 
   it("class pages are plain text: newlines kept, markup shown as typed", async () => {

@@ -37,7 +37,7 @@ A class always has at least one admin. Roles are per class: the same person can 
 | Create, list, revoke invites (`class-invite/create`, `get-list`, `revoke`; T-125) | 200 | **403** | 404 | 404 | 401 |
 | Preview an invite link (`class-invite/lookup`, public; T-125) | 200 for a live token, else 404 | same | same | same | same (no session needed) |
 | Join with an invite (`class-invite/accept`, verified email; T-125) | 200, keeps `admin` | 200, keeps `student` | 200, becomes student | 200, becomes student | 401 |
-| Read class book data: profiles, approved notes, class pages (`class-book/get`; T-027) | 200, approved content only | **403** | 404 | 404 | 401 |
+| Read class book data: profiles, approved notes, each student's design, class pages (`class-book/get`; T-027, T-146) | 200, approved content only | **403** | 404 | 404 | 401 |
 | Open a photo of a member's linked book (`media/get-content`; T-027) | 200 for the profile photo and the photos of **approved** notes only, else 404 | 404 | 404 | 404 | 401 |
 | Read a student's pending or hidden notes, their photos, note-link tokens, the cover or any other photo | **never** | own only, via the normal yearbook endpoints | no | no | no |
 | Edit a student's yearbook | **never** | own only | no | no | no |
@@ -138,6 +138,10 @@ yearbooks (`internal/class/book.go`); nothing is copied, so moderation is applie
    and language, and the approved notes with answers, signature and photo ids. Never a pending or hidden note, a note-link token or label, a cover, an email or
    a user id. The notes come from `notes.Service.ClassBookNotes`, the same query as the owner's `book-data/get` (`approvedNotes`), read **as the book's owner**
    (the member row's user), not as the admin: moderation rules stay in one place and the admin never passes an ownership check of the book stack.
+   **Design (T-146).** Each linked member also carries `design`, the student's resolved design exactly as in `book-data/get` (theme, font set, section order and hidden
+   sections, replaced texts, picture choices; defaults filled in; `null` when the template has none), read as the book's owner through `bookdesign.Service.Resolved`. It holds nothing
+   personal beyond the titles and texts the student typed into the template's slots; it goes through the same admin check and counts against the 8 MiB cap (a member whose
+   notes are cut keeps it). The print applies it to that student's pages only; the class cover and class pages keep the class look.
 2. **Order.** Members: `class_member_tab.sort_order`, then joining order (member row id). A member's notes: that student's own order, exactly as in
    their `book-data/get` (`note_tab.sort_order`, then creation). The admin cannot reorder a student's notes; the member order and the class pages are T-127 (below).
 3. **Cap.** At most 60 members (the class cap) and **40 approved notes per member** (`notes.MaxClassBookNotes`), which keeps the book near the 120-page budget.

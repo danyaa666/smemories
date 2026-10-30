@@ -1,6 +1,7 @@
 import type { BookData } from "../api/book";
 import type { ClassBook, ClassBookMember } from "../api/classBook";
 import { profilePageCount } from "./BookPages";
+import { printSections } from "./design";
 import type { FitInfo } from "./fit";
 import { noteFits } from "./fitReport";
 import { SIZES, type PageSize } from "./sizes";
@@ -23,7 +24,7 @@ export function memberBook(
 ): BookData | null {
   if (!m.linked || !m.yearbook || !m.profile) return null;
   return {
-    design: null, // T-146 applies each student's own design
+    design: m.design, // the student's own look (T-146); null for a template without one
     yearbook: {
       title: cls.name,
       school_name: cls.school_name,
@@ -53,6 +54,19 @@ export function commonSize(members: readonly ClassBookMember[]): PageSize {
   return sizes.reduce((best, s) => ((count[s] ?? 0) > (count[best] ?? 0) ? s : best), "A5");
 }
 
+/** The font sets the students' designs use, once each and sorted: the fonts of exactly these load before the book is ready (an unused set is never fetched). */
+export function fontSetsInUse(book: ClassBook): string {
+  return [
+    ...new Set(
+      book.members.flatMap((m) =>
+        m.design ? [`${m.yearbook?.template_id}:${m.design.fonts}`] : [],
+      ),
+    ),
+  ]
+    .sort()
+    .join(",");
+}
+
 /** Cover, class pages in front, every student's pages, class pages at the back, back cover. */
 export function classPageCount(book: ClassBook, size: PageSize): number {
   const students = book.members.reduce((n, m) => {
@@ -62,11 +76,12 @@ export function classPageCount(book: ClassBook, size: PageSize): number {
   return 2 + book.front_pages.length + students + book.back_pages.length;
 }
 
-/** Public ids of the photos the student's pages show (the profile photo and, if the template draws them, the notes' photos). */
+/** Public ids of the photos the student's pages show: the profile photo and, if the template draws them, the notes' photos; none of a section their design hides. */
 export function memberPhotoIds(d: BookData): string[] {
+  const prints = printSections(d.design);
   const ids = [
-    d.profile.photo_media_id,
-    ...(getTemplate(d.yearbook.template_id).photos?.notes === false
+    prints.includes("profile") ? d.profile.photo_media_id : null,
+    ...(!prints.includes("notes") || getTemplate(d.yearbook.template_id).photos?.notes === false
       ? []
       : d.notes.flatMap((n) => n.photo_ids)),
   ];

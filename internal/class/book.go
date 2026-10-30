@@ -9,6 +9,7 @@ import (
 
 	"github.com/danyaa666/smemories/internal/apperr"
 	"github.com/danyaa666/smemories/internal/bookdata"
+	"github.com/danyaa666/smemories/internal/bookdesign"
 	"github.com/danyaa666/smemories/internal/notes"
 	"github.com/danyaa666/smemories/internal/yearbook"
 )
@@ -29,8 +30,16 @@ type ApprovedNotes interface {
 	ClassBookNotes(ctx context.Context, ownerID uint64, bookID string) ([]*notes.BookNote, int, error)
 }
 
-// SetBookSources wires the yearbook and notes services the class book reads through (once, at start-up).
-func (s *Service) SetBookSources(b Books, n ApprovedNotes) { s.books, s.notes = b, n }
+// Designs is the part of the book design service the class book uses: the same resolved design as book-data/get (nil when the
+// template has none), read as the book's owner.
+type Designs interface {
+	Resolved(ctx context.Context, ownerID uint64, publicID string, templateID *string) (*bookdesign.Resolved, error)
+}
+
+// SetBookSources wires the yearbook, notes and design services the class book reads through (once, at start-up).
+func (s *Service) SetBookSources(b Books, n ApprovedNotes, d Designs) {
+	s.books, s.notes, s.designs = b, n, d
+}
 
 // BookClass is the class as the book's cover needs it.
 type BookClass struct {
@@ -57,6 +66,7 @@ type BookMember struct {
 	Linked        bool                  `json:"linked"`
 	Yearbook      *BookStyle            `json:"yearbook"`
 	Profile       *bookdata.ProfileInfo `json:"profile"`
+	Design        *bookdesign.Resolved  `json:"design"`         // the student's customisation, defaults filled in (E09, T-146); null when the template has none
 	Notes         []*notes.BookNote     `json:"notes"`          // approved only, at most notes.MaxClassBookNotes
 	NoteCount     int                   `json:"note_count"`     // the number of notes returned
 	ApprovedTotal int                   `json:"approved_total"` // every approved note of the page
@@ -69,9 +79,9 @@ const MaxBookBytes = 8 << 20
 
 const (
 	// strippedMemberMax is the most a member costs once their notes are dropped: the profile at its longest (1250 characters, six
-	// bytes each when every one is "<"), the name, the style and the keys. Every member after the one that does not fit is reserved
+	// bytes each when every one is "<"), the name, the style, the design (T-146) and the keys. Every member after the one that does not fit is reserved
 	// this much, so the cut itself can never push the body over MaxBookBytes. A unit test builds the worst member and checks it.
-	strippedMemberMax = 12 << 10
+	strippedMemberMax = 16 << 10
 	// bookFrameBytes covers the envelope, the keys and the list of truncated members (60 ids of 26 characters).
 	bookFrameBytes = 1<<10 + MaxMembers*idJSONBytes
 	idJSONBytes    = 26 + 3 // a ULID in quotes, and the comma
@@ -264,7 +274,15 @@ func (s *Service) bookMember(ctx context.Context, m bookMember) (BookMember, err
 	if ns == nil {
 		ns = []*notes.BookNote{} // JSON [], never null
 	}
-	bm.Linked, bm.Profile, bm.Notes = true, &p, ns
+	var design *bookdesign.Resolved
+	if s.designs != nil {
+		if design, err = s.designs.Resolved(ctx, m.userID, m.book, y.TemplateID); apperr.Is(err, apperr.NotFound) { // deleted meanwhile: no page
+			return bm, nil
+		} else if err != nil {
+			return bm, err
+		}
+	}
+	bm.Linked, bm.Profile, bm.Design, bm.Notes = true, &p, design, ns
 	bm.Yearbook = &BookStyle{TemplateID: y.TemplateID, PageSize: y.PageSize, Language: y.Language}
 	bm.NoteCount, bm.ApprovedTotal, bm.Truncated = len(ns), total, total > len(ns)
 	return bm, nil

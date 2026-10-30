@@ -13,8 +13,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/danyaa666/smemories/internal/apperr"
+	"github.com/danyaa666/smemories/internal/bookdesign"
 	"github.com/danyaa666/smemories/internal/media"
 	"github.com/danyaa666/smemories/internal/notes"
+	"github.com/danyaa666/smemories/internal/templates"
 	"github.com/danyaa666/smemories/internal/yearbook"
 )
 
@@ -92,7 +95,7 @@ func TestBookMemberJSON(t *testing.T) {
 	s := &Service{books: fakeBooks{}, notes: fakeNotes{}}
 	bm, _ := s.bookMember(context.Background(), bookMember{id: "m", name: "N"})
 	b, _ := json.Marshal(bm)
-	want := `{"member_id":"m","name":"N","linked":false,"yearbook":null,"profile":null,"notes":[],"note_count":0,"approved_total":0,"truncated":false}`
+	want := `{"member_id":"m","name":"N","linked":false,"yearbook":null,"profile":null,"design":null,"notes":[],"note_count":0,"approved_total":0,"truncated":false}`
 	if string(b) != want {
 		t.Fatalf("%s\nwant %s", b, want)
 	}
@@ -200,6 +203,83 @@ func TestStrippedMemberFitsItsReserve(t *testing.T) {
 	bm.Notes, bm.NoteCount = []*notes.BookNote{}, 0
 	if raw, _ := json.Marshal(bm); len(raw) > strippedMemberMax {
 		t.Fatalf("a stripped member is %d bytes, the reserve is %d", len(raw), strippedMemberMax)
+	}
+}
+
+// fakeDesigns answers the same resolved design for every member.
+type fakeDesigns struct {
+	d   *bookdesign.Resolved
+	err error
+}
+
+func (f fakeDesigns) Resolved(context.Context, uint64, string, *string) (*bookdesign.Resolved, error) {
+	return f.d, f.err
+}
+
+// worstDesign is the longest design any shipped template can resolve to: every text at its maximum in "<" (six bytes in JSON).
+func worstDesign(t *testing.T) (*bookdesign.Resolved, string) {
+	t.Helper()
+	var worst *bookdesign.Resolved
+	var id string
+	size := 0
+	for _, info := range templates.List() {
+		d, ok := templates.Design(info.ID)
+		if !ok {
+			continue
+		}
+		texts := map[string]string{}
+		for _, x := range d.Texts {
+			texts[x.ID] = strings.Repeat("<", x.Max)
+		}
+		stored, _ := json.Marshal(map[string]any{"v": 1, "texts": texts})
+		r := bookdesign.Resolve(d, stored)
+		if raw, _ := json.Marshal(r); len(raw) > size {
+			worst, id, size = r, info.ID, len(raw)
+		}
+	}
+	if worst == nil {
+		t.Fatal("no template has a design block")
+	}
+	return worst, id
+}
+
+// T-146: the design is in every member, also a stripped one, and the worst design still fits the reserve (with the worst profile).
+func TestStrippedMemberWithDesignFitsItsReserve(t *testing.T) {
+	d, _ := worstDesign(t)
+	s, ms := maximalClass()
+	s.designs = fakeDesigns{d: d}
+	bm, err := s.bookMember(context.Background(), ms[0])
+	if err != nil || bm.Design != d {
+		t.Fatalf("%v %v", bm.Design, err)
+	}
+	bm.Notes, bm.NoteCount = []*notes.BookNote{}, 0
+	if raw, _ := json.Marshal(bm); len(raw) > strippedMemberMax {
+		t.Fatalf("a stripped member is %d bytes, the reserve is %d", len(raw), strippedMemberMax)
+	}
+}
+
+// T-146: the cap holds for a class whose members all carry the worst design.
+func TestClassBookStaysUnderTheCapWithDesigns(t *testing.T) {
+	d, _ := worstDesign(t)
+	s, ms := maximalClass()
+	s.designs = fakeDesigns{d: d}
+	b, size := encodeClass(t, s, ms)
+	if size > MaxBookBytes || len(b.Truncated) == 0 || len(b.Members) != MaxMembers {
+		t.Fatalf("%d bytes, %d cut, %d members", size, len(b.Truncated), len(b.Members))
+	}
+}
+
+// A design read that says the book is gone leaves the member without a page; any other failure fails the request.
+func TestBookMemberDesignErrors(t *testing.T) {
+	s, ms := maximalClass()
+	s.designs = fakeDesigns{err: apperr.New(apperr.NotFound, "yearbook not found")}
+	if bm, err := s.bookMember(context.Background(), ms[0]); err != nil || bm.Linked || bm.Profile != nil {
+		t.Fatalf("%+v %v", bm, err)
+	}
+	boom := apperr.New(apperr.Internal, "boom")
+	s.designs = fakeDesigns{err: boom}
+	if _, err := s.bookMember(context.Background(), ms[0]); err != boom {
+		t.Fatalf("%v", err)
 	}
 }
 
