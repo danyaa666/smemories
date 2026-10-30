@@ -10,20 +10,21 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 6 | T-023, T-024, T-025, T-031, T-050, T-147 |
-| TODO | 1 | T-149 |
-| READY_FOR_QA | 1 | T-148 |
-| QA_PASS | 1 | T-146 |
+| BACKLOG | 5 | T-023, T-024, T-025, T-031, T-050 |
+| TODO | 1 | T-147 |
+| READY_FOR_QA | 1 | T-149 |
+| IN_QA | 1 | T-148 |
+| MERGED | 1 | T-146 |
 | DONE | 132 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-137, T-138, T-139, T-140, T-141, T-142, T-143, T-144, T-145 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Epics (done/total):** E06-go-live 0/1; E09-customisation-editor 0/1; (unfiled) 132/147
+**Epics (done/total):** E06-go-live 0/1; E09-customisation-editor 0/1; (unfiled) 133/147
 
-**Awaiting your review (MERGED):** nothing
+**Awaiting your review (MERGED):** T-146 ([E09] Class book applies each student's design)
 
 **Open questions for you:** none
 
-_Board last written 2026-10-30 12:18Z_
+_Board last written 2026-10-30 12:32Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -6403,7 +6404,7 @@ Spec: .team/epics/E09-customisation-editor/05-navy-classic-customisable.md.
 - 2026-10-30 09:54Z · human · accepted by owner
 
 ### T-146 — [E09] Class book applies each student's design
-- **Status:** QA_PASS
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1b
@@ -6411,11 +6412,11 @@ Spec: .team/epics/E09-customisation-editor/05-navy-classic-customisable.md.
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** leader
+- **Assignee:** —
 - **Branch:** task/t-146-e09-class-book-applies-each-student-s-de
 - **PR:** https://github.com/danyaa666/smemories/pull/145
-- **Updated:** 2026-10-30 12:17Z by qa
-- **Comments-seen:** 3
+- **Updated:** 2026-10-30 12:32Z by leader
+- **Comments-seen:** 4
 
 Spec: .team/epics/E09-customisation-editor/06-class-book-applies-designs.md.
 
@@ -6430,9 +6431,10 @@ Spec: .team/epics/E09-customisation-editor/06-class-book-applies-designs.md.
   Hidden profile: its photo is never fetched (print-check asserts the two hidden profile photo ids are absent from the media requests; max in flight <= 16, all photos loaded at ready).
   AC4: lint/vet/race/web/print-check done as above. Manual full CI run 41052503585 on head 03f42df: web, go, security, go-integration, image = success; e2e = FAILURE, but only because the 'Print check' step hit its timeout-minutes: 6 in ci.yml (it had passed 42 of 53 suites, no test failure). Not caused by T-146: the T-146 diff does not touch ci.yml and adds about 4 s; the suite already took 319 s for 94 tests on the T-142 manual run (40997028070) and has grown to 163 tests (313 s on my machine, slower on CI runners). LEADER ACTION: raise timeout-minutes of the Print check step (e.g. 12) or split the suite, otherwise every manual CI run goes red on e2e. PR run on 5970989 (go, web, security) was still in progress when I finished; the previous PR run on 03f42df was green.
   Non-blocking: docs/e2e.md class journey section does not mention the new step 7b (docs are not mine to edit); a visual side-by-side with each customise preview was not done by eye, the contact sheet plus automated look assertions stand in for it.
+- 2026-10-30 12:32Z · leader · merged 5334c1c. Review: class-book/get returns each member's resolved design to the class admin only, counted in the 8 MiB cap (reserve 16 KiB), class print applies each design to that student's pages; diff matches the spec; docs/class-permissions, class-privacy-review and book-export updated. QA: make test-integration pass (own compose project, old MinIO on the main stack), check-class-matrix 21 ops ok, print-check 163/0, e2e 6/0 (QA added class journey step 7b: 403 for students A and B), vitest 675; go/web/security green on 5970989 (go re-run once after a CI golangci-lint install failure); manual full run 41052503585 all green except e2e Print check step timeout -> T-149. For owner to check: print a real class with several customised students; class-privacy-review section 8 sign-off still open.
 
 ### T-147 — [E09] Customisation journey, print-check coverage and docs
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1b
@@ -6443,12 +6445,13 @@ Spec: .team/epics/E09-customisation-editor/06-class-book-applies-designs.md.
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-30 02:07Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-30 12:32Z by leader
+- **Comments-seen:** 1
 
 Spec: .team/epics/E09-customisation-editor/07-journey-print-check-docs.md.
 
 #### Comments
+- 2026-10-30 12:32Z · leader · Dependency T-146 merged (5334c1c). Spec has a new requirement 5 (carry-overs: docs/e2e.md step 7b, journey time vs the new print-check limit). Read the spec again.
 
 <!-- tasks:end -->
 
