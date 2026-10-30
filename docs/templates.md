@@ -155,6 +155,41 @@ texts; `images` lists every slot). On read, an id the manifest no longer has (a 
 passes the rules is ignored, a document that cannot be read is the defaults, and a row made for another template is ignored. `design` is null when the book has no template or its
 template has no `design` block. Not covered here: the class book (T-146) applies each student's own design to their pages; uploads of backgrounds, free text styling and element editing are stage 2.
 
+### Adding a theme, font set, section, text or picture to an html template (T-147)
+
+A template author does not need to read the runtime. For `<tpl>` (`memory-book`, `navy-classic`) with prefix `<p>` (`mb`, `nc`), the page component file `web/src/book/templates/<name>.tsx` and its `.css`:
+
+**A theme** (a colour set):
+1. `internal/templates/embed/<tpl>.json`: add the id to `design.themes` (at most 8, `[a-z0-9._-]{1,40}`; the first is the default, so append).
+2. `<name>.css`: add a block `.<p>-page[data-theme="<id>"] { ... }` that defines **every** custom property the other theme blocks define (`--mb-*` or `--nc-*`). Nothing else in the CSS or the TSX may hold a colour (a unit test reads both files).
+3. **The contrast rule:** body text must reach 4.5:1 (WCAG 2.1 AA) on every surface it sits on: `memory-book` checks `ink` and `soft` on `paper`, `white` and the six pastels (16 pairs); `navy-classic` checks light on dark, gold on dark, dark on light and bronze on light. `design.test.ts` checks every theme the manifest declares and fails below 4.5; decoration (the accent colours, rules, shadows) is not held to it. Put your ratios in the table of the template's section above.
+4. `web/src/book/templates/<name>.tsx`: add the id to the template's `design.themes` array at the bottom of the file (the runtime and the customise screen read it; `design.test.ts` fails if it differs from the manifest or if the CSS lacks the block).
+5. `web/src/locales/en.json` and `vi.json`: `customise.tpl.<tpl>.themes.<id>` (the name on the chip; without it the id shows).
+6. `tools/print-check/check.test.mjs`: add the id to the theme loop of the template's "themes x font sets" describe (see "What print-check covers"), run `make print-check` (it does not read the manifest, so a theme left out of this loop is not print-checked) and `cd web && npm test` (the contrast, id and CSS-block tests derive their theme list from the manifest, so nothing else to edit).
+
+**A font set:** the same six steps with `font_sets`, the `--<p>-body`/`--<p>-disp`/... properties under `[data-fonts="<id>"]`, `design.fonts`, `customise.tpl.<tpl>.fonts.<id>`, and a `SETS` entry in print-check. Only Vietnamese-capable OFL families (D-18), self-hosted woff2 under `web/src/book/fonts/` with the licence in its `README.md` and a `@font-face` in `fonts.css`; a font set must request only its own families' files.
+
+**A text:** add `{id, max}` to `design.texts` (id like `profile.heading`, max 1..200), draw the template's own wording through `Own`/`useDesign().text(id, fallback)` (the box shrinks a longer replacement, so give it a `*-fit` class and a floor), add the id to `textDefaults` (the locale key of the default wording, shown as the placeholder) and `customise.tpl.<tpl>.texts.<id with dots as underscores>` in both locales, and add it to the "every text at its maximum length" print-check case.
+
+**A picture choice:** add `{id, choices}` to `design.images` (the first choice is the default), draw the slot from `useDesign().image(id)` (an unknown choice must draw the default), add `customise.tpl.<tpl>.images.<id with underscores>.label` and `.choices.<choice>` in both locales, and a print-check case for the new choice.
+
+**A section:** the runtime knows four page kinds (`cover`, `profile`, `notes`, `back`; `SECTION_IDS` in `web/src/book/design.tsx`). A template can change which of them are `hideable`/`movable`/`fixed` in the manifest and add the name `customise.tpl.<tpl>.sections.<id>`; a new kind of page is a code change in `design.tsx` and `BookPages.tsx`, not a manifest edit.
+
+`go test ./internal/templates` validates the manifest (limits, unique ids, a Go-renderer template may not have a `design` block; `design_test.go` pins only the default first, not the count); `cd web && npm test && npm run lint:i18n` check the ids, the contrast and the locale keys. A retired id is not an error for a stored design: it is ignored and the default applies.
+
+### What print-check covers (T-147)
+
+`make print-check` (`tools/print-check/check.test.mjs`, about 160 tests, 5-6 min) renders fixture books in Chromium, prints them to PDF and inspects the PDF. Every theme x font set x size of both customisable templates is a cell with **two tests**: the render (page count, page size, all fonts embedded, that set's fonts only, self-hosted files, no foreign host, no blank page, names and emoji present) and the stress test (long Vietnamese names and emoji everywhere: no text cut off, nothing outside its page, none wider than its box, the set's fonts loaded at the ready signal).
+
+| Template | Themes | Font sets | Sizes | Cells | Tests |
+|---|---|---|---|---|---|
+| `memory-book` (24 pages, 21 notes) | `lavender`, `peach`, `mint` | `playful`, `classic` | A5, A4 | 12 | 24 |
+| `navy-classic` (9 pages, 21 notes) | `navy`, `burgundy`, `forest` | `classic`, `modern` | A5, A4 | 12 | 24 |
+
+Not per cell, but on both templates: hidden and reordered sections (A5 and A4: page kinds in order, none blank, photos loaded at ready), every text at its maximum length in both font sets, a design this build does not know draws the defaults, `memory-book` also the plain cover pattern, a hidden profile, a hidden back page and both hidden, and a class name with a 1 in `classic`; the class book with each student's own design (T-146, six students). Letter is covered for the design-less book and the signature check only. The manual run of the journey is `docs/e2e.md` ("The customisation journey").
+
+**Adding a theme to the table:** add its id to the loop of the template's describe (`for (const theme of ["lavender", "peach", "mint"])` in "memory-book themes x font sets", the same in the `navy-classic` one, which reads the ids from the manifest for the section cases), run `make print-check`, and add 2 x sizes to the Tests column here.
+
 ## The picker and the print screen (T-061)
 
 - `GET /api/template/get-list?page_size=` (session, `internal/templateapi`) lists `templates.List()` (all) or

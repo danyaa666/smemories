@@ -32,8 +32,20 @@ intro page, both students and their approved notes in that order and **no pendin
 note and book-data routes, (9) as student A: none of B's notes, name or email appears on any screen A can open (the class, the admin screens, B's book address), and direct API calls return 404 for B's yearbook, notes and book data and
 403 for `class-book/get`, the roster and the class pages. The markers in the notes are unique per run, so a leak is found by a text search. A deliberate break (the class book query also returning pending notes) fails step 7.
 
-Registration is limited to 5 per address and hour and the three specs together register exactly 5 accounts (M1: 1, the gallery check: 1, the class journey: 3), so a new account in any of them needs the limit raised for tests: `make e2e` resets the limits first; after a direct `scripts/e2e.sh` run
-use `make reset-limits SMEM_ENV=test`. `class-book/get` is limited to 30 reads an hour per user once T-133 is in; the journey reads it about five times. The run deletes the class and the students' yearbooks at the end (the accounts stay).
+**Step 7b (T-146)** is the design reaching the class book. Student A switches their book to `navy-classic` and saves a design through the API (burgundy, modern fonts, profile hidden, a replaced "Autographs" heading); the admin's `class-book/get` carries it as that member's `design`, the admin's class print draws A's pages in `burgundy/modern` without the profile page and with the text, B's pages and the class pages keep the default look, and **only the admin gets it: students A and B get 403** on `class-book/get` and nothing of the design text reaches them.
+
+Registration is limited to 5 per address and hour, and the four specs together register 6 accounts (M1: 1, the gallery check: 1, the class journey: 3, the customisation journey: 1). `scripts/e2e.sh` therefore starts the test API with `SMEM_RATE_REGISTER_PER_HOUR=20`, whatever `.env` says (`make` exports `.env`, whose 5 would otherwise win); to change it set `SMEM_E2E_RATE_REGISTER_PER_HOUR`, a variable `.env` never sets (test API only, the default stays 5), and `make e2e` still resets the limits first; after several direct `scripts/e2e.sh` runs
+use `make reset-limits SMEM_ENV=test`. `class-book/get` is limited to 30 reads an hour per user once T-133 is in; the journey reads it about six times. The run deletes the class and the students' yearbooks at the end (the accounts stay).
+
+## The customisation journey (T-147)
+
+`tools/e2e/design.spec.mjs` runs in the same `make e2e` (about 8 s locally, well inside its 240 s limit; the five specs together take about 25 s). One account, a Memory Book (A5, Vietnamese) with one approved friend note and a profile quote (printed on the profile page only):
+(1) register, create the book, choose `memory-book`; (2) a friend sends a note and the student approves it; (3) with no design the print route draws `lavender/playful`, four sheets (cover, profile, notes, back) and `--mb-ink` `#3b2f4a`;
+(4) the customise screen: Peach, the Classic font set, "All about me" switched off, the cover text "this book belongs to" replaced, Save design; (5) after a reload the screen shows the same choices and Save is disabled;
+(6) the print route: `data-book-ready` and `page.pdf()` both say 3 pages, the profile sheet is absent (and its quote is not in the PDF), the cover holds the title and the new text, every page is `peach/classic`, `--mb-ink` is `#4a2c22`, all fonts embedded;
+(7) Reset to template: the default look and four pages come back, the quote is printed again; (8) a design saved again, then the template picker on the customise screen switches to Navy Classic: the "design was reset" notice shows, `book-design/get` has `options: null`, the print route draws `navy/classic` and the note is still in the book.
+The spec asserts the page, theme and text on the screen the student prints (DOM) and on the PDF (page count, fonts, text); pixel parity of the PDF with the preview is the print check's job (`docs/templates.md`, "What print-check covers"). A deliberate break (the print route ignoring the design) fails step 6.
+The spec has no cover-title edit because the cover title is the book's own title (data, not a replaceable text); it edits `cover.belongs`, the cover's only replaceable heading.
 
 ## The gallery check over HTTP/2 (T-107)
 
@@ -90,7 +102,7 @@ A trace holds every request, response body and page snapshot, so it would contai
 `token=...`, `/c/<token>`, `/join/<token>`, `"token":"..."` and the `__Host-smem_session` cookie by `REDACTED`, and packs it again without directory entries (Playwright's reader fails on them; needs `unzip`, `zip` and `perl`; the
 runner and macOS have them). It fails closed: a `trace.zip` that cannot be scrubbed and checked is deleted and the reason printed, so it is never uploaded; the run's exit code is kept. `npm run guard-test` in `tools/e2e` tests the script. The trace stays useful (steps, screenshots, request URLs and statuses) and the artifact expires after 3 days. The token
 is also never printed to the job log (every error leaving a step is scrubbed of it). To check it:
-`unzip -q out/results/*/trace.zip -d /tmp/t && grep -rE 'get-content\?token=[^R]' /tmp/t` finds nothing. A new bearer secret in the app needs a rule in the script. The job has a 10 minute limit (the journey itself 240 s) and caches the Chromium download per
+`unzip -q out/results/*/trace.zip -d /tmp/t && grep -rE 'get-content\?token=[^R]' /tmp/t` finds nothing. A new bearer secret in the app needs a rule in the script. The job has a 25 minute limit (the journey itself 240 s per spec, the print check 15 min) and caches the Chromium download per
 Playwright version.
 
 ## Changing the journey when a screen changes

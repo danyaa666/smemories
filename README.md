@@ -38,6 +38,8 @@ SMemories is a web application that lets students and classes design, collect co
 - A library of ready-made **templates** (themes, cover styles, page layouts, fonts, colour palettes).
 - Templates cover common page types: cover, class introduction, teacher messages, student profiles, group photos, event timeline, "class superlatives", and a notes/autograph page.
 - Users can customize colours, fonts, and photo placement, and can add, remove, or reorder pages.
+- On the **customise screen** a student picks a colour theme and a font set from the template's own choices, hides or reorders pages, replaces some of the template's fixed texts and picture choices, and sees the real book change before saving.
+- Reset returns the book to the template's look, and changing the template resets the design; friends' notes and photos always stay. The class admin's printed book uses each student's own design for their pages.
 
 ### 4. Yearbook information
 Structured fields for the content that goes into the book:

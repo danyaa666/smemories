@@ -88,7 +88,7 @@ func TestNavyClassicDesign(t *testing.T) {
 	if !ok {
 		t.Fatal("navy-classic has no design block")
 	}
-	if len(d.Themes) != 3 || d.Themes[0] != "navy" || len(d.FontSets) != 2 || d.FontSets[0] != "classic" || len(d.Images) != 0 || d.Images == nil {
+	if len(d.Themes) == 0 || d.Themes[0] != "navy" || len(d.FontSets) == 0 || d.FontSets[0] != "classic" || len(d.Images) != 0 || d.Images == nil {
 		t.Errorf("defaults = %v %v %v", d.Themes, d.FontSets, d.Images)
 	}
 	var ids []string
@@ -109,7 +109,7 @@ func TestMemoryBookDesign(t *testing.T) {
 	if !ok {
 		t.Fatal("memory-book has no design block")
 	}
-	if len(d.Themes) != 3 || d.Themes[0] != "lavender" || d.FontSets[0] != "playful" || d.Images[0].Choices[0] != "dots" {
+	if len(d.Themes) == 0 || d.Themes[0] != "lavender" || d.FontSets[0] != "playful" || d.Images[0].Choices[0] != "dots" {
 		t.Errorf("defaults = %v %v %v", d.Themes, d.FontSets, d.Images)
 	}
 	if len(d.Sections) != 4 || d.Sections[0].Pin() != FixedFirst || d.Sections[3].Pin() != FixedLast {

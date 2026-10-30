@@ -112,8 +112,8 @@ describe("themes", () => {
     expect(rest.match(/#[0-9a-fA-F]{3,8}\b|rgba?\(/g)).toBeNull();
   });
 
-  // The pairs are listed in docs/templates.md ("Themes").
-  for (const id of ["lavender", "peach", "mint"]) {
+  // The pairs are listed in docs/templates.md ("Themes"). Every theme the manifest declares is checked, so a new one cannot skip it.
+  for (const id of manifest.design.themes) {
     test(`${id}: text is at least 4.5:1 on every surface`, () => {
       const v = themes[id] ?? {};
       for (const t of TEXTS)
@@ -340,7 +340,7 @@ describe("navy-classic design", () => {
   });
 
   // The pairs are listed in docs/templates.md ("Themes of navy-classic").
-  for (const id of ["navy", "burgundy", "forest"])
+  for (const id of navy.themes)
     test(`${id}: light on dark, gold on dark, dark on light and bronze on light are at least 4.5:1`, () => {
       const v = themes[id] ?? {};
       for (const [fg, bg] of [

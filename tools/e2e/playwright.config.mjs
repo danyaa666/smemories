@@ -8,7 +8,7 @@ const out = process.env.E2E_OUT ?? "out";
 
 export default defineConfig({
   testDir: ".",
-  testMatch: ["journey.spec.mjs", "h2-gallery.spec.mjs", "class.spec.mjs"],
+  testMatch: ["journey.spec.mjs", "h2-gallery.spec.mjs", "class.spec.mjs", "design.spec.mjs"],
   outputDir: `${out}/results`, // traces and screenshots of a failed run; CI uploads the folder
   timeout: 240_000, // the whole journey; the budget in CI is 5 minutes including start-up
   expect: { timeout: 15_000 },
