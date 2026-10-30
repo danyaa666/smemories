@@ -3,13 +3,42 @@ import { useNavigate } from "react-router-dom";
 
 /**
  * Asks before the user leaves a screen with unsaved changes. The app uses a plain BrowserRouter (no data router, so no `useBlocker`), so this
- * covers what it can: closing or reloading the tab (the browser's own prompt) and a click on any in-app link (`pending` holds the target while a
- * dialog asks). Programmatic navigation and the browser's Back button are not intercepted.
+ * covers what it can: closing or reloading the tab (the browser's own prompt), a click on any in-app link (`pending` holds the target while a
+ * dialog asks) and the browser's or phone's Back (T-148). Programmatic navigation is not intercepted.
+ *
+ * Back works with a sentinel: while `active`, one extra history entry with the same URL sits on top of the stack, so Back only pops to the
+ * screen's own entry (same route, so the screen and its edits stay mounted) and the dialog can ask. "Stay" costs nothing (the sentinel is put back
+ * at once); "Leave" goes two entries back. When `active` turns off (saved, or edits undone) the sentinel is removed again.
+ * ponytail: a history jump of several entries at once (long-press Back) skips the dialog.
  */
 export function useLeaveGuard(active: boolean) {
   const navigate = useNavigate();
   const [pending, setPending] = useState<string | null>(null);
+  const [back, setBack] = useState(false); // Back was pressed: the dialog asks
   const off = useRef(false); // set while a confirmed leave is under way
+  const armed = useRef(false); // the sentinel entry is on top of the history stack
+
+  useEffect(() => {
+    if (!active) {
+      if (armed.current) {
+        armed.current = false;
+        window.history.back(); // pops the sentinel; the screen's own entry has the same URL
+      }
+      return;
+    }
+    if (!armed.current) {
+      window.history.pushState(window.history.state, "", window.location.href);
+      armed.current = true;
+    }
+    const here = window.location.href;
+    const pop = () => {
+      if (off.current || window.location.href !== here) return;
+      window.history.pushState(window.history.state, "", here); // the sentinel again, so a second Back asks again
+      setBack(true);
+    };
+    window.addEventListener("popstate", pop);
+    return () => window.removeEventListener("popstate", pop);
+  }, [active]);
 
   useEffect(() => {
     if (!active) return;
@@ -38,13 +67,19 @@ export function useLeaveGuard(active: boolean) {
   }, [active]);
 
   return {
-    /** The place the user wants to go to, while the dialog asks. */
-    pending,
-    stay: () => setPending(null),
+    /** True while the dialog asks (a link was clicked or Back was pressed). */
+    pending: pending !== null || back,
+    stay: () => {
+      setPending(null);
+      setBack(false);
+    },
     leave: () => {
       off.current = true;
-      if (pending !== null) void navigate(pending);
+      if (pending !== null)
+        void navigate(pending, { replace: armed.current }); // replaces the sentinel: Back from there returns to this screen
+      else window.history.go(-2); // over the sentinel and this screen's own entry
       setPending(null);
+      setBack(false);
     },
   };
 }

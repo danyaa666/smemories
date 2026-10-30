@@ -21,10 +21,13 @@ export function TemplatePicker({
   bookId,
   size,
   current,
+  ask,
 }: {
   bookId: string;
   size: string;
   current: string | null;
+  /** When given, a pick goes through it: it may ask first and call `go` to carry the pick out, or drop it. */
+  ask?: (go: () => void) => void;
 }) {
   const { t, i18n } = useTranslation();
   const qc = useQueryClient();
@@ -58,8 +61,12 @@ export function TemplatePicker({
 
   const pick = (id: string, name: string) => {
     if (save.isPending) return; // one save at a time; the fieldset is not disabled, so the focus stays on the radio
-    setSaved("");
-    save.mutate(id, { onSuccess: () => setSaved(t("print.template.saved", { name })) });
+    const go = () => {
+      setSaved("");
+      save.mutate(id, { onSuccess: () => setSaved(t("print.template.saved", { name })) });
+    };
+    if (ask) ask(go);
+    else go();
   };
   return (
     <fieldset className="bk-templates" aria-busy={save.isPending}>

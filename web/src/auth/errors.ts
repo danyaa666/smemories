@@ -38,6 +38,10 @@ export function errorText(t: TFunction, e: unknown): string {
 export const isBookGone = (e: unknown) =>
   e instanceof ApiError && (e.status === 404 || (e.status === 400 && e.code === "invalid_body"));
 
+/** For a query that is the owner check of a screen: a 404 or 403 is the answer (not found), so it is not retried (T-148); a network error or 5xx keeps the app's 3 retries. */
+export const retryUnlessDenied = (n: number, e: unknown) =>
+  !(e instanceof ApiError && (e.status === 404 || e.status === 403)) && n < 3;
+
 /** The message for `field` if `e` belongs to it. */
 export const fieldError = (t: TFunction, e: unknown, field: string) =>
   e instanceof ApiError && FIELD_OF[e.code] === field ? errorText(t, e) : undefined;

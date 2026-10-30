@@ -13,7 +13,7 @@ import {
 } from "../api/bookDesign";
 import { retryOnce } from "../api/notes";
 import { getYearbook } from "../api/yearbooks";
-import { errorText, isBookGone } from "../auth/errors";
+import { errorText, isBookGone, retryUnlessDenied } from "../auth/errors";
 import { CustomiseControls } from "../book/CustomiseControls";
 import { CustomisePreview } from "../book/CustomisePreview";
 import {
@@ -41,7 +41,11 @@ import "../styles/customise.css";
 export function Customise() {
   const { t } = useTranslation();
   const { id = "" } = useParams();
-  const book = useQuery({ queryKey: ["yearbook", id], queryFn: () => getYearbook(id) }); // the same request as the shell's: it tells who owns the book
+  const book = useQuery({
+    queryKey: ["yearbook", id],
+    queryFn: () => getYearbook(id),
+    retry: retryUnlessDenied,
+  }); // the same request as the shell's: it tells who owns the book
   const data = useQuery({
     queryKey: ["book-data", id],
     queryFn: () => getBookData(id),
@@ -145,6 +149,7 @@ function Editor({
   const [status, setStatus] = useState(""); // visible, polite: saved, reset
   const [moves, setMoves] = useState(""); // spoken only: moves and switches
   const [asking, setAsking] = useState(false);
+  const [switching, setSwitching] = useState<(() => void) | null>(null); // a template pick waiting for the owner's answer
   const dirty = !sameDraft(draft, saved);
   const guard = useLeaveGuard(dirty);
 
@@ -197,6 +202,7 @@ function Editor({
           bookId={bookId}
           size={data.yearbook.page_size}
           current={data.yearbook.template_id}
+          ask={(go) => (dirty ? setSwitching(() => go) : go())}
         />
         <CustomiseControls
           tpl={tpl}
@@ -263,7 +269,22 @@ function Editor({
           )}
         </Dialog>
       )}
-      {guard.pending !== null && (
+      {switching && (
+        <Dialog
+          title={t("customise.switchTitle")}
+          confirmLabel={t("customise.switchConfirm")}
+          cancelLabel={t("customise.switchCancel")}
+          danger
+          onConfirm={() => {
+            switching();
+            setSwitching(null);
+          }}
+          onCancel={() => setSwitching(null)}
+        >
+          <p>{t("customise.switchBody")}</p>
+        </Dialog>
+      )}
+      {guard.pending && (
         <Dialog
           title={t("customise.leaveTitle")}
           confirmLabel={t("customise.leaveConfirm")}
