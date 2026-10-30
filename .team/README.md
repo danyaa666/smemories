@@ -10,17 +10,17 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 9 | T-023, T-024, T-025, T-031, T-050, T-144, T-145, T-146, T-147 |
-| TODO | 1 | T-143 |
-| MERGED | 1 | T-142 |
+| BACKLOG | 8 | T-023, T-024, T-025, T-031, T-050, T-145, T-146, T-147 |
+| TODO | 1 | T-144 |
+| MERGED | 2 | T-142, T-143 |
 | DONE | 128 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-137, T-138, T-139, T-140, T-141 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-142 ([E09] Web runtime: colour themes and font sets (Memory Book pilot))
+**Awaiting your review (MERGED):** T-142 ([E09] Web runtime: colour themes and font sets (Memory Book pilot)); T-143 ([E09] Web runtime: sections, texts and images (Memory Book pilot))
 
 **Open questions for you:** none
 
-_Board last written 2026-10-30 07:10Z_
+_Board last written 2026-10-30 07:35Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -6303,7 +6303,7 @@ Spec: .team/epics/E09-customisation-editor/02-web-themes-and-font-sets.md.
 - 2026-10-30 07:10Z · leader · merged e44a826. Review: diff limited to the web book runtime, tests and docs; QA ran lint, typecheck, vitest 618/618, print-check 94/94, 6 theme/font renders; manual full CI 40997028070 green. For owner to check: the three colour themes and two font sets on a real book. Follow-ups (lining numerals for Cormorant, docs sentence about synthetic bold) added to T-143.
 
 ### T-143 — [E09] Web runtime: sections, texts and images (Memory Book pilot)
-- **Status:** TODO
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1b
@@ -6312,18 +6312,29 @@ Spec: .team/epics/E09-customisation-editor/02-web-themes-and-font-sets.md.
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-30 07:10Z by leader
-- **Comments-seen:** 1
+- **Branch:** task/t-143-e09-web-runtime-sections-texts-and-image
+- **PR:** https://github.com/danyaa666/smemories/pull/141
+- **Updated:** 2026-10-30 07:35Z by leader
+- **Comments-seen:** 4
 
 Spec: .team/epics/E09-customisation-editor/03-web-sections-texts-images.md.
 
 #### Comments
 - 2026-10-30 07:10Z · leader · Spec updated: requirement 7 (carry-overs from T-142 QA: lining-nums for the classic font set, correct the synthetic-bold sentence in docs/templates.md and web/src/book/fonts/README.md). Read the spec again.
+- 2026-10-30 07:28Z · dev · PR #141 head 046f4ef. Sections/texts/cover pattern follow design; carry-overs (lining-nums in classic, synthetic-bold sentence) done. Verify: print-check 112 pass (18 new: hidden profile/back/both, notes before profile, max-length texts both font sets, plain pattern, lining figures) on A5+A4; web lint/build/vitest 626/i18n/check:api green; default geometry identical to before, snapshots unchanged. Run make print-check + class book locally. Known: back.pact at 30 chars with emoji shrinks to ~half (reported).
+- 2026-10-30 07:35Z · qa · PR #141 head 046f4ef. CI on that head: go pass, web pass, security pass (e2e/go-integration/image skipped by D-37/D-38). Local on the head: make print-check 112/112 pass 0 fail (A5+A4, incl. class book 30 students 77 pages A5 and A4); web lint (eslint+prettier) ok, tsc ok, vitest 626/626, build ok, lint:i18n ok, check:api ok. No Go/API change, so make test-integration is not affected (no Go files in the diff).
+  AC1 hide/reorder: print-check cases pass for profile hidden, back hidden, both hidden (cover+notes only), notes before profile (+back hidden) on A5 and A4: PDF page count = ready signal, page kinds in the expected order via pdftotext, none blank, photos loaded at ready. printSections reviewed: honours order+hidden, falls back to the four default sections on an unknown order.
+  AC2 texts: all 6 text slots at manifest max (Vietnamese+emoji, playful and classic, A5 and A4): no overflow, all boxes inside their page, long ones shrink and are reported, text present in PDF; '<script>alert("x")</script>' prints literally (0 script nodes). Own probe: back.pact at 30 chars -> data-fit=shrunk (reported), not cut off.
+  AC3 parity: the 69 earlier cases and snapshots pass unchanged; class book (ClassBookPages) green.
+  AC4: see commands above.
+  Req 3 images: plain pattern -> cover background none, other pages keep dots; unknown choice -> dots. Req 6: no new dependency in the diff.
+  Req 7a lining figures: own render of classic cover with class 12A1 and text 'Của Hồng 11A1' reads 12A1 / 11A1 (no 'I2AI'); the new print-check case compares rendered pixels of lining vs old-style and asserts the book draws lining. Req 7b: docs/templates.md and web/src/book/fonts/README.md now say the app's @fontsource Be Vietnam Pro 400/500/600/700 (web/src/styles/fonts.css lines 4-7, verified) give a real bold, no synthetic bold: accurate.
+  Dev's known limits, both confirmed, non-blocking: (1) back.pact is a head in a narrow column beside Ngày/Địa điểm; at the manifest max 30 it shrinks to about half size for ASCII, and for 30 emoji it wraps to two tiny lines and the star icon shrinks too (screenshot compared by me). Readable, inside the page, reported as shrunk, but ugly. Suggest the leader lowers back.pact max in memory-book.json to about 16-18 (T-141 manifest + its Go test) or accepts it. (2) With profile hidden the owner's portrait id is not requested (verified: 4 ids requested, portrait not among them; it appears only in the profile page), so nothing is lost.
+  Observation: the web runtime does not itself enforce hideable/movable; the server does (internal/bookdesign/options.go resolves hidden only for hideable sections), so book-data cannot hide cover or notes. No action.
+- 2026-10-30 07:35Z · leader · merged 762c586. Review: web book runtime only, diff limited to the task; QA print-check 112/112 (A5+A4, class book 77 pages unchanged), vitest 626, lint/tsc/build/i18n/check:api, go/web/security green on 046f4ef. For owner to check: hide/reorder and custom texts on a real book once the customise screen (T-144) exists. Follow-up: back.pact max lowered to 18 in T-144.
 
 ### T-144 — [E09] Web: the customise screen
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1b
@@ -6334,12 +6345,13 @@ Spec: .team/epics/E09-customisation-editor/03-web-sections-texts-images.md.
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-30 02:07Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-30 07:35Z by leader
+- **Comments-seen:** 1
 
 Spec: .team/epics/E09-customisation-editor/04-web-customise-screen.md.
 
 #### Comments
+- 2026-10-30 07:35Z · leader · Spec updated: requirement 8 (lower back.pact max 30 -> 18 in memory-book.json, from T-143 QA). Read the spec again.
 
 ### T-145 — [E09] Navy Classic becomes customisable
 - **Status:** BACKLOG
