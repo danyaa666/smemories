@@ -83,6 +83,27 @@ func TestDesignBlockValidation(t *testing.T) {
 	})
 }
 
+func TestNavyClassicDesign(t *testing.T) {
+	d, ok := Design("navy-classic")
+	if !ok {
+		t.Fatal("navy-classic has no design block")
+	}
+	if len(d.Themes) != 3 || d.Themes[0] != "navy" || len(d.FontSets) != 2 || d.FontSets[0] != "classic" || len(d.Images) != 0 || d.Images == nil {
+		t.Errorf("defaults = %v %v %v", d.Themes, d.FontSets, d.Images)
+	}
+	var ids []string
+	for _, s := range d.Sections {
+		ids = append(ids, s.ID)
+	}
+	if fmt.Sprint(ids) != "[cover profile notes back]" || d.Sections[0].Pin() != FixedFirst || d.Sections[3].Pin() != FixedLast ||
+		d.Sections[0].Hideable || !d.Sections[1].Hideable || !d.Sections[1].Movable || d.Sections[2].Hideable || !d.Sections[2].Movable || !d.Sections[3].Hideable {
+		t.Errorf("sections = %+v", d.Sections)
+	}
+	if len(d.Texts) != 5 {
+		t.Errorf("texts = %+v", d.Texts)
+	}
+}
+
 func TestMemoryBookDesign(t *testing.T) {
 	d, ok := Design("memory-book")
 	if !ok {
@@ -94,7 +115,7 @@ func TestMemoryBookDesign(t *testing.T) {
 	if len(d.Sections) != 4 || d.Sections[0].Pin() != FixedFirst || d.Sections[3].Pin() != FixedLast {
 		t.Errorf("sections = %+v", d.Sections)
 	}
-	for _, id := range []string{"classic", "modern", "navy-classic", "nope"} {
+	for _, id := range []string{"classic", "modern", "nope"} {
 		if _, ok := Design(id); ok {
 			t.Errorf("Design(%q) = ok, want none", id)
 		}

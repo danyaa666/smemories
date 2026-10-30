@@ -497,6 +497,32 @@
             }
           }
         }
+      },
+      "navy-classic": {
+        "themes": {
+          "navy": "Navy and gold",
+          "burgundy": "Burgundy",
+          "forest": "Forest green"
+        },
+        "fonts": {
+          "classic": "Classic serif",
+          "modern": "Modern sans"
+        },
+        "fontSample": "Hẹn gặp lại, Lưu bút 2026",
+        "sections": {
+          "cover": "Cover",
+          "profile": "A few words about me",
+          "notes": "Autographs",
+          "back": "Back page"
+        },
+        "texts": {
+          "profile_eyebrow": "Profile page: small heading",
+          "profile_heading": "Profile page: heading",
+          "notes_eyebrow": "Autographs: small heading",
+          "notes_heading": "Autographs: heading",
+          "back_thanks": "Back page: thank-you line"
+        },
+        "images": {}
       }
     }
   },

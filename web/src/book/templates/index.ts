@@ -17,6 +17,11 @@ export type Template = {
   photos?: { cover: boolean; notes: boolean };
   /** The theme and font set ids it draws, when the owner can choose them (E09). */
   design?: DesignIds;
+  /**
+   * How the customise screen shows a theme or font set before it is chosen: `root` is the template's page class (its stylesheet puts the theme and font
+   * custom properties on it), `chips` the colour variables to show as swatches, `serif` the class that sets the font of a sample word.
+   */
+  swatch?: { root: string; chips: readonly string[]; serif: string };
   /** Text id to the locale key of the template's own wording of it, for the texts the owner can replace. */
   textDefaults?: Record<string, string>;
   Cover: ComponentType<{ data: BookData }>;

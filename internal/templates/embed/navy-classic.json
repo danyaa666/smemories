@@ -8,5 +8,23 @@
     {"id": "name", "required": true},
     {"id": "relationship"},
     {"id": "message", "required": true}
-  ]
+  ],
+  "design": {
+    "themes": ["navy", "burgundy", "forest"],
+    "font_sets": ["classic", "modern"],
+    "sections": [
+      {"id": "cover", "hideable": false, "movable": false, "fixed": "first"},
+      {"id": "profile", "hideable": true, "movable": true, "fixed": null},
+      {"id": "notes", "hideable": false, "movable": true, "fixed": null},
+      {"id": "back", "hideable": true, "movable": false, "fixed": "last"}
+    ],
+    "texts": [
+      {"id": "profile.eyebrow", "max": 40},
+      {"id": "profile.heading", "max": 24},
+      {"id": "notes.eyebrow", "max": 40},
+      {"id": "notes.heading", "max": 24},
+      {"id": "back.thanks", "max": 80}
+    ],
+    "images": []
+  }
 }

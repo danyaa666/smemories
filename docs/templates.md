@@ -102,6 +102,7 @@ The second one is `navy-classic` (T-060, the navy and gold canvas of design `tem
 cover, profile (welcome-letter layout with an oval portrait), "Autographs" notes pages with four friends each (message on
 ruled lines, name as the signature) and a back page in the cover's frame. Its form asks `name` and `message` (required) and
 `relationship`. The design has no place for the cover photo or the friends' photos, so the book does not load them.
+Since T-145 it is customisable (see "Themes, font sets, sections and texts of `navy-classic`" below).
 Samples and the canvas-to-template pictures are in `docs/templates/navy-classic-*`.
 
 ## Design block and book designs
@@ -375,3 +376,33 @@ box of the same size that shrinks it (`.mb-title-fit`, `.mb-sub-fit`, `.mb-belon
 the width left of the "No." tag and the sparkle (`.mb-title` max-width), so a long one shrinks instead of running under them. `cover.pattern`: `dots` is the dotted paper (`memory-dots.png`), `plain` draws the cover
 without it; the other pages keep the paper, and a choice this build does not know draws `dots`. Print check: hidden profile, hidden back, both hidden, notes before profile (A5 and A4: page kinds in order, none blank, photos loaded at ready),
 every text at its maximum length in both font sets, the plain pattern, and a class name with a 1 in `classic`.
+
+### Themes, font sets, sections and texts of `navy-classic` (T-145)
+
+The same runtime as `memory-book` (T-142, T-143), for `navy.tsx` and `navy.css`; `design.test.ts` pins the ids to `navy-classic.json`. Each page (`Page` in `navy.tsx`) carries `data-theme` and `data-fonts`.
+Themes `navy` (today's colours, the default), `burgundy` and `forest`; font sets `classic` (today's) and `modern`; the four sections as in `memory-book` (`cover` fixed first, `profile` hideable and movable,
+`notes` movable, `back` fixed last and hideable); five fixed texts and no picture slots (`images: []`: the design has none).
+
+**Themes** are six custom properties under `.nc-page[data-theme="..."]`: `--nc-dark` (cover and back background, text on the cream pages), `--nc-light` (cream pages, text on the dark ones), `--nc-gold` (frames,
+accents on the dark pages), `--nc-bronze` (small accents on the cream pages), `--nc-photo` (empty oval) and `--nc-rule` (the ruled lines). `navy.css` and the SVG pieces of `navy.tsx` hold no other colour (a unit test).
+`navy` is exactly the canvas: a book with no design prints the same pixels as before (checked page by page against the previous build: 18 pages, A5, A4 and Letter, byte-identical PNGs at 110 dpi).
+Contrast ratios of the four text pairs (the unit test fails below 4.5:1):
+
+| Theme | light on dark | gold on dark | dark on light | bronze on light |
+|---|---|---|---|---|
+| `navy` | 12.8 | 6.3 | 12.8 | 5.6 |
+| `burgundy` | 13.0 | 7.4 | 13.0 | 6.2 |
+| `forest` | 11.5 | 6.0 | 11.5 | 6.2 |
+
+**Font sets** are `--nc-serif`, `--nc-caps` and `--nc-italic` under `.nc-page[data-fonts="..."]`. `classic` is today's Cormorant Garamond (italic) over Be Vietnam Pro. `modern` is Nunito for both roles,
+upright (Nunito has no italic, so `--nc-italic` is `normal`; no slanted copy is synthesised) and `font-size-adjust: 0.4`, which brings its taller, wider letters to Cormorant's x-height so the layout and the fit floors
+hold. Nunito is already shipped with the whole Vietnamese alphabet (`web/src/book/fonts/README.md`); no file was added, and the two sets share no family, so a book requests only its own set's files (print check).
+The default keeps Cormorant's old-style figures (the year on the cover is drawn with them); a replaced text does too.
+
+**Texts** (`Own` in `navy.tsx`, same rules as `memory.tsx`): `profile.eyebrow` (40), `profile.heading` (24), `notes.eyebrow` (40), `notes.heading` (24), `back.thanks` (80). The farewell line ("Farewell, Class of 2026") takes the
+year and is not replaceable. The template's wording keeps its plain markup; a replacement is drawn in a box of the same size that shrinks it (`.nc-eyebrow-fit`, `.nc-title-fit`, `.nc-thanks-fit`, floor 35 %).
+
+**Customise screen.** It needed one generic fix: the colour chips and the font sample borrowed `memory.css`'s variables, so a template now declares `swatch` (`web/src/book/templates/index.ts`: its page class, the colour
+variables to show and the class that sets a sample word); everything else is the template's `customise.tpl.navy-classic.*` locale keys.
+Print check (`tools/print-check`, "navy-classic themes x font sets, sections and texts"): every theme x font set on A5 and A4 (9 pages, none blank, that set's fonts only, long names and emoji not cut off, signatures keep the page count
+and never meet a text), hidden and reordered sections on A5 and A4, every text at its maximum length in both font sets, and an unknown design drawing the defaults.
