@@ -25,9 +25,10 @@ export function LegalConsent({
 
 /** The one line under the send button of the public note form. */
 export function LegalNotice() {
+  const { t } = useTranslation();
   return (
     <p className="note-muted">
-      <Trans i18nKey="legal.notice" components={pages} />
+      <Trans i18nKey="legal.notice" components={pages} /> {t("legal.noticeClass")}
     </p>
   );
 }

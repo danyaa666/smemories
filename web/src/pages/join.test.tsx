@@ -251,6 +251,30 @@ describe("join page", () => {
   });
 });
 
+describe("18+ line on the join page", () => {
+  const signedIn = { ...base, "GET /user/get-me": ok(user()) };
+  it("shows before the accept button in both languages, and not to a signed-out visitor", async () => {
+    mockApi(signedIn);
+    const { unmount } = renderApp(`/join/${TOKEN}`);
+    const accept = await screen.findByRole("button", { name: "Join this class" });
+    expect(accept.previousElementSibling).toHaveTextContent(
+      "SMemories is for people aged 18 or older.",
+    );
+    unmount();
+    await i18n.changeLanguage("vi");
+    renderApp(`/join/${TOKEN}`);
+    expect(
+      await screen.findByText("SMemories dành cho người từ 18 tuổi trở lên."),
+    ).toBeInTheDocument();
+  });
+  it("is not shown to a signed-out visitor", async () => {
+    mockApi({ ...base, "GET /user/get-me": signedOut });
+    renderApp(`/join/${TOKEN}`);
+    await screen.findByRole("heading", { name: "Join Lớp 12A1" });
+    expect(screen.queryByText("SMemories is for people aged 18 or older.")).not.toBeInTheDocument();
+  });
+});
+
 describe("Google sign-in hint on the join path", () => {
   const HINT = "Signed in with Google? Sign in first, then open your invite link again.";
   afterEach(() => vi.unstubAllEnvs());

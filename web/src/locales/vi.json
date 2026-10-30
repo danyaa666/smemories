@@ -603,6 +603,7 @@
     "privacy": "Chính sách quyền riêng tư",
     "agree": "Tôi đồng ý với <terms>Điều khoản sử dụng</terms> và <privacy>Chính sách quyền riêng tư</privacy>",
     "notice": "Khi gửi, bạn đồng ý với <terms>Điều khoản sử dụng</terms> và <privacy>Chính sách quyền riêng tư</privacy>. Chủ sổ có thể chia sẻ ảnh của bạn qua liên kết.",
+    "noticeClass": "Nếu chủ cuốn lưu bút đưa lời nhắn của bạn vào sách lớp, quản trị viên lớp có thể xem được.",
     "draft": "Bản nháp: chưa phải bản chính thức"
   },
   "accept": {
@@ -615,6 +616,7 @@
     "title": "Lớp của tôi",
     "new": "Lớp mới",
     "newTitle": "Lớp mới",
+    "ageLine": "SMemories dành cho người từ 18 tuổi trở lên.",
     "empty": "Bạn chưa ở trong lớp nào. Hãy tạo một lớp, hoặc mở đường dẫn mời từ giáo viên.",
     "back": "Về danh sách lớp",
     "notFound": "Lớp này không tồn tại.",

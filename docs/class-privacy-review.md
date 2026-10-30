@@ -131,8 +131,8 @@ class book are refused, and that a pending note never reaches the admin's printo
 
 ## 7. Open points for the owner
 
-1. Minors: the terms say 18 or older; school classes are often younger (section 1).
-2. The note form does not tell a friend that the note may be seen by a class admin (section 1).
+1. Minors: the terms say 18 or older; school classes are often younger (section 1). **Decided (D-40, T-139):** the class create screen and the join screen say "SMemories is for people aged 18 or older." as plain text, not a blocker.
+2. The note form does not tell a friend that the note may be seen by a class admin (section 1). **Decided (D-40, T-139):** one sentence follows the notice under the send button of the public friend note form.
 3. Invite links of a departed admin stay live until expiry or revocation (section 4).
 4. The legal texts are still drafts: the bracketed items (operator, contact, region, retention days, law) are open, and the Vietnamese needs a native review.
 5. Printed or saved copies leave our control (section 3).

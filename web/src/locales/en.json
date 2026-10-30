@@ -603,6 +603,7 @@
     "privacy": "Privacy Policy",
     "agree": "I agree to the <terms>Terms of Use</terms> and the <privacy>Privacy Policy</privacy>",
     "notice": "By sending, you agree to the <terms>Terms of Use</terms> and the <privacy>Privacy Policy</privacy>. The book owner may share your photos by link.",
+    "noticeClass": "If the yearbook owner puts your note in a class book, the class admin can see it.",
     "draft": "Draft: not the final text"
   },
   "accept": {
@@ -615,6 +616,7 @@
     "title": "My classes",
     "new": "New class",
     "newTitle": "New class",
+    "ageLine": "SMemories is for people aged 18 or older.",
     "empty": "You are not in any class yet. Create one, or open an invite link from your teacher.",
     "back": "Back to my classes",
     "notFound": "This class does not exist.",

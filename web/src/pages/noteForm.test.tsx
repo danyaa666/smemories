@@ -450,7 +450,7 @@ describe("terms notice", () => {
     const send = await screen.findByRole("button", { name: "Send my note" });
     const notice = send.nextElementSibling as HTMLElement;
     expect(notice).toHaveTextContent(
-      "By sending, you agree to the Terms of Use and the Privacy Policy. The book owner may share your photos by link.",
+      "By sending, you agree to the Terms of Use and the Privacy Policy. The book owner may share your photos by link. If the yearbook owner puts your note in a class book, the class admin can see it.",
     );
     expect(within(notice).getByRole("link", { name: "Terms of Use" })).toHaveAttribute(
       "href",
@@ -466,7 +466,7 @@ describe("terms notice", () => {
     renderApp("/c/abc");
     const sendVi = await screen.findByRole("button", { name: /Gửi/ });
     expect(sendVi.nextElementSibling).toHaveTextContent(
-      "Khi gửi, bạn đồng ý với Điều khoản sử dụng và Chính sách quyền riêng tư. Chủ sổ có thể chia sẻ ảnh của bạn qua liên kết.",
+      "Khi gửi, bạn đồng ý với Điều khoản sử dụng và Chính sách quyền riêng tư. Chủ sổ có thể chia sẻ ảnh của bạn qua liên kết. Nếu chủ cuốn lưu bút đưa lời nhắn của bạn vào sách lớp, quản trị viên lớp có thể xem được.",
     );
   });
 });

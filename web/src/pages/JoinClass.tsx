@@ -107,6 +107,7 @@ export function JoinClass() {
           {classErrorText(t, accept.error, "join")}
         </p>
       )}
+      <p className="note-muted">{t("classes.ageLine")}</p>
       <Button variant="primary" busy={accept.isPending} onClick={() => accept.mutate()}>
         {t("classes.join.accept")}
       </Button>
