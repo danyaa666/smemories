@@ -113,7 +113,7 @@ func newEnv(t *testing.T) *env {
 	mediaSvc.SetRefClearer(bookStore, notesSvc)
 	bookSvc := yearbook.NewService(bookStore, cursors, mediaSvc, e.now, mediaSvc, notesSvc, e.svc, bookdesign.NewService(bookdesign.NewStore(e.db), nil, nil))
 	bookSvc.SetLimiters(limiters)
-	e.svc.SetBookSources(bookSvc, notesSvc)
+	e.svc.SetBookSources(bookSvc, notesSvc, bookdesign.NewService(bookdesign.NewStore(e.db), nil, nil))
 	yh := yearbook.NewHandler(bookSvc, ah.RequireUser, []string{origin})
 	mh := media.NewHandler(mediaSvc, 10<<20, ah.RequireUser, []string{origin}, cursors, logger)
 	nh := notes.NewHandler(notesSvc, 10<<20, ah.RequireUser, []string{origin}, ah.ClientIP, logger)

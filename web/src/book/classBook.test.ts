@@ -5,10 +5,13 @@ import {
   classPageCount,
   classSummary,
   commonSize,
+  fontSetsInUse,
   memberBook,
+  memberPhotoIds,
   memberPrefix,
   pageKey,
 } from "./classBook";
+import { profilePageCount } from "./BookPages";
 import type { FitInfo } from "./fit";
 
 const m = (n: number, over: Partial<ClassBookMember> = {}): ClassBookMember => ({
@@ -28,12 +31,14 @@ const m = (n: number, over: Partial<ClassBookMember> = {}): ClassBookMember => (
   note_count: 1,
   approved_total: 1,
   truncated: false,
+  design: null,
   ...over,
 });
 const none = {
   linked: false,
   yearbook: null,
   profile: null,
+  design: null,
   notes: [],
   note_count: 0,
   approved_total: 0,
@@ -71,6 +76,46 @@ describe("class book arithmetic", () => {
       title: "12A1",
     });
     expect(memberBook(book([]).class, m(2, none), "A5")).toBeNull();
+  });
+});
+
+describe("designs in the class book (T-146)", () => {
+  const des = (hidden: string[]) => ({
+    theme: "navy",
+    fonts: "modern",
+    sections: { order: ["cover", "profile", "notes", "back"], hidden },
+    texts: {},
+    images: {},
+  });
+  const navy = { template_id: "memory-book", page_size: "A5" as const, language: "vi" as const };
+  it("hands the student's own design to their pages; none for a student without one", () => {
+    const d = des([]);
+    expect(memberBook(book([]).class, m(1, { yearbook: navy, design: d }), "A5")?.design).toEqual(
+      d,
+    );
+    expect(memberBook(book([]).class, m(2), "A5")?.design).toBeNull();
+  });
+  it("a hidden section is not counted and its photos are not fetched", () => {
+    const withPhotos = {
+      yearbook: navy,
+      profile: { ...m(1).profile!, photo_media_id: "PP" },
+      notes: [{ id: "N1", answers: {}, signature: null, photo_ids: ["NP"] }],
+    };
+    const cls = book([]).class;
+    const all = memberBook(cls, m(1, { ...withPhotos, design: des([]) }), "A5")!;
+    expect(memberPhotoIds(all)).toEqual(["PP", "NP"]);
+    expect(profilePageCount(all)).toBe(2);
+    const noProfile = memberBook(cls, m(1, { ...withPhotos, design: des(["profile"]) }), "A5")!;
+    expect(memberPhotoIds(noProfile)).toEqual(["NP"]);
+    expect(profilePageCount(noProfile)).toBe(1);
+    expect(classPageCount(book([m(1, { ...withPhotos, design: des(["profile"]) })]), "A5")).toBe(3);
+  });
+  it("names the font sets in use, once each, so only they are waited for", () => {
+    const a = m(1, { yearbook: navy, design: des([]) });
+    const b = m(2, { yearbook: navy, design: des([]) });
+    const c = m(3, { yearbook: navy, design: { ...des([]), fonts: "classic" } });
+    expect(fontSetsInUse(book([a, b, c, m(4)]))).toBe("memory-book:classic,memory-book:modern");
+    expect(fontSetsInUse(book([m(4)]))).toBe("");
   });
 });
 

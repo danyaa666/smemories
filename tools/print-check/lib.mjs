@@ -32,10 +32,10 @@ export async function startServer() {
 const ok = (data) => ({ status: 200, contentType: "application/json", body: JSON.stringify({ status: "OK", data }) });
 
 /** Serves the signed-in owner, the book and its photos; every other API call is a 404. Counts book-data and media requests. */
-export async function serveBook(page, book, classBook = null) {
-  const seen = { bookData: 0, media: 0, classBook: 0 };
+export async function serveBook(page, book, classBook = null, { mediaDelayMs = 0 } = {}) {
+  const seen = { bookData: 0, media: 0, classBook: 0, inFlight: 0, maxInFlight: 0, ids: new Set() }; // a media delay makes the requests in flight visible (T-146)
   const files = new Map(Array.from({ length: 30 }, (_, i) => [photoId(i + 1), `photo-${String((i % 30) + 1).padStart(2, "0")}.jpg`]));
-  await page.route(/^https?:\/\/[^/]+\/api\//, (route) => { // only the API, not the dev server's /src/api/*.ts modules
+  await page.route(/^https?:\/\/[^/]+\/api\//, async (route) => { // only the API, not the dev server's /src/api/*.ts modules
     const u = new URL(route.request().url());
     if (u.pathname === "/api/user/get-me")
       return route.fulfill(ok({ id: "01J9Z3K6V8Q4M7N2P5R8T0W1XY", email: "hong@example.com", email_verified: true, display_name: "Hồng", locale: "vi", created_at: 1759276800000 }));
@@ -51,6 +51,10 @@ export async function serveBook(page, book, classBook = null) {
     }
     if (u.pathname === "/api/media/get-content") {
       seen.media++;
+      seen.ids.add(u.searchParams.get("id"));
+      seen.maxInFlight = Math.max(seen.maxInFlight, ++seen.inFlight);
+      if (mediaDelayMs) await new Promise((r) => setTimeout(r, mediaDelayMs));
+      seen.inFlight--;
       const f = files.get(u.searchParams.get("id") ?? "");
       if (u.searchParams.get("variant") !== "print" || !f) return route.fulfill({ status: 404, contentType: "application/json", body: '{"status":"ERROR_NOT_FOUND"}' });
       return route.fulfill({ status: 200, contentType: "image/jpeg", headers: { "Cache-Control": "private, max-age=3600" }, body: readFileSync(path.join(PHOTOS, f)) });

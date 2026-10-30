@@ -15,6 +15,7 @@ is **not given yet**. The contract it reviews is [class-permissions.md](class-pe
 | Invite metadata: SHA-256 of the token (never the token), creator id, expiry, revoked time | `class_invite_tab` | the admin who made it |
 | Class pages (intro, teachers, events, superlatives, custom): plain text written by an admin | `class_page_tab` | whoever the admin names in the text |
 | **Not stored, only shown (assembled on read):** the student's profile, approved notes (with the authors' names, relationships, messages, signatures) and the photos of the profile and of approved notes | the member's own yearbook (`class-book/get`, `media/get-content`) | the student and **the friends who wrote notes** |
+| **Design choices and fixed-text edits** (T-146): the student's resolved design (theme, font set, section order and hidden sections, replaced titles and texts, picture choices), shown only to the class admin in `class-book/get` | the member's own `book_design_tab` row, read as the book's owner | the student: the only free text in it is what they typed into the template's text slots (titles), which they chose to put in their book; no other personal field is added |
 
 No email address, user id, birthday, cover photo, note-link token, pending or hidden note is ever part of what the class layer shows an admin. The roster shows
 a display name, role, join time and three facts about the page (`page_linked`, `profile_complete`, `approved_notes`).
@@ -107,7 +108,7 @@ names a test file or a test function that does not exist. Test files are in `int
 | `class-member/remove` | removes a member (admin); a removed admin's active links are revoked | `matrix_integration_test.go` | `TestPermissionMatrix`, `TestDepartedAdminsInvitesAreRevoked` |
 | `class-member/leave` | the caller leaves; a leaving admin's active links are revoked | `matrix_integration_test.go` | `TestPermissionMatrix`, `TestDepartedAdminsInvitesAreRevoked` |
 | `class-member/set-book` | the caller's own page link | `page_integration_test.go` | `TestSetBookMatrix` |
-| `class-book/get` | profiles, approved notes, class pages (admin) | `book_integration_test.go` | `TestClassBookMatrix` |
+| `class-book/get` | profiles, approved notes, each student's design, class pages (admin only; `TestClassBookMatrix` also proves a student, a classmate, a stranger and another class's admin never receive the design) | `book_integration_test.go` | `TestClassBookMatrix` |
 | `class-book/update-order` | order of members and pages (admin) | `pages_integration_test.go` | `TestPageMatrix` |
 | `class-page/create` | class page (admin) | `pages_integration_test.go` | `TestPageMatrix` |
 | `class-page/update` | class page (admin) | `pages_integration_test.go` | `TestPageMatrix` |

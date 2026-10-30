@@ -8,7 +8,7 @@ import os from "node:os";
 import path from "node:path";
 import { after, before, describe, test } from "node:test";
 import { chromium } from "playwright";
-import { CLASS_BOOK_CASES, classBookPages, designOf, makeBook, makeClassBook, photoId, SIGNATURES, studentName } from "./fixture.mjs";
+import { CLASS_BOOK_CASES, DESIGN_TITLE, HIDDEN_PHOTOS, classBookPages, designOf, makeBook, makeClassBook, makeDesignClassBook, photoId, SIGNATURES, studentName } from "./fixture.mjs";
 import { BASE, fitBoxes, inkIn, inspect, open, openClassBook, raster, savePdf, serveBook, signatureBoxes, startServer, text, words } from "./lib.mjs";
 
 const squash = (x) => x.replace(/\s+/g, "");
@@ -963,6 +963,60 @@ describe("class book: 30 students, 77 pages", () => {
         assert.ok(n >= from && n < want - 2, `${studentName(i)} is in the PDF after the previous student (page ${n + 1})`);
         from = n;
       }
+    });
+  }
+});
+
+// T-146: the class book applies each student's own design to their pages only. Six students with different themes, font sets, hidden and moved sections on A5 and A4:
+// the page count and order, no blank page, the cover and class pages in the class look, the hidden profile's photo never fetched, photos eager (loaded at ready) and at most 16 in flight.
+describe("class book with each student's own design: 6 students (T-146)", () => {
+  for (const size of ["A5", "A4"]) {
+    test(`${size}: pages, order, looks, no blank page, photos eager and at most 16 in flight`, async () => {
+      const cb = makeDesignClassBook();
+      const want = classBookPages(cb);
+      const page = await browser.newPage();
+      const seen = await serveBook(page, null, cb, { mediaDelayMs: 40 });
+      const opened = await openClassBook(page, size);
+      assert.equal(opened.pages, want, "the ready signal carries the page count");
+
+      const imgs = await page.evaluate(() => [...document.querySelectorAll("img.bk-photo")].map((i) => ({ src: i.hasAttribute("src"), w: i.naturalWidth })));
+      assert.equal(imgs.filter((i) => i.src && i.w > 0).length, imgs.length, "every photo has loaded at ready (eager)");
+      assert.ok(seen.maxInFlight <= 16, `${seen.maxInFlight} photos in flight`);
+      for (const id of HIDDEN_PHOTOS) assert.ok(!seen.ids.has(id), "the photo of a hidden profile is not fetched");
+
+      // each student's pages carry their own theme and fonts; the class cover, class pages and back cover carry none
+      const looks = await page.evaluate(() => [...document.querySelectorAll("[data-theme]")].map((e) => `${e.dataset.theme}/${e.dataset.fonts}`));
+      // pages per look: student 0 two notes pages (profile hidden), 1 one notes page (profile hidden), 3 profile + one notes page, 5 profile + two notes pages
+      const perLook = looks.reduce((a, l) => ({ ...a, [l]: (a[l] ?? 0) + 1 }), {});
+      assert.deepEqual(perLook, { "lavender/classic": 2, "burgundy/modern": 1, "forest/classic": 2, "mint/playful": 3 }, "each student's pages have their own look");
+      const classLook = await page.evaluate(() => [...document.querySelectorAll('[data-page^="class-"] [data-theme], [data-page^="class-"][data-theme]')].length);
+      assert.equal(classLook, 0, "the class cover and class pages keep the class look");
+      assert.equal(await page.locator("[data-fit=overflow]").count(), 0, "nothing is cut off");
+
+      const file = path.join(tmp, `class-designs-${size}.pdf`);
+      await savePdf(page, file);
+      await page.close();
+      const info = inspect(file);
+      assert.equal(info.pages, want, "the PDF has every page");
+      for (const [i, w] of PT[size].entries()) assert.ok(Math.abs(info.sizePt[i] - w) < 1, `${size} page size ${info.sizePt} vs ${PT[size]}`);
+      assert.ok(info.allFontsEmbedded, "every font is embedded");
+      const pdf = words(file);
+      pdf.forEach((p, n) => assert.ok(p.words.length >= 3, `page ${n + 1} is not blank (${p.words.length} words)`));
+      const pages = text(file).split("\f").slice(0, want).map((t) => squash(t).toLowerCase());
+      const at = (needle, from = 0) => pages.findIndex((t, n) => n >= from && t.includes(squash(needle).toLowerCase()));
+      assert.equal(at("Lớp 12A1 Chu Văn An"), 0, "the cover is first");
+      assert.equal(at("Cảm ơn bạn đã là một phần"), want - 1, "the back cover is last");
+      // the students in order; the profile quote is on the pages of the four students whose design shows the profile
+      let from = 2;
+      for (let i = 0; i < cb.members.length; i++) {
+        const hidden = cb.members[i].design?.sections.hidden.includes("profile");
+        const n = hidden ? at("Chúc mừng", from) : at(studentName(i), from);
+        if (!hidden) assert.ok(n >= from, `${studentName(i)} is in the PDF after the previous student`);
+        if (!hidden) from = n;
+      }
+      const quote = pages.filter((t) => t.includes(squash("Hãy sống như thể hôm nay là ngày cuối cùng.").toLowerCase())).length;
+      assert.equal(quote, 4, "the profile page is printed for the four students who show it, not for the two who hide it");
+      assert.ok(pages.some((t) => t.includes(squash(DESIGN_TITLE).toLowerCase())), "the student's own title is printed");
     });
   }
 });
