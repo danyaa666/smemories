@@ -224,6 +224,10 @@
     {
       "key": "cbLimitClass",
       "value": ""
+    },
+    {
+      "key": "departedToken",
+      "value": ""
     }
   ],
   "item": [
@@ -2967,6 +2971,379 @@
         },
         {
           "name": "Revoking did not remove B",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class/get?id={{inviteClassId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{inviteClassId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                  "pm.test('B is a student', () => pm.expect(pm.response.json().data.my_role).to.eql('student'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Departed admin: A reads the roster to learn B's current member id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-member/get-list?class_id={{inviteClassId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-member",
+                "get-list"
+              ],
+              "query": [
+                {
+                  "key": "class_id",
+                  "value": "{{inviteClassId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                  "const b = pm.response.json().data.items.find(m => m.role === 'student');",
+                  "pm.test('B is the student', () => pm.expect(b).to.not.eql(undefined));",
+                  "pm.collectionVariables.set('inviteMemberB', b.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Departed admin: A promotes B to admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-member/update-role",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-member",
+                "update-role"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\": \"{{inviteClassId}}\", \"member_id\": \"{{inviteMemberB}}\", \"role\": \"admin\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Departed admin: B (now an admin) makes an invite",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenB}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-invite/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-invite",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\": \"{{inviteClassId}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('active', () => pm.expect(d.active).to.eql(true));",
+                  "pm.collectionVariables.set('departedToken', d.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Departed admin: the link previews while B is an admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-invite/lookup",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-invite",
+                "lookup"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"token\": \"{{departedToken}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Departed admin: A demotes B to student",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-member/update-role",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-member",
+                "update-role"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"class_id\": \"{{inviteClassId}}\", \"member_id\": \"{{inviteMemberB}}\", \"role\": \"student\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code OK', () => pm.expect(pm.response.json().status).to.eql('OK'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Departed admin: the demoted admin's link is revoked - 404, the same answer as an unknown token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-invite/lookup",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-invite",
+                "lookup"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"token\": \"{{departedToken}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));",
+                  "pm.test('same body as an unknown token', () => pm.expect(pm.response.json().error_message).to.eql(pm.collectionVariables.get('deadTokenMessage')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Departed admin: and it cannot be accepted - 404, the same answer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session={{tokenA}}"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/class-invite/accept",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "class-invite",
+                "accept"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"token\": \"{{departedToken}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));",
+                  "pm.test('same body as an unknown token', () => pm.expect(pm.response.json().error_message).to.eql(pm.collectionVariables.get('deadTokenMessage')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Departed admin: B stays a member, as a student",
           "request": {
             "method": "GET",
             "header": [
