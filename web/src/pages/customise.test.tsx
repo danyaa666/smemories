@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { BookData } from "../api/book";
@@ -541,6 +541,178 @@ describe("changing the template", () => {
     expect(calls.filter((c) => c.path.startsWith("/book-design/get")).length).toBe(2);
     expect(screen.getByRole("button", { name: "Save design" })).toBeDisabled();
   });
+});
+
+describe("browser Back (T-148)", () => {
+  const openAfter = async () => {
+    window.history.replaceState(null, "", "/yearbooks");
+    window.history.pushState(null, "", `/yearbooks/${BOOK}/customise`);
+    renderApp(`/yearbooks/${BOOK}/customise`, { browser: true });
+    await loadedScreen();
+  };
+  const back = () => act(() => window.history.back());
+  const url = () => window.location.pathname;
+  const dirty = (u: ReturnType<typeof userEvent.setup>) =>
+    u.click(screen.getByRole("radio", { name: /Peach/ }));
+
+  it("asks first; Stay keeps the edits and the URL, and a second Back asks again", async () => {
+    const u = userEvent.setup();
+    serve();
+    await openAfter();
+    await dirty(u);
+    back();
+    const dialog = await screen.findByRole("dialog", { name: "Leave without saving?" });
+    await waitFor(() => expect(window.history.length).toBeGreaterThan(0));
+    expect(url()).toBe(`/yearbooks/${BOOK}/customise`);
+    await u.click(within(dialog).getByRole("button", { name: "Stay here" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByRole("radio", { name: /Peach/ })).toBeChecked();
+    expect(url()).toBe(`/yearbooks/${BOOK}/customise`);
+    back();
+    expect(
+      await screen.findByRole("dialog", { name: "Leave without saving?" }),
+    ).toBeInTheDocument();
+    expect(url()).toBe(`/yearbooks/${BOOK}/customise`);
+  });
+
+  it("Leave goes back to the screen before", async () => {
+    const u = userEvent.setup();
+    serve();
+    await openAfter();
+    await dirty(u);
+    back();
+    await u.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Leave" }));
+    await waitFor(() => expect(url()).toBe("/yearbooks"));
+  });
+
+  it("leaves at once without edits, and after the edits are saved", async () => {
+    const u = userEvent.setup();
+    serve({
+      hooks: {
+        "POST /book-design/update": (c) =>
+          ok(design((c.body as { options: DesignOptions }).options)),
+      },
+    });
+    await openAfter();
+    await dirty(u);
+    await u.click(screen.getByRole("button", { name: "Save design" }));
+    await screen.findByText("Design saved.");
+    await waitFor(() => expect(url()).toBe(`/yearbooks/${BOOK}/customise`));
+    back();
+    await waitFor(() => expect(url()).toBe("/yearbooks"));
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("an in-app link leaves one entry, so Back from there returns to the screen", async () => {
+    const u = userEvent.setup();
+    serve();
+    await openAfter();
+    await dirty(u);
+    await u.click(screen.getAllByRole("link", { name: "Back to the book" })[0] as HTMLElement);
+    await u.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Leave" }));
+    await waitFor(() => expect(url()).toBe(`/yearbooks/${BOOK}/book`));
+    back();
+    await waitFor(() => expect(url()).toBe(`/yearbooks/${BOOK}/customise`));
+  });
+});
+
+describe("a template change with unsaved edits (T-148)", () => {
+  const tplApi = () =>
+    serve({
+      hooks: {
+        "POST /yearbook/update": () => ok({ id: BOOK, template_id: "navy-classic" }),
+      },
+    });
+
+  it("asks first and names what is lost; cancel keeps the template and the edits", async () => {
+    const u = userEvent.setup();
+    const calls = tplApi();
+    open();
+    await loadedScreen();
+    await u.click(screen.getByRole("radio", { name: /Peach/ }));
+    await u.click(await screen.findByRole("radio", { name: /Navy Classic/ }));
+    const dialog = await screen.findByRole("dialog", { name: "Change the template?" });
+    expect(dialog).toHaveTextContent(/not saved/);
+    await u.click(within(dialog).getByRole("button", { name: "Keep editing" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(calls.some((c) => c.path === "/yearbook/update")).toBe(false);
+    expect(screen.getByRole("radio", { name: /Memory Book/ })).toBeChecked();
+    expect(screen.getByRole("radio", { name: /Peach/ })).toBeChecked();
+  });
+
+  it("changes the template after a yes, and does not ask without edits", async () => {
+    const u = userEvent.setup();
+    const calls = tplApi();
+    open();
+    await loadedScreen();
+    await u.click(screen.getByRole("radio", { name: /Peach/ }));
+    await u.click(screen.getByRole("radio", { name: /Navy Classic/ }));
+    await u.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "Change the template",
+      }),
+    );
+    await waitFor(() => expect(calls.filter((c) => c.path === "/yearbook/update")).toHaveLength(1));
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("goes straight through when nothing is unsaved", async () => {
+    const u = userEvent.setup();
+    const calls = tplApi();
+    open();
+    await loadedScreen();
+    await u.click(await screen.findByRole("radio", { name: /Navy Classic/ }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    await waitFor(() => expect(calls.filter((c) => c.path === "/yearbook/update")).toHaveLength(1));
+  });
+});
+
+describe("retries (T-148)", () => {
+  const BOOK_GET = `GET /yearbook/get?id=${BOOK}`;
+  // The shell (YearbookLayout) and the screen share one ["yearbook", id] query; the app's real defaults (retry 3) must not retry a 404 or a 403.
+  it("makes exactly one yearbook/get for a 404 and a 403, on the customise and the edit screen", async () => {
+    for (const [status, tail] of [
+      [404, "/customise"],
+      [403, "/customise"],
+      [404, ""],
+      [403, ""],
+    ] as const) {
+      loaded.clear();
+      const calls = mockApi({
+        "GET /user/get-me": () => ok(user()),
+        [BOOK_GET]: () => err(status, status === 404 ? "not_found" : "forbidden"),
+      });
+      const view = renderApp(`/yearbooks/${BOOK}${tail}`, { retry: 3 });
+      await waitFor(
+        () => expect(calls.filter((c) => c.path.startsWith("/yearbook/get"))).toHaveLength(1),
+        { timeout: 500 },
+      );
+      if (status === 404)
+        expect(
+          await screen.findByText("This yearbook does not exist.", {}, { timeout: 500 }),
+        ).toBeInTheDocument();
+      await new Promise((r) => setTimeout(r, 1300)); // the first retry would fire after 1 s
+      expect(calls.filter((c) => c.path.startsWith("/yearbook/get"))).toHaveLength(1);
+      view.unmount();
+      vi.unstubAllGlobals();
+    }
+  }, 15000);
+
+  it("still retries a 5xx", async () => {
+    let n = 0;
+    mockApi({
+      "GET /user/get-me": () => ok(user()),
+      [BOOK_GET]: () => (n++ === 0 ? err(500, "internal_error") : ok(yearbook())),
+      [`GET /book-data/get?yearbook_id=${BOOK}`]: () => ok(bookData()),
+      [`GET /book-design/get?yearbook_id=${BOOK}`]: () => ok(design()),
+      "GET /template/get-list?page_size=A5": () => ok({ items: [MEMORY], next_id: "" }),
+    });
+    renderApp(`/yearbooks/${BOOK}/customise`, { retry: 3 });
+    expect(
+      await screen.findByRole("group", { name: "Colours" }, { timeout: 4000 }),
+    ).toBeInTheDocument();
+    expect(n).toBe(2);
+  }, 10000);
 });
 
 describe("links to the screen", () => {
