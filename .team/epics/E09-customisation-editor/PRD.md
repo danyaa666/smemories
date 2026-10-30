@@ -1,6 +1,6 @@
 # E09 — Customisation and design editor (Canva-style, staged)
 
-**Status:** stage 1 active (specified 2026-10-30, D-39, D-41); stage 2 sketch   **Milestone(s):** M1b (guided customisation), M4 (free-layout editor)   **Owner decisions:** D-19, D-20, D-21 (README §4)
+**Status:** stage 1 built and merged 2026-10-30 (T-141..T-148, QA-verified exit check; owner acceptance pending for T-146..T-148); stage 2 sketch   **Milestone(s):** M1b (guided customisation), M4 (free-layout editor)   **Owner decisions:** D-19, D-20, D-21 (README §4)
 
 ## Problem and users
 Students want their yearbook to look like theirs: move a photo, resize a title, remove a block, add a sticker, replace an image. The owner asked (2026-10-08) for a Canva-like experience: the site provides templates, gathers friends' submissions,
@@ -76,8 +76,8 @@ flowchart LR
 - D-12 stays (pure-Go PDF). Revisit only if the editor needs effects the renderer cannot draw (then a headless-browser renderer would need its own decision: memory, sandboxing, cost).
 
 ## Exit criteria ("stable" for this epic)
-- Stage 1: a student customises colours, fonts, page order and visibility of their book, sees the PDF preview, resets to the template, and the export matches the preview; existing notes and photos survive a template change.
+- Stage 1 (**met 2026-10-30**: T-147 journey `tools/e2e/design.spec.mjs` plus QA's hand check on Memory Book and Navy Classic; follow-up T-148 guards the Back button): a student customises colours, fonts, page order and visibility of their book, sees the PDF preview, resets to the template, and the export matches the preview; existing notes and photos survive a template change.
 - Stage 2: a student adds, removes, moves, resizes and replaces elements in the browser on desktop and tablet, types Vietnamese correctly, undoes and redoes, and the exported PDF matches the editor in an automated parity test.
 
 ## Task index
-Stage 1 tasks: T-141 .. T-147 (specs `01-..` to `07-..` in this folder). The foundation tasks of this direction are in other epics: T-043 (field catalogue), T-034 (answers by field id), T-044 (templates declare fields), T-038 (format v2). Stage 2 tasks are specified when M4 becomes "Now" (README §2).
+Stage 1 tasks: T-141 .. T-148 (T-148 is the leave-guard follow-up) (specs `01-..` to `07-..` in this folder). The foundation tasks of this direction are in other epics: T-043 (field catalogue), T-034 (answers by field id), T-044 (templates declare fields), T-038 (format v2). Stage 2 tasks are specified when M4 becomes "Now" (README §2).

@@ -11,18 +11,17 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 5 | T-023, T-024, T-025, T-031, T-050 |
-| READY_FOR_QA | 1 | T-147 |
-| MERGED | 3 | T-146, T-149, T-148 |
+| MERGED | 4 | T-146, T-147, T-149, T-148 |
 | DONE | 132 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-137, T-138, T-139, T-140, T-141, T-142, T-143, T-144, T-145 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Epics (done/total):** E06-go-live 1/1; E09-customisation-editor 1/1; (unfiled) 133/147
+**Epics (done/total):** E06-go-live 1/1; E09-customisation-editor 1/1; (unfiled) 134/147
 
-**Awaiting your review (MERGED):** T-146 ([E09] Class book applies each student's design); T-149 ([E06] CI: raise the e2e Print check timeout (suite outgrew 6 minutes)); T-148 ([E09] Customise screen: guard browser Back, ask before a template change, fast NotFound)
+**Awaiting your review (MERGED):** T-146 ([E09] Class book applies each student's design); T-147 ([E09] Customisation journey, print-check coverage and docs); T-149 ([E06] CI: raise the e2e Print check timeout (suite outgrew 6 minutes)); T-148 ([E09] Customise screen: guard browser Back, ask before a template change, fast NotFound)
 
 **Open questions for you:** Q-063 (What comes after guided customisation: go-live (A), free-layout editor (B) or an owner trial (C)?)
 
-_Board last written 2026-10-30 13:32Z_
+_Board last written 2026-10-30 13:55Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -54,7 +53,7 @@ _Board last written 2026-10-30 13:32Z_
 | Now | M1 Personal yearbook, end to end | One student creates a yearbook, collects friends' notes, picks a template, exports a PDF | see M1 exit below | planned (specified) |
 | Next | M2 Go live on AWS and harden | Production environment, real email, observability, backups, privacy tooling | sketch only | BACKLOG |
 | Next | M3 Class yearbook | Class space, invites, roles, assembling many students' pages into one book | sketch only | BACKLOG |
-| Next | M1b Template-driven forms and guided customisation | Forms generated from template fields (started in M1: T-043, T-034, T-044); per-book design copy with colours, fonts, page order and visibility, PDF preview (E09 stage 1); friends' handwritten signatures (E11, owner request 2026-10-19) | sketch only | idea (starts when M1 is stable) |
+| Done | M1b Template-driven forms and guided customisation | Forms generated from template fields (started in M1: T-043, T-034, T-044); per-book design copy with colours, fonts, page order and visibility, PDF preview (E09 stage 1); friends' handwritten signatures (E11, owner request 2026-10-19) | sketch only | idea (starts when M1 is stable) |
 | Later | M4 Free-layout editor | Canva-style editor on the template document: add, remove, move, resize, rotate, replace, assets, undo/redo (E09 stage 2); order against M3 decided at the M2 retrospective | sketch only | idea (D-19) |
 | Later | M5+ | Print-shop-ready PDF (bleed, CMYK note), under-18 support, more social providers, in-app print ordering | direction only | idea |
 
@@ -6450,7 +6449,7 @@ Spec: .team/epics/E09-customisation-editor/06-class-book-applies-designs.md.
 - 2026-10-30 12:32Z · leader · merged 5334c1c. Review: class-book/get returns each member's resolved design to the class admin only, counted in the 8 MiB cap (reserve 16 KiB), class print applies each design to that student's pages; diff matches the spec; docs/class-permissions, class-privacy-review and book-export updated. QA: make test-integration pass (own compose project, old MinIO on the main stack), check-class-matrix 21 ops ok, print-check 163/0, e2e 6/0 (QA added class journey step 7b: 403 for students A and B), vitest 675; go/web/security green on 5970989 (go re-run once after a CI golangci-lint install failure); manual full run 41052503585 all green except e2e Print check step timeout -> T-149. For owner to check: print a real class with several customised students; class-privacy-review section 8 sign-off still open.
 
 ### T-147 — [E09] Customisation journey, print-check coverage and docs
-- **Status:** READY_FOR_QA
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1b
@@ -6461,8 +6460,8 @@ Spec: .team/epics/E09-customisation-editor/06-class-book-applies-designs.md.
 - **Assignee:** —
 - **Branch:** task/t-147-e09-customisation-journey-print-check-co
 - **PR:** https://github.com/danyaa666/smemories/pull/147
-- **Updated:** 2026-10-30 13:18Z by dev
-- **Comments-seen:** 6
+- **Updated:** 2026-10-30 13:55Z by leader
+- **Comments-seen:** 8
 
 Spec: .team/epics/E09-customisation-editor/07-journey-print-check-docs.md.
 
@@ -6488,6 +6487,12 @@ Spec: .team/epics/E09-customisation-editor/07-journey-print-check-docs.md.
   - SMEM_RATE_REGISTER_PER_HOUR=20: test API only, ok; just the precedence bug in issue 1.
 - 2026-10-30 13:14Z · leader · Leader, for the rework (QA_FAIL, two items): (1) Makefile exports .env, so SMEM_RATE_REGISTER_PER_HOUR=5 from .env.example beats the ${...:-20} default in scripts/e2e.sh and make e2e fails with a 429 on a normal local setup. Use a dedicated variable that .env never sets, e.g. SMEM_RATE_REGISTER_PER_HOUR="${SMEM_E2E_RATE_REGISTER_PER_HOUR:-20}" for the test API only (SMEM_ENV=test), and document it in docs/e2e.md; verify with a plain 'make e2e' on a checkout that has .env.example values. (2) docs/templates.md 'Adding a theme' must be true when followed: it omits internal/templates/design_test.go (pins 3 themes), and the contrast tests in web/src/book/design.test.ts loop over hard-coded theme lists so a new low-contrast theme (about 1.9:1) passes 32/32. Make the contrast test derive its theme and font-set lists from the manifests (or the template registry) so every declared theme is checked automatically and a 1.9:1 theme fails; make the Go design_test.go check count-agnostic if that is simple, otherwise list the exact files to touch in the docs. Prove it by adding a scratch low-contrast theme locally (do not commit it) and showing the test fails, then following your own docs on a scratch checkout. Merge origin/develop first.
 - 2026-10-30 13:18Z · dev · Rework head 65a16d3 (develop merged, no force-push). (1) e2e.sh now uses SMEM_E2E_RATE_REGISTER_PER_HOUR (default 20; .env never sets it), documented in docs/e2e.md; plain 'make e2e' on a .env copied from .env.example (RATE_REGISTER=5), own project t147rework ports 23316/26389/29010, api 18091 web 14191: 7 passed (25.8s). (2) design.test.ts contrast tests now loop over manifest.design.themes / navy.themes; Go design_test.go no longer pins theme/font-set counts. Scratch theme 'sunny' (soft #c9b560 on #fffdf0, 2.0:1) added per docs steps 1,2,4,5: go test passes, design.test.ts FAILS 'sunny: soft ... expected 2.0 >= 4.5'; with soft #5c4a12 the full vitest passes 676/676, lint:i18n ok; scratch reverted, not committed. Docs step 3/6 and the validation paragraph updated (print-check loop is still a hand-edit, documented). Font-set tests already iterate the css blocks, no pinned lists. vitest 675/675, tsc, eslint, prettier, gofmt ok.
+- 2026-10-30 13:55Z · qa · QA_PASS on head 65a16d3 (PR #147 MERGEABLE/CLEAN, T-148 f4b0d88 already in; PR checks go, web, security pass; e2e/go-integration/image skipped by D-37/38). Rework of my 2 majors verified; nothing else changed in product code (diff 497f2b9..65a16d3 = scripts/e2e.sh, design.test.ts, design_test.go, docs).
+  1. make e2e: .env copied from .env.example (make -pn shows SMEM_RATE_REGISTER_PER_HOUR=5 exported), own project t147rework, non-default ports (mysql 23316, s3 29010, api 18095, web 14195), plain 'make e2e' (no override): 7 passed (25.5 s), journey and design.spec included. PASS.
+  2. Scratch checkout, theme 'sunny' added to memory-book following docs/templates.md steps 1,2,4,5 (manifest, css block, memory.tsx themes, en/vi). With --mb-soft #c9b560 on #fffdf0: go test ./internal/templates ok; vitest design.test.ts FAILS 'sunny: soft #c9b560 on paper #fffdf0: expected 2.0035 >= 4.5' (1 failed/129 in src/book). With soft #5c4a12: full vitest 676/676, go test ok, lint:i18n ok. Remaining hard-coded theme lists are only the print-check loops (documented step 6) and resolveDesign/customise unit fixtures. Docs steps complete and true. Scratch worktree deleted, nothing committed. PASS.
+  Result lines on head 65a16d3: make print-check: tests 163 pass 163 fail 0 (EXIT 0). npm test (vitest) 35 files, 675/675. tsc 0 errors, eslint+prettier ok, lint:i18n ok, check:api ok, go build ok. make test-integration with SMEM_TEST_S3_ENDPOINT=http://127.0.0.1:29010 (own stack's S3; default :9000 hits the main stack's old store and 403s on CreateBucket, env only, not the PR): exit 0, 31 packages ok. Stage 1 hand checks (reorder, live preview, PDF vs preview, reset, template change) were done on 497f2b9 and passed; unchanged code paths since.
+  Non-blocking: worktree .env is shared with the dev's (compose project t147rework); I stopped it with make down (volumes kept).
+- 2026-10-30 13:55Z · leader · merged 9220f43. Review: e2e journey design.spec.mjs, print-check coverage table, docs/templates.md 'Adding a theme' (verified by QA on a scratch checkout), contrast tests now derived from the manifests, dedicated SMEM_E2E_RATE_REGISTER_PER_HOUR for the test API. QA: plain make e2e 7/7 from a .env.example copy, print-check 163/163, vitest 675, make test-integration 31 ok (own stack), deliberate break fails the journey at step 6, stage 1 exit items checked by hand on Memory Book and Navy Classic; go/web/security green on 65a16d3, manual full run 41057558857 e2e/web/security/image green (go job: golangci-lint install flake). For owner to check: run through the stage 1 exit by hand on a real book.
 
 <!-- tasks:end -->
 
