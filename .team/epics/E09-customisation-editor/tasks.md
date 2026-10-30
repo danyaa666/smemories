@@ -8,7 +8,7 @@ PR and comments change only through `board.py`.
 <!-- tasks:start -->
 
 ### T-148 — [E09] Customise screen: guard browser Back, ask before a template change, fast NotFound
-- **Status:** READY_FOR_QA
+- **Status:** IN_QA
 - **Priority:** P3
 - **Type:** feature
 - **Milestone:** M1b
@@ -16,10 +16,10 @@ PR and comments change only through `board.py`.
 - **Risk:** low
 - **Rework:** 2
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** qa
 - **Branch:** task/t-148-e09-customise-screen-guard-browser-back-
 - **PR:** https://github.com/danyaa666/smemories/pull/144
-- **Updated:** 2026-10-30 12:58Z by dev
+- **Updated:** 2026-10-30 13:14Z by qa
 - **Comments-seen:** 6
 
 Spec: .team/epics/E09-customisation-editor/08-customise-leave-guard-and-not-found.md (read it from the main checkout). Follow-up to T-144 QA: browser Back drops unsaved edits, template change drops them silently, non-owner waits 8-10 s for NotFound.

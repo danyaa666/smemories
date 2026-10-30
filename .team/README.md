@@ -11,8 +11,8 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 5 | T-023, T-024, T-025, T-031, T-050 |
-| READY_FOR_QA | 1 | T-148 |
-| QA_FAIL | 1 | T-147 |
+| READY_FOR_QA | 1 | T-147 |
+| IN_QA | 1 | T-148 |
 | MERGED | 2 | T-146, T-149 |
 | DONE | 132 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-137, T-138, T-139, T-140, T-141, T-142, T-143, T-144, T-145 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
@@ -21,9 +21,9 @@
 
 **Awaiting your review (MERGED):** T-146 ([E09] Class book applies each student's design); T-149 ([E06] CI: raise the e2e Print check timeout (suite outgrew 6 minutes))
 
-**Open questions for you:** none
+**Open questions for you:** Q-063 (What comes after guided customisation: go-live (A), free-layout editor (B) or an owner trial (C)?)
 
-_Board last written 2026-10-30 13:14Z_
+_Board last written 2026-10-30 13:20Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -687,6 +687,24 @@ C. Free-layout editor (M4, epic E09 stage 2). The Canva-style editor. Large, and
 D. Something else (tell me).
 
 My recommendation: A. Everything users can touch is built; going live turns the work into something you can show and test with real friends, and the feedback should steer B and C. If you want to keep building for a while before the AWS setup, B is the next best, because it needs nothing from you.
+
+### Q-063 — What comes after guided customisation: go-live (A), free-layout editor (B) or an owner trial (C)?
+- **Status:** OPEN
+- **Asked:** 2026-10-30 13:20Z
+- **Blocks:** —
+- **Recommendation:** A: start M2 go-live; trial stage 1 yourself in parallel (C)
+- **Answer:** _(pending)_
+
+**Context.** E09 stage 1 (colour themes, font sets, show/hide and reorder sections, editable titles and texts, swappable cover image, for Memory Book and Navy Classic, in the personal and the class book) is merged except T-147 (journey and docs) and T-148 (leave guard), both in QA now. When they merge the build pipeline will hold only go-live tasks (T-023, T-024, T-025, T-031, T-050), and those need inputs only you can give.
+
+**Options**
+- **A. Start M2 go-live now (recommended).** Customisation is complete enough to put in front of real students, and nothing runs for them until it is deployed. I need from you: (1) AWS account and region, (2) the domain name, (3) email provider (SES recommended, D-11 context), (4) a monthly cost cap so I can write the estimate first, (5) retention periods (notes, deleted accounts, backups), (6) a Google OAuth client, (7) the open brackets in the legal texts (operator, contact, region, law) and a native Vietnamese read. Until you answer I specify what needs none of it (infrastructure skeleton in OpenTofu, runbooks, restore drill plan) and keep the pipeline full.
+- **B. Build M4 (free-layout editor, E09 stage 2) before go-live.** The largest piece of work so far, many tasks, delays shipping by weeks and needs a new product decision on scope; high risk of drifting from the print-safe template model.
+- **C. Pause the team for an owner trial.** You try stage 1 on a real class and send feedback; I turn it into fixes before going live. Cheapest in tokens, but nothing ships meanwhile.
+
+**Recommendation:** A, with C happening in parallel (you can trial while I prepare the infrastructure skeleton).
+
+**Blocked meanwhile:** nothing today; the pipeline runs dry after T-147/T-148 merge.
 
 <!-- questions:end -->
 
@@ -6433,7 +6451,7 @@ Spec: .team/epics/E09-customisation-editor/06-class-book-applies-designs.md.
 - 2026-10-30 12:32Z · leader · merged 5334c1c. Review: class-book/get returns each member's resolved design to the class admin only, counted in the 8 MiB cap (reserve 16 KiB), class print applies each design to that student's pages; diff matches the spec; docs/class-permissions, class-privacy-review and book-export updated. QA: make test-integration pass (own compose project, old MinIO on the main stack), check-class-matrix 21 ops ok, print-check 163/0, e2e 6/0 (QA added class journey step 7b: 403 for students A and B), vitest 675; go/web/security green on 5970989 (go re-run once after a CI golangci-lint install failure); manual full run 41052503585 all green except e2e Print check step timeout -> T-149. For owner to check: print a real class with several customised students; class-privacy-review section 8 sign-off still open.
 
 ### T-147 — [E09] Customisation journey, print-check coverage and docs
-- **Status:** QA_FAIL
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1b
@@ -6444,8 +6462,8 @@ Spec: .team/epics/E09-customisation-editor/06-class-book-applies-designs.md.
 - **Assignee:** —
 - **Branch:** task/t-147-e09-customisation-journey-print-check-co
 - **PR:** https://github.com/danyaa666/smemories/pull/147
-- **Updated:** 2026-10-30 13:13Z by qa
-- **Comments-seen:** 5
+- **Updated:** 2026-10-30 13:18Z by dev
+- **Comments-seen:** 6
 
 Spec: .team/epics/E09-customisation-editor/07-journey-print-check-docs.md.
 
@@ -6470,6 +6488,7 @@ Spec: .team/epics/E09-customisation-editor/07-journey-print-check-docs.md.
   - Docs: e2e.md step 7b, journey section and 25 min limit present; README 2 lines ok; docs/templates.md "What print-check covers" table matches check.test.mjs (12 cells x 2 per template). Only the two defects above.
   - SMEM_RATE_REGISTER_PER_HOUR=20: test API only, ok; just the precedence bug in issue 1.
 - 2026-10-30 13:14Z · leader · Leader, for the rework (QA_FAIL, two items): (1) Makefile exports .env, so SMEM_RATE_REGISTER_PER_HOUR=5 from .env.example beats the ${...:-20} default in scripts/e2e.sh and make e2e fails with a 429 on a normal local setup. Use a dedicated variable that .env never sets, e.g. SMEM_RATE_REGISTER_PER_HOUR="${SMEM_E2E_RATE_REGISTER_PER_HOUR:-20}" for the test API only (SMEM_ENV=test), and document it in docs/e2e.md; verify with a plain 'make e2e' on a checkout that has .env.example values. (2) docs/templates.md 'Adding a theme' must be true when followed: it omits internal/templates/design_test.go (pins 3 themes), and the contrast tests in web/src/book/design.test.ts loop over hard-coded theme lists so a new low-contrast theme (about 1.9:1) passes 32/32. Make the contrast test derive its theme and font-set lists from the manifests (or the template registry) so every declared theme is checked automatically and a 1.9:1 theme fails; make the Go design_test.go check count-agnostic if that is simple, otherwise list the exact files to touch in the docs. Prove it by adding a scratch low-contrast theme locally (do not commit it) and showing the test fails, then following your own docs on a scratch checkout. Merge origin/develop first.
+- 2026-10-30 13:18Z · dev · Rework head 65a16d3 (develop merged, no force-push). (1) e2e.sh now uses SMEM_E2E_RATE_REGISTER_PER_HOUR (default 20; .env never sets it), documented in docs/e2e.md; plain 'make e2e' on a .env copied from .env.example (RATE_REGISTER=5), own project t147rework ports 23316/26389/29010, api 18091 web 14191: 7 passed (25.8s). (2) design.test.ts contrast tests now loop over manifest.design.themes / navy.themes; Go design_test.go no longer pins theme/font-set counts. Scratch theme 'sunny' (soft #c9b560 on #fffdf0, 2.0:1) added per docs steps 1,2,4,5: go test passes, design.test.ts FAILS 'sunny: soft ... expected 2.0 >= 4.5'; with soft #5c4a12 the full vitest passes 676/676, lint:i18n ok; scratch reverted, not committed. Docs step 3/6 and the validation paragraph updated (print-check loop is still a hand-edit, documented). Font-set tests already iterate the css blocks, no pinned lists. vitest 675/675, tsc, eslint, prettier, gofmt ok.
 
 <!-- tasks:end -->
 
