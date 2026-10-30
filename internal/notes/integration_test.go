@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/danyaa666/smemories/internal/auth"
+	"github.com/danyaa666/smemories/internal/bookdesign"
 	"github.com/danyaa666/smemories/internal/db/dbtest"
 	"github.com/danyaa666/smemories/internal/httpx"
 	"github.com/danyaa666/smemories/internal/legal"
@@ -113,7 +114,7 @@ func newEnv(t *testing.T) *env {
 	notesSvc := NewService(notesStore, e.svc, httpx.NewCursors([]byte(strings.Repeat("c", 32))), e.lim, logger, e.now)
 	e.ns = notesSvc
 	e.svc.SetRefClearer(bookStore, notesSvc)
-	yh := yearbook.NewHandler(yearbook.NewService(bookStore, httpx.NewCursors([]byte(strings.Repeat("c", 32))), e.svc, e.now, e.svc, notesSvc), ah.RequireUser, []string{origin})
+	yh := yearbook.NewHandler(yearbook.NewService(bookStore, httpx.NewCursors([]byte(strings.Repeat("c", 32))), e.svc, e.now, e.svc, notesSvc, bookdesign.NewService(bookdesign.NewStore(d), nil, nil)), ah.RequireUser, []string{origin})
 	e.nh = NewHandler(notesSvc, 10<<20, ah.RequireUser, []string{origin}, ah.ClientIP, logger)
 	e.tmp = t.TempDir()
 	e.nh.SetUploadLimits(defaultUploadConns, defaultUploadsPerIP, e.tmp)

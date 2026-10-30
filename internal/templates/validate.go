@@ -107,6 +107,9 @@ func (v *validator) template() {
 		v.errf("", "unknown renderer %q (use %s or %s)", t.Renderer, RendererGo, RendererHTML)
 		return
 	}
+	if t.Design != nil {
+		v.errf("", "only an html template has a design block")
+	}
 	if t.Unit != "mm" {
 		v.errf("", "invalid unit %q: only \"mm\" is supported", t.Unit)
 	}
@@ -170,6 +173,7 @@ func (v *validator) html() {
 			v.errf("", "unknown page size %q", s)
 		}
 	}
+	v.design()
 }
 
 // noteFields checks the declared note form: 1..maxNoteFields catalogue ids, no duplicates.

@@ -23,6 +23,7 @@ export function memberBook(
 ): BookData | null {
   if (!m.linked || !m.yearbook || !m.profile) return null;
   return {
+    design: null, // T-146 applies each student's own design
     yearbook: {
       title: cls.name,
       school_name: cls.school_name,

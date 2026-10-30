@@ -100,6 +100,7 @@ var orphanPairs = []struct{ child, column, parent string }{
 	{"class_invite_tab", "class_id", "class_tab"},
 	{"class_invite_tab", "created_by", "user_tab"},
 	{"class_page_tab", "class_id", "class_tab"},
+	{"book_design_tab", "yearbook_id", "yearbook_tab"},
 }
 
 // AssertNoOrphans fails the test for every row whose reference points at a parent row that does not exist.

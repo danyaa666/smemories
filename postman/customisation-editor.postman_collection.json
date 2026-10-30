@@ -1,0 +1,2894 @@
+{
+  "info": {
+    "name": "SMemories - customisation editor (E09)",
+    "description": "Book designs (E09 stage 1, T-141, D-41): `GET /api/book-design/get`, `POST /api/book-design/update`, `POST /api/book-design/reset`, the `design` of `GET /api/book-data/get` and the reset when a book's template changes. `{status,data}` envelope, `ERROR_*` codes. Uses the two verified accounts of notes.postman_collection.json (A owns the books, B is the other user; book-data/get needs a verified email): run that collection's Setup once (or this one's) and then `make verify-newman-users`. Run from the repository root: `newman run postman/customisation-editor.postman_collection.json`. Start the API with SMEM_ENV=dev and the `make up` stack. Each folder creates and deletes its own yearbook, so the collection can run twice in a row; a run makes about 40 design writes (limit 60 per 10 minutes per user, `make reset-limits` clears it), so wait or reset between two runs.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "origin",
+      "value": "http://localhost:5173"
+    },
+    {
+      "key": "termsVersion",
+      "value": "2026-10-29"
+    },
+    {
+      "key": "emailA",
+      "value": "newman-notes-a@example.com"
+    },
+    {
+      "key": "emailB",
+      "value": "newman-notes-b@example.com"
+    },
+    {
+      "key": "password",
+      "value": "Fake-Newman-notes-pw-1"
+    },
+    {
+      "key": "tokenA",
+      "value": ""
+    },
+    {
+      "key": "tokenB",
+      "value": ""
+    },
+    {
+      "key": "bookId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Setup (once per database)",
+      "item": [
+        {
+          "name": "Register A (200, or 409/429 when an earlier run already did)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{emailA}}\",\"password\":\"{{password}}\",\"display_name\":\"Newman Alice\",\"accept_terms_version\":\"{{termsVersion}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('created, or already there', () => pm.expect(pm.response.code).to.be.oneOf([200, 409, 429]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register B (200, or 409/429 when an earlier run already did)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "smem_session="
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{emailB}}\",\"password\":\"{{password}}\",\"display_name\":\"Newman Bob\",\"accept_terms_version\":\"{{termsVersion}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('created, or already there', () => pm.expect(pm.response.code).to.be.oneOf([200, 409, 429]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "book-design",
+      "item": [
+        {
+          "name": "Full flow",
+          "item": [
+            {
+              "name": "1. Login A",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session="
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"email\":\"{{emailA}}\",\"password\":\"{{password}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "const m = /smem_session=([^;]+)/.exec(pm.response.headers.get('Set-Cookie') || '');",
+                      "pm.test('session cookie issued', () => pm.expect(m).to.not.be.null);",
+                      "pm.collectionVariables.set('tokenA', m ? m[1] : '');"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "2. Login B",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session="
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"email\":\"{{emailB}}\",\"password\":\"{{password}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "const m = /smem_session=([^;]+)/.exec(pm.response.headers.get('Set-Cookie') || '');",
+                      "pm.test('session cookie issued', () => pm.expect(m).to.not.be.null);",
+                      "pm.collectionVariables.set('tokenB', m ? m[1] : '');"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "3. A creates a book on the memory-book template",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/yearbook/create",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "yearbook",
+                    "create"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"title\":\"Design book\",\"language\":\"en\",\"template_id\":\"memory-book\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "pm.collectionVariables.set('bookId', pm.response.json().data.id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "4. A reads the design: no options, the template's choices",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/get?yearbook_id={{bookId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "get"
+                  ],
+                  "query": [
+                    {
+                      "key": "yearbook_id",
+                      "value": "{{bookId}}"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "const d = pm.response.json().data;",
+                      "pm.test('no options yet', () => { pm.expect(d.options).to.eql(null); pm.expect(d.updated_at).to.eql(null); });",
+                      "pm.test('template and choices', () => { pm.expect(d.template_id).to.eql('memory-book'); pm.expect(d.design.themes).to.eql(['lavender','peach','mint']); pm.expect(d.design.sections.map(s => s.id)).to.eql(['cover','profile','notes','back']); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "5. book-data/get carries the default design",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-data/get?yearbook_id={{bookId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-data",
+                    "get"
+                  ],
+                  "query": [
+                    {
+                      "key": "yearbook_id",
+                      "value": "{{bookId}}"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "const g = pm.response.json().data.design;",
+                      "pm.test('defaults filled in', () => { pm.expect(g.theme).to.eql('lavender'); pm.expect(g.fonts).to.eql('playful'); pm.expect(g.sections.order).to.eql(['cover','profile','notes','back']); pm.expect(g.sections.hidden).to.eql([]); pm.expect(g.texts).to.eql({}); pm.expect(g.images['cover.pattern']).to.eql('dots'); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "6. A saves a full design",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/update",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "update"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"options\":{\"v\":1,\"theme\":\"mint\",\"fonts\":\"classic\",\"sections\":{\"order\":[\"cover\",\"notes\",\"profile\",\"back\"],\"hidden\":[\"profile\"]},\"texts\":{\"profile.heading\":\"Về mình\"},\"images\":{\"cover.pattern\":\"plain\"}}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "const d = pm.response.json().data;",
+                      "pm.test('stored and echoed', () => { pm.expect(d.options.theme).to.eql('mint'); pm.expect(d.updated_at).to.be.a('number'); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "7. A reads it back",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/get?yearbook_id={{bookId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "get"
+                  ],
+                  "query": [
+                    {
+                      "key": "yearbook_id",
+                      "value": "{{bookId}}"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "const o = pm.response.json().data.options;",
+                      "pm.test('same document', () => { pm.expect(o.fonts).to.eql('classic'); pm.expect(o.sections.order).to.eql(['cover','notes','profile','back']); pm.expect(o.sections.hidden).to.eql(['profile']); pm.expect(o.texts['profile.heading']).to.eql('Về mình'); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "8. book-data/get now carries the chosen design",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-data/get?yearbook_id={{bookId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-data",
+                    "get"
+                  ],
+                  "query": [
+                    {
+                      "key": "yearbook_id",
+                      "value": "{{bookId}}"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "const g = pm.response.json().data.design;",
+                      "pm.test('resolved', () => { pm.expect(g.theme).to.eql('mint'); pm.expect(g.sections.order).to.eql(['cover','notes','profile','back']); pm.expect(g.sections.hidden).to.eql(['profile']); pm.expect(g.texts['profile.heading']).to.eql('Về mình'); pm.expect(g.images['cover.pattern']).to.eql('plain'); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "9. A saves a smaller design: a full replace",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/update",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "update"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"options\":{\"theme\":\"peach\"}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "10. Only the new document is left",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/get?yearbook_id={{bookId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "get"
+                  ],
+                  "query": [
+                    {
+                      "key": "yearbook_id",
+                      "value": "{{bookId}}"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "const o = pm.response.json().data.options;",
+                      "pm.test('replaced, not merged', () => { pm.expect(o).to.eql({v: 1, theme: 'peach'}); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "11. B cannot read A's design - 404",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenB}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/get?yearbook_id={{bookId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "get"
+                  ],
+                  "query": [
+                    {
+                      "key": "yearbook_id",
+                      "value": "{{bookId}}"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 404', () => pm.response.to.have.status(404));",
+                      "pm.test('ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "12. A resets to the template",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/reset",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "reset"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "13. Resetting again is fine",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/reset",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "reset"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "14. Back to the defaults",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/get?yearbook_id={{bookId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "get"
+                  ],
+                  "query": [
+                    {
+                      "key": "yearbook_id",
+                      "value": "{{bookId}}"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "pm.test('no options', () => pm.expect(pm.response.json().data.options).to.eql(null));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "15. A saves a design again",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/update",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "update"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"options\":{\"theme\":\"mint\"}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "16. A changes the book's template: the design goes",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/yearbook/update",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "yearbook",
+                    "update"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"id\":\"{{bookId}}\",\"template_id\":\"navy-classic\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "17. The new template has no design",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/get?yearbook_id={{bookId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "get"
+                  ],
+                  "query": [
+                    {
+                      "key": "yearbook_id",
+                      "value": "{{bookId}}"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "const d = pm.response.json().data;",
+                      "pm.test('nothing to customise', () => { pm.expect(d.template_id).to.eql('navy-classic'); pm.expect(d.options).to.eql(null); pm.expect(d.design).to.eql(null); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "18. Saving a design for it is refused - 400",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/update",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "update"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"options\":{}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_INVALID_DESIGN', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_DESIGN'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "19. A goes back to memory-book",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/yearbook/update",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "yearbook",
+                    "update"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"id\":\"{{bookId}}\",\"template_id\":\"memory-book\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "20. The old design did not come back",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/get?yearbook_id={{bookId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "get"
+                  ],
+                  "query": [
+                    {
+                      "key": "yearbook_id",
+                      "value": "{{bookId}}"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "pm.test('defaults', () => pm.expect(pm.response.json().data.options).to.eql(null));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "21. A saves a design once more",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/update",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "update"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"options\":{\"v\":1,\"theme\":\"mint\",\"fonts\":\"classic\",\"sections\":{\"order\":[\"cover\",\"notes\",\"profile\",\"back\"],\"hidden\":[\"profile\"]},\"texts\":{\"profile.heading\":\"Về mình\"},\"images\":{\"cover.pattern\":\"plain\"}}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "22. A deletes the book (the design goes with it)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/yearbook/delete",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "yearbook",
+                    "delete"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"id\":\"{{bookId}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "23. The design of a deleted book - 404",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/get?yearbook_id={{bookId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "get"
+                  ],
+                  "query": [
+                    {
+                      "key": "yearbook_id",
+                      "value": "{{bookId}}"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 404', () => pm.response.to.have.status(404));",
+                      "pm.test('ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Edge cases",
+          "item": [
+            {
+              "name": "E-A. Login A",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session="
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"email\":\"{{emailA}}\",\"password\":\"{{password}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "const m = /smem_session=([^;]+)/.exec(pm.response.headers.get('Set-Cookie') || '');",
+                      "pm.test('session cookie issued', () => pm.expect(m).to.not.be.null);",
+                      "pm.collectionVariables.set('tokenA', m ? m[1] : '');"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E-B. Login B",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session="
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"email\":\"{{emailB}}\",\"password\":\"{{password}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "const m = /smem_session=([^;]+)/.exec(pm.response.headers.get('Set-Cookie') || '');",
+                      "pm.test('session cookie issued', () => pm.expect(m).to.not.be.null);",
+                      "pm.collectionVariables.set('tokenB', m ? m[1] : '');"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E0. A creates a book for the edge cases",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/yearbook/create",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "yearbook",
+                    "create"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"title\":\"Design book\",\"language\":\"en\",\"template_id\":\"memory-book\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "pm.collectionVariables.set('bookId', pm.response.json().data.id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E1. get without yearbook_id - 400",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/get",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "get"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E2. get with a lower-case id - 400",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/get?yearbook_id=01k7qb1b2c3d4e5f6g7h8j9k0m",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "get"
+                  ],
+                  "query": [
+                    {
+                      "key": "yearbook_id",
+                      "value": "01k7qb1b2c3d4e5f6g7h8j9k0m"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E3. get of an unknown book - 404",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/get?yearbook_id=01K7QB1B2C3D4E5F6G7H8J9K0M",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "get"
+                  ],
+                  "query": [
+                    {
+                      "key": "yearbook_id",
+                      "value": "01K7QB1B2C3D4E5F6G7H8J9K0M"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 404', () => pm.response.to.have.status(404));",
+                      "pm.test('ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E4. get without a session - 401",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session="
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/get?yearbook_id={{bookId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "get"
+                  ],
+                  "query": [
+                    {
+                      "key": "yearbook_id",
+                      "value": "{{bookId}}"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 401', () => pm.response.to.have.status(401));",
+                      "pm.test('ERROR_UNAUTHORIZED', () => pm.expect(pm.response.json().status).to.eql('ERROR_UNAUTHORIZED'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E5. update by another user - 404",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenB}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/update",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "update"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"options\":{\"theme\":\"peach\"}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 404', () => pm.response.to.have.status(404));",
+                      "pm.test('ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E6. update of an unknown book - 404",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/update",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "update"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"01K7QB1B2C3D4E5F6G7H8J9K0M\",\"options\":{\"theme\":\"peach\"}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 404', () => pm.response.to.have.status(404));",
+                      "pm.test('ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E7. reset by another user - 404",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenB}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/reset",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "reset"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 404', () => pm.response.to.have.status(404));",
+                      "pm.test('ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E8. update without a session - 401",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session="
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/update",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "update"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"options\":{}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 401', () => pm.response.to.have.status(401));",
+                      "pm.test('ERROR_UNAUTHORIZED', () => pm.expect(pm.response.json().status).to.eql('ERROR_UNAUTHORIZED'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E9. update from a foreign origin - 403",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/update",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "update"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"options\":{}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 403', () => pm.response.to.have.status(403));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E10. update without options - 400",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/update",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "update"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E11. update with an unknown body field - 400",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/update",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "update"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"options\":{},\"extra\":1}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E12. unknown theme - 400",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/update",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "update"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"options\":{\"theme\":\"neon\"}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_INVALID_DESIGN', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_DESIGN'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E13. unknown font set - 400",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/update",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "update"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"options\":{\"fonts\":\"comic\"}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_INVALID_DESIGN', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_DESIGN'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E14. version 2 - 400",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/update",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "update"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"options\":{\"v\":2}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_INVALID_DESIGN', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_DESIGN'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E15. unknown top-level key - 400",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/update",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "update"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"options\":{\"colours\":{}}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_INVALID_DESIGN', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_DESIGN'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E16. options is a list - 400",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/update",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "update"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"options\":[]}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_INVALID_DESIGN', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_DESIGN'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E17. theme of the wrong type - 400",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/update",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "update"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"options\":{\"theme\":5}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_INVALID_DESIGN', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_DESIGN'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E18. order misses a section - 400",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/update",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "update"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"options\":{\"sections\":{\"order\":[\"cover\",\"profile\",\"notes\"]}}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_INVALID_DESIGN', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_DESIGN'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E19. order repeats a section - 400",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/update",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "update"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"options\":{\"sections\":{\"order\":[\"cover\",\"profile\",\"profile\",\"back\"]}}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_INVALID_DESIGN', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_DESIGN'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E20. order moves the fixed cover - 400",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/update",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "update"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"options\":{\"sections\":{\"order\":[\"profile\",\"cover\",\"notes\",\"back\"]}}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_INVALID_DESIGN', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_DESIGN'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E21. order moves the fixed back - 400",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/update",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "update"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"options\":{\"sections\":{\"order\":[\"cover\",\"profile\",\"back\",\"notes\"]}}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_INVALID_DESIGN', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_DESIGN'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E22. hiding a section that is not hideable - 400",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/update",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "update"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"options\":{\"sections\":{\"hidden\":[\"notes\"]}}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_INVALID_DESIGN', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_DESIGN'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E23. hiding an unknown section - 400",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/update",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "update"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"options\":{\"sections\":{\"hidden\":[\"zzz\"]}}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_INVALID_DESIGN', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_DESIGN'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E24. text with a newline - 400",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/update",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "update"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"options\":{\"texts\":{\"cover.belongs\":\"a\\nb\"}}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_INVALID_DESIGN', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_DESIGN'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E25. text with a control character - 400",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/update",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "update"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"options\":{\"texts\":{\"cover.belongs\":\"a\\u0007b\"}}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_INVALID_DESIGN', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_DESIGN'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E26. text one character too long - 400",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/update",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "update"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"options\":{\"texts\":{\"cover.belongs\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_INVALID_DESIGN', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_DESIGN'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E27. 5000-character text - 400",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/update",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "update"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"options\":{\"texts\":{\"cover.belongs\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_INVALID_DESIGN', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_DESIGN'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E28. unknown text id - 400",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/update",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "update"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"options\":{\"texts\":{\"cover.nope\":\"x\"}}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_INVALID_DESIGN', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_DESIGN'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E29. unknown image choice - 400",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/update",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "update"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"options\":{\"images\":{\"cover.pattern\":\"waves\"}}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_INVALID_DESIGN', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_DESIGN'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E30. none of the refused documents was stored",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/get?yearbook_id={{bookId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "get"
+                  ],
+                  "query": [
+                    {
+                      "key": "yearbook_id",
+                      "value": "{{bookId}}"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "pm.test('still the defaults', () => pm.expect(pm.response.json().data.options).to.eql(null));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E31. exactly 40 characters is fine",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/update",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "update"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"options\":{\"texts\":{\"cover.belongs\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E32. an empty text means the default and is not stored",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/update",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "update"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"options\":{\"texts\":{\"cover.belongs\":\"   \"}}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "pm.test('dropped', () => pm.expect(pm.response.json().data.options).to.eql({v: 1}));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E33. GET on update is not allowed - 405",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-design/update",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-design",
+                    "update"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 405', () => pm.response.to.have.status(405));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E34. A deletes the edge-case book",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/yearbook/delete",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "yearbook",
+                    "delete"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"id\":\"{{bookId}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

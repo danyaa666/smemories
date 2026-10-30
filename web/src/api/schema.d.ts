@@ -647,11 +647,71 @@ export interface paths {
         };
         /**
          * Read the whole book for the browser renderer
-         * @description Called by the signed-in owner's book screens (preview and print) to draw the book from one request (decision D-24): the yearbook, the owner's profile and the approved notes, nothing else. Notes are in book order (the order of `GET /api/note/get-list?status=approved`); pending and hidden notes never appear. At most 300 notes with at most 3 photos each. A book with more approved notes is cut after the 300th in book order, never silently: `truncated` (always present) is true and `approved_total` is the real number of approved notes, while `note_count` stays the number returned. The renderer must show a visible warning when `truncated` is true. Each note carries `signature` (the vector strokes, or null; integers only, draw it as an SVG path, never as markup). The answer is about 1.62 MB (1 618 318 bytes measured, documented bound 1.6 MiB) for 300 notes with 3 photos, the longest answers of the built-in templates and a maximal 3070-byte signature each (about 700 KB without signatures); the API does not compress it. Media are public ids; the bytes come from `GET /api/media/get-content?id=&variant=print`. The answers are stored text: render them escaped, never as HTML. No storage key, hash, email, birthday or internal id is part of the answer. `yearbook_id` must be a canonical ULID (26 upper-case characters), else `ERROR_PARAM`. Needs a verified email (`ERROR_EMAIL_NOT_VERIFIED`, as the note list). A missing yearbook and one owned by someone else both answer `ERROR_NOT_FOUND`. Safe to repeat.
+         * @description Called by the signed-in owner's book screens (preview and print) to draw the book from one request (decision D-24): the yearbook, the owner's profile and the approved notes, nothing else. Notes are in book order (the order of `GET /api/note/get-list?status=approved`); pending and hidden notes never appear. At most 300 notes with at most 3 photos each. A book with more approved notes is cut after the 300th in book order, never silently: `truncated` (always present) is true and `approved_total` is the real number of approved notes, while `note_count` stays the number returned. The renderer must show a visible warning when `truncated` is true. Each note carries `signature` (the vector strokes, or null; integers only, draw it as an SVG path, never as markup). The answer is about 1.62 MB (1 618 318 bytes measured, documented bound 1.6 MiB) for 300 notes with 3 photos, the longest answers of the built-in templates and a maximal 3070-byte signature each (about 700 KB without signatures); the API does not compress it. Media are public ids; the bytes come from `GET /api/media/get-content?id=&variant=print`. The answers are stored text: render them escaped, never as HTML. No storage key, hash, email, birthday or internal id is part of the answer. `yearbook_id` must be a canonical ULID (26 upper-case characters), else `ERROR_PARAM`. Needs a verified email (`ERROR_EMAIL_NOT_VERIFIED`, as the note list). A missing yearbook and one owned by someone else both answer `ERROR_NOT_FOUND`. Safe to repeat. `design` (epic E09, T-141) is the owner's customisation of the book resolved against the template's design block: theme, font set, section order and hidden sections, replaced texts and chosen images, every default filled in and every id the template no longer has dropped, so the renderer needs no manifest. It is null when the book has no template or its template cannot be customised.
          */
         get: operations["getBookData"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/book-design/get": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the design of a book and the choices its template offers
+         * @description Called by the signed-in owner's customise screen (epic E09, decision D-41) with one request: the stored options document of the book (or null when the book uses the template's defaults), when it was last saved, and the template's `design` block, which lists every theme, font set, section, fixed text and image choice the screen may offer. `design` is null when the book has no template or its template cannot be customised (a Go-renderer template, or an html one without a `design` block); `options` is then null too. A design made for another template than the book's current one is not shown (`options` null). Only the owner can read it: a missing book and someone else's both answer `ERROR_NOT_FOUND`. `yearbook_id` must be a canonical ULID (else `ERROR_PARAM`). No email verification is needed. Safe to repeat. What the print renders is `design` of `GET /api/book-data/get`, which is this document with every default filled in.
+         */
+        get: operations["getBookDesign"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/book-design/update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Save the design of a book (full replace)
+         * @description Called by the signed-in owner's customise screen. Replaces the whole options document of the book (it is not merged with the earlier one) and creates the row when there is none. The document is validated against the `design` block of the book's current template: an unknown theme, font set, section, text, image or image choice, a section order that does not list every section exactly once or moves a fixed one, a hidden section that is not hideable, a text with a control character, a newline or more than its `max` characters, an unknown top-level key, a wrong type, a version other than 1, or a document over 4096 bytes is `ERROR_INVALID_DESIGN` (400) and nothing is stored; the message names the field. A book whose template has no `design` block is `ERROR_INVALID_DESIGN` too. Texts are stored as plain text, normalised (NFC) and trimmed; an empty text is dropped (the template's own text is used). A missing book and someone else's both answer `ERROR_NOT_FOUND`, also when the document is invalid. Limited to 60 writes (update and reset together) per 10 minutes per user (`ERROR_RATE_LIMITED`, with `Retry-After`; fails open when Redis is down). A request with the session cookie must come from an allowed Origin. Changing the book's template with `POST /api/yearbook/update` deletes the design.
+         */
+        post: operations["updateBookDesign"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/book-design/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Go back to the template's own design
+         * @description Called by the signed-in owner's customise screen ("reset to template"). Deletes the stored design of the book so the template's defaults apply again. It succeeds, and changes nothing, when the book has no design (safe to repeat). It cannot be undone. A missing book and someone else's both answer `ERROR_NOT_FOUND`. Counts against the same limit as `book-design/update` (60 writes per 10 minutes per user). A request with the session cookie must come from an allowed Origin.
+         */
+        post: operations["resetBookDesign"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1786,6 +1846,120 @@ export interface components {
                 counts: components["schemas"]["NoteCounts"];
             };
         };
+        /** @description The options document (version 1). Every key is optional; an absent key means the template's default. Ids come from the template's `design` block. A `null` value is the same as leaving the key out. */
+        BookDesignOptions: {
+            /**
+             * @description Document version; optional, must be 1 when present.
+             * @constant
+             */
+            v?: 1;
+            /** @description Optional. A theme id from `design.themes`; default the first one. */
+            theme?: string;
+            /** @description Optional. A font set id from `design.font_sets`; default the first one. */
+            fonts?: string;
+            /** @description Optional. The page order and the hidden sections. */
+            sections?: {
+                /** @description Optional. Every section id exactly once, in print order. A section that is not `movable` (the fixed first and last ones) must stay at its place in the template's own order. */
+                order?: string[];
+                /** @description Optional. Section ids left out of the print, each unique and `hideable`. */
+                hidden?: string[];
+            };
+            /** @description Optional. Text id to the replacement text, plain text of 0 to `max` characters (counted after trimming), one line, no control characters. Empty means the template's own text. */
+            texts?: {
+                [key: string]: string;
+            };
+            /** @description Optional. Image id to one of its `choices`; default the first choice. */
+            images?: {
+                [key: string]: string;
+            };
+        };
+        /** @description The choices a template offers (the `design` block of its manifest; the first theme, font set and image choice is the default). */
+        BookDesignBlock: {
+            /** @description Theme ids, 1 to 8. */
+            themes: string[];
+            /** @description Font set ids, 1 to 6. */
+            font_sets: string[];
+            /** @description The page groups in the template's own order, at most 16. */
+            sections: {
+                /** @description Section id. */
+                id: string;
+                /** @description True when the owner may leave the section out of the print. */
+                hideable: boolean;
+                /** @description True when the owner may move the section; false keeps it at its place in the template's order. */
+                movable: boolean;
+                /**
+                 * @description `first` or `last` when the section is pinned to the front or the back (then it is not movable); null otherwise.
+                 * @enum {string|null}
+                 */
+                fixed: "first" | "last" | null;
+            }[];
+            /** @description The fixed texts the owner may replace, at most 16. */
+            texts: {
+                /** @description Text id. */
+                id: string;
+                /** @description Longest replacement in characters */
+                max: number;
+            }[];
+            /** @description The picture slots with their choices, at most 8. */
+            images: {
+                /** @description Image slot id. */
+                id: string;
+                /** @description Choice ids, 1 to 8; the first is the default. */
+                choices: string[];
+            }[];
+        };
+        BookDesignResponse: {
+            /**
+             * @description Always `OK` on success.
+             * @constant
+             */
+            status: "OK";
+            /** @description The stored design and the choices of the template. */
+            data: {
+                /** @description The book's current template; null when it has none. */
+                template_id: string | null;
+                /** @description The stored options document; null when the book uses the template's defaults. */
+                options: components["schemas"]["BookDesignOptions"] | null;
+                /**
+                 * Format: int64
+                 * @description When the options were last saved, Unix ms; null together with `options`.
+                 */
+                updated_at: number | null;
+                /** @description The template's design block; null when the book has no template or the template cannot be customised. */
+                design: components["schemas"]["BookDesignBlock"] | null;
+            };
+        };
+        BookDesignUpdateRequest: {
+            /** @description Required. ULID of the yearbook. */
+            yearbook_id: string;
+            options: components["schemas"]["BookDesignOptions"];
+        };
+        BookDesignResetRequest: {
+            /** @description Required. ULID of the yearbook. */
+            yearbook_id: string;
+        };
+        /** @description The design the renderer applies: the stored options with every default filled in. Ids the template no longer has fall back to the default silently, and a design made for another template is ignored. Texts are plain text, to be rendered as text, never as HTML. */
+        BookDesignResolved: {
+            /** @description Theme id in use. */
+            theme: string;
+            /** @description Font set id in use. */
+            fonts: string;
+            /** @description Every section once, in print order, and the hidden ones. */
+            sections: {
+                /** @description Every section id of the template in print order (a fixed section is at its place).  Hidden sections are still listed. */
+                order: string[];
+                /** @description Ids of the sections to leave out of the print; empty when none. */
+                hidden: string[];
+            };
+            /** @description Only the texts the owner replaced, text id to text; a text that is not listed shows the template's own wording. */
+            texts: {
+                [key: string]: string;
+            };
+            /** @description Image slot id to the chosen choice id; every slot of the template is listed. */
+            images: {
+                [key: string]: string;
+            };
+        };
         BookDataResponse: {
             /**
              * @description Always `OK` on success.
@@ -1794,6 +1968,8 @@ export interface components {
             status: "OK";
             /** @description The book as the renderer needs it. */
             data: {
+                /** @description The owner's customisation of the book (epic E09), resolved against the template's design block so the renderer needs no manifest. Null when the book has no template or its template cannot be customised. */
+                design: components["schemas"]["BookDesignResolved"] | null;
                 /** @description The yearbook's printed information. */
                 yearbook: {
                     /** @description The book's title. */
@@ -3723,6 +3899,101 @@ export interface operations {
             401: components["responses"]["ApiUnauthorized"];
             403: components["responses"]["ApiForbidden"];
             404: components["responses"]["ApiNotFound"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    getBookDesign: {
+        parameters: {
+            query: {
+                /** @description Yearbook ULID (canonical upper case). */
+                yearbook_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The stored options and the choices. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookDesignResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    updateBookDesign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BookDesignUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Saved; the answer is the same as `GET /api/book-design/get`. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookDesignResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            429: components["responses"]["ApiRateLimited"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    resetBookDesign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BookDesignResetRequest"];
+            };
+        };
+        responses: {
+            /** @description The design is gone (or there was none). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmptyResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            429: components["responses"]["ApiRateLimited"];
             500: components["responses"]["ApiInternal"];
             503: components["responses"]["ApiSessionStoreUnavailable"];
         };

@@ -19,6 +19,7 @@ import (
 
 	"github.com/danyaa666/smemories/internal/auth"
 	"github.com/danyaa666/smemories/internal/bookdata"
+	"github.com/danyaa666/smemories/internal/bookdesign"
 	"github.com/danyaa666/smemories/internal/bookexport"
 	"github.com/danyaa666/smemories/internal/db/dbtest"
 	"github.com/danyaa666/smemories/internal/httpx"
@@ -110,15 +111,17 @@ func newEnv(t *testing.T) *env {
 	bookStore := yearbook.NewStore(d)
 	notesSvc := notes.NewService(notes.NewStore(d), mediaSvc, cursors, limiters, logger, e.now)
 	mediaSvc.SetRefClearer(bookStore, notesSvc)
-	bookSvc := yearbook.NewService(bookStore, cursors, mediaSvc, e.now, mediaSvc, notesSvc, e.svc)
+	bookSvc := yearbook.NewService(bookStore, cursors, mediaSvc, e.now, mediaSvc, notesSvc, e.svc, bookdesign.NewService(bookdesign.NewStore(e.db), nil, nil))
 	bookSvc.SetLimiters(limiters)
 	e.svc.SetBookSources(bookSvc, notesSvc)
 	yh := yearbook.NewHandler(bookSvc, ah.RequireUser, []string{origin})
 	mh := media.NewHandler(mediaSvc, 10<<20, ah.RequireUser, []string{origin}, cursors, logger)
 	nh := notes.NewHandler(notesSvc, 10<<20, ah.RequireUser, []string{origin}, ah.ClientIP, logger)
-	dh := bookdata.NewHandler(bookdata.NewService(bookSvc, notesSvc), ah.RequireUser)
+	designSvc := bookdesign.NewService(bookdesign.NewStore(e.db), nil, nil)
+	dh := bookdata.NewHandler(bookdata.NewService(bookSvc, notesSvc, designSvc), ah.RequireUser)
+	gh := bookdesign.NewHandler(designSvc, ah.RequireUser, []string{origin})
 	xh := bookexport.NewHandler(bookexport.NewService(bookSvc, notesSvc, signer, baseURL, limiters, e.now), ah.RequireUser)
-	e.h = httpx.NewRouter(logger, ah.Routes, ch.Routes, yh.Routes, mh.Routes, nh.Routes, dh.Routes, xh.Routes)
+	e.h = httpx.NewRouter(logger, ah.Routes, ch.Routes, yh.Routes, mh.Routes, nh.Routes, dh.Routes, gh.Routes, xh.Routes)
 	return e
 }
 

@@ -19,6 +19,7 @@ const note = (i: number, over: Partial<BookData["notes"][number]> = {}) => ({
 
 function bookData(notes: BookData["notes"], over: Partial<BookData> = {}): BookData {
   return {
+    design: null,
     yearbook: {
       title: "Lớp 12A1",
       school_name: "THPT Chu Văn An",

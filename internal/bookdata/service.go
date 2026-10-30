@@ -5,6 +5,7 @@ package bookdata
 import (
 	"context"
 
+	"github.com/danyaa666/smemories/internal/bookdesign"
 	"github.com/danyaa666/smemories/internal/notes"
 	"github.com/danyaa666/smemories/internal/yearbook"
 )
@@ -17,6 +18,11 @@ type Books interface {
 // Notes is the part of the notes service the book data uses.
 type Notes interface {
 	ApprovedNotes(ctx context.Context, ownerID uint64, verified bool, bookID string) ([]*notes.BookNote, int, error)
+}
+
+// Designs is the part of the book design service the book data uses: the design to print, nil when the template has none.
+type Designs interface {
+	Resolved(ctx context.Context, ownerID uint64, publicID string, templateID *string) (*bookdesign.Resolved, error)
 }
 
 // BookInfo is the yearbook as the renderer needs it: no internal ids, no times.
@@ -44,22 +50,26 @@ type ProfileInfo struct {
 
 // Book is the response of GET /api/book-data/get.
 type Book struct {
-	Yearbook      BookInfo          `json:"yearbook"`
-	Profile       ProfileInfo       `json:"profile"`
-	Notes         []*notes.BookNote `json:"notes"`
-	NoteCount     int               `json:"note_count"`     // the number of notes returned
-	ApprovedTotal int               `json:"approved_total"` // every approved note of the book
-	Truncated     bool              `json:"truncated"`      // true when approved_total is more than the notes returned
+	Yearbook      BookInfo             `json:"yearbook"`
+	Profile       ProfileInfo          `json:"profile"`
+	Design        *bookdesign.Resolved `json:"design"` // the owner's customisation, defaults filled in (E09, T-141); null when the template has none
+	Notes         []*notes.BookNote    `json:"notes"`
+	NoteCount     int                  `json:"note_count"`     // the number of notes returned
+	ApprovedTotal int                  `json:"approved_total"` // every approved note of the book
+	Truncated     bool                 `json:"truncated"`      // true when approved_total is more than the notes returned
 }
 
 // Service builds the book.
 type Service struct {
-	books Books
-	notes Notes
+	books   Books
+	notes   Notes
+	designs Designs
 }
 
-// NewService wires the two sources.
-func NewService(b Books, n Notes) *Service { return &Service{books: b, notes: n} }
+// NewService wires the sources.
+func NewService(b Books, n Notes, d Designs) *Service {
+	return &Service{books: b, notes: n, designs: d}
+}
 
 // Get returns the owner's book. A malformed id is ERROR_PARAM and an unverified email is refused (the notes rule, T-013);
 // a missing book and another user's are both ERROR_NOT_FOUND. The notes are read first because that call validates the id.
@@ -73,12 +83,16 @@ func (s *Service) Get(ctx context.Context, ownerID uint64, verified bool, bookID
 	if err != nil {
 		return nil, err
 	}
+	design, err := s.designs.Resolved(ctx, ownerID, bookID, y.TemplateID)
+	if err != nil {
+		return nil, err
+	}
 	p := &y.Profile
 	return &Book{
 		Yearbook: BookInfo{Title: y.Title, SchoolName: y.SchoolName, ClassName: y.ClassName, GraduationYear: y.GraduationYear, Motto: y.Motto,
 			Language: y.Language, PageSize: y.PageSize, TemplateID: y.TemplateID, CoverMediaID: y.CoverMediaID},
 		Profile: ProfileInfo{FullName: p.FullName, Nickname: p.Nickname, Quote: p.Quote, Hobbies: p.Hobbies, FuturePlans: p.FuturePlans,
 			PhotoMediaID: p.PhotoMediaID},
-		Notes: ns, NoteCount: len(ns), ApprovedTotal: total, Truncated: total > len(ns),
+		Design: design, Notes: ns, NoteCount: len(ns), ApprovedTotal: total, Truncated: total > len(ns),
 	}, nil
 }

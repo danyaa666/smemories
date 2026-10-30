@@ -131,6 +131,11 @@ func TestMigrateClassPageTable(t *testing.T) {
 	if got := dump(t, ctx, d, `SELECT CHAR_LENGTH(body) FROM class_page_tab WHERE public_id = 'P1'`)[0]; got != "4000" {
 		t.Errorf("the body was cut: %s characters", got)
 	}
+	if exists("book_design_tab") == "1" { // a newer migration (T-141) goes down first
+		if err := db.MigrateDown(ctx, d); err != nil {
+			t.Fatalf("down (newer): %v", err)
+		}
+	}
 	if err := db.MigrateDown(ctx, d); err != nil {
 		t.Fatalf("down: %v", err)
 	}
@@ -141,6 +146,48 @@ func TestMigrateClassPageTable(t *testing.T) {
 		t.Fatalf("up again: %v", err)
 	}
 	if exists("class_page_tab") != "1" {
+		t.Fatal("up again did not create the table")
+	}
+}
+
+// T-141 (E09): the book design table keeps one row per yearbook, has no foreign key, and goes down and up again on its own.
+func TestMigrateBookDesignTable(t *testing.T) {
+	ctx := context.Background()
+	d := dbtest.New(t)
+	exists := func() string {
+		return dump(t, ctx, d, `SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'book_design_tab'`)[0]
+	}
+	design := func(yearbook int) error {
+		_, err := d.ExecContext(ctx, `INSERT INTO book_design_tab (yearbook_id, template_id, options_json, created_at, updated_at) VALUES (?,'memory-book','{"v":1}',1,1)`, yearbook)
+		return err
+	}
+	if exists() != "1" {
+		t.Fatal("the test database lacks book_design_tab")
+	}
+	if err := design(7); err != nil { // no yearbook 7 exists: there is no foreign key
+		t.Fatal(err)
+	}
+	if err := design(7); err == nil {
+		t.Error("a second design for one yearbook was accepted")
+	}
+	if err := design(8); err != nil {
+		t.Errorf("a design for another yearbook: %v", err)
+	}
+	if n := dump(t, ctx, d, `SELECT COUNT(*) FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME = 'book_design_tab'`)[0]; n != "0" {
+		t.Errorf("%s foreign keys on book_design_tab", n)
+	}
+	for i := 0; i < 10 && exists() != "0"; i++ { // newer migrations go down first
+		if err := db.MigrateDown(ctx, d); err != nil {
+			t.Fatalf("down: %v", err)
+		}
+	}
+	if exists() != "0" {
+		t.Fatal("down left the table behind")
+	}
+	if err := db.MigrateUp(ctx, d); err != nil {
+		t.Fatalf("up again: %v", err)
+	}
+	if exists() != "1" {
 		t.Fatal("up again did not create the table")
 	}
 }

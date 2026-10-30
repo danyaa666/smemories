@@ -361,6 +361,11 @@ func (e *env) adminCalls(admin person, cls, book, coll, note, media string) map[
 		"media/delete":          func() resp { return e.do(admin, "POST", "/api/media/delete", body("id", media)) },
 		"class-member/set-book": func() resp { return e.setBook(admin, cls, book) }, // the admin cannot link a student's book as their own page
 		"book-data/get":         func() resp { return e.do(admin, "GET", "/api/book-data/get?yearbook_id="+book, "") },
+		"book-design/get":       func() resp { return e.do(admin, "GET", "/api/book-design/get?yearbook_id="+book, "") },
+		"book-design/update": func() resp {
+			return e.do(admin, "POST", "/api/book-design/update", `{"yearbook_id":"`+book+`","options":{"theme":"mint"}}`)
+		},
+		"book-design/reset": func() resp { return e.do(admin, "POST", "/api/book-design/reset", body("yearbook_id", book)) },
 		"book-export/get-text": func() resp {
 			return e.do(admin, "GET", "/api/book-export/get-text?yearbook_id="+book, "")
 		},
