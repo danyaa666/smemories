@@ -27,6 +27,7 @@ export function ClassNew() {
         error={m.error}
         onSubmit={m.mutate}
       />
+      <p className="note-muted">{t("classes.ageLine")}</p>
     </>
   );
 }

@@ -142,6 +142,26 @@ describe("new class", () => {
     expect(await screen.findByRole("heading", { name: "Lớp mới" })).toBeInTheDocument();
     expect(screen.getByLabelText("Ngôn ngữ của kỷ yếu lớp")).toHaveValue("vi");
   });
+
+  it("says SMemories is 18+ on the create screen, in both languages, and not on the list", async () => {
+    mockApi({ "GET /user/get-me": me, "GET /class/get-list": list([]) });
+    const { unmount } = renderApp("/classes/new");
+    expect(
+      await screen.findByText("SMemories is for people aged 18 or older."),
+    ).toBeInTheDocument();
+    unmount();
+    await i18n.changeLanguage("vi");
+    const second = renderApp("/classes/new");
+    expect(
+      await screen.findByText("SMemories dành cho người từ 18 tuổi trở lên."),
+    ).toBeInTheDocument();
+    second.unmount();
+    renderApp("/classes");
+    await screen.findByRole("heading", { name: "Lớp của tôi" });
+    expect(
+      screen.queryByText("SMemories dành cho người từ 18 tuổi trở lên."),
+    ).not.toBeInTheDocument();
+  });
 });
 
 describe("class screen, student", () => {
