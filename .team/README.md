@@ -11,17 +11,16 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 11 | T-023, T-024, T-025, T-031, T-050, T-142, T-143, T-144, T-145, T-146, T-147 |
-| READY_FOR_QA | 1 | T-139 |
 | QA_PASS | 1 | T-141 |
-| MERGED | 1 | T-140 |
+| MERGED | 2 | T-139, T-140 |
 | DONE | 125 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-137, T-138 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** T-140 ([E07] Revoke a departed admin's invite links automatically)
+**Awaiting your review (MERGED):** T-139 ([E07] Web: say 18+ on the class screens and tell friends a class admin may see their note); T-140 ([E07] Revoke a departed admin's invite links automatically)
 
 **Open questions for you:** none
 
-_Board last written 2026-10-30 02:56Z_
+_Board last written 2026-10-30 02:57Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -6179,7 +6178,7 @@ From T-135 QA: typing in the middle of a field that is already at its character 
 - 2026-10-29 09:48Z · human · accepted by owner
 
 ### T-139 — [E07] Web: say 18+ on the class screens and tell friends a class admin may see their note
-- **Status:** READY_FOR_QA
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
@@ -6190,8 +6189,8 @@ From T-135 QA: typing in the middle of a field that is already at its character 
 - **Assignee:** —
 - **Branch:** task/t-139-e07-web-say-18-on-the-class-screens-and-
 - **PR:** https://github.com/danyaa666/smemories/pull/138
-- **Updated:** 2026-10-30 02:47Z by dev
-- **Comments-seen:** 6
+- **Updated:** 2026-10-30 02:57Z by leader
+- **Comments-seen:** 8
 
 Spec: .team/epics/E07-class-yearbook/13-web-age-line-and-friend-note-notice.md. Owner decision D-40 (a, b).
 
@@ -6211,6 +6210,8 @@ Spec: .team/epics/E07-class-yearbook/13-web-age-line-and-friend-note-notice.md. 
 - 2026-10-30 02:47Z · dev · Merged origin/develop (587a444) into the branch; conflict only in docs/class-privacy-review.md s7, kept both: items 1,2 decided by D-40 (T-139), item 3 decided by D-40 c (T-140). Web checks rerun: lint, typecheck, i18n, check:api, build, vitest 603 pass (one transient 2-test failure in a loaded combined run, 2 clean reruns). Head 581055c.
 - 2026-10-30 02:47Z · dev · Merge conflict fixed, head 581055c, same code as QA_PASS
 - 2026-10-30 02:48Z · leader · Leader: QA re-check is limited to docs/class-privacy-review.md section 7 (both edits kept) and mergeability; also run the web suite 3 times and report if any test is flaky (dev saw 2 transient vitest failures in one combined run, passing on reruns: name the tests if you see them). QA starts when the QA lease is free (T-141 is in QA).
+- 2026-10-30 02:57Z · qa · Re-check at head 581055cadd50ea8b2a132190168edb308ed9ac4e (earlier pass was 7348649). (1) gh pr diff 138 --name-only: 9 files, only web/ (LegalConsent, 2 locales, ClassNew, JoinClass, 3 tests) + docs/class-privacy-review.md; no '-e' file, no .team/; git ls-tree of the head has no *-e file. (2) Section 7: git diff origin/develop...581055c -- docs is 2 lines only: items 1 and 2 now read 'Decided (D-40, T-139)' with the 18+ plain text and the friend-note sentence; item 3 (D-40 c, T-140 revoke) identical to develop, items 4-5 unchanged, nothing duplicated or lost. (3) PR MERGEABLE; checks go, web, security SUCCESS on 581055c (go-integration, e2e, image skipped per D-37). (4) web in worktree: vitest x3 = 32 files / 603 of 603 passed each run, 0 failures, no flaky test seen; lint (eslint+prettier), typecheck, lint:i18n, check:api, build all ok. (5) git diff 7348649..581055c -- web/ is empty, so no web change since my last pass; the earlier browser check still stands, no new one needed. Non-blocking: dev's 2 transient failures in a combined run did not reproduce in 3 runs here; not named, so cannot be assigned to a test.
+- 2026-10-30 02:57Z · leader · merged 460e5d8. Review: 18+ line (plain text) on /classes/new and the signed-in join step, one sentence after the friend-form notice, exact en/vi wording; QA 38/38 real-browser checks at 375 px and web suite 3x 603/603; privacy review section 7 reads correctly after the merge with T-140. For owner to check: the two lines on a real phone, Vietnamese wording by a native speaker.
 
 ### T-140 — [E07] Revoke a departed admin's invite links automatically
 - **Status:** MERGED
