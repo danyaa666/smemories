@@ -11,18 +11,19 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 6 | T-023, T-024, T-025, T-031, T-050, T-147 |
-| READY_FOR_QA | 1 | T-146 |
-| QA_FAIL | 1 | T-148 |
+| TODO | 1 | T-149 |
+| READY_FOR_QA | 1 | T-148 |
+| QA_PASS | 1 | T-146 |
 | DONE | 132 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-137, T-138, T-139, T-140, T-141, T-142, T-143, T-144, T-145 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Epics (done/total):** E09-customisation-editor 0/1; (unfiled) 132/147
+**Epics (done/total):** E06-go-live 0/1; E09-customisation-editor 0/1; (unfiled) 132/147
 
 **Awaiting your review (MERGED):** nothing
 
 **Open questions for you:** none
 
-_Board last written 2026-10-30 12:03Z_
+_Board last written 2026-10-30 12:18Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -6402,7 +6403,7 @@ Spec: .team/epics/E09-customisation-editor/05-navy-classic-customisable.md.
 - 2026-10-30 09:54Z · human · accepted by owner
 
 ### T-146 — [E09] Class book applies each student's design
-- **Status:** READY_FOR_QA
+- **Status:** QA_PASS
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1b
@@ -6410,17 +6411,25 @@ Spec: .team/epics/E09-customisation-editor/05-navy-classic-customisable.md.
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** leader
 - **Branch:** task/t-146-e09-class-book-applies-each-student-s-de
 - **PR:** https://github.com/danyaa666/smemories/pull/145
-- **Updated:** 2026-10-30 09:15Z by dev
-- **Comments-seen:** 2
+- **Updated:** 2026-10-30 12:17Z by qa
+- **Comments-seen:** 3
 
 Spec: .team/epics/E09-customisation-editor/06-class-book-applies-designs.md.
 
 #### Comments
 - 2026-10-30 08:56Z · leader · Dependency T-145 merged (c0e3b68). Read the spec again before you start.
 - 2026-10-30 09:15Z · dev · PR #145 head 03f42df. class-book/get returns per-member resolved design (admin only, in the 8 MiB cap; stripped reserve 12->16 KiB); class print applies it per student, class cover/pages keep class look; hidden sections not counted/fetched. Ran locally on own compose (smemt146): integration class/bookdesign/bookdata green, web 675 pass, print-check 163 pass (new 6-student A5/A4 fixture + 30-student), e2e 6 pass incl. class journey, check-class-matrix ok. NOT run: D-37 manual full CI (AC4), make test-integration for whole repo (only touched packages), image checks (no Docker-copied files changed). QA: print 6-student class to PDF and compare with each customise preview.
+- 2026-10-30 12:17Z · qa · QA_PASS T-146, PR #145. Tested head 03f42df (dev) + my test-only commit 5970989 (tools/e2e/class.spec.mjs step 7b). Stack: the main compose project still runs old MinIO, so I used my own project smemqa146 on ports 23306/26379/29000 (S3 tests need SMEM_TEST_S3_ENDPOINT=http://127.0.0.1:29000); main project untouched, mine removed after.
+  RESULTS: make test-integration (go test -race -count=1 -tags integration ./...): all packages ok incl. class 216s, bookdesign, bookdata, yearbook, db, auth; media/notes/storage first failed InvalidAccessKeyId (wrong S3 endpoint, my setup) and re-run with the right endpoint: media ok 92s, notes ok 143s, storage ok 10s. go vet ./... and -tags integration clean, gofmt clean, golangci-lint 0 issues. scripts/check-class-matrix.sh: 21 class operations ok. Web: vitest 35 files / 675 pass / 0 fail; lint, typecheck, lint:i18n, check:api ok. print-check (cd tools/print-check; npm test): 163 pass / 0 fail / 0 skip, 313 s, incl. new '6 students' A5 and A4 and the 30-student fixture. make e2e: 6 passed / 0 failed (class journey incl. my new step).
+  AC1 design applied per student: print-check 6-student fixture (themes lavender/burgundy/forest/mint, fonts, hidden profile, moved sections, replaced title) asserts page counts, order, no blank page, each student's data-theme/fonts, class cover and class pages have no design look; I rendered the A5 PDF (16 pages) to a contact sheet and looked at it: each student has visibly their own look, default students (no design) print the template default. Real stack: new e2e step 7b (student A: navy-classic, burgundy, modern, profile hidden, notes.heading replaced) -> admin's class-book/get holds A's design, print shows A's look only on A's pages, A's profile absent, B's present, A's text printed.
+  AC2 admin only: TestClassBookMatrix asserts the design reaches admin and not student, classmate, stranger, other class's admin (passes); e2e 7b and step 9 confirm 403 for students A and B on class-book/get and no design text in the answer; docs/class-permissions.md and class-privacy-review.md rows added; no field other than design texts/choices added (Resolved holds only theme/fonts/sections/texts/images ids).
+  AC3 cap: TestClassBookIsCutAtTheCap now has a design per student, cut members keep design, truncated unchanged (class pkg ok); unit test for strippedMemberMax 16 KiB passes.
+  Hidden profile: its photo is never fetched (print-check asserts the two hidden profile photo ids are absent from the media requests; max in flight <= 16, all photos loaded at ready).
+  AC4: lint/vet/race/web/print-check done as above. Manual full CI run 41052503585 on head 03f42df: web, go, security, go-integration, image = success; e2e = FAILURE, but only because the 'Print check' step hit its timeout-minutes: 6 in ci.yml (it had passed 42 of 53 suites, no test failure). Not caused by T-146: the T-146 diff does not touch ci.yml and adds about 4 s; the suite already took 319 s for 94 tests on the T-142 manual run (40997028070) and has grown to 163 tests (313 s on my machine, slower on CI runners). LEADER ACTION: raise timeout-minutes of the Print check step (e.g. 12) or split the suite, otherwise every manual CI run goes red on e2e. PR run on 5970989 (go, web, security) was still in progress when I finished; the previous PR run on 03f42df was green.
+  Non-blocking: docs/e2e.md class journey section does not mention the new step 7b (docs are not mine to edit); a visual side-by-side with each customise preview was not done by eye, the contact sheet plus automated look assertions stand in for it.
 
 ### T-147 — [E09] Customisation journey, print-check coverage and docs
 - **Status:** BACKLOG
