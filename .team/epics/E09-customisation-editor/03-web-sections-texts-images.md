@@ -10,6 +10,7 @@
 4. **Default parity** as in T-142: no design or default design prints exactly as today (69 print-check cases and snapshots unchanged).
 5. **print-check**: add cases for hidden profile, hidden back, notes before profile, custom texts at their maximum length (Vietnamese, emoji; read the maxima from the manifest), and the plain pattern, on A5 and A4; assert page counts, order, no blank pages, no text cut off beyond the summary, and every photo loaded before ready.
 6. No new dependency; no API change.
+7. **Carry-overs from T-142 QA (2026-10-30), both small.** (a) The `classic` font set (Cormorant) draws old-style figures, so the digit 1 looks like a capital I and the cover reads "Lớp I2AI" for class 12A1: add `font-variant-numeric: lining-nums` to the classic `.disp` and `.cute` rules in `memory.css`, re-check the cover fit at the maximum title length, and add one print-check case with a class name that contains a `1`. (b) QA showed there is no synthetic bold (the app's @fontsource faces supply Regular, SemiBold, Bold): correct the "synthetic bold" sentence in `docs/templates.md` and `web/src/book/fonts/README.md`.
 
 #### Acceptance criteria
 - [ ] AC1 — Hide/reorder changes the pages that print and their numbers; a book with `profile` and `back` hidden prints cover + notes only.

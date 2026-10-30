@@ -10,16 +10,17 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 10 | T-023, T-024, T-025, T-031, T-050, T-143, T-144, T-145, T-146, T-147 |
-| READY_FOR_QA | 1 | T-142 |
+| BACKLOG | 9 | T-023, T-024, T-025, T-031, T-050, T-144, T-145, T-146, T-147 |
+| TODO | 1 | T-143 |
+| MERGED | 1 | T-142 |
 | DONE | 128 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-137, T-138, T-139, T-140, T-141 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Awaiting your review (MERGED):** nothing
+**Awaiting your review (MERGED):** T-142 ([E09] Web runtime: colour themes and font sets (Memory Book pilot))
 
 **Open questions for you:** none
 
-_Board last written 2026-10-30 07:03Z_
+_Board last written 2026-10-30 07:10Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -6271,7 +6272,7 @@ Spec: .team/epics/E09-customisation-editor/01-design-model-and-api.md. Plan: PRD
 - 2026-10-30 03:54Z · human · accepted by owner
 
 ### T-142 — [E09] Web runtime: colour themes and font sets (Memory Book pilot)
-- **Status:** READY_FOR_QA
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1b
@@ -6282,8 +6283,8 @@ Spec: .team/epics/E09-customisation-editor/01-design-model-and-api.md. Plan: PRD
 - **Assignee:** —
 - **Branch:** task/t-142-e09-web-runtime-colour-themes-and-font-s
 - **PR:** https://github.com/danyaa666/smemories/pull/140
-- **Updated:** 2026-10-30 03:32Z by dev
-- **Comments-seen:** 3
+- **Updated:** 2026-10-30 07:10Z by leader
+- **Comments-seen:** 5
 
 Spec: .team/epics/E09-customisation-editor/02-web-themes-and-font-sets.md.
 
@@ -6291,9 +6292,18 @@ Spec: .team/epics/E09-customisation-editor/02-web-themes-and-font-sets.md.
 - 2026-10-30 03:07Z · leader · T-141 merged (f9e202f)
 - 2026-10-30 03:32Z · dev · PR #140 head b3e5daf. Themes lavender(=today)/peach/mint as --mb-* vars, font sets playful/classic (Cormorant Garamond + Be Vietnam Pro, already shipped, no new font file), DesignProvider/useDesign, ready key has font set. Default parity: develop vs branch PDFs A5+A4 identical page by page. Local: lint, typecheck, build, vitest 618, i18n, check:api green; print-check 94/94 (69 + 25 new). Manual full CI run 40997028070 (head b3e5daf): go, web, security, image, go-integration, e2e all success; print-check 94 tests 94 pass. Verify: print each theme x font set, diacritics in classic, network log (no woff2 of the other set). Known: vitest snapshot of memory-book markup regenerated (data-theme/data-fonts + var()); Be Vietnam Pro book weight 500 only, synthetic bold in classic.
 - 2026-10-30 03:32Z · leader · Leader: QA waits for the usage window (5h at 65%, resumes about 07:03Z). QA: besides the listed checks, judge the synthetic bold of Be Vietnam Pro in the classic set (only weight 500 is shipped): is it acceptable in print? Report with a crop of the page; if it looks poor, say whether adding a 600/700 woff2 (OFL, licence file) is a small follow-up.
+- 2026-10-30 07:10Z · qa · QA_PASS, head b3e5daf (PR #140), CI go/web/security green on the PR; manual full run 40997028070 on b3e5daf all 6 jobs success (verified with gh).
+  Evidence (mine, local, on b3e5daf worktree): web lint+prettier ok, typecheck ok, vitest 618/618 (33 files), i18n ok; make print-check 94 tests, pass 94, fail 0 (includes the 3 themes x 2 font sets x A5/A4 cases + unknown-design fallback).
+  AC1 default parity: the 69 old print-check cases pass unchanged; pdffonts of lavender+playful are exactly Nunito/Baloo2/PatrickHand as today. (The dev's page-by-page A5/A4 PDF diff vs develop was not re-run by me.)
+  AC2: I rendered 6 combos at A5 with the Vietnamese fixture (21 notes, 1 long) to PDF: 24 pages each; viewed cover, profile and 2 note pages for lavender/playful and lavender/peach/mint classic: no cut-off, no blank page, diacritics correct in Cormorant and Be Vietnam Pro, themes visibly distinct. Contrast: design.test.ts asserts >=4.5:1 for ink/soft on all 8 surfaces per theme, pairs listed in docs/templates.md.
+  AC3: network log of the 6 renders: only the localhost origin; classic requests CormorantGaramond-500i/600 (+Be Vietnam Pro), playful requests Baloo2/PatrickHand/Nunito; no Cormorant file in playful, no Baloo/Patrick/Nunito file in classic. (BeVietnamPro-500 and the @fontsource Be Vietnam Pro/Fraunces files load in both sets: the app screen's own faces, as the dev noted; the playful PDFs embed no Be Vietnam Pro.)
+  AC4: ok as above. make test-integration and make e2e NOT runnable locally: my .env is stale (make up fails: S3_ROOT_USER missing, MINIO_* renamed to S3_*, T-029), so MySQL was down and dbtest/google tests failed with connection refused; the PR changes no Go or SQL file. I rely on manual CI run 40997028070 (go-integration and e2e success on b3e5daf). Owner: fix .env from .env.example so QA can run them locally.
+  BOLD VERDICT (Be Vietnam Pro 500 synthetic bold): not an issue. pdffonts of the classic PDFs embed BeVietnamPro-Regular, -SemiBold and -Bold and no -Medium: the book text uses the real 400/600/700 faces of @fontsource (loaded by the app), not a synthesised bold of the 500 file. 220 dpi crop (bold labels Ten / Biet danh / Moi quan he) is clean: /private/tmp/claude-501/-Users-unisoft-GolandProjects-awesomeProject1/8f7da22d-14bb-4d31-8a40-3270ae13d6af/scratchpad/crop-bold.png. The sentence in docs/templates.md and fonts/README.md saying 'synthetic bold' is inaccurate for print through this app; no 600/700 woff2 needed. Caveat: this relies on the app's fontsource faces; a standalone print page without them would get synthetic bold.
+  NON-BLOCKING, recommended small follow-up (one CSS line): Cormorant Garamond draws old-style figures, so the digit 1 looks like a small capital I: the cover reads 'Lop I2AI' for class 12A1 (crop /private/tmp/claude-501/-Users-unisoft-GolandProjects-awesomeProject1/8f7da22d-14bb-4d31-8a40-3270ae13d6af/scratchpad/crop-cover.png; sheet of all combos /private/tmp/claude-501/-Users-unisoft-GolandProjects-awesomeProject1/8f7da22d-14bb-4d31-8a40-3270ae13d6af/scratchpad/sheet.png). Class names and years are core content. Suggested: font-variant-numeric: lining-nums on .mb-page[data-fonts=classic] .disp/.cute (re-check fit). Not an AC, so not a fail.
+- 2026-10-30 07:10Z · leader · merged e44a826. Review: diff limited to the web book runtime, tests and docs; QA ran lint, typecheck, vitest 618/618, print-check 94/94, 6 theme/font renders; manual full CI 40997028070 green. For owner to check: the three colour themes and two font sets on a real book. Follow-ups (lining numerals for Cormorant, docs sentence about synthetic bold) added to T-143.
 
 ### T-143 — [E09] Web runtime: sections, texts and images (Memory Book pilot)
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1b
@@ -6304,12 +6314,13 @@ Spec: .team/epics/E09-customisation-editor/02-web-themes-and-font-sets.md.
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-30 02:07Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-10-30 07:10Z by leader
+- **Comments-seen:** 1
 
 Spec: .team/epics/E09-customisation-editor/03-web-sections-texts-images.md.
 
 #### Comments
+- 2026-10-30 07:10Z · leader · Spec updated: requirement 7 (carry-overs from T-142 QA: lining-nums for the classic font set, correct the synthetic-bold sentence in docs/templates.md and web/src/book/fonts/README.md). Read the spec again.
 
 ### T-144 — [E09] Web: the customise screen
 - **Status:** BACKLOG
