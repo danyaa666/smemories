@@ -204,7 +204,7 @@ func (s *Service) RemoveMember(ctx context.Context, userID uint64, classID, memb
 	if err := s.throttle(ctx, userID); err != nil {
 		return err
 	}
-	return s.store.removeMember(ctx, userID, classID, memberID)
+	return s.store.removeMember(ctx, userID, classID, memberID, s.now().UnixMilli())
 }
 
 // Leave takes the caller out of the class (any member). The last admin cannot leave.
@@ -215,7 +215,7 @@ func (s *Service) Leave(ctx context.Context, userID uint64, classID string) erro
 	if err := s.throttle(ctx, userID); err != nil {
 		return err
 	}
-	return s.store.leave(ctx, userID, classID)
+	return s.store.leave(ctx, userID, classID, s.now().UnixMilli())
 }
 
 // DeleteByYearbook implements yearbook.ChildPurger: when a yearbook is deleted, the member row that pointed at it forgets it

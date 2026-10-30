@@ -10,8 +10,10 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 5 | T-023, T-024, T-025, T-031, T-050 |
-| TODO | 2 | T-139, T-140 |
+| BACKLOG | 11 | T-023, T-024, T-025, T-031, T-050, T-142, T-143, T-144, T-145, T-146, T-147 |
+| IN_PROGRESS | 1 | T-141 |
+| IN_QA | 1 | T-139 |
+| QA_PASS | 1 | T-140 |
 | DONE | 125 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-137, T-138 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
@@ -19,7 +21,7 @@
 
 **Open questions for you:** none
 
-_Board last written 2026-10-29 18:56Z_
+_Board last written 2026-10-30 02:12Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -732,6 +734,7 @@ Owner decisions (2026-10-06, `/team-init` interview). "Rejected" lists the optio
 | D-38 | **CI no longer runs the `image` job (image build, smoke, Trivy scan, SBOM) on pushes and pull requests; it runs by hand (`workflow_dispatch`), like `go-integration` and `e2e` (D-37).** | Owner request 2026-10-29, right after a new Trivy HIGH (CVE-2026-116587) turned the job red on every branch. Done by T-137 with a job-level `if:`; `image` is not a required check. `go`, `web` and `security` (govulncheck, npm audit) keep running. | Keep it on and fix each CVE as it appears (what T-136 did) | A vulnerable dependency or a broken Dockerfile reaches `develop` unseen; the deploy pipeline (T-023) must therefore build, smoke-test and scan the image itself before any deploy; undo = delete the `if:` line |
 | D-39 | **Next milestone: M1b guided customisation (epic E09 stage 1), before go-live.** Go-live (M2) waits; the free-layout editor (M4) comes later. | Owner answer to Q-062 on 2026-10-30 (the leader had recommended go-live first). Stage 1 needs nothing from the owner; it keeps the HTML print export (D-24): the design copy drives the web templates and the browser prints it. | Go live first | Go-live inputs (domain, AWS account, final legal texts) stay open longer; real users arrive later, so feedback on the product arrives later |
 | D-40 | **Class privacy points settled:** (a) 18+ stays and is stated on the class create and join screens; (b) the friend note form tells the friend that a class admin may see the note if it goes into a class book; (c) a departed (left, removed or demoted) admin's active invite links are revoked automatically. | Owner answer to Q-060 on 2026-10-30, all three leader recommendations taken. Tasks T-139 (a, b) and T-140 (c). The sign-off of `docs/class-privacy-review.md` section 8 stays with the owner until go-live. | (a) allow younger users with parental consent; (b) leave it to the privacy policy; (c) leave links live until they expire | A younger user may still sign up by ignoring the line (the terms forbid it); b adds one sentence to maintain in two languages |
+| D-41 | **Guided customisation, first release (E09 stage 1):** colour themes and font pairs, show/hide and reorder sections, edit titles and fixed texts, swap images from a set shipped with the template. Pilot on Memory Book, then Navy Classic. Desktop and tablet first, phone usable but basic. The design is a set of validated choices (`book_design_tab`), not a template document, because the book is HTML printed by the browser (D-24). | Owner answers in chat 2026-10-30 (all three leader recommendations plus the optional image swap). Plan in `.team/epics/E09-customisation-editor/PRD.md` "Stage 1 plan"; tasks T-141..T-147. | Server-rendered PDF preview as the E09 outline said (dropped: D-24); both templates at once; phone-first | A second template needs its own tokens and print-check work; extra fonts add bytes (loaded on demand) |
 
 Leader decisions (low-risk, inside the approved stack):
 
@@ -6176,7 +6179,7 @@ From T-135 QA: typing in the middle of a field that is already at its character 
 - 2026-10-29 09:48Z · human · accepted by owner
 
 ### T-139 — [E07] Web: say 18+ on the class screens and tell friends a class admin may see their note
-- **Status:** TODO
+- **Status:** IN_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
@@ -6184,18 +6187,19 @@ From T-135 QA: typing in the middle of a field that is already at its character 
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-29 18:56Z by leader
-- **Comments-seen:** 0
+- **Assignee:** qa
+- **Branch:** task/t-139-e07-web-say-18-on-the-class-screens-and-
+- **PR:** https://github.com/danyaa666/smemories/pull/138
+- **Updated:** 2026-10-30 02:12Z by qa
+- **Comments-seen:** 1
 
 Spec: .team/epics/E07-class-yearbook/13-web-age-line-and-friend-note-notice.md. Owner decision D-40 (a, b).
 
 #### Comments
+- 2026-10-30 02:09Z · dev · PR #138 head 7348649. 18+ line (classes.ageLine) under ClassNew form and before Join button (accept step only); legal.noticeClass appended in LegalNotice paragraph; privacy review s7 points 1,2 marked decided. Local: lint, typecheck, i18n, check:api, build, vitest 603 pass. QA: check /classes/new, /join/:token (signed in), /c/:token at 375px en+vi.
 
 ### T-140 — [E07] Revoke a departed admin's invite links automatically
-- **Status:** TODO
+- **Status:** QA_PASS
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
@@ -6203,13 +6207,153 @@ Spec: .team/epics/E07-class-yearbook/13-web-age-line-and-friend-note-notice.md. 
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
+- **Assignee:** leader
+- **Branch:** task/t-140-e07-revoke-a-departed-admin-s-invite-lin
+- **PR:** 137
+- **Updated:** 2026-10-30 02:11Z by qa
+- **Comments-seen:** 2
+
+Spec: .team/epics/E07-class-yearbook/14-revoke-departed-admin-invites.md. Owner decision D-40 (c).
+
+#### Comments
+- 2026-10-29 19:15Z · dev · PR #137 head e9bcbd3. Leave/remove/demote of an admin revoke that admin's active invites in the same tx (revokeInvitesOf, store.go), after class+member locks. Tests: TestDepartedAdminsInvitesAreRevoked (matrix_integration_test.go), TestStudentLeavingRevokesNothing, TestInviteAcceptRacingTheCreatorLeaving (-race -count=20 ok). Full class integration under -race ok locally (own containers). Manual full CI run 40936653143 on the branch: success (go, go-integration, web, image, security, e2e). Docs + Postman 'Departed admin:' steps added (newman not installed, JSON validated only, not run).
+- 2026-10-30 02:11Z · qa · QA_PASS. Verified PR head e9bcbd3; I then pushed ONE test-only commit 706ae63 (internal/class/invite_departed_qa_integration_test.go), no product change. CI: dev manual full run 40936653143 headSha=e9bcbd3 (equals PR head at QA start), completed/success, all 6 jobs (go, go-integration, web, security, image, e2e) success. Own local run (own mysql:8.4 + valkey containers on ports 33140/36140, removed after): build, go vet, go vet -tags integration, golangci-lint (0 issues, also --build-tags integration on class), go test -race ./... all green; go test -race -tags integration ./internal/class = ok (85s, full package); TestInviteAcceptRacingTheCreatorLeaving -race -count=20 = 20/20 PASS. scripts/check-class-matrix.sh: 21 operations, ok. Not run: full make test-integration for other packages (diff touches only internal/class; CI run covers them), e2e/print-check locally (no web/print change; CI e2e green), newman (not installed; I syntax-checked all 237 Postman scripts with node --check and JSON-parsed the collection: ok).
+  AC1: revokeInvitesOf (store.go) runs in the same tx in leave/removeMember/setRole after lockMembership (class row FOR UPDATE, member row), target, keepAnAdmin; invite rows are locked last by the UPDATE. UPDATE has class_id = ? AND created_by = ? AND revoked_at IS NULL AND expires_at > now, so other classes, other admins, already revoked (revoked_at not overwritten) and expired rows are untouched; role != admin is a no-op (student leave); setRole skips it when promoting and when role unchanged. No deadlock cycle: create-invite, revoke-invite, class/delete, accept all take the class row first (accept: class, invite, member; same as here), so the class row serialises every path; set-book does not touch invites. Last-admin check precedes the revoke, unchanged. TestDepartedAdminsInvitesAreRevoked (leave/remove/demote subtests) checks: 2 active revoked, previously revoked keeps old timestamp, expired stays, owner and other admin links live, joiner stays, get-list shows 2 active. TestStudentLeavingRevokesNothing ok.
+  AC2: race test is meaningful (8 kids accept while creator leaves; asserts members == OK accepts, leaver's link revoked, later accept 404, no late joiner); 20/20 under -race.
+  (2) dead token: lookup/accept of revoked tokens 404 ERROR_NOT_FOUND; my added test TestDepartedAdminOtherClassAndRepromotion asserts sameAnswer() is identical to a never-issued token for lookup and accept, that the leaver's link in ANOTHER class stays live and usable, and that re-promotion does not revive the old link (new test, passes).
+  AC3: docs/class-permissions.md and class-privacy-review.md (sections 4, 6/7 open point 3 marked decided D-40 c) match the code; Postman 'Departed admin:' steps (8) valid JS/JSON. No migration, no .team/ changes (7 files, all in docs/, internal/class, postman).
+  Non-blocking: Postman 'Departed admin' has no leave/remove variants (demote only), covered by Go tests. Leader: head is now 706ae63 (test-only); CI on PR will rerun go/web/security only.
+
+### T-141 — [E09] Design model and API: manifest design block, book_design_tab, book-design endpoints
+- **Status:** IN_PROGRESS
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M1b
+- **Depends-on:** —
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** dev
+- **Branch:** task/t-141-e09-design-model-and-api-manifest-design
+- **PR:** —
+- **Updated:** 2026-10-30 02:10Z by dev
+- **Comments-seen:** 0
+
+Spec: .team/epics/E09-customisation-editor/01-design-model-and-api.md. Plan: PRD 'Stage 1 plan', D-41.
+
+#### Comments
+
+### T-142 — [E09] Web runtime: colour themes and font sets (Memory Book pilot)
+- **Status:** BACKLOG
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M1b
+- **Depends-on:** T-141
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-29 18:56Z by leader
+- **Updated:** 2026-10-30 02:07Z by leader
 - **Comments-seen:** 0
 
-Spec: .team/epics/E07-class-yearbook/14-revoke-departed-admin-invites.md. Owner decision D-40 (c).
+Spec: .team/epics/E09-customisation-editor/02-web-themes-and-font-sets.md.
+
+#### Comments
+
+### T-143 — [E09] Web runtime: sections, texts and images (Memory Book pilot)
+- **Status:** BACKLOG
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M1b
+- **Depends-on:** T-142
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-30 02:07Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E09-customisation-editor/03-web-sections-texts-images.md.
+
+#### Comments
+
+### T-144 — [E09] Web: the customise screen
+- **Status:** BACKLOG
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M1b
+- **Depends-on:** T-143
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-30 02:07Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E09-customisation-editor/04-web-customise-screen.md.
+
+#### Comments
+
+### T-145 — [E09] Navy Classic becomes customisable
+- **Status:** BACKLOG
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M1b
+- **Depends-on:** T-144
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-30 02:07Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E09-customisation-editor/05-navy-classic-customisable.md.
+
+#### Comments
+
+### T-146 — [E09] Class book applies each student's design
+- **Status:** BACKLOG
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M1b
+- **Depends-on:** T-145
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-30 02:07Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E09-customisation-editor/06-class-book-applies-designs.md.
+
+#### Comments
+
+### T-147 — [E09] Customisation journey, print-check coverage and docs
+- **Status:** BACKLOG
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M1b
+- **Depends-on:** T-146
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-30 02:07Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E09-customisation-editor/07-journey-print-check-docs.md.
 
 #### Comments
 

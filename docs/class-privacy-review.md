@@ -68,9 +68,10 @@ Logs: the API's access log records the route only, never a query string or body,
   promotes someone else, or deletes the class.
 - When one of several admins leaves, is demoted or is removed, they lose every admin right at the next request: roster, invites, class pages, class book **and the media read
   path** (it joins `class_member_tab` on every call; `TestAdminMediaReadPath`, `TestDemotedAdminCannotWritePages`).
-- Their **invite links stay live** until they expire (14 days by default, 30 at most) or are revoked. Invites are class-wide, so any remaining admin sees them in
-  `class-invite/get-list` and can revoke them. Residual risk, accepted for v1: a removed admin who kept a link can still let people join as students (they see
-  nothing but their own row). Follow-up if the owner wants it: revoke a person's invites when their admin role ends.
+- Their **active invite links are revoked** in the same transaction as the change (owner decision D-40 c, T-140): `revoked_at` is set on every unrevoked, unexpired invite
+  of that class made by that person, under the class row lock, before the invite rows are locked (the lock order of accept). People who already joined with those links
+  stay members; the other admins' links are untouched; `class-invite/get-list` shows the revoked ones as revoked. A person who is only a student has no links (no-op). Tests:
+  `TestDepartedAdminsInvitesAreRevoked` (leave, remove, demote), `TestInviteAcceptRacingTheCreatorLeaving` (an accept racing the exit is either before it or refused).
 - Class pages the departed admin wrote stay with the class (they are the class's, not the person's).
 
 ## 5. Abuse cases
@@ -102,9 +103,9 @@ names a test file or a test function that does not exist. Test files are in `int
 | `class/update` | changes class details (admin) | `matrix_integration_test.go` | `TestPermissionMatrix` |
 | `class/delete` | deletes the class rows (admin) | `matrix_integration_test.go` | `TestPermissionMatrix` |
 | `class-member/get-list` | the roster (admin) | `matrix_integration_test.go` | `TestPermissionMatrix`, `TestStudentNeverSeesTheRoster` |
-| `class-member/update-role` | promotes or demotes (admin) | `matrix_integration_test.go` | `TestPermissionMatrix` |
-| `class-member/remove` | removes a member (admin) | `matrix_integration_test.go` | `TestPermissionMatrix` |
-| `class-member/leave` | the caller leaves | `matrix_integration_test.go` | `TestPermissionMatrix` |
+| `class-member/update-role` | promotes or demotes (admin); a demoted admin's active links are revoked | `matrix_integration_test.go` | `TestPermissionMatrix`, `TestDepartedAdminsInvitesAreRevoked` |
+| `class-member/remove` | removes a member (admin); a removed admin's active links are revoked | `matrix_integration_test.go` | `TestPermissionMatrix`, `TestDepartedAdminsInvitesAreRevoked` |
+| `class-member/leave` | the caller leaves; a leaving admin's active links are revoked | `matrix_integration_test.go` | `TestPermissionMatrix`, `TestDepartedAdminsInvitesAreRevoked` |
 | `class-member/set-book` | the caller's own page link | `page_integration_test.go` | `TestSetBookMatrix` |
 | `class-book/get` | profiles, approved notes, class pages (admin) | `book_integration_test.go` | `TestClassBookMatrix` |
 | `class-book/update-order` | order of members and pages (admin) | `pages_integration_test.go` | `TestPageMatrix` |
@@ -133,7 +134,7 @@ class book are refused, and that a pending note never reaches the admin's printo
 
 1. Minors: the terms say 18 or older; school classes are often younger (section 1). **Decided (D-40, T-139):** the class create screen and the join screen say "SMemories is for people aged 18 or older." as plain text, not a blocker.
 2. The note form does not tell a friend that the note may be seen by a class admin (section 1). **Decided (D-40, T-139):** one sentence follows the notice under the send button of the public friend note form.
-3. Invite links of a departed admin stay live until expiry or revocation (section 4).
+3. ~~Invite links of a departed admin stay live until expiry or revocation~~ Decided (D-40 c): they are revoked with the admin role (section 4).
 4. The legal texts are still drafts: the bracketed items (operator, contact, region, retention days, law) are open, and the Vietnamese needs a native review.
 5. Printed or saved copies leave our control (section 3).
 
@@ -144,7 +145,7 @@ Left unchecked on purpose. Only the owner ticks these, in a later change, after 
 - [ ] I have read this review and the privacy policy and terms (version 2026-10-29), English and Vietnamese.
 - [ ] I accept that a class admin sees the profile and the approved notes and photos of every student who linked a page, including the friends' names and messages.
 - [ ] I decide whether the class feature is offered to people under 18, and what consent that needs (open point 1).
-- [ ] I decide about a warning on the note form (open point 2) and about revoking a departed admin's links (open point 3).
+- [ ] I decide about a warning on the note form (open point 2) (open point 3, revoking a departed admin's links, is decided: D-40 c).
 - [ ] The bracketed items of the legal texts are filled and the DRAFT banner is removed.
 - [ ] The class feature may be used in production.
 

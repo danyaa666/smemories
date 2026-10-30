@@ -30,9 +30,9 @@ A class always has at least one admin. Roles are per class: the same person can 
 | Change class details (`class/update`) | 200 | **403** | 404 | 404 | 401 |
 | Delete the class (`class/delete`) | 200 | **403** | 404 | 404 | 401 |
 | See the roster (`class-member/get-list`) | 200 | **403** | 404 | 404 | 401 |
-| Promote or demote a member (`class-member/update-role`) | 200 (last admin protected) | **403** | 404 | 404 | 401 |
-| Remove a member (`class-member/remove`) | 200 (last admin protected) | **403** | 404 | 404 | 401 |
-| Leave the class (`class-member/leave`) | 200 unless last admin | 200 | 404 | 404 | 401 |
+| Promote or demote a member (`class-member/update-role`) | 200 (last admin protected; a demoted admin's active invite links are revoked) | **403** | 404 | 404 | 401 |
+| Remove a member (`class-member/remove`) | 200 (last admin protected; a removed admin's active invite links are revoked) | **403** | 404 | 404 | 401 |
+| Leave the class (`class-member/leave`) | 200 unless last admin (their active invite links are revoked) | 200 (nothing to revoke) | 404 | 404 | 401 |
 | Link or clear **my own** page (`class-member/set-book`; T-126) | 200, own yearbook only | 200, own yearbook only | 404 | 404 | 401 |
 | Create, list, revoke invites (`class-invite/create`, `get-list`, `revoke`; T-125) | 200 | **403** | 404 | 404 | 401 |
 | Preview an invite link (`class-invite/lookup`, public; T-125) | 200 for a live token, else 404 | same | same | same | same (no session needed) |
@@ -97,7 +97,7 @@ live link may join as a `student`; the link is a bearer secret, so:
    60 members. A full class answers 409 `ERROR_CLASS_FULL` (a member of a full class still gets their membership back); ten accepts of the
    last seat at once add exactly one member. A revoke takes the same lock, so an accept that starts after a revoke commits is refused.
 7. **Lifetime** 14 days by default; `expires_at` (Unix ms) may be set from now (exclusive) to 30 days.
-8. Revoking a link removes nobody who joined with it; removing a member does not revoke the link. Deleting a class deletes its invites.
+8. Revoking a link removes nobody who joined with it; removing a student does not revoke the link. When an admin leaves, is removed or is demoted, every active link they made in that class is revoked in the same transaction (D-40 c, T-140); the members who joined with them stay, other admins' links are untouched. Deleting a class deletes its invites.
 9. An invite or member id is looked up inside the class named in the request, so an admin of class A who sends an id of class B gets 404
    and nothing changes (matrix test `TestCrossClassIDsChangeNothing`).
 

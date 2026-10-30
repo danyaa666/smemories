@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 )
 
 // The permission matrix of docs/class-permissions.md, endpoint by endpoint and actor by actor (T-026 AC1). Every cell gets a
@@ -135,5 +136,75 @@ func TestStudentNeverSeesTheRoster(t *testing.T) {
 		if strings.Contains(r.Body.String(), leak) {
 			t.Errorf("roster leaks %q: %s", leak, r.Body)
 		}
+	}
+}
+
+// D-40 c: an admin who leaves, is removed or is demoted takes their active invite links with them, and only those.
+func TestDepartedAdminsInvitesAreRevoked(t *testing.T) {
+	exits := []struct {
+		name string
+		do   func(e *env, owner, gone person, cls string) resp
+	}{
+		{"leave", func(e *env, _, gone person, cls string) resp {
+			return e.do(gone, "POST", "/api/class-member/leave", body("class_id", cls))
+		}},
+		{"remove", func(e *env, owner, gone person, cls string) resp {
+			return e.do(owner, "POST", "/api/class-member/remove", body("class_id", cls, "member_id", e.memberID(cls, gone)))
+		}},
+		{"demote", func(e *env, owner, gone person, cls string) resp {
+			return e.do(owner, "POST", "/api/class-member/update-role", body("class_id", cls, "member_id", e.memberID(cls, gone), "role", RoleStudent))
+		}},
+	}
+	for _, x := range exits {
+		t.Run(x.name, func(t *testing.T) {
+			e := newEnv(t)
+			owner, gone, other, joiner := e.user("Owner"), e.user("Gone"), e.user("Other"), e.user("Joiner")
+			cls, _ := e.seedClass([]person{owner, gone, other})
+			_, tok1 := e.createInvite(gone, cls)
+			_, tok2 := e.createInvite(gone, cls)
+			already, tokRevoked := e.createInvite(gone, cls)
+			e.do(gone, "POST", "/api/class-invite/revoke", body("class_id", cls, "id", already)).status(200, "OK")
+			var firstRevoked int64
+			if err := e.db.QueryRow(`SELECT revoked_at FROM class_invite_tab WHERE public_id = ?`, already).Scan(&firstRevoked); err != nil {
+				t.Fatal(err)
+			}
+			expiredID, tokExpired := e.createInvite(gone, cls)
+			e.exec(`UPDATE class_invite_tab SET expires_at = ? WHERE public_id = ?`, e.now().Add(-time.Minute).UnixMilli(), expiredID)
+			_, tokOwner := e.createInvite(owner, cls)
+			_, tokOther := e.createInvite(other, cls)
+			e.accept(joiner, tok1).status(200, "OK") // joined with a link that is about to die
+
+			e.advance(time.Minute) // so the exit's revoked_at differs from the earlier one
+			x.do(e, owner, gone, cls).status(200, "OK")
+
+			for name, tok := range map[string]string{"first": tok1, "second": tok2, "revoked": tokRevoked, "expired": tokExpired} {
+				e.lookup(tok).status(404, "ERROR_NOT_FOUND")
+				e.accept(e.user("Late"+name), tok).status(404, "ERROR_NOT_FOUND")
+			}
+			e.lookup(tokOwner).status(200, "OK")
+			e.lookup(tokOther).status(200, "OK")
+			if e.role(joiner, cls) != RoleStudent {
+				t.Fatal("the member who joined with the link was removed")
+			}
+			if n := e.count(`SELECT COUNT(*) FROM class_invite_tab WHERE revoked_at IS NOT NULL AND revoked_at <> ?`, firstRevoked); n != 2 {
+				t.Fatalf("%d invites revoked by the exit, want the leaver's 2 active ones (the expired one stays as it is)", n)
+			}
+			if n := e.count(`SELECT COUNT(*) FROM class_invite_tab WHERE revoked_at = ?`, firstRevoked); n != 1 {
+				t.Fatal("the already revoked invite got a new revoked_at")
+			}
+			if n := e.count(`SELECT COUNT(*) FROM class_invite_tab WHERE revoked_at IS NULL AND created_by <> ?`, gone.row); n != 2 {
+				t.Fatalf("%d other invites untouched, want 2", n)
+			}
+			items := e.do(owner, "GET", "/api/class-invite/get-list?class_id="+cls, "").data()["items"].([]any)
+			active := 0
+			for _, it := range items {
+				if it.(map[string]any)["active"] == true {
+					active++
+				}
+			}
+			if active != 2 {
+				t.Fatalf("get-list shows %d active invites, want 2", active)
+			}
+		})
 	}
 }
