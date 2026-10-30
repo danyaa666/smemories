@@ -12,7 +12,7 @@
 |---|---:|---|
 | BACKLOG | 11 | T-023, T-024, T-025, T-031, T-050, T-142, T-143, T-144, T-145, T-146, T-147 |
 | READY_FOR_QA | 1 | T-139 |
-| IN_QA | 1 | T-141 |
+| QA_PASS | 1 | T-141 |
 | MERGED | 1 | T-140 |
 | DONE | 125 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-137, T-138 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
@@ -21,7 +21,7 @@
 
 **Open questions for you:** none
 
-_Board last written 2026-10-30 02:48Z_
+_Board last written 2026-10-30 02:56Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -6240,7 +6240,7 @@ Spec: .team/epics/E07-class-yearbook/14-revoke-departed-admin-invites.md. Owner 
 - 2026-10-30 02:44Z · leader · merged 587a444. Review: revokeInvitesOf runs in the same transaction after the class and member locks (leave, remove of an admin, demote); other admins/classes/already revoked rows untouched; race test 20/20 under -race; manual full CI run 40936653143 green on e9bcbd3, QA's extra commit is test-only (706ae63), PR jobs green. For owner to check: docs/class-privacy-review.md sections 4 and 7; Postman departed-admin steps cover demote only.
 
 ### T-141 — [E09] Design model and API: manifest design block, book_design_tab, book-design endpoints
-- **Status:** IN_QA
+- **Status:** QA_PASS
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1b
@@ -6248,16 +6248,23 @@ Spec: .team/epics/E07-class-yearbook/14-revoke-departed-admin-invites.md. Owner 
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** leader
 - **Branch:** task/t-141-e09-design-model-and-api-manifest-design
 - **PR:** https://github.com/danyaa666/smemories/pull/139
-- **Updated:** 2026-10-30 02:44Z by qa
-- **Comments-seen:** 1
+- **Updated:** 2026-10-30 02:55Z by qa
+- **Comments-seen:** 2
 
 Spec: .team/epics/E09-customisation-editor/01-design-model-and-api.md. Plan: PRD 'Stage 1 plan', D-41.
 
 #### Comments
 - 2026-10-30 02:43Z · dev · PR #139, head 73ad5e5. Local: go test -race ./... green, golangci-lint 0, vet+integration vet clean; make test-integration equivalent (-race -tags integration) on bookdesign, bookdata, yearbook, templates, templateapi, notes, class, bookexport, db, api all ok; web typecheck/lint/check:api/test (600) green; newman book-design folder 60 req / 130 assertions / 0 failed. Full CI by hand (D-37): run 40992455178 on 73ad5e5 = success (go, go-integration, e2e, image, security, web); PR run = go, web, security success. To verify: IDOR on book-design/get|update|reset with a second account, cascade on yearbook delete + template change, options fuzz (docs/templates.md 'Design block and book designs'), book-data/get design. Deviations: memory-book texts follow what memory.tsx really prints (cover.belongs, cover.sticker, profile.heading, profile.subtitle, notes.heading, back.heading, back.subtitle, back.pact; cover.title is user data); image cover.pattern ships dots+plain only, waves NOT made (needs an image, ask owner/designer). movable=false means keeps its place in the template order. 4 web test fixtures + classBook.ts got design: null (schema now requires it).
+- 2026-10-30 02:55Z · qa · QA_PASS. PR #139 head under test 73ad5e5 (I then pushed 9832c4f = 73ad5e5 + one test-only file internal/bookdesign/qa_integration_test.go; no product change).
+  CI: manual full run 40992455178 headSha 73ad5e5a4e8b = success, all six jobs (go-integration, go, image, e2e, security, web) success; PR run 40992451874 go/web/security pass, e2e/go-integration/image skipped (D-37).
+  LOCAL (own docker stack qa141-*, ports 43306/46379/49000, removed afterwards): go build, go vet + -tags integration clean; golangci-lint 0 issues (also with integration tag); go test -race ./... all ok; make-equivalent go test -race -count=1 -timeout 30m -tags integration ./... EXIT 0 (every package ok: bookdesign 40s, class 245s incl. admin-404 matrix, db 203s incl. username down loop, notes 282s, yearbook 139s, media, auth, bookdata, templates); scripts/check-class-matrix.sh ok (21 ops); web typecheck, check:api, gen:api produces no diff, eslint+prettier, vitest 600/600. e2e/print-check NOT run by me: this task changes no web book/print/auth flow (only 4 fixtures + classBook.ts got design: null); covered by dev's by-hand CI run (e2e success on 73ad5e5).
+  Live: built the API against my stack and ran postman/customisation-editor.postman_collection.json (book-design folder) with the Postman CLI: 62 requests / 132 assertions / 0 failed on a clean DB and again after flushing redis.
+  AC1 manifest validator: design_test.go table (28 rejections incl. dup ids, bad ids, counts, fixed rules, text max 0/201, go-renderer + design) and memory-book block passes: ok. AC2 matrix: TestEndpointMatrix (other user, anonymous 401, unknown id 404, bad id 400, invalid doc by other user still 404, foreign Origin 403, refused calls leave the design untouched); class admin of the member's book gets 404 ERROR_NOT_FOUND on book-design get/update/reset and nothing changes (adminCalls matrix + snapshot, passes). Cascade: yearbook delete removes row + AssertNoOrphans, orphan pair registered in dbtest, notes registry test fills it; template change/clear deletes row, same-template keeps it, going back does not resurrect. AC3 fuzz (my own, in qa_integration_test.go + dev's table): size 4095 and 4096 bytes as sent accepted, 4097 rejected; NFD text of 120 runes (40 after NFC) stored NFC and accepted, 41 NFC runes rejected; 1000-deep object and 1500-deep array (as options and nested in texts/order), duplicate key, trailing data, v true/null/2/0, null values, empty ids, bad UTF-16 surrogate, ZWSP, NUL, newline/tab, 5000 runes, unknown/dup/missing section ids, fixed violations, hiding non-hideable, unknown theme/font/image/choice: all 400 ERROR_INVALID_DESIGN, no 5xx, stored row still the previous design after the whole barrage; update replaces fully. Atomicity (my TestQATemplateChangeFailureKeepsDesign): yearbook/update with template_id change plus a bad cover_media_id fails and the design row and template stay. AC4 book-data/get design: defaults, chosen, stale theme/section/text/image ids resolve to defaults, garbage options_json and a template_id-mismatched row do not break the endpoint, design null for navy-classic/no template; openapi marks it required+nullable on the response (additive for clients), schema.d.ts regenerated identical, fixtures type-check. Locks: yearbook row first then design row; parallel write/reset/template change/delete test: no 5xx.
+  Deviations accepted by leader confirmed: memory-book text ids (8 ids match docs/templates.md), cover.pattern dots+plain. Unrelated test edits justified: notes registry/matrix tests must list the new *_tab table (and fill it), class admin matrix gets the 3 new routes (guard test requires it), username migration down loop 10 to 30 only raises the cap (loop exits as soon as the column is gone), bookdata/class/notes envs just pass the new constructor argument; none weakens an assertion. Migration: one new table, expand-only, Down drops it, no FK, VARCHAR(4096) with byte check in Go. Rate limit 60 writes/10 min/owner on update+reset with Retry-After (test). No .team/ files in the PR.
+  Non-blocking: (1) running the Postman collection twice within 10 minutes hits the 60-writes limit (429) on the second run, because one run does about 40 writes; flush redis / make reset-limits or wait 10 min. Same behaviour as other limited collections, but a note in the collection description would help. (2) Go JSON matches keys case-insensitively, so {"Theme":"mint"} is accepted and stored normalised as theme; harmless. (3) the raw 4096 check counts whitespace as sent, so a normalised document that would fit is refused if the padding pushes it over; matches the 'as sent and as stored' wording.
 
 ### T-142 — [E09] Web runtime: colour themes and font sets (Memory Book pilot)
 - **Status:** BACKLOG
