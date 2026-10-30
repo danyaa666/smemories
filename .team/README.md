@@ -11,8 +11,8 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 11 | T-023, T-024, T-025, T-031, T-050, T-142, T-143, T-144, T-145, T-146, T-147 |
+| READY_FOR_QA | 1 | T-139 |
 | IN_QA | 1 | T-141 |
-| CHANGES_REQUESTED | 1 | T-139 |
 | MERGED | 1 | T-140 |
 | DONE | 125 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-137, T-138 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
@@ -21,7 +21,7 @@
 
 **Open questions for you:** none
 
-_Board last written 2026-10-30 02:44Z_
+_Board last written 2026-10-30 02:48Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -6179,7 +6179,7 @@ From T-135 QA: typing in the middle of a field that is already at its character 
 - 2026-10-29 09:48Z · human · accepted by owner
 
 ### T-139 — [E07] Web: say 18+ on the class screens and tell friends a class admin may see their note
-- **Status:** CHANGES_REQUESTED
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M3
@@ -6190,8 +6190,8 @@ From T-135 QA: typing in the middle of a field that is already at its character 
 - **Assignee:** —
 - **Branch:** task/t-139-e07-web-say-18-on-the-class-screens-and-
 - **PR:** https://github.com/danyaa666/smemories/pull/138
-- **Updated:** 2026-10-30 02:44Z by leader
-- **Comments-seen:** 3
+- **Updated:** 2026-10-30 02:47Z by dev
+- **Comments-seen:** 6
 
 Spec: .team/epics/E07-class-yearbook/13-web-age-line-and-friend-note-notice.md. Owner decision D-40 (a, b).
 
@@ -6208,6 +6208,9 @@ Spec: .team/epics/E07-class-yearbook/13-web-age-line-and-friend-note-notice.md. 
   Conflict: git merge-tree HEAD vs origin/task/t-140-... (PR #137): CONFLICT in docs/class-privacy-review.md only. Section 4 and the table auto-merge; the conflict is section 7 items 1-3 (adjacent lines: T-140 rewrites item 3, T-139 items 1 and 2). Trivial to resolve (keep both). Merge-tree against develop is clean, so whichever merges second must rebase/resolve.
   Not checked: real API (stubbed); real-device Safari/Firefox (chromium only); Vietnamese native-language review. Non-blocking: none.
 - 2026-10-30 02:44Z · leader · QA_PASS stands. One change: docs/class-privacy-review.md section 7 now conflicts with develop (T-140, merged 587a444, rewrote item 3 next to your items 1 and 2). Merge origin/develop into your branch (no force-push), keep BOTH edits (items 1 and 2 decided by D-40 from T-139, item 3 decided by T-140), check the file reads correctly, rerun web checks, then READY_FOR_QA. QA only needs to re-check that file and that the PR is mergeable.
+- 2026-10-30 02:47Z · dev · Merged origin/develop (587a444) into the branch; conflict only in docs/class-privacy-review.md s7, kept both: items 1,2 decided by D-40 (T-139), item 3 decided by D-40 c (T-140). Web checks rerun: lint, typecheck, i18n, check:api, build, vitest 603 pass (one transient 2-test failure in a loaded combined run, 2 clean reruns). Head 581055c.
+- 2026-10-30 02:47Z · dev · Merge conflict fixed, head 581055c, same code as QA_PASS
+- 2026-10-30 02:48Z · leader · Leader: QA re-check is limited to docs/class-privacy-review.md section 7 (both edits kept) and mergeability; also run the web suite 3 times and report if any test is flaky (dev saw 2 transient vitest failures in one combined run, passing on reruns: name the tests if you see them). QA starts when the QA lease is free (T-141 is in QA).
 
 ### T-140 — [E07] Revoke a departed admin's invite links automatically
 - **Status:** MERGED
