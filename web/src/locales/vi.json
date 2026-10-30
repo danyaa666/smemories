@@ -151,6 +151,7 @@
     "username_reserved": "Tên người dùng này không dùng được. Hãy chọn tên khác.",
     "username_taken": "Tên người dùng này đã có người dùng. Hãy chọn tên khác.",
     "username_change_too_soon": "Bạn vừa đổi tên người dùng. Bạn có thể đổi lại vào {{date}}.",
+    "invalid_design": "Không thể lưu thiết kế.",
     "invalid_template": "Mẫu trình bày này không dùng được cho khổ giấy này. Hãy chọn mẫu khác.",
     "terms_required": "Hãy đồng ý với Điều khoản sử dụng và Chính sách quyền riêng tư để tiếp tục."
   },
@@ -414,6 +415,90 @@
     "revoke": "Thu hồi",
     "revokeTitle": "Thu hồi liên kết này?",
     "revokeBody": "Bạn bè sẽ không dùng được nữa. Các lời nhắn đã gửi vẫn nằm trong hộp thư của bạn."
+  },
+  "customise": {
+    "title": "Tùy chỉnh thiết kế",
+    "link": "Tùy chỉnh thiết kế",
+    "intro": "Lựa chọn của bạn hiện ngay trong bản xem trước. Cuốn sách chỉ thay đổi khi bạn lưu.",
+    "loading": "Đang tải thiết kế...",
+    "back": "Về cuốn sách",
+    "notAvailable": "Mẫu của cuốn sách này không tùy chỉnh được. Hãy chọn mẫu khác ở màn hình in.",
+    "templateReset": "Bạn đã đổi mẫu nên thiết kế trước đó đã được đặt lại. Đây là các lựa chọn của mẫu mới.",
+    "selected": "Đang chọn",
+    "colours": "Màu sắc",
+    "fonts": "Phông chữ",
+    "sections": "Các phần",
+    "sectionsHelp": "Chọn phần nào được in và theo thứ tự nào. Các phần cố định giữ nguyên vị trí.",
+    "texts": "Chữ",
+    "textsHelp": "Để trống để giữ nguyên lời của mẫu.",
+    "images": "Hình ảnh",
+    "shown": "Có trong sách",
+    "hidden": "Bỏ qua",
+    "showSection": "In “{{name}}”",
+    "lockedFirst": "Cố định: luôn ở đầu",
+    "lockedLast": "Cố định: luôn ở cuối",
+    "locked": "Cố định",
+    "moveUp": "Chuyển “{{name}}” lên",
+    "moveDown": "Chuyển “{{name}}” xuống",
+    "moved": "“{{name}}” giờ ở vị trí {{position}} trên {{total}}.",
+    "nowShown": "“{{name}}” sẽ được in.",
+    "nowHidden": "“{{name}}” sẽ bị bỏ qua.",
+    "save": "Lưu thiết kế",
+    "saving": "Đang lưu...",
+    "saved": "Đã lưu thiết kế.",
+    "unsaved": "Bạn có thay đổi chưa lưu.",
+    "reset": "Đặt lại theo mẫu",
+    "resetDone": "Thiết kế đã trở về như mẫu.",
+    "resetTitle": "Đặt lại thiết kế?",
+    "resetBody": "Thao tác này xóa màu sắc, phông chữ, thứ tự và lựa chọn các phần, chữ và hình đã chọn của cuốn sách này, và đưa nó về như mẫu. Lời nhắn và ảnh vẫn còn. Không thể hoàn tác.",
+    "resetConfirm": "Đặt lại thiết kế",
+    "resetCancel": "Giữ thiết kế của tôi",
+    "leaveTitle": "Rời đi mà không lưu?",
+    "leaveBody": "Các thay đổi thiết kế chưa được lưu và sẽ mất.",
+    "leaveConfirm": "Rời đi",
+    "leaveCancel": "Ở lại đây",
+    "preview": "Xem trước",
+    "previewHelp": "Các trang của phần bạn đang chỉnh, đúng như khi in.",
+    "previewNoNotes": "Trang lời nhắn sẽ hiện khi có lời nhắn của bạn bè được duyệt.",
+    "tpl": {
+      "memory-book": {
+        "themes": {
+          "lavender": "Oải hương",
+          "peach": "Đào",
+          "mint": "Bạc hà"
+        },
+        "fonts": {
+          "playful": "Vui nhộn",
+          "classic": "Cổ điển"
+        },
+        "fontSample": "Hẹn gặp lại, Lưu bút 2026",
+        "sections": {
+          "cover": "Bìa",
+          "profile": "Giới thiệu về mình",
+          "notes": "Lời nhắn từ bạn bè",
+          "back": "Giữ liên lạc nhé"
+        },
+        "texts": {
+          "cover_belongs": "Bìa: “cuốn lưu bút này là của”",
+          "cover_sticker": "Bìa: nhãn dán",
+          "profile_heading": "Trang giới thiệu: tiêu đề",
+          "profile_subtitle": "Trang giới thiệu: phụ đề",
+          "notes_heading": "Trang của bạn bè: tiêu đề",
+          "back_heading": "Trang cuối: tiêu đề",
+          "back_subtitle": "Trang cuối: phụ đề",
+          "back_pact": "Trang cuối: lời hẹn gặp lại"
+        },
+        "images": {
+          "cover_pattern": {
+            "label": "Giấy bìa",
+            "choices": {
+              "dots": "Giấy chấm bi",
+              "plain": "Giấy trơn"
+            }
+          }
+        }
+      }
+    }
   },
   "bookPages": {
     "classOf": "Khóa {{year}}",

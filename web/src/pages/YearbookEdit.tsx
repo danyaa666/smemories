@@ -57,6 +57,9 @@ export function YearbookEdit() {
         <Link to="/yearbooks">{t("books.back")}</Link>
       </p>
       <h1>{y.title}</h1>
+      <p>
+        <Link to={`/yearbooks/${y.id}/customise`}>{t("customise.link")}</Link>
+      </p>
       <section aria-labelledby="book-h">
         <h2 id="book-h">{t("book.heading")}</h2>
         <BookForm

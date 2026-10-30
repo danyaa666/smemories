@@ -123,7 +123,7 @@ Every id matches `[a-z0-9._-]{1,40}` and is unique in its list. `templates.Desig
 declares themes `lavender` (today's colours), `peach`, `mint`; font sets `playful` (Nunito, Baloo 2, Patrick Hand: today's) and `classic`; sections `cover` (fixed first),
 `profile` (hideable, movable), `notes` (movable) and `back` (fixed last, hideable); the fixed texts `memory.tsx` prints (`cover.belongs`, `cover.sticker`,
 `profile.heading`, `profile.subtitle`, `notes.heading`, `back.heading`, `back.subtitle`, `back.pact`; their default wording stays in the web locale files, per
-language); and the image `cover.pattern` with `dots` (today's) and `plain` (no pattern). A web test pins the web ids to the manifest ids (T-142).
+language; `back.pact` allows 18 characters, because the pact sits in a small box and at 30 emoji it wrapped into two tiny lines); and the image `cover.pattern` with `dots` (today's) and `plain` (no pattern). A web test pins the web ids to the manifest ids (T-142).
 
 **The options document** of a book (`book_design_tab.options_json`, one row per yearbook, at most 4096 bytes, `template_id` records the template it was made for):
 

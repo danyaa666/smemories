@@ -166,7 +166,7 @@ func TestResolveDefaultsAndStaleIDs(t *testing.T) {
 				Texts: map[string]string{"back.pact": "Hẹn"}, Images: map[string]string{"cover.pattern": "dots"}}},
 		{"fixed sections stay put even in a stored order that moved them", `{"v":1,"sections":{"order":["back","notes","profile","cover"]}}`,
 			&Resolved{Theme: "lavender", Fonts: "playful", Sections: ResolvedSections{Order: []string{"cover", "notes", "profile", "back"}, Hidden: []string{}}, Texts: map[string]string{}, Images: defaults.Images}},
-		{"a text longer than the manifest now allows is dropped", `{"v":1,"texts":{"back.pact":"` + strings.Repeat("a", 31) + `"}}`, defaults},
+		{"a text longer than the manifest now allows is dropped", `{"v":1,"texts":{"back.pact":"` + strings.Repeat("a", 19) + `"}}`, defaults},
 		{"a control character in a stored text is dropped", "{\"v\":1,\"texts\":{\"back.pact\":\"a\\nb\"}}", defaults},
 	}
 	for _, c := range cases {

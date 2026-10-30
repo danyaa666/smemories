@@ -29,7 +29,7 @@
       {"id": "notes.heading", "max": 40},
       {"id": "back.heading", "max": 40},
       {"id": "back.subtitle", "max": 60},
-      {"id": "back.pact", "max": 30}
+      {"id": "back.pact", "max": 18}
     ],
     "images": [
       {"id": "cover.pattern", "choices": ["dots", "plain"]}
