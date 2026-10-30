@@ -100,7 +100,7 @@ function BookScreen({ data, bookId }: { data: BookData; bookId: string }) {
   const photos = usePhotoPreload(
     useMemo(() => photoIds(data, getTemplate(data.yearbook.template_id).photos), [data]),
   );
-  const key = `${data.yearbook.title}|${data.note_count}|${size}|${data.yearbook.template_id ?? ""}`; // another template has other fonts
+  const key = `${data.yearbook.title}|${data.note_count}|${size}|${data.yearbook.template_id ?? ""}|${data.design?.fonts ?? ""}`; // another template or font set has other fonts
   const fonts = useFontsLoaded(key);
   const { states, Provider } = useFitReport();
   const { ref, scale } = useStageScale(size);

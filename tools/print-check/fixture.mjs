@@ -56,7 +56,7 @@ export const SIGNATURES = {
 };
 
 /** `notes` approved notes; the first 28 carry one photo each, the cover and the profile one more: 30 distinct photos. */
-export function makeBook({ notes = 84, size = "A5", truncatedOf = null, template = null, longNote = -1, stress = false, cutOff = false, profileMax = false, portrait = true, signatures = false } = {}) {
+export function makeBook({ notes = 84, size = "A5", truncatedOf = null, template = null, longNote = -1, stress = false, cutOff = false, profileMax = false, portrait = true, signatures = false, design = null } = {}) {
   const list = template === "memory-book" ? memoryNotes(notes, longNote, cutOff) : Array.from({ length: notes }, (_, i) => ({
     id: ulid("N", i + 1),
     answers: {
@@ -116,8 +116,18 @@ export function makeBook({ notes = 84, size = "A5", truncatedOf = null, template
   // signatures: note 1 maximal, 2 tiny, 3 none, 4 normal, then the cycle again (the 2000-character note is the 5th of a navy page's cycle).
   for (const [i, n] of book.notes.entries()) n.signature = signatures ? [SIGNATURES.maximal, SIGNATURES.tiny, null, SIGNATURES.normal][i % 4] : null;
   if (!portrait) book.profile.photo_media_id = null;
+  if (design) book.design = design;
   return book;
 }
+
+/** The `design` of book-data/get (T-141) for a theme and a font set: no hidden section, no replaced text, the template's own picture choices. */
+export const designOf = (theme, fonts) => ({
+  theme,
+  fonts,
+  sections: { order: ["cover", "profile", "notes", "back"], hidden: [] },
+  texts: {},
+  images: { "cover.pattern": "dots" },
+});
 
 // ---- The class book (T-130): the answer of GET /api/class-book/get for 30 students ----
 export const CLASS_ID = "01J9Z3K6V8Q4M7N2P5R8T0CCCC";
