@@ -709,6 +709,17 @@ export const memoryBook: Template = {
   id: "memory-book",
   notesPerPage: 1,
   design: { themes: ["lavender", "peach", "mint"], fonts: ["playful", "classic"] },
+  // the locale key of each text's own wording (the customise screen shows it as the placeholder); design.test.ts pins the ids to the manifest
+  textDefaults: {
+    "cover.belongs": "bookPages.memory.belongs",
+    "cover.sticker": "bookPages.memory.sticker",
+    "profile.heading": "bookPages.aboutMe",
+    "profile.subtitle": "bookPages.memory.ownerOf",
+    "notes.heading": "bookPages.memory.friendTitle",
+    "back.heading": "bookPages.memory.touchTitle",
+    "back.subtitle": "bookPages.memory.touchSub",
+    "back.pact": "bookPages.memory.pact",
+  },
   Cover,
   Profile,
   Notes,

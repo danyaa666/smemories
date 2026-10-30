@@ -149,6 +149,11 @@ function BookScreen({ data, bookId }: { data: BookData; bookId: string }) {
           {data.yearbook.title} · {size}
         </p>
         <TemplatePicker bookId={bookId} size={size} current={data.yearbook.template_id} />
+        <p>
+          <Link className={buttonClass("secondary")} to={`/yearbooks/${bookId}/customise`}>
+            {t("customise.link")}
+          </Link>
+        </p>
         {data.truncated && (
           <Banner variant="warning">
             {t("print.truncated", { shown: data.note_count, total: data.approved_total })}

@@ -151,6 +151,7 @@
     "username_reserved": "This username is not available. Choose another one.",
     "username_taken": "This username is already taken. Choose another one.",
     "username_change_too_soon": "You changed your username recently. You can change it again on {{date}}.",
+    "invalid_design": "The design could not be saved.",
     "invalid_template": "That template is not available for this paper size. Pick another one.",
     "terms_required": "Please accept the Terms of Use and the Privacy Policy to continue."
   },
@@ -414,6 +415,90 @@
     "revoke": "Revoke",
     "revokeTitle": "Revoke this link?",
     "revokeBody": "Friends can no longer use it. Notes already sent stay in your inbox."
+  },
+  "customise": {
+    "title": "Customise the design",
+    "link": "Customise the design",
+    "intro": "Your choices show in the preview at once. The book does not change until you save.",
+    "loading": "Loading the design...",
+    "back": "Back to the book",
+    "notAvailable": "This book’s template cannot be customised. Choose another template on the print screen.",
+    "templateReset": "You changed the template, so the earlier design was reset. These are the choices of the new template.",
+    "selected": "Selected",
+    "colours": "Colours",
+    "fonts": "Fonts",
+    "sections": "Sections",
+    "sectionsHelp": "Choose which parts are printed and in which order. Fixed parts stay where they are.",
+    "texts": "Texts",
+    "textsHelp": "Leave a text empty to keep the template’s own wording.",
+    "images": "Pictures",
+    "shown": "In the book",
+    "hidden": "Left out",
+    "showSection": "Print “{{name}}”",
+    "lockedFirst": "Fixed: always first",
+    "lockedLast": "Fixed: always last",
+    "locked": "Fixed",
+    "moveUp": "Move “{{name}}” up",
+    "moveDown": "Move “{{name}}” down",
+    "moved": "“{{name}}” is now number {{position}} of {{total}}.",
+    "nowShown": "“{{name}}” will be printed.",
+    "nowHidden": "“{{name}}” will be left out.",
+    "save": "Save design",
+    "saving": "Saving...",
+    "saved": "Design saved.",
+    "unsaved": "You have changes that are not saved.",
+    "reset": "Reset to template",
+    "resetDone": "The design is back to the template’s look.",
+    "resetTitle": "Reset the design?",
+    "resetBody": "This deletes your colours, fonts, section order and choices, texts and picture choices for this book, and returns it to the template’s look. Your notes and photos stay. This cannot be undone.",
+    "resetConfirm": "Reset the design",
+    "resetCancel": "Keep my design",
+    "leaveTitle": "Leave without saving?",
+    "leaveBody": "Your changes to the design are not saved and will be lost.",
+    "leaveConfirm": "Leave",
+    "leaveCancel": "Stay here",
+    "preview": "Preview",
+    "previewHelp": "The pages of the part you are editing, as they print.",
+    "previewNoNotes": "The notes page appears once a friend’s note is approved.",
+    "tpl": {
+      "memory-book": {
+        "themes": {
+          "lavender": "Lavender",
+          "peach": "Peach",
+          "mint": "Mint"
+        },
+        "fonts": {
+          "playful": "Playful",
+          "classic": "Classic"
+        },
+        "fontSample": "Hẹn gặp lại, Lưu bút 2026",
+        "sections": {
+          "cover": "Cover",
+          "profile": "All about me",
+          "notes": "Notes from friends",
+          "back": "Let’s stay in touch"
+        },
+        "texts": {
+          "cover_belongs": "Cover: “this book belongs to”",
+          "cover_sticker": "Cover: sticker",
+          "profile_heading": "Profile page: heading",
+          "profile_subtitle": "Profile page: subtitle",
+          "notes_heading": "Friends’ pages: heading",
+          "back_heading": "Last page: heading",
+          "back_subtitle": "Last page: subtitle",
+          "back_pact": "Last page: reunion pact"
+        },
+        "images": {
+          "cover_pattern": {
+            "label": "Cover paper",
+            "choices": {
+              "dots": "Dotted paper",
+              "plain": "Plain paper"
+            }
+          }
+        }
+      }
+    }
   },
   "bookPages": {
     "classOf": "Class of {{year}}",

@@ -1,0 +1,141 @@
+/* The customise screen (T-144): controls on the left, the live preview on the right; one column on a phone. */
+.cu {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+.cu-side,
+.cu-preview {
+  min-width: 0;
+}
+.cu-preview {
+  position: sticky;
+  top: var(--space-4);
+  max-height: calc(100vh - 2 * var(--space-4));
+  overflow: auto;
+}
+@media (max-width: 699px) {
+  .cu {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .cu-preview {
+    position: static;
+    max-height: none;
+  }
+}
+.cu-group {
+  min-width: 0;
+  margin: 0 0 var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+}
+.cu-group legend {
+  padding: 0 var(--space-2);
+  font-weight: 600;
+}
+.cu-help {
+  margin: 0 0 var(--space-3);
+  color: var(--color-ink-2);
+  font-size: 0.875rem;
+}
+.cu-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+.cu-choice {
+  display: flex;
+  flex: 1 1 140px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  cursor: pointer;
+}
+.cu-choice-on {
+  border-color: var(--color-teal);
+  box-shadow: 0 0 0 1px var(--color-teal);
+}
+.cu-choice-name {
+  font-weight: 600;
+}
+.cu-selected {
+  color: var(--color-teal);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+/* The swatches and samples borrow the template's own custom properties (memory.css puts them on .mb-page): drawn in flow, not as a page. */
+.cu-chips.mb-page,
+.cu-sample.mb-page {
+  position: static;
+  inset: auto;
+  display: flex;
+  overflow: visible;
+  gap: 4px;
+  background: none;
+}
+.cu-chips i {
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+}
+.cu-sample .disp {
+  font-size: 1.25rem;
+}
+.cu-sections {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.cu-section {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  min-height: 44px;
+}
+.cu-pos {
+  min-width: 1.5em;
+  color: var(--color-ink-2);
+}
+.cu-section-name {
+  flex: 1 1 8em;
+  font-weight: 600;
+}
+.cu-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+}
+.cu-switch input {
+  width: 22px;
+  height: 22px;
+}
+.cu-moves {
+  display: inline-flex;
+}
+.cu-locked {
+  color: var(--color-ink-2);
+  font-size: 0.875rem;
+}
+.cu-actions {
+  position: sticky;
+  bottom: 0;
+  padding: var(--space-3) 0;
+  background: var(--color-paper);
+}
+.cu-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}

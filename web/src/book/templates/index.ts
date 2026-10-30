@@ -17,6 +17,8 @@ export type Template = {
   photos?: { cover: boolean; notes: boolean };
   /** The theme and font set ids it draws, when the owner can choose them (E09). */
   design?: DesignIds;
+  /** Text id to the locale key of the template's own wording of it, for the texts the owner can replace. */
+  textDefaults?: Record<string, string>;
   Cover: ComponentType<{ data: BookData }>;
   Profile: ComponentType<{ data: BookData }>;
   /** `first` is the index of the first note of the page in the book, `data` the whole book (title, year for the footer). */
