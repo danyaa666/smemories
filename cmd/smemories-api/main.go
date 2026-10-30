@@ -16,6 +16,7 @@ import (
 
 	"github.com/danyaa666/smemories/internal/auth"
 	"github.com/danyaa666/smemories/internal/bookdata"
+	"github.com/danyaa666/smemories/internal/bookdesign"
 	"github.com/danyaa666/smemories/internal/bookexport"
 	"github.com/danyaa666/smemories/internal/class"
 	"github.com/danyaa666/smemories/internal/config"
@@ -181,12 +182,15 @@ func main() {
 	mediaSvc.SetRefClearer(bookStore, notesSvc) // the yearbook store first: it locks the photo's book
 	classSvc := class.NewService(class.NewStore(d), cursors, limiters, nil)
 	classSvc.SetPublicBaseURL(cfg.PublicBaseURL)
-	bookSvc := yearbook.NewService(bookStore, cursors, mediaSvc, nil, mediaSvc, notesSvc, classSvc) // classSvc clears a deleted book's class link
+	designSvc := bookdesign.NewService(bookdesign.NewStore(d), limiters, nil)
+	bookStore.OnTemplateChange(designSvc.DeleteByYearbook)                                                     // a design is only valid for the template it was made for
+	bookSvc := yearbook.NewService(bookStore, cursors, mediaSvc, nil, mediaSvc, notesSvc, classSvc, designSvc) // classSvc clears a deleted book's class link
 	bookSvc.SetLimiters(limiters)
 	classSvc.SetBookSources(bookSvc, notesSvc) // the class book reads each member's own book and approved notes
 	bookH := yearbook.NewHandler(bookSvc, authH.RequireUser, cfg.AllowedOrigins)
 	classH := class.NewHandler(classSvc, authH.RequireUser, cfg.AllowedOrigins, authH.ClientIP)
-	bookDataH := bookdata.NewHandler(bookdata.NewService(bookSvc, notesSvc), authH.RequireUser)
+	designH := bookdesign.NewHandler(designSvc, authH.RequireUser, cfg.AllowedOrigins)
+	bookDataH := bookdata.NewHandler(bookdata.NewService(bookSvc, notesSvc, designSvc), authH.RequireUser)
 	bookExportH := bookexport.NewHandler(bookexport.NewService(bookSvc, notesSvc, linkSigner, cfg.PublicBaseURL, limiters, nil), authH.RequireUser)
 	templateH := templateapi.NewHandler(authH.RequireUser)
 	feedbackH := printfeedback.NewHandler(printfeedback.NewService(printfeedback.NewStore(d), limiters, nil), cfg.AllowedOrigins, authH.ClientIP)
@@ -201,7 +205,7 @@ func main() {
 	}
 	notesH.SweepSpool() // files a crash or kill left behind; before the listener accepts traffic
 
-	srv := httpx.NewServer(cfg.HTTPAddr, httpx.NewRouterWith(logger, httpx.RouterConfig{RequestTimeout: cfg.RequestTimeout, TrustProxy: cfg.TrustProxy, Metrics: mt}, httpx.Ready(d, logger, httpx.Draining(ctx), httpx.Dep{Name: "redis", Ping: rc.Ready}), authH.Routes, bookH.Routes, mediaH.Routes, notesH.Routes, bookDataH.Routes, bookExportH.Routes, templateH.Routes, feedbackH.Routes, classH.Routes))
+	srv := httpx.NewServer(cfg.HTTPAddr, httpx.NewRouterWith(logger, httpx.RouterConfig{RequestTimeout: cfg.RequestTimeout, TrustProxy: cfg.TrustProxy, Metrics: mt}, httpx.Ready(d, logger, httpx.Draining(ctx), httpx.Dep{Name: "redis", Ping: rc.Ready}), authH.Routes, bookH.Routes, mediaH.Routes, notesH.Routes, bookDataH.Routes, designH.Routes, bookExportH.Routes, templateH.Routes, feedbackH.Routes, classH.Routes))
 	if cfg.MetricsAddr != "" { // internal listener only; the public mux never serves /metrics
 		mln, err := net.Listen("tcp", cfg.MetricsAddr)
 		if err != nil {

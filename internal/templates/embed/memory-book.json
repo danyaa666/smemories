@@ -11,5 +11,28 @@
     {"id": "best_memory"},
     {"id": "wish"},
     {"id": "message", "required": true}
-  ]
+  ],
+  "design": {
+    "themes": ["lavender", "peach", "mint"],
+    "font_sets": ["playful", "classic"],
+    "sections": [
+      {"id": "cover", "hideable": false, "movable": false, "fixed": "first"},
+      {"id": "profile", "hideable": true, "movable": true, "fixed": null},
+      {"id": "notes", "hideable": false, "movable": true, "fixed": null},
+      {"id": "back", "hideable": true, "movable": false, "fixed": "last"}
+    ],
+    "texts": [
+      {"id": "cover.belongs", "max": 40},
+      {"id": "cover.sticker", "max": 40},
+      {"id": "profile.heading", "max": 40},
+      {"id": "profile.subtitle", "max": 50},
+      {"id": "notes.heading", "max": 40},
+      {"id": "back.heading", "max": 40},
+      {"id": "back.subtitle", "max": 60},
+      {"id": "back.pact", "max": 30}
+    ],
+    "images": [
+      {"id": "cover.pattern", "choices": ["dots", "plain"]}
+    ]
+  }
 }

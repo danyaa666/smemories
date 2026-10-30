@@ -105,6 +105,8 @@ The Postman collection and `web/src/api/schema.d.ts` follow the file; the defini
 | (new, T-093) | `GET /api/book-export/get-text?yearbook_id=&lang=` | the book as plain text with public photo links (D-32); see [book-export.md](book-export.md) |
 | `POST /v1/public/collect/{token}/notes` (T-034) | `POST /api/public-collect/submit-note?token=` | **deliberate exception:** `token` is a query parameter, not a body field, so the link is checked before the (up to 32 MiB) body is read; the body is the multipart form. Never logged (access log records the route only) |
 
+`ERROR_INVALID_DESIGN` (400, T-141) is the business code of `book-design/update`: the options document is not valid for the book's template, the message names the field; the rules are in [templates.md](templates.md), section "Design block and book designs".
+
 `ERROR_INVALID_SIGNATURE` (400, T-095) is the business code of the optional `signature` part of `submit-note`; the format is in [note-fields.md](note-fields.md), section "Signature".
 
-New endpoints (moderation T-013, book data T-056, template list and print feedback T-061, ...) are written in v2 from the start; pick the namespace by the same rule (`note`, `book-data`, `book-export`, `template`, `print-feedback`).
+New endpoints (moderation T-013, book data T-056, template list and print feedback T-061, ...) are written in v2 from the start; pick the namespace by the same rule (`note`, `book-data`, `book-export`, `book-design`, `template`, `print-feedback`).

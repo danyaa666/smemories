@@ -25,7 +25,7 @@ func TestMigrateUserUsername(t *testing.T) {
 		t.Fatal("the test database lacks the username columns")
 	}
 	downToUsername := func() { // newer migrations (T-061 print_feedback_tab, ...) go down first, then the username one
-		for i := 0; i < 10 && hasUsername(); i++ {
+		for i := 0; i < 30 && hasUsername(); i++ {
 			if err := db.MigrateDown(ctx, d); err != nil {
 				t.Fatalf("down: %v", err)
 			}

@@ -83,7 +83,7 @@ unknown id). Format and limits: the section "Signature" of [note-fields.md](note
 
 `"renderer": "html"` (default `"go"`) marks a template drawn by the web app. Its manifest has only `id`, `name`
 (`en` and `vi`), `page_sizes` (any of `A5`, `A4`, `Letter`; no aspect-ratio rule) and `note_fields`: no `pages`, `unit`,
-`reference` or `theme` (the validator rejects them). `templates.List()` returns Go and html templates, with a
+`reference` or `theme` (the validator rejects them); it may also carry `signature` and the `design` block (see "Design block and book designs"). `templates.List()` returns Go and html templates, with a
 `Renderer` field; `pdf.Render` refuses an html template.
 
 The built-in html template is `memory-book` (T-059, the pastel Memory Book of design `temp1`; the page components are
@@ -103,6 +103,56 @@ cover, profile (welcome-letter layout with an oval portrait), "Autographs" notes
 ruled lines, name as the signature) and a back page in the cover's frame. Its form asks `name` and `message` (required) and
 `relationship`. The design has no place for the cover photo or the friends' photos, so the book does not load them.
 Samples and the canvas-to-template pictures are in `docs/templates/navy-classic-*`.
+
+## Design block and book designs
+
+E09 stage 1 (T-141, decisions D-24, D-41). A student customises the **choices a template declares**; the web template decides what each id looks like and the
+browser prints it, so the screen the student edits is the print itself. The server holds the choices and validates them; it draws nothing.
+
+**The manifest `design` block** (optional, html templates only: the validator fails a Go-renderer template that has one):
+
+| Key | Rule |
+|---|---|
+| `themes` | 1..8 ids; the first is the default |
+| `font_sets` | 1..6 ids; the first is the default |
+| `sections` | up to 16 `{id, hideable, movable, fixed}`; `fixed` is `"first"`, `"last"` or `null`. At most one first and one last, listed at the front and the end; a fixed section is not movable. The list is the default order |
+| `texts` | up to 16 `{id, max}`: a fixed text of the template the student may replace; `max` 1..200 characters |
+| `images` | up to 8 `{id, choices}`: a picture slot; 1..8 choice ids, the first is the default |
+
+Every id matches `[a-z0-9._-]{1,40}` and is unique in its list. `templates.Design(id)` returns the parsed block (`ok` false for none). `memory-book` (the pilot)
+declares themes `lavender` (today's colours), `peach`, `mint`; font sets `playful` (Nunito, Baloo 2, Patrick Hand: today's) and `classic`; sections `cover` (fixed first),
+`profile` (hideable, movable), `notes` (movable) and `back` (fixed last, hideable); the fixed texts `memory.tsx` prints (`cover.belongs`, `cover.sticker`,
+`profile.heading`, `profile.subtitle`, `notes.heading`, `back.heading`, `back.subtitle`, `back.pact`; their default wording stays in the web locale files, per
+language); and the image `cover.pattern` with `dots` (today's) and `plain` (no pattern). A web test pins the web ids to the manifest ids (T-142).
+
+**The options document** of a book (`book_design_tab.options_json`, one row per yearbook, at most 4096 bytes, `template_id` records the template it was made for):
+
+```json
+{"v":1,"theme":"peach","fonts":"classic","sections":{"order":["cover","notes","profile","back"],"hidden":["back"]},"texts":{"profile.heading":"Về mình"},"images":{"cover.pattern":"plain"}}
+```
+
+Every key is optional (`null` is the same as leaving it out). `POST /api/book-design/update` replaces the whole document and answers `ERROR_INVALID_DESIGN` (400, the
+message names the field, nothing is stored) for: a document over 4096 bytes, not an object, with data after it, an unknown key at any level, a wrong type, a `v` other than 1;
+an unknown theme, font set, section, text, image or image choice; an `order` that does not list every section exactly once, or that puts a non-movable section anywhere but
+its place in the template's order (which keeps `fixed` first and last where they are); a `hidden` section that is unknown, repeated or not `hideable`; a text that is
+over its `max` characters (counted after trimming), has a control character (a newline or tab included), a bidi or other format character, a line separator or invalid UTF-8.
+Texts are NFC-normalised and trimmed; an empty text is dropped (the template's own wording is used). They are plain text and the web renders them as text, never as markup.
+A book whose template has no `design` block cannot be customised (`ERROR_INVALID_DESIGN`). The document is stored normalised, so what `book-design/get` returns is what was stored.
+
+**Endpoints** (owner only; another user's or unknown book is `ERROR_NOT_FOUND`; no email verification): `GET /api/book-design/get?yearbook_id=` returns `{template_id, options, updated_at, design}`
+(`options` and `updated_at` null while the book uses the defaults; `design` is the template's block, null when it has none); `POST /api/book-design/update` `{yearbook_id, options}` answers
+the same shape; `POST /api/book-design/reset` `{yearbook_id}` deletes the row and is idempotent. Update and reset share a limit of 60 per 10 minutes per user.
+The contract is `api/openapi.yaml`; the Postman folder is `book-design` in `postman/customisation-editor.postman_collection.json`.
+
+**Lifecycle.** Changing a book's template (`yearbook/update` with another or no `template_id`) deletes its design row in the same transaction, so a design is only ever valid for the
+template it was made for (answers and photos survive); deleting the book deletes the row (`yearbook.ChildPurger`, orphan pair registered in `dbtest`). Lock order: the `yearbook_tab`
+row first, then `book_design_tab`.
+
+**What the print gets.** `GET /api/book-data/get` carries `design`, the stored options *resolved* against the manifest, so the web never needs the manifest to print:
+`{theme, fonts, sections: {order, hidden}, texts, images}` with every default filled in (`order` always lists every section, a non-movable one at its place; `texts` holds only the replaced
+texts; `images` lists every slot). On read, an id the manifest no longer has (a retired theme, a removed section) is dropped silently and the default applies, a text that no longer
+passes the rules is ignored, a document that cannot be read is the defaults, and a row made for another template is ignored. `design` is null when the book has no template or its
+template has no `design` block. Not covered here: the class book (T-146) applies each student's own design to their pages; uploads of backgrounds, free text styling and element editing are stage 2.
 
 ## The picker and the print screen (T-061)
 

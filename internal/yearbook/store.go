@@ -61,9 +61,18 @@ type Profile struct {
 // Store persists yearbooks and profiles. Every query is parameterised and scoped by owner_id:
 // a book is never fetched by id alone. There are no joins: a read takes the book rows, then their profiles,
 // then the public ids of the media they point at, so the query count does not depend on the page size.
-type Store struct{ db *sql.DB }
+type Store struct {
+	db               *sql.DB
+	onTemplateChange func(ctx context.Context, tx *sql.Tx, yearbookID uint64) error
+}
 
 func NewStore(db *sql.DB) *Store { return &Store{db: db} }
+
+// OnTemplateChange registers what must happen in the same transaction when an update changes a book's template (T-141: the
+// book design made for the old template is deleted). Wired once at start-up; the hook runs after the book row is locked.
+func (s *Store) OnTemplateChange(f func(ctx context.Context, tx *sql.Tx, yearbookID uint64) error) {
+	s.onTemplateChange = f
+}
 
 const bookCols = `id, public_id, title, school_name, class_name, graduation_year, motto, language, page_size, template_id, cover_media_id, created_at, updated_at, link_epoch`
 
@@ -328,10 +337,16 @@ func (s *Store) modify(ctx context.Context, ownerID uint64, publicID string, now
 		return nil, err
 	}
 	y = &books[0]
+	before := templateOf(y)
 	if err := change(y); err != nil {
 		return nil, err
 	}
 	y.UpdatedAt = nowMs
+	if s.onTemplateChange != nil && templateOf(y) != before {
+		if err := s.onTemplateChange(ctx, tx, y.internalID); err != nil {
+			return nil, err
+		}
+	}
 	// A media id must belong to this very book; anything else (also another user's) is invalid_media.
 	cover, err := mediaRow(ctx, tx, y.internalID, y.CoverMediaID)
 	if err != nil {
@@ -353,6 +368,14 @@ func (s *Store) modify(ctx context.Context, ownerID uint64, publicID string, now
 		return nil, err
 	}
 	return y, tx.Commit()
+}
+
+// templateOf is the book's template id, "" for none.
+func templateOf(y *Yearbook) string {
+	if y.TemplateID == nil {
+		return ""
+	}
+	return *y.TemplateID
 }
 
 // mediaRow resolves a public media id to its row id and checks that the photo belongs to the book (there is no

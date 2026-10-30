@@ -17,6 +17,7 @@ const exported = (over: Partial<BookText> = {}): BookText => ({
   ...over,
 });
 const book: BookData = {
+  design: null,
   yearbook: {
     title: "Lớp 12A1",
     school_name: "",

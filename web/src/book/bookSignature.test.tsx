@@ -37,6 +37,7 @@ function book(
 ): BookData {
   const notes = Array.from({ length: 5 }, (_, i) => note(i + 1, signature));
   return {
+    design: null,
     yearbook: {
       title: "Lớp 12A1",
       school_name: "THPT Chu Văn An",

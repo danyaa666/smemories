@@ -1457,6 +1457,9 @@ paths:
         never as HTML. No storage key, hash, email, birthday or internal id is part of the answer. `yearbook_id` must be a
         canonical ULID (26 upper-case characters), else `ERROR_PARAM`. Needs a verified email (`ERROR_EMAIL_NOT_VERIFIED`, as the
         note list). A missing yearbook and one owned by someone else both answer `ERROR_NOT_FOUND`. Safe to repeat.
+        `design` (epic E09, T-141) is the owner's customisation of the book resolved against the template's design block: theme, font set, section
+        order and hidden sections, replaced texts and chosen images, every default filled in and every id the template no longer has dropped, so the
+        renderer needs no manifest. It is null when the book has no template or its template cannot be customised.
       x-auth: required
       x-error-codes:
         - {code: ERROR_NOT_FOUND, description: The yearbook does not exist or belongs to someone else; the two cannot be told apart.}
@@ -1479,6 +1482,7 @@ paths:
                     data:
                       yearbook: {title: "Lớp 12A1 - Trường THPT Chu Văn An", school_name: "THPT Chu Văn An", class_name: 12A1, graduation_year: 2026, motto: "Học, học nữa, học mãi", language: vi, page_size: A5, template_id: classic, cover_media_id: 01K7QC0B2C3D4E5F6G7H8J9K0M}
                       profile: {full_name: "Nguyễn Thị Hồng", nickname: Hồng, quote: "", hobbies: "", future_plans: "", photo_media_id: null}
+                      design: null
                       notes:
                         - {id: 01K7QB1B2C3D4E5F6G7H8J9K0M, answers: {name: Minh Khoa, relationship: Classmate, message: Thanks for everything}, signature: {v: 1, w: 1000, h: 400, s: [[120, 260, 300, 120, 480, 280]]}, photo_ids: [01K7QC1B2C3D4E5F6G7H8J9K0M]}
                       note_count: 1
@@ -1488,6 +1492,167 @@ paths:
         "401": {$ref: "#/components/responses/ApiUnauthorized"}
         "403": {$ref: "#/components/responses/ApiForbidden"}
         "404": {$ref: "#/components/responses/ApiNotFound"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/book-design/get:
+    get:
+      operationId: getBookDesign
+      tags: [book-design]
+      summary: Read the design of a book and the choices its template offers
+      description: >-
+        Called by the signed-in owner's customise screen (epic E09, decision D-41) with one request: the stored options document of the
+        book (or null when the book uses the template's defaults), when it was last saved, and the template's `design` block, which lists every
+        theme, font set, section, fixed text and image choice the screen may offer. `design` is null when the book has no template or its
+        template cannot be customised (a Go-renderer template, or an html one without a `design` block); `options` is then null too. A design
+        made for another template than the book's current one is not shown (`options` null). Only the owner can read it: a missing book and
+        someone else's both answer `ERROR_NOT_FOUND`. `yearbook_id` must be a canonical ULID (else `ERROR_PARAM`). No email verification is
+        needed. Safe to repeat. What the print renders is `design` of `GET /api/book-data/get`, which is this document with every default filled in.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: The yearbook does not exist or belongs to someone else; the two cannot be told apart.}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
+      security:
+        - sessionCookie: []
+      parameters:
+        - {name: yearbook_id, in: query, required: true, schema: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$'}, description: Yearbook ULID (canonical upper case).}
+      responses:
+        "200":
+          description: The stored options and the choices.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/BookDesignResponse"}
+              examples:
+                customised:
+                  value:
+                    status: OK
+                    data:
+                      template_id: memory-book
+                      options: {v: 1, theme: peach, sections: {order: [cover, notes, profile, back], hidden: [back]}, texts: {profile.heading: Về mình}}
+                      updated_at: 1793361600000
+                      design:
+                        themes: [lavender, peach, mint]
+                        font_sets: [playful, classic]
+                        sections:
+                          - {id: cover, hideable: false, movable: false, fixed: first}
+                          - {id: profile, hideable: true, movable: true, fixed: null}
+                          - {id: notes, hideable: false, movable: true, fixed: null}
+                          - {id: back, hideable: true, movable: false, fixed: last}
+                        texts: [{id: profile.heading, max: 40}]
+                        images: [{id: cover.pattern, choices: [dots, plain]}]
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/book-design/update:
+    post:
+      operationId: updateBookDesign
+      tags: [book-design]
+      summary: Save the design of a book (full replace)
+      description: >-
+        Called by the signed-in owner's customise screen. Replaces the whole options document of the book (it is not merged with the earlier one) and
+        creates the row when there is none. The document is validated against the `design` block of the book's current template: an unknown theme,
+        font set, section, text, image or image choice, a section order that does not list every section exactly once or moves a fixed one, a hidden
+        section that is not hideable, a text with a control character, a newline or more than its `max` characters, an unknown top-level key, a wrong
+        type, a version other than 1, or a document over 4096 bytes is `ERROR_INVALID_DESIGN` (400) and nothing is stored; the message names the field.
+        A book whose template has no `design` block is `ERROR_INVALID_DESIGN` too. Texts are stored as plain text, normalised (NFC) and trimmed; an
+        empty text is dropped (the template's own text is used). A missing book and someone else's both answer `ERROR_NOT_FOUND`, also when the
+        document is invalid. Limited to 60 writes (update and reset together) per 10 minutes per user (`ERROR_RATE_LIMITED`, with `Retry-After`;
+        fails open when Redis is down). A request with the session cookie must come from an allowed Origin. Changing the book's template with
+        `POST /api/yearbook/update` deletes the design.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_INVALID_DESIGN, description: "The options document is not valid for the book's template, or the template cannot be customised; the message names the field. Nothing was stored."}
+        - {code: ERROR_NOT_FOUND, description: The yearbook does not exist or belongs to someone else; the two cannot be told apart.}
+        - {code: ERROR_RATE_LIMITED, description: "More than 60 writes in 10 minutes; wait `Retry-After` seconds."}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/BookDesignUpdateRequest"}
+            examples:
+              peach:
+                value: {yearbook_id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, options: {v: 1, theme: peach, fonts: classic, sections: {order: [cover, notes, profile, back], hidden: [back]}, texts: {profile.heading: Về mình}, images: {cover.pattern: plain}}}
+      responses:
+        "200":
+          description: Saved; the answer is the same as `GET /api/book-design/get`.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/BookDesignResponse"}
+              examples:
+                saved:
+                  value:
+                    status: OK
+                    data:
+                      template_id: memory-book
+                      options: {v: 1, theme: peach}
+                      updated_at: 1793361600000
+                      design:
+                        themes: [lavender, peach, mint]
+                        font_sets: [playful, classic]
+                        sections: []
+                        texts: []
+                        images: []
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "429": {$ref: "#/components/responses/ApiRateLimited"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/book-design/reset:
+    post:
+      operationId: resetBookDesign
+      tags: [book-design]
+      summary: Go back to the template's own design
+      description: >-
+        Called by the signed-in owner's customise screen ("reset to template"). Deletes the stored design of the book so the template's defaults apply
+        again. It succeeds, and changes nothing, when the book has no design (safe to repeat). It cannot be undone. A missing book and someone else's both
+        answer `ERROR_NOT_FOUND`. Counts against the same limit as `book-design/update` (60 writes per 10 minutes per user). A request with the session
+        cookie must come from an allowed Origin.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: The yearbook does not exist or belongs to someone else; the two cannot be told apart.}
+        - {code: ERROR_RATE_LIMITED, description: "More than 60 writes in 10 minutes; wait `Retry-After` seconds."}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/BookDesignResetRequest"}
+            examples:
+              reset:
+                value: {yearbook_id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E}
+      responses:
+        "200":
+          description: The design is gone (or there was none).
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/EmptyResponse"}
+              examples:
+                reset:
+                  value: {status: OK, data: {}}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "429": {$ref: "#/components/responses/ApiRateLimited"}
         "500": {$ref: "#/components/responses/ApiInternal"}
         "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
   /api/book-export/get-text:
@@ -3410,6 +3575,132 @@ components:
               items: {$ref: "#/components/schemas/NoteItem"}
             next_id: {type: string, description: "Opaque cursor for the next page; the empty string on the last page."}
             counts: {$ref: "#/components/schemas/NoteCounts"}
+    BookDesignOptions:
+      type: object
+      description: >-
+        The options document (version 1). Every key is optional; an absent key means the template's default. Ids come from the template's `design` block.
+        A `null` value is the same as leaving the key out.
+      additionalProperties: false
+      properties:
+        v: {type: integer, const: 1, description: "Document version; optional, must be 1 when present."}
+        theme: {type: string, description: "Optional. A theme id from `design.themes`; default the first one."}
+        fonts: {type: string, description: "Optional. A font set id from `design.font_sets`; default the first one."}
+        sections:
+          type: object
+          description: Optional. The page order and the hidden sections.
+          additionalProperties: false
+          properties:
+            order:
+              type: array
+              description: "Optional. Every section id exactly once, in print order. A section that is not `movable` (the fixed first and last ones) must stay at its place in the template's own order."
+              items: {type: string}
+            hidden:
+              type: array
+              description: "Optional. Section ids left out of the print, each unique and `hideable`."
+              items: {type: string}
+        texts:
+          type: object
+          description: "Optional. Text id to the replacement text, plain text of 0 to `max` characters (counted after trimming), one line, no control characters. Empty means the template's own text."
+          additionalProperties: {type: string}
+        images:
+          type: object
+          description: "Optional. Image id to one of its `choices`; default the first choice."
+          additionalProperties: {type: string}
+    BookDesignBlock:
+      type: object
+      description: The choices a template offers (the `design` block of its manifest; the first theme, font set and image choice is the default).
+      required: [themes, font_sets, sections, texts, images]
+      properties:
+        themes: {type: array, description: "Theme ids, 1 to 8.", items: {type: string}}
+        font_sets: {type: array, description: "Font set ids, 1 to 6.", items: {type: string}}
+        sections:
+          type: array
+          description: The page groups in the template's own order, at most 16.
+          items:
+            type: object
+            required: [id, hideable, movable, fixed]
+            properties:
+              id: {type: string, description: Section id.}
+              hideable: {type: boolean, description: True when the owner may leave the section out of the print.}
+              movable: {type: boolean, description: "True when the owner may move the section; false keeps it at its place in the template's order."}
+              fixed: {type: [string, "null"], enum: [first, last, null], description: "`first` or `last` when the section is pinned to the front or the back (then it is not movable); null otherwise."}
+        texts:
+          type: array
+          description: The fixed texts the owner may replace, at most 16.
+          items:
+            type: object
+            required: [id, max]
+            properties:
+              id: {type: string, description: Text id.}
+              max: {type: integer, description: Longest replacement in characters, 1 to 200.}
+        images:
+          type: array
+          description: The picture slots with their choices, at most 8.
+          items:
+            type: object
+            required: [id, choices]
+            properties:
+              id: {type: string, description: Image slot id.}
+              choices: {type: array, description: "Choice ids, 1 to 8; the first is the default.", items: {type: string}}
+    BookDesignResponse:
+      type: object
+      required: [status, data]
+      properties:
+        status: {type: string, const: OK, description: Always `OK` on success.}
+        data:
+          type: object
+          description: The stored design and the choices of the template.
+          required: [template_id, options, updated_at, design]
+          properties:
+            template_id: {type: [string, "null"], description: The book's current template; null when it has none.}
+            options:
+              description: The stored options document; null when the book uses the template's defaults.
+              oneOf:
+                - {$ref: "#/components/schemas/BookDesignOptions"}
+                - {type: "null"}
+            updated_at: {type: [integer, "null"], format: int64, description: "When the options were last saved, Unix ms; null together with `options`."}
+            design:
+              description: The template's design block; null when the book has no template or the template cannot be customised.
+              oneOf:
+                - {$ref: "#/components/schemas/BookDesignBlock"}
+                - {type: "null"}
+    BookDesignUpdateRequest:
+      type: object
+      additionalProperties: false
+      required: [yearbook_id, options]
+      properties:
+        yearbook_id: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$', description: "Required. ULID of the yearbook."}
+        options: {$ref: "#/components/schemas/BookDesignOptions"}
+    BookDesignResetRequest:
+      type: object
+      additionalProperties: false
+      required: [yearbook_id]
+      properties:
+        yearbook_id: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$', description: "Required. ULID of the yearbook."}
+    BookDesignResolved:
+      type: object
+      description: >-
+        The design the renderer applies: the stored options with every default filled in. Ids the template no longer has fall back to the default
+        silently, and a design made for another template is ignored. Texts are plain text, to be rendered as text, never as HTML.
+      required: [theme, fonts, sections, texts, images]
+      properties:
+        theme: {type: string, description: Theme id in use.}
+        fonts: {type: string, description: Font set id in use.}
+        sections:
+          type: object
+          description: Every section once, in print order, and the hidden ones.
+          required: [order, hidden]
+          properties:
+            order: {type: array, description: Every section id of the template in print order (a fixed section is at its place).  Hidden sections are still listed., items: {type: string}}
+            hidden: {type: array, description: Ids of the sections to leave out of the print; empty when none., items: {type: string}}
+        texts:
+          type: object
+          description: "Only the texts the owner replaced, text id to text; a text that is not listed shows the template's own wording."
+          additionalProperties: {type: string}
+        images:
+          type: object
+          description: Image slot id to the chosen choice id; every slot of the template is listed.
+          additionalProperties: {type: string}
     BookDataResponse:
       type: object
       required: [status, data]
@@ -3418,8 +3709,15 @@ components:
         data:
           type: object
           description: The book as the renderer needs it.
-          required: [yearbook, profile, notes, note_count, approved_total, truncated]
+          required: [yearbook, profile, design, notes, note_count, approved_total, truncated]
           properties:
+            design:
+              description: >-
+                The owner's customisation of the book (epic E09), resolved against the template's design block so the renderer needs no manifest. Null when the
+                book has no template or its template cannot be customised.
+              oneOf:
+                - {$ref: "#/components/schemas/BookDesignResolved"}
+                - {type: "null"}
             yearbook:
               type: object
               description: The yearbook's printed information.

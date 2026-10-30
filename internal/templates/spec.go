@@ -70,6 +70,8 @@ type Template struct {
 	// Signature switches on the optional handwritten signature of a note (E11, T-095): the public form shows the pad and the API accepts one.
 	// Default false.
 	Signature bool `json:"signature,omitempty"`
+	// Design is the customisation choices of an html template (E09, T-141); the validator rejects it on a Go-renderer template.
+	Design *DesignBlock `json:"design,omitempty"`
 
 	assets fs.FS // where background assets are read from (the embedded folder, or a test fixture)
 }
