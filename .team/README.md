@@ -11,8 +11,8 @@
 | Status | # | Tasks |
 |---|---:|---|
 | BACKLOG | 5 | T-023, T-024, T-025, T-031, T-050 |
-| IN_PROGRESS | 1 | T-147 |
-| QA_FAIL | 1 | T-148 |
+| READY_FOR_QA | 1 | T-148 |
+| QA_FAIL | 1 | T-147 |
 | MERGED | 2 | T-146, T-149 |
 | DONE | 132 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-137, T-138, T-139, T-140, T-141, T-142, T-143, T-144, T-145 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
@@ -23,7 +23,7 @@
 
 **Open questions for you:** none
 
-_Board last written 2026-10-30 12:35Z_
+_Board last written 2026-10-30 13:14Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -6433,24 +6433,43 @@ Spec: .team/epics/E09-customisation-editor/06-class-book-applies-designs.md.
 - 2026-10-30 12:32Z · leader · merged 5334c1c. Review: class-book/get returns each member's resolved design to the class admin only, counted in the 8 MiB cap (reserve 16 KiB), class print applies each design to that student's pages; diff matches the spec; docs/class-permissions, class-privacy-review and book-export updated. QA: make test-integration pass (own compose project, old MinIO on the main stack), check-class-matrix 21 ops ok, print-check 163/0, e2e 6/0 (QA added class journey step 7b: 403 for students A and B), vitest 675; go/web/security green on 5970989 (go re-run once after a CI golangci-lint install failure); manual full run 41052503585 all green except e2e Print check step timeout -> T-149. For owner to check: print a real class with several customised students; class-privacy-review section 8 sign-off still open.
 
 ### T-147 — [E09] Customisation journey, print-check coverage and docs
-- **Status:** IN_PROGRESS
+- **Status:** QA_FAIL
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1b
 - **Depends-on:** T-146
 - **Risk:** low
-- **Rework:** 0
+- **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-147-e09-customisation-journey-print-check-co
-- **PR:** —
-- **Updated:** 2026-10-30 12:33Z by dev
-- **Comments-seen:** 1
+- **PR:** https://github.com/danyaa666/smemories/pull/147
+- **Updated:** 2026-10-30 13:13Z by qa
+- **Comments-seen:** 5
 
 Spec: .team/epics/E09-customisation-editor/07-journey-print-check-docs.md.
 
 #### Comments
 - 2026-10-30 12:32Z · leader · Dependency T-146 merged (5334c1c). Spec has a new requirement 5 (carry-overs: docs/e2e.md step 7b, journey time vs the new print-check limit). Read the spec again.
+- 2026-10-30 12:53Z · dev · PR #147 head 497f2b9. New tools/e2e/design.spec.mjs (7.4 s, limit 240 s; make e2e: 7 passed, 25 s). Local: print-check 163/163 (312 s), vitest 675/675, typecheck, lint, lint:i18n, check:api, e2e guard-test green. Deliberate break (BookPages ignores data.design) fails step 6. Manual full CI run https://github.com/danyaa666/smemories/actions/runs/41057558857: e2e (journey+print-check, 15 min step limit from T-149 already on develop) success, web, security, image success; its go job failed at 'go install golangci-lint' (network, no Go change); the PR's own go check passed. Carry-overs done: docs/e2e.md step 7b + journey duration. Notes: (1) spec 'cover title' is book data, so the journey edits cover.belongs; (2) scripts/e2e.sh now starts the test API with SMEM_RATE_REGISTER_PER_HOUR=20 (4 specs register 6 accounts; test API only) - leader please confirm OK; (3) PRD exit criteria: journey covers colours, fonts, visibility, save/reload, reset, notes survive template change, PDF pages/fonts/text vs preview DOM. NOT covered, QA by hand in Chrome: section reorder, live preview, pixel match of printed PDF vs preview. QA: follow docs/templates.md 'Adding a theme...' on a scratch branch.
+- 2026-10-30 12:53Z · leader · Leader: SMEM_RATE_REGISTER_PER_HOUR=20 default in scripts/e2e.sh accepted (existing documented production knob, set only for the test API started with SMEM_ENV=test; not a dev shortcut). Spec deviation accepted (cover.belongs instead of the cover title, which is user data). QA: please check by hand in Chrome the stage 1 exit items the journey does not cover (section reorder, live preview, PDF vs preview, reset, notes and photos survive a template change).
+- 2026-10-30 13:13Z · qa · QA_FAIL on head 497f2b9 (2 majors, both small; everything else passes). Dev fix = 3 small edits, then I re-verify in minutes.
+  ISSUES
+  1. [major] `make e2e` fails on a normal local setup. Repro: fresh worktree, `make up` (copies .env.example, which has SMEM_RATE_REGISTER_PER_HOUR=5; Makefile includes and exports .env), then `make e2e`. Result: journey.spec step 1 "registration is rate limited" (429), 6 passed 1 failed. Cause: scripts/e2e.sh uses `${SMEM_RATE_REGISTER_PER_HOUR:-20}`, so the exported 5 from .env wins and 6 accounts exceed it. CI is fine (no .env), the dev's own .env evidently lacks the line. Expected: `make e2e` passes from a fresh .env. Fix: make e2e.sh set it unconditionally for the test API (e.g. `SMEM_RATE_REGISTER_PER_HOUR="${E2E_RATE_REGISTER_PER_HOUR:-20}"`) and say so in docs/e2e.md. With `make e2e SMEM_RATE_REGISTER_PER_HOUR=20` all 7 pass.
+  2. [major] AC2 / docs/templates.md "Adding a theme" is not true as written. I followed steps 1-6 literally on a scratch checkout (new theme `sunny` on memory-book: manifest, css block with all 15 vars, memory.tsx design.themes, en/vi locale, print-check loop). Findings: (a) `go test ./internal/templates` FAILS (internal/templates/design_test.go:112 pins `len(d.Themes) != 3`); the docs never mention it. (b) web/src/book/design.test.ts:116 and :343 loop over hard-coded id lists (["lavender","peach","mint"], ["navy","burgundy","forest"]), not the manifest, so a new theme is never contrast-checked: I set `sunny` --mb-soft to #c9b560 on #fffdf0 (about 1.9:1) and design.test.ts still passed 32/32. Docs step 3 says "design.test.ts fails below 4.5" and step 6 omits this loop. Expected: a new author is told every place to touch, and the 4.5:1 guard really covers a new theme. Fix: loop over manifest.design.themes in both contrast tests (best, removes the step) or add both lists, and mention design_test.go (or make it length-agnostic); same for font sets if they have pinned lists.
+  VERIFIED (head 497f2b9, own compose project t-147, ports 23306/26379/29000, test API 18080/14173)
+  - AC1 journey: `make e2e SMEM_RATE_REGISTER_PER_HOUR=20`: 7 passed (25.2 s); design.spec 7.4 s (limit 240 s). Deliberate break (print route Book.tsx passes design:null): design.spec FAILS at "6. the print route applies the design ... the hidden section is absent", other 6 pass. Reverted.
+  - print-check 163/163 pass, 312 s. Vitest 675/675, typecheck, eslint+prettier, lint:i18n, check:api ok, e2e guard-test 8/8, go build ok. `make test-integration` 31 packages ok with SMEM_TEST_S3_ENDPOINT=http://127.0.0.1:29000 (tests default to :9000 = the main stack's old MinIO, which answers CreateBucket 403; env only, not the PR).
+  - CI on the head: PR checks go, web, security pass (run 41058189942, head 497f2b9); the manual full run 41057558857 (same head): web, security, image, go-integration, e2e success, go failed (golangci-lint install flake, as dev said).
+  - Stage 1 exit by hand, real API + built head, real Chromium driven by Playwright (the Chrome extension tools were not available to me), 4 approved notes (3 with photos), Vietnamese A5:
+    * Live preview: choosing Peach+Classic changes the preview to peach/classic at once; the print route stays lavender/playful until Save (both templates).
+    * Section reorder: Notes moved above "All about me"/"A few words about me": preview shows it, Save, reload keeps it, print route kinds cover,notes x4,profile,back (memory-book) and cover,notes,profile,back (navy); PDF page order and text agree.
+    * Printed PDF vs preview: 7 pages A5 (memory-book) / 4 pages (navy); I compared DOM sheet screenshots with PDF pages side by side (cover, notes page, profile, last page; navy cover, notes, profile): same colours, fonts, text, layout; fonts embedded.
+    * Reset to template: confirm dialog, "design is back to the template's look", default look and default section order return (both templates).
+    * Template change (memory-book to Navy Classic and back, design saved first): "design was reset" notice, default look of the new template, all 4 notes present in print and PDF text; photos come back as 4 loaded images and 24 images in the PDF when returning to memory-book (Navy Classic has no photo slot, so none print there; data stays).
+  - Docs: e2e.md step 7b, journey section and 25 min limit present; README 2 lines ok; docs/templates.md "What print-check covers" table matches check.test.mjs (12 cells x 2 per template). Only the two defects above.
+  - SMEM_RATE_REGISTER_PER_HOUR=20: test API only, ok; just the precedence bug in issue 1.
+- 2026-10-30 13:14Z · leader · Leader, for the rework (QA_FAIL, two items): (1) Makefile exports .env, so SMEM_RATE_REGISTER_PER_HOUR=5 from .env.example beats the ${...:-20} default in scripts/e2e.sh and make e2e fails with a 429 on a normal local setup. Use a dedicated variable that .env never sets, e.g. SMEM_RATE_REGISTER_PER_HOUR="${SMEM_E2E_RATE_REGISTER_PER_HOUR:-20}" for the test API only (SMEM_ENV=test), and document it in docs/e2e.md; verify with a plain 'make e2e' on a checkout that has .env.example values. (2) docs/templates.md 'Adding a theme' must be true when followed: it omits internal/templates/design_test.go (pins 3 themes), and the contrast tests in web/src/book/design.test.ts loop over hard-coded theme lists so a new low-contrast theme (about 1.9:1) passes 32/32. Make the contrast test derive its theme and font-set lists from the manifests (or the template registry) so every declared theme is checked automatically and a 1.9:1 theme fails; make the Go design_test.go check count-agnostic if that is simple, otherwise list the exact files to touch in the docs. Prove it by adding a scratch low-contrast theme locally (do not commit it) and showing the test fails, then following your own docs on a scratch checkout. Merge origin/develop first.
 
 <!-- tasks:end -->
 
