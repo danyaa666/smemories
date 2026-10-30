@@ -338,3 +338,29 @@ identical). Text, layout and fonts are always stable.
 2. Run `go test ./internal/templates ./internal/pdf`: the validator reports any bad element by page and number.
 3. Run `go test ./internal/pdf -run TestSamples -write-samples` and open `docs/templates/<id>.pdf` (add the new id to
    the loop in `TestSamples` first).
+
+### Themes and font sets of `memory-book` (T-142)
+
+The web template draws the ids the manifest lists (`web/src/book/templates/memory.tsx` registers them, `memory.css` defines them). `BookPages` hands `book-data/get`'s `design` to the pages
+through `DesignProvider` (`web/src/book/design.tsx`); `useDesign()` returns `{theme, fonts, text(id, fallback), image(id)}`, and a missing design or an id this build does not know is the first
+(default) id of the manifest. Each page carries `data-theme` and `data-fonts`; `web/src/book/design.test.ts` pins the ids to `memory-book.json`.
+
+**Themes** are CSS custom properties `--mb-*` defined once per theme under `.mb-page[data-theme="..."]`; nothing else in `memory.css` or `memory.tsx` holds a colour. `lavender` is exactly the
+colours of design `temp1` (a book with no design prints the same pixels as before: checked page by page against the previous build, A5 and A4). The slot names (`lav`, `yellow`, `pink`, `peach`,
+`mint`, `sky`) are the hues of `lavender`; `peach` (warm apricot and coral) and `mint` (green and blue) put their own hue in the slot. The dotted paper picture (ink at 13 %) is shared by the themes.
+Text is `ink` (body) or `soft` (footer, subtitles, table cells) on the page paper, white and the six pastels. Contrast ratios, `ink / soft` (WCAG 2.1; the unit test fails below 4.5:1):
+
+| Theme | Text colours | paper | white | lav | yellow | pink | peach | mint | sky |
+|---|---|---|---|---|---|---|---|---|---|
+| `lavender` | `ink #3b2f4a`, `soft #5e5170` | 12.0 / 7.1 | 12.4 / 7.3 | 9.6 / 5.6 | 10.9 / 6.4 | 9.3 / 5.5 | 9.7 / 5.7 | 10.1 / 5.9 | 9.9 / 5.8 |
+| `peach` | `ink #4a2c22`, `soft #7a4332` | 12.1 / 7.6 | 12.5 / 7.8 | 10.0 / 6.3 | 10.9 / 6.8 | 9.2 / 5.7 | 9.4 / 5.9 | 10.5 / 6.6 | 10.1 / 6.3 |
+| `mint` | `ink #1f3b34`, `soft #35564d` | 11.9 / 8.0 | 12.1 / 8.1 | 10.0 / 6.7 | 10.7 / 7.2 | 9.4 / 6.3 | 10.2 / 6.8 | 9.7 / 6.5 | 9.4 / 6.3 |
+
+The three accent colours (`--mb-a1..a3`, the icons) are decoration, not text, and are not held to the ratio.
+
+**Font sets** are `--mb-body`, `--mb-disp` and `--mb-cute` under `.mb-page[data-fonts="..."]`. `playful` is today's: Nunito, Baloo 2 (titles), Patrick Hand (handwriting). `classic` is Cormorant Garamond
+(titles, and the handwriting lines in italic) over Be Vietnam Pro (body): families already shipped in `web/src/book/fonts/` with the whole Vietnamese alphabet (OFL, `README.md` there), so no new file was added.
+A `@font-face` is fetched only when text uses it, so a book in one set never requests the other set's files (print check). The ready signal restarts when the font set changes
+(`Book.tsx` key) and waits until `document.fonts` has stayed loaded. Be Vietnam Pro ships one weight for the book (500): bold labels use the browser's synthetic bold, and the app's own
+`@fontsource` faces of the same family (regular and semibold, used by the app screens) also apply. Print check: every theme x font set on A5 and A4 with the Vietnamese fixture (24 pages, none blank,
+embedded fonts of that set only, long names and emoji everywhere not cut off, no request to another origin).

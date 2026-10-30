@@ -2,6 +2,7 @@ import type { CSSProperties, ReactNode } from "react";
 import type { BookData, BookNote } from "../../api/book";
 import { BookSignature, hasSignature } from "../BookSignature";
 import { FitText } from "../fit";
+import { useDesign } from "../design";
 import { Photo, Sheet, useBookEnv } from "../env";
 import { designHeight } from "../sizes";
 import type { Template } from "./index";
@@ -13,7 +14,7 @@ import "./memory.css";
 // The design is a form to fill in by hand; here the lines hold the owner's profile and the friend's answers. Boxes keep the
 // canvas's colours, radii, tilts and tape; texts shrink to fit their box (fit.tsx). Every user text goes through React as text.
 
-const SOFT = "#5E5170";
+const SOFT = "var(--mb-soft)";
 
 const ICONS = {
   heart:
@@ -36,12 +37,11 @@ function Icon({
 }) {
   return (
     <svg
-      style={style}
+      style={{ stroke, ...style }}
       width={size}
       height={size}
       viewBox="0 0 24 24"
       fill="none"
-      stroke={stroke}
       strokeWidth={1.8}
       strokeLinejoin="round"
       aria-hidden="true"
@@ -61,9 +61,15 @@ const MESSAGE_SIGNED_BASIS = 150;
  * 72 dpi raster and Firefox as black (ADR 0003, finding 5). The PDF stores the picture once.
  */
 function Page({ label, bg, children }: { label: string; bg: string; children: ReactNode }) {
+  const { theme, fonts } = useDesign();
   return (
     <Sheet label={label}>
-      <div className="mb-page" style={{ backgroundColor: bg, backgroundImage: `url(${dots})` }}>
+      <div
+        className="mb-page"
+        data-theme={theme || undefined}
+        data-fonts={fonts || undefined}
+        style={{ backgroundColor: bg, backgroundImage: `url(${dots})` }}
+      >
         {children}
       </div>
     </Sheet>
@@ -76,7 +82,7 @@ function Footer({ data }: { data: BookData }) {
   return (
     <div className="mb-footer">
       <div className="mb-footer-title">{y.title}</div>
-      <Icon kind="heart" size={14} stroke="#D9668C" />
+      <Icon kind="heart" size={14} stroke="var(--mb-a1)" />
       <div>{y.graduation_year !== null && t("bookPages.classOf", { year: y.graduation_year })}</div>
     </div>
   );
@@ -184,7 +190,7 @@ function Cover({ data }: { data: BookData }) {
     .filter(Boolean)
     .join(" · ");
   return (
-    <Page label="cover" bg="#E6DEFA">
+    <Page label="cover" bg="var(--mb-lav)">
       <div className="mb-spine" />
       {Array.from({ length: rings }, (_, i) => (
         <div key={i} className="mb-ring" style={{ top: 64 + i * 62 }} />
@@ -237,37 +243,37 @@ function Cover({ data }: { data: BookData }) {
       <Icon
         kind="heart"
         size={40}
-        stroke="#D9668C"
+        stroke="var(--mb-a1)"
         style={{ position: "absolute", left: 120, top: 440, transform: "rotate(-12deg)" }}
       />
       <Icon
         kind="sparkle"
         size={46}
-        stroke="#8E6CCB"
+        stroke="var(--mb-a2)"
         style={{ position: "absolute", left: 640, top: 420 }}
       />
       <Icon
         kind="star"
         size={30}
-        stroke="#E09A2D"
+        stroke="var(--mb-a3)"
         style={{ position: "absolute", left: 600, top: 560, transform: "rotate(15deg)" }}
       />
       <Icon
         kind="sparkle"
         size={30}
-        stroke="#8E6CCB"
+        stroke="var(--mb-a2)"
         style={{ position: "absolute", left: 130, top: 800 }}
       />
       <Icon
         kind="heart"
         size={26}
-        stroke="#8E6CCB"
+        stroke="var(--mb-a2)"
         style={{ position: "absolute", left: 700, top: 900, transform: "rotate(14deg)" }}
       />
       <Icon
         kind="star"
         size={26}
-        stroke="#E09A2D"
+        stroke="var(--mb-a3)"
         style={{ position: "absolute", left: 150, top: 690, transform: "rotate(-10deg)" }}
       />
       <div className="mb-cover-foot">
@@ -289,9 +295,9 @@ function Profile({ data }: { data: BookData }) {
   const p = data.profile;
   const y = data.yearbook;
   return (
-    <Page label="profile" bg="#FFFBF6">
+    <Page label="profile" bg="var(--mb-paper)">
       <div className="mb-flow">
-        <Title sub={t("bookPages.memory.ownerOf")} icon="sparkle" color="#8E6CCB">
+        <Title sub={t("bookPages.memory.ownerOf")} icon="sparkle" color="var(--mb-a2)">
           {t("bookPages.aboutMe")}
         </Title>
         <div className="mb-head-row">
@@ -331,24 +337,24 @@ function Profile({ data }: { data: BookData }) {
           <Ruled
             fitKey="profile:hobbies"
             title={t("bookPages.hobbies")}
-            bg="#FFDCCB"
+            bg="var(--mb-peach)"
             icon="star"
-            iconColor="#E09A2D"
+            iconColor="var(--mb-a3)"
           >
             {p.hobbies}
           </Ruled>
           <Ruled
             fitKey="profile:future"
             title={t("bookPages.futurePlans")}
-            bg="#D2EEDF"
+            bg="var(--mb-mint)"
             icon="heart"
-            iconColor="#D9668C"
+            iconColor="var(--mb-a1)"
           >
             {p.future_plans}
           </Ruled>
         </div>
         <div className="mb-motto" style={{ flexGrow: rowWeight(p.quote.length) }}>
-          <Icon kind="sparkle" size={22} stroke="#8E6CCB" />
+          <Icon kind="sparkle" size={22} stroke="var(--mb-a2)" />
           <div className="disp mb-motto-label">{t("bookPages.quote")}</div>
           <FitText fitKey="profile:quote" className="mb-motto-text" style={{ fontSize: 20 }}>
             {p.quote}
@@ -390,30 +396,30 @@ function FriendPage({ note, number, data }: { note: BookNote; number: number; da
     {
       fields: ["how_we_met", "first_impression"] as const,
       nodes: [
-        box("how_we_met", "#FFDCCB", "star", "#E09A2D"),
-        box("first_impression", "#D2EEDF", "sparkle", "#8E6CCB"),
+        box("how_we_met", "var(--mb-peach)", "star", "var(--mb-a3)"),
+        box("first_impression", "var(--mb-mint)", "sparkle", "var(--mb-a2)"),
       ],
     },
     {
       fields: ["best_memory"] as const,
-      nodes: [box("best_memory", "#D3E8F8", "heart", "#D9668C")],
+      nodes: [box("best_memory", "var(--mb-sky)", "heart", "var(--mb-a1)")],
     },
     {
       fields: ["wish", "advice"] as const,
       nodes: [
-        box("wish", "#FFF1B5", "star", "#E09A2D"),
-        box("advice", "#E6DEFA", "sparkle", "#8E6CCB"),
+        box("wish", "var(--mb-yellow)", "star", "var(--mb-a3)"),
+        box("advice", "var(--mb-lav)", "sparkle", "var(--mb-a2)"),
       ],
     },
   ].filter((r) => r.nodes.some(Boolean));
   const extra = note.photo_ids.slice(1, 3);
   const signed = hasSignature(note.signature);
   return (
-    <Page label="notes" bg="#FFFBF6">
+    <Page label="notes" bg="var(--mb-paper)">
       <div className="mb-flow">
         <Title
           icon="heart"
-          color="#D9668C"
+          color="var(--mb-a1)"
           sub={
             <FitText
               fitKey={`sub:${note.id}`}
@@ -432,7 +438,7 @@ function FriendPage({ note, number, data }: { note: BookNote; number: number; da
             <Polaroid id={note.photo_ids[0]} className="mb-friend-photo" />
           ) : (
             <div className="mb-stick">
-              <Icon kind="heart" size={28} stroke="#D9668C" />
+              <Icon kind="heart" size={28} stroke="var(--mb-a1)" />
               <div className="cute mb-stick-text">{t("bookPages.memory.stickPhoto")}</div>
             </div>
           )}
@@ -471,9 +477,9 @@ function FriendPage({ note, number, data }: { note: BookNote; number: number; da
               <Ruled
                 fitKey={key("message")}
                 title={t("bookPages.fields.message")}
-                bg="#E6DEFA"
+                bg="var(--mb-lav)"
                 icon="heart"
-                iconColor="#D9668C"
+                iconColor="var(--mb-a1)"
                 tail={
                   signed && (
                     <>
@@ -539,9 +545,9 @@ function Back({ data }: { data: BookData }) {
     [t("bookPages.memory.colBirthday"), 110],
   ] as const;
   return (
-    <Page label="back" bg="#FFFBF6">
+    <Page label="back" bg="var(--mb-paper)">
       <div className="mb-flow">
-        <Title sub={t("bookPages.memory.touchSub")} icon="heart" color="#D9668C">
+        <Title sub={t("bookPages.memory.touchSub")} icon="heart" color="var(--mb-a1)">
           {t("bookPages.memory.touchTitle")}
         </Title>
         <table className="mb-table">
@@ -569,7 +575,7 @@ function Back({ data }: { data: BookData }) {
         <div className="mb-pact">
           <div className="mb-pact-text">
             <div className="mb-pact-head">
-              <Icon kind="star" size={22} stroke="#E09A2D" />
+              <Icon kind="star" size={22} stroke="var(--mb-a3)" />
               <div className="disp" style={{ fontSize: 22, fontWeight: 600 }}>
                 {t("bookPages.memory.pact")}
               </div>
@@ -593,7 +599,7 @@ function Back({ data }: { data: BookData }) {
       <Icon
         kind="sparkle"
         size={30}
-        stroke="#8E6CCB"
+        stroke="var(--mb-a2)"
         style={{ position: "absolute", left: 700, top: 66 }}
       />
       <div className="mb-foot">
@@ -606,6 +612,7 @@ function Back({ data }: { data: BookData }) {
 export const memoryBook: Template = {
   id: "memory-book",
   notesPerPage: 1,
+  design: { themes: ["lavender", "peach", "mint"], fonts: ["playful", "classic"] },
   Cover,
   Profile,
   Notes,

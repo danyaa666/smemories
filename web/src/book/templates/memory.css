@@ -1,19 +1,94 @@
 /* Template memory-book (templates/memory.tsx), drawn in the 816 px box of the sheet. Colours and shapes are from design/canvas/temp1.html. */
+
+/* Colour themes (T-142). Every colour of the page comes from these variables; the theme is data-theme on .mb-page. `lavender` is the default and is
+   exactly the canvas's colours. The slot names (lav, yellow, pink, peach, mint, sky) are the hues of `lavender`: another theme puts its own hue in the slot.
+   Text is --mb-ink or --mb-soft on the surfaces (paper, white and the six pastels); every pair is >= 4.5:1 (checked by design.test.ts, listed in docs/templates.md). */
+.mb-page,
+.mb-page[data-theme="lavender"] {
+  --mb-ink: #3b2f4a;
+  --mb-soft: #5e5170;
+  --mb-paper: #fffbf6;
+  --mb-white: #fff;
+  --mb-lav: #e6defa;
+  --mb-yellow: #fff1b5;
+  --mb-pink: #fcd5e2;
+  --mb-peach: #ffdccb;
+  --mb-mint: #d2eedf;
+  --mb-sky: #d3e8f8;
+  --mb-a1: #d9668c;
+  --mb-a2: #8e6ccb;
+  --mb-a3: #e09a2d;
+  --mb-rule: rgba(59, 47, 74, 0.32);
+  --mb-shadow: rgba(59, 47, 74, 0.12);
+}
+.mb-page[data-theme="peach"] {
+  --mb-ink: #4a2c22;
+  --mb-soft: #7a4332;
+  --mb-paper: #fffaf4;
+  --mb-white: #fff;
+  --mb-lav: #ffe0cc;
+  --mb-yellow: #ffeeb8;
+  --mb-pink: #ffd2cc;
+  --mb-peach: #ffd9ae;
+  --mb-mint: #e6efc9;
+  --mb-sky: #fbe0e6;
+  --mb-a1: #d95d4a;
+  --mb-a2: #b8713e;
+  --mb-a3: #e0932d;
+  --mb-rule: rgba(74, 44, 34, 0.32);
+  --mb-shadow: rgba(74, 44, 34, 0.12);
+}
+.mb-page[data-theme="mint"] {
+  --mb-ink: #1f3b34;
+  --mb-soft: #35564d;
+  --mb-paper: #f6fffb;
+  --mb-white: #fff;
+  --mb-lav: #d3efe5;
+  --mb-yellow: #f1f5c2;
+  --mb-pink: #f9dbe5;
+  --mb-peach: #ffe8d3;
+  --mb-mint: #cdeed8;
+  --mb-sky: #cde7f2;
+  --mb-a1: #2f9e87;
+  --mb-a2: #4f86c6;
+  --mb-a3: #e0a82d;
+  --mb-rule: rgba(31, 59, 52, 0.32);
+  --mb-shadow: rgba(31, 59, 52, 0.12);
+}
+
+/* Font sets (T-142), data-fonts on .mb-page. `playful` is the default: today's fonts. `classic` is a serif display and a clean sans body, both with
+   the whole Vietnamese alphabet. A @font-face is fetched only when text uses it, so the files of the set that is not active are never requested. No
+   other family in the fallback list: a family named there would be fetched for a character the first one lacks. */
+.mb-page,
+.mb-page[data-fonts="playful"] {
+  --mb-body: Nunito, sans-serif;
+  --mb-disp: "Baloo 2", Nunito, sans-serif;
+  --mb-cute: "Patrick Hand", Nunito, cursive;
+}
+.mb-page[data-fonts="classic"] {
+  --mb-body: "Be Vietnam Pro", sans-serif;
+  --mb-disp: "Cormorant Garamond", serif;
+  --mb-cute: "Cormorant Garamond", serif;
+}
+.mb-page[data-fonts="classic"] .cute {
+  font-style: italic;
+}
+
 .mb-page {
   position: absolute;
   inset: 0;
   overflow: hidden;
-  font-family: Nunito, sans-serif;
+  font-family: var(--mb-body);
   line-height: normal;
-  color: #3b2f4a;
+  color: var(--mb-ink);
   background-repeat: no-repeat;
   background-size: 816px 1158px; /* memory-dots.png at design size; the page shows its top */
 }
 .mb-page .disp {
-  font-family: "Baloo 2", Nunito, sans-serif;
+  font-family: var(--mb-disp);
 }
 .mb-page .cute {
-  font-family: "Patrick Hand", Nunito, cursive;
+  font-family: var(--mb-cute);
 }
 
 /* A page of flowing content: a column from the top margin to above the footer; .mb-grow takes what is left. */
@@ -44,7 +119,7 @@
   gap: 12px;
   font-size: 12px;
   font-weight: 600;
-  color: #5e5170;
+  color: var(--mb-soft);
 }
 .mb-footer-title {
   min-width: 0;
@@ -64,7 +139,7 @@
 }
 .mb-title-sub {
   font-size: 26px;
-  color: #5e5170;
+  color: var(--mb-soft);
   line-height: 1.1;
 }
 
@@ -104,7 +179,7 @@
   height: 30px;
   line-height: 28px;
   white-space: nowrap;
-  border-bottom: 1.5px solid rgba(59, 47, 74, 0.32);
+  border-bottom: 1.5px solid var(--mb-rule);
 }
 
 .mb-polaroid {
@@ -112,8 +187,8 @@
   flex-direction: column;
   flex: none;
   box-sizing: border-box;
-  background: #fff;
-  box-shadow: 0 3px 10px rgba(59, 47, 74, 0.12);
+  background: var(--mb-white);
+  box-shadow: 0 3px 10px var(--mb-shadow);
 }
 .mb-polaroid-photo {
   width: 100%;
@@ -149,9 +224,9 @@
   gap: 6px;
   box-sizing: border-box;
   text-align: center;
-  border: 2px dashed #5e5170;
+  border: 2px dashed var(--mb-soft);
   border-radius: 18px;
-  background: #fcd5e2;
+  background: var(--mb-pink);
 }
 /* A signed note needs the height for its signature: the photo (and the fields beside it) are 30 px shorter. */
 .mb-signed .mb-friend-photo,
@@ -220,7 +295,7 @@
   background-image: repeating-linear-gradient(
     to bottom,
     transparent 0 calc(1lh - 1.5px),
-    rgba(59, 47, 74, 0.32) calc(1lh - 1.5px) 1lh
+    var(--mb-rule) calc(1lh - 1.5px) 1lh
   );
 }
 /* The friend's signature (T-097): 40 x 16 mm on A5 = 220 x 88 design px, at the bottom right of the message's text box, in the text box: it is
@@ -237,7 +312,7 @@
   clear: right;
   width: 220px;
   height: 88px;
-  color: #3b2f4a;
+  color: var(--mb-ink);
 }
 .mb-side {
   display: flex;
@@ -266,7 +341,7 @@
   box-sizing: border-box;
   padding: 10px 18px;
   border-radius: 18px;
-  background: #fff1b5;
+  background: var(--mb-yellow);
 }
 .mb-motto-label {
   padding-bottom: 4px;
@@ -285,7 +360,7 @@
   line-height: 30px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  border-bottom: 1.5px solid rgba(59, 47, 74, 0.32);
+  border-bottom: 1.5px solid var(--mb-rule);
 }
 .mb-no {
   position: absolute;
@@ -298,7 +373,7 @@
   height: 45px;
   padding: 8px 14px;
   border-radius: 12px;
-  background: #fff1b5;
+  background: var(--mb-yellow);
   transform: rotate(4deg);
   font-size: 14px;
   font-weight: 700;
@@ -308,7 +383,7 @@
   height: 20px;
   line-height: 18px;
   text-align: center;
-  border-bottom: 1.5px solid rgba(59, 47, 74, 0.32);
+  border-bottom: 1.5px solid var(--mb-rule);
 }
 
 /* Cover */
@@ -327,8 +402,8 @@
   height: 26px;
   box-sizing: border-box;
   border-radius: 50%;
-  border: 3px solid #5e5170;
-  background: #fffbf6;
+  border: 3px solid var(--mb-soft);
+  background: var(--mb-paper);
 }
 .mb-cover-head {
   position: absolute;
@@ -369,7 +444,11 @@
 .mb-tape {
   position: absolute;
   opacity: 0.9;
-  background-image: repeating-linear-gradient(45deg, #fcd5e2 0 8px, #fff 8px 16px);
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--mb-pink) 0 8px,
+    var(--mb-white) 8px 16px
+  );
 }
 .mb-sticker {
   position: absolute;
@@ -379,10 +458,10 @@
   width: 176px;
   height: 176px;
   border-radius: 50%;
-  background: #ffdccb;
+  background: var(--mb-peach);
   text-align: center;
   transform: rotate(10deg);
-  box-shadow: 0 3px 10px rgba(59, 47, 74, 0.12);
+  box-shadow: 0 3px 10px var(--mb-shadow);
 }
 .mb-sticker-text {
   font-size: 32px;
@@ -416,7 +495,7 @@
   width: 100%;
   flex: none;
   border-collapse: collapse;
-  background: #fff;
+  background: var(--mb-white);
   font-size: 12px;
 }
 .mb-table th {
@@ -426,15 +505,15 @@
   font-size: 13px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  background: #e6defa;
-  border: 1px solid rgba(59, 47, 74, 0.32);
+  background: var(--mb-lav);
+  border: 1px solid var(--mb-rule);
 }
 .mb-table td {
   height: 34px;
   box-sizing: border-box;
   padding: 0 8px;
-  color: #5e5170;
-  border: 1px solid rgba(59, 47, 74, 0.32);
+  color: var(--mb-soft);
+  border: 1px solid var(--mb-rule);
 }
 .mb-table td:first-child {
   text-align: center;
@@ -449,7 +528,7 @@
   gap: 24px;
   padding: 14px 18px;
   border-radius: 18px;
-  background: #fff1b5;
+  background: var(--mb-yellow);
 }
 .mb-pact-text {
   display: flex;

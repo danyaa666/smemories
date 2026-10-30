@@ -31,3 +31,8 @@ family of the canvas, already covers all of it. Same source and method as above.
 | Family               | Replaces | Source                                                                | Files                                                 | Vietnamese letters (every letter with its tone marks, both cases) | Licence                         |
 | -------------------- | -------- | --------------------------------------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------------------- | ------------------------------- |
 | Be Vietnam Pro (500) | Jost     | fonts.google.com/specimen/Be+Vietnam+Pro, Vietnam Pro Project Authors | `BeVietnamPro-500-{latin,latin-ext,vietnamese}.woff2` | all 146 (fontTools: 12 vowels x 6 tones x 2 cases, plus đ Đ)      | OFL 1.1, `OFL-BeVietnamPro.txt` |
+
+## Font set `classic` of memory-book (T-142)
+
+The `classic` font set of the memory-book (E09) is Cormorant Garamond (titles and handwriting lines, 500/600/700 and 500/600 italic) over Be Vietnam Pro (body). Both are shipped above with all of the
+Vietnamese alphabet, so no file was added; they are fetched only when a book uses that set (`memory.css`, `data-fonts="classic"`).

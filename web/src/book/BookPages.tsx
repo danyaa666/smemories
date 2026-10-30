@@ -1,6 +1,7 @@
 import type { TFunction } from "i18next";
 import { memo, useMemo } from "react";
 import type { BookData } from "../api/book";
+import { DesignProvider } from "./design";
 import { BookEnvProvider } from "./env";
 import { paginate } from "./paginate";
 import type { PageSize } from "./sizes";
@@ -49,9 +50,11 @@ export const BookPages = memo(function BookPages({
   const env = useMemo(() => ({ size, t, eager, track }), [size, t, eager, track]);
   return (
     <BookEnvProvider value={env}>
-      <tpl.Cover data={data} />
-      <ProfilePages data={data} />
-      <tpl.Back data={data} />
+      <DesignProvider design={data.design} ids={tpl.design}>
+        <tpl.Cover data={data} />
+        <ProfilePages data={data} />
+        <tpl.Back data={data} />
+      </DesignProvider>
     </BookEnvProvider>
   );
 });

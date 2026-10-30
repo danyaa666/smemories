@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
 import type { BookData, BookNote } from "../../api/book";
+import type { DesignIds } from "../design";
 import { basic } from "./basic";
 import { memoryBook } from "./memory";
 import { navyClassic } from "./navy";
@@ -14,6 +15,8 @@ export type Template = {
   notesPerPage: number;
   /** Which photos the design shows (default: all). The book loads only those before it allows printing. */
   photos?: { cover: boolean; notes: boolean };
+  /** The theme and font set ids it draws, when the owner can choose them (E09). */
+  design?: DesignIds;
   Cover: ComponentType<{ data: BookData }>;
   Profile: ComponentType<{ data: BookData }>;
   /** `first` is the index of the first note of the page in the book, `data` the whole book (title, year for the footer). */

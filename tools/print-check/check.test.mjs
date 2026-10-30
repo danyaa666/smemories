@@ -8,7 +8,7 @@ import os from "node:os";
 import path from "node:path";
 import { after, before, describe, test } from "node:test";
 import { chromium } from "playwright";
-import { CLASS_BOOK_CASES, classBookPages, makeBook, makeClassBook, photoId, SIGNATURES, studentName } from "./fixture.mjs";
+import { CLASS_BOOK_CASES, classBookPages, designOf, makeBook, makeClassBook, photoId, SIGNATURES, studentName } from "./fixture.mjs";
 import { BASE, fitBoxes, inkIn, inspect, open, openClassBook, raster, savePdf, serveBook, signatureBoxes, startServer, text, words } from "./lib.mjs";
 
 const squash = (x) => x.replace(/\s+/g, "");
@@ -27,7 +27,11 @@ after(async () => {
 async function render(book, name) {
   const page = await browser.newPage();
   const hosts = new Set();
-  page.on("request", (r) => hosts.add(new URL(r.url()).host));
+  const urls = [];
+  page.on("request", (r) => {
+    hosts.add(new URL(r.url()).host);
+    urls.push(r.url());
+  });
   const seen = await serveBook(page, book);
   const opened = await open(page);
   const screenText = await page.locator("main").innerText();
@@ -35,7 +39,7 @@ async function render(book, name) {
   const saved = await savePdf(page, file);
   const shrunk = await page.locator("[data-fit=shrunk]").count();
   await page.close();
-  return { opened, saved, hosts, seen, shrunk, screenText, file, info: inspect(file), t: text(file) };
+  return { opened, saved, hosts, urls, seen, shrunk, screenText, file, info: inspect(file), t: text(file) };
 }
 
 // T-121: the image queue (T-116) left the photos of pages never scrolled to without a src, and "ready" did not wait for them.
@@ -174,6 +178,84 @@ describe("memory-book template: 24 pages, 30 photos, 21 notes", () => {
       assert.equal(fonts[0].isCustomFont, true);
       assert.ok(fonts[0].glyphCount >= PANGRAM.length - 2, `${id}: every character is drawn by the font (${fonts[0].glyphCount} of ${PANGRAM.length})`);
     }
+    await page.close();
+  });
+});
+
+// T-142: the colour themes and font sets of the memory-book (epic E09). Every theme x font set on A5 and A4 with the Vietnamese fixture: 24 pages, none blank,
+// the fonts of that set (and of no other), only those font files requested, nothing cut off with long names everywhere, and no request leaves the origin.
+// The default design (lavender, playful) is the book with no design: the cases above run it without one.
+describe("memory-book themes x font sets (T-142)", () => {
+  // The app's own screen also uses a family named Be Vietnam Pro (its toolbar), so that family's files are requested whatever the book's set is; Cormorant Garamond is the book's alone.
+  const SETS = {
+    playful: { has: /Baloo2.*PatrickHand|PatrickHand.*Baloo2/s, hasNot: /CormorantGaramond|BeVietnamPro/, files: /Baloo2|PatrickHand|Nunito/, filesNot: /CormorantGaramond/ },
+    classic: { has: /CormorantGaramond.*BeVietnamPro|BeVietnamPro.*CormorantGaramond/s, hasNot: /Baloo2|PatrickHand|Nunito/, files: /CormorantGaramond|BeVietnamPro/, filesNot: /Baloo2|PatrickHand|Nunito/ },
+  };
+  for (const theme of ["lavender", "peach", "mint"])
+    for (const fonts of ["playful", "classic"])
+      for (const size of ["A5", "A4"]) {
+        const set = SETS[fonts];
+        test(`${theme} + ${fonts}, ${size}: 24 pages, none blank, that set's fonts only, self-hosted`, async () => {
+          const r = await render(makeBook({ size, notes: 21, template: "memory-book", longNote: 4, design: designOf(theme, fonts) }), `memory-${theme}-${fonts}-${size}`);
+          assert.equal(r.info.pages, 24);
+          for (const [i, want] of PT[size].entries()) assert.ok(Math.abs(r.info.sizePt[i] - want) < 1, `${size} page size ${r.info.sizePt}`);
+          assert.ok(r.info.allFontsEmbedded, "every font is embedded");
+          const names = r.info.fonts.map((f) => f.name).join(" ");
+          assert.match(names, set.has, `the fonts of ${fonts}: ${names}`);
+          assert.doesNotMatch(names, set.hasNot, `no font of the other set: ${names}`);
+          const files = r.urls.map((u) => new URL(u).pathname).filter((u) => /\.woff2/.test(u)).join(" ");
+          assert.match(files, set.files, "the active set's font files are requested");
+          assert.doesNotMatch(files, set.filesNot, `the font files of the other set are not requested: ${files}`);
+          assert.deepEqual([...r.hosts], [new URL(BASE).host], "no request to any other host");
+          const pages = r.t.split("\f").filter((_, i, a) => i < a.length - 1 || a[i].trim());
+          assert.equal(pages.length, 24);
+          assert.ok(pages.every((p) => p.trim().length > 20), "no blank page");
+          for (const s of ["Nguyễn Thị Hồng Ánh", "Đặng Ngọc Bích Trâm", "Từ một người bạn", "Chuyến dã ngoại ở Đà Lạt"])
+            assert.ok(squash(r.t).includes(squash(s)), `extracted text contains "${s}"`);
+          assert.ok(r.t.includes("😄"), "emoji are text");
+        });
+
+        test(`${theme} + ${fonts}, ${size}: long Vietnamese names and emoji everywhere: nothing is cut off and no text leaves its box`, async () => {
+          const page = await browser.newPage();
+          await serveBook(page, makeBook({ size, notes: 3, template: "memory-book", stress: true, design: designOf(theme, fonts) }));
+          await open(page);
+          const res = await page.evaluate(([wantTheme, wantFonts]) => {
+            const sheetOf = (e) => e.closest(".bk-sheet").getBoundingClientRect();
+            const boxes = [...document.querySelectorAll(".bk-fit")];
+            return {
+              n: boxes.length,
+              fontsAtReady: {
+                status: document.fonts.status,
+                loading: [...document.fonts].filter((f) => f.status === "loading").map((f) => f.family),
+                set: [...document.fonts].some((f) => f.status === "loaded" && f.family.replace(/"/g, "") === (wantFonts === "classic" ? "Cormorant Garamond" : "Baloo 2")),
+              },
+              themed: [...document.querySelectorAll(".mb-page")].every((e) => e.dataset.theme === wantTheme && e.dataset.fonts === wantFonts),
+              overflow: boxes.filter((e) => e.dataset.fit === "overflow").map((e) => e.className),
+              outside: boxes
+                .filter((e) => {
+                  const r = e.getBoundingClientRect(), s = sheetOf(e);
+                  return r.left < s.left - 1 || r.right > s.right + 1 || r.top < s.top - 1 || r.bottom > s.bottom + 1;
+                })
+                .map((e) => e.className),
+              wide: boxes.filter((e) => e.scrollWidth > e.clientWidth + 1).map((e) => e.className),
+            };
+          }, [theme, fonts]);
+          assert.ok(res.n >= 30, `${res.n} text boxes`);
+          assert.deepEqual(res.fontsAtReady, { status: "loaded", loading: [], set: true }, "at ready the fonts of the set have loaded and none is still loading");
+          assert.ok(res.themed, "every page carries the theme and the font set");
+          assert.deepEqual(res.overflow, [], "no text is cut off");
+          assert.deepEqual(res.outside, [], "every text box is inside its page");
+          assert.deepEqual(res.wide, [], "no line runs out of its box");
+          await page.close();
+        });
+      }
+
+  test("a design this build does not know draws the defaults", async () => {
+    const page = await browser.newPage();
+    await serveBook(page, makeBook({ size: "A5", notes: 1, template: "memory-book", design: designOf("neon", "comic") }));
+    await open(page);
+    const set = await page.evaluate(() => [...new Set([...document.querySelectorAll(".mb-page")].map((e) => `${e.dataset.theme}/${e.dataset.fonts}`))]);
+    assert.deepEqual(set, ["lavender/playful"]);
     await page.close();
   });
 });
