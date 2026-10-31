@@ -1,0 +1,22 @@
+{
+ "base": {
+  "min_kb": 290.3,
+  "gzip_kb": 74.2
+ },
+ "inhouse": {
+  "min_kb": 298.6,
+  "gzip_kb": 76.9
+ },
+ "moveable": {
+  "min_kb": 587.6,
+  "gzip_kb": 155.8
+ },
+ "inhouse_over_base": {
+  "min_kb": 8.3,
+  "gzip_kb": 2.7
+ },
+ "moveable_over_base": {
+  "min_kb": 297.3,
+  "gzip_kb": 81.6
+ }
+}

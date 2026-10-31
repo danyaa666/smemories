@@ -1,0 +1,8 @@
+{
+ "swipe_on_unselected_item_pans_page_px": 143,
+ "tap_selects": true,
+ "selected_item_dragged_design_px_y": 77.8,
+ "page_panned_during_item_drag_px": 0,
+ "handle_size_css_px": 24.8,
+ "note": "handles are 22 design px; at the phone's fit-to-width scale (about 0.4) they are 9 screen px, below the 44 px touch target: the phone editor needs larger handles (or move up/down buttons), as planned"
+}

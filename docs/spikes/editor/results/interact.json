@@ -1,0 +1,114 @@
+{
+ "inhouse": {
+  "screen_px_per_design_px": 0.6855,
+  "drag": {
+   "expected_dx": 87.5,
+   "expected_dy": 58.4,
+   "got_dx": 87.5,
+   "got_dy": 60
+  },
+  "resize_rotated_12deg_by_40x30_screen_px": {
+   "got_dw_design_px": 58.4,
+   "note": "40 px along x is 58.4 design px; a rotation-aware resize projects the pointer on the item axes"
+  },
+  "rotate": {
+   "got_deg": 90
+  },
+  "snap_centre": {
+   "distance_from_page_middle_after": 0,
+   "started_at": -3
+  },
+  "touch_768": {
+   "expected_dx": -72.9,
+   "expected_dy": -58.4,
+   "got_dx": -72.9,
+   "got_dy": -60,
+   "page_scrolled": 0
+  },
+  "stage_scale_0_6": {
+   "expected_dx": 121.6,
+   "got_dx": 121.6
+  },
+  "keyboard": {
+   "focusable": true,
+   "dx": 1,
+   "dy": 10
+  },
+  "frames_100_items_4x_throttle": {
+   "drag_ms": 5132,
+   "frames": 337,
+   "fps": 60,
+   "median_ms": 16.7,
+   "p95_ms": 16.8,
+   "max_ms": 16.8,
+   "move_to_second_frame_median_ms": 17.4,
+   "move_to_second_frame_p95_ms": 28.9
+  },
+  "frames_300_items_4x_throttle": {
+   "drag_ms": 9754,
+   "frames": 553,
+   "fps": 53.8,
+   "median_ms": 16.7,
+   "p95_ms": 49.9,
+   "max_ms": 50.1,
+   "move_to_second_frame_median_ms": 18.7,
+   "move_to_second_frame_p95_ms": 76.3
+  }
+ },
+ "moveable": {
+  "screen_px_per_design_px": 0.6855,
+  "drag": {
+   "expected_dx": 87.5,
+   "expected_dy": 58.4,
+   "got_dx": 87.5,
+   "got_dy": 58.4
+  },
+  "resize_rotated_12deg_by_40x30_screen_px": {
+   "got_dw_design_px": 50,
+   "note": "40 px along x is 58.4 design px; a rotation-aware resize projects the pointer on the item axes"
+  },
+  "rotate": {
+   "got_deg": 90
+  },
+  "snap_centre": {
+   "distance_from_page_middle_after": -0.39,
+   "started_at": -3
+  },
+  "touch_768": {
+   "expected_dx": -72.9,
+   "expected_dy": -58.4,
+   "got_dx": -72.9,
+   "got_dy": -58.4,
+   "page_scrolled": 0
+  },
+  "stage_scale_0_6": {
+   "expected_dx": 121.6,
+   "got_dx": 72.9
+  },
+  "keyboard": {
+   "focusable": false,
+   "dx": 0,
+   "dy": 0
+  },
+  "frames_100_items_4x_throttle": {
+   "drag_ms": 4419,
+   "frames": 296,
+   "fps": 59.8,
+   "median_ms": 16.7,
+   "p95_ms": 16.8,
+   "max_ms": 33.3,
+   "move_to_second_frame_median_ms": 18.5,
+   "move_to_second_frame_p95_ms": 20.9
+  },
+  "frames_300_items_4x_throttle": {
+   "drag_ms": 7357,
+   "frames": 471,
+   "fps": 59.4,
+   "median_ms": 16.7,
+   "p95_ms": 16.7,
+   "max_ms": 83.3,
+   "move_to_second_frame_median_ms": 18.9,
+   "move_to_second_frame_p95_ms": 23.6
+  }
+ }
+}
