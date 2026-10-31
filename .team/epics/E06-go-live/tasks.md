@@ -20,7 +20,7 @@ PR and comments change only through `board.py`.
 - **Branch:** task/t-149-e06-ci-raise-the-e2e-print-check-timeout
 - **PR:** 146
 - **Updated:** 2026-10-30 20:44Z by human
-- **Comments-seen:** 3
+- **Comments-seen:** 4
 
 Spec: .team/epics/E06-go-live/18-ci-print-check-timeout.md (read it from the main checkout). Manual full run 41052503585 failed e2e only on the Print check step timeout (6 min); the suite is 163 tests, ~319 s.
 
