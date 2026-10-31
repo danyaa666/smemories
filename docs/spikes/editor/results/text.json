@@ -1,0 +1,369 @@
+{
+ "ce": {
+  "ime": {
+   "typed": "Viet(Telex) Nam(Telex) duong(VNI-like steps)",
+   "value": "Việt Nam đường",
+   "ok": true,
+   "compositionstart": 3,
+   "compositionupdate": 19,
+   "compositionend": 3
+  },
+  "ime_caret_in_middle": "Việtđẹp Nam đường",
+  "enter_value_has_newline": true,
+  "paste_plain": "dòng một\ndòng hai",
+  "paste_no_markup_in_dom": true,
+  "paste_600_emoji_runes_kept": 500,
+  "paste_600_emoji_utf16_units": 983,
+  "parity": {
+   "short@0deg": {
+    "w": 604,
+    "h": 276,
+    "size_mismatch": [
+     0,
+     0
+    ],
+    "diff_pixels": 0,
+    "diff_pct": 0,
+    "max_channel_delta": 45,
+    "print_font_px": "30px",
+    "editor_font_px": "30px",
+    "print_fit_state": "ok",
+    "print_clipped_strict": false
+   },
+   "short@-4deg": {
+    "w": 624,
+    "h": 318,
+    "size_mismatch": [
+     0,
+     0
+    ],
+    "diff_pixels": 0,
+    "diff_pct": 0,
+    "max_channel_delta": 45,
+    "print_font_px": "30px",
+    "editor_font_px": "30px",
+    "print_fit_state": "ok",
+    "print_clipped_strict": false
+   },
+   "medium@0deg": {
+    "w": 604,
+    "h": 276,
+    "size_mismatch": [
+     0,
+     0
+    ],
+    "diff_pixels": 95,
+    "diff_pct": 0.06,
+    "max_channel_delta": 53,
+    "print_font_px": "30px",
+    "editor_font_px": "30px",
+    "print_fit_state": "ok",
+    "print_clipped_strict": false
+   },
+   "medium@-4deg": {
+    "w": 624,
+    "h": 318,
+    "size_mismatch": [
+     0,
+     0
+    ],
+    "diff_pixels": 51,
+    "diff_pct": 0.03,
+    "max_channel_delta": 53,
+    "print_font_px": "30px",
+    "editor_font_px": "30px",
+    "print_fit_state": "ok",
+    "print_clipped_strict": false
+   },
+   "long_shrinks@0deg": {
+    "w": 604,
+    "h": 276,
+    "size_mismatch": [
+     0,
+     0
+    ],
+    "diff_pixels": 438,
+    "diff_pct": 0.26,
+    "max_channel_delta": 53,
+    "print_font_px": "20.5px",
+    "editor_font_px": "20.5px",
+    "print_fit_state": "shrunk",
+    "print_clipped_strict": true
+   },
+   "long_shrinks@-4deg": {
+    "w": 624,
+    "h": 318,
+    "size_mismatch": [
+     0,
+     0
+    ],
+    "diff_pixels": 556,
+    "diff_pct": 0.28,
+    "max_channel_delta": 53,
+    "print_font_px": "20.5px",
+    "editor_font_px": "20.5px",
+    "print_fit_state": "shrunk",
+    "print_clipped_strict": true
+   },
+   "full_500_runes@0deg": {
+    "w": 604,
+    "h": 276,
+    "size_mismatch": [
+     0,
+     0
+    ],
+    "diff_pixels": 1002,
+    "diff_pct": 0.6,
+    "max_channel_delta": 62,
+    "print_font_px": "18px",
+    "editor_font_px": "18px",
+    "print_fit_state": "shrunk",
+    "print_clipped_strict": true
+   },
+   "full_500_runes@-4deg": {
+    "w": 624,
+    "h": 318,
+    "size_mismatch": [
+     0,
+     0
+    ],
+    "diff_pixels": 1101,
+    "diff_pct": 0.55,
+    "max_channel_delta": 63,
+    "print_font_px": "18px",
+    "editor_font_px": "18px",
+    "print_fit_state": "shrunk",
+    "print_clipped_strict": true
+   },
+   "overflow_clip_220x70@0deg": {
+    "w": 302,
+    "h": 98,
+    "size_mismatch": [
+     0,
+     0
+    ],
+    "diff_pixels": 122,
+    "diff_pct": 0.41,
+    "max_channel_delta": 61,
+    "print_font_px": "15px",
+    "editor_font_px": "15px",
+    "print_fit_state": "overflow",
+    "print_clipped_strict": true
+   },
+   "overflow_clip_220x70@-4deg": {
+    "w": 310,
+    "h": 118,
+    "size_mismatch": [
+     0,
+     0
+    ],
+    "diff_pixels": 160,
+    "diff_pct": 0.44,
+    "max_channel_delta": 61,
+    "print_font_px": "15px",
+    "editor_font_px": "15px",
+    "print_fit_state": "overflow",
+    "print_clipped_strict": true
+   }
+  },
+  "cap_during_composition_runes": 500,
+  "cap_after_commit_runes": 500
+ },
+ "ta": {
+  "ime": {
+   "typed": "Viet(Telex) Nam(Telex) duong(VNI-like steps)",
+   "value": "Việt Nam đường",
+   "ok": true,
+   "compositionstart": 3,
+   "compositionupdate": 19,
+   "compositionend": 3
+  },
+  "ime_caret_in_middle": "Việtđẹp Nam đường",
+  "enter_value_has_newline": true,
+  "paste_plain": "dòng một\ndòng hai",
+  "paste_no_markup_in_dom": true,
+  "paste_600_emoji_runes_kept": 500,
+  "paste_600_emoji_utf16_units": 983,
+  "parity": {
+   "short@0deg": {
+    "w": 604,
+    "h": 276,
+    "size_mismatch": [
+     0,
+     0
+    ],
+    "diff_pixels": 0,
+    "diff_pct": 0,
+    "max_channel_delta": 0,
+    "print_font_px": "30px",
+    "editor_font_px": "30px",
+    "print_fit_state": "ok",
+    "print_clipped_strict": false
+   },
+   "short@-4deg": {
+    "w": 624,
+    "h": 318,
+    "size_mismatch": [
+     0,
+     0
+    ],
+    "diff_pixels": 0,
+    "diff_pct": 0,
+    "max_channel_delta": 0,
+    "print_font_px": "30px",
+    "editor_font_px": "30px",
+    "print_fit_state": "ok",
+    "print_clipped_strict": false
+   },
+   "medium@0deg": {
+    "w": 604,
+    "h": 276,
+    "size_mismatch": [
+     0,
+     0
+    ],
+    "diff_pixels": 0,
+    "diff_pct": 0,
+    "max_channel_delta": 0,
+    "print_font_px": "30px",
+    "editor_font_px": "30px",
+    "print_fit_state": "ok",
+    "print_clipped_strict": false
+   },
+   "medium@-4deg": {
+    "w": 624,
+    "h": 318,
+    "size_mismatch": [
+     0,
+     0
+    ],
+    "diff_pixels": 0,
+    "diff_pct": 0,
+    "max_channel_delta": 0,
+    "print_font_px": "30px",
+    "editor_font_px": "30px",
+    "print_fit_state": "ok",
+    "print_clipped_strict": false
+   },
+   "long_shrinks@0deg": {
+    "w": 604,
+    "h": 276,
+    "size_mismatch": [
+     0,
+     0
+    ],
+    "diff_pixels": 0,
+    "diff_pct": 0,
+    "max_channel_delta": 0,
+    "print_font_px": "20.5px",
+    "editor_font_px": "20.5px",
+    "print_fit_state": "shrunk",
+    "print_clipped_strict": true
+   },
+   "long_shrinks@-4deg": {
+    "w": 624,
+    "h": 318,
+    "size_mismatch": [
+     0,
+     0
+    ],
+    "diff_pixels": 0,
+    "diff_pct": 0,
+    "max_channel_delta": 0,
+    "print_font_px": "20.5px",
+    "editor_font_px": "20.5px",
+    "print_fit_state": "shrunk",
+    "print_clipped_strict": true
+   },
+   "full_500_runes@0deg": {
+    "w": 604,
+    "h": 276,
+    "size_mismatch": [
+     0,
+     0
+    ],
+    "diff_pixels": 0,
+    "diff_pct": 0,
+    "max_channel_delta": 0,
+    "print_font_px": "18px",
+    "editor_font_px": "18px",
+    "print_fit_state": "shrunk",
+    "print_clipped_strict": true
+   },
+   "full_500_runes@-4deg": {
+    "w": 624,
+    "h": 318,
+    "size_mismatch": [
+     0,
+     0
+    ],
+    "diff_pixels": 0,
+    "diff_pct": 0,
+    "max_channel_delta": 0,
+    "print_font_px": "18px",
+    "editor_font_px": "18px",
+    "print_fit_state": "shrunk",
+    "print_clipped_strict": true
+   },
+   "overflow_clip_220x70@0deg": {
+    "w": 302,
+    "h": 98,
+    "size_mismatch": [
+     0,
+     0
+    ],
+    "diff_pixels": 0,
+    "diff_pct": 0,
+    "max_channel_delta": 0,
+    "print_font_px": "15px",
+    "editor_font_px": "15px",
+    "print_fit_state": "overflow",
+    "print_clipped_strict": true
+   },
+   "overflow_clip_220x70@-4deg": {
+    "w": 310,
+    "h": 118,
+    "size_mismatch": [
+     0,
+     0
+    ],
+    "diff_pixels": 0,
+    "diff_pct": 0,
+    "max_channel_delta": 0,
+    "print_font_px": "15px",
+    "editor_font_px": "15px",
+    "print_fit_state": "overflow",
+    "print_clipped_strict": true
+   }
+  },
+  "cap_during_composition_runes": 502,
+  "cap_after_commit_runes": 500,
+  "clip_state_typing_at_end": {
+   "before": {
+    "scrollTop": 0,
+    "scrollHeight": 169,
+    "clientHeight": 70,
+    "overflow": "hidden",
+    "caretColor": "rgb(59, 47, 74)",
+    "fit": "overflow"
+   },
+   "after": {
+    "scrollTop": 99.19729614257812,
+    "scrollHeight": 169,
+    "clientHeight": 70,
+    "overflow": "hidden",
+    "caretColor": "rgb(59, 47, 74)",
+    "fit": "overflow"
+   },
+   "typed_tail": "xyz",
+   "caret_inside_box_scrolled": true,
+   "box_height_screen_px": 48
+  },
+  "cap_rewrite_caret_after_typing_in_middle": {
+   "runes": 500,
+   "selectionStart": 101,
+   "expected": 101,
+   "has_b": true
+  }
+ }
+}

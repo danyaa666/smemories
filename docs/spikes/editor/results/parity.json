@@ -1,0 +1,128 @@
+{
+ "centre/A5": {
+  "exact": {
+   "w": 1120,
+   "h": 1587,
+   "size_mismatch": [
+    0,
+    1
+   ],
+   "diff_pixels": 17348,
+   "diff_pct": 0.98,
+   "max_channel_delta": 205
+  },
+  "tolerant_1px": {
+   "w": 1120,
+   "h": 1587,
+   "size_mismatch": [
+    0,
+    1
+   ],
+   "diff_pixels": 2408,
+   "diff_pct": 0.14,
+   "max_channel_delta": 205
+  },
+  "pages": 1,
+  "page_size_pt": "420 x 594.96",
+  "fonts": 9,
+  "fonts_all_embedded": true,
+  "text_has_item": true,
+  "sticker_bbox_editor": [
+   800,
+   1332,
+   953,
+   1470
+  ],
+  "sticker_bbox_pdf": [
+   800,
+   1332,
+   952,
+   1470
+  ],
+  "sticker_bbox_max_offset_px_at_192dpi": 1
+ },
+ "centre/A4": {
+  "exact": {
+   "w": 1587,
+   "h": 2246,
+   "size_mismatch": [
+    1,
+    0
+   ],
+   "diff_pixels": 18575,
+   "diff_pct": 0.52,
+   "max_channel_delta": 196
+  },
+  "tolerant_1px": {
+   "w": 1587,
+   "h": 2246,
+   "size_mismatch": [
+    1,
+    0
+   ],
+   "diff_pixels": 2208,
+   "diff_pct": 0.06,
+   "max_channel_delta": 153
+  },
+  "pages": 1,
+  "page_size_pt": "594.96 x 841.92",
+  "fonts": 9,
+  "fonts_all_embedded": true,
+  "text_has_item": true,
+  "sticker_bbox_editor": [
+   1135,
+   1884,
+   1353,
+   2081
+  ],
+  "sticker_bbox_pdf": [
+   1135,
+   1884,
+   1352,
+   2081
+  ],
+  "sticker_bbox_max_offset_px_at_192dpi": 1
+ },
+ "centre/Letter": {
+  "exact": {
+   "w": 1632,
+   "h": 2112,
+   "size_mismatch": [
+    0,
+    0
+   ],
+   "diff_pixels": 16344,
+   "diff_pct": 0.47,
+   "max_channel_delta": 196
+  },
+  "tolerant_1px": {
+   "w": 1632,
+   "h": 2112,
+   "size_mismatch": [
+    0,
+    0
+   ],
+   "diff_pixels": 1540,
+   "diff_pct": 0.04,
+   "max_channel_delta": 113
+  },
+  "pages": 1,
+  "page_size_pt": "612 x 792",
+  "fonts": 9,
+  "fonts_all_embedded": true,
+  "text_has_item": true,
+  "sticker_bbox_editor": [
+   1166,
+   1763,
+   1390,
+   1966
+  ],
+  "sticker_bbox_pdf": [
+   1166,
+   1763,
+   1390,
+   1966
+  ],
+  "sticker_bbox_max_offset_px_at_192dpi": 0
+ }
+}

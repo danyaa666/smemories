@@ -1,0 +1,4 @@
+node_modules
+dist
+results/parity-A4-*.png
+results/parity-Letter-*.png

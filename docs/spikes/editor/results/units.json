@@ -1,0 +1,562 @@
+{
+ "pct": {
+  "A5": {
+   "pageH_px": 1158,
+   "boxes": {
+    "photo": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 63.1,
+     "invisible": false
+    },
+    "sticker_bottom": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 10.5,
+     "invisible": false
+    },
+    "sticker_flush": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 0,
+     "invisible": false
+    },
+    "text_bottom": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 5.1,
+     "invisible": false
+    },
+    "title_top": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 176.7,
+     "invisible": false
+    }
+   },
+   "pair_gap_px": 20
+  },
+  "A4": {
+   "pageH_px": 1154,
+   "boxes": {
+    "photo": {
+     "aspect_change_pct": 0.3,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 89.2,
+     "invisible": false
+    },
+    "sticker_bottom": {
+     "aspect_change_pct": 0.3,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 14.9,
+     "invisible": false
+    },
+    "sticker_flush": {
+     "aspect_change_pct": 0.3,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 0,
+     "invisible": false
+    },
+    "text_bottom": {
+     "aspect_change_pct": 0.3,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 7.2,
+     "invisible": false
+    },
+    "title_top": {
+     "aspect_change_pct": 0.3,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 249.8,
+     "invisible": false
+    }
+   },
+   "pair_gap_px": 20
+  },
+  "Letter": {
+   "pageH_px": 1056,
+   "boxes": {
+    "photo": {
+     "aspect_change_pct": 9.7,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 84,
+     "invisible": false
+    },
+    "sticker_bottom": {
+     "aspect_change_pct": 9.7,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 14,
+     "invisible": false
+    },
+    "sticker_flush": {
+     "aspect_change_pct": 9.7,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 0,
+     "invisible": false
+    },
+    "text_bottom": {
+     "aspect_change_pct": 9.7,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 6.8,
+     "invisible": false
+    },
+    "title_top": {
+     "aspect_change_pct": 9.7,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 235,
+     "invisible": false
+    }
+   },
+   "pair_gap_px": 18
+  }
+ },
+ "mm": {
+  "A5": {
+   "pageH_px": 1158,
+   "boxes": {
+    "photo": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 63.1,
+     "invisible": false
+    },
+    "sticker_bottom": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 10.5,
+     "invisible": false
+    },
+    "sticker_flush": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 0,
+     "invisible": false
+    },
+    "text_bottom": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 5.1,
+     "invisible": false
+    },
+    "title_top": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 176.7,
+     "invisible": false
+    }
+   },
+   "pair_gap_px": 20
+  },
+  "A4": {
+   "pageH_px": 1154,
+   "boxes": {
+    "photo": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 88.5,
+     "invisible": false
+    },
+    "sticker_bottom": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 13.9,
+     "invisible": false
+    },
+    "sticker_flush": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 1,
+     "bottom_overflow_pct_of_box": 2.7,
+     "clamped_shift_mm": 1,
+     "gap_to_bottom_mm": -1,
+     "invisible": false
+    },
+    "text_bottom": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 6.2,
+     "invisible": false
+    },
+    "title_top": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 249.6,
+     "invisible": false
+    }
+   },
+   "pair_gap_px": 20
+  },
+  "Letter": {
+   "pageH_px": 1056,
+   "boxes": {
+    "photo": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 65.1,
+     "invisible": false
+    },
+    "sticker_bottom": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 11.6,
+     "bottom_overflow_pct_of_box": 29.3,
+     "clamped_shift_mm": 11.6,
+     "gap_to_bottom_mm": -11.6,
+     "invisible": false
+    },
+    "sticker_flush": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 27,
+     "bottom_overflow_pct_of_box": 68,
+     "clamped_shift_mm": 27,
+     "gap_to_bottom_mm": -27,
+     "invisible": false
+    },
+    "text_bottom": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 19.6,
+     "bottom_overflow_pct_of_box": 82.2,
+     "clamped_shift_mm": 19.6,
+     "gap_to_bottom_mm": -19.6,
+     "invisible": false
+    },
+    "title_top": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 230.7,
+     "invisible": false
+    }
+   },
+   "pair_gap_px": 20
+  }
+ },
+ "centre": {
+  "A5": {
+   "pageH_px": 1158,
+   "boxes": {
+    "photo": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 63.1,
+     "invisible": false
+    },
+    "sticker_bottom": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 10.5,
+     "invisible": false
+    },
+    "sticker_flush": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 0,
+     "invisible": false
+    },
+    "text_bottom": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 5.1,
+     "invisible": false
+    },
+    "title_top": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 176.7,
+     "invisible": false
+    }
+   },
+   "pair_gap_px": 20
+  },
+  "A4": {
+   "pageH_px": 1154,
+   "boxes": {
+    "photo": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 89.1,
+     "invisible": false
+    },
+    "sticker_bottom": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 14.8,
+     "invisible": false
+    },
+    "sticker_flush": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0.1,
+     "bottom_overflow_pct_of_box": 0.2,
+     "clamped_shift_mm": 0.1,
+     "gap_to_bottom_mm": -0.1,
+     "invisible": false
+    },
+    "text_bottom": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 7.1,
+     "invisible": false
+    },
+    "title_top": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 249.7,
+     "invisible": false
+    }
+   },
+   "pair_gap_px": 20
+  },
+  "Letter": {
+   "pageH_px": 1056,
+   "boxes": {
+    "photo": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 79.3,
+     "invisible": false
+    },
+    "sticker_bottom": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 12.2,
+     "invisible": false
+    },
+    "sticker_flush": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 1.7,
+     "bottom_overflow_pct_of_box": 4.4,
+     "clamped_shift_mm": 1.7,
+     "gap_to_bottom_mm": -1.7,
+     "invisible": false
+    },
+    "text_bottom": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 5.7,
+     "invisible": false
+    },
+    "title_top": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 233.6,
+     "invisible": false
+    }
+   },
+   "pair_gap_px": 10
+  }
+ },
+ "anchor": {
+  "A5": {
+   "pageH_px": 1158,
+   "boxes": {
+    "photo": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 63.1,
+     "invisible": false
+    },
+    "sticker_bottom": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 10.5,
+     "invisible": false
+    },
+    "sticker_flush": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 0,
+     "invisible": false
+    },
+    "text_bottom": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 5.1,
+     "invisible": false
+    },
+    "title_top": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 176.7,
+     "invisible": false
+    }
+   },
+   "pair_gap_px": 20
+  },
+  "A4": {
+   "pageH_px": 1154,
+   "boxes": {
+    "photo": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 89.6,
+     "invisible": false
+    },
+    "sticker_bottom": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 14.9,
+     "invisible": false
+    },
+    "sticker_flush": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 0,
+     "invisible": false
+    },
+    "text_bottom": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 7.2,
+     "invisible": false
+    },
+    "title_top": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 249.6,
+     "invisible": false
+    }
+   },
+   "pair_gap_px": 16
+  },
+  "Letter": {
+   "pageH_px": 1056,
+   "boxes": {
+    "photo": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 92.1,
+     "invisible": false
+    },
+    "sticker_bottom": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 15.3,
+     "invisible": false
+    },
+    "sticker_flush": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 0,
+     "invisible": false
+    },
+    "text_bottom": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 7.4,
+     "invisible": false
+    },
+    "title_top": {
+     "aspect_change_pct": 0,
+     "bottom_overflow_mm": 0,
+     "bottom_overflow_pct_of_box": 0,
+     "clamped_shift_mm": 0,
+     "gap_to_bottom_mm": 230.7,
+     "invisible": false
+    }
+   },
+   "pair_gap_px": -82
+  }
+ }
+}

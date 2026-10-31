@@ -1,0 +1,259 @@
+{
+ "pct@A5": {
+  "drag_50_right_100_up": {
+   "item_dx_screen_px": 50,
+   "item_dy_screen_px": -100,
+   "error_screen_px": 0
+  },
+  "resize_sticker_40_screen_px": {
+   "width_growth_screen_px": 40,
+   "aspect_kept": 0
+  },
+  "clamp_zone": {
+   "bottom_after_drag_past_edge_design_px": 1157.981,
+   "page_height": 1158,
+   "flush": true,
+   "then_100_screen_px_up_moved": 100
+  },
+  "keyboard": {
+   "dx_design_px": 1,
+   "dy_design_px": 10
+  }
+ },
+ "mm@A5": {
+  "drag_50_right_100_up": {
+   "item_dx_screen_px": 50,
+   "item_dy_screen_px": -100,
+   "error_screen_px": 0
+  },
+  "resize_sticker_40_screen_px": {
+   "width_growth_screen_px": 40,
+   "aspect_kept": 0
+  },
+  "clamp_zone": {
+   "bottom_after_drag_past_edge_design_px": 1157.981,
+   "page_height": 1158,
+   "flush": true,
+   "then_100_screen_px_up_moved": 100
+  },
+  "keyboard": {
+   "dx_design_px": 1,
+   "dy_design_px": 10
+  }
+ },
+ "centre@A5": {
+  "drag_50_right_100_up": {
+   "item_dx_screen_px": 50,
+   "item_dy_screen_px": -100,
+   "error_screen_px": 0
+  },
+  "resize_sticker_40_screen_px": {
+   "width_growth_screen_px": 40,
+   "aspect_kept": 0
+  },
+  "clamp_zone": {
+   "bottom_after_drag_past_edge_design_px": 1157.981,
+   "page_height": 1158,
+   "flush": true,
+   "then_100_screen_px_up_moved": 100
+  },
+  "keyboard": {
+   "dx_design_px": 1,
+   "dy_design_px": 10
+  }
+ },
+ "anchor@A5": {
+  "drag_50_right_100_up": {
+   "item_dx_screen_px": 50,
+   "item_dy_screen_px": -100,
+   "error_screen_px": 0
+  },
+  "resize_sticker_40_screen_px": {
+   "width_growth_screen_px": 40,
+   "aspect_kept": 0
+  },
+  "clamp_zone": {
+   "bottom_after_drag_past_edge_design_px": 1157.981,
+   "page_height": 1158,
+   "flush": true,
+   "then_100_screen_px_up_moved": 100
+  },
+  "keyboard": {
+   "dx_design_px": 1,
+   "dy_design_px": 10
+  }
+ },
+ "pct@A4": {
+  "drag_50_right_100_up": {
+   "item_dx_screen_px": 50,
+   "item_dy_screen_px": -100,
+   "error_screen_px": 0
+  },
+  "resize_sticker_40_screen_px": {
+   "width_growth_screen_px": 40,
+   "aspect_kept": 0
+  },
+  "clamp_zone": {
+   "bottom_after_drag_past_edge_design_px": 1153.991,
+   "page_height": 1154,
+   "flush": true,
+   "then_100_screen_px_up_moved": 100
+  },
+  "keyboard": {
+   "dx_design_px": 1,
+   "dy_design_px": 10
+  }
+ },
+ "mm@A4": {
+  "drag_50_right_100_up": {
+   "item_dx_screen_px": 50,
+   "item_dy_screen_px": -100,
+   "error_screen_px": 0
+  },
+  "resize_sticker_40_screen_px": {
+   "width_growth_screen_px": 40,
+   "aspect_kept": 0
+  },
+  "clamp_zone": {
+   "bottom_after_drag_past_edge_design_px": 1153.989,
+   "page_height": 1154,
+   "flush": true,
+   "then_100_screen_px_up_moved": 100
+  },
+  "keyboard": {
+   "dx_design_px": 1,
+   "dy_design_px": 10
+  }
+ },
+ "centre@A4": {
+  "drag_50_right_100_up": {
+   "item_dx_screen_px": 50,
+   "item_dy_screen_px": -100,
+   "error_screen_px": 0
+  },
+  "resize_sticker_40_screen_px": {
+   "width_growth_screen_px": 40,
+   "aspect_kept": 0
+  },
+  "clamp_zone": {
+   "bottom_after_drag_past_edge_design_px": 1153.989,
+   "page_height": 1154,
+   "flush": true,
+   "then_100_screen_px_up_moved": 100
+  },
+  "keyboard": {
+   "dx_design_px": 1,
+   "dy_design_px": 10
+  }
+ },
+ "anchor@A4": {
+  "drag_50_right_100_up": {
+   "item_dx_screen_px": 50,
+   "item_dy_screen_px": -100,
+   "error_screen_px": 0
+  },
+  "resize_sticker_40_screen_px": {
+   "width_growth_screen_px": 40,
+   "aspect_kept": 0
+  },
+  "clamp_zone": {
+   "bottom_after_drag_past_edge_design_px": 1153.989,
+   "page_height": 1154,
+   "flush": true,
+   "then_100_screen_px_up_moved": 100
+  },
+  "keyboard": {
+   "dx_design_px": 1,
+   "dy_design_px": 10
+  }
+ },
+ "pct@Letter": {
+  "drag_50_right_100_up": {
+   "item_dx_screen_px": 50,
+   "item_dy_screen_px": -100,
+   "error_screen_px": 0
+  },
+  "resize_sticker_40_screen_px": {
+   "width_growth_screen_px": 40,
+   "aspect_kept": 0
+  },
+  "clamp_zone": {
+   "bottom_after_drag_past_edge_design_px": 1055.9859999999999,
+   "page_height": 1056,
+   "flush": true,
+   "then_100_screen_px_up_moved": 100
+  },
+  "keyboard": {
+   "dx_design_px": 1,
+   "dy_design_px": 10
+  }
+ },
+ "mm@Letter": {
+  "drag_50_right_100_up": {
+   "item_dx_screen_px": 50,
+   "item_dy_screen_px": -100,
+   "error_screen_px": 0
+  },
+  "resize_sticker_40_screen_px": {
+   "handle_clipped_by_page": true
+  },
+  "clamp_zone": {
+   "bottom_after_drag_past_edge_design_px": 1056,
+   "page_height": 1056,
+   "flush": true,
+   "then_100_screen_px_up_moved": 100
+  },
+  "keyboard": {
+   "dx_design_px": 1,
+   "dy_design_px": 10
+  }
+ },
+ "centre@Letter": {
+  "drag_50_right_100_up": {
+   "item_dx_screen_px": 50,
+   "item_dy_screen_px": -100,
+   "error_screen_px": 0
+  },
+  "resize_sticker_40_screen_px": {
+   "width_growth_screen_px": 40,
+   "aspect_kept": 0
+  },
+  "clamp_zone": {
+   "bottom_after_drag_past_edge_design_px": 1056,
+   "page_height": 1056,
+   "flush": true,
+   "then_100_screen_px_up_moved": 100
+  },
+  "keyboard": {
+   "dx_design_px": 1,
+   "dy_design_px": 10
+  },
+  "second_pointer": {
+   "moved_by_other_pointer_design_px": 0,
+   "still_selected": true,
+   "main_pointer_still_drags_screen_px": 20
+  }
+ },
+ "anchor@Letter": {
+  "drag_50_right_100_up": {
+   "item_dx_screen_px": 50,
+   "item_dy_screen_px": -100,
+   "error_screen_px": 0
+  },
+  "resize_sticker_40_screen_px": {
+   "width_growth_screen_px": 40,
+   "aspect_kept": 0
+  },
+  "clamp_zone": {
+   "bottom_after_drag_past_edge_design_px": 1056,
+   "page_height": 1056,
+   "flush": true,
+   "then_100_screen_px_up_moved": 100
+  },
+  "keyboard": {
+   "dx_design_px": 1,
+   "dy_design_px": 10
+  }
+ },
+ "worst_pointer_error_screen_px": 0
+}

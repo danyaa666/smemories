@@ -1,0 +1,24 @@
+{
+ "doc_bytes": 129162,
+ "items": 504,
+ "gestures": 2000,
+ "depth": 100,
+ "snapshot_refs": {
+  "total_ms": 8,
+  "per_gesture_us": 4,
+  "heap_mb": 0.579,
+  "undo_100_steps_ms": 0
+ },
+ "snapshot_json": {
+  "total_ms": 376,
+  "per_gesture_us": 188,
+  "heap_mb": 24.393,
+  "undo_one_step_ms": 0.19
+ },
+ "command_stack": {
+  "total_ms": 7,
+  "per_gesture_us": 3,
+  "heap_mb": 0.062,
+  "operation_kinds_needing_an_inverse": "move/resize/rotate, add, delete, reorder (z), text edit, hide/show, background, paste of many, restore version (about 9)"
+ }
+}

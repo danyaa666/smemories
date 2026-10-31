@@ -1,0 +1,22 @@
+{
+  "name": "editor-spike",
+  "private": true,
+  "type": "module",
+  "description": "T-150 throw-away prototype of the layout editor (ADR 0004). Not part of the app, web/package.json or CI.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "measure": "node scripts/run-all.mjs"
+  },
+  "dependencies": {
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-moveable": "0.56.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.1.2",
+    "playwright": "1.64.0",
+    "pngjs": "^7.0.0",
+    "vite": "^8.3.3"
+  }
+}
