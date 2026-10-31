@@ -342,6 +342,7 @@ jobs:
       - run: npm test
       - run: npm run build
       - run: npm run check:api
+      - run: ../scripts/check-assets.sh # sticker, shape and frame pack: SVG safety and registry rules (T-151)
 
   security:
     runs-on: ubuntu-24.04
