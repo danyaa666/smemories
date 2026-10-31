@@ -42,7 +42,7 @@ Spec: .team/epics/E09-customisation-editor/08-customise-leave-guard-and-not-foun
 - 2026-10-31 10:01Z · human · accepted by owner (2026-10-31, block restored after an old board.py dropped it)
 
 ### T-150 — [E09] Spike: layout editor architecture and ADR 0004
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** spike
 - **Milestone:** M4
@@ -50,11 +50,11 @@ Spec: .team/epics/E09-customisation-editor/08-customise-leave-guard-and-not-foun
 - **Risk:** low
 - **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-150-e09-spike-layout-editor-architecture-and
 - **PR:** 148
-- **Updated:** 2026-10-31 10:43Z by dev
-- **Comments-seen:** 5
+- **Updated:** 2026-10-31 10:56Z by dev
+- **Comments-seen:** 6
 
 Spec: .team/epics/E09-customisation-editor/09-editor-architecture-spike.md (read it from the main checkout). Answers units/page sizes, drag-resize-rotate library, in-place Vietnamese text editing, undo technique and print parity with a prototype under docs/spikes/editor/.
 
@@ -74,6 +74,7 @@ Spec: .team/epics/E09-customisation-editor/09-editor-architecture-spike.md (read
   STAYS UNPROVEN (nobody here has it): real macOS Telex typing, real Safari/iOS (WebKit under Playwright only matches layout; no IME, no focus zoom), real Firefox IME, Android Gboard Telex, touch drag in Firefox/WebKit, screen readers.
   Result lines: no Go/integration/e2e/print-check run (docs and throw-away prototype only; no product code in the diff).
 - 2026-10-31 10:30Z · leader · Leader, for the rework: fix QA's two majors and the minors. (1) units-grid.png: key every Sheet portal by unit so each row shows its own sticker and text box; regenerate the picture and units.json. (2) Gestures must edit in the stored form (inverse of place) so a drag moves the item by the same displayed distance on A5, A4 and Letter in every unit: prove a drag on Letter and A4 (numbers in the ADR) or mark gestures-on-non-reference-sizes UNPROVEN in the ADR and say which unit needs it. Minors: correct the ADR mm row (58 px, cut, 106 of 150 px visible); re-run fitElement when fonts load (or state the Firefox 25-35% variance as a requirement for the runtime task); add the clip/overflow state to the Q3 proof and show the caret; add a pointerId filter. Keep the 'still unproven' list in the ADR (real macOS Telex, Safari/iOS, Firefox IME, Android Gboard Telex, touch on Firefox/WebKit, screen readers); the owner will check Telex by hand. Dev is on T-151 now: pick this up at the next wake-up (rework has priority). Merge origin/develop first.
+- 2026-10-31 10:56Z · dev · Rework, head 60075ad (origin/develop merged, no force-push). QA#1 major: Sheet portal host keyed per instance (useId); units-grid.png regenerated, each row shows its own sticker+text, drawn as stored (no clamp); mm Letter sticker cut (106 of 150 px). QA#2 major: gestures/keyboard now edit the box as drawn on the edited page, clamp, write back unplace (stored form; anchor keeps ay in item.st). New scripts/gestures.mjs + results/gestures.json: 4 units x A5/A4/Letter, pointer error 0.0 screen px, clamp-zone drag ends flush then 100 px up moves exactly 100, keyboard 1/10 px, second pointer ignored (pointerId filter); ADR Q2 table. Minors: ADR mm row 58 px/cut/106 of 150; fitElement re-run on fonts.ready+loadingdone (Firefox 157: stable 19.99/18.01 px, 0% vs print; engines still differ from Chromium by 0.5 px steps, stated as requirement); text parity now 10 cases incl. clip state 499 runes 220x70, all 0 px; caret visible, typing at end of clipped text scrolls the field (99 px), caret kept after cap rewrite. New finding: resize handle of an item flush to the page edge is clipped by .bk-inner (ADR risk 8; handles must be in an overlay outside the clip). Still unproven list kept (real Telex, Safari/iOS, Firefox IME, Gboard, touch FF/WebKit, screen readers, Alt+Arrow/AltGr on Win/Linux). Verify: npm run measure per README (or node scripts/gestures.mjs with npm run dev). Diff touches only docs/adr/0004-* and docs/spikes/editor/.
 
 ### T-151 — [E09] Asset pack and registry for stickers, shapes and frames
 - **Status:** MERGED
