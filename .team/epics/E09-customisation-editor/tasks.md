@@ -186,7 +186,7 @@ Spec: .team/epics/E09-customisation-editor/13-web-layout-runtime.md (read it fro
 #### Comments
 
 ### T-155 — [E09] Fix three stale Postman assertions in the customisation-editor collection
-- **Status:** TODO
+- **Status:** MERGED
 - **Priority:** P3
 - **Type:** test
 - **Milestone:** M4
@@ -195,13 +195,16 @@ Spec: .team/epics/E09-customisation-editor/13-web-layout-runtime.md (read it fro
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-31 15:30Z by leader
-- **Comments-seen:** 0
+- **Branch:** task/t-155-e09-fix-three-stale-postman-assertions-i
+- **PR:** https://github.com/danyaa666/smemories/pull/151
+- **Updated:** 2026-10-31 15:37Z by leader
+- **Comments-seen:** 3
 
 Spec: .team/epics/E09-customisation-editor/14-fix-stale-book-design-newman-steps.md (read it from the main checkout). Steps 17 and 18 assume navy-classic is not customisable (false since T-145)
 
 #### Comments
+- 2026-10-31 15:32Z · dev · Postman-only: steps 17 (own defaults: options null, design.themes[0]=navy) and 18 (lavender on navy-classic, still 400 ERROR_INVALID_DESIGN). Whole collection run twice on own compose project t155dev: 132 assertions, 0 failed (3 failed before). Run make reset-limits between runs (register rate limit). Head 1a78b64.
+- 2026-10-31 15:35Z · qa · Head 1a78b64 (PR #151). AC1: diff vs origin/develop touches only postman/customisation-editor.postman_collection.json (4 ins, 4 del; steps 17 name+assertion, 18 name+body). Fresh own compose project t155qa (mysql 13307, redis 16380, s3 19001, API 18080 built from head, SMEM_ENV=dev, migrations applied, users verified), make-reset-limits equivalent (rl keys deleted) before each run: newman run postman/customisation-editor.postman_collection.json twice back to back -> run1 requests 62/0 failed, test-scripts 62/0 failed, assertions 132 executed/0 failed; run2 identical 132/0. (A first run before verifying the two newman users showed ERROR_EMAIL_NOT_VERIFIED in steps 5/8; that is the documented setup step, not a defect.) AC2: step 18 still POSTs options.theme=lavender on navy-classic and asserts status 400 + ERROR_INVALID_DESIGN (both passed); lavender is a memory-book-only theme (embed/memory-book.json), so the refusal is real; step 17 now asserts template_id navy-classic, options null, design.themes[0]=navy (passed). Nothing deleted or weakened; no other assertion changed. Only PR CI pending for go/web at check time, security pass; e2e/integration/image skipped by design; no code/Go touched so make test-integration not applicable (Risk low, postman-only). Stack torn down (own project only).
+- 2026-10-31 15:37Z · leader · merged b2bc66e (PR #151, head 1a78b64); QA_PASS: collection 132 assertions, 0 failed, twice
 
 <!-- tasks:end -->
