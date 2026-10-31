@@ -1,6 +1,6 @@
 # E09 — Customisation and design editor (Canva-style, staged)
 
-**Status:** stage 1 built and merged 2026-10-30 (T-141..T-148, QA-verified exit check; owner acceptance pending for T-146..T-148); stage 2 planned 2026-10-31 (D-42, D-43; waiting for the owner to approve the plan, Q-064)   **Milestone(s):** M1b (guided customisation), M4 (free-layout editor)   **Owner decisions:** D-19, D-20, D-21 (README §4)
+**Status:** stage 1 built and merged 2026-10-30 (T-141..T-148, QA-verified exit check; owner acceptance pending for T-146..T-148); stage 2 plan approved 2026-10-31 (D-42, D-43, D-44), first tasks T-150..T-152   **Milestone(s):** M1b (guided customisation), M4 (free-layout editor)   **Owner decisions:** D-19, D-20, D-21 (README §4)
 
 ## Problem and users
 Students want their yearbook to look like theirs: move a photo, resize a title, remove a block, add a sticker, replace an image. The owner asked (2026-10-08) for a Canva-like experience: the site provides templates, gathers friends' submissions,

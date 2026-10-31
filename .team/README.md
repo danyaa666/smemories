@@ -10,17 +10,18 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 7 | T-023, T-024, T-025, T-031, T-050, T-151, T-152 |
+| BACKLOG | 5 | T-023, T-024, T-025, T-031, T-050 |
+| TODO | 3 | T-150, T-151, T-152 |
 | DONE | 135 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-137, T-138, T-139, T-140, T-141, T-142, T-143, T-144, T-145, T-146, T-147, T-149 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Epics (done/total):** E06-go-live 1/1; E09-customisation-editor 0/1; e09-customisation-editor 0/1; (unfiled) 134/147
+**Epics (done/total):** E06-go-live 1/1; E09-customisation-editor 0/3; (unfiled) 134/147
 
 **Awaiting your review (MERGED):** nothing
 
 **Open questions for you:** none
 
-_Board last written 2026-10-31 04:37Z_
+_Board last written 2026-10-31 10:00Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -754,6 +755,7 @@ Owner decisions (2026-10-06, `/team-init` interview). "Rejected" lists the optio
 | D-41 | **Guided customisation, first release (E09 stage 1):** colour themes and font pairs, show/hide and reorder sections, edit titles and fixed texts, swap images from a set shipped with the template. Pilot on Memory Book, then Navy Classic. Desktop and tablet first, phone usable but basic. The design is a set of validated choices (`book_design_tab`), not a template document, because the book is HTML printed by the browser (D-24). | Owner answers in chat 2026-10-30 (all three leader recommendations plus the optional image swap). Plan in `.team/epics/E09-customisation-editor/PRD.md` "Stage 1 plan"; tasks T-141..T-147. | Server-rendered PDF preview as the E09 outline said (dropped: D-24); both templates at once; phone-first | A second template needs its own tokens and print-check work; extra fonts add bytes (loaded on demand) |
 | D-42 | **Next milestone is the free-layout editor (M4, E09 stage 2) before go-live (M2).** | Owner answer in chat 2026-10-31 to Q-063 (option B; go-live and an owner trial were the alternatives). Stage 2 must be re-specified against the HTML-print architecture (D-24, ADR 0003; the stage 2 sketch in the E09 PRD still assumes a server-side Go renderer) and needs owner decisions on foundation, phone support, first-release scope and assets before tasks are dispatched (Q-064). Go-live tasks (T-023, T-024, T-025, T-031, T-050) stay in BACKLOG; their owner inputs are still needed whenever M2 starts. | Q-063 |
 | D-43 | **Free-layout editor (E09 stage 2): foundation and first release.** (a) A DOM editor on our own book renderer, with a small MIT library for drag, resize, rotate and snapping (react-moveable is the candidate, confirmed or replaced by the spike, ADR 0004); no canvas library, no paid SDK. (b) Phone: view and light edit (stage 1 screen); drag, resize and rotate on tablet (768 px) and desktop. (c) First release: move, resize, rotate and hide template elements; add text boxes, stickers and shapes; undo and redo, autosave and version history; student-uploaded background and decoration images. (d) Stickers, frames and shapes come from free-licence packs (CC0 or OFL) curated by us, one licence file per asset. | Owner answers in chat 2026-10-31 (AskUserQuestion, recommended option each time for foundation, phone and assets; all four first-release capabilities chosen). The editor and the print use the same React components, so they cannot disagree; Vietnamese typing (Telex, VNI) works in native text inputs. Plan: E09 PRD "Stage 2 plan". | Q-063, D-42 |
+| D-44 | **E09 stage 2 plan approved as written.** Layout layer on top of the template pages (editable elements, added text/sticker/shape/image items, backgrounds); notes pages flow by content, so students can decorate them and move the heading but not move individual notes; student image uploads stay in (T-152, high risk, owner approves before merge). First tasks T-150 (spike), T-151 (asset pack), T-152 (uploads). | Owner answer in chat 2026-10-31 (AskUserQuestion, "Approve as written"). | D-43, Q-064 |
 
 Leader decisions (low-risk, inside the approved stack):
 
