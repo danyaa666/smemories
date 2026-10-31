@@ -42,7 +42,7 @@ Spec: .team/epics/E09-customisation-editor/08-customise-leave-guard-and-not-foun
 - 2026-10-31 10:01Z · human · accepted by owner (2026-10-31, block restored after an old board.py dropped it)
 
 ### T-150 — [E09] Spike: layout editor architecture and ADR 0004
-- **Status:** QA_FAIL
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** spike
 - **Milestone:** M4
@@ -50,10 +50,10 @@ Spec: .team/epics/E09-customisation-editor/08-customise-leave-guard-and-not-foun
 - **Risk:** low
 - **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** dev
 - **Branch:** task/t-150-e09-spike-layout-editor-architecture-and
 - **PR:** 148
-- **Updated:** 2026-10-31 10:30Z by qa
+- **Updated:** 2026-10-31 10:43Z by dev
 - **Comments-seen:** 5
 
 Spec: .team/epics/E09-customisation-editor/09-editor-architecture-spike.md (read it from the main checkout). Answers units/page sizes, drag-resize-rotate library, in-place Vietnamese text editing, undo technique and print parity with a prototype under docs/spikes/editor/.
@@ -76,7 +76,7 @@ Spec: .team/epics/E09-customisation-editor/09-editor-architecture-spike.md (read
 - 2026-10-31 10:30Z · leader · Leader, for the rework: fix QA's two majors and the minors. (1) units-grid.png: key every Sheet portal by unit so each row shows its own sticker and text box; regenerate the picture and units.json. (2) Gestures must edit in the stored form (inverse of place) so a drag moves the item by the same displayed distance on A5, A4 and Letter in every unit: prove a drag on Letter and A4 (numbers in the ADR) or mark gestures-on-non-reference-sizes UNPROVEN in the ADR and say which unit needs it. Minors: correct the ADR mm row (58 px, cut, 106 of 150 px visible); re-run fitElement when fonts load (or state the Firefox 25-35% variance as a requirement for the runtime task); add the clip/overflow state to the Q3 proof and show the caret; add a pointerId filter. Keep the 'still unproven' list in the ADR (real macOS Telex, Safari/iOS, Firefox IME, Android Gboard Telex, touch on Firefox/WebKit, screen readers); the owner will check Telex by hand. Dev is on T-151 now: pick this up at the next wake-up (rework has priority). Merge origin/develop first.
 
 ### T-151 — [E09] Asset pack and registry for stickers, shapes and frames
-- **Status:** READY_FOR_QA
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -87,14 +87,21 @@ Spec: .team/epics/E09-customisation-editor/09-editor-architecture-spike.md (read
 - **Assignee:** —
 - **Branch:** task/t-151-e09-asset-pack-and-registry-for-stickers
 - **PR:** https://github.com/danyaa666/smemories/pull/149
-- **Updated:** 2026-10-31 10:43Z by dev
-- **Comments-seen:** 2
+- **Updated:** 2026-10-31 10:54Z by leader
+- **Comments-seen:** 4
 
 Spec: .team/epics/E09-customisation-editor/10-sticker-shape-frame-asset-pack.md (read it from the main checkout). 48+ CC0/OFL/authored SVG assets, registry (web + Go), SVG safety check script, docs/assets.md.
 
 #### Comments
 - 2026-10-31 10:00Z · leader · Owner approved the stage 2 plan on 2026-10-31 (D-44). Read the spec from the main checkout before you start.
 - 2026-10-31 10:43Z · dev · PR #149 head c6bec17. 51 assets (25 authored, 26 Openclipart CC0), registry + Go copy, check-assets.sh in CI web job, AssetSvg, dev-only contact sheet /dev/assets. QA: spot-check 5 licences/<id>.txt against the Openclipart pages, plant a bad svg in scripts/check-assets.sh, run web+Go checks, open /dev/assets under npm run dev. Gaps: print-check and integration not run (no book/store change); spec field list extended with licence_file; file is index.tsx not index.ts.
+- 2026-10-31 10:53Z · qa · QA_PASS T-151, PR #149 head c6bec17 (branch == PR head). CI on that head: go pass 4m54s, web pass, security pass (e2e/go-integration/image skipped by D-37/D-38).
+  LICENCE (the point): fetched live Openclipart pages for ALL 26 curated clips (not just 8): every page carries the creativecommons.org/publicdomain/zero/1.0 licence metadata, no pd_issue tag on any, the artist on the page equals registry author for all 26, source_url resolves (HTTP 200), titles match the licence-file headers. openclipart.org/share FAQ re-read: 'We use the Creative Commons Zero 1.0 Public Domain License every time an artist uploads'. date_checked 2026-10-31 = today, plausible. Licence files: 26 per-id txt + authored.txt (27 files), content matches registry. Nothing non-CC0 found, no blocker. Non-blocking: three clips are remixes (sticker.graduation-cap remix of GDJ; smiling-star derived from PublicDomainPictures.net; cap-and-book from publicdomainvectors.org) so CC0 there rests on the upstream PD claim as Openclipart states it; acceptable. Licence txt files are not machine-checked for the word CC0 (script only checks they exist); minor.
+  SVG SAFETY: 51 SVGs pass; grep finds no image/text/style/base64 in any; no dangerouslySetInnerHTML in assets/. Planted on a scratch copy, scripts/check-assets.sh exits 1 with a named problem for each: <script>, <image href=http://...>, onclick attr, 21207-byte file (max 20480), url(http..) paint, <foreignObject>, SVG not listed in registry, deleted licence file, registry entry with licence field removed, extra svg file. Clean tree: 'check-assets ok: 51 assets', rc 0. Wired into CI web job (ci.yml:345).
+  AC1 51 assets (25 authored, 26 CC0; 34 sticker/11 shape/6 frame), both labels, licence data+files: PASS. AC2 scripts/sync-assets.sh leaves internal/assets/registry.json byte-identical (cmp), TestRegistryMatchesWeb + web registry test pass: PASS.
+  AC3 npm run dev on :5287, Playwright/Chromium at /dev/assets: 51 cells, 102 inline SVGs (plain+tinted), 0 empty getBBox, 0 console errors; screenshot viewed, all render, authored ones recolour, curated keep own colours; PR has docs/assets/contact-sheet.png. AC4 built the branch and merge-base 474ce11: Book-i87JpjYm.js and Book-DWBJ3fHA.css byte-identical (shasum), Customise/ClassBook same size, index js 468,563 -> 468,574 (+11 B, dev-route constant), no asset chunk in dist: PASS.
+  AC5 web: lint+prettier clean, typecheck clean, i18n ok, vitest 36 files / 696 tests pass, build ok; go test -count=1 ./... all ok; make print-check 163/163 pass 0 fail (unchanged). make test-integration not run: no store/migration change, risk low. docs/assets.md (98 lines: layout, entry fields, SVG rules, licence rules, add steps, server use, sources table of all 26) and THIRD_PARTY_NOTICES.md section accurate vs registry. Spec deviations noted by dev (licence_file field, index.tsx) are fine.
+- 2026-10-31 10:54Z · leader · merged 8ad8c0c. Review: 51 assets (25 authored CC0, 26 Openclipart CC0), registry in web and embedded Go copy kept in sync by scripts/sync-assets.sh, check-assets.sh in the web job, AssetSvg module lazily loaded, contact sheet at /dev/assets (dev only), docs/assets.md and THIRD_PARTY_NOTICES.md. QA: all 26 Openclipart pages re-read (CC0 1.0 stated, artists match, none tagged pd_issue); check-assets.sh fails on 10 planted faults; print bundle byte-identical; vitest 696, go test, print-check 163/163; go/web/security green on c6bec17. For owner to check: flip through docs/assets/contact-sheet.png; 3 clips (graduation-cap, smiling-star, cap-and-book) are Openclipart remixes whose CC0 rests on the upstream public-domain claim: say if you want them replaced by authored ones.
 
 ### T-152 — [E09] Backend: student-uploaded design images (backgrounds and decorations)
 - **Status:** TODO
