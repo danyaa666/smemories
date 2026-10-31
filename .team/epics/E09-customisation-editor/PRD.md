@@ -1,6 +1,6 @@
 # E09 — Customisation and design editor (Canva-style, staged)
 
-**Status:** stage 1 built and merged 2026-10-30 (T-141..T-148, QA-verified exit check; owner acceptance pending for T-146..T-148); stage 2 sketch   **Milestone(s):** M1b (guided customisation), M4 (free-layout editor)   **Owner decisions:** D-19, D-20, D-21 (README §4)
+**Status:** stage 1 built and merged 2026-10-30 (T-141..T-148, QA-verified exit check; owner acceptance pending for T-146..T-148); stage 2 planned 2026-10-31 (D-42, D-43; waiting for the owner to approve the plan, Q-064)   **Milestone(s):** M1b (guided customisation), M4 (free-layout editor)   **Owner decisions:** D-19, D-20, D-21 (README §4)
 
 ## Problem and users
 Students want their yearbook to look like theirs: move a photo, resize a title, remove a block, add a sticker, replace an image. The owner asked (2026-10-08) for a Canva-like experience: the site provides templates, gathers friends' submissions,
@@ -25,7 +25,7 @@ Slots stay the binding between a document and the data (profile fields, photos, 
 
 ## Scope and requirements (outline, to be specified per stage)
 - Stage 1: **superseded by the section "Stage 1 plan" below** (the original outline assumed a server-side PDF render; since D-24 the book is HTML printed by the browser).
-- Stage 2: an editor library spike first (MIT-licensed Konva or Fabric.js versus paid SDKs such as Polotno or CE.SDK; paid services need an owner decision, licences to verify at that time); text editing through a DOM text field laid over the canvas (Vietnamese input methods Telex and VNI are the known failure point of canvas editors);
+- Stage 2: **superseded by the section "Stage 2 plan" below** (the outline assumed a canvas editor and a Go renderer; both changed). Original outline: an editor library spike first (MIT-licensed Konva or Fabric.js versus paid SDKs such as Polotno or CE.SDK; paid services need an owner decision, licences to verify at that time); text editing through a DOM text field laid over the canvas (Vietnamese input methods Telex and VNI are the known failure point of canvas editors);
   fonts shipped to the browser from the same files the PDF uses (Vietnamese-capable only, D-18); element palette and property panel; layers; undo and redo; snapping and guides; safe-margin overlay; asset library with licensed, curated stickers and frames (OFL/CC0 or owner-made, licence file per asset); strict validation of every document and asset on the server (limits, allowed asset ids only, SVG not accepted unless sanitised); autosave with versions; parity tests proving that the editor's text fitting and the PDF agree; mobile strategy (phone view-and-light-edit first, full editing on larger screens).
 - Non-functional: the export budget of T-014 holds for edited documents; a document never references data the student does not own; accessibility basics (keyboard moves, labels, contrast).
 
@@ -67,9 +67,46 @@ flowchart LR
 
 **Tasks (board, milestone M1b).** T-141 design model and API; T-142 web runtime with themes and fonts (Memory Book pilot); T-143 sections, texts and images in the runtime; T-144 the customise screen; T-145 Navy Classic; T-146 the class book applies each student's design; T-147 end-to-end journey, print-check coverage and docs. Order: 141 → 142 → 143 → 144 → 145 → 146 → 147.
 
+## Stage 2 plan (2026-10-31)
+
+**Owner decisions (D-42, D-43).** The free-layout editor comes before go-live. DOM editor on our own book renderer (no canvas library, no paid SDK); phone = view and light edit, drag/resize/rotate from 768 px up; first release = move, resize, rotate and hide template elements, add text boxes, stickers and shapes, undo/redo, autosave and version history, and student-uploaded background and decoration images; stickers and frames from free-licence (CC0/OFL) packs curated by us.
+
+**What changed from the outline.** The book is HTML printed by the browser (D-24, ADR 0003), so the "document the Go renderer draws" of the outline does not exist. Templates are hand-written React components (`web/src/book/templates/`) that flow content (profile fields, many notes pages). The editor is therefore a **layout layer on top of the template pages**, rendered by the same components that print, so the editor view and the printed page cannot disagree.
+
+**The model (the key decision; the spike confirms the details).**
+- A student's layout document is stored per yearbook (`book_layout_tab`, `layout_json` at most 128 KiB, `version` for optimistic concurrency, no FK) next to the stage 1 design (`book_design_tab` stays; the layout does not replace themes, fonts or section choices, it adds to them).
+- The template manifest's `design` block gets a `layout` part: the **page kinds** the template has (Memory Book: `cover`, `profile`, `notes`, `back`; `notes` repeats on every notes page), the **editable elements** of each kind (ids the template code marks, for example `cover.photo`, `cover.title`), and the safe margin.
+- The document per page kind has: `overrides` (box x, y, w, h, rotation and `hidden` for editable elements; a slot moves but never changes its data source), `items` (added elements: `text` with plain text, font set choice, size, colour, alignment; `sticker` and `shape` by registry id; `image` by uploaded media id; each with a box, rotation and z-order) and `background` (a registry id, an uploaded media id, or none).
+- Everything is validated on the server against the manifest and the asset registry: unknown ids rejected, limits (about 30 items per page kind, 150 per book, text 500 runes, boxes inside a generous bound, document 128 KiB), plain text only (React text, never HTML), stickers only from our registry (no user SVG), images only the owner's own media ids. Reads ignore what no longer validates.
+- **Notes pages flow by content.** The student can decorate them (background, stickers, text and images repeated on every notes page) and move the heading, but cannot move individual notes. This is the one real limit of the editor and needs the owner's OK (Q-064).
+- Class book (T-146 pattern): each student's layout applies to their own pages and counts in the 8 MiB cap; uploaded images are readable by the class admin through the same admin read path (privacy review updated, D-36).
+- Undo/redo is a snapshot stack in the browser (a document is at most 128 KiB). Autosave (debounced) sends `base_version`; a second tab gets `409` with the newer document. Versions: the last 20 saved versions per book (leader default), restore creates a new version.
+- Uploads reuse the photo pipeline (T-009/T-105: decode, strip metadata, re-encode, limits) with a new purpose `design`, counted in the same quotas (200 photos per yearbook, 500 MiB per user) unless the spike or QA shows a need for separate ones.
+- Performance budgets: the editor stays smooth with 100 items on a mid-range tablet (4x CPU throttle in Chrome, 30 frames/s or better while dragging); the print time of a book with a layout is within 10% of one without; print-check covers layouts on A5, A4 and Letter.
+
+```mermaid
+flowchart LR
+    M[Manifest: page kinds, editable elements, safe margin] --> V[Server validates layout]
+    A[Asset registry: stickers, shapes, frames] --> V
+    E[Editor: select, move, resize, rotate, add, undo] --> V
+    U[Own images: media pipeline, purpose design] --> V
+    V --> L[(book_layout_tab)]
+    L --> B[book-data/get: data + design + layout]
+    B --> R[Template components + layout layer]
+    R --> P[Editor view = browser print]
+```
+
+**Sub-stages and tasks (board, milestone M4).** Specs are written just in time (the spike decides units, library and text-editing technique). Sketch:
+- *2a Foundation:* spike and ADR 0004 (T-150); sticker, shape and frame asset pack with registry and licence check (T-151); design-image uploads in the media pipeline (T-152, high risk); layout document model and API (after the spike); web layout runtime in the book (after the model); Navy Classic page kinds and editable elements.
+- *2b Editor:* editor shell and route (page strip, zoom, selection, property panel, safe-margin overlay); move, resize, rotate with snapping and guides; text boxes (in-place editing, Vietnamese IME, fonts); sticker, shape and image palette, z-order; undo/redo, autosave and conflict handling; version history and restore.
+- *2c Integration and hardening:* class book applies layouts (and uploaded images, privacy review); phone mode (view and light edit) and tablet touch; accessibility (keyboard move/resize, labels, focus, announcements) and i18n; abuse limits and security review of documents and uploads; journey, print-check coverage, performance budgets and docs.
+About 18 tasks. Order: T-150 and T-151 and T-152 can start in parallel; the model waits for the spike.
+
 ## Risks and open questions
 - Screen and PDF can disagree (text wrapping and shrinking). Mitigation: preview is the server-rendered PDF in stage 1; stage 2 shares the layout rules and has parity tests; limit editor effects to what the renderer supports.
-- Vietnamese input in canvas editors (stage 2 spike must prove it).
+- Vietnamese input (Telex, VNI) in the in-place text editor: the spike must prove it with composition events and by hand.
+- One layout for three page sizes (A5, A4 and Letter differ in aspect ratio): the spike fixes the unit and the rule; mis-scaled items would print differently from the editor.
+- Uploaded images are new personal data (class admins can read them in a class book): privacy review and quotas before release (T-152 is high risk).
 - Phones: canvas editing on small screens is hard; decide the level of support in the stage 2 spec.
 - Asset licensing and storage size; user-uploaded images follow the T-009 pipeline.
 - Cost: stage 2 is about 20 or more tasks. Owner questions to raise at stage 2 start: editor SDK versus building on Konva/Fabric (cost, licence), mobile support level, asset library source, version retention, and whether M4 goes before the class yearbook (M3).
@@ -80,4 +117,4 @@ flowchart LR
 - Stage 2: a student adds, removes, moves, resizes and replaces elements in the browser on desktop and tablet, types Vietnamese correctly, undoes and redoes, and the exported PDF matches the editor in an automated parity test.
 
 ## Task index
-Stage 1 tasks: T-141 .. T-148 (T-148 is the leave-guard follow-up) (specs `01-..` to `07-..` in this folder). The foundation tasks of this direction are in other epics: T-043 (field catalogue), T-034 (answers by field id), T-044 (templates declare fields), T-038 (format v2). Stage 2 tasks are specified when M4 becomes "Now" (README §2).
+Stage 2 tasks: T-150 .. (see the "Stage 2 plan"). Stage 1 tasks: T-141 .. T-148 (T-148 is the leave-guard follow-up) (specs `01-..` to `07-..` in this folder). The foundation tasks of this direction are in other epics: T-043 (field catalogue), T-034 (answers by field id), T-044 (templates declare fields), T-038 (format v2). Stage 2 tasks are specified when M4 becomes "Now" (README §2).

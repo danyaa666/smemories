@@ -10,18 +10,17 @@
 <!-- summary:start -->
 | Status | # | Tasks |
 |---|---:|---|
-| BACKLOG | 5 | T-023, T-024, T-025, T-031, T-050 |
-| MERGED | 4 | T-146, T-147, T-149, T-148 |
-| DONE | 132 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-137, T-138, T-139, T-140, T-141, T-142, T-143, T-144, T-145 |
+| BACKLOG | 7 | T-023, T-024, T-025, T-031, T-050, T-151, T-152 |
+| DONE | 135 | T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-015, T-016, T-017, T-018, T-020, T-021, T-022, T-026, T-027, T-028, T-029, T-030, T-032, T-033, T-034, T-035, T-036, T-037, T-038, T-043, T-044, T-045, T-046, T-047, T-048, T-049, T-051, T-052, T-053, T-054, T-056, T-057, T-058, T-059, T-060, T-061, T-062, T-063, T-064, T-065, T-066, T-067, T-068, T-069, T-070, T-071, T-072, T-073, T-074, T-075, T-076, T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-085, T-086, T-087, T-088, T-089, T-090, T-091, T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-099, T-100, T-101, T-102, T-103, T-104, T-105, T-106, T-107, T-108, T-109, T-110, T-111, T-112, T-113, T-114, T-115, T-116, T-117, T-118, T-119, T-120, T-121, T-122, T-123, T-124, T-125, T-126, T-127, T-128, T-129, T-130, T-131, T-132, T-133, T-134, T-135, T-136, T-137, T-138, T-139, T-140, T-141, T-142, T-143, T-144, T-145, T-146, T-147, T-149 |
 | CANCELLED | 8 | T-014, T-019, T-039, T-040, T-041, T-042, T-055, T-084 |
 
-**Epics (done/total):** E06-go-live 1/1; E09-customisation-editor 1/1; (unfiled) 134/147
+**Epics (done/total):** E06-go-live 1/1; E09-customisation-editor 0/1; e09-customisation-editor 0/1; (unfiled) 134/147
 
-**Awaiting your review (MERGED):** T-146 ([E09] Class book applies each student's design); T-147 ([E09] Customisation journey, print-check coverage and docs); T-149 ([E06] CI: raise the e2e Print check timeout (suite outgrew 6 minutes)); T-148 ([E09] Customise screen: guard browser Back, ask before a template change, fast NotFound)
+**Awaiting your review (MERGED):** nothing
 
-**Open questions for you:** Q-063 (What comes after guided customisation: go-live (A), free-layout editor (B) or an owner trial (C)?)
+**Open questions for you:** none
 
-_Board last written 2026-10-30 13:55Z_
+_Board last written 2026-10-31 04:37Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
@@ -687,11 +686,11 @@ D. Something else (tell me).
 My recommendation: A. Everything users can touch is built; going live turns the work into something you can show and test with real friends, and the feedback should steer B and C. If you want to keep building for a while before the AWS setup, B is the next best, because it needs nothing from you.
 
 ### Q-063 — What comes after guided customisation: go-live (A), free-layout editor (B) or an owner trial (C)?
-- **Status:** OPEN
+- **Status:** RESOLVED
 - **Asked:** 2026-10-30 13:20Z
 - **Blocks:** —
 - **Recommendation:** A: start M2 go-live; trial stage 1 yourself in parallel (C)
-- **Answer:** _(pending)_
+- **Answer:** B - free-layout editor (owner, chat 2026-10-31)
 
 **Context.** E09 stage 1 (colour themes, font sets, show/hide and reorder sections, editable titles and texts, swappable cover image, for Memory Book and Navy Classic, in the personal and the class book) is merged except T-147 (journey and docs) and T-148 (leave guard), both in QA now. When they merge the build pipeline will hold only go-live tasks (T-023, T-024, T-025, T-031, T-050), and those need inputs only you can give.
 
@@ -753,6 +752,8 @@ Owner decisions (2026-10-06, `/team-init` interview). "Rejected" lists the optio
 | D-39 | **Next milestone: M1b guided customisation (epic E09 stage 1), before go-live.** Go-live (M2) waits; the free-layout editor (M4) comes later. | Owner answer to Q-062 on 2026-10-30 (the leader had recommended go-live first). Stage 1 needs nothing from the owner; it keeps the HTML print export (D-24): the design copy drives the web templates and the browser prints it. | Go live first | Go-live inputs (domain, AWS account, final legal texts) stay open longer; real users arrive later, so feedback on the product arrives later |
 | D-40 | **Class privacy points settled:** (a) 18+ stays and is stated on the class create and join screens; (b) the friend note form tells the friend that a class admin may see the note if it goes into a class book; (c) a departed (left, removed or demoted) admin's active invite links are revoked automatically. | Owner answer to Q-060 on 2026-10-30, all three leader recommendations taken. Tasks T-139 (a, b) and T-140 (c). The sign-off of `docs/class-privacy-review.md` section 8 stays with the owner until go-live. | (a) allow younger users with parental consent; (b) leave it to the privacy policy; (c) leave links live until they expire | A younger user may still sign up by ignoring the line (the terms forbid it); b adds one sentence to maintain in two languages |
 | D-41 | **Guided customisation, first release (E09 stage 1):** colour themes and font pairs, show/hide and reorder sections, edit titles and fixed texts, swap images from a set shipped with the template. Pilot on Memory Book, then Navy Classic. Desktop and tablet first, phone usable but basic. The design is a set of validated choices (`book_design_tab`), not a template document, because the book is HTML printed by the browser (D-24). | Owner answers in chat 2026-10-30 (all three leader recommendations plus the optional image swap). Plan in `.team/epics/E09-customisation-editor/PRD.md` "Stage 1 plan"; tasks T-141..T-147. | Server-rendered PDF preview as the E09 outline said (dropped: D-24); both templates at once; phone-first | A second template needs its own tokens and print-check work; extra fonts add bytes (loaded on demand) |
+| D-42 | **Next milestone is the free-layout editor (M4, E09 stage 2) before go-live (M2).** | Owner answer in chat 2026-10-31 to Q-063 (option B; go-live and an owner trial were the alternatives). Stage 2 must be re-specified against the HTML-print architecture (D-24, ADR 0003; the stage 2 sketch in the E09 PRD still assumes a server-side Go renderer) and needs owner decisions on foundation, phone support, first-release scope and assets before tasks are dispatched (Q-064). Go-live tasks (T-023, T-024, T-025, T-031, T-050) stay in BACKLOG; their owner inputs are still needed whenever M2 starts. | Q-063 |
+| D-43 | **Free-layout editor (E09 stage 2): foundation and first release.** (a) A DOM editor on our own book renderer, with a small MIT library for drag, resize, rotate and snapping (react-moveable is the candidate, confirmed or replaced by the spike, ADR 0004); no canvas library, no paid SDK. (b) Phone: view and light edit (stage 1 screen); drag, resize and rotate on tablet (768 px) and desktop. (c) First release: move, resize, rotate and hide template elements; add text boxes, stickers and shapes; undo and redo, autosave and version history; student-uploaded background and decoration images. (d) Stickers, frames and shapes come from free-licence packs (CC0 or OFL) curated by us, one licence file per asset. | Owner answers in chat 2026-10-31 (AskUserQuestion, recommended option each time for foundation, phone and assets; all four first-release capabilities chosen). The editor and the print use the same React components, so they cannot disagree; Vietnamese typing (Telex, VNI) works in native text inputs. Plan: E09 PRD "Stage 2 plan". | Q-063, D-42 |
 
 Leader decisions (low-risk, inside the approved stack):
 
@@ -6419,7 +6420,7 @@ Spec: .team/epics/E09-customisation-editor/05-navy-classic-customisable.md.
 - 2026-10-30 09:54Z · human · accepted by owner
 
 ### T-146 — [E09] Class book applies each student's design
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1b
@@ -6430,7 +6431,7 @@ Spec: .team/epics/E09-customisation-editor/05-navy-classic-customisable.md.
 - **Assignee:** —
 - **Branch:** task/t-146-e09-class-book-applies-each-student-s-de
 - **PR:** https://github.com/danyaa666/smemories/pull/145
-- **Updated:** 2026-10-30 12:32Z by leader
+- **Updated:** 2026-10-30 20:44Z by human
 - **Comments-seen:** 4
 
 Spec: .team/epics/E09-customisation-editor/06-class-book-applies-designs.md.
@@ -6447,9 +6448,10 @@ Spec: .team/epics/E09-customisation-editor/06-class-book-applies-designs.md.
   AC4: lint/vet/race/web/print-check done as above. Manual full CI run 41052503585 on head 03f42df: web, go, security, go-integration, image = success; e2e = FAILURE, but only because the 'Print check' step hit its timeout-minutes: 6 in ci.yml (it had passed 42 of 53 suites, no test failure). Not caused by T-146: the T-146 diff does not touch ci.yml and adds about 4 s; the suite already took 319 s for 94 tests on the T-142 manual run (40997028070) and has grown to 163 tests (313 s on my machine, slower on CI runners). LEADER ACTION: raise timeout-minutes of the Print check step (e.g. 12) or split the suite, otherwise every manual CI run goes red on e2e. PR run on 5970989 (go, web, security) was still in progress when I finished; the previous PR run on 03f42df was green.
   Non-blocking: docs/e2e.md class journey section does not mention the new step 7b (docs are not mine to edit); a visual side-by-side with each customise preview was not done by eye, the contact sheet plus automated look assertions stand in for it.
 - 2026-10-30 12:32Z · leader · merged 5334c1c. Review: class-book/get returns each member's resolved design to the class admin only, counted in the 8 MiB cap (reserve 16 KiB), class print applies each design to that student's pages; diff matches the spec; docs/class-permissions, class-privacy-review and book-export updated. QA: make test-integration pass (own compose project, old MinIO on the main stack), check-class-matrix 21 ops ok, print-check 163/0, e2e 6/0 (QA added class journey step 7b: 403 for students A and B), vitest 675; go/web/security green on 5970989 (go re-run once after a CI golangci-lint install failure); manual full run 41052503585 all green except e2e Print check step timeout -> T-149. For owner to check: print a real class with several customised students; class-privacy-review section 8 sign-off still open.
+- 2026-10-30 20:44Z · human · accepted by owner
 
 ### T-147 — [E09] Customisation journey, print-check coverage and docs
-- **Status:** MERGED
+- **Status:** DONE
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M1b
@@ -6460,7 +6462,7 @@ Spec: .team/epics/E09-customisation-editor/06-class-book-applies-designs.md.
 - **Assignee:** —
 - **Branch:** task/t-147-e09-customisation-journey-print-check-co
 - **PR:** https://github.com/danyaa666/smemories/pull/147
-- **Updated:** 2026-10-30 13:55Z by leader
+- **Updated:** 2026-10-30 20:44Z by human
 - **Comments-seen:** 8
 
 Spec: .team/epics/E09-customisation-editor/07-journey-print-check-docs.md.
@@ -6493,6 +6495,7 @@ Spec: .team/epics/E09-customisation-editor/07-journey-print-check-docs.md.
   Result lines on head 65a16d3: make print-check: tests 163 pass 163 fail 0 (EXIT 0). npm test (vitest) 35 files, 675/675. tsc 0 errors, eslint+prettier ok, lint:i18n ok, check:api ok, go build ok. make test-integration with SMEM_TEST_S3_ENDPOINT=http://127.0.0.1:29010 (own stack's S3; default :9000 hits the main stack's old store and 403s on CreateBucket, env only, not the PR): exit 0, 31 packages ok. Stage 1 hand checks (reorder, live preview, PDF vs preview, reset, template change) were done on 497f2b9 and passed; unchanged code paths since.
   Non-blocking: worktree .env is shared with the dev's (compose project t147rework); I stopped it with make down (volumes kept).
 - 2026-10-30 13:55Z · leader · merged 9220f43. Review: e2e journey design.spec.mjs, print-check coverage table, docs/templates.md 'Adding a theme' (verified by QA on a scratch checkout), contrast tests now derived from the manifests, dedicated SMEM_E2E_RATE_REGISTER_PER_HOUR for the test API. QA: plain make e2e 7/7 from a .env.example copy, print-check 163/163, vitest 675, make test-integration 31 ok (own stack), deliberate break fails the journey at step 6, stage 1 exit items checked by hand on Memory Book and Navy Classic; go/web/security green on 65a16d3, manual full run 41057558857 e2e/web/security/image green (go job: golangci-lint install flake). For owner to check: run through the stage 1 exit by hand on a real book.
+- 2026-10-30 20:44Z · human · accepted by owner
 
 <!-- tasks:end -->
 

@@ -10,7 +10,7 @@ The epic code lives in the title and in the label E##_T-nnn used by TASKS.md.
 import os, re, subprocess, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-BOARD = [sys.executable, "/Users/unisoft/.claude/plugins/cache/claude-agent-team/agent-team/0.3.0/scripts/board.py", "--as", "leader"]
+BOARD = [sys.executable, "/Users/unisoft/GolandProjects/claude-agent-team/scripts/board.py", "--as", "leader"]
 README = os.path.join(ROOT, ".team", "README.md")
 
 def parse():
