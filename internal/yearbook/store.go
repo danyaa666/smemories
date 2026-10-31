@@ -379,14 +379,14 @@ func templateOf(y *Yearbook) string {
 }
 
 // mediaRow resolves a public media id to its row id and checks that the photo belongs to the book (there is no
-// foreign key to do it); nil stays NULL. The row is share-locked, so a concurrent delete of the photo (which clears
+// foreign key to do it) and is a photo, not a design image (T-152: purpose 'photo' = media.PurposePhoto); nil stays NULL. The row is share-locked, so a concurrent delete of the photo (which clears
 // the references first) waits for this transaction instead of leaving a dangling reference.
 func mediaRow(ctx context.Context, tx *sql.Tx, bookID uint64, publicID *string) (sql.NullInt64, error) {
 	if publicID == nil {
 		return sql.NullInt64{}, nil
 	}
 	var id int64
-	err := tx.QueryRowContext(ctx, `SELECT id FROM media_tab WHERE yearbook_id = ? AND public_id = ? FOR SHARE`, bookID, *publicID).Scan(&id)
+	err := tx.QueryRowContext(ctx, `SELECT id FROM media_tab WHERE yearbook_id = ? AND public_id = ? AND purpose = 'photo' FOR SHARE`, bookID, *publicID).Scan(&id)
 	if errors.Is(err, sql.ErrNoRows) {
 		return sql.NullInt64{}, invalid("media")
 	}

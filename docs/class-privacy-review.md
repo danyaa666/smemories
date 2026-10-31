@@ -16,6 +16,7 @@ is **not given yet**. The contract it reviews is [class-permissions.md](class-pe
 | Class pages (intro, teachers, events, superlatives, custom): plain text written by an admin | `class_page_tab` | whoever the admin names in the text |
 | **Not stored, only shown (assembled on read):** the student's profile, approved notes (with the authors' names, relationships, messages, signatures) and the photos of the profile and of approved notes | the member's own yearbook (`class-book/get`, `media/get-content`) | the student and **the friends who wrote notes** |
 | **Design choices and fixed-text edits** (T-146): the student's resolved design (theme, font set, section order and hidden sections, replaced titles and texts, picture choices), shown only to the class admin in `class-book/get` | the member's own `book_design_tab` row, read as the book's owner | the student: the only free text in it is what they typed into the template's text slots (titles), which they chose to put in their book; no other personal field is added |
+| **Design images** (T-152, D-43): pictures the student uploads as a background or decoration for their own book (`media_tab.purpose = 'design'`, at most 30 per book). They go through the photo pipeline (metadata stripped), are the student's own choice and are not photos of friends, but the class admin can open them (`media/get-content`, read only, `no-store`) for every member whose book is linked to the class, **including images no layout uses yet**. | the student, and anyone who appears in a picture the student chose to upload |
 
 No email address, user id, birthday, cover photo, note-link token, pending or hidden note is ever part of what the class layer shows an admin. The roster shows
 a display name, role, join time and three facts about the page (`page_linked`, `profile_complete`, `approved_notes`).
@@ -36,6 +37,7 @@ Enforced in SQL on `class_member_tab` and tested endpoint by endpoint (section 6
 | Class name, school, year | yes | yes | no (404, same as "no such class") | no (401) |
 | Roster: display names, roles, join time, page flags | yes | **no** (403; own row only in `class/get`) | no | no |
 | Another student's profile, approved notes, photos | yes, read only, through `class-book/get` and `media/get-content` | **never** | never | never |
+| A student's design images (backgrounds and decorations, T-152) | yes, read only, through `media/get-content`, for members whose page is linked to the class (`no-store`) | own only | never (404) | never |
 | Their own page, notes and photos | n/a | yes (normal yearbook endpoints, owner only) | n/a | no |
 | A student's pending or hidden notes, note-link tokens, unapproved photos, cover, email, user id | **never** | own only | never | never |
 | Edit or moderate a student's yearbook | **never** (404 on every yearbook, note, media, book-data and book-export route) | own only | never | never |
@@ -53,10 +55,11 @@ disclosed in both privacy policies and terms.
 | Student leaves (`class-member/leave`) | member row deleted | untouched, still the student's | ends at once (next request; no server cache) |
 | Admin removes a student (`class-member/remove`) | member row deleted | untouched | ends at once |
 | Student unlinks the page (`class-member/set-book` with `null`) | link cleared, membership kept | untouched | ends at once |
-| Student deletes the yearbook | link cleared by the yearbook purger, membership kept | deleted with its notes and photos (existing rules) | ends at once |
+| Student deletes the yearbook | link cleared by the yearbook purger, membership kept | deleted with its notes, photos and design images (existing rules) | ends at once |
+| Student deletes a design image (`media/delete`) | none | the image and its three stored versions are deleted | ends at once |
 | Student hides or deletes a note | none | note hidden or deleted | that note disappears from the next `class-book/get` |
 | Admin deletes the class (`class/delete`) | members, invites and class pages deleted in one transaction | **never touched** | ends; nobody keeps access |
-| Account deletion | no endpoint exists yet (see the legal texts' bracketed item) | n/a | n/a |
+| Account deletion | no endpoint exists yet (see the legal texts' bracketed item). T-025 must delete the design images with the books (they are `media_tab` rows of the book, so the yearbook delete path covers them) and list them in the export (`GET /api/media/get-list?purpose=design` per book) | n/a | n/a |
 
 What stays after the access ends: pages an admin already **printed or saved as PDF** from their browser, and images the browser cached (`private, max-age=3600`).
 That is outside the server's control and the policy says so. Backups follow the retention of the other data (`[N]` days, to be filled by the owner).
@@ -124,7 +127,7 @@ Outside `class*` but part of the privacy boundary:
 
 | Endpoint | Why it matters | Test file | Test |
 |---|---|---|---|
-| `media/get-content` | the one read path into a student's photos (profile photo and approved notes' photos, admin only) | `book_integration_test.go` | `TestAdminMediaReadPath` |
+| `media/get-content` | the one read path into a student's photos (profile photo, approved notes' photos and, since T-152, design images, admin only; every other caller, another class's admin and an unlinked or removed member's book: 404) | `book_integration_test.go` | `TestAdminMediaReadPath` |
 | every `yearbook/*`, `note/*`, `note-collection/*`, `media/*`, `book-data/*`, `book-export/*` route | an admin or student gets 404 on someone else's book | `book_integration_test.go` | `TestAdminRoutesAreAllInTheMatrix` |
 | the same routes, called as the admin on a linked student book | still 404 | `page_integration_test.go` | `TestAdminStillHasNoRightsOverAStudentsBook` |
 

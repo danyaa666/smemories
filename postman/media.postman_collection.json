@@ -403,7 +403,7 @@
                 "exec": [
                   "pm.test('status 200', () => pm.response.to.have.status(200));",
                   "const m = pm.response.json().data;",
-                  "pm.test('shape', () => { pm.expect(m.id).to.match(/^[0-9A-Z]{26}$/); pm.expect(m).to.have.all.keys('id','yearbook_id','content_type','bytes','width','height','created_at'); });",
+                  "pm.test('shape', () => { pm.expect(m.id).to.match(/^[0-9A-Z]{26}$/); pm.expect(m).to.have.all.keys('id','yearbook_id','content_type','bytes','width','height','created_at','purpose'); });",
                   "pm.test('created_at is Unix ms, content type from the server', () => { pm.expect(m.created_at).to.be.above(1.7e12); pm.expect(m.content_type).to.eql('image/jpeg'); pm.expect(m.yearbook_id).to.eql(pm.collectionVariables.get('bookId')); });",
                   "pm.test('rotated upright', () => { pm.expect(m.width).to.eql(100); pm.expect(m.height).to.eql(200); });",
                   "pm.collectionVariables.set('mediaId', m.id);"
@@ -1390,7 +1390,7 @@
                   "const b = pm.response.json();",
                   "const m = b.data.items[0];",
                   "pm.test('one item, the newest', () => { pm.expect(b.data.items).to.have.length(1); pm.expect(m.id).to.eql(pm.collectionVariables.get('mediaId3')); });",
-                  "pm.test('item shape: no storage keys, hashes or URLs', () => { pm.expect(m).to.have.all.keys('id','yearbook_id','content_type','bytes','width','height','created_at'); pm.expect(m.yearbook_id).to.eql(pm.collectionVariables.get('bookId')); pm.expect(m.created_at).to.be.a('number'); pm.expect(pm.response.text()).to.not.match(/object_key|thumb_key|sha256|yearbooks\\//); });",
+                  "pm.test('item shape: no storage keys, hashes or URLs', () => { pm.expect(m).to.have.all.keys('id','yearbook_id','content_type','bytes','width','height','created_at','purpose'); pm.expect(m.yearbook_id).to.eql(pm.collectionVariables.get('bookId')); pm.expect(m.created_at).to.be.a('number'); pm.expect(pm.response.text()).to.not.match(/object_key|thumb_key|sha256|yearbooks\\//); });",
                   "pm.test('more pages', () => pm.expect(b.data.next_id).to.be.a('string').and.not.empty);",
                   "pm.collectionVariables.set('mediaCursor', b.data.next_id);"
                 ]

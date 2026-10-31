@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "SMemories - customisation editor (E09)",
-    "description": "Book designs (E09 stage 1, T-141, D-41): `GET /api/book-design/get`, `POST /api/book-design/update`, `POST /api/book-design/reset`, the `design` of `GET /api/book-data/get` and the reset when a book's template changes. `{status,data}` envelope, `ERROR_*` codes. Uses the two verified accounts of notes.postman_collection.json (A owns the books, B is the other user; book-data/get needs a verified email): run that collection's Setup once (or this one's) and then `make verify-newman-users`. Run from the repository root: `newman run postman/customisation-editor.postman_collection.json`. Start the API with SMEM_ENV=dev and the `make up` stack. Each folder creates and deletes its own yearbook, so the collection can run twice in a row; a run makes about 40 design writes (limit 60 per 10 minutes per user, `make reset-limits` clears it), so wait or reset between two runs.",
+    "description": "Design-image uploads (E09 stage 2, T-152, D-43): `POST /api/media/create` with `purpose=design` and `GET /api/media/get-list?purpose=design` (folder design-images); a run makes about 9 uploads (limit 60 per 10 minutes per user). Book designs (E09 stage 1, T-141, D-41): `GET /api/book-design/get`, `POST /api/book-design/update`, `POST /api/book-design/reset`, the `design` of `GET /api/book-data/get` and the reset when a book's template changes. `{status,data}` envelope, `ERROR_*` codes. Uses the two verified accounts of notes.postman_collection.json (A owns the books, B is the other user; book-data/get needs a verified email): run that collection's Setup once (or this one's) and then `make verify-newman-users`. Run from the repository root: `newman run postman/customisation-editor.postman_collection.json`. Start the API with SMEM_ENV=dev and the `make up` stack. Each folder creates and deletes its own yearbook, so the collection can run twice in a row; a run makes about 40 design writes (limit 60 per 10 minutes per user, `make reset-limits` clears it), so wait or reset between two runs.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -39,6 +39,18 @@
     },
     {
       "key": "bookId",
+      "value": ""
+    },
+    {
+      "key": "photoId",
+      "value": ""
+    },
+    {
+      "key": "designId",
+      "value": ""
+    },
+    {
+      "key": "designId2",
       "value": ""
     }
   ],
@@ -2881,6 +2893,1649 @@
                     "exec": [
                       "pm.test('status 200', () => pm.response.to.have.status(200));",
                       "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "design-images (T-152)",
+      "item": [
+        {
+          "name": "Full flow",
+          "item": [
+            {
+              "name": "1. Login",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session="
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"email\":\"{{emailA}}\",\"password\":\"{{password}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "const m = /smem_session=([^;]+)/.exec(pm.response.headers.get('Set-Cookie') || '');",
+                      "pm.test('session cookie issued', () => pm.expect(m).to.not.be.null);",
+                      "pm.collectionVariables.set('tokenA', m ? m[1] : '');"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "2. Login",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session="
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"email\":\"{{emailB}}\",\"password\":\"{{password}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "const m = /smem_session=([^;]+)/.exec(pm.response.headers.get('Set-Cookie') || '');",
+                      "pm.test('session cookie issued', () => pm.expect(m).to.not.be.null);",
+                      "pm.collectionVariables.set('tokenB', m ? m[1] : '');"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "3. A creates a book",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/yearbook/create",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "yearbook",
+                    "create"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"title\":\"Design images\",\"language\":\"en\",\"template_id\":\"memory-book\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.collectionVariables.set('bookId', pm.response.json().data.id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "4. A uploads a photo (the control: purpose is absent)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/media/create",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "media",
+                    "create"
+                  ]
+                },
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "yearbook_id",
+                      "type": "text",
+                      "value": "{{bookId}}"
+                    },
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "src": "fixtures/media/photo-gps.jpg"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "const m = pm.response.json().data;",
+                      "pm.test('a photo', () => pm.expect(m.purpose).to.eql('photo'));",
+                      "pm.collectionVariables.set('photoId', pm.response.json().data.id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "5. A uploads a design image (purpose=design, after the file)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/media/create",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "media",
+                    "create"
+                  ]
+                },
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "yearbook_id",
+                      "type": "text",
+                      "value": "{{bookId}}"
+                    },
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "src": "fixtures/media/photo-gps.jpg"
+                    },
+                    {
+                      "key": "purpose",
+                      "type": "text",
+                      "value": "design"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "const m = pm.response.json().data;",
+                      "pm.test('shape', () => { pm.expect(m.id).to.match(/^[0-9A-Z]{26}$/); pm.expect(m).to.have.all.keys('id','yearbook_id','content_type','bytes','width','height','created_at','purpose'); });",
+                      "pm.test('a design image, rotated upright', () => { pm.expect(m.purpose).to.eql('design'); pm.expect(m.width).to.eql(100); pm.expect(m.height).to.eql(200); });",
+                      "pm.collectionVariables.set('designId', pm.response.json().data.id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "6. A uploads a PNG with transparency as a design image",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/media/create",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "media",
+                    "create"
+                  ]
+                },
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "yearbook_id",
+                      "type": "text",
+                      "value": "{{bookId}}"
+                    },
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "src": "fixtures/media/photo-alpha.png"
+                    },
+                    {
+                      "key": "purpose",
+                      "type": "text",
+                      "value": "design"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('stays PNG', () => pm.expect(pm.response.json().data.content_type).to.eql('image/png'));",
+                      "pm.collectionVariables.set('designId2', pm.response.json().data.id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "7. The default list shows the photo only",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/media/get-list?yearbook_id={{bookId}}&uploader=all",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "media",
+                    "get-list"
+                  ],
+                  "query": [
+                    {
+                      "key": "yearbook_id",
+                      "value": "{{bookId}}"
+                    },
+                    {
+                      "key": "uploader",
+                      "value": "all"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "const ids = pm.response.json().data.items.map(i => i.id);",
+                      "pm.test('photo yes, design no', () => { pm.expect(ids).to.include(pm.collectionVariables.get('photoId')); pm.expect(ids).to.not.include(pm.collectionVariables.get('designId')); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "8. purpose=design lists the design images only, newest first",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/media/get-list?yearbook_id={{bookId}}&purpose=design",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "media",
+                    "get-list"
+                  ],
+                  "query": [
+                    {
+                      "key": "yearbook_id",
+                      "value": "{{bookId}}"
+                    },
+                    {
+                      "key": "purpose",
+                      "value": "design"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "const items = pm.response.json().data.items;",
+                      "pm.test('both design images, newest first, no photo', () => { pm.expect(items.map(i => i.id)).to.eql([pm.collectionVariables.get('designId2'), pm.collectionVariables.get('designId')]); items.forEach(i => pm.expect(i.purpose).to.eql('design')); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "9. A downloads the thumbnail of a design image",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/media/get-content?id={{designId}}&variant=thumb",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "media",
+                    "get-content"
+                  ],
+                  "query": [
+                    {
+                      "key": "id",
+                      "value": "{{designId}}"
+                    },
+                    {
+                      "key": "variant",
+                      "value": "thumb"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('JPEG thumbnail, private cache, nosniff', () => { pm.expect(pm.response.headers.get('Content-Type')).to.eql('image/jpeg'); pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'); pm.expect(pm.response.headers.get('Cache-Control')).to.eql('private, max-age=3600'); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "10. A downloads the display size",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/media/get-content?id={{designId}}&variant=display",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "media",
+                    "get-content"
+                  ],
+                  "query": [
+                    {
+                      "key": "id",
+                      "value": "{{designId}}"
+                    },
+                    {
+                      "key": "variant",
+                      "value": "display"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('JPEG', () => pm.expect(pm.response.headers.get('Content-Type')).to.eql('image/jpeg'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "11. B cannot read A's design image",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenB}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/media/get-content?id={{designId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "media",
+                    "get-content"
+                  ],
+                  "query": [
+                    {
+                      "key": "id",
+                      "value": "{{designId}}"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 404', () => pm.response.to.have.status(404));",
+                      "pm.test('ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "12. A design image is no profile photo",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/yearbook/update-profile",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "yearbook",
+                    "update-profile"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"full_name\":\"A\",\"photo_media_id\":\"{{designId}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_INVALID_MEDIA', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_MEDIA'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "13. A design image is no cover",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/yearbook/update",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "yearbook",
+                    "update"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"id\":\"{{bookId}}\",\"cover_media_id\":\"{{designId}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_INVALID_MEDIA', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_MEDIA'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "14. The photo is still a valid cover (control)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/yearbook/update",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "yearbook",
+                    "update"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"id\":\"{{bookId}}\",\"cover_media_id\":\"{{photoId}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "15. B deleting A's design image answers 200 and deletes nothing",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenB}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/media/delete",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "media",
+                    "delete"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"id\":\"{{designId}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "16. A deletes a design image",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/media/delete",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "media",
+                    "delete"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"id\":\"{{designId}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "17. Deleting it again is idempotent",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/media/delete",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "media",
+                    "delete"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"id\":\"{{designId}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "18. The deleted design image is gone",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/media/get-content?id={{designId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "media",
+                    "get-content"
+                  ],
+                  "query": [
+                    {
+                      "key": "id",
+                      "value": "{{designId}}"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 404', () => pm.response.to.have.status(404));",
+                      "pm.test('ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "19. One design image is left; the photo list is unchanged",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/media/get-list?yearbook_id={{bookId}}&purpose=design",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "media",
+                    "get-list"
+                  ],
+                  "query": [
+                    {
+                      "key": "yearbook_id",
+                      "value": "{{bookId}}"
+                    },
+                    {
+                      "key": "purpose",
+                      "value": "design"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('one design image left', () => pm.expect(pm.response.json().data.items.map(i => i.id)).to.eql([pm.collectionVariables.get('designId2')]));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "20. A deletes the book (the design images go with it)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/yearbook/delete",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "yearbook",
+                    "delete"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"id\":\"{{bookId}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "21. The design image of a deleted book - 404",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/media/get-content?id={{designId2}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "media",
+                    "get-content"
+                  ],
+                  "query": [
+                    {
+                      "key": "id",
+                      "value": "{{designId2}}"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 404', () => pm.response.to.have.status(404));",
+                      "pm.test('ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Edge cases",
+          "item": [
+            {
+              "name": "E-A. Login",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session="
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"email\":\"{{emailA}}\",\"password\":\"{{password}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "const m = /smem_session=([^;]+)/.exec(pm.response.headers.get('Set-Cookie') || '');",
+                      "pm.test('session cookie issued', () => pm.expect(m).to.not.be.null);",
+                      "pm.collectionVariables.set('tokenA', m ? m[1] : '');"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E0. A creates a book for the edge cases",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/yearbook/create",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "yearbook",
+                    "create"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"title\":\"Design images edge cases\",\"language\":\"en\",\"template_id\":\"memory-book\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.collectionVariables.set('bookId', pm.response.json().data.id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E1. purpose=photo is not accepted - 400",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/media/create",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "media",
+                    "create"
+                  ]
+                },
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "yearbook_id",
+                      "type": "text",
+                      "value": "{{bookId}}"
+                    },
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "src": "fixtures/media/photo-gps.jpg"
+                    },
+                    {
+                      "key": "purpose",
+                      "type": "text",
+                      "value": "photo"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E2. an unknown purpose - 400",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/media/create",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "media",
+                    "create"
+                  ]
+                },
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "yearbook_id",
+                      "type": "text",
+                      "value": "{{bookId}}"
+                    },
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "src": "fixtures/media/photo-gps.jpg"
+                    },
+                    {
+                      "key": "purpose",
+                      "type": "text",
+                      "value": "banner"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E3. list with purpose=photo - 400",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/media/get-list?yearbook_id={{bookId}}&purpose=photo",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "media",
+                    "get-list"
+                  ],
+                  "query": [
+                    {
+                      "key": "yearbook_id",
+                      "value": "{{bookId}}"
+                    },
+                    {
+                      "key": "purpose",
+                      "value": "photo"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E4. list with an unknown purpose - 400",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/media/get-list?yearbook_id={{bookId}}&purpose=x",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "media",
+                    "get-list"
+                  ],
+                  "query": [
+                    {
+                      "key": "yearbook_id",
+                      "value": "{{bookId}}"
+                    },
+                    {
+                      "key": "purpose",
+                      "value": "x"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E5. a design upload that is not an image - 415",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/media/create",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "media",
+                    "create"
+                  ]
+                },
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "yearbook_id",
+                      "type": "text",
+                      "value": "{{bookId}}"
+                    },
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "src": "fixtures/media/image.gif"
+                    },
+                    {
+                      "key": "purpose",
+                      "type": "text",
+                      "value": "design"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 415', () => pm.response.to.have.status(415));",
+                      "pm.test('ERROR_UNSUPPORTED_MEDIA_TYPE', () => pm.expect(pm.response.json().status).to.eql('ERROR_UNSUPPORTED_MEDIA_TYPE'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E6. a design upload of an empty file - 415",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/media/create",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "media",
+                    "create"
+                  ]
+                },
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "yearbook_id",
+                      "type": "text",
+                      "value": "{{bookId}}"
+                    },
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "src": "fixtures/media/empty.jpg"
+                    },
+                    {
+                      "key": "purpose",
+                      "type": "text",
+                      "value": "design"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 415', () => pm.response.to.have.status(415));",
+                      "pm.test('ERROR_UNSUPPORTED_MEDIA_TYPE', () => pm.expect(pm.response.json().status).to.eql('ERROR_UNSUPPORTED_MEDIA_TYPE'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E7. a decompression bomb as a design image - 400",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/media/create",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "media",
+                    "create"
+                  ]
+                },
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "yearbook_id",
+                      "type": "text",
+                      "value": "{{bookId}}"
+                    },
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "src": "fixtures/media/bomb.png"
+                    },
+                    {
+                      "key": "purpose",
+                      "type": "text",
+                      "value": "design"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_INVALID_IMAGE', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_IMAGE'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E8. a design image into a yearbook of someone else - 404",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenB}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/media/create",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "media",
+                    "create"
+                  ]
+                },
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "yearbook_id",
+                      "type": "text",
+                      "value": "{{bookId}}"
+                    },
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "src": "fixtures/media/photo-gps.jpg"
+                    },
+                    {
+                      "key": "purpose",
+                      "type": "text",
+                      "value": "design"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 404', () => pm.response.to.have.status(404));",
+                      "pm.test('ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E9. nothing was stored by the refused uploads",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/media/get-list?yearbook_id={{bookId}}&purpose=design",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "media",
+                    "get-list"
+                  ],
+                  "query": [
+                    {
+                      "key": "yearbook_id",
+                      "value": "{{bookId}}"
+                    },
+                    {
+                      "key": "purpose",
+                      "value": "design"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('no design image', () => pm.expect(pm.response.json().data.items).to.eql([]));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "E10. A deletes the edge-case book",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/yearbook/delete",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "yearbook",
+                    "delete"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"id\":\"{{bookId}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));"
                     ]
                   }
                 }

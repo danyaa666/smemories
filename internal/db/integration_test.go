@@ -242,7 +242,7 @@ func TestEmailTokensTableIsDroppedAndDownRecreatesIt(t *testing.T) {
 	if exists() {
 		t.Fatal("email_tokens still exists after migrating up")
 	}
-	for i := 0; i < 20 && !exists(); i++ { // roll back (any later migrations first) until 0011 is undone
+	for i := 0; i < 40 && !exists(); i++ { // roll back (any later migrations first) until 0011 is undone
 		if err := db.MigrateDown(ctx, d); err != nil {
 			t.Fatalf("down: %v", err)
 		}
@@ -274,7 +274,7 @@ func TestSessionsTableIsDroppedAndDownRecreatesIt(t *testing.T) {
 	if exists() {
 		t.Fatal("sessions still exists after migrating up")
 	}
-	for i := 0; i < 20 && !exists(); i++ { // roll back (any later migrations first) until 0012 is undone
+	for i := 0; i < 40 && !exists(); i++ { // roll back (any later migrations first) until 0012 is undone
 		if err := db.MigrateDown(ctx, d); err != nil {
 			t.Fatalf("down: %v", err)
 		}

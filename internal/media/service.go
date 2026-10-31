@@ -13,6 +13,7 @@ import (
 	"io"
 	"log/slog"
 	"path"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -111,6 +112,14 @@ func yearbookPrefix(yearbookID string) string { return "yearbooks/" + yearbookID
 
 // Upload validates and stores one photo for a yearbook the user owns.
 func (s *Service) Upload(ctx context.Context, ownerID uint64, yearbookID string, data []byte) (*Media, error) {
+	return s.UploadPurpose(ctx, ownerID, yearbookID, PurposePhoto, data)
+}
+
+// UploadPurpose is Upload for an image of the given purpose (PurposePhoto or PurposeDesign, T-152).
+func (s *Service) UploadPurpose(ctx context.Context, ownerID uint64, yearbookID, purpose string, data []byte) (*Media, error) {
+	if purpose != PurposePhoto && purpose != PurposeDesign {
+		return nil, apperr.New(apperr.Param, "purpose must be design")
+	}
 	yb, stored, err := s.store.ownedYearbook(ctx, ownerID, yearbookID)
 	if err != nil {
 		return nil, err
@@ -118,7 +127,7 @@ func (s *Service) Upload(ctx context.Context, ownerID uint64, yearbookID string,
 	if ok, retry, _ := s.limiter.Take(ctx, strconv.FormatUint(ownerID, 10)); !ok {
 		return nil, tooManyUploads(retry)
 	}
-	return s.save(ctx, ownerID, yb, stored, KindOwner, func() ([]byte, error) { return data, nil }, 0)
+	return s.save(ctx, ownerID, yb, stored, KindOwner, purpose, func() ([]byte, error) { return data, nil }, 0)
 }
 
 // UploadContributor stores a photo sent through a collection link (T-034) in the yearbook with internal
@@ -136,13 +145,13 @@ func (s *Service) UploadContributorFrom(ctx context.Context, yearbookRow uint64,
 	if err != nil {
 		return nil, err
 	}
-	return s.save(ctx, ownerID, yearbookRow, publicID, KindContributor, load, s.contributorWait)
+	return s.save(ctx, ownerID, yearbookRow, publicID, KindContributor, PurposePhoto, load, s.contributorWait)
 }
 
 // save is the shared pipeline: quota pre-check, processing slot, load, process, put objects, insert the row.
 // slotWait 0 waits for a slot until ctx ends.
-func (s *Service) save(ctx context.Context, ownerID, yb uint64, yearbookID, kind string, load func() ([]byte, error), slotWait time.Duration) (*Media, error) {
-	if err := checkQuota(ctx, s.store.db, ownerID, yb, kind, 0); err != nil { // cheap early exit; insert re-checks under a lock
+func (s *Service) save(ctx context.Context, ownerID, yb uint64, yearbookID, kind, purpose string, load func() ([]byte, error), slotWait time.Duration) (*Media, error) {
+	if err := checkQuota(ctx, s.store.db, ownerID, yb, kind, purpose, 0); err != nil { // cheap early exit; insert re-checks under a lock
 		return nil, err
 	}
 	p, err := s.processPhoto(ctx, load, slotWait)
@@ -166,7 +175,7 @@ func (s *Service) save(ctx context.Context, ownerID, yb uint64, yearbookID, kind
 		s.cleanup(m)
 		return nil, storageFailed(err)
 	}
-	saved, err := s.store.insert(ctx, ownerID, yb, kind, m)
+	saved, err := s.store.insert(ctx, ownerID, yb, kind, purpose, m)
 	if err != nil {
 		s.cleanup(m) // never leave objects without a row
 		return nil, err
@@ -240,10 +249,11 @@ const (
 	MaxListLimit     = 100
 )
 
-// List returns one page of a yearbook's photos, newest first, for its owner, and the position to continue from
-// (0 on the last page). uploader is "owner" (also the default for ""), "contributor" or "all". before is the position
-// the previous page returned (0 = first page); it only narrows a query that is already scoped to the owner's yearbook.
-func (s *Service) List(ctx context.Context, ownerID uint64, yearbookID, uploader string, limit int, before uint64) ([]Media, uint64, error) {
+// List returns one page of a yearbook's photos (or, for purpose PurposeDesign, its design images), newest first, for its owner, and
+// the position to continue from (0 on the last page). purpose "" is PurposePhoto. uploader is "owner" (also the default for ""),
+// "contributor" or "all"; design images are the owner's only. before is the position the previous page returned (0 = first
+// page); it only narrows a query that is already scoped to the owner's yearbook.
+func (s *Service) List(ctx context.Context, ownerID uint64, yearbookID, uploader, purpose string, limit int, before uint64) ([]Media, uint64, error) {
 	var kinds []string
 	switch uploader {
 	case "", KindOwner:
@@ -255,11 +265,18 @@ func (s *Service) List(ctx context.Context, ownerID uint64, yearbookID, uploader
 	default:
 		return nil, 0, apperr.New(apperr.Param, "uploader must be owner, contributor or all")
 	}
+	switch purpose {
+	case "":
+		purpose = PurposePhoto
+	case PurposeDesign:
+	default:
+		return nil, 0, apperr.New(apperr.Param, "purpose must be design")
+	}
 	yb, _, err := s.store.ownedYearbook(ctx, ownerID, yearbookID)
 	if err != nil {
 		return nil, 0, err
 	}
-	items, err := s.store.list(ctx, yb, kinds, before, limit+1) // one extra row says whether another page exists
+	items, err := s.store.list(ctx, yb, kinds, purpose, before, limit+1) // one extra row says whether another page exists
 	if err != nil {
 		return nil, 0, err
 	}
@@ -269,6 +286,26 @@ func (s *Service) List(ctx context.Context, ownerID uint64, yearbookID, uploader
 		next = items[limit-1].seq
 	}
 	return items, next, nil
+}
+
+// DesignImages says which of the canonical public ids are design images of the user's yearbook (the set that a layout may
+// reference, T-152). A photo id, an id of another book or user and an unknown id are left out; the match is exact, so another
+// spelling of an id is not a match either.
+func (s *Service) DesignImages(ctx context.Context, ownerID uint64, yearbookID string, ids []string) (map[string]bool, error) {
+	yb, _, err := s.store.ownedYearbook(ctx, ownerID, yearbookID)
+	if err != nil {
+		return nil, err
+	}
+	found, err := s.store.designImages(ctx, yb, ids)
+	if err != nil {
+		return nil, err
+	}
+	for id := range found { // the column compares case-insensitively: keep only the canonical spelling the caller sent
+		if !slices.Contains(ids, id) {
+			delete(found, id)
+		}
+	}
+	return found, nil
 }
 
 // Sizes of a stored photo.
