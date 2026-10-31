@@ -1,6 +1,6 @@
 # ADR 0004: Layout editor on the book renderer (units, gestures, text, undo, print parity)
 
-Status: **Proposed** (spike T-150, 2026-10-31; the leader accepts it). Decision context: owner decisions D-42 and D-43 (free-layout editor before go-live, DOM editor on our own book renderer, no canvas library, no paid SDK),
+Status: **Accepted** by the leader 2026-10-31 (spike T-150, merged d086971; QA_PASS on head 60075ad). The real-Telex and other-browser checks stay open as acceptance criteria of the text task. Decision context: owner decisions D-42 and D-43 (free-layout editor before go-live, DOM editor on our own book renderer, no canvas library, no paid SDK),
 [ADR 0003](0003-html-print-export.md) (the book is HTML printed by the browser), E09 PRD "Stage 2 plan". The prototype and every number below are in [docs/spikes/editor](../spikes/editor/README.md)
 (`npm run measure` reproduces them; each number names its result file).
 
@@ -73,7 +73,7 @@ inserting "đẹp" with composition at the caret in the middle gives "Việtđ�
 
 | | `<textarea>` over the printed text | `contenteditable="plaintext-only"` on the printed element |
 | --- | --- | --- |
-| pixel difference to print, 8 cases (4 texts up to 500 runes, 0 and -4 degrees) | **0 pixels in all** (same box, font, size, line height and wrapping) | 0 to **0.6 %** (glyph edges differ) |
+| pixel difference to print, 10 cases (texts up to 500 runes incl. the clip state, 0 and -4 degrees) | **0 pixels in all** (same box, font, size, line height and wrapping) | 0 to **0.6 %** (glyph edges differ) |
 | paste with HTML on the clipboard (`<b style="font-size:99px">`) | plain text only, `\r\n` becomes `\n` | same (needs the same explicit paste handler) |
 | 600 pasted emoji | **500 runes kept** (983 UTF-16 units: `maxlength` counts units, so the cap is our own rune count) | 500 runes |
 | composition at 499 runes (3 more composed) | finishes the word (502), cut to 500 at `compositionend` | state capped, DOM not; caret jumps when cut |
@@ -125,7 +125,7 @@ The safe margin is an editor-only overlay and is never drawn on the page; the pr
 6. **Snap scan** is O(items) per move: fine at the 150-item limit, not at 300 (52.8 fps with p95 50 ms).
 7. **Rune count is code points.** A flag emoji or a family emoji is several; the cap counts them as several (documented, same on the server).
 8. **Handles are clipped by the page.** The page sheet (`.bk-inner`) is `overflow: hidden`; the resize handle sits on the item's corner, so for an item flush to the page edge (`mm` on Letter does this) it is outside the clip and cannot be reached with the mouse (`gestures.json`: `handle_clipped_by_page`). Selection chrome (handles, outline, guides) must be drawn in a layer outside the clip (an overlay positioned over the page), not in the item layer; the keyboard path still works.
-9. **Still unproven, besides risk 1:** touch drag in Firefox and WebKit (mouse drag, rotation and the keyboard were exact in Chromium, Firefox and WebKit under Playwright per QA); screen readers (no live region is built); keyboard shortcuts on Windows and Linux, where `Alt+Arrow` is browser Back (the prototype calls `preventDefault`, not tried there) and `[` `]` need AltGr on some layouts: the gesture task should pick and test shortcuts that work on those (for example Ctrl+Arrow and `,` `.` or a visible rotate control) and keep them in a help sheet.
+9. **Still unproven, besides risk 1:** touch drag in Firefox and WebKit (mouse drag, rotation and the keyboard were exact in Chromium and Firefox under Playwright per QA; WebKit was looked at for layout only); screen readers (no live region is built); keyboard shortcuts on Windows and Linux, where `Alt+Arrow` is browser Back (the prototype calls `preventDefault`, not tried there) and `[` `]` need AltGr on some layouts: the gesture task should pick and test shortcuts that work on those (for example Ctrl+Arrow and `,` `.` or a visible rotate control) and keep them in a help sheet.
 
 ## Changes this implies for the stage 2 sketch (E09 PRD)
 
