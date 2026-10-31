@@ -42,19 +42,19 @@ Spec: .team/epics/E09-customisation-editor/08-customise-leave-guard-and-not-foun
 - 2026-10-31 10:01Z · human · accepted by owner (2026-10-31, block restored after an old board.py dropped it)
 
 ### T-150 — [E09] Spike: layout editor architecture and ADR 0004
-- **Status:** READY_FOR_QA
+- **Status:** QA_FAIL
 - **Priority:** P2
 - **Type:** spike
 - **Milestone:** M4
 - **Depends-on:** —
 - **Risk:** low
-- **Rework:** 0
+- **Rework:** 1
 - **Owner-approved:** —
 - **Assignee:** —
 - **Branch:** task/t-150-e09-spike-layout-editor-architecture-and
 - **PR:** 148
-- **Updated:** 2026-10-31 10:22Z by dev
-- **Comments-seen:** 3
+- **Updated:** 2026-10-31 10:30Z by qa
+- **Comments-seen:** 5
 
 Spec: .team/epics/E09-customisation-editor/09-editor-architecture-spike.md (read it from the main checkout). Answers units/page sizes, drag-resize-rotate library, in-place Vietnamese text editing, undo technique and print parity with a prototype under docs/spikes/editor/.
 
@@ -62,9 +62,21 @@ Spec: .team/epics/E09-customisation-editor/09-editor-architecture-spike.md (read
 - 2026-10-31 10:00Z · leader · Owner approved the stage 2 plan on 2026-10-31 (D-44). Read the spec from the main checkout before you start.
 - 2026-10-31 10:22Z · dev · ADR 0004 (proposed) + prototype in docs/spikes/editor, head 7f15c3a. Recommend: centre unit (width thousandths + vertical centre fraction, clamp), in-house gestures (no dependency), textarea overlay for text, snapshot-of-references undo; parity 0.04-0.14% px. Verify: npm run measure per README; repeat Vietnamese typing by hand (macOS Telex, Safari/iOS, Firefox NOT proven: only Chromium IME events driven). Diff touches only docs/adr/0004-* and docs/spikes/editor/.
 - 2026-10-31 10:22Z · dev · Stage-2 sketch changes are listed at the end of ADR 0004 (no react-moveable, keyboard moves into the gesture task, Sheet gets a layer slot, text task needs manual Telex/iOS checks). Nothing missing except the manual Telex/Safari/Firefox checks.
+- 2026-10-31 10:30Z · qa · QA T-150, head 7f15c3a (PR #148 mergeable; go/security/web green; image/e2e/go-integration skipped by policy). Most of the spike holds; 2 majors to fix, 3 minors. 
+  PASSED (my own runs): AC4 diff = docs/adr/0004-layout-editor.md + docs/spikes/editor/** only (no node_modules tracked). AC2 clean export of HEAD (git archive web docs; cd web && npm ci; cd docs/spikes/editor && npm ci; npm run measure, 1m20s on Apple silicon, poppler present): parity A5 0.14%/A4 0.06%/Letter 0.04% and sticker offset 1/1/0 px identical to the ADR; bundle +2.7 KB vs +81.5 KB gzip; in-house 60 fps p95 16.7 ms @100 items 4x throttle (ADR 60), Moveable 59.8; 300 items 53.3 fps p95 50 ms (ADR 53.8); Moveable stage-scale 0.6 bug reproduced (72.9 vs 121.6); undo 0.58 MB/4us/24.4 MB/181us/0.06 MB identical; text.json 8/8 textarea pixel-identical, contenteditable 0..0.6%; Vietnamese (Viet Nam duong -> 'Viet Nam duong' with accents, 3 start/19 update/3 end events) reproduced on both techniques (AC3 real, but Chromium CDP imeSetComposition only). units.json arithmetic re-run and re-derived by hand (Letter pct +9.7%, mm -11.6 mm, centre 1.7 mm, anchor -82 px pair gap): correct. Extra, Playwright Firefox 157 and WebKit (browsers in a scratch PLAYWRIGHT_BROWSERS_PATH, no global install): in-house mouse drag exact (87.5), rotate 90 deg, keyboard arrows/Shift/Alt resize/[ ] rotate work in Chromium, Firefox and WebKit; textarea-vs-print parity 0 px in WebKit for all 8 cases.
+  FAIL:
+  1. [major] docs/spikes/editor/results/units-grid.png (Q1 'show the cover with one sticker and one text box on all three sizes for each candidate') is wrong. Rows mm, centre, anchor show NO sticker and NO text box on any size, even A5; the pct row shows all four candidates drawn on top of each other (doubled heart on Letter). Repro: npm run dev, open /?view=grid, or look at the png; in the browser [data-item] is 8 per sheet in pct-A5 and 0 in mm-A5. Cause: src/book.jsx Sheet finds its host with document.querySelector('[data-sheet="${size}-${scale}-${print}"] .bk-inner') and the key has no unit, so every row's portal lands in the first (pct) row. Fix: make the key unique (add a per-instance id / unit) and regenerate the png; check the ADR Q1 table against the real picture. The numbers in units.json are fine.
+  2. [major] The recommended unit ('centre') is not exercised by the gesture code off the A5 page, and the ADR says drags are exact. interact.mjs runs only on A5, where all four units coincide. Repro: /?view=editor&lib=inhouse&size=Letter&unit=centre&n=2, drag #t1 100 screen px up: the item moves 22 px (ratio 0.22; unit=pct also 0.22, unit=anchor 1.12), A5+centre is 1.0 (my Playwright mouse drag). Cause: Item keeps box in A5-reference design px and runs UNITS[unit].store then place(size), while the gesture writes pointer deltas of the displayed page into that A5 box (and the snap lines mix A5 boxes with H(size) page lines). Expected: edit in the stored form (x, w, h, cy) and write back the inverse of place for the displayed paper (cy = (top + h/2) / H(size)); prove one drag on Letter and A4 with centre (pointer and item within 1 px) and add it to interact.mjs and the ADR Q2 table; or state in the ADR that the editor must do this and mark it unproven. Include the clamp interplay (a drag that ends in the clamp zone).
+  3. [minor] ADR Q1 table, mm row: 'a sticker 50 px above the A5 bottom edge ... gone'. The sticker box is 58 px above the A5 bottom (y 950 + 150 vs 1158), and on Letter it is 106 of 150 px visible (bottom 11.6 mm past the page), i.e. cut, not gone. Same '50 px' in the comment of scripts/units.mjs.
+  4. [minor] Fit is not re-run when web fonts finish loading in the prototype (text.jsx View calls fitElement once per value). Playwright Firefox, same URL, 3 loads of /?view=text&tech=ta&mode=edit&text=<LONG>: font size 18.0069px, then 19.9899px twice (wrong wrapping, 7 lines vs 6); textarea-vs-print diff 25-35% in Firefox for the LONG and FULL cases (0% in Chromium and WebKit). The real web/src/book/fit.tsx FitText already refits on fonts.ready and loadingdone, so the product is fine only if the text task reuses it and the textarea takes its size from it: say so in ADR Q3/'Changes' item 4 so the claim 'same function, pixel-identical' is not read as proven for Firefox.
+  5. [minor] Q3 proof has holes the ADR should list under 'Risks left': (a) all 8 parity cases are fit state ok or shrunk, none in 'overflow' (clip) which the ADR decides on; with a 220x70 box and 499 runes the state is overflow, the textarea stays at scrollTop 0 with the caret hidden (caretColor transparent in the prototype), so typing at the end is blind and caret behaviour was never visibly checked; (b) the controlled textarea rewrites value when it caps, which moves the caret to the end when typing in the middle of a full text; (c) no pointerId filter in the in-house gesture (a second finger starts a second gesture / deselects); (d) alt+arrow is browser Back on Windows/Linux (preventDefault is called, check) and [ ] need AltGr on some layouts.
+  CHALLENGES that hold up: centre unit on Letter is sensible (item near the bottom keeps its proportional place, 1.7 mm clamp, stateless); in-house touch/keyboard/rotation work as described on 768 px; Vietnamese proof is a real composition-path test in Chromium.
+  STAYS UNPROVEN (nobody here has it): real macOS Telex typing, real Safari/iOS (WebKit under Playwright only matches layout; no IME, no focus zoom), real Firefox IME, Android Gboard Telex, touch drag in Firefox/WebKit, screen readers.
+  Result lines: no Go/integration/e2e/print-check run (docs and throw-away prototype only; no product code in the diff).
+- 2026-10-31 10:30Z · leader · Leader, for the rework: fix QA's two majors and the minors. (1) units-grid.png: key every Sheet portal by unit so each row shows its own sticker and text box; regenerate the picture and units.json. (2) Gestures must edit in the stored form (inverse of place) so a drag moves the item by the same displayed distance on A5, A4 and Letter in every unit: prove a drag on Letter and A4 (numbers in the ADR) or mark gestures-on-non-reference-sizes UNPROVEN in the ADR and say which unit needs it. Minors: correct the ADR mm row (58 px, cut, 106 of 150 px visible); re-run fitElement when fonts load (or state the Firefox 25-35% variance as a requirement for the runtime task); add the clip/overflow state to the Q3 proof and show the caret; add a pointerId filter. Keep the 'still unproven' list in the ADR (real macOS Telex, Safari/iOS, Firefox IME, Android Gboard Telex, touch on Firefox/WebKit, screen readers); the owner will check Telex by hand. Dev is on T-151 now: pick this up at the next wake-up (rework has priority). Merge origin/develop first.
 
 ### T-151 — [E09] Asset pack and registry for stickers, shapes and frames
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -72,10 +84,10 @@ Spec: .team/epics/E09-customisation-editor/09-editor-architecture-spike.md (read
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-151-e09-asset-pack-and-registry-for-stickers
 - **PR:** —
-- **Updated:** 2026-10-31 10:00Z by leader
+- **Updated:** 2026-10-31 10:23Z by dev
 - **Comments-seen:** 1
 
 Spec: .team/epics/E09-customisation-editor/10-sticker-shape-frame-asset-pack.md (read it from the main checkout). 48+ CC0/OFL/authored SVG assets, registry (web + Go), SVG safety check script, docs/assets.md.
