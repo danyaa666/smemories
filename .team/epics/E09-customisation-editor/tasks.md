@@ -107,7 +107,7 @@ Spec: .team/epics/E09-customisation-editor/10-sticker-shape-frame-asset-pack.md 
 - 2026-10-31 10:54Z · leader · merged 8ad8c0c. Review: 51 assets (25 authored CC0, 26 Openclipart CC0), registry in web and embedded Go copy kept in sync by scripts/sync-assets.sh, check-assets.sh in the web job, AssetSvg module lazily loaded, contact sheet at /dev/assets (dev only), docs/assets.md and THIRD_PARTY_NOTICES.md. QA: all 26 Openclipart pages re-read (CC0 1.0 stated, artists match, none tagged pd_issue); check-assets.sh fails on 10 planted faults; print bundle byte-identical; vitest 696, go test, print-check 163/163; go/web/security green on c6bec17. For owner to check: flip through docs/assets/contact-sheet.png; 3 clips (graduation-cap, smiling-star, cap-and-book) are Openclipart remixes whose CC0 rests on the upstream public-domain claim: say if you want them replaced by authored ones.
 
 ### T-152 — [E09] Backend: student-uploaded design images (backgrounds and decorations)
-- **Status:** READY_FOR_QA
+- **Status:** QA_PASS
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -115,17 +115,36 @@ Spec: .team/epics/E09-customisation-editor/10-sticker-shape-frame-asset-pack.md 
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** leader
 - **Branch:** task/t-152-e09-backend-student-uploaded-design-imag
 - **PR:** https://github.com/danyaa666/smemories/pull/150
-- **Updated:** 2026-10-31 11:17Z by dev
-- **Comments-seen:** 2
+- **Updated:** 2026-10-31 15:24Z by qa
+- **Comments-seen:** 3
 
 Spec: .team/epics/E09-customisation-editor/11-design-image-uploads.md (read it from the main checkout). Media purpose=design, isolation from photos, quotas, class admin read path, privacy review. High risk: owner approves before merge.
 
 #### Comments
 - 2026-10-31 10:00Z · leader · Owner approved the stage 2 plan on 2026-10-31 (D-44). Read the spec from the main checkout before you start.
 - 2026-10-31 11:17Z · dev · PR #150 head f9fbe1e. Migration 20261031120000 (purpose, Down deletes design rows), media/create + get-list purpose=design, 30 cap + shared 500 MiB, isolation (cover/profile/public link/list tokens), class admin read path via readable (open point: includes images no layout uses yet), metric smem_media_uploads_total, docs/openapi/schema/Postman (design-images folder in customisation-editor). Run on own compose project t152: go test -race ./... ok, integration all packages ok, golangci-lint 0, check-class-matrix ok, check:api ok, newman 59/59 + media 172/172, e2e 7 passed (class journey included). Verify: TestDesignImageIsolation, TestDesignQuotas, TestDesignImageDelete, TestAdminMediaReadPath, TestMigrateMediaPurpose. High risk: owner approves before merge. No account-deletion/export endpoint exists (T-025 note in docs/media.md).
+- 2026-10-31 15:24Z · qa · QA_PASS T-152, PR #150 head f9fbe1e (branch = PR head, worktree clean). Own compose project qa152 (ports 23306/26379/29000, SMEM_TEST_S3_ENDPOINT set), torn down after. PR CI: go, web, security green.
+  RESULT LINES (local, head f9fbe1e):
+  - make test-integration equivalent (go test -race -count=1 -timeout 30m -tags integration ./...): 32 packages ok, 0 FAIL (media 131 s, class 219 s, db 171 s, yearbook 111 s). First attempt failed only because SMEM_TEST_S3_ENDPOINT pointed at the default port (403 on CreateBucket); rerun against my own S3 passed.
+  - go test -race ./... : 31 ok, 0 FAIL. web vitest 36 files / 696 tests passed. gofmt clean, go vet (+integration tag) ok, golangci-lint 0 issues, web lint/typecheck/lint:i18n/check:api ok.
+  - scripts/check-class-matrix.sh: 21 class operations, all in docs/class-privacy-review.md.
+  - scripts/e2e.sh (own DB smem_test_e2e): 7 passed (class journey, design journey, h2 gallery x4, M1 journey), EXIT 0.
+  - print-check (tools/print-check npm test): 163 tests, 163 pass, 0 fail.
+  - newman (npx newman 6.2.3, baseUrl 127.0.0.1:28080, fresh rate limits): customisation-editor folder "design-images (T-152)" 59/59 twice back to back; media.postman_collection 172/172 twice. Whole customisation-editor file: 191 assertions, 3 fail, all in the OLD book-design folder, steps 17/18 (expects navy-classic to have nothing to customise; false since T-145 made Navy customisable). That folder is unchanged by T-152 and the same step is on develop: pre-existing, not a T-152 defect, non-blocking (leader may want a small follow-up task).
+  MIGRATION: up/down/up on a DB with existing photos (1 owner + 1 contributor row): up gives purpose='photo' on both; inserted a design row; Down removed only the design row, kept both photos and dropped the column, version back to 20261030120000; up again ok (20261031120000). Down deleting design rows is documented in the migration header and docs/media.md ("Design images"); the S3 objects of those rows stay until the yearbook is deleted (documented, acceptable).
+  AC TABLE (all exercised live against a real API, plus the dev's integration tests which pass):
+  AC1 upload design 200 (purpose in answer; JPEG/PNG/WebP all stored as jpeg); get-list default shows photos only, purpose=design only designs, uploader=all/contributor lists no extra; display/thumb/print serve 200 to owner; 30 designs fill and the 31st is 409 ERROR_QUOTA_EXCEEDED while a photo upload in the same book still works and a second book takes designs (own cap per book, not counted toward the 200 photos); shared 500 MiB bytes: not reachable live, covered by TestDesignQuotas (passes, rows seeded with large sizes; design refused when photos fill the pool and vice versa).
+  AC2 design id as cover and as profile photo: 400 ERROR_INVALID_MEDIA (photo id control 200). Photo id as design image: no HTTP consumer exists yet; only Service.DesignImages (exact-match set, TestDesignImageIsolation passes) - T-153 must call it before storing a media id. Public link: TestDesignImageIsolation shows a correctly signed token for a design id gives 404 while a photo token gives 200.
+  AC3 live class run (admin, linked student s1, member s2, other-class admin, anon): admin 200, owner 200, other member 404, other-class admin 404, anon 401; unlinked student's design 404 for everyone; admin cannot list, delete (200 no-op, image still readable by owner) or upload into the member's book (404); unlinking the page ends admin access at once. docs/class-privacy-review.md and class-permissions.md list the new data and read path. Class admin read exposes ALL design images of a linked member (also unused ones): matches spec req 5 (admin reads members' design images) and the dev's open point; T-153 narrows it. Reported, not a fail.
+  AC4 media/delete by owner works (idempotent; non-owner call returns 200 and deletes nothing, same as photos; reads 404 after). Yearbook delete removed the design and photo rows and content 404 (DB count 0). There is no account-deletion or export endpoint in the code yet, so "export lists them" can only be the documented plan for T-025 (media.md, privacy review); not testable.
+  AC5 see MIGRATION above; photo behaviour unchanged (media 172/172, all photo integration tests pass).
+  AC6 see RESULT LINES.
+  EDGE/SECURITY: purpose values photo, Design, DESIGN, empty, "design " -> 400 ERROR_PARAM (list: purpose=photo also 400, documented); purpose field before or after the file works (never taken for a photo); gif/txt/svg/empty/text-as-jpeg -> 415; truncated jpeg 400 ERROR_INVALID_IMAGE; 11 MiB file 413 ERROR_TOO_LARGE; 6000x6000 and 20000x20000 flat PNG -> 400 (pixel bomb refused); EXIF/maker string stripped from stored display image; non-owner and anon: upload/list/read 404/404/404 and 401. Metric smem_media_uploads_total{purpose,result} seen on the metrics listener with design ok/quota/invalid/busy and photo ok (busy also counts the per-user rate limit); no file names or ids in labels.
+  NON-BLOCKING: (a) spec text says display 2000 px, dev kept the existing 3000 px display and documents that print (1800 px) is too small for a full-bleed A4 background, so the layout must use display; the PR states which variant, as the spec asks. (b) The 3 stale book-design newman assertions above. (c) Metric result "busy" mixes the pool-busy and the per-user rate-limit refusals.
+  Not merged. High risk: owner approves before merge.
 
 ### T-153 — [E09] Layout document model and API (backend)
 - **Status:** BACKLOG
@@ -163,6 +182,25 @@ Spec: .team/epics/E09-customisation-editor/12-layout-document-model-and-api.md (
 - **Comments-seen:** 0
 
 Spec: .team/epics/E09-customisation-editor/13-web-layout-runtime.md (read it from the main checkout). place/unplace geometry, Sheet layer slot, bg/overrides/items rendering with FitText, notes pages, parity test on A5/A4/Letter, class book.
+
+#### Comments
+
+### T-155 — [E09] Fix three stale Postman assertions in the customisation-editor collection
+- **Status:** TODO
+- **Priority:** P3
+- **Type:** test
+- **Milestone:** M4
+- **Depends-on:** —
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-10-31 15:30Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E09-customisation-editor/14-fix-stale-book-design-newman-steps.md (read it from the main checkout). Steps 17 and 18 assume navy-classic is not customisable (false since T-145)
 
 #### Comments
 
