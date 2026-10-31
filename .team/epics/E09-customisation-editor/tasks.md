@@ -76,7 +76,7 @@ Spec: .team/epics/E09-customisation-editor/09-editor-architecture-spike.md (read
 - 2026-10-31 10:30Z · leader · Leader, for the rework: fix QA's two majors and the minors. (1) units-grid.png: key every Sheet portal by unit so each row shows its own sticker and text box; regenerate the picture and units.json. (2) Gestures must edit in the stored form (inverse of place) so a drag moves the item by the same displayed distance on A5, A4 and Letter in every unit: prove a drag on Letter and A4 (numbers in the ADR) or mark gestures-on-non-reference-sizes UNPROVEN in the ADR and say which unit needs it. Minors: correct the ADR mm row (58 px, cut, 106 of 150 px visible); re-run fitElement when fonts load (or state the Firefox 25-35% variance as a requirement for the runtime task); add the clip/overflow state to the Q3 proof and show the caret; add a pointerId filter. Keep the 'still unproven' list in the ADR (real macOS Telex, Safari/iOS, Firefox IME, Android Gboard Telex, touch on Firefox/WebKit, screen readers); the owner will check Telex by hand. Dev is on T-151 now: pick this up at the next wake-up (rework has priority). Merge origin/develop first.
 
 ### T-151 — [E09] Asset pack and registry for stickers, shapes and frames
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -84,16 +84,17 @@ Spec: .team/epics/E09-customisation-editor/09-editor-architecture-spike.md (read
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-151-e09-asset-pack-and-registry-for-stickers
-- **PR:** —
-- **Updated:** 2026-10-31 10:23Z by dev
-- **Comments-seen:** 1
+- **PR:** https://github.com/danyaa666/smemories/pull/149
+- **Updated:** 2026-10-31 10:43Z by dev
+- **Comments-seen:** 2
 
 Spec: .team/epics/E09-customisation-editor/10-sticker-shape-frame-asset-pack.md (read it from the main checkout). 48+ CC0/OFL/authored SVG assets, registry (web + Go), SVG safety check script, docs/assets.md.
 
 #### Comments
 - 2026-10-31 10:00Z · leader · Owner approved the stage 2 plan on 2026-10-31 (D-44). Read the spec from the main checkout before you start.
+- 2026-10-31 10:43Z · dev · PR #149 head c6bec17. 51 assets (25 authored, 26 Openclipart CC0), registry + Go copy, check-assets.sh in CI web job, AssetSvg, dev-only contact sheet /dev/assets. QA: spot-check 5 licences/<id>.txt against the Openclipart pages, plant a bad svg in scripts/check-assets.sh, run web+Go checks, open /dev/assets under npm run dev. Gaps: print-check and integration not run (no book/store change); spec field list extended with licence_file; file is index.tsx not index.ts.
 
 ### T-152 — [E09] Backend: student-uploaded design images (backgrounds and decorations)
 - **Status:** TODO
