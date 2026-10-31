@@ -107,7 +107,7 @@ Spec: .team/epics/E09-customisation-editor/10-sticker-shape-frame-asset-pack.md 
 - 2026-10-31 10:54Z · leader · merged 8ad8c0c. Review: 51 assets (25 authored CC0, 26 Openclipart CC0), registry in web and embedded Go copy kept in sync by scripts/sync-assets.sh, check-assets.sh in the web job, AssetSvg module lazily loaded, contact sheet at /dev/assets (dev only), docs/assets.md and THIRD_PARTY_NOTICES.md. QA: all 26 Openclipart pages re-read (CC0 1.0 stated, artists match, none tagged pd_issue); check-assets.sh fails on 10 planted faults; print bundle byte-identical; vitest 696, go test, print-check 163/163; go/web/security green on c6bec17. For owner to check: flip through docs/assets/contact-sheet.png; 3 clips (graduation-cap, smiling-star, cap-and-book) are Openclipart remixes whose CC0 rests on the upstream public-domain claim: say if you want them replaced by authored ones.
 
 ### T-152 — [E09] Backend: student-uploaded design images (backgrounds and decorations)
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -115,16 +115,17 @@ Spec: .team/epics/E09-customisation-editor/10-sticker-shape-frame-asset-pack.md 
 - **Risk:** high
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-31 11:05Z by dev
-- **Comments-seen:** 1
+- **Assignee:** —
+- **Branch:** task/t-152-e09-backend-student-uploaded-design-imag
+- **PR:** https://github.com/danyaa666/smemories/pull/150
+- **Updated:** 2026-10-31 11:17Z by dev
+- **Comments-seen:** 2
 
 Spec: .team/epics/E09-customisation-editor/11-design-image-uploads.md (read it from the main checkout). Media purpose=design, isolation from photos, quotas, class admin read path, privacy review. High risk: owner approves before merge.
 
 #### Comments
 - 2026-10-31 10:00Z · leader · Owner approved the stage 2 plan on 2026-10-31 (D-44). Read the spec from the main checkout before you start.
+- 2026-10-31 11:17Z · dev · PR #150 head f9fbe1e. Migration 20261031120000 (purpose, Down deletes design rows), media/create + get-list purpose=design, 30 cap + shared 500 MiB, isolation (cover/profile/public link/list tokens), class admin read path via readable (open point: includes images no layout uses yet), metric smem_media_uploads_total, docs/openapi/schema/Postman (design-images folder in customisation-editor). Run on own compose project t152: go test -race ./... ok, integration all packages ok, golangci-lint 0, check-class-matrix ok, check:api ok, newman 59/59 + media 172/172, e2e 7 passed (class journey included). Verify: TestDesignImageIsolation, TestDesignQuotas, TestDesignImageDelete, TestAdminMediaReadPath, TestMigrateMediaPurpose. High risk: owner approves before merge. No account-deletion/export endpoint exists (T-025 note in docs/media.md).
 
 ### T-153 — [E09] Layout document model and API (backend)
 - **Status:** BACKLOG
@@ -139,11 +140,12 @@ Spec: .team/epics/E09-customisation-editor/11-design-image-uploads.md (read it f
 - **Branch:** —
 - **PR:** —
 - **Updated:** 2026-10-31 06:10Z by leader
-- **Comments-seen:** 0
+- **Comments-seen:** 1
 
 Spec: .team/epics/E09-customisation-editor/12-layout-document-model-and-api.md (read it from the main checkout). book_layout_tab, document v1 (ADR 0004 units), booklayout package, book-layout/get|save|reset with optimistic concurrency, manifest design.layout, book-data/get carries layout.
 
 #### Comments
+- 2026-10-31 11:18Z · leader · Spec updated: new requirement 9 (narrow the class admin's read of design images to images the stored layout references; T-152 left it open) and AC6. Read the spec again when you start.
 
 ### T-154 — [E09] Web layout runtime: the book draws a layout (Memory Book)
 - **Status:** BACKLOG

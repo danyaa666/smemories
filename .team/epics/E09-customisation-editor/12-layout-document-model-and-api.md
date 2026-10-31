@@ -37,7 +37,8 @@ A new optional block, validated when the manifest loads: `page_kinds` (`id`, `re
 6. **Deletion and export**: deleting a yearbook or an account deletes the layout; the data export includes it (tests, docs).
 7. **Observability**: counters `smem_layout_saves_total{result}` (ok, conflict, invalid, too_large, rate_limited), no document content in logs.
 8. Docs: `docs/api-contract.md` (endpoints, errors), `docs/templates.md` (the `design.layout` block and the document), `docs/class-privacy-review.md` (a layout is the owner's design data, readable by a class admin only through the class book, see the class task), `api/openapi.yaml` and the generated web schema (`check:api` clean).
-9. Nothing under `.team/`; no web code except the regenerated API schema file.
+9. **Narrow the class admin's read of design images (carry-over from T-152, 2026-10-31).** T-152 lets a class admin open every `design` image of a linked member's book, including images no layout uses, because the layout table did not exist. Now that it does: `media.Store.readable` lets a class admin read a `design` image only if the member's stored layout references it (`bg.media` or an `image` item), the owner always can; extend the class matrix (referenced: admin 200; unreferenced: admin 404; other callers 404) and update `docs/class-privacy-review.md` (section 1 and the endpoint list). Note for the editor tasks: the `display` variant of a design image is 3000 px (about 256 dpi on A4), the `print` variant (1800 px) is too small for a full-bleed background, so the layout asks for `display`.
+10. Nothing under `.team/`; no web code except the regenerated API schema file.
 
 #### Acceptance criteria
 - [ ] AC1 — A valid document saves, reads back identical and bumps the version; the same `base_version` used twice gives 200 then 409 with the stored document (test with two concurrent saves: exactly one wins).
@@ -45,7 +46,8 @@ A new optional block, validated when the manifest loads: `page_kinds` (`id`, `re
 - [ ] AC3 — Non-owner, class admin and anonymous get 404 on all three endpoints (class matrix script extended).
 - [ ] AC4 — Template change, yearbook deletion, account deletion and export behave as in requirements 4 and 6.
 - [ ] AC5 — `book-data/get` returns the layout and drops parts that no longer validate; migration up and down tested with existing rows.
-- [ ] AC6 — `go test ./...`, `make test-integration` for the touched packages, lint, `check:api`, `scripts/check-class-matrix.sh` pass.
+- [ ] AC6 — A class admin reads a member's design image only while the layout references it (matrix script covers both cases).
+- [ ] AC7 — `go test ./...`, `make test-integration` for the touched packages, lint, `check:api`, `scripts/check-class-matrix.sh` pass.
 
 #### Test plan
 QA hits the endpoints with valid and hostile documents (oversize, deep nesting, unicode edge cases, wrong types), races two saves, walks the class matrix, checks template change and deletion, and runs the migration both ways. The Go skills' checklists apply (`be-api-design`, `be-rldb`, `be-golang`).
