@@ -1,0 +1,13 @@
+Openclipart clip 345846, "backpack"
+Author: elconomeno_email_com (https://openclipart.org/artist/elconomeno_email_com)
+Source: https://openclipart.org/detail/345846
+Licence: CC0 1.0 Universal (Public Domain Dedication), https://creativecommons.org/publicdomain/zero/1.0/
+Verified: on the source page the clip's licence is https://creativecommons.org/publicdomain/zero/1.0/ (page metadata), and https://openclipart.org/share says "All Clipart are Released into the
+Public Domain ... We use the Creative Commons Zero 1.0 Public Domain License every time an artist uploads a piece of clipart".
+Date checked: 2026-10-31
+Changes made by us: converted to a plain SVG for the pack (metadata, editor data, styles and unused definitions removed; colours kept as
+presentation attributes; viewBox set to whole numbers; numbers rounded to 2 decimals). Artwork otherwise unchanged.
+
+To the extent possible under law, the person who associated CC0 with this work has waived all copyright and related or neighboring
+rights to this work (CC0 1.0 Universal Public Domain Dedication). You can copy, modify, distribute and perform the work, even for
+commercial purposes, all without asking permission. Full legal code: https://creativecommons.org/publicdomain/zero/1.0/legalcode

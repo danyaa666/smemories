@@ -52,7 +52,7 @@ web-test: web/node_modules
 	cd web && npm test
 
 web-lint: web/node_modules
-	cd web && npm run lint && npm run typecheck && npm run lint:i18n && npm run check:api
+	cd web && npm run lint && npm run typecheck && npm run lint:i18n && npm run check:api && ../scripts/check-assets.sh
 
 # Headless print check of the HTML book renderer (T-058, ADR 0003): prints a fixture book to PDF with Chromium and inspects the PDF.
 # Needs poppler (pdfinfo, pdffonts, pdfimages, pdftotext) on the PATH; not part of `make test`.

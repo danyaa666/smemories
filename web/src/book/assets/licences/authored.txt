@@ -1,0 +1,8 @@
+Authored assets (licence "authored" in registry.json)
+
+These SVG files (shapes, frames, tape strips and doodles) were drawn by the SMemories team for this project in task T-151, from basic
+geometry. They contain no third-party artwork. The team dedicates them to the public domain under CC0 1.0 Universal
+(https://creativecommons.org/publicdomain/zero/1.0/): to the extent possible under law, the SMemories team has waived all copyright and
+related or neighbouring rights to them.
+
+Date: 2026-10-31
