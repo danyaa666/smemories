@@ -876,7 +876,7 @@
               ]
             },
             {
-              "name": "17. The new template has no design",
+              "name": "17. The new template starts from its own defaults",
               "request": {
                 "method": "GET",
                 "header": [
@@ -912,14 +912,14 @@
                       "pm.test('status 200', () => pm.response.to.have.status(200));",
                       "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
                       "const d = pm.response.json().data;",
-                      "pm.test('nothing to customise', () => { pm.expect(d.template_id).to.eql('navy-classic'); pm.expect(d.options).to.eql(null); pm.expect(d.design).to.eql(null); });"
+                      "pm.test('own defaults, not the old design', () => { pm.expect(d.template_id).to.eql('navy-classic'); pm.expect(d.options).to.eql(null); pm.expect(d.design.themes[0]).to.eql('navy'); });"
                     ]
                   }
                 }
               ]
             },
             {
-              "name": "18. Saving a design for it is refused - 400",
+              "name": "18. A theme of the old template is refused - 400",
               "request": {
                 "method": "POST",
                 "header": [
@@ -949,7 +949,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"options\":{}}"
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"options\":{\"theme\":\"lavender\"}}"
                 }
               },
               "event": [
