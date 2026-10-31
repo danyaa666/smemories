@@ -54,7 +54,7 @@ Spec: .team/epics/E09-customisation-editor/08-customise-leave-guard-and-not-foun
 - **Branch:** task/t-150-e09-spike-layout-editor-architecture-and
 - **PR:** 148
 - **Updated:** 2026-10-31 11:05Z by leader
-- **Comments-seen:** 6
+- **Comments-seen:** 8
 
 Spec: .team/epics/E09-customisation-editor/09-editor-architecture-spike.md (read it from the main checkout). Answers units/page sizes, drag-resize-rotate library, in-place Vietnamese text editing, undo technique and print parity with a prototype under docs/spikes/editor/.
 

@@ -22,7 +22,7 @@
 
 **Open questions for you:** none
 
-_Board last written 2026-10-31 11:18Z_
+_Board last written 2026-10-31 15:02Z_
 <!-- summary:end -->
 
 ## 1. Vision & orientation
