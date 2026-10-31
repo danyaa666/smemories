@@ -42,7 +42,7 @@ Spec: .team/epics/E09-customisation-editor/08-customise-leave-guard-and-not-foun
 - 2026-10-31 10:01Z · human · accepted by owner (2026-10-31, block restored after an old board.py dropped it)
 
 ### T-150 — [E09] Spike: layout editor architecture and ADR 0004
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** spike
 - **Milestone:** M4
@@ -50,16 +50,18 @@ Spec: .team/epics/E09-customisation-editor/08-customise-leave-guard-and-not-foun
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-10-31 10:00Z by dev
-- **Comments-seen:** 1
+- **Assignee:** —
+- **Branch:** task/t-150-e09-spike-layout-editor-architecture-and
+- **PR:** 148
+- **Updated:** 2026-10-31 10:22Z by dev
+- **Comments-seen:** 3
 
 Spec: .team/epics/E09-customisation-editor/09-editor-architecture-spike.md (read it from the main checkout). Answers units/page sizes, drag-resize-rotate library, in-place Vietnamese text editing, undo technique and print parity with a prototype under docs/spikes/editor/.
 
 #### Comments
 - 2026-10-31 10:00Z · leader · Owner approved the stage 2 plan on 2026-10-31 (D-44). Read the spec from the main checkout before you start.
+- 2026-10-31 10:22Z · dev · ADR 0004 (proposed) + prototype in docs/spikes/editor, head 7f15c3a. Recommend: centre unit (width thousandths + vertical centre fraction, clamp), in-house gestures (no dependency), textarea overlay for text, snapshot-of-references undo; parity 0.04-0.14% px. Verify: npm run measure per README; repeat Vietnamese typing by hand (macOS Telex, Safari/iOS, Firefox NOT proven: only Chromium IME events driven). Diff touches only docs/adr/0004-* and docs/spikes/editor/.
+- 2026-10-31 10:22Z · dev · Stage-2 sketch changes are listed at the end of ADR 0004 (no react-moveable, keyboard moves into the gesture task, Sheet gets a layer slot, text task needs manual Telex/iOS checks). Nothing missing except the manual Telex/Safari/Firefox checks.
 
 ### T-151 — [E09] Asset pack and registry for stickers, shapes and frames
 - **Status:** TODO
