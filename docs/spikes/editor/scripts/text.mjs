@@ -10,6 +10,7 @@ const SHORT = "Việt Nam";
 const MEDIUM = "Tôi yêu những buổi chiều tan học, cùng các bạn đi dưới hàng phượng đỏ rực cả một góc trời.";
 const LONG = "Mười hai năm đèn sách, những ngày mưa đường trơn trượt, những buổi trưa hè ve kêu râm ran, tiếng trống trường giòn giã mỗi sáng, cô giáo chủ nhiệm cười hiền, bạn bè chia nhau từng cái kẹo, từng trang vở, từng nỗi lo thi cử. ".repeat(2);
 const FULL = Array.from("Việt Nam đường về nhà 😀 ".repeat(40)).slice(0, 500).join("");
+const R499 = Array.from(FULL).slice(0, 499).join("");
 
 async function compose(page, cdp, steps, commit) {
   for (const s of steps) await cdp.send("Input.imeSetComposition", { text: s, selectionStart: s.length, selectionEnd: s.length });
@@ -60,9 +61,11 @@ for (const tech of ["ce", "ta"]) {
   }
   // parity: the editor box against the printed (view) box at three texts and two rotations
   r.parity = {};
-  for (const [name, text] of Object.entries({ short: SHORT, medium: MEDIUM, long_shrinks: LONG, full_500_runes: FULL })) for (const rot of [0, -4]) {
+  // the last two are the "overflow" (clip) state: 499 runes in a 220 x 70 design px box, text that no shrink to 50 % can fit
+  const CASES = { short: [SHORT], medium: [MEDIUM], long_shrinks: [LONG], full_500_runes: [FULL], overflow_clip_220x70: [R499, 220, 70] };
+  for (const [name, [text, w = 440, h = 200]] of Object.entries(CASES)) for (const rot of [0, -4]) {
     const { browser, page } = await launch({ deviceScaleFactor: 2 });
-    const q = (mode) => `${BASE}/?view=text&tech=${tech}&mode=${mode}&r=${rot}&text=${encodeURIComponent(text)}`;
+    const q = (mode) => `${BASE}/?view=text&tech=${tech}&mode=${mode}&r=${rot}&w=${w}&h=${h}&caret=off&text=${encodeURIComponent(text)}`;
     await page.goto(q("view")); await page.waitForSelector("[data-box]"); await page.evaluate(() => document.fonts.ready); await page.waitForTimeout(500);
     const view = await page.locator("[data-box]").screenshot();
     const viewInfo = await page.evaluate(() => { const e = document.querySelector("[data-print-text]"); return { state: e.dataset.fit, px: getComputedStyle(e).fontSize, clipped: e.scrollHeight > e.clientHeight + 1 }; });
@@ -85,6 +88,34 @@ for (const tech of ["ce", "ta"]) {
     await cdp.send("Input.insertText", { text: "Việ" });
     await page.waitForTimeout(100);
     r.cap_after_commit_runes = Array.from(await page.evaluate(() => window.__text())).length;
+    await browser.close();
+  }
+  // the clip state: typing at the end of a text the box cannot show (textarea only: the technique we recommend). Caret visible, scroll follows it.
+  if (tech === "ta") {
+    const { browser, page } = await launch({ deviceScaleFactor: 2 });
+    await page.goto(`${BASE}/?view=text&tech=ta&mode=edit&w=220&h=70&text=${encodeURIComponent(Array.from(FULL).slice(0, 300).join(""))}`);
+    await page.waitForSelector(sel("ta")); await page.evaluate(() => document.fonts.ready); await page.waitForTimeout(400);
+    const at = () => page.evaluate(() => { const t = document.querySelector("[data-edit=ta]"); return { scrollTop: t.scrollTop, scrollHeight: t.scrollHeight, clientHeight: t.clientHeight, overflow: getComputedStyle(t).overflowY, caretColor: getComputedStyle(t).caretColor, fit: document.querySelector("[data-print-text]").dataset.fit }; });
+    const before = await at();
+    await page.evaluate(() => { const t = document.querySelector("[data-edit=ta]"); t.focus(); t.setSelectionRange(t.value.length, t.value.length); });
+    await page.keyboard.type("xyz");
+    const after = await at();
+    const box = await page.locator("[data-box]").boundingBox();
+    const ca = await page.evaluate(() => { const t = document.querySelector("[data-edit=ta]"); return t.value.slice(-3); });
+    r.clip_state_typing_at_end = { before, after, typed_tail: ca, caret_inside_box_scrolled: after.scrollTop > 0 && after.scrollTop + after.clientHeight >= after.scrollHeight - 2, box_height_screen_px: Math.round(box.height) };
+    await page.screenshot({ path: new URL("../results/text-clip-caret.png", import.meta.url).pathname, clip: { x: box.x - 10, y: box.y - 10, width: box.width + 20, height: box.height + 20 } });
+    await browser.close();
+  }
+  // a full text (500 runes), caret in the middle, one more character: the cap rewrites the value; where does the caret go?
+  {
+    const { browser, page } = await launch();
+    await page.goto(`${BASE}/?view=text&tech=${tech}&mode=edit&text=${encodeURIComponent("a".repeat(500))}`);
+    await page.waitForSelector(sel(tech)); await page.waitForTimeout(400);
+    if (tech === "ta") {
+      await page.evaluate(() => { const t = document.querySelector("[data-edit=ta]"); t.focus(); t.setSelectionRange(100, 100); });
+      await page.keyboard.type("b");
+      r.cap_rewrite_caret_after_typing_in_middle = await page.evaluate(() => { const t = document.querySelector("[data-edit=ta]"); return { runes: Array.from(t.value).length, selectionStart: t.selectionStart, expected: 101, has_b: t.value.includes("b") }; });
+    }
     await browser.close();
   }
   console.log(tech, JSON.stringify(r));

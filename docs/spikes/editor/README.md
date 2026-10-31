@@ -25,14 +25,15 @@ from Playwright 1.64); frame times and sizes are reproducible within noise, the 
 | `units.mjs`, `grid.mjs` | 1 units and page sizes | `units.json`, `units-grid.png` | four ways to store a box, drawn on A5, A4 and Letter |
 | `size.mjs` | 2 library | `size.json` | minified and gzip bundle of each candidate over react-dom |
 | `interact.mjs` | 2 library | `interact.json` | drag, resize, rotate, snap, touch at 768 px, keyboard, frame rate with 100 and 300 items at 4x CPU throttle |
+| `gestures.mjs` | 2 stored form | `gestures.json` | drag, resize, clamp zone, keyboard and a second pointer on A5, A4 and Letter in all four units: item moves the pointer's distance |
 | `phone.mjs` | 2 touch note | `phone.json` | 375 px phone: swipe pans the page, tap selects, a selected item drags |
-| `text.mjs` | 3 text | `text.json` | Vietnamese composition through Chromium's IME events, paste, 500 rune limit, editor against print |
+| `text.mjs` | 3 text | `text.json`, `text-clip-caret.png` | Vietnamese composition through Chromium's IME events, paste, 500 rune limit, editor against print in 10 cases incl. the clipped state, typing at the end of clipped text, caret after the cap |
 | `undo.mjs` | 4 undo | `undo.json` | snapshot of references, snapshot of JSON, command stack on a 126 KiB document |
 | `parity.mjs` | 5 print | `parity.json`, `parity-A5-*.png` | the editor view against the browser's PDF on A5, A4 and Letter |
 
 ## Map of the code
 
-- `src/units.mjs`: the four unit candidates (`pct`, `mm`, `centre`, `anchor`), pure functions.
+- `src/units.mjs`: the four unit candidates (`pct`, `mm`, `centre`, `anchor`), pure functions: `store`/`place` and their inverses `unstore`/`unplace`.
 - `src/book.jsx`: the real `BookPages` cover and a portal into its `.bk-inner` (design px, origin at the page corner).
 - `src/items.jsx`: items (a sticker is an inline SVG, a text box uses the one shared text CSS).
 - `src/inhouse.jsx` (pointer events, snapping, handles, keyboard) and `src/moveable.jsx` (react-moveable): the two editors compared.
@@ -41,4 +42,4 @@ from Playwright 1.64); frame times and sizes are reproducible within noise, the 
 
 ## Not covered (see the ADR, "Risks left")
 
-Only Chromium was driven (the print engine of record, ADR 0003). Real macOS Telex typing, Safari and Firefox editing, and screen readers were not tried by the author of the spike.
+Only Chromium was driven by the scripts (the print engine of record, ADR 0003; Firefox and WebKit were looked at by hand under Playwright for layout). Real macOS Telex typing, real Safari/iOS and Firefox IME, Android Gboard Telex, touch in Firefox and WebKit, and screen readers were not tried. Query switches for the prototype: `snap=off`, `caret=off`, `w`/`h` (text box size).

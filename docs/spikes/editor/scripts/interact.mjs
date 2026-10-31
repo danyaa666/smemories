@@ -7,22 +7,22 @@ const out = {};
 for (const lib of ["inhouse", "moveable"]) {
   const r = (out[lib] = {});
   const { browser, page } = await launch();
-  await ready(page, `${BASE}/?view=editor&lib=${lib}&size=A5&unit=centre&n=2`);
+  await ready(page, `${BASE}/?view=editor&lib=${lib}&size=A5&unit=centre&n=2&snap=off`); // snap off: the distances below are the pointer's (snapping is test 4)
   const k = (await page.locator("[data-layer]").boundingBox()).width / 816; // screen px per design px
   r.screen_px_per_design_px = round(k, 4);
 
-  // 1. drag by +60,+40 screen px: expect +60/k, +40/k design px
+  // 1. drag by +60,-40 screen px: expect +60/k, -40/k design px (up: a drag past the page edge stops at the edge, see gestures.mjs)
   const before = (await items(page)).find((i) => i.id === "t1");
   let c = await centre(page, "#t1");
   await page.mouse.click(c.x, c.y);
   await page.mouse.move(c.x, c.y);
   await page.mouse.down();
-  await page.mouse.move(c.x + 30, c.y + 20, { steps: 5 });
-  await page.mouse.move(c.x + 60, c.y + 40, { steps: 5 });
+  await page.mouse.move(c.x + 30, c.y - 20, { steps: 5 });
+  await page.mouse.move(c.x + 60, c.y - 40, { steps: 5 });
   await page.mouse.up();
   await page.waitForTimeout(100);
   const after = (await items(page)).find((i) => i.id === "t1");
-  r.drag = { expected_dx: round(60 / k), expected_dy: round(40 / k), got_dx: round(after.box.x - before.box.x), got_dy: round(after.box.y - before.box.y) };
+  r.drag = { expected_dx: round(60 / k), expected_dy: round(-40 / k), got_dx: round(after.box.x - before.box.x), got_dy: round(after.box.y - before.box.y) };
 
   // 2. resize with the corner handle by +40,+30 screen px
   c = await centre(page, "#s1");
@@ -53,7 +53,8 @@ for (const lib of ["inhouse", "moveable"]) {
     r.rotate = { got_deg: round((await items(page)).find((i) => i.id === "t1").r) };
   } else r.rotate = "handle not found";
 
-  // 4. snap to the page centre: drag the sticker so its centre is about 3 design px from the page middle
+  // 4. snap to the page centre (snap on, a fresh page): drag the sticker so its centre is about 3 design px from the page middle
+  await ready(page, `${BASE}/?view=editor&lib=${lib}&size=A5&unit=centre&n=2`);
   const s0 = (await items(page)).find((i) => i.id === "s1");
   c = await centre(page, "#s1");
   await page.mouse.click(c.x, c.y);
@@ -70,7 +71,7 @@ for (const lib of ["inhouse", "moveable"]) {
 
   // 5. touch drag on a 768 px wide viewport (CDP touch events)
   const t = await launch({ viewport: { width: 768, height: 1024 }, hasTouch: true, isMobile: false });
-  await ready(t.page, `${BASE}/?view=editor&lib=${lib}&size=A5&unit=centre&n=2`);
+  await ready(t.page, `${BASE}/?view=editor&lib=${lib}&size=A5&unit=centre&n=2&snap=off`);
   const kt = (await t.page.locator("[data-layer]").boundingBox()).width / 816;
   const cdp = await t.ctx.newCDPSession(t.page);
   const touch = (type, x, y) => cdp.send("Input.dispatchTouchEvent", { type, touchPoints: type === "touchEnd" ? [] : [{ x, y, id: 1 }] });
@@ -87,16 +88,16 @@ for (const lib of ["inhouse", "moveable"]) {
     page_scrolled: await t.page.evaluate(() => window.scrollY) };
   await t.browser.close();
 
-  // 5b. the stage is drawn at a zoom other than 1 (the book fits its pages to the window with transform: scale): drag by +50 screen px at scale 0.6
+  // 5b. the stage is drawn at a zoom other than 1 (the book fits its pages to the window with transform: scale): drag by -50 screen px at scale 0.6
   const z = await launch();
-  await ready(z.page, `${BASE}/?view=editor&lib=${lib}&size=A5&unit=centre&n=2&scale=0.6`);
+  await ready(z.page, `${BASE}/?view=editor&lib=${lib}&size=A5&unit=centre&n=2&scale=0.6&snap=off`);
   const kz = (await z.page.locator("[data-layer]").boundingBox()).width / 816;
   const zb = (await items(z.page)).find((i) => i.id === "s1");
   const zc = await centre(z.page, "#s1");
   await z.page.mouse.click(zc.x, zc.y);
-  await z.page.mouse.move(zc.x, zc.y); await z.page.mouse.down(); await z.page.mouse.move(zc.x + 25, zc.y, { steps: 4 }); await z.page.mouse.move(zc.x + 50, zc.y, { steps: 4 }); await z.page.mouse.up();
+  await z.page.mouse.move(zc.x, zc.y); await z.page.mouse.down(); await z.page.mouse.move(zc.x - 25, zc.y, { steps: 4 }); await z.page.mouse.move(zc.x - 50, zc.y, { steps: 4 }); await z.page.mouse.up();
   await z.page.waitForTimeout(100);
-  r.stage_scale_0_6 = { expected_dx: round(50 / kz), got_dx: round((await items(z.page)).find((i) => i.id === "s1").box.x - zb.box.x) };
+  r.stage_scale_0_6 = { expected_dx: round(-50 / kz), got_dx: round((await items(z.page)).find((i) => i.id === "s1").box.x - zb.box.x) };
   await z.browser.close();
 
   // 6. keyboard (in-house only has it built in)

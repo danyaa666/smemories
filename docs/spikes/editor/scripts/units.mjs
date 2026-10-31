@@ -6,7 +6,7 @@ const H5 = H("A5");
 // boxes on the A5 reference page, in design px: [name, x, y, w, h]
 const BOXES = {
   photo: [190, 410, 370, 400],
-  sticker_bottom: [560, 950, 150, 150], // flush to the bottom corner area (bottom edge 50 px = 9 mm from the page edge)
+  sticker_bottom: [560, 950, 150, 150], // box bottom 1100 = 58 px (11 mm) above the A5 bottom edge 1158
   sticker_flush: [560, H5 - 150, 150, 150], // touches the bottom edge on A5
   text_bottom: [80, 1040, 440, 90],
   title_top: [100, 64, 616, 120],

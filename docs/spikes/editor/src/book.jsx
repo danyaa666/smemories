@@ -1,5 +1,5 @@
 // The REAL Memory Book cover (web/src/book) with a layer portalled into its sheet.
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import i18n from "@web/i18n";
 import "@web/book/book.css";
@@ -23,14 +23,15 @@ export function bookData(size, page = "cover") {
 /** One sheet of the real book; `layer(host)` is rendered inside .bk-inner (design px coordinates, origin at the page corner). */
 export function Sheet({ size, scale = 1, page = "cover", print = false, children }) {
   const [host, setHost] = useState(null);
+  const uid = useId(); // one key per Sheet instance: the portal host is looked up by it (size/scale/print alone is not unique in the grid)
   const data = useMemo(() => bookData(size, page), [size, page]);
   const stage = useMemo(() => ({ "--pw": `${SIZES[size].w}mm`, "--ph": `${SIZES[size].h}mm`, "--s": print ? 1 : scale }), [size, scale, print]);
   useEffect(() => {
-    const el = document.querySelector(`[data-sheet="${size}-${scale}-${print}"] .bk-inner`);
+    const el = document.querySelector(`[data-sheet="${uid}"] .bk-inner`);
     setHost(el);
-  }, [size, scale, print]);
+  }, [uid, size, scale, print]);
   return (
-    <div data-sheet={`${size}-${scale}-${print}`} className="bk-stage" style={{ ...stage, padding: 0, background: "none", width: "auto" }}>
+    <div data-sheet={uid} className="bk-stage" style={{ ...stage, padding: 0, background: "none", width: "auto" }}>
       {print && <style>{pageCss(size)}</style>}
       <BookPages data={data} size={size} t={t} eager={false} track={noop} />
       {host && createPortal(children, host)}

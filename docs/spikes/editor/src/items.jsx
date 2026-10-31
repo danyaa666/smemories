@@ -2,6 +2,7 @@ import { memo } from "react";
 import { place, UNITS } from "./units.mjs";
 
 // An item keeps its box {x,y,w,h} in design px of the A5 reference page; the unit candidate stores and places it for the page size drawn.
+// After a gesture the item also keeps `st`, the stored form written by the gesture (UNITS[unit].unplace of the box drawn on the edited page); `st` wins over box.
 export const HEART = "M12 20.5C5 15.5 2.5 12 2.5 8.6 2.5 5.9 4.6 4 7 4c2.1 0 3.9 1.3 5 3 1.1-1.7 2.9-3 5-3 2.4 0 4.5 1.9 4.5 4.6 0 3.4-2.5 6.9-9.5 11.9z";
 export const STAR = "M12 2.5l2.9 6.1 6.6.8-4.9 4.5 1.3 6.6L12 17.2l-5.9 3.3 1.3-6.6-4.9-4.5 6.6-.8z";
 
@@ -24,8 +25,11 @@ export const TEXT_CSS = {
   boxSizing: "border-box",
 };
 
+/** The box of an item as drawn on page `size` (design px, origin at the page corner). */
+export const rectOf = (item, unit, size, clamp = true) => place(unit, size, item.st ?? UNITS[unit].store(item.box), clamp);
+
 export const Item = memo(function Item({ item, unit, size, selected, onPointerDown, onKeyDown, children, clamp = true }) {
-  const r = place(unit, size, UNITS[unit].store(item.box), clamp);
+  const r = rectOf(item, unit, size, clamp);
   return (
     <div
       id={item.id}
@@ -55,6 +59,6 @@ export const Item = memo(function Item({ item, unit, size, selected, onPointerDo
 });
 
 /** Draws every item, no interaction: this is the print / read-only layer. */
-export function StaticLayer({ items, unit, size }) {
-  return items.map((it) => <Item key={it.id} item={it} unit={unit} size={size} />);
+export function StaticLayer({ items, unit, size, clamp = true }) {
+  return items.map((it) => <Item key={it.id} item={it} unit={unit} size={size} clamp={clamp} />);
 }

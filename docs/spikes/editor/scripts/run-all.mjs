@@ -6,7 +6,7 @@ import { createServer } from "vite";
 const server = await createServer({ configFile: new URL("../vite.config.mjs", import.meta.url).pathname, logLevel: "error" });
 await server.listen();
 const base = server.resolvedUrls.local[0].replace(/\/$/, "");
-const steps = [["units.mjs"], ["grid.mjs"], ["size.mjs"], ["interact.mjs"], ["text.mjs"], ["--expose-gc", "undo.mjs"], ["parity.mjs"], ["phone.mjs"]];
+const steps = [["units.mjs"], ["grid.mjs"], ["size.mjs"], ["interact.mjs"], ["gestures.mjs"], ["text.mjs"], ["--expose-gc", "undo.mjs"], ["parity.mjs"], ["phone.mjs"]];
 let failed = false;
 for (const s of steps) {
   const file = s.at(-1);

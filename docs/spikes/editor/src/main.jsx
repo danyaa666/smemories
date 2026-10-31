@@ -47,6 +47,7 @@ function Editor() {
   );
 }
 
+// The grid shows each candidate AS STORED (no clamp): that is what the ADR Q1 table measures. The clamp is the rule applied on top of the chosen one.
 function Grid() {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "auto repeat(3, auto)", gap: 8, padding: 8, font: "12px sans-serif" }}>
@@ -55,7 +56,7 @@ function Grid() {
         ...Object.keys(SIZES).map((s) => (
           <div key={u + s} data-cell={`${u}-${s}`}>
             {s} {W}x{H(s)}
-            <Sheet size={s} scale={0.4}><StaticLayer items={demo()} unit={u} size={s} /></Sheet>
+            <Sheet size={s} scale={0.4}><StaticLayer items={demo()} unit={u} size={s} clamp={false} /></Sheet>
           </div>
         )),
       ])}

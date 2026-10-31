@@ -8,13 +8,22 @@ const MAX_RUNES = 500;
 const START = TEXT_CSS.fontSize; // px, the box's own size; shrinks to 50% at most, then clips (the guided templates' rule, fit.tsx)
 export const cap = (s) => Array.from(s).slice(0, MAX_RUNES).join("");
 
-/** The printed text: what the book draws. Fit rule = fitElement of the book. */
+/** The printed text: what the book draws. Fit rule = fitElement of the book, re-run when web fonts finish loading (as web/src/book/fit.tsx FitText does). */
 function View({ value, hidden, onFit }) {
   const ref = useRef(null);
   useLayoutEffect(() => {
-    const info = fitElement(ref.current, `${START}px`, 0.5);
-    ref.current.dataset.fit = info.state;
-    onFit?.(info);
+    const el = ref.current;
+    let live = true;
+    const fit = () => {
+      if (!live) return;
+      const info = fitElement(el, `${START}px`, 0.5);
+      el.dataset.fit = info.state;
+      onFit?.(info);
+    };
+    fit();
+    document.fonts.ready.then(fit);
+    document.fonts.addEventListener("loadingdone", fit);
+    return () => { live = false; document.fonts.removeEventListener("loadingdone", fit); };
   }, [value, onFit]);
   return <div ref={ref} data-print-text style={{ ...TEXT_CSS, width: "100%", height: "100%", overflow: "hidden", visibility: hidden ? "hidden" : "visible" }}>{value}</div>;
 }
@@ -29,15 +38,26 @@ const insertPlain = (e, set) => {
 /** A: a textarea laid exactly over the printed text (same box, same CSS, the size the fit rule chose). */
 function Textarea({ value, setValue, px, log }) {
   const composing = useRef(false);
+  const ta = useRef(null);
+  const caret = useRef(null); // where the caret was when the cap rewrote the value (a controlled textarea would put it at the end)
+  useLayoutEffect(() => {
+    if (caret.current !== null && ta.current) { ta.current.setSelectionRange(caret.current, caret.current); caret.current = null; }
+  }, [value]);
+  const set = (el, next) => { if (next !== el.value) caret.current = Math.min(el.selectionStart, next.length); setValue(next); };
+  // overflow stays "hidden" in every fit state (0 px against print, also rotated): a hidden textarea still scrolls to the caret while typing (text.json clip_state_typing_at_end);
+  // the mouse wheel does not scroll it. An "overflow" box (text cut) is also warned about by the editor, not by the field.
+  const params = new URLSearchParams(location.search);
   return (
     <textarea
+      ref={ta}
       data-edit="ta" aria-label="Text" value={value} autoFocus
-      onChange={(e) => setValue(composing.current ? e.target.value : cap(e.target.value))}
+      onChange={(e) => (composing.current ? setValue(e.target.value) : set(e.target, cap(e.target.value)))}
       onCompositionStart={(e) => { composing.current = true; log(e); }}
       onCompositionUpdate={log}
-      onCompositionEnd={(e) => { composing.current = false; setValue(cap(e.target.value)); log(e); }}
+      onCompositionEnd={(e) => { composing.current = false; set(e.target, cap(e.target.value)); log(e); }}
       onPaste={(e) => insertPlain(e)}
-      style={{ ...TEXT_CSS, fontSize: px, position: "absolute", inset: 0, width: "100%", height: "100%", border: 0, outline: "1px dashed #8e6ccb", background: "transparent", resize: "none", overflow: "hidden", caretColor: "transparent" }}
+      style={{ ...TEXT_CSS, fontSize: px, position: "absolute", inset: 0, width: "100%", height: "100%", border: 0, outline: "1px dashed #8e6ccb", background: "transparent", resize: "none", overflow: "hidden",
+        caretColor: params.get("caret") === "off" ? "transparent" : "#3b2f4a" }}
     />
   );
 }
@@ -78,6 +98,7 @@ export function TextLab() {
   const size = q.get("size") ?? "A5";
   const rot = Number(q.get("r") ?? 0);
   const [value, setValue] = useState(q.get("text") ?? "Việt Nam — đường về nhà");
+  const w = Number(q.get("w") ?? 440), h = Number(q.get("h") ?? 200);
   const [px, setPx] = useState(START);
   const events = useRef([]);
   window.__text = () => value;
@@ -85,7 +106,7 @@ export function TextLab() {
   const log = (e) => events.current.push(`${e.type}${e.data !== undefined && e.data !== null ? `:${e.data}` : ""}`);
   return (
     <Sheet size={size}>
-      <div style={{ position: "absolute", left: 80, top: 330, width: 440, height: 200, transform: rot ? `rotate(${rot}deg)` : undefined }} data-box>
+      <div style={{ position: "absolute", left: 80, top: 330, width: w, height: h, transform: rot ? `rotate(${rot}deg)` : undefined }} data-box>
         <View value={value} hidden={mode === "edit" && tech === "ta"} onFit={(i) => setPx(i.px)} />
         {mode === "edit" && tech === "ta" && <Textarea value={value} setValue={setValue} px={px} log={log} />}
         {mode === "edit" && tech === "ce" && <div style={{ position: "absolute", inset: 0, background: "transparent" }}><Editable value={value} setValue={setValue} log={log} /></div>}
