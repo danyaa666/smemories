@@ -21,13 +21,14 @@ const namespace = "smem"
 
 // Metrics owns a private registry (no global state) and the instruments that need to be called from code.
 type Metrics struct {
-	reg         *prometheus.Registry
-	duration    *prometheus.HistogramVec
-	inFlight    prometheus.Gauge
-	rateLimited *prometheus.CounterVec
-	mailFailed  *prometheus.CounterVec
-	publicMedia *prometheus.CounterVec
-	mediaPanics prometheus.Counter
+	reg          *prometheus.Registry
+	duration     *prometheus.HistogramVec
+	inFlight     prometheus.Gauge
+	rateLimited  *prometheus.CounterVec
+	mailFailed   *prometheus.CounterVec
+	publicMedia  *prometheus.CounterVec
+	mediaPanics  prometheus.Counter
+	mediaUploads *prometheus.CounterVec
 }
 
 // New returns a registry with the Go runtime and process collectors and the HTTP and rate-limit instruments.
@@ -54,12 +55,20 @@ func New() *Metrics {
 		mediaPanics: prometheus.NewCounter(prometheus.CounterOpts{
 			Namespace: namespace, Name: "media_process_panics_total", Help: "Panics recovered in the image pipeline (decode, scale, encode); each answered 400 ERROR_INVALID_IMAGE.",
 		}),
+		mediaUploads: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Namespace: namespace, Name: "media_uploads_total", Help: "Owner image uploads (media/create) by purpose (photo, design) and result (ok, quota, invalid, busy, error). No ids or file names.",
+		}, []string{"purpose", "result"}),
+	}
+	for _, p := range []string{"photo", "design"} {
+		for _, r := range []string{"ok", "quota", "invalid", "busy", "error"} {
+			m.mediaUploads.WithLabelValues(p, r) // present at 0 from the first scrape
+		}
 	}
 	for _, r := range []string{"ok", "not_found", "rate_limited"} {
 		m.publicMedia.WithLabelValues(r) // present at 0 from the first scrape
 	}
 	m.reg.MustRegister(collectors.NewGoCollector(), collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
-		m.duration, m.inFlight, m.rateLimited, m.mailFailed, m.publicMedia, m.mediaPanics)
+		m.duration, m.inFlight, m.rateLimited, m.mailFailed, m.publicMedia, m.mediaPanics, m.mediaUploads)
 	return m
 }
 
@@ -95,6 +104,20 @@ func (m *Metrics) PublicMedia(result string) {
 		result = "not_found"
 	}
 	m.publicMedia.WithLabelValues(result).Inc()
+}
+
+// MediaUpload counts one owner upload; purpose and result are constants chosen in code (media.Purpose*, media.Upload* results).
+// Any other value is counted as photo / error so the label set stays closed.
+func (m *Metrics) MediaUpload(purpose, result string) {
+	if purpose != "design" {
+		purpose = "photo"
+	}
+	switch result {
+	case "ok", "quota", "invalid", "busy":
+	default:
+		result = "error"
+	}
+	m.mediaUploads.WithLabelValues(purpose, result).Inc()
 }
 
 // MediaProcessPanic counts one panic recovered in the image pipeline (T-104).

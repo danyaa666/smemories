@@ -72,10 +72,44 @@ type Handler struct {
 	perClient      map[string]int // ... per client key (httpx.ClientIP), same lock
 	clientCap      int            // maxUploadsPerClient; a field only so that a test can raise it
 	dlMu           sync.Mutex
-	dlPerClient    map[string]int      // downloads in progress per "u:<user id>" or "ip:<address>" (this process only)
-	dlTotal        int                 // sum of dlPerClient, for smem_media_download_inflight
-	dlPace         httpx.BodyPace      // what a reader of a photo must keep up with; a field only so that a test can shorten it
-	countPublic    func(result string) // metrics of the public endpoint (PublicOK, PublicNotFound, PublicRateLimited); nil = not counted
+	dlPerClient    map[string]int               // downloads in progress per "u:<user id>" or "ip:<address>" (this process only)
+	dlTotal        int                          // sum of dlPerClient, for smem_media_download_inflight
+	dlPace         httpx.BodyPace               // what a reader of a photo must keep up with; a field only so that a test can shorten it
+	countPublic    func(result string)          // metrics of the public endpoint (PublicOK, PublicNotFound, PublicRateLimited); nil = not counted
+	countUpload    func(purpose, result string) // metrics of owner uploads (Upload* results); nil = not counted
+}
+
+// Results of an owner upload, the values of smem_media_uploads_total{result} (the purpose label is PurposePhoto or PurposeDesign).
+const (
+	UploadOK      = "ok"
+	UploadQuota   = "quota"
+	UploadInvalid = "invalid"
+	UploadBusy    = "busy"
+	UploadError   = "error"
+)
+
+// SetUploadCounter registers who counts the outcome of each owner upload (wired once at start-up).
+func (h *Handler) SetUploadCounter(f func(purpose, result string)) { h.countUpload = f }
+
+// countUploadResult counts the end of an upload that got as far as the service. Refusals before the body is read (caps, pool) are
+// counted by the rate-limit and busy metrics already.
+func (h *Handler) countUploadResult(purpose string, err error) {
+	if h.countUpload == nil {
+		return
+	}
+	var rl *RateLimitedError
+	switch {
+	case err == nil:
+		h.countUpload(purpose, UploadOK)
+	case errors.Is(err, ErrQuota):
+		h.countUpload(purpose, UploadQuota)
+	case errors.Is(err, ErrInvalidImage), errors.Is(err, ErrUnsupported):
+		h.countUpload(purpose, UploadInvalid)
+	case errors.Is(err, ErrBusy), errors.As(err, &rl):
+		h.countUpload(purpose, UploadBusy)
+	default:
+		h.countUpload(purpose, UploadError)
+	}
 }
 
 // Results of a public photo request, the values of smem_public_media_requests_total{result}.
@@ -205,10 +239,11 @@ type mediaJSON struct {
 	Width       int    `json:"width"`
 	Height      int    `json:"height"`
 	CreatedAt   int64  `json:"created_at"` // Unix ms
+	Purpose     string `json:"purpose"`    // photo or design (T-152)
 }
 
-func toJSON(m *Media, yearbookID string) mediaJSON {
-	return mediaJSON{m.ID, yearbookID, m.ContentType, m.Bytes, m.Width, m.Height, m.CreatedAt}
+func toJSON(m *Media, yearbookID, purpose string) mediaJSON {
+	return mediaJSON{m.ID, yearbookID, m.ContentType, m.Bytes, m.Width, m.Height, m.CreatedAt, purpose}
 }
 
 // checkID is ERROR_PARAM for a missing id and for one that is not a canonical public id (ulid.Valid), answered before any
@@ -255,17 +290,18 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	}
 	// The slot stays before the read (it bounds the request buffers); the pace makes a stalled or dripping body end in 408 and free it.
 	httpx.PaceBody(w, r, h.pace)
-	yearbookID, data, ok := h.readForm(w, r)
+	yearbookID, purpose, data, ok := h.readForm(w, r)
 	if !ok {
 		return
 	}
 	httpx.ExtendDeadlines(w, uploadProcessing, 0) // the pace left a read deadline 10 s out; processing may take longer and must not look like a gone client
-	m, err := h.svc.Upload(r.Context(), u.InternalID, yearbookID, data)
+	m, err := h.svc.UploadPurpose(r.Context(), u.InternalID, yearbookID, purpose, data)
+	h.countUploadResult(purpose, err)
 	if err != nil {
 		h.fail(w, r, err)
 		return
 	}
-	httpx.OK(w, r, toJSON(m, yearbookID))
+	httpx.OK(w, r, toJSON(m, yearbookID, purpose))
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
@@ -284,7 +320,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 		h.fail(w, r, err)
 		return
 	}
-	scope := "media/get-list:" + yearbookID // a token from another yearbook (or another list) is refused
+	scope := "media/get-list:" + yearbookID + ":" + q.Get("purpose") // a token from another yearbook (or another list, photos or design images) is refused
 	var before uint64
 	if token := q.Get("next_id"); token != "" {
 		pos, err := h.cursors.Open(scope, token)
@@ -296,14 +332,14 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	items, next, err := h.svc.List(r.Context(), u.InternalID, yearbookID, q.Get("uploader"), limit, before)
+	items, next, err := h.svc.List(r.Context(), u.InternalID, yearbookID, q.Get("uploader"), q.Get("purpose"), limit, before)
 	if err != nil {
 		h.fail(w, r, err)
 		return
 	}
 	page := httpx.Page[mediaJSON]{Items: make([]mediaJSON, len(items))}
 	for i := range items {
-		page.Items[i] = toJSON(&items[i], yearbookID)
+		page.Items[i] = toJSON(&items[i], yearbookID, cmp.Or(q.Get("purpose"), PurposePhoto))
 	}
 	if next != 0 {
 		page.NextID = h.cursors.Seal(scope, strconv.FormatUint(next, 10))
@@ -321,9 +357,10 @@ func parsePosition(pos string) (uint64, error) {
 	return n, nil
 }
 
-// readForm streams the multipart body (nothing spills to disk) and returns the form field "yearbook_id" and the content of
-// the part named "file" (at most h.maxBytes), in either order. The client-supplied file name is never looked at.
-func (h *Handler) readForm(w http.ResponseWriter, r *http.Request) (yearbookID string, data []byte, ok bool) {
+// readForm streams the multipart body (nothing spills to disk) and returns the form field "yearbook_id", the optional field
+// "purpose" (absent = PurposePhoto, "design" = PurposeDesign, anything else ERROR_PARAM) and the content of the part named
+// "file" (at most h.maxBytes), in any order. The client-supplied file name is never looked at.
+func (h *Handler) readForm(w http.ResponseWriter, r *http.Request) (yearbookID, purpose string, data []byte, ok bool) {
 	// The multipart parser does not always wrap a body-cap error, so remember what the body returned.
 	body := &errRecorder{r: r.Body}
 	r.Body = io.NopCloser(body)
@@ -331,7 +368,7 @@ func (h *Handler) readForm(w http.ResponseWriter, r *http.Request) (yearbookID s
 	mr, err := r.MultipartReader()
 	if err != nil {
 		h.fail(w, r, apperr.New(apperr.Param, "expected a multipart/form-data body"))
-		return "", nil, false
+		return "", "", nil, false
 	}
 	haveFile := false
 	for range maxParts {
@@ -341,35 +378,44 @@ func (h *Handler) readForm(w http.ResponseWriter, r *http.Request) (yearbookID s
 		}
 		if err != nil {
 			httpx.WriteBodyError(w, r, bodyErr(err))
-			return "", nil, false
+			return "", "", nil, false
 		}
 		switch name := part.FormName(); {
 		case name == "yearbook_id" && yearbookID == "":
 			b, err := io.ReadAll(io.LimitReader(part, maxIDBytes+1))
 			if err != nil {
 				httpx.WriteBodyError(w, r, bodyErr(err))
-				return "", nil, false
+				return "", "", nil, false
 			}
 			if len(b) > maxIDBytes || !ulid.Valid(string(b)) { // canonical ids only: the column matches any spelling (audit M3)
 				h.fail(w, r, apperr.New(apperr.Param, "yearbook_id is not a yearbook id"))
-				return "", nil, false
+				return "", "", nil, false
 			}
 			yearbookID = string(b)
+		case name == "purpose" && purpose == "":
+			b, err := io.ReadAll(io.LimitReader(part, maxIDBytes+1))
+			if err != nil {
+				httpx.WriteBodyError(w, r, bodyErr(err))
+				return "", "", nil, false
+			}
+			if string(b) != PurposeDesign {
+				h.fail(w, r, apperr.New(apperr.Param, "purpose must be design"))
+				return "", "", nil, false
+			}
+			purpose = PurposeDesign
 		case name == "file" && !haveFile:
 			data, err = io.ReadAll(io.LimitReader(part, h.maxBytes+1))
 			if err != nil {
 				httpx.WriteBodyError(w, r, bodyErr(err))
-				return "", nil, false
+				return "", "", nil, false
 			}
 			if int64(len(data)) > h.maxBytes {
 				h.fail(w, r, apperr.New(apperr.TooLarge, "file too large"))
-				return "", nil, false
+				return "", "", nil, false
 			}
 			haveFile = true
 		}
-		if haveFile && yearbookID != "" {
-			break
-		}
+		// no early exit once file and yearbook_id are read: "purpose" may come last, and a design image must never be taken for a photo
 	}
 	switch {
 	case yearbookID == "":
@@ -377,9 +423,9 @@ func (h *Handler) readForm(w http.ResponseWriter, r *http.Request) (yearbookID s
 	case !haveFile:
 		h.fail(w, r, apperr.New(apperr.Param, "missing form field \"file\""))
 	default:
-		return yearbookID, data, true
+		return yearbookID, cmp.Or(purpose, PurposePhoto), data, true
 	}
-	return "", nil, false
+	return "", "", nil, false
 }
 
 // errRecorder remembers the first non-EOF error of the reader it wraps.

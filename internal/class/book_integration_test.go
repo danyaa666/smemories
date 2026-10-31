@@ -70,6 +70,14 @@ func (e *env) photo(book string) string {
 	return pub
 }
 
+// design is a design image (T-152: a background or decoration of the student's layout) in the book.
+func (e *env) designImage(book string) string {
+	e.t.Helper()
+	id := e.photo(book)
+	e.exec(`UPDATE media_tab SET purpose = 'design', uploader_kind = 'owner' WHERE public_id = ?`, id)
+	return id
+}
+
 func (e *env) collectionOf(book string) uint64 {
 	e.t.Helper()
 	var id uint64
@@ -458,6 +466,8 @@ func TestAdminMediaReadPath(t *testing.T) {
 		e.profile(book, "X", ph)
 		e.note(book, "approved", 1, "n", ph)
 	}
+	// T-152: design images (backgrounds and decorations of a layout) of every book, none used by a profile or a note
+	sbDesign, cbDesign, rbDesign, ubDesign, obDesign := e.designImage(sb), e.designImage(cb), e.designImage(rb), e.designImage(ub), e.designImage(ob)
 	e.setBook(student, cls, sb).status(200, "OK")
 	e.setBook(classmate, cls, cb).status(200, "OK")
 	e.setBook(removed, cls, rb).status(200, "OK")
@@ -473,35 +483,51 @@ func TestAdminMediaReadPath(t *testing.T) {
 	e.wantPhoto(student, hidden)
 	e.wantPhoto(student, orphan)
 	e.wantPhoto(student, cover)
+	// T-152 AC3: the admin reads the design images of members whose book is in the class (also the ones no layout uses yet), the
+	// owner reads their own, and nobody else reads any
+	e.wantPhoto(admin, sbDesign)
+	e.wantPhoto(admin, cbDesign)
+	e.wantPhoto(student, sbDesign)
 	// AC2: nothing else, and every refusal is the answer for a photo that does not exist
 	for what, id := range map[string]string{
 		"pending note photo": pending, "hidden note photo": hidden, "photo of no note": orphan, "cover photo": cover,
 		"unlinked yearbook": ubPhoto, "removed member": rbPhoto, "book linked to another class": obPhoto,
+		"design image of an unlinked yearbook": ubDesign, "design image of a removed member": rbDesign, "design image of another class": obDesign,
 	} {
 		e.wantNoPhoto(admin, id, what)
 	}
 	// the other admin has the same rule for their class, and none for ours
 	e.wantPhoto(adminB, obPhoto)
-	for _, id := range []string{pp, approved1, cbPhoto, pending} {
+	e.wantPhoto(adminB, obDesign)
+	for _, id := range []string{pp, approved1, cbPhoto, pending, sbDesign, cbDesign} {
 		e.wantNoPhoto(adminB, id, "admin of another class")
 		e.wantNoPhoto(stranger, id, "stranger")
 	}
 	// a student has no read path into a classmate's photos, approved or not
-	for _, id := range []string{pp, approved1, pending} {
+	for _, id := range []string{pp, approved1, pending, sbDesign} {
 		e.wantNoPhoto(classmate, id, "classmate")
 	}
 	// a demoted admin has none either
 	e.exec(`UPDATE class_member_tab SET role = 'student' WHERE class_id = (SELECT id FROM class_tab WHERE public_id = ?) AND user_id = ?`, cls, admin.row)
 	e.wantNoPhoto(admin, pp, "demoted admin")
+	e.wantNoPhoto(admin, sbDesign, "demoted admin")
 	e.exec(`UPDATE class_member_tab SET role = 'admin' WHERE class_id = (SELECT id FROM class_tab WHERE public_id = ?) AND user_id = ?`, cls, admin.row)
 	e.wantPhoto(admin, pp)
+	// unlinking the page ends the admin's access to its design images at once
+	e.setBook(student, cls, nil).status(200, "OK")
+	e.wantNoPhoto(admin, sbDesign, "unlinked page")
+	e.wantPhoto(student, sbDesign)
+	e.setBook(student, cls, sb).status(200, "OK")
 
 	// the path is read only: the admin deleting an allowed photo changes nothing
 	n := e.count(`SELECT COUNT(*) FROM media_tab`)
 	e.do(admin, "POST", "/api/media/delete", body("id", pp)).status(200, "OK")
+	e.do(admin, "POST", "/api/media/delete", body("id", sbDesign)).status(200, "OK")
 	if e.count(`SELECT COUNT(*) FROM media_tab`) != n {
-		t.Fatal("the admin deleted a photo")
+		t.Fatal("the admin deleted a photo or a design image")
 	}
+	// ... and lists none: media/get-list is the owner's, even with purpose=design
+	e.do(admin, "GET", "/api/media/get-list?yearbook_id="+sb+"&purpose=design", "").status(404, "ERROR_NOT_FOUND")
 	e.wantPhoto(student, pp)
 }
 

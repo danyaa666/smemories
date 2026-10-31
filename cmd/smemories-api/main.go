@@ -175,6 +175,7 @@ func main() {
 	mt.Gauge("media_uploads_in_progress", "Owner photo uploads holding a shared upload slot (4 x SMEM_MEDIA_MAX_CONCURRENT slots).", func() float64 { return float64(mediaH.UploadsInProgress()) })
 	mt.Gauge("media_download_inflight", "Photo downloads (owner and public) holding a per-client slot; each streams from the object store and holds only a copy buffer.", func() float64 { return float64(mediaH.DownloadsInProgress()) })
 	mediaH.SetPublicCounter(mt.PublicMedia)
+	mediaH.SetUploadCounter(mt.MediaUpload)
 	mediaSvc.SetPanicReporter(logger, mt.MediaProcessPanic)
 	bookStore := yearbook.NewStore(d)
 	notesStore := notes.NewStore(d)

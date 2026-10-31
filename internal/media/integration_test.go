@@ -365,6 +365,7 @@ type mediaBody struct {
 	Width       int
 	Height      int
 	CreatedAt   int64 `json:"created_at"`
+	Purpose     string
 }
 
 func (r resp) media() mediaBody {
@@ -931,7 +932,7 @@ func TestContributorUploadBusyAndDiscard(t *testing.T) {
 	// a hang is caught by the generous guard below instead of a tight elapsed-time check.
 	res := make(chan error, 1)
 	go func() {
-		_, err := e.svc.save(context.Background(), ownerID, row, book, "contributor", load, 50*time.Millisecond)
+		_, err := e.svc.save(context.Background(), ownerID, row, book, "contributor", PurposePhoto, load, 50*time.Millisecond)
 		res <- err
 	}()
 	select {

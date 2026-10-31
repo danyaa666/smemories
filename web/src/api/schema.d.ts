@@ -428,8 +428,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Upload a photo to a yearbook
-         * @description Called by the signed-in owner (the web app's photo library, cover and profile photo pickers). `multipart/form-data` with the text field `yearbook_id` and the image in the part named `file`, in either order; other parts are ignored and the client file name is never used. The type is decided by sniffing the content (JPEG, PNG, WebP), never by file name or Content-Type. The image is decoded, rotated upright, stripped of all metadata (EXIF, GPS, ICC, comments), resized to at most 3000 px on the long edge (never enlarged) and stored; a 480 px JPEG thumbnail and a print version (long edge at most 1800 px, JPEG quality 85, PNG when the photo has transparency) are stored too. Opaque images are stored as JPEG, images with transparency as PNG. Only the owner of the yearbook may upload (`ERROR_NOT_FOUND` otherwise). The request body is capped at `SMEM_MEDIA_MAX_BYTES` (default 10 MiB) for the file plus 64 KiB of framing. The route may take up to 2.5 minutes (2 minutes to receive a slow phone upload, 30 seconds to process it). Limits: 200 photos per yearbook, 500 MiB per user, 60 uploads per 10 minutes per user, and at most four times the number of image-processing slots in progress at once (`ERROR_BUSY`, retry after `Retry-After`). Needs a verified email (`ERROR_EMAIL_NOT_VERIFIED`, checked before the body is read), and at most 2 uploads in progress per user and 4 per client address (`ERROR_RATE_LIMITED` with `Retry-After: 5`). A request with the session cookie must come from an allowed Origin. Not idempotent: retrying after a lost answer may store the photo twice. The answer carries no storage key or URL: fetch the image with `GET /api/media/get-content?id=`.
+         * Upload a photo or a design image to a yearbook
+         * @description Called by the signed-in owner (the web app's photo library, cover and profile photo pickers, and the layout editor for its background and decoration images). `multipart/form-data` with the text field `yearbook_id`, the image in the part named `file` and the optional text field `purpose`, in any order; other parts are ignored and the client file name is never used. `purpose` is absent (a yearbook photo, the default) or `design` (an image the student uploads as a background or decoration, T-152); any other value, `photo` included, is `ERROR_PARAM`. A design image goes through the same pipeline, size limits and rate limits as a photo and has the same three versions (`display`, `thumb`, `print`), but it is kept apart: it is not listed without `purpose=design`, it is not a photo (it cannot be a cover or a profile photo and does not count toward the 200 photos), a class admin can read it like a member's profile photo, and no public link opens it. At most 30 design images per yearbook; their bytes count toward the user's 500 MiB with the photos'. The type is decided by sniffing the content (JPEG, PNG, WebP), never by file name or Content-Type. The image is decoded, rotated upright, stripped of all metadata (EXIF, GPS, ICC, comments), resized to at most 3000 px on the long edge (never enlarged) and stored; a 480 px JPEG thumbnail and a print version (long edge at most 1800 px, JPEG quality 85, PNG when the photo has transparency) are stored too. Opaque images are stored as JPEG, images with transparency as PNG. Only the owner of the yearbook may upload (`ERROR_NOT_FOUND` otherwise). The request body is capped at `SMEM_MEDIA_MAX_BYTES` (default 10 MiB) for the file plus 64 KiB of framing. The route may take up to 2.5 minutes (2 minutes to receive a slow phone upload, 30 seconds to process it). Limits: 200 photos and 30 design images per yearbook, 500 MiB per user (both together), 60 uploads per 10 minutes per user, and at most four times the number of image-processing slots in progress at once (`ERROR_BUSY`, retry after `Retry-After`). Needs a verified email (`ERROR_EMAIL_NOT_VERIFIED`, checked before the body is read), and at most 2 uploads in progress per user and 4 per client address (`ERROR_RATE_LIMITED` with `Retry-After: 5`). A request with the session cookie must come from an allowed Origin. Not idempotent: retrying after a lost answer may store the photo twice. The answer carries no storage key or URL: fetch the image with `GET /api/media/get-content?id=`.
          */
         post: operations["createMedia"];
         delete?: never;
@@ -446,8 +446,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List a yearbook's photos
-         * @description Called by the signed-in owner (the photo library). Newest first, keyset paginated, so uploads and deletes between pages never repeat or skip a photo that stays. Pass the `next_id` of a page back as the `next_id` query parameter to get the next one; it is the empty string on the last page. `next_id` is an opaque, tamper-evident token that is bound to the yearbook it came from: a changed, truncated, foreign or otherwise unknown token (also the cursor of the old API) is `ERROR_PARAM`, and a token never reveals an internal id. By default only the owner's own uploads are listed (`uploader=owner`); `contributor` lists the photos friends sent through a collection link and `all` both. A missing `yearbook_id`, a `limit` outside 1..100 and an unknown `uploader` are `ERROR_PARAM`. A missing yearbook and one owned by someone else both answer `ERROR_NOT_FOUND`. The response never contains storage keys, hashes or URLs: build the image URL from `id`, for example `/api/media/get-content?id=<id>&variant=thumb`.
+         * List a yearbook's photos or design images
+         * @description Called by the signed-in owner (the photo library, and the layout editor's image picker with `purpose=design`). Only photos are listed unless `purpose=design`, which lists only the design images (always the owner's own: `uploader=contributor` lists none); the page tokens of the two lists are not interchangeable. Any other `purpose` is `ERROR_PARAM`. Newest first, keyset paginated, so uploads and deletes between pages never repeat or skip a photo that stays. Pass the `next_id` of a page back as the `next_id` query parameter to get the next one; it is the empty string on the last page. `next_id` is an opaque, tamper-evident token that is bound to the yearbook it came from: a changed, truncated, foreign or otherwise unknown token (also the cursor of the old API) is `ERROR_PARAM`, and a token never reveals an internal id. By default only the owner's own uploads are listed (`uploader=owner`); `contributor` lists the photos friends sent through a collection link and `all` both. A missing `yearbook_id`, a `limit` outside 1..100 and an unknown `uploader` are `ERROR_PARAM`. A missing yearbook and one owned by someone else both answer `ERROR_NOT_FOUND`. The response never contains storage keys, hashes or URLs: build the image URL from `id`, for example `/api/media/get-content?id=<id>&variant=thumb`.
          */
         get: operations["listMedia"];
         put?: never;
@@ -467,7 +467,7 @@ export interface paths {
         };
         /**
          * Download a photo
-         * @description Called by the browser for every `<img src>` of the signed-in owner (session cookie, same origin). Binary: on success the body is the stored image with **no envelope**; `Content-Type` comes from the stored record (`image/jpeg`, or `image/png` for a photo with transparency; always `image/jpeg` for `variant=thumb`), `X-Content-Type-Options: nosniff` and `Cache-Control: private, max-age=3600` (`private, no-store` when the reader is a class admin and not the owner, so a hidden note's photo is not shown from the browser's cache) are set, and the `ETag` differs per variant. Honours `HEAD`, `Range` (206) and `If-None-Match` (304). On failure the answer is the usual JSON error envelope with the matching HTTP status and `Cache-Control: no-store`, so an error is never cached in place of the image; an `<img>` tag only needs the status. Only the owner may read (`ERROR_NOT_FOUND` for anyone else, and for an unknown id), with one exception: an admin of a class may read, read only, the owner profile photo and the photos of approved notes of a yearbook that a member of that class chose as their class page (`class-book/get` lists them); a pending or hidden note's photo, the cover, any other photo of that yearbook, a yearbook that is no class page, a removed member's yearbook and another class's are `ERROR_NOT_FOUND` for the admin, exactly as for a photo that does not exist. `variant=print` is the 1800 px version for the print renderer; a photo uploaded before it existed, and not yet reached by the backfill (`smemories-media-backfill`), is answered in display size. The route may take up to 2 minutes for a slow client; a client that reads slower than 16 KiB/s (after 15 s) or stops reading for 10 s is disconnected. The bytes are streamed from the object store (T-107). One account may have at most 64 downloads in progress; the 65th waits up to 0.5 s for a slot and is then `429 ERROR_RATE_LIMITED` with `Retry-After`, answered before anything is read.
+         * @description Called by the browser for every `<img src>` of the signed-in owner (session cookie, same origin). Binary: on success the body is the stored image with **no envelope**; `Content-Type` comes from the stored record (`image/jpeg`, or `image/png` for a photo with transparency; always `image/jpeg` for `variant=thumb`), `X-Content-Type-Options: nosniff` and `Cache-Control: private, max-age=3600` (`private, no-store` when the reader is a class admin and not the owner, so a hidden note's photo is not shown from the browser's cache) are set, and the `ETag` differs per variant. Honours `HEAD`, `Range` (206) and `If-None-Match` (304). On failure the answer is the usual JSON error envelope with the matching HTTP status and `Cache-Control: no-store`, so an error is never cached in place of the image; an `<img>` tag only needs the status. Only the owner may read (`ERROR_NOT_FOUND` for anyone else, and for an unknown id), with one exception: an admin of a class may read, read only, the owner profile photo, the photos of approved notes and the design images (T-152) of a yearbook that a member of that class chose as their class page (`class-book/get` lists the first two); a pending or hidden note's photo, the cover, any other photo of that yearbook, a yearbook that is no class page, a removed member's yearbook and another class's are `ERROR_NOT_FOUND` for the admin, exactly as for a photo that does not exist. `variant=print` is the 1800 px version for the print renderer; a photo uploaded before it existed, and not yet reached by the backfill (`smemories-media-backfill`), is answered in display size. The route may take up to 2 minutes for a slow client; a client that reads slower than 16 KiB/s (after 15 s) or stops reading for 10 s is disconnected. The bytes are streamed from the object store (T-107). One account may have at most 64 downloads in progress; the 65th waits up to 0.5 s for a slot and is then `429 ERROR_RATE_LIMITED` with `Retry-After`, answered before anything is read.
          */
         get: operations["getMediaContent"];
         put?: never;
@@ -489,7 +489,7 @@ export interface paths {
         put?: never;
         /**
          * Delete a photo
-         * @description Called by the signed-in owner. Removes the row and the stored objects (display, thumbnail, print). Idempotent: an unknown id, an already deleted one and someone else's photo all answer success (and the last deletes nothing), so the answer never reveals whether a photo exists. A cover or profile photo that pointed at it is cleared. A missing `id` and unknown fields are `ERROR_PARAM`. A request with the session cookie must come from an allowed Origin.
+         * @description Called by the signed-in owner. Works for a photo and for a design image (T-152). Removes the row and the stored objects (display, thumbnail, print). Idempotent: an unknown id, an already deleted one and someone else's photo all answer success (and the last deletes nothing), so the answer never reveals whether a photo exists. A cover or profile photo that pointed at it is cleared. A missing `id` and unknown fields are `ERROR_PARAM`. A request with the session cookie must come from an allowed Origin.
          */
         post: operations["deleteMedia"];
         delete?: never;
@@ -1578,7 +1578,7 @@ export interface components {
             /** @description Required. ULID of the yearbook whose public photo links are switched off. */
             id: string;
         };
-        /** @description A stored photo. Carries no storage key, hash or URL; the client builds the content URL from `id`. */
+        /** @description A stored photo or design image. Carries no storage key, hash or URL; the client builds the content URL from `id`. */
         Media: {
             /** @description Photo ULID; use it as `id` of get-content and delete. */
             id: string;
@@ -1597,6 +1597,11 @@ export interface components {
              * @description Upload time, Unix ms.
              */
             created_at: number;
+            /**
+             * @description What the image is for: `photo` (a yearbook photo) or `design` (a background or decoration image of the layout editor, T-152). Always `photo` unless the upload or the list asked for `design`.
+             * @enum {string}
+             */
+            purpose: "photo" | "design";
         };
         MediaResponse: {
             /**
@@ -1628,6 +1633,11 @@ export interface components {
              * @description Required. The image: JPEG, PNG or WebP, at most `SMEM_MEDIA_MAX_BYTES` (default 10 MiB).
              */
             file: string;
+            /**
+             * @description Optional, default absent = a yearbook photo. `design` stores the image as a background or decoration for the layout editor (30 per yearbook). Any other value is `ERROR_PARAM`.
+             * @enum {string}
+             */
+            purpose?: "design";
         };
         MediaDeleteRequest: {
             /** @description Required. ULID of the photo to delete. */
@@ -3535,6 +3545,8 @@ export interface operations {
                 next_id?: string;
                 /** @description Whose photos to list: `owner` (the owner's own uploads, default), `contributor` (photos sent through a collection link) or `all`. */
                 uploader?: "owner" | "contributor" | "all";
+                /** @description Omit it to list the yearbook's photos (the default). `design` lists only the design images (backgrounds and decorations uploaded for the layout editor). Anything else is `ERROR_PARAM`. */
+                purpose?: "design";
             };
             header?: never;
             path?: never;
