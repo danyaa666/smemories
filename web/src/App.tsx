@@ -32,11 +32,23 @@ import { Yearbooks } from "./pages/Yearbooks";
 const Book = lazy(() => import("./pages/Book").then((m) => ({ default: m.Book })));
 const Customise = lazy(() => import("./pages/Customise").then((m) => ({ default: m.Customise })));
 const ClassBook = lazy(() => import("./pages/ClassBook").then((m) => ({ default: m.ClassBook })));
+// Review page for the asset pack (T-151); `import.meta.env.DEV` is false in a build, so the page and its chunk are not shipped.
+const ContactSheet = import.meta.env.DEV ? lazy(() => import("./book/assets/ContactSheet")) : null;
 
 export function App() {
   return (
     <Routes>
       <Route path="/c/:token" element={<NoteForm />} />
+      {ContactSheet && (
+        <Route
+          path="/dev/assets"
+          element={
+            <Suspense fallback={null}>
+              <ContactSheet />
+            </Suspense>
+          }
+        />
+      )}
       <Route element={<PublicLayout />}>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />

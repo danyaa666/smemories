@@ -42,3 +42,7 @@ Served from our own origin as woff2 through the `@fontsource` npm packages (lati
 | `@fontsource-variable/fraunces` 5.3.0 | Fraunces, Copyright 2020 The Fraunces Project Authors (https://github.com/undercasetype/Fraunces) |
 | `@fontsource/be-vietnam-pro` 5.3.0 | Be Vietnam Pro, Copyright 2021 The Be Vietnam Pro Project Authors (https://github.com/bettergui/BeVietnamPro) |
 | `@fontsource/patrick-hand` 5.3.0 | Patrick Hand, Copyright 2010-2012 Patrick Wagesreiter (mail@patrickwagesreiter.at) |
+
+## Sticker, shape and frame pack (T-151, epic E09)
+
+`web/src/book/assets/`: 25 assets drawn by the team (licence `authored`, CC0 dedication in `licences/authored.txt`) and 26 stickers from Openclipart, each CC0 1.0 (public domain). Every curated asset has its own notice (author, source page, date checked, changes) in `web/src/book/assets/licences/<id>.txt`; the list is in `docs/assets.md`. Only CC0 and SIL OFL assets may be added.
