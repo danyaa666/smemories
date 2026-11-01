@@ -375,7 +375,7 @@ Spec: .team/epics/E09-customisation-editor/18-editor-shell-and-selection.md (rea
 - 2026-11-01 12:18Z · leader · merged PR #157 squash, head 264ad00, QA_PASS with e2e 8/8 and print-check 187/187
 
 ### T-160 — [E09] Editor gestures: move, resize, rotate, snap, guides, with keyboard control (web)
-- **Status:** TODO
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -384,15 +384,18 @@ Spec: .team/epics/E09-customisation-editor/18-editor-shell-and-selection.md (rea
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-11-01 12:18Z by leader
-- **Comments-seen:** 1
+- **Branch:** task/t-160-e09-editor-gestures-move-resize-rotate-s
+- **PR:** https://github.com/danyaa666/smemories/pull/158
+- **Updated:** 2026-11-01 12:58Z by dev
+- **Comments-seen:** 4
 
 Spec: .team/epics/E09-customisation-editor/19-editor-gestures-and-keyboard.md (read it from the main checkout). In-house pointer-event module per ADR 0004 Q2, keyboard in the same task, 44 px touch targets
 
 #### Comments
 - 2026-11-01 12:18Z · leader · T-159 merged; also handle QA notes: hit areas keep old order after a move (click on overlap selects the element underneath), and the status label after a 500 save reads Offline
+- 2026-11-01 12:58Z · dev · Head 83637225410caaab1f64655f72d68244f0e26227, PR #158. Results: web lint/prettier/tsc ok, vitest 899/0, lint:i18n ok, check:api ok, build ok; make e2e (own stack t160stack, API 28316, web 24316) 16 passed 0 failed incl. 8 new editor-gestures tests; make print-check 187 pass 0 fail. Pointer error (screen px, Alt held) worst per measure A5/A4/Letter at 100 and 125 pct: drag 0.44, corner resize 0.46, opposite corner 0.55, rotate 0.0 (full table in PR). 100 items, 4x CPU throttle: 59.7 fps, p95 16.8 ms. Keyboard: arrows 1, Shift+arrows 10, Alt+Shift+arrows resize 10 (Ctrl+Alt rejected: VoiceOver/Linux workspaces), comma/period rotate 1 (Shift 15), Delete/Backspace, Esc, Tab, ? help; table in PR. A1 (hit order = DOM order of moved elements) and A2 (new save state failing = Could not save, retrying) done with tests. Decisions to check: clamp keeps box inside the page (stricter than half-outside); keyboard does not snap; no resize snapping. UNPROVEN: Windows/Linux shortcut set (manual check keys in docs/e2e.md), Safari/Firefox any OS, touch in Firefox/WebKit/real tablet, screen readers, AltGr layouts.
+- 2026-11-01 12:58Z · dev · PR #158 head 8363722; gestures + keyboard + A1 + A2; e2e 16/0, print-check 187/0, vitest 899/0; see comment for numbers and unproven list
+- 2026-11-01 12:59Z · leader · Leader to QA: re-run everything on head 83637225410caaab1f64655f72d68244f0e26227 and write result lines with the head SHA. Decisions I want you to judge: (1) dev's clamp keeps the whole box inside the page, stricter than the spec (box may leave the page by at most half its size; server bound unchanged): check a rotated item at a corner and say whether it is a usability problem; I accept the stricter clamp for the first release if nothing else breaks (nothing is cut by print), but it must be documented in docs/e2e.md or the editor docs. (2) Keyboard does not snap and resize does not snap, only move does: fine unless it contradicts an AC. (3) Pointer error was measured at 100% and 125%, not 150% (quantisation): repeat on Letter at a non-default zoom (e.g. 75% and 150%) and report the numbers; pass if the error comes only from the thousandths quantisation (at most 1 px at 100-125%, say what you see at 150%). Also: rotated-item resize, flush-to-edge drag, Escape mid-gesture leaves no history step and no save, one gesture = one undo step, keyboard shortcuts in Chromium (list which you could not try), A1 click on overlap selects the topmost, A2 server error label, touch at 768 px in Chromium (first tap selects, then drag; swipe over an unselected item pans). Note dev's stack t160stack (ports 33316/36316/39316) may still be running: it is the dev's, leave it; use your own project and ports.
 
 ### T-161 — [E09] Editor text boxes: add, type in place, font, size, colour, align (web)
 - **Status:** BACKLOG
