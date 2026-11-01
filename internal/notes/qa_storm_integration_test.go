@@ -272,7 +272,7 @@ func TestQAStormRevokeAndPhotoDelete(t *testing.T) {
 // The registry in TestDeleteBookLeavesNoRows must fail when a *_tab table nobody registered exists.
 func TestQAUnregisteredTableIsCaught(t *testing.T) {
 	e := newEnv(t)
-	want := []string{"book_design_tab", "book_layout_tab", "media_tab", "note_collection_tab", "note_photo_tab", "note_tab", "profile_tab", "yearbook_tab"}
+	want := []string{"book_design_tab", "book_layout_tab", "book_layout_version_tab", "media_tab", "note_collection_tab", "note_photo_tab", "note_tab", "profile_tab", "yearbook_tab"}
 	if got := e.tabTables(); fmt.Sprint(got) != fmt.Sprint(want) {
 		t.Fatalf("baseline %v", got)
 	}

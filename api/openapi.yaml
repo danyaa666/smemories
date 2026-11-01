@@ -1820,6 +1820,162 @@ paths:
         "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
         "500": {$ref: "#/components/responses/ApiInternal"}
         "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/book-layout/version-list:
+    post:
+      operationId: listBookLayoutVersions
+      tags: [book-layout]
+      summary: List the saved earlier versions of a book's layout
+      description: >-
+        Called by the signed-in owner's layout editor ("version history", T-163). Returns the book's layout snapshots, newest first, at most 30, without the
+        documents (`version-get` reads one). A snapshot is the document as it was before a save that started a new editing burst (the newest snapshot
+        was older than 10 minutes or there was none; kind `auto`), before `reset` (kind `reset`) or before a `restore` (kind `restore`); the oldest beyond
+        30 are deleted. The history is deleted with the layout when the book's template changes and with the yearbook; `reset` keeps it. A missing book and
+        someone else's both answer `ERROR_NOT_FOUND`; a class admin has no access. Takes from the same per-user limits as `save`. A request with the session cookie
+        must come from an allowed Origin.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: The yearbook does not exist or belongs to someone else; the two cannot be told apart.}
+        - {code: ERROR_RATE_LIMITED, description: "Too many requests; wait `Retry-After` seconds (shared with `save`)."}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/BookLayoutResetRequest"}
+            examples:
+              list:
+                value: {yearbook_id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E}
+      responses:
+        "200":
+          description: The snapshots, newest first.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/BookLayoutVersionListResponse"}
+              examples:
+                list:
+                  value: {status: OK, data: {items: [{id: 01K7QB1B2C3D4E5F6G7H8J9K0M, version: 7, kind: auto, created_at: 1793361600000, item_count: 4, bytes: 912}], next_id: ""}}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "429": {$ref: "#/components/responses/ApiRateLimited"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/book-layout/version-get:
+    post:
+      operationId: getBookLayoutVersion
+      tags: [book-layout]
+      summary: Read one saved earlier version of a book's layout
+      description: >-
+        Called by the signed-in owner's layout editor to preview a snapshot before `restore` (T-163). Returns the stored document as it was saved
+        (it is not re-validated here; `restore` validates it against the current template and images). `id` is the snapshot's public id from `version-list`.
+        A missing book, someone else's and an unknown or foreign snapshot id all answer `ERROR_NOT_FOUND`. Takes from the same per-user limits as `save`. A request with
+        the session cookie must come from an allowed Origin.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_NOT_FOUND, description: The yearbook does not exist, belongs to someone else, or has no snapshot with this id; the cases cannot be told apart.}
+        - {code: ERROR_RATE_LIMITED, description: "Too many requests; wait `Retry-After` seconds (shared with `save`)."}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/BookLayoutVersionRequest"}
+            examples:
+              get:
+                value: {yearbook_id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, id: 01K7QB1B2C3D4E5F6G7H8J9K0M}
+      responses:
+        "200":
+          description: The snapshot with its document.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/BookLayoutVersionGetResponse"}
+              examples:
+                get:
+                  value: {status: OK, data: {id: 01K7QB1B2C3D4E5F6G7H8J9K0M, version: 7, kind: auto, created_at: 1793361600000, layout: {v: 1, pages: {cover: {items: [{id: a1b2c3, t: text, text: Lớp 12A1, x: 100, w: 400, h: 120, cy: 850}]}}}}}
+        "400": {$ref: "#/components/responses/ApiBadRequest"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "429": {$ref: "#/components/responses/ApiRateLimited"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
+  /api/book-layout/restore:
+    post:
+      operationId: restoreBookLayoutVersion
+      tags: [book-layout]
+      summary: Bring back a saved earlier version of a book's layout as a new version
+      description: >-
+        Called by the signed-in owner's layout editor ("restore", T-163). Writes the snapshot `id` as the book's layout under a **new, higher** version (the counter
+        only goes up) and stores the document it replaces as a `restore` snapshot, in one transaction. `base_version` is the version the editor holds, as for `save`: a
+        stale one is `ERROR_VERSION_CONFLICT` (409, `data` is the stored `{version, layout}`) and nothing changes. The snapshot is validated like a save against
+        the book's **current** template, the asset registry and the owner's **current** design images; an item or a page background that names an asset id that no longer exists
+        or a design image that was deleted is **dropped**, and `dropped` says how many. Any other problem (unknown key, over a limit) is
+        `ERROR_INVALID_LAYOUT` (400, `data.problems`) and nothing changes. A snapshot made for another template than the book has now is `ERROR_VERSION_TEMPLATE_CHANGED`
+        (409; in practice a template change already deletes the history). A missing book, someone else's and an unknown or foreign snapshot id all answer
+        `ERROR_NOT_FOUND`. Takes from the same per-user limits as `save`. A request with the session cookie must come from an allowed Origin.
+      x-auth: required
+      x-error-codes:
+        - {code: ERROR_INVALID_LAYOUT, description: "The snapshot is not valid for the book's current template (`data.problems`), or the template cannot hold a layout. Nothing was changed."}
+        - {code: ERROR_VERSION_CONFLICT, description: "`base_version` is not the stored version (`data.version`, `data.layout`). Nothing was changed."}
+        - {code: ERROR_VERSION_TEMPLATE_CHANGED, description: "The snapshot was made for another template than the book has now. Nothing was changed."}
+        - {code: ERROR_NOT_FOUND, description: The yearbook does not exist, belongs to someone else, or has no snapshot with this id; the cases cannot be told apart.}
+        - {code: ERROR_RATE_LIMITED, description: "Too many requests; wait `Retry-After` seconds (shared with `save`)."}
+        - {code: ERROR_CSRF_ORIGIN_MISMATCH, description: The request carries the session cookie but its Origin (or Referer) is missing or not allowed.}
+        - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: A body was sent with a Content-Type other than application/json.}
+        - {code: ERROR_TOO_LARGE, description: The body is over the 1 MiB cap.}
+        - {code: ERROR_SESSION_STORE_UNAVAILABLE, description: "Redis, which holds the login sessions, did not answer; the request fails closed. Retry after `Retry-After`."}
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/BookLayoutRestoreRequest"}
+            examples:
+              restore:
+                value: {yearbook_id: 01K7Q8W3ZR5N2M4X6V8B0C1D2E, id: 01K7QB1B2C3D4E5F6G7H8J9K0M, base_version: 9}
+      responses:
+        "200":
+          description: Restored as a new version.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/BookLayoutRestoredResponse"}
+              examples:
+                restored:
+                  value: {status: OK, data: {version: 10, updated_at: 1793361600000, dropped: 1, layout: {v: 1, pages: {cover: {items: [{id: a1b2c3, t: text, text: Lớp 12A1, x: 100, w: 400, h: 120, cy: 850}]}}}}}
+        "400":
+          description: "`ERROR_PARAM` (malformed body, bad ids, missing `base_version`) or `ERROR_INVALID_LAYOUT` with `data.problems`."
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/BookLayoutInvalidError"}
+        "401": {$ref: "#/components/responses/ApiUnauthorized"}
+        "403": {$ref: "#/components/responses/ApiForbidden"}
+        "404": {$ref: "#/components/responses/ApiNotFound"}
+        "409":
+          description: "`ERROR_VERSION_CONFLICT` (`data` is the stored version and document) or `ERROR_VERSION_TEMPLATE_CHANGED`."
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/BookLayoutConflictError"}
+        "413": {$ref: "#/components/responses/ApiTooLarge"}
+        "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
+        "429": {$ref: "#/components/responses/ApiRateLimited"}
+        "500": {$ref: "#/components/responses/ApiInternal"}
+        "503": {$ref: "#/components/responses/ApiSessionStoreUnavailable"}
   /api/book-export/get-text:
     get:
       operationId: getBookExportText
@@ -4006,6 +4162,75 @@ components:
           properties:
             version: {type: integer, format: int64, description: The new stored version.}
             updated_at: {type: integer, format: int64, description: Unix ms.}
+    BookLayoutVersionRequest:
+      type: object
+      additionalProperties: false
+      required: [yearbook_id, id]
+      properties:
+        yearbook_id: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$', description: "Required. ULID of the yearbook."}
+        id: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$', description: "Required. ULID of the snapshot, from `version-list`."}
+    BookLayoutRestoreRequest:
+      type: object
+      additionalProperties: false
+      required: [yearbook_id, id, base_version]
+      properties:
+        yearbook_id: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$', description: "Required. ULID of the yearbook."}
+        id: {type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$', description: "Required. ULID of the snapshot to bring back, from `version-list`."}
+        base_version: {type: integer, format: int64, minimum: 0, description: "Required. The layout version the editor holds (as for `save`); 0 when the book had no layout."}
+    BookLayoutVersionListResponse:
+      type: object
+      required: [status, data]
+      properties:
+        status: {type: string, const: OK, description: Always `OK` on success.}
+        data:
+          type: object
+          description: The snapshots.
+          required: [items, next_id]
+          properties:
+            next_id: {type: string, description: "Always the empty string: the list is capped at 30 and has no next page (the shape of docs/api-contract.md section 5)."}
+            items:
+              type: array
+              maxItems: 30
+              description: The book's snapshots, newest first (at most 30), without documents.
+              items:
+                type: object
+                required: [id, version, kind, created_at, item_count, bytes]
+                properties:
+                  id: {type: string, description: "ULID of the snapshot; the `id` of `version-get` and `restore`."}
+                  version: {type: integer, format: int64, description: The layout version the document held when it was replaced.}
+                  kind: {type: string, enum: [auto, reset, restore], description: "What replaced it: `auto` a save that began a new editing burst, `reset` the reset endpoint, `restore` a restore."}
+                  created_at: {type: integer, format: int64, description: "Unix ms, when the document was replaced."}
+                  item_count: {type: integer, description: Items on all pages of the document.}
+                  bytes: {type: integer, description: Size of the stored document in bytes.}
+    BookLayoutVersionGetResponse:
+      type: object
+      required: [status, data]
+      properties:
+        status: {type: string, const: OK, description: Always `OK` on success.}
+        data:
+          type: object
+          description: One snapshot with its document.
+          required: [id, version, kind, created_at, layout]
+          properties:
+            id: {type: string, description: ULID of the snapshot.}
+            version: {type: integer, format: int64, description: The layout version the document held when it was replaced.}
+            kind: {type: string, enum: [auto, reset, restore], description: What replaced it (see `version-list`).}
+            created_at: {type: integer, format: int64, description: "Unix ms, when the document was replaced."}
+            layout: {$ref: "#/components/schemas/BookLayoutDocument"}
+    BookLayoutRestoredResponse:
+      type: object
+      required: [status, data]
+      properties:
+        status: {type: string, const: OK, description: Always `OK` on success.}
+        data:
+          type: object
+          description: The new version and the document now stored.
+          required: [version, updated_at, layout, dropped]
+          properties:
+            version: {type: integer, format: int64, description: The new stored version (higher than any issued before).}
+            updated_at: {type: integer, format: int64, description: Unix ms.}
+            layout: {$ref: "#/components/schemas/BookLayoutDocument"}
+            dropped: {type: integer, description: "How many items and page backgrounds were left out because their asset or design image no longer exists; 0 when nothing was."}
     BookLayoutInvalidError:
       description: "`ERROR_INVALID_LAYOUT` (with `data.problems`) or `ERROR_PARAM` (no `data`)."
       allOf:

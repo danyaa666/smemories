@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"log/slog"
 	"strconv"
 	"time"
 
@@ -17,6 +18,11 @@ const (
 	DefaultSavesPerMinute = 60
 	Burst                 = 20
 	burstWindow           = 10 * time.Second
+
+	// SnapshotGap is how old the newest snapshot of a book must be before a save stores a new automatic one (T-163): saves inside the
+	// gap are one editing burst. MaxSnapshots is how many snapshots a book keeps, newest first.
+	SnapshotGap  = 10 * time.Minute
+	MaxSnapshots = 30
 )
 
 // Codes of the save endpoint.
@@ -25,7 +31,25 @@ var (
 	CodeVersionConflict = apperr.NewCode("ERROR_VERSION_CONFLICT", apperr.Conflict.HTTP)
 	// CodeInvalidLayout is the 400 for a rejected document. The answer carries the problem list.
 	CodeInvalidLayout = apperr.NewCode("ERROR_INVALID_LAYOUT", apperr.Param.HTTP)
+	// CodeVersionTemplateChanged is the 409 of a restore whose snapshot was made for another template than the book has now.
+	CodeVersionTemplateChanged = apperr.NewCode("ERROR_VERSION_TEMPLATE_CHANGED", apperr.Conflict.HTTP)
 )
+
+// Results of a restore, the label of smem_layout_restores_total.
+const (
+	RestoreOK              = "ok"
+	RestoreConflict        = "conflict"
+	RestoreInvalid         = "invalid"
+	RestoreTemplateChanged = "template_changed"
+)
+
+// Observer receives what the history does, for metrics and one log line per restore. Every member may be nil.
+type Observer struct {
+	Snapshot func(kind string) // a snapshot was stored (KindAuto, KindReset, KindRestore)
+	Pruned   func(n int)       // old snapshots were deleted
+	Restore  func(result string)
+	Log      *slog.Logger // one line per restore: the book's public id, the version numbers and dropped; never document content
+}
 
 // Results of a save, the label of smem_layout_saves_total.
 const (
@@ -91,6 +115,7 @@ type Service struct {
 	burst  ratelimit.Limiter
 	now    func() time.Time
 	count  func(result string) // smem_layout_saves_total; nil = not counted
+	obs    Observer
 }
 
 // NewService builds the service; limiters and now may be nil (no rate limit, time.Now). perMinute is
@@ -109,6 +134,9 @@ func NewService(store *Store, media DesignImages, limiters *ratelimit.Factory, p
 
 // SetCounter makes the service report every save's result (ResultOK, ...) to f.
 func (s *Service) SetCounter(f func(result string)) { s.count = f }
+
+// SetObserver makes the service report snapshots, pruning and restores to o.
+func (s *Service) SetObserver(o Observer) { s.obs = o }
 
 // Counted lets the handler report the one result the service never sees: a body over the size limit.
 func (s *Service) Counted(result string) {
@@ -171,15 +199,30 @@ func (s *Service) save(ctx context.Context, ownerID uint64, publicID string, bas
 	if len(probs) > 0 {
 		return nil, invalid(probs...)
 	}
-	now := s.now().UnixMilli()
-	version, lost, err := s.store.save(ctx, ownerID, publicID, *st.templateID, baseVersion, doc, now)
+	pol := s.policy()
+	w, lost, err := s.store.save(ctx, ownerID, publicID, *st.templateID, baseVersion, doc, KindAuto, pol)
 	if err != nil {
 		return nil, err
 	}
 	if lost != nil {
 		return nil, conflictOf(lost)
 	}
-	return &Saved{Version: version, UpdatedAt: now}, nil
+	s.written(w)
+	return &Saved{Version: w.version, UpdatedAt: pol.nowMs}, nil
+}
+
+func (s *Service) policy() policy {
+	return policy{nowMs: s.now().UnixMilli(), gapMs: SnapshotGap.Milliseconds(), keep: MaxSnapshots}
+}
+
+// written reports the snapshot a committed write stored and the ones it pruned.
+func (s *Service) written(w *written) {
+	if w.snap != "" && s.obs.Snapshot != nil {
+		s.obs.Snapshot(w.snap)
+	}
+	if w.pruned > 0 && s.obs.Pruned != nil {
+		s.obs.Pruned(int(w.pruned))
+	}
 }
 
 // ownImages asks the media service which of the media ids the document names are design images of the owner's book: the one check that
@@ -193,8 +236,14 @@ func (s *Service) ownImages(ctx context.Context, ownerID uint64, publicID string
 }
 
 // Reset deletes the layout (back to the template's own pages); it succeeds when there is none.
+// The deleted document is kept as a snapshot (T-163).
 func (s *Service) Reset(ctx context.Context, ownerID uint64, publicID string) error {
-	return s.store.reset(ctx, ownerID, publicID)
+	w, err := s.store.reset(ctx, ownerID, publicID, s.policy())
+	if err != nil {
+		return err
+	}
+	s.written(w)
+	return nil
 }
 
 // Resolved is the layout to print for the owner's book (book-data/get): nil when there is none, the row was made for another template, the
@@ -222,10 +271,13 @@ func (s *Service) Resolved(ctx context.Context, ownerID uint64, publicID string,
 	return &Resolved{Layout: doc, Version: st.row.version}, nil
 }
 
-// DeleteByYearbook removes the book's layout row in the caller's transaction. It is the yearbook.ChildPurger of a book delete and the
-// hook of a template change (a layout is only valid for the template it was made for).
+// DeleteByYearbook removes the book's layout row and its snapshots in the caller's transaction. It is the yearbook.ChildPurger of a book
+// delete and the hook of a template change (a layout, and so its history, is only valid for the template it was made for).
 func (s *Service) DeleteByYearbook(ctx context.Context, tx *sql.Tx, yearbookID uint64) error {
-	return deleteRow(ctx, tx, yearbookID)
+	if err := deleteRow(ctx, tx, yearbookID); err != nil {
+		return err
+	}
+	return deleteVersions(ctx, tx, yearbookID)
 }
 
 // take spends one save: Burst per burstWindow and the configured number per minute. Both fail open when Redis is down.
@@ -265,4 +317,113 @@ func conflictOf(l *conflict) error {
 		c.Layout = l.row.layout
 	}
 	return apperr.Wrap(CodeVersionConflict, c, "the layout was saved elsewhere")
+}
+
+// Versions lists the owner's snapshots of the book, newest first (at most MaxSnapshots), without documents.
+func (s *Service) Versions(ctx context.Context, ownerID uint64, publicID string) ([]VersionInfo, error) {
+	if err := s.take(ctx, ownerID); err != nil {
+		return nil, err
+	}
+	return s.store.versions(ctx, ownerID, publicID, MaxSnapshots)
+}
+
+// VersionView is the answer of version-get.
+type VersionView struct {
+	ID        string          `json:"id"`
+	Version   int64           `json:"version"`
+	Kind      string          `json:"kind"`
+	CreatedAt int64           `json:"created_at"`
+	Layout    json.RawMessage `json:"layout"`
+}
+
+// Version returns one snapshot with its document. Another user's book, an unknown book and an unknown snapshot are ERROR_NOT_FOUND.
+func (s *Service) Version(ctx context.Context, ownerID uint64, publicID, id string) (*VersionView, error) {
+	if err := s.take(ctx, ownerID); err != nil {
+		return nil, err
+	}
+	v, err := s.store.version(ctx, ownerID, publicID, id)
+	if err != nil {
+		return nil, err
+	}
+	return &VersionView{ID: v.ID, Version: v.Version, Kind: v.Kind, CreatedAt: v.CreatedAt, Layout: v.layout}, nil
+}
+
+// Restored is the answer of restore.
+type Restored struct {
+	Version   int64           `json:"version"`
+	UpdatedAt int64           `json:"updated_at"`
+	Layout    json.RawMessage `json:"layout"`
+	Dropped   int             `json:"dropped"`
+}
+
+// Restore writes snapshot id as a new version of the book if baseVersion is the current one. The document is validated like a save
+// against the book's current template and the owner's current design images; items and backgrounds whose asset or image is gone are
+// dropped and counted. The replaced document becomes a restore snapshot, in the same transaction. A snapshot made for another template is
+// ERROR_VERSION_TEMPLATE_CHANGED, a stale baseVersion ERROR_VERSION_CONFLICT with the stored document.
+func (s *Service) Restore(ctx context.Context, ownerID uint64, publicID, id string, baseVersion int64) (*Restored, error) {
+	res, err := s.restore(ctx, ownerID, publicID, id, baseVersion)
+	result := ""
+	switch {
+	case err == nil:
+		result = RestoreOK
+	case apperr.Is(err, CodeVersionConflict):
+		result = RestoreConflict
+	case apperr.Is(err, CodeInvalidLayout):
+		result = RestoreInvalid
+	case apperr.Is(err, CodeVersionTemplateChanged), apperr.Is(err, apperr.Conflict): // the second: the template changed while we validated
+		result = RestoreTemplateChanged
+	}
+	if result != "" && s.obs.Restore != nil {
+		s.obs.Restore(result)
+	}
+	if err == nil && s.obs.Log != nil {
+		s.obs.Log.InfoContext(ctx, "layout restored", "yearbook_id", publicID, "restored_version", res.From, "from_version", res.Replaced, "new_version", res.Version, "dropped", res.Dropped)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &res.Restored, nil
+}
+
+type restoreResult struct {
+	Restored
+	From, Replaced int64 // the version the snapshot held, the version the restore replaced
+}
+
+func (s *Service) restore(ctx context.Context, ownerID uint64, publicID, id string, baseVersion int64) (*restoreResult, error) {
+	if baseVersion < 0 {
+		return nil, apperr.New(apperr.Param, "base_version must be 0 or the version read")
+	}
+	if err := s.take(ctx, ownerID); err != nil {
+		return nil, err
+	}
+	snap, err := s.store.version(ctx, ownerID, publicID, id)
+	if err != nil {
+		return nil, err
+	}
+	block := layoutOf(snap.bookTpl)
+	if block == nil {
+		return nil, invalid(Problem{"", "template_not_customisable"})
+	}
+	if snap.templateID != *snap.bookTpl {
+		return nil, apperr.New(CodeVersionTemplateChanged, "the layout was made for another template")
+	}
+	own, err := s.ownImages(ctx, ownerID, publicID, snap.layout)
+	if err != nil {
+		return nil, err
+	}
+	doc, dropped, probs := ValidateRestore(snap.layout, block, own)
+	if len(probs) > 0 {
+		return nil, invalid(probs...)
+	}
+	pol := s.policy()
+	w, lost, err := s.store.save(ctx, ownerID, publicID, *snap.bookTpl, baseVersion, doc, KindRestore, pol)
+	if err != nil {
+		return nil, err
+	}
+	if lost != nil {
+		return nil, conflictOf(lost)
+	}
+	s.written(w)
+	return &restoreResult{Restored: Restored{Version: w.version, UpdatedAt: pol.nowMs, Layout: doc, Dropped: dropped}, From: snap.Version, Replaced: baseVersion}, nil
 }

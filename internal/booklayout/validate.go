@@ -68,6 +68,9 @@ type checker struct {
 	m       *templates.LayoutBlock
 	own     map[string]bool // the owner's design images of this book
 	lenient bool            // read path: drop what does not validate instead of reporting it
+	soft    bool            // restore: drop an item or background whose asset or media is gone (counted in dropped), report everything else
+	missing bool            // soft: the part being checked names an asset or media that is gone
+	dropped int             // soft: parts dropped
 	probs   []Problem
 	n       int             // problems seen, also past the cap
 	ids     map[string]bool // item ids seen
@@ -90,6 +93,31 @@ func Validate(raw []byte, m *templates.LayoutBlock, ownMediaIDs map[string]bool)
 		return nil, c.probs
 	}
 	return out, nil
+}
+
+// ValidateRestore is Validate for a stored snapshot (T-163): an item or a page background that names an asset id missing from the registry
+// or a media id that is not one of the owner's design images any more is dropped, and dropped counts them; every other problem is
+// reported as Validate does.
+func ValidateRestore(raw []byte, m *templates.LayoutBlock, ownMediaIDs map[string]bool) (doc []byte, dropped int, probs []Problem) {
+	c := &checker{m: m, own: ownMediaIDs, ids: map[string]bool{}, soft: true}
+	out := c.document(raw)
+	if c.n > 0 {
+		return nil, 0, c.probs
+	}
+	return out, c.dropped, nil
+}
+
+// itemCount is the number of items on all pages of a stored document (0 when it cannot be read).
+func itemCount(raw []byte) int {
+	root, _ := decode(raw)
+	pages, _ := root["pages"].(map[string]any)
+	n := 0
+	for _, p := range pages {
+		page, _ := p.(map[string]any)
+		items, _ := page["items"].([]any)
+		n += len(items)
+	}
+	return n
 }
 
 // Sanitize is Validate for the print route: a part that no longer validates (an asset removed from the registry, a deleted media id, a
@@ -279,6 +307,11 @@ func (c *checker) background(p string, page map[string]any, v any) {
 		c.n = mark
 		delete(page, "bg")
 	}
+	if c.soft && c.missing && c.n == mark {
+		c.dropped++
+		delete(page, "bg")
+	}
+	c.missing = false
 }
 
 func (c *checker) overrides(p string, ov map[string]any, kind templates.LayoutPageKind) {
@@ -335,6 +368,13 @@ func (c *checker) items(p string, arr []any) []any {
 		if c.lenient && c.n != mark {
 			c.n = mark
 			continue
+		}
+		if c.soft && c.missing {
+			c.missing = false
+			if c.n == mark { // only a gone asset or media is wrong with it
+				c.dropped++
+				continue
+			}
 		}
 		c.total++
 		kept = append(kept, v)
@@ -434,7 +474,7 @@ func (c *checker) assetItem(p string, m map[string]any) {
 	} else if c.str(p+".asset", v) {
 		a, found = assets.Get(v.(string))
 		if !found {
-			c.add(p+".asset", CodeUnknownID)
+			c.gone(p+".asset", CodeUnknownID)
 		}
 	}
 	if v, ok := m["tint"]; ok && c.str(p+".tint", v) {
@@ -542,12 +582,21 @@ func (c *checker) token(p, s string, allowed []string) {
 
 func (c *checker) asset(p, id string) {
 	if !assets.Has(id) {
-		c.add(p, CodeUnknownID)
+		c.gone(p, CodeUnknownID)
 	}
 }
 
 func (c *checker) media(p, id string) {
 	if !c.own[id] {
-		c.add(p, CodeNotOwnMedia)
+		c.gone(p, CodeNotOwnMedia)
 	}
+}
+
+// gone reports an asset or media reference that does not resolve; a restore only marks the part, which the caller then drops.
+func (c *checker) gone(p, code string) {
+	if c.soft {
+		c.missing = true
+		return
+	}
+	c.add(p, code)
 }
