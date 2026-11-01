@@ -149,7 +149,7 @@ Spec: .team/epics/E09-customisation-editor/11-design-image-uploads.md (read it f
 - 2026-11-01 04:10Z · leader · merged 34d8b5a (PR #150, head f9fbe1e); QA_PASS with full local suite; owner approved
 
 ### T-153 — [E09] Layout document model and API (backend)
-- **Status:** READY_FOR_QA
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -160,8 +160,8 @@ Spec: .team/epics/E09-customisation-editor/11-design-image-uploads.md (read it f
 - **Assignee:** —
 - **Branch:** task/t-153-e09-layout-document-model-and-api-backen
 - **PR:** https://github.com/danyaa666/smemories/pull/152
-- **Updated:** 2026-11-01 04:38Z by dev
-- **Comments-seen:** 3
+- **Updated:** 2026-11-01 04:55Z by leader
+- **Comments-seen:** 5
 
 Spec: .team/epics/E09-customisation-editor/12-layout-document-model-and-api.md (read it from the main checkout). book_layout_tab, document v1 (ADR 0004 units), booklayout package, book-layout/get|save|reset with optimistic concurrency, manifest design.layout, book-data/get carries layout.
 
@@ -169,9 +169,20 @@ Spec: .team/epics/E09-customisation-editor/12-layout-document-model-and-api.md (
 - 2026-10-31 11:18Z · leader · Spec updated: new requirement 9 (narrow the class admin's read of design images to images the stored layout references; T-152 left it open) and AC6. Read the spec again when you start.
 - 2026-11-01 04:10Z · leader · T-152 merged (34d8b5a); spec updated with admin-read narrowing and DesignImages check
 - 2026-11-01 04:38Z · dev · PR #152 head 3aeaf04. Backend only (schema.d.ts regenerated). Run: go test -race ./..., integration for booklayout/bookdata/bookdesign/class/db/yearbook/templates/config/metrics/notes/media/bookexport, scripts/check-class-matrix.sh (now also book-layout/* and media/get-content), newman folder 'book-layout (T-153)' 40 req/104 assertions 0 failed, e2e 7 passed (own compose dev153). Notes: anonymous gets 401 (like book-design), non-owner/class admin 404; reset restarts version at 1; book-data layout fields not 'required' in OpenAPI (keeps web fixtures typing); account delete/export do not exist yet (T-025). Not run: print-check (no web/print change).
+- 2026-11-01 04:54Z · qa · Head 3aeaf04 (PR #152). PR CI: go pass, web pass, security pass (e2e/go-integration/image skipped by design). Own compose project qa153 (mysql 13306, redis 16379, s3 19000, API 18153 built from head), torn down after.
+  LOCAL RUNS on 3aeaf04: go build+vet ok; go test -race ./... ok; make test-integration equivalent (go test -race -count=1 -timeout 30m -tags integration ./...) 33 packages ok, 0 FAIL (booklayout, bookdata, bookdesign, class, db, media, notes, bookexport, config, metrics, templates all ok); make lint exit 0; web check:api ok, web vitest ok; scripts/check-class-matrix.sh ok (24 class and book-layout ops); newman customisation-editor collection (--working-dir postman) whole file twice back to back with rate limits reset: 135 requests, 295 assertions, 0 failed both runs (includes book-layout (T-153) 40 requests); scripts/e2e.sh 7 passed; tools/print-check npm test 163 pass, 0 fail.
+  AC1: save -> get is identical (deep equal), version 1; same base_version 0 again -> 409 ERROR_VERSION_CONFLICT with stored document; 8 parallel saves base=1 -> exactly one 200, seven 409.
+  AC2 (my own HTTP script, each with precise path+code): 40 items per page ok / 41 too_many pages.cover.items; 150 total ok / 151 too_many at pages; w 10 ok / 9 out_of_range, w 2000 ok / 2001, h 2000 ok / 2001, x -w/2 ok / one less rejected, x 1000-w/2 ok / +1 rejected, cy bounds (ratio 1.419) ok at the edge / rejected one past, r +-180 ok / +-181 rejected, floats/strings/1e30/int64 overflow rejected; text 500 code points ok (Vietnamese, emoji, combining) / 501 too_long, tab/NUL/DEL/bidi override rejected, script text stored as text; dup item id (also across pages), bad id length/chars, z key unknown_key, unknown page kind, override of unknown element or another page's element, unknown asset, tint on non-tintable, unknown colour/font/align, size 8..96 ok / 7 and 97 rejected, radius 501, fit, bg with two keys; at most 20 problems reported; v=2, missing pages, unknown top key, [] / string / 1 as layout; dup JSON key, NaN, trailing garbage, 50000-deep nesting -> 400 not a crash. Media: own design image ok (item and bg); a regular photo, a photo set as the profile photo, B's design image, a random ulid and a non-ulid all -> 400 not_own_media with path. 128 KiB: a 131072-byte layout value saves (200); 131073-byte value -> 413 ERROR_TOO_LARGE; 5 MB body -> 413.
+  AC3: B (non-owner): get/save(valid and invalid)/reset all 404; anonymous 401 on all three. book-design behaves the same (401 anonymous, checked: get/update/reset), so the dev's deviation from the spec text is consistent. Foreign Origin -> 403, GET on save -> 405. Class admin 404 on book-layout/* is covered by the class matrix test rows (checked by the script; integration class package ok).
+  AC4: template change (memory-book -> navy-classic) deletes layout (get: null, version 0), AND the design hook still runs (options null after), design image and photo list and profile name survive; save on navy-classic -> 400 template_not_customisable; same-template update keeps layout; yearbook delete removes the row (count 10 -> 9). Account deletion and data export have no endpoints yet (T-025); dev documented the obligation in docs/templates.md and docs/class-privacy-review.md - n/a here.
+  AC5: book-data/get carries layout + layout_version (128 KiB layout: 200 OK); after deleting the design image the layout in book-data/get drops the bg and the image item and keeps the text, while book-layout/get still returns the stored document; migration: down with 9 rows in the table (29 books untouched) then up -> table recreated empty, schema as in the file.
+  AC6: integration TestAdminMediaReadPath (passed): admin reads a design image referenced as image item or bg (200), not an unreferenced one, not one named only inside a text imitating "media":"<id>", not other-class/unlinked/removed-member images; access ends at once when the layout drops the image or is reset, starts at once when it references it. Other callers 404.
+  Rate limits: 20 saves ok then 429 with Retry-After 10 and ERROR_RATE_LIMITED (burst); invalid saves also spend burst; with 1 save per 0.6 s the 61st in the minute got 429 (Retry-After 24). Counter smem_layout_saves_total{ok,conflict,invalid,too_large,rate_limited} all present and increasing; text with a marker sent in 24 saves does not appear in the API log (0 hits).
+  NON-BLOCKING observations: (1) Reset restarts the version at 1, so a stale editor can win silently (ABA): with editor X open at version 3, a reset then 3 new saves in another tab bring the stored version to 3 again and X's save with base_version 3 returned 200 and overwrote them (reproduced). It needs reset plus exactly the same number of saves; a stale editor with a different version gets 409 with layout null. Suggest a version that never goes back (for example keep the counter on the yearbook row, or do not delete the row on reset but blank it). Low risk now; matters once the editor autosaves. (2) The stored document is compact, but HTTP JSON responses escape < > & as <, so a 128 KiB layout full of such characters becomes a ~470 KB book-data/get or book-layout/get response (reproduced: 97 KB stored, 472 KB response). Not a limit violation; mention for the print route size expectations. (3) Text is trimmed/normalised on save (leading/trailing spaces removed), so "reads back identical" holds for canonical input only. (4) A trailing whitespace outside the layout value is not counted in the 128 KiB (Go RawMessage); inner whitespace is counted. Harmless.
+- 2026-11-01 04:55Z · leader · merged d917d92 (PR #152, head 3aeaf04); QA_PASS: integration 33 pkgs 0 FAIL, newman 295/0, e2e 7/7, print-check 163/0; version-reset ABA follow-up is T-156
 
 ### T-154 — [E09] Web layout runtime: the book draws a layout (Memory Book)
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -182,12 +193,13 @@ Spec: .team/epics/E09-customisation-editor/12-layout-document-model-and-api.md (
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-10-31 11:04Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-11-01 04:55Z by leader
+- **Comments-seen:** 1
 
 Spec: .team/epics/E09-customisation-editor/13-web-layout-runtime.md (read it from the main checkout). place/unplace geometry, Sheet layer slot, bg/overrides/items rendering with FitText, notes pages, parity test on A5/A4/Letter, class book.
 
 #### Comments
+- 2026-11-01 04:55Z · leader · T-153 merged (d917d92)
 
 ### T-155 — [E09] Fix three stale Postman assertions in the customisation-editor collection
 - **Status:** MERGED
@@ -210,5 +222,24 @@ Spec: .team/epics/E09-customisation-editor/14-fix-stale-book-design-newman-steps
 - 2026-10-31 15:32Z · dev · Postman-only: steps 17 (own defaults: options null, design.themes[0]=navy) and 18 (lavender on navy-classic, still 400 ERROR_INVALID_DESIGN). Whole collection run twice on own compose project t155dev: 132 assertions, 0 failed (3 failed before). Run make reset-limits between runs (register rate limit). Head 1a78b64.
 - 2026-10-31 15:35Z · qa · Head 1a78b64 (PR #151). AC1: diff vs origin/develop touches only postman/customisation-editor.postman_collection.json (4 ins, 4 del; steps 17 name+assertion, 18 name+body). Fresh own compose project t155qa (mysql 13307, redis 16380, s3 19001, API 18080 built from head, SMEM_ENV=dev, migrations applied, users verified), make-reset-limits equivalent (rl keys deleted) before each run: newman run postman/customisation-editor.postman_collection.json twice back to back -> run1 requests 62/0 failed, test-scripts 62/0 failed, assertions 132 executed/0 failed; run2 identical 132/0. (A first run before verifying the two newman users showed ERROR_EMAIL_NOT_VERIFIED in steps 5/8; that is the documented setup step, not a defect.) AC2: step 18 still POSTs options.theme=lavender on navy-classic and asserts status 400 + ERROR_INVALID_DESIGN (both passed); lavender is a memory-book-only theme (embed/memory-book.json), so the refusal is real; step 17 now asserts template_id navy-classic, options null, design.themes[0]=navy (passed). Nothing deleted or weakened; no other assertion changed. Only PR CI pending for go/web at check time, security pass; e2e/integration/image skipped by design; no code/Go touched so make test-integration not applicable (Risk low, postman-only). Stack torn down (own project only).
 - 2026-10-31 15:37Z · leader · merged b2bc66e (PR #151, head 1a78b64); QA_PASS: collection 132 assertions, 0 failed, twice
+
+### T-156 — [E09] Layout version must never go back (reset / template change)
+- **Status:** TODO
+- **Priority:** P2
+- **Type:** fix
+- **Milestone:** M4
+- **Depends-on:** —
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-11-01 05:00Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E09-customisation-editor/15-layout-version-never-goes-back.md (read it from the main checkout). QA ABA finding on T-153: reset restarts the version, so a stale editor can overwrite newer work
+
+#### Comments
 
 <!-- tasks:end -->
