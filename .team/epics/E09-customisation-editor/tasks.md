@@ -182,7 +182,7 @@ Spec: .team/epics/E09-customisation-editor/12-layout-document-model-and-api.md (
 - 2026-11-01 04:55Z · leader · merged d917d92 (PR #152, head 3aeaf04); QA_PASS: integration 33 pkgs 0 FAIL, newman 295/0, e2e 7/7, print-check 163/0; version-reset ABA follow-up is T-156
 
 ### T-154 — [E09] Web layout runtime: the book draws a layout (Memory Book)
-- **Status:** READY_FOR_QA
+- **Status:** IN_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -190,10 +190,10 @@ Spec: .team/epics/E09-customisation-editor/12-layout-document-model-and-api.md (
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** qa
 - **Branch:** task/t-154-e09-web-layout-runtime-the-book-draws-a-
 - **PR:** https://github.com/danyaa666/smemories/pull/153
-- **Updated:** 2026-11-01 05:28Z by dev
+- **Updated:** 2026-11-01 06:10Z by qa
 - **Comments-seen:** 3
 
 Spec: .team/epics/E09-customisation-editor/13-web-layout-runtime.md (read it from the main checkout). place/unplace geometry, Sheet layer slot, bg/overrides/items rendering with FitText, notes pages, parity test on A5/A4/Letter, class book.
@@ -226,7 +226,7 @@ Spec: .team/epics/E09-customisation-editor/14-fix-stale-book-design-newman-steps
 - 2026-10-31 15:37Z · leader · merged b2bc66e (PR #151, head 1a78b64); QA_PASS: collection 132 assertions, 0 failed, twice
 
 ### T-156 — [E09] Layout version must never go back (reset / template change)
-- **Status:** TODO
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** fix
 - **Milestone:** M4
@@ -235,13 +235,15 @@ Spec: .team/epics/E09-customisation-editor/14-fix-stale-book-design-newman-steps
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-11-01 05:00Z by leader
-- **Comments-seen:** 0
+- **Branch:** task/t-156-e09-layout-version-must-never-go-back-re
+- **PR:** https://github.com/danyaa666/smemories/pull/154
+- **Updated:** 2026-11-01 06:24Z by dev
+- **Comments-seen:** 2
 
 Spec: .team/epics/E09-customisation-editor/15-layout-version-never-goes-back.md (read it from the main checkout). QA ABA finding on T-153: reset restarts the version, so a stale editor can overwrite newer work
 
 #### Comments
+- 2026-11-01 06:24Z · dev · PR #154 head 8b3c25d. Counter on yearbook_tab.layout_version (migration 20261101130000, backfilled from layout rows); save compares base to it under the row lock, reset and template change delete the row and +1. After reset get -> layout null, version N+1; 409 carries current version. Tests: TestVersionNeverGoesBack (AC1-3), TestMigrateYearbookLayoutVersion (AC4), existing reset/template tests updated. Own compose t156: go test -race -tags integration ./... all ok, make lint 0, check:api ok, class-matrix ok, newman customisation-editor x2: 135 req/295 assert/0 failed. Not run: e2e/print-check (no web/print change). Note: reset on a book with no layout also bumps the version (harmless). Deploy migrate+code together.
+- 2026-11-01 06:25Z · leader · Leader note for QA: dev did not re-run the full integration suite after fixing TestMigrateBookLayoutTable (only TestMigrate*), and did not repeat the HTTP reproduction on a live stack. Run the full make test-integration equivalent, the live ABA reproduction (reset and template-change variants), migration up/down with existing rows (versions backfilled from layout rows), class matrix and newman, and quote result lines with the head SHA.
 
 <!-- tasks:end -->
