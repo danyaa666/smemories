@@ -339,9 +339,7 @@ export function EditorShell({
     if (r.ok) {
       const msg =
         t("editor.history.restored") +
-        (r.dropped > 0
-          ? ` ${t(r.dropped === 1 ? "editor.history.droppedMsgOne" : "editor.history.droppedMsg", { count: r.dropped })}`
-          : "");
+        (r.dropped > 0 ? ` ${t("editor.history.droppedMsg", { count: r.dropped })}` : "");
       setViewed(null);
       setHistoryKey((k) => k + 1); // the replaced document is a new "Before restore" row
       setToast(msg);

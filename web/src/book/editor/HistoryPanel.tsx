@@ -221,14 +221,7 @@ export function PreviewBanner({
         }
       >
         {t("editor.history.previewing", { time: absoluteTime(version.created_at, i18n.language) })}
-        {dropping > 0 && (
-          <>
-            {" "}
-            {t(dropping === 1 ? "editor.history.willDropOne" : "editor.history.willDrop", {
-              count: dropping,
-            })}
-          </>
-        )}
+        {dropping > 0 && <> {t("editor.history.willDrop", { count: dropping })}</>}
       </Banner>
     </>
   );

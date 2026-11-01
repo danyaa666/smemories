@@ -113,9 +113,9 @@ describe("opening", () => {
     const rows = await open();
     expect(srv.s.history).toEqual(["list"]);
     expect(rows.map((r) => r.getAttribute("aria-label"))).toEqual([
-      "12 minutes ago, Before restore, Items: 1",
-      "5 hours ago, Autosave, Items: 2",
-      "3 days ago, Before reset, Items: 1",
+      "12 minutes ago, Before restore, 1 item",
+      "5 hours ago, Autosave, 2 items",
+      "3 days ago, Before reset, 1 item",
     ]);
     expect(rows[0]).toHaveAttribute("title");
     expect(screen.getByRole("button", { name: /History/ })).toHaveAttribute(
