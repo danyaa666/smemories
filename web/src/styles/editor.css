@@ -368,8 +368,16 @@
   text-rendering: inherit;
   tab-size: 8;
   caret-color: currentcolor;
+  appearance: none;
+  unicode-bidi: isolate;
   user-select: text;
   -webkit-user-select: text;
+}
+/* the page-wide focus ring would draw 5 px around a field that is part of the printed text; the dashed outline of the box says it is open */
+.ed-textarea:focus,
+.ed-textarea:focus-visible {
+  outline: none;
+  box-shadow: none;
 }
 .ed-box.is-editing .ed-hit {
   pointer-events: none;
