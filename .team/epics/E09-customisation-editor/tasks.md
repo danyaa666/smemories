@@ -334,19 +334,19 @@ Spec: .team/epics/E09-customisation-editor/17-editor-state-undo-autosave.md (rea
 - 2026-11-01 07:18Z · leader · merged cdaa62d (PR #156, head 0b2c3f3); QA_PASS after rework 1: vitest 814, mirror test 8/8, live 429/conflict/offline scenarios
 
 ### T-159 — [E09] Editor route and shell: page strip, zoom, selection overlay, property panel (web)
-- **Status:** IN_QA
+- **Status:** QA_FAIL
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
 - **Depends-on:** T-158
 - **Risk:** low
-- **Rework:** 0
+- **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** —
 - **Branch:** task/t-159-e09-editor-route-and-shell-page-strip-zo
 - **PR:** https://github.com/danyaa666/smemories/pull/157
-- **Updated:** 2026-11-01 11:13Z by qa
-- **Comments-seen:** 3
+- **Updated:** 2026-11-01 11:35Z by qa
+- **Comments-seen:** 5
 
 Spec: .team/epics/E09-customisation-editor/18-editor-shell-and-selection.md (read it from the main checkout). Route /yearbooks/:id/editor, overlay outside the page clip, panel numeric edits, e2e journey
 
@@ -354,6 +354,14 @@ Spec: .team/epics/E09-customisation-editor/18-editor-shell-and-selection.md (rea
 - 2026-11-01 07:18Z · leader · T-158 merged cdaa62d
 - 2026-11-01 07:44Z · dev · PR #157 head ce6c1dc. Web only. Verified locally on own compose project t159stack (ports 23306/26379/29000): make e2e 8 passed (new editor-shell.spec.mjs), make print-check 184 pass (3 new stage-vs-book tests: A5 0.03/0.15 %, A4 0.08/0.34 %, Letter 0/0 %), web lint/prettier/tsc/vitest 844/lint:i18n/check:api/build green. QA: check A5/A4/Letter, Vietnamese labels, conflict banner from a second tab, keyboard-only (Tab select, panel edit, Ctrl+Z), narrow <768. Gaps: Preview as PDF opens /book in a new tab right after a flush (async save race possible); handles tabindex -1 (gestures and keyboard are T-160). memory.tsx natural keys reordered to draw order. docker permission was fine, no denied commands.
 - 2026-11-01 07:44Z · leader · Leader note for QA: also check the 'Preview as PDF' race dev flagged (opens /book in a new tab right after a save starts): the PDF must show the latest edit; if it can show the layout from before the last edit, report it (a flush-then-open fix is small). Run make e2e and make print-check on the PR head yourself, plus the conflict banner from a second client, A5/A4/Letter, Vietnamese labels, keyboard-only and the <768 px message.
+- 2026-11-01 11:35Z · qa · QA on PR #157 head ce6c1dc472b79beeeafae69f72be524078f55d19 (own compose project t159qa, ports 24306/26380/29001, torn down after). CI green (go, web, security).
+  LOCAL RESULTS: web lint+prettier ok, tsc ok, vitest 48 files / 844 passed / 0 failed, lint:i18n ok, check:api ok, build ok. make e2e: 8 passed, 0 failed (incl. editor-shell.spec.mjs, 11.9 s). make print-check: 184 pass / 0 fail / 0 skipped. Passed also by hand: keyboard-only (page strip arrows, Tab selects, panel edit by Enter or blur, Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y), 767 px shows the message and no toolbar, 768 px mounts the editor, Vietnamese labels all translated, conflict banner from a second client (edits blocked, 'use saved' and 'keep mine' both work and save), handles outside the clip on A5/A4/Letter (e2e).
+  ISSUES (2 must be fixed):
+  1. [major, blocker for the editor] A moved template element is drawn in the wrong place, so the selection outline and the panel numbers do not match the element. Repro: new Memory Book (A5), open /yearbooks/:id/editor, click 'Cover title', set Width to 40 and press Enter. The title jumps right and down (about +11.8 % of page width and +8 % of page height) while the outline and Left/Top (11.8 / 18.4) stay put. Cause: Editable (web/src/book/layout/runtime.tsx, wrapper .mb-ov, position:absolute with left/top in page units) is rendered INSIDE .mb-cover-head (memory.css, position:absolute; left 96px; top 92px), so the box is positioned relative to that parent, not the page. Measured with a script: I saved an override equal to each element's natural box (x,w,h,cy, r 0), which must not move anything. Result on A5, A4 and Letter alike: cover.photo and cover.sticker SAME; cover.title, profile.heading, profile.photo, back.heading, back.pact MOVED (e.g. A5 cover.title natural left/top 0.1176/0.1846 -> drawn 0.2356/0.2637; profile.photo 0.0527/0.1288 -> 0.1118/0.1743). notes.heading not reachable (no notes in my book), likely the same. Same runtime draws /book and print, so printed output is wrong too. Expected: the drawn box equals the stored box on every element and page size. Fix: anchor the override box to the page (render it in a page-level layer or via a portal/ancestor offset), and add a test that an override equal to the natural box leaves every editable id where it was (print-check or e2e: compare rect before/after for all editable ids). Root cause is in T-154 code; leader may prefer a separate fix task, but T-159 cannot pass while the editor cannot move 5 of 8 elements correctly (T-160 depends on it).
+  2. [minor to major, small fix] 'Preview as PDF' race. The link only calls ed.flush() (fire and forget) and the new tab loads /book at once. Repro: Playwright, selection on Cover title, set Width via panel + Enter, click Preview as PDF immediately; with the save POST delayed 1.5 s (route delay, a slow mobile connection) the new tab shows the layout from BEFORE the last edit in 5 of 6 tries (want 0.35/0.40/0.45/0.50/0.55 of page width, got 0.30/0.35/0.40/0.45/0.50). Without delay 6 of 6 correct. Also a flush while a save is in flight is only queued (store.ts save(): inFlight -> queued), so it waits for the first POST first. Expected: the tab shows the just-edited layout whatever the latency. Fix: open the tab (window.open from the click, to keep popup-blocker happy) and navigate it after await flush() has settled (save and queued save both done), or disable the link while saveState is saving/idle-dirty.
+  NON-BLOCKING: (a) committing one number rewrites the whole box and rounds the others: Top 18.5 -> 18.4 after changing only Width (1 unit drift). (b) Typed value kept on blur works; out of range (250, -5, empty, 0.04) is silently reverted, no message. (c) Resize handles inert, as dev said (T-160).
+  NOT RE-RUN until fixed: AC3 pixel parity passed in print-check (stage vs book, baseline); AC1, AC2, AC4, AC5 have evidence above. After the fix please re-run e2e and print-check and add the all-ids natural-box test.
+- 2026-11-01 11:36Z · leader · Leader: QA_FAIL accepted. Rework 1 spec appended to 18-editor-shell-and-selection.md (R1 blocker: Editable boxes drawn relative to positioned ancestors, fix in runtime.tsx so drawn box = stored box for every editable id on A5/A4/Letter + all-ids guard test; R2 Preview as PDF must wait for flush incl. in-flight and queued save; R3 panel inputs patch only the changed field; R4 inline message for out-of-range input). Keep it in this PR; re-run e2e and print-check and list result lines with the head SHA.
 
 ### T-160 — [E09] Editor gestures: move, resize, rotate, snap, guides, with keyboard control (web)
 - **Status:** BACKLOG
