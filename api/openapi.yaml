@@ -1674,8 +1674,8 @@ paths:
       summary: Read the free layout of a book
       description: >-
         Called by the signed-in owner's layout editor (epic E09 stage 2, ADR 0004) with one request: the stored layout document of the book
-        (what the student moved, hid or added on the pages), its version and when it was last saved. `layout` is null and `version` 0 while the book has
-        none. The document is the one the server stored, in canonical form (compact, keys sorted, text normalised); see `BookLayoutDocument`.
+        (what the student moved, hid or added on the pages), its version and when it was last saved. `layout` is null while the book has
+        none; `version` never decreases (0 until the first save, and after a reset or a template change the version they moved on to). The document is the one the server stored, in canonical form (compact, keys sorted, text normalised); see `BookLayoutDocument`.
         Only the owner can read it: a missing book, someone else's and a class admin's all answer `ERROR_NOT_FOUND`. `yearbook_id` must be a
         canonical ULID (else `ERROR_PARAM`). No email verification is needed. Safe to repeat. What the print renders is `layout` of
         `GET /api/book-data/get`, which is this document re-validated.
@@ -1782,9 +1782,9 @@ paths:
       tags: [book-layout]
       summary: Go back to the template's own pages
       description: >-
-        Called by the signed-in owner's layout editor ("reset layout"). Deletes the stored layout of the book (and its version) so the template's own pages
-        print again. It succeeds, and changes nothing, when the book has no layout (safe to repeat). It cannot be undone; the next save starts at
-        version 1, so an editor that still holds an older version gets `ERROR_VERSION_CONFLICT` with `layout: null`. A missing book and someone else's
+        Called by the signed-in owner's layout editor ("reset layout"). Deletes the stored layout of the book so the template's own pages
+        print again, and moves the book's version on (it never decreases). It succeeds when the book has no layout. It cannot be undone; the next save
+        must name the new version (`get`), so an editor that still holds an older one gets `ERROR_VERSION_CONFLICT` with `layout: null`. A missing book and someone else's
         both answer `ERROR_NOT_FOUND`. A request with the session cookie must come from an allowed Origin.
       x-auth: required
       x-error-codes:
@@ -3977,7 +3977,7 @@ components:
               oneOf:
                 - {$ref: "#/components/schemas/BookLayoutDocument"}
                 - {type: "null"}
-            version: {type: integer, format: int64, description: "Stored version, 1 after the first save and +1 per save; 0 when there is no layout. Send it as `base_version`."}
+            version: {type: integer, format: int64, description: "Version of the book's layout: never decreases, 1 after the first save, +1 per save, +1 per reset or template change; 0 until the first save. Also when `layout` is null. Send it as `base_version`."}
             template_id: {type: [string, "null"], description: The book's current template; null when it has none.}
             updated_at: {type: [integer, "null"], format: int64, description: "When the layout was last saved, Unix ms; null without a layout."}
     BookLayoutSaveRequest:
@@ -4027,7 +4027,7 @@ components:
                       path: {type: string, description: "Where the problem is, like pages.cover.items[2].x."}
                       code: {type: string, description: "What is wrong with it."}
     BookLayoutConflictError:
-      description: "`ERROR_VERSION_CONFLICT`: `data` is the stored version and document (`version` 0 and `layout` null when the row is gone)."
+      description: "`ERROR_VERSION_CONFLICT`: `data` is the stored version and document (`layout` null when it was reset or the template changed)."
       allOf:
         - {$ref: "#/components/schemas/ApiError"}
         - type: object
@@ -4038,7 +4038,7 @@ components:
               description: The stored version and document.
               required: [version, layout]
               properties:
-                version: {type: integer, format: int64, description: "Stored version; 0 when the row is gone."}
+                version: {type: integer, format: int64, description: "Current version of the book's layout (never decreases)."}
                 layout:
                   description: The stored layout document; null when the row is gone.
                   oneOf:

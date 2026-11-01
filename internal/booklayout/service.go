@@ -50,7 +50,7 @@ type InvalidError struct{ Problems []Problem }
 
 func (e *InvalidError) Error() string { return "invalid layout" }
 
-// ConflictError is a save with a stale base_version; Layout and Version are the stored ones (null and 0 when the row is gone).
+// ConflictError is a save with a stale base_version; Layout and Version are the stored ones (null and the current version when the row is gone).
 type ConflictError struct {
 	Version int64
 	Layout  json.RawMessage
@@ -66,7 +66,7 @@ type DesignImages interface {
 // View is the answer of get.
 type View struct {
 	Layout     json.RawMessage `json:"layout"`      // the stored document; null when there is none
-	Version    int64           `json:"version"`     // 0 when there is none
+	Version    int64           `json:"version"`     // never decreases; 0 until the first save; after a reset or template change the next base_version
 	TemplateID *string         `json:"template_id"` // the book's template; null when it has none
 	UpdatedAt  *int64          `json:"updated_at"`  // Unix ms; null without a layout
 }
@@ -123,9 +123,9 @@ func (s *Service) Get(ctx context.Context, ownerID uint64, publicID string) (*Vi
 	if err != nil {
 		return nil, err
 	}
-	v := &View{TemplateID: st.templateID}
+	v := &View{TemplateID: st.templateID, Version: st.version}
 	if st.row != nil {
-		v.Layout, v.Version, v.UpdatedAt = st.row.layout, st.row.version, &st.row.updatedAt
+		v.Layout, v.UpdatedAt = st.row.layout, &st.row.updatedAt
 	}
 	return v, nil
 }
@@ -177,7 +177,7 @@ func (s *Service) save(ctx context.Context, ownerID uint64, publicID string, bas
 		return nil, err
 	}
 	if lost != nil {
-		return nil, conflictOf(lost.row)
+		return nil, conflictOf(lost)
 	}
 	return &Saved{Version: version, UpdatedAt: now}, nil
 }
@@ -259,10 +259,10 @@ func invalid(p ...Problem) error {
 	return apperr.Wrap(CodeInvalidLayout, &InvalidError{Problems: p}, "layout is not valid")
 }
 
-func conflictOf(r *row) error {
-	c := &ConflictError{}
-	if r != nil {
-		c.Version, c.Layout = r.version, r.layout
+func conflictOf(l *conflict) error {
+	c := &ConflictError{Version: l.version}
+	if l.row != nil {
+		c.Layout = l.row.layout
 	}
 	return apperr.Wrap(CodeVersionConflict, c, "the layout was saved elsewhere")
 }

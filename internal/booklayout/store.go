@@ -5,12 +5,8 @@ import (
 	"database/sql"
 	"errors"
 
-	"github.com/go-sql-driver/mysql"
-
 	"github.com/danyaa666/smemories/internal/apperr"
 )
-
-const mysqlDuplicateEntry = 1062
 
 // errNotFound is a missing book and another user's book alike.
 var errNotFound = apperr.New(apperr.NotFound, "yearbook not found")
@@ -26,6 +22,7 @@ type state struct {
 	templateID *string // the book's template
 	yearbookID uint64
 	row        *row
+	version    int64 // the last version issued for the book (0 = never saved); the row's version, or the next base after a reset
 }
 
 type row struct {
@@ -42,9 +39,9 @@ func (s *Store) get(ctx context.Context, ownerID uint64, publicID string) (*stat
 	var layout []byte
 	var version, at sql.NullInt64
 	err := s.db.QueryRowContext(ctx,
-		`SELECT y.id, y.template_id, l.template_id, l.layout_json, l.version, l.updated_at
+		`SELECT y.id, y.template_id, l.template_id, l.layout_json, l.version, l.updated_at, y.layout_version
 		 FROM yearbook_tab y LEFT JOIN book_layout_tab l ON l.yearbook_id = y.id
-		 WHERE y.owner_id = ? AND y.public_id = ?`, ownerID, publicID).Scan(&st.yearbookID, &tpl, &lTpl, &layout, &version, &at)
+		 WHERE y.owner_id = ? AND y.public_id = ?`, ownerID, publicID).Scan(&st.yearbookID, &tpl, &lTpl, &layout, &version, &at, &st.version)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, errNotFound
 	}
@@ -60,14 +57,18 @@ func (s *Store) get(ctx context.Context, ownerID uint64, publicID string) (*stat
 	return &st, nil
 }
 
-// conflict is a save that lost: the stored row (nil when there is none) is what the caller must start from.
-type conflict struct{ row *row }
+// conflict is a save that lost: the stored row (nil when there is none) and the current version are what the caller must start from.
+type conflict struct {
+	row     *row
+	version int64
+}
 
-// save writes layout for the book if the stored version is base (0 = no row yet) and the book still has template tpl, the one the
-// layout was validated against. It returns the new version, or the stored row when base is stale.
+// save writes layout for the book if base is the book's current version (yearbook_tab.layout_version; 0 = never saved, and after a reset
+// or a template change the version those left behind) and the book still has template tpl, the one the layout was validated against.
+// It returns the new version, or the current state when base is stale.
 //
 // Lock order (docs/db-conventions.md, Writes): yearbook_tab row (FOR UPDATE) first, then book_layout_tab, like yearbook modify and remove
-// and the template change. The write itself is one conditional statement, so it does not rely on the lock for correctness.
+// and the template change. The compare and the write happen under that lock.
 func (s *Store) save(ctx context.Context, ownerID uint64, publicID, tpl string, base int64, layout []byte, nowMs int64) (int64, *conflict, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -76,7 +77,8 @@ func (s *Store) save(ctx context.Context, ownerID uint64, publicID, tpl string, 
 	defer func() { _ = tx.Rollback() }()
 	var id uint64
 	var cur sql.NullString
-	err = tx.QueryRowContext(ctx, `SELECT id, template_id FROM yearbook_tab WHERE owner_id = ? AND public_id = ? FOR UPDATE`, ownerID, publicID).Scan(&id, &cur)
+	var version int64
+	err = tx.QueryRowContext(ctx, `SELECT id, template_id, layout_version FROM yearbook_tab WHERE owner_id = ? AND public_id = ? FOR UPDATE`, ownerID, publicID).Scan(&id, &cur, &version)
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, nil, errNotFound
 	}
@@ -86,29 +88,18 @@ func (s *Store) save(ctx context.Context, ownerID uint64, publicID, tpl string, 
 	if !cur.Valid || cur.String != tpl {
 		return 0, nil, apperr.New(apperr.Conflict, "the book's template changed, reload the editor")
 	}
-	version := int64(1)
-	if base == 0 {
-		_, err = tx.ExecContext(ctx,
-			`INSERT INTO book_layout_tab (yearbook_id, template_id, layout_json, version, created_at, updated_at) VALUES (?,?,?,1,?,?)`,
-			id, tpl, layout, nowMs, nowMs)
-		var me *mysql.MySQLError
-		if errors.As(err, &me) && me.Number == mysqlDuplicateEntry {
-			return s.lost(ctx, tx, id)
-		}
-		if err != nil {
-			return 0, nil, apperr.Wrap(apperr.Internal, err, "insert book layout")
-		}
-	} else {
-		res, err := tx.ExecContext(ctx,
-			`UPDATE book_layout_tab SET layout_json = ?, version = version + 1, updated_at = ? WHERE yearbook_id = ? AND version = ?`,
-			layout, nowMs, id, base)
-		if err != nil {
-			return 0, nil, apperr.Wrap(apperr.Internal, err, "update book layout")
-		}
-		if n, _ := res.RowsAffected(); n == 0 {
-			return s.lost(ctx, tx, id)
-		}
-		version = base + 1
+	if base != version {
+		return s.lost(ctx, tx, id, version)
+	}
+	version++
+	if _, err = tx.ExecContext(ctx, `UPDATE yearbook_tab SET layout_version = ? WHERE id = ?`, version, id); err != nil {
+		return 0, nil, apperr.Wrap(apperr.Internal, err, "bump layout version")
+	}
+	if _, err = tx.ExecContext(ctx,
+		`INSERT INTO book_layout_tab (yearbook_id, template_id, layout_json, version, created_at, updated_at) VALUES (?,?,?,?,?,?)
+		 ON DUPLICATE KEY UPDATE template_id = VALUES(template_id), layout_json = VALUES(layout_json), version = VALUES(version), updated_at = VALUES(updated_at)`,
+		id, tpl, layout, version, nowMs, nowMs); err != nil {
+		return 0, nil, apperr.Wrap(apperr.Internal, err, "write book layout")
 	}
 	if err := tx.Commit(); err != nil {
 		return 0, nil, apperr.Wrap(apperr.Internal, err, "commit book layout")
@@ -116,21 +107,21 @@ func (s *Store) save(ctx context.Context, ownerID uint64, publicID, tpl string, 
 	return version, nil, nil
 }
 
-// lost reads the row that won, in the same transaction.
-func (s *Store) lost(ctx context.Context, tx *sql.Tx, yearbookID uint64) (int64, *conflict, error) {
+// lost reads the row that won (nil after a reset or a template change), in the same transaction.
+func (s *Store) lost(ctx context.Context, tx *sql.Tx, yearbookID uint64, version int64) (int64, *conflict, error) {
 	r := &row{}
 	err := tx.QueryRowContext(ctx, `SELECT template_id, layout_json, version, updated_at FROM book_layout_tab WHERE yearbook_id = ?`, yearbookID).
 		Scan(&r.templateID, &r.layout, &r.version, &r.updatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
-		return 0, &conflict{}, nil // base was above 0 but the row is gone (reset, template change)
+		return 0, &conflict{version: version}, nil
 	}
 	if err != nil {
 		return 0, nil, apperr.Wrap(apperr.Internal, err, "read book layout")
 	}
-	return 0, &conflict{row: r}, nil
+	return 0, &conflict{row: r, version: version}, nil
 }
 
-// reset deletes the owner's layout row; deleting nothing is fine. Same lock order as save.
+// reset deletes the owner's layout row and moves the version on; deleting nothing is fine. Same lock order as save.
 func (s *Store) reset(ctx context.Context, ownerID uint64, publicID string) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -151,9 +142,14 @@ func (s *Store) reset(ctx context.Context, ownerID uint64, publicID string) erro
 	return apperr.WithCode(apperr.Internal, tx.Commit())
 }
 
+// deleteRow removes the layout row and bumps the book's version, so no version issued before comes back (a stale editor's save is a
+// conflict). The caller holds the yearbook row lock (reset, template change) or is about to delete the yearbook (the bump is then moot).
 func deleteRow(ctx context.Context, tx *sql.Tx, yearbookID uint64) error {
 	if _, err := tx.ExecContext(ctx, `DELETE FROM book_layout_tab WHERE yearbook_id = ?`, yearbookID); err != nil {
 		return apperr.Wrap(apperr.Internal, err, "delete book layout")
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE yearbook_tab SET layout_version = layout_version + 1 WHERE id = ?`, yearbookID); err != nil {
+		return apperr.Wrap(apperr.Internal, err, "bump layout version")
 	}
 	return nil
 }

@@ -264,19 +264,21 @@ func TestSaveReadResetAndVersions(t *testing.T) {
 
 	e.call("POST", "/api/book-layout/reset", alice, reset(id)).status(200, "OK")
 	e.call("POST", "/api/book-layout/reset", alice, reset(id)).status(200, "OK") // idempotent
-	if d := e.call("GET", get(id), alice, "").status(200, "OK").data(); d["layout"] != nil || d["version"] != float64(0) {
+	// T-156: the version never goes back; each reset moves it on (2 -> 3 -> 4), the layout is null
+	if d := e.call("GET", get(id), alice, "").status(200, "OK").data(); d["layout"] != nil || d["version"] != float64(4) {
 		t.Fatalf("after reset: %v", d)
 	}
-	// a client that still holds version 2 finds the row gone: 409 with null and 0
+	// a client that still holds version 2 finds the row gone: 409 with null and the current version
 	c = e.call("POST", "/api/book-layout/save", alice, save(id, 2, one)).status(409, "ERROR_VERSION_CONFLICT")
-	if c.data()["version"] != float64(0) || c.data()["layout"] != nil {
+	if c.data()["version"] != float64(4) || c.data()["layout"] != nil {
 		t.Fatalf("conflict after reset: %v", c.data())
 	}
-	if s := e.call("POST", "/api/book-layout/save", alice, save(id, 0, one)).status(200, "OK").data(); s["version"] != float64(1) {
+	e.call("POST", "/api/book-layout/save", alice, save(id, 0, one)).status(409, "ERROR_VERSION_CONFLICT")
+	if s := e.call("POST", "/api/book-layout/save", alice, save(id, 4, one)).status(200, "OK").data(); s["version"] != float64(5) {
 		t.Fatalf("save after reset: %v", s)
 	}
-	if e.counted("ok") != 3 || e.counted("conflict") != 4 {
-		t.Errorf("counters ok=%d conflict=%d, want 3 and 4", e.counted("ok"), e.counted("conflict"))
+	if e.counted("ok") != 3 || e.counted("conflict") != 5 {
+		t.Errorf("counters ok=%d conflict=%d, want 3 and 5", e.counted("ok"), e.counted("conflict"))
 	}
 }
 
@@ -484,7 +486,7 @@ func TestTemplateChangeAndYearbookDelete(t *testing.T) {
 		t.Fatal("an update that keeps the template deleted the layout")
 	}
 	e.call("POST", "/api/yearbook/update", alice, fmt.Sprintf(`{"id":%q,"template_id":"navy-classic"}`, id)).status(200, "OK")
-	if d := e.call("GET", get(id), alice, "").status(200, "OK").data(); d["layout"] != nil || d["version"] != float64(0) || d["template_id"] != "navy-classic" {
+	if d := e.call("GET", get(id), alice, "").status(200, "OK").data(); d["layout"] != nil || d["version"] != float64(2) || d["template_id"] != "navy-classic" {
 		t.Fatalf("after the template change: %v", d)
 	}
 	if e.count(`SELECT COUNT(*) FROM book_layout_tab`) != 0 || e.count(`SELECT COUNT(*) FROM media_tab WHERE public_id IN (?, ?)`, img, photo) != 2 ||
@@ -492,13 +494,14 @@ func TestTemplateChangeAndYearbookDelete(t *testing.T) {
 		t.Fatal("the template change deleted the layout, or something else")
 	}
 	e.call("POST", "/api/yearbook/update", alice, fmt.Sprintf(`{"id":%q,"template_id":"memory-book"}`, id)).status(200, "OK")
-	e.call("POST", "/api/book-layout/save", alice, save(id, 0, doc(textAt("a1b2c3")))).status(200, "OK")
+	e.call("POST", "/api/book-layout/save", alice, save(id, 0, doc(textAt("a1b2c3")))).status(409, "ERROR_VERSION_CONFLICT") // not the pre-change base
+	e.call("POST", "/api/book-layout/save", alice, save(id, 3, doc(textAt("a1b2c3")))).status(200, "OK")
 	e.call("POST", "/api/yearbook/update", alice, fmt.Sprintf(`{"id":%q,"template_id":null}`, id)).status(200, "OK")
 	if e.count(`SELECT COUNT(*) FROM book_layout_tab`) != 0 {
 		t.Fatal("removing the template kept the layout")
 	}
 	e.call("POST", "/api/yearbook/update", alice, fmt.Sprintf(`{"id":%q,"template_id":"memory-book"}`, id)).status(200, "OK")
-	e.call("POST", "/api/book-layout/save", alice, save(id, 0, doc(textAt("a1b2c3")))).status(200, "OK")
+	e.call("POST", "/api/book-layout/save", alice, save(id, 6, doc(textAt("a1b2c3")))).status(200, "OK")
 	e.call("POST", "/api/yearbook/delete", alice, fmt.Sprintf(`{"id":%q}`, id)).status(200, "OK")
 	if e.count(`SELECT COUNT(*) FROM book_layout_tab`) != 0 {
 		t.Fatal("the yearbook delete kept the layout")
@@ -690,4 +693,61 @@ func TestBookDataWith128KiBLayout(t *testing.T) {
 	if len(got.Data.Layout) < 100<<10 || len(got.Data.Layout) > booklayout.MaxBytes {
 		t.Fatalf("layout is %d bytes", len(got.Data.Layout))
 	}
+}
+
+// T-156 AC1..AC3: the version of a book only grows. A stale editor cannot win after a reset or a template change, however many saves
+// brought the stored version back to its number; the sequence save, reset, save, template change, save is strictly increasing.
+func TestVersionNeverGoesBack(t *testing.T) {
+	e := newEnv(t, nil, 0)
+	alice := e.register("alice@example.com")
+	id := e.book(alice, "memory-book")
+	doc1 := doc(textAt("a1b2c3"))
+	saveAt := func(base int64) resp {
+		return e.call("POST", "/api/book-layout/save", alice, save(id, int(base), doc1))
+	}
+	version := func() float64 { return e.call("GET", get(id), alice, "").status(200, "OK").data()["version"].(float64) }
+
+	var seen []float64
+	note := func(v float64) { seen = append(seen, v) }
+	for i := range 3 { // editor X reads version 3
+		saveAt(int64(i)).status(200, "OK")
+	}
+	note(version())
+	e.call("POST", "/api/book-layout/reset", alice, reset(id)).status(200, "OK")
+	note(version())
+	base := int64(version())
+	for range 3 { // another tab saves three times
+		s := saveAt(base).status(200, "OK").data()["version"].(float64)
+		base = int64(s)
+	}
+	note(version())
+	// AC1: X saves with base 3 and loses
+	c := saveAt(3).status(409, "ERROR_VERSION_CONFLICT").data()
+	if c["version"] != float64(base) || c["layout"] == nil {
+		t.Fatalf("conflict data %v", c)
+	}
+	// AC2: the same with a template change instead of a reset
+	e.call("POST", "/api/yearbook/update", alice, fmt.Sprintf(`{"id":%q,"template_id":"navy-classic"}`, id)).status(200, "OK")
+	e.call("POST", "/api/yearbook/update", alice, fmt.Sprintf(`{"id":%q,"template_id":"memory-book"}`, id)).status(200, "OK")
+	note(version())
+	for _, stale := range []int64{3, base} {
+		if c := saveAt(stale).status(409, "ERROR_VERSION_CONFLICT").data(); c["layout"] != nil || c["version"] != float64(version()) {
+			t.Fatalf("stale %d after template change: %v", stale, c)
+		}
+	}
+	base = int64(version())
+	note(float64(saveAt(base).status(200, "OK").data()["version"].(float64)))
+	// AC3: strictly increasing
+	for i := 1; i < len(seen); i++ {
+		if seen[i] <= seen[i-1] {
+			t.Fatalf("versions %v are not strictly increasing", seen)
+		}
+	}
+	// a fresh book still starts at 1
+	other := e.book(alice, "memory-book")
+	e.call("POST", "/api/book-layout/save", alice, save(other, 0, doc1)).status(200, "OK")
+	if v := e.call("GET", get(other), alice, "").data()["version"]; v != float64(1) {
+		t.Fatalf("fresh book at version %v", v)
+	}
+	dbtest.AssertNoOrphans(t, e.db)
 }

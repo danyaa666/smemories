@@ -5336,7 +5336,7 @@
               ]
             },
             {
-              "name": "17. A reads: none again",
+              "name": "17. A reads: none again, version 4 (two resets moved it on)",
               "request": {
                 "method": "GET",
                 "header": [
@@ -5371,14 +5371,14 @@
                     "exec": [
                       "pm.test('status 200', () => pm.response.to.have.status(200));",
                       "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
-                      "pm.test('none', () => { pm.expect(pm.response.json().data.layout).to.eql(null); pm.expect(pm.response.json().data.version).to.eql(0); });"
+                      "pm.test('none, version moved on (never goes back)', () => { pm.expect(pm.response.json().data.layout).to.eql(null); pm.expect(pm.response.json().data.version).to.eql(4); pm.collectionVariables.set('layoutVersionAfterReset', pm.response.json().data.version); });"
                     ]
                   }
                 }
               ]
             },
             {
-              "name": "18. A stale save after the reset: 409 with null and 0",
+              "name": "18. A stale save after the reset: 409 with null and the current version 4",
               "request": {
                 "method": "POST",
                 "header": [
@@ -5419,7 +5419,7 @@
                     "exec": [
                       "pm.test('status 409', () => pm.response.to.have.status(409));",
                       "pm.test('ERROR_VERSION_CONFLICT', () => pm.expect(pm.response.json().status).to.eql('ERROR_VERSION_CONFLICT'));",
-                      "pm.test('row gone', () => { pm.expect(pm.response.json().data.version).to.eql(0); pm.expect(pm.response.json().data.layout).to.eql(null); });"
+                      "pm.test('row gone', () => { pm.expect(pm.response.json().data.version).to.eql(4); pm.expect(pm.response.json().data.layout).to.eql(null); });"
                     ]
                   }
                 }
@@ -6231,7 +6231,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"base_version\":0,\"layout\":{\"v\":1,\"pages\":{\"cover\":{\"overrides\":{\"cover.photo\":{\"x\":120,\"w\":500,\"h\":500,\"cy\":400,\"r\":0,\"hidden\":false}},\"items\":[{\"id\":\"a1b2c3\",\"t\":\"text\",\"text\":\"Lớp 12A1 <b>x</b>\",\"font\":\"display\",\"size\":28,\"color\":\"accent\",\"align\":\"center\",\"bold\":true,\"x\":100,\"w\":400,\"h\":120,\"cy\":850,\"r\":-4}]}}}}"
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"base_version\":{{layoutVersionAfterReset}},\"layout\":{\"v\":1,\"pages\":{\"cover\":{\"overrides\":{\"cover.photo\":{\"x\":120,\"w\":500,\"h\":500,\"cy\":400,\"r\":0,\"hidden\":false}},\"items\":[{\"id\":\"a1b2c3\",\"t\":\"text\",\"text\":\"Lớp 12A1 <b>x</b>\",\"font\":\"display\",\"size\":28,\"color\":\"accent\",\"align\":\"center\",\"bold\":true,\"x\":100,\"w\":400,\"h\":120,\"cy\":850,\"r\":-4}]}}}}"
                 }
               },
               "event": [
@@ -6242,7 +6242,7 @@
                     "exec": [
                       "pm.test('status 200', () => pm.response.to.have.status(200));",
                       "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
-                      "pm.test('version 1', () => pm.expect(pm.response.json().data.version).to.eql(1));"
+                      "pm.test('next version', () => pm.expect(pm.response.json().data.version).to.eql(Number(pm.collectionVariables.get('layoutVersionAfterReset')) + 1));"
                     ]
                   }
                 }

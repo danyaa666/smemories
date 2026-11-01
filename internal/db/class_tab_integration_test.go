@@ -224,8 +224,10 @@ func TestMigrateBookLayoutTable(t *testing.T) {
 	if n := dump(t, ctx, d, `SELECT COUNT(*) FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME = 'book_layout_tab'`)[0]; n != "0" {
 		t.Errorf("%s foreign keys on book_layout_tab", n)
 	}
-	if err := db.MigrateDown(ctx, d); err != nil { // the newest migration is this table's
-		t.Fatalf("down: %v", err)
+	for range 2 { // the newest migration is T-156's layout_version column, the one before it this table's
+		if err := db.MigrateDown(ctx, d); err != nil {
+			t.Fatalf("down: %v", err)
+		}
 	}
 	if exists() != "0" {
 		t.Fatal("down left the table behind")
@@ -238,5 +240,47 @@ func TestMigrateBookLayoutTable(t *testing.T) {
 	}
 	if exists() != "1" || dump(t, ctx, d, `SELECT COUNT(*) FROM book_layout_tab`)[0] != "0" {
 		t.Fatal("up again did not create an empty table")
+	}
+}
+
+// T-156: yearbook_tab.layout_version is backfilled from the layout rows (stored versions are preserved, a book without a layout stays 0),
+// goes down without touching the rows and comes back with the same values.
+func TestMigrateYearbookLayoutVersion(t *testing.T) {
+	ctx := context.Background()
+	d := dbtest.New(t)
+	versions := func() string {
+		return strings.Join(dump(t, ctx, d, `SELECT CONCAT(title, '=', layout_version) FROM yearbook_tab ORDER BY title`), ",")
+	}
+	if err := db.MigrateDown(ctx, d); err != nil {
+		t.Fatalf("down: %v", err)
+	}
+	if n := dump(t, ctx, d, `SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'yearbook_tab' AND COLUMN_NAME = 'layout_version'`)[0]; n != "0" {
+		t.Fatal("down left the column behind")
+	}
+	if _, err := d.ExecContext(ctx, `INSERT INTO yearbook_tab (public_id, owner_id, title, language, created_at, updated_at) VALUES
+		('01AAAAAAAAAAAAAAAAAAAAAAA1', 1, 'with', 'en', 1, 1), ('01AAAAAAAAAAAAAAAAAAAAAAA2', 1, 'without', 'en', 1, 1)`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.ExecContext(ctx, `INSERT INTO book_layout_tab (yearbook_id, template_id, layout_json, version, created_at, updated_at)
+		SELECT id, 'memory-book', '{}', 7, 1, 1 FROM yearbook_tab WHERE title = 'with'`); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.MigrateUp(ctx, d); err != nil {
+		t.Fatalf("up: %v", err)
+	}
+	if got := versions(); got != "with=7,without=0" {
+		t.Fatalf("after up: %s", got)
+	}
+	if err := db.MigrateDown(ctx, d); err != nil {
+		t.Fatalf("down again: %v", err)
+	}
+	if n := dump(t, ctx, d, `SELECT COUNT(*) FROM yearbook_tab`)[0]; n != "2" {
+		t.Fatalf("down touched the rows: %s", n)
+	}
+	if err := db.MigrateUp(ctx, d); err != nil {
+		t.Fatalf("up again: %v", err)
+	}
+	if got := versions(); got != "with=7,without=0" {
+		t.Fatalf("after up again: %s", got)
 	}
 }
