@@ -275,4 +275,42 @@ Spec: .team/epics/E09-customisation-editor/16-print-check-start-server-strict.md
 #### Comments
 - 2026-11-01 06:43Z · leader · T-154 merged
 
+### T-158 — [E09] Editor state: document store, undo/redo, autosave and conflict handling (web)
+- **Status:** BACKLOG
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M4
+- **Depends-on:** T-156
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-11-01 08:00Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E09-customisation-editor/17-editor-state-undo-autosave.md (read it from the main checkout). Pure operations, snapshot history depth 100, debounced autosave with base_version, 409 choices
+
+#### Comments
+
+### T-159 — [E09] Editor route and shell: page strip, zoom, selection overlay, property panel (web)
+- **Status:** BACKLOG
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M4
+- **Depends-on:** T-158
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-11-01 08:00Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E09-customisation-editor/18-editor-shell-and-selection.md (read it from the main checkout). Route /yearbooks/:id/editor, overlay outside the page clip, panel numeric edits, e2e journey
+
+#### Comments
+
 <!-- tasks:end -->
