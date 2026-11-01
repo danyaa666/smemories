@@ -131,13 +131,10 @@ func TestMigrateClassPageTable(t *testing.T) {
 	if got := dump(t, ctx, d, `SELECT CHAR_LENGTH(body) FROM class_page_tab WHERE public_id = 'P1'`)[0]; got != "4000" {
 		t.Errorf("the body was cut: %s characters", got)
 	}
-	if exists("book_design_tab") == "1" { // a newer migration (T-141) goes down first
+	for i := 0; i < 10 && exists("class_page_tab") == "1"; i++ { // newer migrations (T-141, T-152) go down first, then this one
 		if err := db.MigrateDown(ctx, d); err != nil {
-			t.Fatalf("down (newer): %v", err)
+			t.Fatalf("down: %v", err)
 		}
-	}
-	if err := db.MigrateDown(ctx, d); err != nil {
-		t.Fatalf("down: %v", err)
 	}
 	if exists("class_page_tab") != "0" || exists("class_invite_tab") != "1" {
 		t.Fatal("down must drop only class_page_tab")

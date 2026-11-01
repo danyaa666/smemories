@@ -4,9 +4,9 @@
 
 | Route | Notes |
 |---|---|
-| `POST /api/media/create` | `multipart/form-data`: text field `yearbook_id` and the image in the part `file` (either order). Answers `{status:"OK", data:{id, yearbook_id, content_type, bytes, width, height, created_at}}`. |
-| `GET /api/media/get-list?yearbook_id=&limit=&next_id=&uploader=` | `data: {items, next_id}`, newest first, `limit` 1..100 (default 50). `uploader` is `owner` (default), `contributor` or `all`. |
-| `GET /api/media/get-content?id=&variant=display\|thumb\|print` | **Binary** on success (no envelope; `Content-Type` from the database, `nosniff`, `Cache-Control: private, max-age=3600`, `ETag` per variant, `HEAD`/`Range`/`If-None-Match` work; readable by the yearbook's owner and, read only, by the admin of a class whose member linked the yearbook, for its profile photo and the photos of approved notes only (docs/class-permissions.md); streamed from the object store, see "Photo downloads"); the JSON error envelope with `Cache-Control: no-store` on failure. |
+| `POST /api/media/create` | `multipart/form-data`: text field `yearbook_id`, the image in the part `file` and the optional text field `purpose` (`design`; see "Design images"), in any order. Answers `{status:"OK", data:{id, yearbook_id, content_type, bytes, width, height, created_at, purpose}}`. |
+| `GET /api/media/get-list?yearbook_id=&limit=&next_id=&uploader=&purpose=` | `data: {items, next_id}`, newest first, `limit` 1..100 (default 50). `uploader` is `owner` (default), `contributor` or `all`. Photos only, unless `purpose=design`. |
+| `GET /api/media/get-content?id=&variant=display\|thumb\|print` | **Binary** on success (no envelope; `Content-Type` from the database, `nosniff`, `Cache-Control: private, max-age=3600`, `ETag` per variant, `HEAD`/`Range`/`If-None-Match` work; readable by the yearbook's owner and, read only, by the admin of a class whose member linked the yearbook, for its profile photo, the photos of approved notes and its design images only (docs/class-permissions.md); streamed from the object store, see "Photo downloads"); the JSON error envelope with `Cache-Control: no-store` on failure. |
 | `POST /api/media/delete` | JSON `{id}`; idempotent. |
 | `GET /api/public-media/get-content?token=` | **Public** (no session, no cookie, no CORS), **binary** display variant only, behind a signed link token; see "Public photo links" below. |
 
@@ -43,6 +43,27 @@ Every upload is decoded, scaled to at most 3000 px (print 1800 px, thumbnail 480
 `internal/media/image.go`. Decoding is the memory risk: a few hundred KB of PNG can claim a 49 megapixel
 canvas. The limits below make the worst case a number we chose.
 
+## Design images (T-152, decision D-43)
+
+A student may upload their own background and decoration images for the layout editor. They are `media_tab` rows with `purpose = 'design'` (migration `20261031120000`: `VARCHAR(16) NOT NULL DEFAULT 'photo'`, expand-only,
+no index because every query is scoped by `yearbook_id`; its Down deletes the design rows, because the previous schema could not tell them from photos, and drops the column; the objects go with the yearbook's prefix).
+They are decoded, stripped of metadata, re-encoded and limited exactly like photos (same pipeline, limits, rate limits, per-user and per-client caps and memory budget) and have the same three versions.
+
+- **Which version a layout uses.** All three variants are stored; nothing new is needed. `display` (long edge at most 3000 px, not the 2000 px the task text assumed) is the version for a full-bleed background: an A4 page at 300 dpi needs
+  2480 x 3508 px, so a 3000 px long edge is about 256 dpi on A4 (and over 300 dpi on A5), which is acceptable for a background. The `print` variant (1800 px) is **too small for a full-bleed A4 background**: the layout runtime must request
+  `display` for backgrounds and may use `print` for small decorations. No new variant was added.
+- **Isolation.** The default of `get-list` and every photo query is `purpose = 'photo'`; `purpose=design` lists only design images (they are always the owner's own, so `uploader=contributor` lists none). The page tokens of the two lists
+  are not interchangeable (the purpose is part of the token's scope). A design id is not a cover or a profile photo (`yearbook` refuses it with `ERROR_INVALID_MEDIA`, the same code as an unknown photo), friends' note photos are always photos,
+  and no public link opens a design image (`publicPhoto` requires `purpose = 'photo'`). The other direction, a photo as a design image, is `Service.DesignImages(ctx, owner, yearbookID, ids)`, which returns the ids that are design images of
+  that owner's yearbook: the layout task must use it before it stores a media id (`TestDesignImageIsolation`).
+- **Limits.** At most 30 design images per yearbook (`maxDesignPerYearbook`); they do not count toward the 200 photos. Their stored bytes (display + thumb + print) count with the photos' in the owner's 500 MiB per user. `ERROR_QUOTA_EXCEEDED` (409) for either.
+- **Delete.** `media/delete` works for a design image (idempotent, objects first). Deleting the yearbook deletes its design images with the rows and the prefix (`TestDesignImageDelete`). A layout that still references a deleted
+  image is the reader's problem (it ignores the missing id); deletion never checks for references.
+- **Class admin.** `media.Store.readable` also opens a design image of a member's linked book for the class admin (read only, `no-store`), whether or not a layout uses it yet; see docs/class-permissions.md and docs/class-privacy-review.md.
+- **Metrics.** `smem_media_uploads_total{purpose,result}` ([observability.md](observability.md)).
+- **Export and account deletion (T-025).** There is no account deletion or export endpoint yet. When T-025 adds them: a design image is a row of its book, so the yearbook delete path covers it; the export lists a book's design images with
+  `media/get-list?purpose=design` (id, size, created_at), the same way it lists photos.
+
 ## Quotas (T-105)
 
 Both quotas count **every variant a photo stores** (display, thumb and print: `media_tab.bytes + thumb_bytes + print_bytes`; a photo uploaded before T-105 has 0 for the two new columns until the print backfill fills `print_bytes`).
@@ -50,7 +71,8 @@ Both quotas count **every variant a photo stores** (display, thumb and print: `m
 
 | Quota | Counts | Limit | Constants |
 |---|---|---|---|
-| Owner | photos the owner uploads (`uploader_kind = 'owner'`) | 200 photos per yearbook, 500 MiB per user across yearbooks | `maxPerYearbook`, `maxBytesPerUser` |
+| Owner | photos the owner uploads (`uploader_kind = 'owner'`, `purpose = 'photo'`) | 200 photos per yearbook, 500 MiB per user across yearbooks (photos and design images together) | `maxPerYearbook`, `maxBytesPerUser` |
+| Owner, design images (T-152) | design images the owner uploads (`purpose = 'design'`) | 30 per yearbook; the bytes count in the 500 MiB above | `maxDesignPerYearbook` |
 | Contributor | photos friends send through a link (`uploader_kind = 'contributor'`) | 600 photos and 1 GiB per yearbook | `maxContributorPhotos`, `maxContributorBytes` |
 
 The two never count toward each other: someone who holds a leaked link can fill the contributor quota with junk but cannot take away one photo of the owner's room (`TestContributorQuotaIsSeparate`), and a full owner quota does not stop

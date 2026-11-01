@@ -32,7 +32,7 @@ func upload(t *testing.T, h *Handler, limit int64, build func(*multipart.Writer)
 	if limit > 0 {
 		r.Body = http.MaxBytesReader(rec, r.Body, limit)
 	}
-	id, data, ok = h.readForm(rec, r)
+	id, _, data, ok = h.readForm(rec, r)
 	return rec, id, data, ok
 }
 
@@ -94,7 +94,7 @@ func TestReadForm(t *testing.T) {
 	rec := httptest.NewRecorder()
 	r := httptest.NewRequest("POST", "/api/media/create", strings.NewReader(`{"file":"x"}`))
 	r.Header.Set("Content-Type", "application/json")
-	if _, _, ok := h.readForm(rec, r); ok || rec.Code != 400 || !strings.Contains(rec.Body.String(), `"ERROR_PARAM"`) {
+	if _, _, _, ok := h.readForm(rec, r); ok || rec.Code != 400 || !strings.Contains(rec.Body.String(), `"ERROR_PARAM"`) {
 		t.Fatalf("not multipart: ok=%v %d %s", ok, rec.Code, rec.Body)
 	}
 }
@@ -277,4 +277,46 @@ func do(f http.HandlerFunc, r *http.Request) *httptest.ResponseRecorder {
 	rec := httptest.NewRecorder()
 	f(rec, r)
 	return rec
+}
+
+// T-152: the optional "purpose" field is read in any position (also after the file), "design" selects design images, a photo is the
+// default, and anything else is ERROR_PARAM before the image is looked at.
+func TestReadFormPurpose(t *testing.T) {
+	h := &Handler{maxBytes: 100, logger: nopLogger()}
+	form := func(fields ...string) (*httptest.ResponseRecorder, string, bool) {
+		var body bytes.Buffer
+		mw := multipart.NewWriter(&body)
+		for i := 0; i < len(fields); i += 2 {
+			if fields[i] == "file" {
+				w, _ := mw.CreateFormFile("file", "x.png")
+				_, _ = w.Write([]byte(fields[i+1]))
+				continue
+			}
+			_ = mw.WriteField(fields[i], fields[i+1])
+		}
+		_ = mw.Close()
+		rec := httptest.NewRecorder()
+		r := httptest.NewRequest("POST", "/api/media/create", &body)
+		r.Header.Set("Content-Type", mw.FormDataContentType())
+		_, purpose, _, ok := h.readForm(rec, r)
+		return rec, purpose, ok
+	}
+	for name, tc := range map[string]struct {
+		fields []string
+		want   string
+	}{
+		"none":         {[]string{"yearbook_id", bookID, "file", "abc"}, PurposePhoto},
+		"before file":  {[]string{"yearbook_id", bookID, "purpose", "design", "file", "abc"}, PurposeDesign},
+		"after file":   {[]string{"yearbook_id", bookID, "file", "abc", "purpose", "design"}, PurposeDesign},
+		"after, first": {[]string{"file", "abc", "yearbook_id", bookID, "purpose", "design"}, PurposeDesign},
+	} {
+		if rec, got, ok := form(tc.fields...); !ok || got != tc.want {
+			t.Errorf("%s: ok=%v purpose=%q want %q (%d %s)", name, ok, got, tc.want, rec.Code, rec.Body)
+		}
+	}
+	for _, v := range []string{"photo", "Design", "", "banner", "design "} {
+		if rec, _, ok := form("yearbook_id", bookID, "file", "abc", "purpose", v); ok || rec.Code != 400 || !strings.Contains(rec.Body.String(), `"ERROR_PARAM"`) {
+			t.Errorf("purpose %q: ok=%v %d %s", v, ok, rec.Code, rec.Body)
+		}
+	}
 }

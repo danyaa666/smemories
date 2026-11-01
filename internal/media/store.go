@@ -20,6 +20,16 @@ const (
 
 	maxContributorPhotos = 600
 	maxContributorBytes  = 1 << 30
+
+	// maxDesignPerYearbook is the owner's cap of design images (T-152) per yearbook. They are not photos: they do not count toward
+	// maxPerYearbook, but their bytes count in maxBytesPerUser with the photos' bytes.
+	maxDesignPerYearbook = 30
+)
+
+// Values of purpose (VARCHAR column, no ENUM; validated here). A design image is a background or decoration of the layout editor.
+const (
+	PurposePhoto  = "photo"
+	PurposeDesign = "design"
 )
 
 // Values of uploader_kind (VARCHAR column, no ENUM; validated here).
@@ -45,6 +55,7 @@ type Media struct {
 	RowID       int64 // internal id, set by insert; for rows that refer to the media (note photos)
 	// ByClassAdmin is set by readable only: the caller reads this photo as an admin of a class, not as the owner (T-133).
 	ByClassAdmin bool
+	Purpose      string // PurposePhoto or PurposeDesign; set by list and insert
 	// Set by list only.
 	UploaderKind string
 	seq          uint64 // the database id, the keyset cursor position; never leaves the package
@@ -77,9 +88,10 @@ func (s *Store) ownedYearbook(ctx context.Context, ownerID uint64, publicID stri
 // variantBytes is the sum of the stored sizes of a photo's variants, as SQL.
 const variantBytes = `(bytes + thumb_bytes + print_bytes)`
 
-// checkQuota fails with ErrQuota (owner photos) or ErrContributorQuota (photos sent through a link) when adding one more photo
-// of kind and total size add would pass that kind's limit. The two kinds never count toward each other's quota.
-func checkQuota(ctx context.Context, q rowQuerier, ownerID, yearbookID uint64, kind string, add int) error {
+// checkQuota fails with ErrQuota (owner photos and design images) or ErrContributorQuota (photos sent through a link) when adding one
+// more image of kind and purpose and total size add would pass that limit. The two kinds never count toward each other's quota.
+// Within the owner's, the count limit is per purpose (200 photos, 30 design images per yearbook) and the byte limit is shared.
+func checkQuota(ctx context.Context, q rowQuerier, ownerID, yearbookID uint64, kind, purpose string, add int) error {
 	if kind == KindContributor {
 		var n int
 		var used int64
@@ -93,7 +105,7 @@ func checkQuota(ctx context.Context, q rowQuerier, ownerID, yearbookID uint64, k
 		return nil
 	}
 	var n int
-	if err := q.QueryRowContext(ctx, `SELECT COUNT(*) FROM media_tab WHERE yearbook_id = ? AND uploader_kind = ?`, yearbookID, KindOwner).Scan(&n); err != nil {
+	if err := q.QueryRowContext(ctx, `SELECT COUNT(*) FROM media_tab WHERE yearbook_id = ? AND uploader_kind = ? AND purpose = ?`, yearbookID, KindOwner, purpose).Scan(&n); err != nil {
 		return dbError(err, "count photos")
 	}
 	var used int64
@@ -102,7 +114,11 @@ func checkQuota(ctx context.Context, q rowQuerier, ownerID, yearbookID uint64, k
 		 WHERE y.owner_id = ? AND m.uploader_kind = ?`, ownerID, KindOwner).Scan(&used); err != nil {
 		return dbError(err, "sum photo bytes")
 	}
-	if n >= maxPerYearbook || used+int64(add) > maxBytesPerUser {
+	limit := maxPerYearbook
+	if purpose == PurposeDesign {
+		limit = maxDesignPerYearbook
+	}
+	if n >= limit || used+int64(add) > maxBytesPerUser {
 		return ErrQuota
 	}
 	return nil
@@ -110,9 +126,12 @@ func checkQuota(ctx context.Context, q rowQuerier, ownerID, yearbookID uint64, k
 
 // insert stores the row after re-checking the quotas under a lock on the user row, so parallel
 // uploads cannot all slip under a limit. It also locks the yearbook so it cannot vanish meanwhile.
-func (s *Store) insert(ctx context.Context, ownerID, yearbookID uint64, kind string, m *Media) (*Media, error) {
+func (s *Store) insert(ctx context.Context, ownerID, yearbookID uint64, kind, purpose string, m *Media) (*Media, error) {
 	if kind != KindOwner && kind != KindContributor {
 		return nil, apperr.New(apperr.Internal, "media: unknown uploader_kind "+kind)
+	}
+	if purpose != PurposePhoto && (purpose != PurposeDesign || kind != KindOwner) { // friends send photos only
+		return nil, apperr.New(apperr.Internal, "media: unknown purpose "+purpose)
 	}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -130,13 +149,13 @@ func (s *Store) insert(ctx context.Context, ownerID, yearbookID uint64, kind str
 	if err != nil {
 		return nil, dbError(err, "lock yearbook")
 	}
-	if err := checkQuota(ctx, tx, ownerID, yearbookID, kind, m.Bytes+m.ThumbBytes+m.PrintBytes); err != nil {
+	if err := checkQuota(ctx, tx, ownerID, yearbookID, kind, purpose, m.Bytes+m.ThumbBytes+m.PrintBytes); err != nil {
 		return nil, err
 	}
 	res, err := tx.ExecContext(ctx,
-		`INSERT INTO media_tab (public_id, yearbook_id, uploader_kind, object_key, thumb_key, print_key, content_type, bytes, thumb_bytes, print_bytes, width, height, sha256, created_at, updated_at)
-		 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-		m.ID, yearbookID, kind, m.ObjectKey, m.ThumbKey, m.PrintKey, m.ContentType, m.Bytes, m.ThumbBytes, m.PrintBytes, m.Width, m.Height, m.SHA256, m.CreatedAt, m.CreatedAt)
+		`INSERT INTO media_tab (public_id, yearbook_id, uploader_kind, purpose, object_key, thumb_key, print_key, content_type, bytes, thumb_bytes, print_bytes, width, height, sha256, created_at, updated_at)
+		 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+		m.ID, yearbookID, kind, purpose, m.ObjectKey, m.ThumbKey, m.PrintKey, m.ContentType, m.Bytes, m.ThumbBytes, m.PrintBytes, m.Width, m.Height, m.SHA256, m.CreatedAt, m.CreatedAt)
 	if err != nil {
 		return nil, dbError(err, "insert photo")
 	}
@@ -144,7 +163,7 @@ func (s *Store) insert(ctx context.Context, ownerID, yearbookID uint64, kind str
 	if err != nil {
 		return nil, dbError(err, "read photo id")
 	}
-	m.RowID = id
+	m.RowID, m.Purpose = id, purpose
 	if err := tx.Commit(); err != nil {
 		return nil, dbError(err, "commit photo")
 	}
@@ -191,7 +210,8 @@ const ClassAdminRole = "admin"
 
 // readable is owned plus the one read path of a class admin (E07, T-027, docs/class-permissions.md): the media is also readable
 // when the caller is an admin of a class in which the media's yearbook is a member's linked page (the member owns it), and the media
-// is that yearbook's owner profile photo or a photo of one of its approved notes. Nothing else: not the cover, not a photo of a
+// is that yearbook's owner profile photo or a photo of one of its approved notes, or a design image of that yearbook (T-152: the
+// backgrounds and decorations of the student's layout, which the class book prints). Nothing else: not the cover, not a photo of a
 // pending or hidden note, not a photo that no note uses, not a yearbook of a removed member or of another class. One statement, so
 // a note hidden a moment ago is already a 404. Read only: Delete and every write keep using owned.
 func (s *Store) readable(ctx context.Context, userID uint64, publicID string) (*Media, error) {
@@ -202,10 +222,11 @@ func (s *Store) readable(ctx context.Context, userID uint64, publicID string) (*
 		   SELECT 1 FROM class_member_tab cm
 		   JOIN class_member_tab adm ON adm.class_id = cm.class_id AND adm.user_id = ? AND adm.role = ?
 		   WHERE cm.yearbook_id = y.id AND cm.user_id = y.owner_id
-		     AND (EXISTS (SELECT 1 FROM profile_tab p WHERE p.yearbook_id = y.id AND p.is_owner = 1 AND p.photo_media_id = m.id)
+		     AND (m.purpose = ?
+		       OR EXISTS (SELECT 1 FROM profile_tab p WHERE p.yearbook_id = y.id AND p.is_owner = 1 AND p.photo_media_id = m.id)
 		       OR EXISTS (SELECT 1 FROM note_photo_tab np JOIN note_tab n ON n.id = np.note_id
 		                  WHERE np.media_id = m.id AND n.yearbook_id = y.id AND n.status = ?))))`,
-		userID, publicID, userID, userID, ClassAdminRole, ShareableNoteStatus), &owner)
+		userID, publicID, userID, userID, ClassAdminRole, PurposeDesign, ShareableNoteStatus), &owner)
 	if m != nil {
 		m.ByClassAdmin = !owner
 	}
@@ -227,7 +248,7 @@ type publicPhoto struct {
 
 // publicPhoto loads a photo by public id for the public endpoint, without any ownership scope: the token is the credential.
 // One row, one statement, whatever the answer, so a bad link, a hidden note and a deleted book take about the same time.
-// A photo is shareable when it is the cover or a profile photo of its book, or belongs to an approved note of its book; a
+// A design image is never shareable (T-152). A photo is shareable when it is the cover or a profile photo of its book, or belongs to an approved note of its book; a
 // deleted note, book or photo has no row left to match. The media-to-book join is 1:1 by primary key (like owned), and the
 // three tests use the indexes on cover_media_id, photo_media_id and note_photo_tab.media_id.
 // <=> is null-safe equality: a book without a cover is false, not NULL.
@@ -235,11 +256,11 @@ func (s *Store) publicPhoto(ctx context.Context, mediaID string) (*publicPhoto, 
 	p := new(publicPhoto)
 	err := s.db.QueryRowContext(ctx,
 		`SELECT m.id, m.public_id, m.object_key, m.content_type, m.bytes, m.sha256, m.created_at, y.public_id, y.link_epoch,
-		   (y.cover_media_id <=> m.id
+		   (m.purpose = ? AND (y.cover_media_id <=> m.id
 		    OR EXISTS (SELECT 1 FROM profile_tab p WHERE p.yearbook_id = y.id AND p.photo_media_id = m.id)
 		    OR EXISTS (SELECT 1 FROM note_photo_tab np JOIN note_tab n ON n.id = np.note_id
-		               WHERE np.media_id = m.id AND n.yearbook_id = y.id AND n.status = ?))
-		 FROM media_tab m JOIN yearbook_tab y ON y.id = m.yearbook_id WHERE m.public_id = ?`, ShareableNoteStatus, mediaID).
+		               WHERE np.media_id = m.id AND n.yearbook_id = y.id AND n.status = ?)))
+		 FROM media_tab m JOIN yearbook_tab y ON y.id = m.yearbook_id WHERE m.public_id = ?`, PurposePhoto, ShareableNoteStatus, mediaID).
 		Scan(&p.m.RowID, &p.m.ID, &p.m.ObjectKey, &p.m.ContentType, &p.m.Bytes, &p.m.SHA256, &p.m.CreatedAt, &p.yearbookID, &p.epoch, &p.shareable)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
@@ -328,13 +349,13 @@ func deleteByYearbook(ctx context.Context, tx *sql.Tx, yearbookID uint64) error 
 }
 
 // list returns up to limit photos of a yearbook, newest first (id descending), with id < before when before > 0.
-// kinds is the set of uploader_kind values to include. The (yearbook_id) index carries the primary key, so the
+// kinds is the set of uploader_kind values to include and purpose the one purpose listed. The (yearbook_id) index carries the primary key, so the
 // read is an index range scan in id order with no sort. FORCE INDEX because, on a big table, the optimizer is
 // tempted by a reverse primary-key scan for ORDER BY id DESC LIMIT n, which walks every yearbook's rows.
-func (s *Store) list(ctx context.Context, yearbookID uint64, kinds []string, before uint64, limit int) ([]Media, error) {
-	q := `SELECT id, public_id, uploader_kind, content_type, bytes, width, height, created_at FROM media_tab FORCE INDEX (idx_yearbook_id) WHERE yearbook_id = ? AND uploader_kind IN (?` +
+func (s *Store) list(ctx context.Context, yearbookID uint64, kinds []string, purpose string, before uint64, limit int) ([]Media, error) {
+	q := `SELECT id, public_id, uploader_kind, content_type, bytes, width, height, created_at FROM media_tab FORCE INDEX (idx_yearbook_id) WHERE yearbook_id = ? AND purpose = ? AND uploader_kind IN (?` +
 		strings.Repeat(",?", len(kinds)-1) + `)`
-	args := []any{yearbookID}
+	args := []any{yearbookID, purpose}
 	for _, k := range kinds {
 		args = append(args, k)
 	}
@@ -396,4 +417,31 @@ func (s *Store) exists(ctx context.Context, rowID int64) (bool, error) {
 	var n int
 	err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM media_tab WHERE id = ?`, rowID).Scan(&n)
 	return n == 1, err
+}
+
+// designImages returns the public ids, among ids, of the design images of the yearbook (internal id yb): the check a layout needs
+// before it may reference an image. A photo id, an id of another book and an unknown id are not in the set.
+func (s *Store) designImages(ctx context.Context, yb uint64, ids []string) (map[string]bool, error) {
+	out := make(map[string]bool, len(ids))
+	if len(ids) == 0 {
+		return out, nil
+	}
+	args := []any{yb, PurposeDesign}
+	for _, id := range ids {
+		args = append(args, id)
+	}
+	q := strings.Replace(`SELECT public_id FROM media_tab WHERE yearbook_id = ? AND purpose = ? AND public_id IN (?)`, "(?)", "(?"+strings.Repeat(",?", len(ids)-1)+")", 1)
+	rows, err := s.db.QueryContext(ctx, q, args...)
+	if err != nil {
+		return nil, dbError(err, "select design images")
+	}
+	defer func() { _ = rows.Close() }()
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, dbError(err, "scan design image")
+		}
+		out[id] = true
+	}
+	return out, dbErrorOrNil(rows.Err(), "read design images")
 }
