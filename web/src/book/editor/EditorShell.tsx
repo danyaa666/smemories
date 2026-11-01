@@ -92,7 +92,7 @@ export function EditorShell({
   const [help, setHelp] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [resetError, setResetError] = useState<unknown>(null);
-  const [previewFailed, setViewedFailed] = useState(false);
+  const [previewFailed, setPreviewFailed] = useState(false);
   const [notice, setNotice] = useState("");
   const [editing, setEditing] = useState<{ id: string; all: boolean } | null>(null);
   const [tab, setTab] = useState<Tab>("sticker");
@@ -483,14 +483,14 @@ export function EditorShell({
             // queued behind it included; if saving fails, the tab is closed and the editor says so.
             if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey) return void ed.flush();
             e.preventDefault();
-            setViewedFailed(false);
+            setPreviewFailed(false);
             const tab = window.open("about:blank", "_blank");
             if (tab) tab.opener = null;
             const url = `/yearbooks/${bookId}/book`;
             void ed.settle().then((saved) => {
               if (!saved) {
                 tab?.close();
-                setViewedFailed(true);
+                setPreviewFailed(true);
               } else if (tab) tab.location.href = url;
               else window.open(url, "_blank", "noopener");
             });
