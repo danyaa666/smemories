@@ -137,7 +137,7 @@ export function DesignImages({
       {images.status === "ready" && images.items.length === 0 && (
         <p className="ed-hint">{t("editor.upload.empty")}</p>
       )}
-      {images.items.length > 0 && (
+      {images.items.length > 0 && !images.more && (
         <p className="ed-hint">
           {t("editor.upload.count", { count: images.items.length, max: MAX_DESIGN_IMAGES })}
         </p>
