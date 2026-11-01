@@ -20,7 +20,7 @@ Before an editor exists the book must be able to draw a layout: print, the previ
 - [ ] AC1 — With the fixture layout the printed PDF shows every item at its placed position on A5, A4 and Letter (parity thresholds met); nothing is cut on any paper size; a missing image or asset is skipped.
 - [ ] AC2 — With no layout the book is identical to today (all existing print-check cases and snapshots unchanged).
 - [ ] AC3 — Text boxes use the book's fit rule and the active theme and font set; changing the stage 1 theme or font set restyles the text boxes and tinted assets.
-- [ ] AC4 — The class book draws each student's layout on their own pages only, within the 8 MiB cap behaviour already tested.
+- [ ] AC4 — The class book draws each student's layout on their own pages only, within the 8 MiB cap behaviour already tested. **Narrowed 2026-11-01 (leader):** `class-book/get` does not carry layouts yet; sending each member's layout from the server (8 MiB cap, privacy review) is a later task. Here AC4 means: the web class book draws `member.layout` when present, on that member's pages only (fixture test); QA checks that and that the class book is unchanged without layouts.
 - [ ] AC5 — Lint, typecheck, vitest, i18n parity, `check:api`, build, `make print-check`, `go test ./internal/templates/...`; QA also runs `make e2e` and the class journey.
 
 #### Test plan

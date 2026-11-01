@@ -182,7 +182,7 @@ Spec: .team/epics/E09-customisation-editor/12-layout-document-model-and-api.md (
 - 2026-11-01 04:55Z · leader · merged d917d92 (PR #152, head 3aeaf04); QA_PASS: integration 33 pkgs 0 FAIL, newman 295/0, e2e 7/7, print-check 163/0; version-reset ABA follow-up is T-156
 
 ### T-154 — [E09] Web layout runtime: the book draws a layout (Memory Book)
-- **Status:** TODO
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -191,15 +191,17 @@ Spec: .team/epics/E09-customisation-editor/12-layout-document-model-and-api.md (
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-11-01 04:55Z by leader
-- **Comments-seen:** 1
+- **Branch:** task/t-154-e09-web-layout-runtime-the-book-draws-a-
+- **PR:** https://github.com/danyaa666/smemories/pull/153
+- **Updated:** 2026-11-01 05:28Z by dev
+- **Comments-seen:** 3
 
 Spec: .team/epics/E09-customisation-editor/13-web-layout-runtime.md (read it from the main checkout). place/unplace geometry, Sheet layer slot, bg/overrides/items rendering with FitText, notes pages, parity test on A5/A4/Letter, class book.
 
 #### Comments
 - 2026-11-01 04:55Z · leader · T-153 merged (d917d92)
+- 2026-11-01 05:28Z · dev · PR #153 head 615d38a. Layout runtime in web/src/book/layout (geometry, Sheet layer/chrome slots, bg/overrides/items, FitText, notes repeat), manifest editable ids corrected, print-check 170/170 pass (7 new: parity A5/A4/Letter, no-layout identical, theme restyle, perf +1.8% for 40 items, class book). GAPS: (1) class-book/get does not carry layout; web reads member.layout when present; server side needs a task and a decision (8 MiB cap, privacy). (2) make e2e NOT run by dev (permission denied for the shared stack); QA to run make e2e + class journey. (3) print-check mock was broken since the YearbookLayout change (CI paused); repaired in tools/print-check/lib.mjs. (4) notes-page parity: whole page 0.16-0.72% (template ruled-line noise 0.31-0.56% without layout), layout adds <0.5%; text size drawn in design px. Verify: make print-check, make e2e, web lint/tsc/vitest.
+- 2026-11-01 05:29Z · leader · Leader note for QA: AC4 is narrowed in the spec (web side only, fixture-tested); the server does not send class-book layouts yet, a later task. Dev could not run make e2e (permission denied on the shared stack): QA must run make e2e and the class journey on your own compose project, plus make print-check (dev: 170 pass/0 fail, repaired tools/print-check/lib.mjs mock). Also review that repair and the manifest editable-id corrections (cover.belongs, back.subtitle removed).
 
 ### T-155 — [E09] Fix three stale Postman assertions in the customisation-editor collection
 - **Status:** MERGED
