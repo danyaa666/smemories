@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { OnePage } from "../BookPages";
 import type { Box, PageBox } from "../layout/geometry";
+import type { TemplateLayout } from "../layout/runtime";
 import {
   clearOverride,
   MAX_BOX,
@@ -18,73 +19,11 @@ import {
 } from "./document";
 import { pageName, targetName } from "./names";
 import { BIG_STEP, BIG_TURN, TURN } from "./gestures/keys";
+import type { GestureStore } from "./gestures/useGestures";
+import { TextControls } from "./TextControls";
 import { nudge, type Nudge } from "./gestures/math";
+import { NumField, tenth } from "./NumField";
 import { overrideOf, patchOf, type Target } from "./targets";
-
-const tenth = (v: number) => String(Math.round(v * 10) / 10);
-
-/**
- * A number that is committed on Enter or when it loses the focus: one history step per committed input. `onCommit` returns false when the change was refused.
- * An empty, non-numeric or out-of-range entry puts the previous value back and says which range is allowed (R4).
- */
-function NumField({
-  label,
-  value,
-  step,
-  min,
-  max,
-  disabled,
-  onCommit,
-}: {
-  label: string;
-  value: number;
-  step: number;
-  min: number;
-  max: number;
-  disabled: boolean;
-  onCommit: (n: number) => boolean;
-}) {
-  const { t } = useTranslation();
-  const [text, setText] = useState(tenth(value));
-  const [bad, setBad] = useState(false);
-  const lo = Math.ceil(min * 10) / 10; // what the input can show, so the message and the check agree
-  const hi = Math.floor(max * 10) / 10;
-  const commit = () => {
-    const n = Number(text);
-    const valid = text.trim() !== "" && Number.isFinite(n) && n >= lo && n <= hi;
-    setBad(!valid);
-    if (!valid || Math.abs(n - value) < 0.05) return setText(tenth(value));
-    if (!onCommit(n)) setText(tenth(value));
-  };
-  return (
-    <>
-      <label className="ed-field">
-        <span>{label}</span>
-        <input
-          type="number"
-          inputMode="decimal"
-          step={step}
-          min={lo}
-          max={hi}
-          value={text}
-          disabled={disabled}
-          aria-invalid={bad || undefined}
-          onChange={(e) => {
-            setText(e.target.value);
-            setBad(false);
-          }}
-          onBlur={commit}
-          onKeyDown={(e) => e.key === "Enter" && commit()}
-        />
-      </label>
-      {bad && (
-        <p role="alert" className="ed-field-error">
-          {t("editor.range", { min: tenth(lo), max: tenth(hi) })}
-        </p>
-      )}
-    </>
-  );
-}
 
 /**
  * The property panel (T-159): the numbers, the stacking order and the actions of the selection, or the properties of the page when nothing is selected.
@@ -101,6 +40,11 @@ export function PropertyPanel({
   select,
   readOnly,
   announce,
+  spec,
+  scope,
+  store,
+  cut,
+  onAddText,
 }: {
   doc: LayoutDoc;
   kind: string;
@@ -111,6 +55,13 @@ export function PropertyPanel({
   select: (ids: readonly string[]) => void;
   readOnly: boolean;
   announce: (s: string) => void;
+  /** What the text controls need (T-161): the template's tokens, the book's theme and font set, the store for typing, and whether the selected text is cut. */
+  spec: TemplateLayout | undefined;
+  scope: { theme?: string; fonts?: string };
+  store: Pick<GestureStore, "preview" | "commit">;
+  cut: boolean;
+  /** "Add text" (the toolbar has the same button). */
+  onAddText: () => void;
 }) {
   const { t } = useTranslation();
   const [last, setRefused] = useState<{ id?: string; why: Refusal } | null>(null);
@@ -128,6 +79,9 @@ export function PropertyPanel({
       <aside className="ed-panel" aria-label={t("editor.panel")}>
         <h2>{t("editor.pageProps", { page: pageName(t, page) })}</h2>
         <p className="ed-hint">{t("editor.nothingSelected")}</p>
+        <button type="button" disabled={readOnly} onClick={onAddText}>
+          {t("editor.addText")}
+        </button>
         {bg && (
           <button type="button" disabled={readOnly} onClick={() => run(setBg(kind, null))}>
             {t("editor.clearBackground")}
@@ -287,11 +241,17 @@ export function PropertyPanel({
       )}
       {item ? (
         <>
-          {item.t === "text" && (
-            <div>
-              <h3>{t("editor.text")}</h3>
-              <p className="ed-preview">{item.text}</p>
-            </div>
+          {item.t === "text" && spec && (
+            <TextControls
+              item={item}
+              kind={kind}
+              spec={spec}
+              scope={scope}
+              store={store}
+              readOnly={readOnly}
+              cut={cut}
+              run={run}
+            />
           )}
           <div role="group" aria-label={t("editor.order")} className="ed-row">
             <button

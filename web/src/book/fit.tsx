@@ -90,12 +90,15 @@ export function FitText({
   minScale = 0.5,
   className,
   style,
+  onFit,
 }: {
   fitKey: string;
   children: ReactNode;
   minScale?: number;
   className?: string;
   style?: CSSProperties;
+  /** Told the outcome of every fit (the editor's text field takes the size the fit rule chose from it). Pass a stable function. */
+  onFit?: (info: FitInfo) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const report = useContext(FitContext);
@@ -109,6 +112,7 @@ export function FitText({
       const info = fitElement(el, start, minScale);
       el.dataset.fit = info.state;
       report?.(fitKey, info);
+      onFit?.(info);
     };
     fit();
     const fonts = typeof document === "undefined" ? undefined : document.fonts;
@@ -119,7 +123,7 @@ export function FitText({
       live = false;
       fonts?.removeEventListener?.("loadingdone", again);
     };
-  }, [children, minScale, size, fitKey, report]);
+  }, [children, minScale, size, fitKey, report, onFit]);
   // Only when the text leaves the page (not on every re-fit, which would make the summary flicker and loop).
   useLayoutEffect(() => () => report?.(fitKey, undefined), [fitKey, report]);
   return (

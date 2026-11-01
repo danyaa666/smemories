@@ -7,16 +7,19 @@ import {
   useMemo,
   useRef,
   useState,
+  type ComponentType,
   type CSSProperties,
+  type ReactNode,
 } from "react";
 import { useTranslation } from "react-i18next";
 import type { BookData } from "../../api/book";
 import { BookPages, type OnePage } from "../BookPages";
 import { pageBox, type Rect } from "../layout/geometry";
-import { kindOf, type TemplateLayout } from "../layout/runtime";
+import { kindOf, type TemplateLayout, type TextEdit } from "../layout/runtime";
 import { DESIGN_W, designZoom, pagePx, SIZES, type PageSize } from "../sizes";
 import { pageName, targetName } from "./names";
 import { useGestures, type Api, type GestureStore } from "./gestures/useGestures";
+import { PageTextField } from "./PageTextField";
 import type { Handle } from "./gestures/math";
 import { targetsOf, unrotate, type Target } from "./targets";
 import "../book.css";
@@ -119,6 +122,11 @@ export function Stage({
   safeMm,
   store,
   announce,
+  Fit,
+  editing,
+  onEdit,
+  onEditDone,
+  cut,
 }: {
   /** The book with the editor's layout document in `layout`. */
   data: BookData;
@@ -136,6 +144,14 @@ export function Stage({
   /** The T-158 store as the gestures use it (begin, preview, commit, cancel, apply, select). */
   store: GestureStore;
   announce: (s: string) => void;
+  /** Collects what the fit rule did to each text (`useFitReport`), so the editor can warn about a text that is cut. */
+  Fit: ComponentType<{ children: ReactNode }>;
+  /** The text item that has its field open (T-161), and what to do when a text item asks for one or the field is done. */
+  editing: { id: string; all: boolean } | null;
+  onEdit: (id: string) => void;
+  onEditDone: (id: string, to: { escape: true } | { blurred: EventTarget | null }) => void;
+  /** The selected text is still too long at the smallest size the fit rule allows. */
+  cut: boolean;
 }) {
   const { t } = useTranslation();
   const scroll = useRef<HTMLDivElement>(null);
@@ -206,12 +222,36 @@ export function Stage({
     announce,
     t,
   });
+  const textEdit = useMemo<TextEdit | undefined>(
+    () =>
+      editing && !readOnly
+        ? {
+            id: editing.id,
+            render: (item, fit, style) => (
+              <PageTextField
+                item={item}
+                kind={kind}
+                style={style}
+                fit={fit}
+                store={store}
+                selectAll={editing.all}
+                readOnly={readOnly}
+                onDone={onEditDone}
+              />
+            ),
+          }
+        : undefined,
+    [editing, readOnly, kind, store, onEditDone],
+  );
   // a click on the stage outside any selectable box clears the selection
   useEffect(() => {
     const el = scroll.current;
     if (!el) return;
     const click = (e: MouseEvent) => {
-      if (!(e.target as Element).closest(".ed-box, .ed-chrome, .ed-bar") && !api.justDragged())
+      if (
+        !(e.target as Element).closest(".ed-box, .ed-chrome, .ed-bar, textarea") &&
+        !api.justDragged()
+      )
         onSelect([]);
     };
     el.addEventListener("click", click);
@@ -242,9 +282,24 @@ export function Stage({
           {t("editor.safeMargin")}
         </button>
       </div>
+      {cut && (
+        <p role="status" className="ed-warn">
+          {t("editor.textCut")}
+        </p>
+      )}
       <div ref={scroll} className="ed-scroll">
         <div ref={box} className="ed-pagebox" style={vars} data-zoom={pct} tabIndex={-1}>
-          <BookPages data={data} size={size} t={bookT} eager={false} track={noop} only={page} />
+          <Fit>
+            <BookPages
+              data={data}
+              size={size}
+              t={bookT}
+              eager={false}
+              track={noop}
+              only={page}
+              edit={textEdit}
+            />
+          </Fit>
           <div className="ed-overlay">
             {margin && (
               <div
@@ -260,7 +315,10 @@ export function Stage({
                 k={k}
                 t={t}
                 selected={selection.includes(x.id)}
+                editing={!readOnly && editing?.id === x.id}
+                canEdit={!readOnly && x.item?.t === "text"}
                 onSelect={onSelect}
+                onEdit={onEdit}
                 api={api}
               />
             ))}
@@ -295,19 +353,27 @@ const Box = memo(
     k,
     t,
     selected,
+    editing,
+    canEdit,
     onSelect,
+    onEdit,
     api,
   }: {
     x: Target;
     k: number;
     t: TFunction;
     selected: boolean;
+    editing: boolean;
+    canEdit: boolean;
     onSelect: (ids: readonly string[]) => void;
+    onEdit: (id: string) => void;
     api: Api;
   }) {
+    // a pointer press on an item that was already selected (a tap on a selected text, or the second click of a double click) opens its field
+    const wasSelected = useRef(false);
     return (
       <div
-        className={`ed-box${selected ? " is-selected" : ""}${x.hidden ? " is-hidden" : ""}`}
+        className={`ed-box${selected ? " is-selected" : ""}${x.hidden ? " is-hidden" : ""}${editing ? " is-editing" : ""}`}
         style={boxStyle(x, k)}
         data-target={x.id}
       >
@@ -317,10 +383,28 @@ const Box = memo(
           aria-pressed={selected}
           aria-label={targetName(t, x)}
           onFocus={() => !selected && onSelect([x.id])}
-          onClick={() => !api.justDragged() && onSelect([x.id])}
+          onPointerDownCapture={() => {
+            wasSelected.current = selected;
+          }}
+          onClick={(e) => {
+            if (api.justDragged()) return;
+            const again = wasSelected.current && e.detail > 0;
+            wasSelected.current = false;
+            if (again && canEdit) onEdit(x.id);
+            else onSelect([x.id]);
+          }}
           onPointerDown={(e) => api.down(e, x, "move")}
-          onKeyDown={(e) => api.key(e, x)}
-          onBlur={api.blur}
+          onDoubleClick={() => canEdit && onEdit(x.id)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && canEdit && !e.ctrlKey && !e.metaKey) {
+              e.preventDefault();
+              onEdit(x.id);
+            } else api.key(e, x);
+          }}
+          onBlur={() => {
+            wasSelected.current = false;
+            api.blur();
+          }}
         />
       </div>
     );
@@ -329,7 +413,10 @@ const Box = memo(
     a.k === b.k &&
     a.t === b.t &&
     a.selected === b.selected &&
+    a.editing === b.editing &&
+    a.canEdit === b.canEdit &&
     a.onSelect === b.onSelect &&
+    a.onEdit === b.onEdit &&
     a.api === b.api &&
     a.x.id === b.x.id &&
     a.x.item === b.x.item &&

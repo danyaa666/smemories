@@ -749,6 +749,7 @@ const LAYOUT: TemplateLayout = {
     accent: "var(--mb-a1)",
   },
   fonts: { display: "var(--mb-disp)", body: "var(--mb-body)" },
+  textSize: { min: 8, max: 96 },
   natural: {
     "cover.title": { left: 96, top: 166, w: 672, h: 120, flow: true },
     "cover.photo": { left: 190, top: 410, w: 370, h: 400, r: -3 },

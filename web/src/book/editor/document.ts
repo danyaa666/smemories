@@ -92,10 +92,13 @@ const BAD_TEXT_CHAR = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}\p{Cs}\uFFFD]/u;
  * Plain text, mirroring the server: internal/booklayout/validate.go (text) with internal/textx CleanMultiline is the source of truth.
  * Order as there: \r\n -> \n, NFC, trim, refuse the characters above (bad_text), then at most 500 code points (text_too_long).
  */
+const cleaned = (text: string) =>
+  text.replace(/\r\n/g, "\n").normalize("NFC").replace(GO_EDGE_SPACE, "");
+/** The length the 500 limit is about: code points of the text after \r\n, NFC and trim (the server's `utf8.RuneCountInString` of the cleaned text). Not UTF-16 units. */
+export const runeCount = (text: string) => [...cleaned(text)].length;
 function textRefusal(text: string): Refusal | undefined {
-  const clean = text.replace(/\r\n/g, "\n").normalize("NFC").replace(GO_EDGE_SPACE, "");
-  if (BAD_TEXT_CHAR.test(clean.replace(/\n|\u200d/g, ""))) return "bad_text";
-  if ([...clean].length > MAX_TEXT) return "text_too_long";
+  if (BAD_TEXT_CHAR.test(cleaned(text).replace(/\n|\u200d/g, ""))) return "bad_text";
+  if (runeCount(text) > MAX_TEXT) return "text_too_long";
   return undefined;
 }
 
@@ -213,6 +216,16 @@ export const setBg =
     return ok(withPage(doc, kind, { ...p, bg }));
   };
 
+/** Removes a text item that holds nothing but white space (the editor does this when edit mode closes). Any other item, or no such item, leaves the document as it is. */
+export const removeBlankText =
+  (kind: string, id: string): Op =>
+  (doc) => {
+    const item = items(doc, kind)[find(doc, kind, id)];
+    return item?.t === "text" && cleaned(item.text ?? "") === ""
+      ? removeItem(kind, id)(doc)
+      : ok(doc);
+  };
+
 type TextPatch = Partial<Pick<LayoutItem, "text" | "font" | "size" | "color" | "align" | "bold">>;
 
 /** Changes the text or the text style of a text item. */
@@ -245,4 +258,5 @@ export const ops = {
   clearOverride,
   setBg,
   setText,
+  removeBlankText,
 };

@@ -3,7 +3,7 @@ import { memo, useMemo } from "react";
 import type { BookData } from "../api/book";
 import { DesignProvider, printSections, type SectionId } from "./design";
 import { BookEnvProvider } from "./env";
-import { LayoutProvider } from "./layout/runtime";
+import { LayoutProvider, type TextEdit } from "./layout/runtime";
 import { paginate } from "./paginate";
 import type { PageSize } from "./sizes";
 import { getTemplate } from "./templates";
@@ -75,6 +75,7 @@ export const BookPages = memo(function BookPages({
   eager,
   track,
   only,
+  edit,
 }: {
   data: BookData;
   size: PageSize;
@@ -82,13 +83,15 @@ export const BookPages = memo(function BookPages({
   eager: boolean;
   track: (delta: number) => void;
   only?: OnePage;
+  /** The editor's text field over one text item (T-161); absent everywhere else. */
+  edit?: TextEdit;
 }) {
   const tpl = getTemplate(data.yearbook.template_id);
   const env = useMemo(() => ({ size, t, eager, track }), [size, t, eager, track]);
   return (
     <BookEnvProvider value={env}>
       <DesignProvider design={data.design} ids={tpl.design}>
-        <LayoutProvider layout={data.layout} spec={tpl.layout}>
+        <LayoutProvider layout={data.layout} spec={tpl.layout} edit={edit}>
           {only ? (
             <Section id={only.section} data={data} only={only.index} />
           ) : (

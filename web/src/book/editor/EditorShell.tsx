@@ -7,9 +7,12 @@ import { Banner } from "../../components/ui/Banner";
 import { Button } from "../../components/ui/Button";
 import { Dialog } from "../../components/ui/Dialog";
 import { Skeleton } from "../../components/ui/Skeleton";
+import { resolveDesign } from "../design";
+import { useFitReport } from "../fit";
 import { listPages } from "../BookPages";
 import { pageBox } from "../layout/geometry";
 import { getTemplate } from "../templates";
+import { addItem, newItemId, removeBlankText, type LayoutItem } from "./document";
 import { pageName, targetName } from "./names";
 import { HelpSheet } from "./gestures/HelpSheet";
 import { PageStrip } from "./PageStrip";
@@ -36,7 +39,9 @@ export function EditorShell({
   const { t, i18n } = useTranslation();
   const ed = useLayoutEditor(bookId);
   const size = data.yearbook.page_size;
-  const spec = getTemplate(data.yearbook.template_id).layout;
+  const tpl = getTemplate(data.yearbook.template_id);
+  const spec = tpl.layout;
+  const scope = resolveDesign(data.design, tpl.design);
   const bookT = useMemo(
     () => i18n.getFixedT(data.yearbook.language),
     [i18n, data.yearbook.language],
@@ -53,6 +58,9 @@ export function EditorShell({
   const [resetting, setResetting] = useState(false);
   const [resetError, setResetError] = useState<unknown>(null);
   const [previewFailed, setPreviewFailed] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [editing, setEditing] = useState<{ id: string; all: boolean } | null>(null);
+  const { states: fits, Provider: Fit } = useFitReport();
   const readOnly = ed.saveState === "conflict";
 
   const pb = useMemo(() => pageBox(size), [size]);
@@ -62,6 +70,8 @@ export function EditorShell({
   const selected = targets.find((x) => x.id === ed.selection[0]);
 
   const { select, undo, redo, apply, begin, preview, commit, cancel } = ed;
+  const cut =
+    selected?.item?.t === "text" && fits[`layout:${kind}:${selected.id}`]?.state === "overflow";
   const store = useMemo(
     () => ({ begin, preview, commit, cancel, apply, select }),
     [begin, preview, commit, cancel, apply, select],
@@ -71,19 +81,72 @@ export function EditorShell({
   useEffect(() => {
     known.current = targets;
   });
+  const edit = useCallback((id: string) => setEditing({ id, all: false }), [setEditing]);
+  /** Edit mode ends (T-161). A text left with nothing but white space is removed, as one step that undo brings back. */
+  const editDone = useCallback(
+    (id: string, to: { escape: true } | { blurred: EventTarget | null }) => {
+      // the focus moved into the property panel (a font, a colour): the box stays selected and open for the next click into it
+      if ("blurred" in to && to.blurred instanceof Element && to.blurred.closest(".ed-panel"))
+        return;
+      setEditing((cur) => (cur?.id === id ? null : cur));
+      let removed = false;
+      apply((doc) => {
+        const r = removeBlankText(kind, id)(doc);
+        removed = r.doc !== doc;
+        return r;
+      });
+      if (removed) select([]);
+      if ("escape" in to)
+        setTimeout(
+          () =>
+            document
+              .querySelector<HTMLElement>(`[data-target="${CSS.escape(id)}"] .ed-hit`)
+              ?.focus(),
+          0,
+        );
+    },
+    [apply, kind, select, setEditing],
+  );
+  const addText = useCallback(() => {
+    const text: LayoutItem = {
+      id: newItemId(),
+      t: "text",
+      text: t("editor.newText"),
+      x: 200,
+      w: 600,
+      h: 200,
+      cy: 500,
+      r: 0,
+      font: "body",
+      size: Math.round(((spec?.textSize.min ?? 8) + (spec?.textSize.max ?? 96)) / 2),
+      color: Object.keys(spec?.colors ?? {})[0] ?? "ink",
+      align: "left",
+      bold: false,
+    };
+    const why = apply(addItem(kind, text));
+    setNotice(why ? t(`editor.refused.${why}`, { defaultValue: t("editor.refused.other") }) : "");
+    if (why) return;
+    select([text.id]);
+    setEditing({ id: text.id, all: true });
+    say(t("editor.textAdded"));
+  }, [apply, kind, select, spec, t, say, setEditing, setNotice]);
   const pick = (i: number) => {
     if (i === index) return;
     setPageIdx(i);
+    setEditing(null);
+    setNotice("");
     select([]);
     say(t("editor.pageOf", { n: i + 1, total: pages.length, name: pageName(t, pages[i]!) }));
   };
   const choose = useCallback(
     (ids: readonly string[]) => {
       select(ids);
+      setNotice("");
+      setEditing((cur) => (cur && ids[0] !== cur.id ? null : cur));
       const x = known.current.find((y) => y.id === ids[0]);
       say(x ? t("editor.selected", { name: targetName(t, x) }) : t("editor.cleared"));
     },
-    [select, t, say],
+    [select, t, say, setEditing, setNotice],
   );
 
   // undo and redo from the keyboard (not while a text area has the keys, T-161)
@@ -143,6 +206,9 @@ export function EditorShell({
         <button type="button" onClick={redo} disabled={readOnly || !ed.canRedo}>
           {t("editor.redo")}
         </button>
+        <button type="button" disabled={readOnly || !spec} onClick={addText}>
+          {t("editor.addText")}
+        </button>
         <SaveStatus state={ed.saveState} dirty={ed.dirty} />
         <button
           type="button"
@@ -183,6 +249,11 @@ export function EditorShell({
         </a>
       </div>
       {help && <HelpSheet onClose={() => setHelp(false)} />}
+      {notice && (
+        <p role="alert" className="error">
+          {notice}
+        </p>
+      )}
       {previewFailed && (
         <p role="alert" className="error">
           {t("editor.previewFailed")}
@@ -238,6 +309,11 @@ export function EditorShell({
           safeMm={safeMm}
           store={store}
           announce={say}
+          Fit={Fit}
+          editing={editing}
+          onEdit={edit}
+          onEditDone={editDone}
+          cut={cut}
         />
         <PropertyPanel
           doc={ed.doc}
@@ -249,6 +325,11 @@ export function EditorShell({
           select={choose}
           readOnly={readOnly}
           announce={say}
+          spec={spec}
+          scope={scope}
+          store={store}
+          cut={cut}
+          onAddText={addText}
         />
       </div>
       <div className="visually-hidden" role="status" aria-live="polite">

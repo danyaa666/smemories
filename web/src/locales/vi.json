@@ -1010,7 +1010,11 @@
     "clearBackground": "Xoá nền",
     "refused": {
       "bad_box": "Vị trí hoặc kích thước vượt quá giới hạn.",
-      "other": "Không thể thực hiện thay đổi này."
+      "other": "Không thể thực hiện thay đổi này.",
+      "too_many_on_page": "Trang này đã có 40 mục. Hãy xóa bớt một mục để thêm.",
+      "too_many_in_total": "Sách đã có 150 mục thêm vào. Hãy xóa bớt một mục để thêm.",
+      "text_too_long": "Chữ dài hơn 500 ký tự.",
+      "bad_text": "Chữ có ký tự không in được."
     },
     "box": "Vị trí và kích thước (% của trang)",
     "x": "Trái",
@@ -1087,6 +1091,35 @@
       "narrower": "Hẹp hơn",
       "taller": "Cao hơn",
       "shorter": "Thấp hơn"
-    }
+    },
+    "addText": "Thêm chữ",
+    "newText": "Chữ của bạn",
+    "textAdded": "Đã thêm khung chữ. Gõ để thay chữ; nhấn Esc khi xong.",
+    "textField": "Chữ trong khung",
+    "textPanelField": "Chữ trong khung (sửa ở đây)",
+    "textCut": "Chữ bị cắt: dù đã nhỏ nhất vẫn không vừa khung. Hãy làm khung lớn hơn hoặc rút ngắn chữ.",
+    "runes": "{{n}} / {{max}} ký tự",
+    "font": {
+      "label": "Phông chữ",
+      "display": "Phông tiêu đề",
+      "body": "Phông nội dung"
+    },
+    "size": "Cỡ chữ",
+    "sizeSlider": "Thanh chỉnh cỡ chữ",
+    "color": {
+      "label": "Màu chữ",
+      "ink": "Mực",
+      "soft": "Mực nhạt",
+      "paper": "Giấy",
+      "white": "Trắng",
+      "accent": "Nhấn"
+    },
+    "align": {
+      "label": "Căn lề",
+      "left": "Trái",
+      "center": "Giữa",
+      "right": "Phải"
+    },
+    "bold": "In đậm"
   }
 }

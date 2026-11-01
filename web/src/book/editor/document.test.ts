@@ -4,6 +4,7 @@ import {
   clearOverride,
   emptyDoc,
   newItemId,
+  removeBlankText,
   removeItem,
   reorderItem,
   setBg,
@@ -280,5 +281,19 @@ describe("newItemId", () => {
     const seen = new Set(Array.from({ length: 50 }, newItemId));
     expect(seen.size).toBe(50);
     for (const id of seen) expect(id).toMatch(/^[A-Za-z0-9]{6,26}$/);
+  });
+});
+
+describe("removeBlankText", () => {
+  it("removes a text that holds only white space and leaves any other item and the document alone", () => {
+    const d0 = run(addItem("cover", text("aaaaaa", { text: " \n\t " })), emptyDoc()).doc;
+    expect(ids(removeBlankText("cover", "aaaaaa")(d0).doc)).toEqual([]);
+    const d1 = run(addItem("cover", text("bbbbbb", { text: "x" })), d0).doc;
+    expect(removeBlankText("cover", "bbbbbb")(d1).doc).toBe(d1);
+    expect(removeBlankText("cover", "nope00")(d1).doc).toBe(d1);
+  });
+  it("an empty text counts as blank", () => {
+    const d = run(addItem("cover", text("aaaaaa", { text: "" })), emptyDoc()).doc;
+    expect(ids(removeBlankText("cover", "aaaaaa")(d).doc)).toEqual([]);
   });
 });

@@ -151,7 +151,9 @@ describe("selection", () => {
     expect(live()).toBe("Selected: Cover title");
     await userEvent.click(hit(/Text: Xin chào/));
     expect(screen.getByRole("heading", { name: "Text: Xin chào lớp 12A1" })).toBeInTheDocument();
-    expect(screen.getByText("Xin chào lớp 12A1", { selector: ".ed-preview" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Text of the box (edit here)" })).toHaveValue(
+      "Xin chào lớp 12A1",
+    );
     fireEvent.click(document.querySelector(".ed-scroll")!);
     expect(live()).toBe("Selection cleared");
     expect(screen.getByRole("heading", { name: "Page: Cover" })).toBeInTheDocument();
