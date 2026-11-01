@@ -556,7 +556,7 @@ Spec: .team/epics/E09-customisation-editor/23-palette-follow-ups.md (read it fro
 - 2026-11-01 21:57Z · leader · merged a994dc6; QA: test-integration 33 pkgs ok, e2e 32/0, print-check 187/187, vitest 1045
 
 ### T-165 — [E09] Editor version history panel: list, preview and restore (web)
-- **Status:** READY_FOR_QA
+- **Status:** IN_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -564,10 +564,10 @@ Spec: .team/epics/E09-customisation-editor/23-palette-follow-ups.md (read it fro
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** qa
 - **Branch:** task/t-165-e09-editor-version-history-panel-list-pr
 - **PR:** https://github.com/danyaa666/smemories/pull/163
-- **Updated:** 2026-11-01 22:10Z by dev
+- **Updated:** 2026-11-01 22:11Z by qa
 - **Comments-seen:** 3
 
 Spec: .team/epics/E09-customisation-editor/24-version-history-panel.md (read it from the main checkout). History button and panel, read-only preview of a snapshot, restore through the T-163 routes with settle first, history cleared after restore, dropped count message, every error mapped, e2e spec editor-history
@@ -578,6 +578,25 @@ Spec: .team/epics/E09-customisation-editor/24-version-history-panel.md (read it 
 - 2026-11-01 22:11Z · leader · Leader to QA: PR #163 head 1f614a69d57b5b67496ac797160e41a3de4265dd (web only). Run vitest, lint, tsc, lint:i18n, check:api, build and the full e2e (scripts/e2e.sh on your own stack; the new tools/e2e/editor-history.spec.mjs back-dates snapshots with the mysql CLI against SMEM_DB_DSN: confirm the client is documented in docs/e2e.md and the spec fails with a clear message when it is missing). Dev saw one 2 px flake in editor-gestures touch once: run e2e twice and report any repeat. Check per spec 24: no version-* request before History opens (Network); list stops at 30 with 31+ snapshots; restore while an autosave is pending keeps the pending edit; two tabs give one conflict; restore with a deleted design image shows the dropped message; keyboard-only walk and Esc focus return; a failed restore changes nothing. Result lines with counts and full SHA in your comment. Accepted: no phone dialog (editor does not mount below 768 px; phone mode is a later task).
 
 ### T-166 — [E09] Navy Classic: page kinds and editable elements for the layout editor (web + manifest)
+- **Status:** IN_PROGRESS
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M4
+- **Depends-on:** none
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** dev
+- **Branch:** task/t-166-e09-navy-classic-page-kinds-and-editable
+- **PR:** —
+- **Updated:** 2026-11-01 22:11Z by dev
+- **Comments-seen:** 0
+
+Spec: .team/epics/E09-customisation-editor/25-navy-classic-layout.md (read it from the main checkout). design.layout block in navy-classic.json, Editable wrappers in navy.tsx, background replaces the page tone, parity with no layout, print-check parity fixture, server cases, editor-navy e2e
+
+#### Comments
+
+### T-167 — [E09] Class book carries each member's layout (server cap, privacy, web wiring)
 - **Status:** TODO
 - **Priority:** P2
 - **Type:** feature
@@ -589,10 +608,10 @@ Spec: .team/epics/E09-customisation-editor/24-version-history-panel.md (read it 
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-11-02 05:05Z by leader
+- **Updated:** 2026-11-02 05:20Z by leader
 - **Comments-seen:** 0
 
-Spec: .team/epics/E09-customisation-editor/25-navy-classic-layout.md (read it from the main checkout). design.layout block in navy-classic.json, Editable wrappers in navy.tsx, background replaces the page tone, parity with no layout, print-check parity fixture, server cases, editor-navy e2e
+Spec: .team/epics/E09-customisation-editor/26-class-book-layouts.md (read it from the main checkout). BookMember.layout read as the owner, layout before notes under the 8 MiB cap with truncated_layouts, privacy docs and matrix, web class book wiring, print-check and class e2e
 
 #### Comments
 
