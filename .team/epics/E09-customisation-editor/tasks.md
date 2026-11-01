@@ -334,7 +334,7 @@ Spec: .team/epics/E09-customisation-editor/17-editor-state-undo-autosave.md (rea
 - 2026-11-01 07:18Z · leader · merged cdaa62d (PR #156, head 0b2c3f3); QA_PASS after rework 1: vitest 814, mirror test 8/8, live 429/conflict/offline scenarios
 
 ### T-159 — [E09] Editor route and shell: page strip, zoom, selection overlay, property panel (web)
-- **Status:** READY_FOR_QA
+- **Status:** IN_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -342,10 +342,10 @@ Spec: .team/epics/E09-customisation-editor/17-editor-state-undo-autosave.md (rea
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** qa
 - **Branch:** task/t-159-e09-editor-route-and-shell-page-strip-zo
 - **PR:** https://github.com/danyaa666/smemories/pull/157
-- **Updated:** 2026-11-01 07:44Z by dev
+- **Updated:** 2026-11-01 11:13Z by qa
 - **Comments-seen:** 3
 
 Spec: .team/epics/E09-customisation-editor/18-editor-shell-and-selection.md (read it from the main checkout). Route /yearbooks/:id/editor, overlay outside the page clip, panel numeric edits, e2e journey
@@ -371,6 +371,25 @@ Spec: .team/epics/E09-customisation-editor/18-editor-shell-and-selection.md (rea
 - **Comments-seen:** 0
 
 Spec: .team/epics/E09-customisation-editor/19-editor-gestures-and-keyboard.md (read it from the main checkout). In-house pointer-event module per ADR 0004 Q2, keyboard in the same task, 44 px touch targets
+
+#### Comments
+
+### T-161 — [E09] Editor text boxes: add, type in place, font, size, colour, align (web)
+- **Status:** BACKLOG
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M4
+- **Depends-on:** T-160
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-11-01 12:00Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E09-customisation-editor/20-editor-text-boxes.md (read it from the main checkout). Textarea overlay per ADR 0004 Q3, 500-code-point cap at compositionend, plain-text paste, clip warning, property-panel text field as fallback; manual Telex (macOS) and iOS Safari checks are acceptance criteria
 
 #### Comments
 
