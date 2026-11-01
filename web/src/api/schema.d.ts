@@ -727,7 +727,7 @@ export interface paths {
         };
         /**
          * Read the free layout of a book
-         * @description Called by the signed-in owner's layout editor (epic E09 stage 2, ADR 0004) with one request: the stored layout document of the book (what the student moved, hid or added on the pages), its version and when it was last saved. `layout` is null and `version` 0 while the book has none. The document is the one the server stored, in canonical form (compact, keys sorted, text normalised); see `BookLayoutDocument`. Only the owner can read it: a missing book, someone else's and a class admin's all answer `ERROR_NOT_FOUND`. `yearbook_id` must be a canonical ULID (else `ERROR_PARAM`). No email verification is needed. Safe to repeat. What the print renders is `layout` of `GET /api/book-data/get`, which is this document re-validated.
+         * @description Called by the signed-in owner's layout editor (epic E09 stage 2, ADR 0004) with one request: the stored layout document of the book (what the student moved, hid or added on the pages), its version and when it was last saved. `layout` is null while the book has none; `version` never decreases (0 until the first save, and after a reset or a template change the version they moved on to). The document is the one the server stored, in canonical form (compact, keys sorted, text normalised); see `BookLayoutDocument`. Only the owner can read it: a missing book, someone else's and a class admin's all answer `ERROR_NOT_FOUND`. `yearbook_id` must be a canonical ULID (else `ERROR_PARAM`). No email verification is needed. Safe to repeat. What the print renders is `layout` of `GET /api/book-data/get`, which is this document re-validated.
          */
         get: operations["getBookLayout"];
         put?: never;
@@ -769,7 +769,7 @@ export interface paths {
         put?: never;
         /**
          * Go back to the template's own pages
-         * @description Called by the signed-in owner's layout editor ("reset layout"). Deletes the stored layout of the book (and its version) so the template's own pages print again. It succeeds, and changes nothing, when the book has no layout (safe to repeat). It cannot be undone; the next save starts at version 1, so an editor that still holds an older version gets `ERROR_VERSION_CONFLICT` with `layout: null`. A missing book and someone else's both answer `ERROR_NOT_FOUND`. A request with the session cookie must come from an allowed Origin.
+         * @description Called by the signed-in owner's layout editor ("reset layout"). Deletes the stored layout of the book so the template's own pages print again, and moves the book's version on (it never decreases). It succeeds when the book has no layout. It cannot be undone; the next save must name the new version (`get`), so an editor that still holds an older one gets `ERROR_VERSION_CONFLICT` with `layout: null`. A missing book and someone else's both answer `ERROR_NOT_FOUND`. A request with the session cookie must come from an allowed Origin.
          */
         post: operations["resetBookLayout"];
         delete?: never;
@@ -2156,7 +2156,7 @@ export interface components {
                 layout: components["schemas"]["BookLayoutDocument"] | null;
                 /**
                  * Format: int64
-                 * @description Stored version, 1 after the first save and +1 per save; 0 when there is no layout. Send it as `base_version`.
+                 * @description Version of the book's layout: never decreases, 1 after the first save, +1 per save, +1 per reset or template change; 0 until the first save. Also when `layout` is null. Send it as `base_version`.
                  */
                 version: number;
                 /** @description The book's current template; null when it has none. */
@@ -2215,13 +2215,13 @@ export interface components {
                 }[];
             };
         };
-        /** @description `ERROR_VERSION_CONFLICT`: `data` is the stored version and document (`version` 0 and `layout` null when the row is gone). */
+        /** @description `ERROR_VERSION_CONFLICT`: `data` is the stored version and document (`layout` null when it was reset or the template changed). */
         BookLayoutConflictError: components["schemas"]["ApiError"] & {
             /** @description The stored version and document. */
             data: {
                 /**
                  * Format: int64
-                 * @description Stored version; 0 when the row is gone.
+                 * @description Current version of the book's layout (never decreases).
                  */
                 version: number;
                 /** @description The stored layout document; null when the row is gone. */
