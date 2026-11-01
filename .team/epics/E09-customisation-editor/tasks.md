@@ -182,7 +182,7 @@ Spec: .team/epics/E09-customisation-editor/12-layout-document-model-and-api.md (
 - 2026-11-01 04:55Z · leader · merged d917d92 (PR #152, head 3aeaf04); QA_PASS: integration 33 pkgs 0 FAIL, newman 295/0, e2e 7/7, print-check 163/0; version-reset ABA follow-up is T-156
 
 ### T-154 — [E09] Web layout runtime: the book draws a layout (Memory Book)
-- **Status:** IN_QA
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -190,11 +190,11 @@ Spec: .team/epics/E09-customisation-editor/12-layout-document-model-and-api.md (
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** —
 - **Branch:** task/t-154-e09-web-layout-runtime-the-book-draws-a-
 - **PR:** https://github.com/danyaa666/smemories/pull/153
-- **Updated:** 2026-11-01 06:10Z by qa
-- **Comments-seen:** 3
+- **Updated:** 2026-11-01 06:43Z by leader
+- **Comments-seen:** 5
 
 Spec: .team/epics/E09-customisation-editor/13-web-layout-runtime.md (read it from the main checkout). place/unplace geometry, Sheet layer slot, bg/overrides/items rendering with FitText, notes pages, parity test on A5/A4/Letter, class book.
 
@@ -202,6 +202,15 @@ Spec: .team/epics/E09-customisation-editor/13-web-layout-runtime.md (read it fro
 - 2026-11-01 04:55Z · leader · T-153 merged (d917d92)
 - 2026-11-01 05:28Z · dev · PR #153 head 615d38a. Layout runtime in web/src/book/layout (geometry, Sheet layer/chrome slots, bg/overrides/items, FitText, notes repeat), manifest editable ids corrected, print-check 170/170 pass (7 new: parity A5/A4/Letter, no-layout identical, theme restyle, perf +1.8% for 40 items, class book). GAPS: (1) class-book/get does not carry layout; web reads member.layout when present; server side needs a task and a decision (8 MiB cap, privacy). (2) make e2e NOT run by dev (permission denied for the shared stack); QA to run make e2e + class journey. (3) print-check mock was broken since the YearbookLayout change (CI paused); repaired in tools/print-check/lib.mjs. (4) notes-page parity: whole page 0.16-0.72% (template ruled-line noise 0.31-0.56% without layout), layout adds <0.5%; text size drawn in design px. Verify: make print-check, make e2e, web lint/tsc/vitest.
 - 2026-11-01 05:29Z · leader · Leader note for QA: AC4 is narrowed in the spec (web side only, fixture-tested); the server does not send class-book layouts yet, a later task. Dev could not run make e2e (permission denied on the shared stack): QA must run make e2e and the class journey on your own compose project, plus make print-check (dev: 170 pass/0 fail, repaired tools/print-check/lib.mjs mock). Also review that repair and the manifest editable-id corrections (cover.belongs, back.subtitle removed).
+- 2026-11-01 06:39Z · qa · QA_PASS on PR #153 head 615d38a (PR checks go/web/security green; QA then pushed d3db7a1 = tests only, +10 print-check tests in tools/print-check/check.test.mjs). Own compose project t-154 on ports 13306/16379/19000, own print-check port 5299; main stack untouched.
+  RESULTS (all on 615d38a): web eslint+prettier clean, tsc clean, lint:i18n ok, check:api ok, vitest 40 files/732 tests pass, vite build ok. go test ./... all ok incl internal/templates and internal/booklayout. make test-integration: 33/33 packages ok (needed SMEM_TEST_S3_ENDPOINT=http://127.0.0.1:19000: the tests default to 127.0.0.1:9000 = main stack). make print-check: tests 170, pass 170, fail 0 (7 new layout tests included; with my 10 extra tests the suite is 180, all pass). make e2e: 7 passed (25.6 s): class journey, customisation journey, M1 journey, h2 gallery x4.
+  AC1 PASS: print-check parity on A5/A4/Letter: whole-page difference A5 cover 0.149% (0.167% without layout), notes 0.716%/0.289% (0.559/0.307 baseline), A4 0.054/0.163/0.351, Letter 0.047/0.178/0.172; each item corner within 2 px; page sizes exact; fonts embedded; missing asset ghost01 and gone image ghost02 draw nothing. I looked at the Letter PDF cover by eye: items where placed, clamped inside the page, nothing cut. Hostile layouts (my tests, A5 and Letter): HTML/script text printed as literal text and no script runs (window.__pwned stays unset); 20000-rune text in 100x40 and 1000-tall boxes; 40 overlapping 300x300 rotated hearts + 40 rotated texts at the page edge; degenerate (w=0, bad ids, unknown font/colour, size 5000, boxes bigger than the page, bg of a gone image / unknown asset / unknown colour token, overrides for unknown ids, unknown page kind): all give the same page count as the book without a layout, no page error, no sheet scrolls (layer clipped), sizes exact, fonts embedded. Ready waits for images: with a 1200 ms media delay every cover img is loaded at data-book-ready.
+  AC2 PASS: I printed the same fixture book (3 notes) on develop 15e75de and on PR head, memory-book, navy-classic and basic x A5/A4/Letter = 9 PDFs, rasterised every page at 96 dpi and compared the bytes: 0 differing pages of 42. Existing print-check cases and vitest DOM snapshots unchanged. (Editable adds no wrapper without a layout.)
+  AC3 PASS: FitText with the book fit rule (fits.clipped=overflow, longtx not overflow); theme+font set switch tested on lavender/playful (Baloo 2, rgb 59,47,74), peach/classic (Cormorant Garamond, 74,44,34), mint/classic (31,59,52); tinted asset takes accent of the theme; size is design px (fontSize item.size in the 816 px box); bg uses media variant display (print-check asserts DESIGN_IMAGE:display for the bg and :print for the image item).
+  AC4 PASS (narrowed): print-check class book test: 6 students, layout on student 0 appears on exactly 1 PDF page, that student's own profile page; student 3 on navy-classic (no layout block) draws none; class book without layouts is unchanged (existing class cases + class e2e journey green); vitest classBook.test.tsx green. Server does not send member.layout yet (known gap).
+  AC5 PASS: see RESULTS. Manifest ids reviewed: cover.belongs and back.subtitle removed (they are text ids inside the cover header / the Title block, not positionable elements); remaining 8 ids each wrapped in Editable (data-layout-id) in memory.tsx and pinned by tests; go templates tests ok. Mock repair in tools/print-check/lib.mjs reviewed: adds yearbook/get and note/get-list for the YearbookLayout shell and the display variant for the design image only; sound. Perf: 40 extra items 276 ms vs 281 ms (+1.8%).
+  NON-BLOCKING: (1) tools/print-check startServer accepts ANY server already on the port: a stale vite from the T-146 worktree (pid 2259, started Oct 30, not mine, left running) sits on :5199 and made my first default run test T-146 code (5 of 7 layout tests failed). Fix idea: startServer should refuse an occupied port or check the server's root; for now run with PRINT_CHECK_PORT=<free port> and kill that vite. (2) Parity is baseline-relative (diff minus the same page without layout < 0.5%); the whole-page number on A5 notes is 0.716% because the template's ruled lines are 0.559% on their own. I agree with the method, the spec's wording is looser. (3) docs/e2e.md and templates.md say 170 print-check tests; with the 10 hostile tests I added it is 180. (4) the notes-kind items repeat with the same fit key layout:notes:<id> on every notes page, so the fit report holds one entry for them (report only). (5) Integration tests default the S3 endpoint to 127.0.0.1:9000, i.e. whatever runs there.
+- 2026-11-01 06:43Z · leader · merged 78f730b (PR #153, head d3db7a1); QA_PASS: print-check 180/0, e2e 7/7, integration 33 pkgs, vitest 732; AC4 web-side only
 
 ### T-155 — [E09] Fix three stale Postman assertions in the customisation-editor collection
 - **Status:** MERGED
@@ -226,7 +235,7 @@ Spec: .team/epics/E09-customisation-editor/14-fix-stale-book-design-newman-steps
 - 2026-10-31 15:37Z · leader · merged b2bc66e (PR #151, head 1a78b64); QA_PASS: collection 132 assertions, 0 failed, twice
 
 ### T-156 — [E09] Layout version must never go back (reset / template change)
-- **Status:** READY_FOR_QA
+- **Status:** IN_QA
 - **Priority:** P2
 - **Type:** fix
 - **Milestone:** M4
@@ -234,10 +243,10 @@ Spec: .team/epics/E09-customisation-editor/14-fix-stale-book-design-newman-steps
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** qa
 - **Branch:** task/t-156-e09-layout-version-must-never-go-back-re
 - **PR:** https://github.com/danyaa666/smemories/pull/154
-- **Updated:** 2026-11-01 06:24Z by dev
+- **Updated:** 2026-11-01 06:40Z by qa
 - **Comments-seen:** 2
 
 Spec: .team/epics/E09-customisation-editor/15-layout-version-never-goes-back.md (read it from the main checkout). QA ABA finding on T-153: reset restarts the version, so a stale editor can overwrite newer work
@@ -245,5 +254,25 @@ Spec: .team/epics/E09-customisation-editor/15-layout-version-never-goes-back.md 
 #### Comments
 - 2026-11-01 06:24Z · dev · PR #154 head 8b3c25d. Counter on yearbook_tab.layout_version (migration 20261101130000, backfilled from layout rows); save compares base to it under the row lock, reset and template change delete the row and +1. After reset get -> layout null, version N+1; 409 carries current version. Tests: TestVersionNeverGoesBack (AC1-3), TestMigrateYearbookLayoutVersion (AC4), existing reset/template tests updated. Own compose t156: go test -race -tags integration ./... all ok, make lint 0, check:api ok, class-matrix ok, newman customisation-editor x2: 135 req/295 assert/0 failed. Not run: e2e/print-check (no web/print change). Note: reset on a book with no layout also bumps the version (harmless). Deploy migrate+code together.
 - 2026-11-01 06:25Z · leader · Leader note for QA: dev did not re-run the full integration suite after fixing TestMigrateBookLayoutTable (only TestMigrate*), and did not repeat the HTTP reproduction on a live stack. Run the full make test-integration equivalent, the live ABA reproduction (reset and template-change variants), migration up/down with existing rows (versions backfilled from layout rows), class matrix and newman, and quote result lines with the head SHA.
+
+### T-157 — [E09] print-check: refuse a foreign server on its port; refresh test counts in docs
+- **Status:** TODO
+- **Priority:** P3
+- **Type:** test
+- **Milestone:** M4
+- **Depends-on:** T-154
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-11-01 06:43Z by leader
+- **Comments-seen:** 1
+
+Spec: .team/epics/E09-customisation-editor/16-print-check-start-server-strict.md (read it from the main checkout). QA found print-check silently tested a stale vite on :5199
+
+#### Comments
+- 2026-11-01 06:43Z · leader · T-154 merged
 
 <!-- tasks:end -->
