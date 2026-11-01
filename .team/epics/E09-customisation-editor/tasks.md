@@ -262,7 +262,7 @@ Spec: .team/epics/E09-customisation-editor/15-layout-version-never-goes-back.md 
 - 2026-11-01 06:55Z · leader · merged 7adc7af (PR #154, head 8b3c25d); QA_PASS: integration 33 pkgs 0 FAIL, newman 295/0 x2, e2e 7/7, print-check 163/163, live ABA repro 409 both variants
 
 ### T-157 — [E09] print-check: refuse a foreign server on its port; refresh test counts in docs
-- **Status:** READY_FOR_QA
+- **Status:** IN_QA
 - **Priority:** P3
 - **Type:** test
 - **Milestone:** M4
@@ -270,10 +270,10 @@ Spec: .team/epics/E09-customisation-editor/15-layout-version-never-goes-back.md 
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** qa
 - **Branch:** task/t-157-e09-print-check-refuse-a-foreign-server-
 - **PR:** 155
-- **Updated:** 2026-11-01 06:55Z by dev
+- **Updated:** 2026-11-01 06:55Z by qa
 - **Comments-seen:** 2
 
 Spec: .team/epics/E09-customisation-editor/16-print-check-start-server-strict.md (read it from the main checkout). QA found print-check silently tested a stale vite on :5199
@@ -283,7 +283,7 @@ Spec: .team/epics/E09-customisation-editor/16-print-check-start-server-strict.md
 - 2026-11-01 06:55Z · dev · Head 2646dc6. print-check picks a free port itself; foreign server on PRINT_CHECK_PORT fails fast (new server.test.mjs, plus real stale vite on 5199 tried, left alive). make print-check 181/181 pass; web lint/tsc/vitest green. QA: run make print-check with a dummy server on 5199 and with PRINT_CHECK_PORT=5199.
 
 ### T-158 — [E09] Editor state: document store, undo/redo, autosave and conflict handling (web)
-- **Status:** TODO
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -292,15 +292,16 @@ Spec: .team/epics/E09-customisation-editor/16-print-check-start-server-strict.md
 - **Rework:** 0
 - **Owner-approved:** —
 - **Assignee:** —
-- **Branch:** —
-- **PR:** —
-- **Updated:** 2026-11-01 06:55Z by leader
-- **Comments-seen:** 1
+- **Branch:** task/t-158-e09-editor-state-document-store-undo-red
+- **PR:** 156
+- **Updated:** 2026-11-01 07:02Z by dev
+- **Comments-seen:** 2
 
 Spec: .team/epics/E09-customisation-editor/17-editor-state-undo-autosave.md (read it from the main checkout). Pure operations, snapshot history depth 100, debounced autosave with base_version, 409 choices
 
 #### Comments
 - 2026-11-01 06:55Z · leader · T-156 merged 7adc7af; spec notes base_version source
+- 2026-11-01 07:02Z · dev · PR #156 head 6525f4a. web/src/book/editor/ (document, history, store, useLayoutEditor, SaveStatus). Verify: states per req 4-6 in store.ts, base_version only from book-layout/get, tests (vitest src/book/editor, 69). Changed shared api/client.ts: ApiError.data (409/400 bodies). Live check (2 tabs, offline) is QA's per spec; no UI route exists yet. AC4 = server boundary table replayed (no shared fixture file exists).
 
 ### T-159 — [E09] Editor route and shell: page strip, zoom, selection overlay, property panel (web)
 - **Status:** BACKLOG
