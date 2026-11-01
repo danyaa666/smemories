@@ -15,7 +15,8 @@ import {
 import { emptyDoc, type Op, type Refusal } from "./document";
 import { History } from "./history";
 
-export type SaveState = "idle" | "saving" | "saved" | "offline" | "conflict" | "invalid" | "gone";
+export type SaveState =
+  "idle" | "saving" | "saved" | "offline" | "failing" | "conflict" | "invalid" | "gone";
 export type Snapshot = {
   loaded: "loading" | "ready" | "failed";
   doc: LayoutDoc;
@@ -195,6 +196,7 @@ export class EditorStore {
     clearTimeout(this.debounce);
     this.debounce = undefined;
     if (this.saveState === "conflict" || this.saveState === "gone") return;
+    if (this.stopped) return void this.save(); // a gesture ended by leaving the screen (T-160): no timer is left behind, the edit is sent now
     // a commit during a 429 or backoff wait must not shorten it (flush on hide / online / stop still saves at once)
     const delay = Math.max(DEBOUNCE_MS, this.notBefore - Date.now());
     this.debounce = setTimeout(() => void this.save(), delay);
@@ -269,8 +271,11 @@ export class EditorStore {
       this.saveState = "invalid";
       this.queued = false;
     } else {
-      // network error or 5xx: stay dirty, retry with backoff (1 s, 2 s, 4 s, 8 s, then every 30 s)
-      this.wait((BACKOFF_MS[this.attempt] ?? BACKOFF_LAST_MS) / 1000, "offline");
+      // network error (status 0: "offline") or 5xx ("failing": the server answered but could not save): stay dirty, retry with backoff (1 s, 2 s, 4 s, 8 s, then every 30 s)
+      this.wait(
+        (BACKOFF_MS[this.attempt] ?? BACKOFF_LAST_MS) / 1000,
+        status === 0 ? "offline" : "failing",
+      );
       this.attempt++;
     }
   }

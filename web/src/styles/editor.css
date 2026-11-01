@@ -129,7 +129,16 @@
   position: absolute;
   pointer-events: none;
 }
+.ed-pagebox:focus {
+  outline: none;
+}
+.ed-overlay {
+  user-select: none;
+  -webkit-user-select: none;
+}
+/* an unselected item lets a swipe pan the stage; a selected one, and every handle, takes the touch for itself (the first tap selects, then a drag moves) */
 .ed-hit {
+  touch-action: pan-x pan-y pinch-zoom;
   position: absolute;
   inset: 0;
   padding: 0;
@@ -147,7 +156,30 @@
 .ed-box.is-selected .ed-hit {
   border: 2px solid var(--color-primary);
 }
+.ed-box.is-selected .ed-hit {
+  touch-action: none;
+}
+.ed-chrome {
+  position: absolute;
+  pointer-events: none;
+}
+.ed-guide {
+  position: absolute;
+  background: var(--color-error);
+  pointer-events: none;
+}
+.ed-guide-v {
+  top: 0;
+  bottom: 0;
+  width: 1px;
+}
+.ed-guide-h {
+  left: 0;
+  right: 0;
+  height: 1px;
+}
 .ed-handle {
+  touch-action: none;
   position: absolute;
   width: 12px;
   height: 12px;
@@ -157,6 +189,61 @@
   border-radius: 2px;
   background: #fff;
   pointer-events: auto;
+}
+/* the drawn handle is 12 px; its hit area is 44 x 44 screen px at any zoom (the pseudo-element belongs to the button for hit testing) */
+.ed-handle::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
+}
+/* a box too small for that: the handles sit outside the corners, so the box itself can still be grabbed */
+.ed-chrome.is-small .ed-h-nw {
+  translate: -22px -22px;
+}
+.ed-chrome.is-small .ed-h-ne {
+  translate: 22px -22px;
+}
+.ed-chrome.is-small .ed-h-sw {
+  translate: -22px 22px;
+}
+.ed-chrome.is-small .ed-h-se {
+  translate: 22px 22px;
+}
+.ed-chrome.is-small .ed-h-n {
+  translate: 0 -22px;
+}
+.ed-chrome.is-small .ed-h-s {
+  translate: 0 22px;
+}
+.ed-chrome.is-small .ed-h-w {
+  translate: -22px 0;
+}
+.ed-chrome.is-small .ed-h-e {
+  translate: 22px 0;
+}
+.ed-help {
+  margin-bottom: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+.ed-help h2 {
+  margin: 0 0 var(--space-2);
+  font-size: 1rem;
+}
+.ed-help th {
+  padding-right: var(--space-3);
+  text-align: left;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.ed-help table {
+  margin-bottom: var(--space-2);
 }
 .ed-h-nw {
   left: 0;

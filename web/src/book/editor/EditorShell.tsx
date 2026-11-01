@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import type { BookData } from "../../api/book";
@@ -11,6 +11,7 @@ import { listPages } from "../BookPages";
 import { pageBox } from "../layout/geometry";
 import { getTemplate } from "../templates";
 import { pageName, targetName } from "./names";
+import { HelpSheet } from "./gestures/HelpSheet";
 import { PageStrip } from "./PageStrip";
 import { PropertyPanel } from "./PropertyPanel";
 import { SaveStatus } from "./SaveStatus";
@@ -48,6 +49,7 @@ export function EditorShell({
   const shown = useMemo(() => ({ ...data, layout: ed.doc }), [data, ed.doc]);
   const [said, say] = useState("");
   const [asking, setAsking] = useState(false);
+  const [help, setHelp] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [resetError, setResetError] = useState<unknown>(null);
   const [previewFailed, setPreviewFailed] = useState(false);
@@ -59,7 +61,16 @@ export function EditorShell({
   const targets = measuredTargets.length ? measuredTargets : targetsOf(ed.doc, kind, spec, pb);
   const selected = targets.find((x) => x.id === ed.selection[0]);
 
-  const { select, undo, redo } = ed;
+  const { select, undo, redo, apply, begin, preview, commit, cancel } = ed;
+  const store = useMemo(
+    () => ({ begin, preview, commit, cancel, apply, select }),
+    [begin, preview, commit, cancel, apply, select],
+  );
+  const stripData = useDeferredValue(shown); // the thumbnails catch up after a drag instead of redrawing on every pointer move
+  const known = useRef(targets);
+  useEffect(() => {
+    known.current = targets;
+  });
   const pick = (i: number) => {
     if (i === index) return;
     setPageIdx(i);
@@ -69,10 +80,10 @@ export function EditorShell({
   const choose = useCallback(
     (ids: readonly string[]) => {
       select(ids);
-      const x = targets.find((y) => y.id === ids[0]);
+      const x = known.current.find((y) => y.id === ids[0]);
       say(x ? t("editor.selected", { name: targetName(t, x) }) : t("editor.cleared"));
     },
-    [select, targets, t, say],
+    [select, t, say],
   );
 
   // undo and redo from the keyboard (not while a text area has the keys, T-161)
@@ -80,6 +91,11 @@ export function EditorShell({
     const key = (e: KeyboardEvent) => {
       const el = e.target instanceof HTMLElement ? e.target : null;
       if (el?.tagName === "TEXTAREA" || el?.isContentEditable) return;
+      if (e.key === "?" && el?.tagName !== "INPUT" && el?.tagName !== "SELECT" && !asking) {
+        e.preventDefault();
+        return setHelp((h) => !h);
+      }
+      if (e.key === "Escape" && help) return setHelp(false);
       const k = e.key.toLowerCase();
       const mod = e.ctrlKey || e.metaKey;
       if (e.key === "Escape" && !asking) return choose([]);
@@ -91,7 +107,7 @@ export function EditorShell({
     };
     document.addEventListener("keydown", key);
     return () => document.removeEventListener("keydown", key);
-  }, [undo, redo, readOnly, asking, choose]);
+  }, [undo, redo, readOnly, asking, help, choose]);
 
   if (ed.saveState === "gone")
     return (
@@ -138,6 +154,9 @@ export function EditorShell({
         >
           {t("editor.resetAll")}
         </button>
+        <button type="button" aria-expanded={help} onClick={() => setHelp((h) => !h)}>
+          {t("editor.helpButton")}
+        </button>
         <a
           href={`/yearbooks/${bookId}/book`}
           target="_blank"
@@ -163,6 +182,7 @@ export function EditorShell({
           {t("editor.preview")}
         </a>
       </div>
+      {help && <HelpSheet onClose={() => setHelp(false)} />}
       {previewFailed && (
         <p role="alert" className="error">
           {t("editor.previewFailed")}
@@ -197,7 +217,7 @@ export function EditorShell({
       )}
       <div className="ed-grid">
         <PageStrip
-          data={shown}
+          data={stripData}
           size={size}
           bookT={bookT}
           pages={pages}
@@ -216,6 +236,8 @@ export function EditorShell({
           onTargets={setTargets}
           readOnly={readOnly}
           safeMm={safeMm}
+          store={store}
+          announce={say}
         />
         <PropertyPanel
           doc={ed.doc}

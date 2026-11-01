@@ -14,7 +14,7 @@ export type Rect = { left: number; top: number; width: number; height: number };
 export const pageBox = (size: PageSize): PageBox => ({ w: DESIGN_W, h: designHeight(size) });
 
 /** Moves `pos` so that `[pos, pos + len]` lies inside `[0, max]`; a box longer than the page is centred on it. */
-function inside(pos: number, len: number, max: number): number {
+export function inside(pos: number, len: number, max: number): number {
   return len >= max ? (max - len) / 2 : Math.min(Math.max(pos, 0), max - len);
 }
 

@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next";
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { memo, useEffect, useRef, useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import type { BookData } from "../../api/book";
 import { BookPages, type OnePage } from "../BookPages";
@@ -26,7 +26,7 @@ function useSeen<T extends HTMLElement>() {
 
 const noop = () => {};
 
-function Thumb({
+const Thumb = memo(function Thumb({
   data,
   size,
   bookT,
@@ -50,7 +50,7 @@ function Thumb({
       )}
     </span>
   );
-}
+});
 
 /** The page strip (T-159): one thumbnail per page in book order, drawn by the real book components; arrow keys move between pages. */
 export function PageStrip({

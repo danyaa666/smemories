@@ -17,6 +17,8 @@ import {
   type Refusal,
 } from "./document";
 import { pageName, targetName } from "./names";
+import { BIG_STEP, BIG_TURN, TURN } from "./gestures/keys";
+import { nudge, type Nudge } from "./gestures/math";
 import { overrideOf, patchOf, type Target } from "./targets";
 
 const tenth = (v: number) => String(Math.round(v * 10) / 10);
@@ -173,6 +175,11 @@ export function PropertyPanel({
       onCommit={(n) => write(make(n))}
     />
   );
+  /** A button step: the same maths and clamps as the keyboard (gestures/math.ts `nudge`), written as the whole drawn box. */
+  const step = (n: Nudge, what: string) => {
+    const next = nudge(rect, selected.r, n, pb);
+    if (write(patchOf(next.rect, next.deg, pb))) announce(what);
+  };
   const list = doc.pages[kind]?.items ?? [];
   const at = item ? list.findIndex((i) => i.id === item.id) : -1;
   const move = (to: number) => {
@@ -213,6 +220,66 @@ export function PropertyPanel({
         )}
         {field(t("editor.rotation"), selected.r, [-180, 180], (n) => ({ r: Math.round(n) }), 1)}
       </fieldset>
+      <div role="group" aria-label={t("editor.nudge")} className="ed-row">
+        <button
+          type="button"
+          disabled={readOnly}
+          onClick={() => step({ kind: "rotate", ddeg: -TURN }, t("editor.nudged.rotateLeft"))}
+        >
+          {t("editor.rotateLeft")}
+        </button>
+        <button
+          type="button"
+          disabled={readOnly}
+          onClick={() => step({ kind: "rotate", ddeg: TURN }, t("editor.nudged.rotateRight"))}
+        >
+          {t("editor.rotateRight")}
+        </button>
+        <button
+          type="button"
+          disabled={readOnly}
+          onClick={() => step({ kind: "rotate", ddeg: -BIG_TURN }, t("editor.nudged.rotateLeft"))}
+        >
+          {t("editor.rotateLeftBig")}
+        </button>
+        <button
+          type="button"
+          disabled={readOnly}
+          onClick={() => step({ kind: "rotate", ddeg: BIG_TURN }, t("editor.nudged.rotateRight"))}
+        >
+          {t("editor.rotateRightBig")}
+        </button>
+        <button
+          type="button"
+          disabled={readOnly}
+          onClick={() => step({ kind: "resize", dw: BIG_STEP, dh: 0 }, t("editor.nudged.wider"))}
+        >
+          {t("editor.wider")}
+        </button>
+        <button
+          type="button"
+          disabled={readOnly}
+          onClick={() =>
+            step({ kind: "resize", dw: -BIG_STEP, dh: 0 }, t("editor.nudged.narrower"))
+          }
+        >
+          {t("editor.narrower")}
+        </button>
+        <button
+          type="button"
+          disabled={readOnly}
+          onClick={() => step({ kind: "resize", dw: 0, dh: BIG_STEP }, t("editor.nudged.taller"))}
+        >
+          {t("editor.taller")}
+        </button>
+        <button
+          type="button"
+          disabled={readOnly}
+          onClick={() => step({ kind: "resize", dw: 0, dh: -BIG_STEP }, t("editor.nudged.shorter"))}
+        >
+          {t("editor.shorter")}
+        </button>
+      </div>
       {refused && (
         <p role="alert">
           {t(`editor.refused.${refused}`, { defaultValue: t("editor.refused.other") })}

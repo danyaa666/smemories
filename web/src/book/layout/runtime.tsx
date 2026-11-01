@@ -1,5 +1,6 @@
 import {
   createContext,
+  memo,
   useContext,
   useCallback,
   useEffect,
@@ -204,7 +205,16 @@ function AssetItem({ item, spec }: { item: Item; spec: TemplateLayout }) {
   return <AssetSvg id={id} size="100%" fill tint={tint} />;
 }
 
-function ItemView({ item, kind, spec }: { item: Item; kind: string; spec: TemplateLayout }) {
+// memoised: a drag changes one item of the document, the others keep their object and are not drawn again (T-160)
+const ItemView = memo(function ItemView({
+  item,
+  kind,
+  spec,
+}: {
+  item: Item;
+  kind: string;
+  spec: TemplateLayout;
+}) {
   const { size } = useBookEnv();
   let body: ReactNode = null;
   if (item.t === "text") body = <TextItem item={item} kind={kind} spec={spec} />;
@@ -230,7 +240,7 @@ function ItemView({ item, kind, spec }: { item: Item; kind: string; spec: Templa
       {body}
     </div>
   );
-}
+});
 
 /**
  * The items of one page kind, in array order (later on top), over the page. It is the `layer` of `Sheet`; it carries the page's theme and font set so

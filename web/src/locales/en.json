@@ -930,7 +930,8 @@
       "offline": "Offline: your changes are kept here and saved when you are back online.",
       "conflict": "This book was changed in another tab or device.",
       "invalid": "This change cannot be saved. Undo it or change it.",
-      "gone": "This book is no longer available to you; changes cannot be saved."
+      "gone": "This book is no longer available to you; changes cannot be saved.",
+      "failing": "Could not save, retrying..."
     },
     "title": "Free layout",
     "back": "Back to customise",
@@ -1037,6 +1038,55 @@
     "leaveTitle": "Leave the editor?",
     "leaveBody": "Your last changes are still being saved. They are sent when you leave, but check the save status first if you are unsure.",
     "leaveConfirm": "Leave",
-    "leaveCancel": "Stay"
+    "leaveCancel": "Stay",
+    "helpButton": "Keyboard shortcuts",
+    "helpTitle": "Keyboard shortcuts",
+    "helpClose": "Close",
+    "help": {
+      "tab": "Select the next or previous item on the page",
+      "move": "Move the selected item 1 px",
+      "moveBig": "Move the selected item 10 px",
+      "resize": "Resize by 10 px: Left and Right change the width, Up and Down the height",
+      "rotate": "Rotate by 1 degree (left, right)",
+      "rotateBig": "Rotate by 15 degrees",
+      "delete": "Delete the selected item",
+      "escape": "Cancel a drag in progress, or clear the selection",
+      "undo": "Undo",
+      "redo": "Redo",
+      "noSnap": "Do not snap to guides while dragging",
+      "ratio": "Keep the proportions while resizing",
+      "snap15": "Turn in steps of 15 degrees while rotating",
+      "help": "Show or hide this list"
+    },
+    "dir": {
+      "left": "left",
+      "right": "right",
+      "up": "up",
+      "down": "down"
+    },
+    "said": {
+      "leadMove": "Moved {{dir}} {{n}}.",
+      "movedTo": "{{lead}} Position {{x}} percent from the left, {{y}} percent from the top.",
+      "resized": "Size {{w}} percent of the page width, {{h}} percent of its height.",
+      "rotated": "Rotated to {{deg}} degrees.",
+      "cancelled": "Cancelled"
+    },
+    "nudge": "Rotate and resize",
+    "rotateLeft": "Rotate left 1°",
+    "rotateRight": "Rotate right 1°",
+    "rotateLeftBig": "Rotate left 15°",
+    "rotateRightBig": "Rotate right 15°",
+    "wider": "Wider",
+    "narrower": "Narrower",
+    "taller": "Taller",
+    "shorter": "Shorter",
+    "nudged": {
+      "rotateLeft": "Rotated left",
+      "rotateRight": "Rotated right",
+      "wider": "Wider",
+      "narrower": "Narrower",
+      "taller": "Taller",
+      "shorter": "Shorter"
+    }
   }
 }
