@@ -556,7 +556,7 @@ Spec: .team/epics/E09-customisation-editor/23-palette-follow-ups.md (read it fro
 - 2026-11-01 21:57Z · leader · merged a994dc6; QA: test-integration 33 pkgs ok, e2e 32/0, print-check 187/187, vitest 1045
 
 ### T-165 — [E09] Editor version history panel: list, preview and restore (web)
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -564,16 +564,18 @@ Spec: .team/epics/E09-customisation-editor/23-palette-follow-ups.md (read it fro
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-165-e09-editor-version-history-panel-list-pr
-- **PR:** —
-- **Updated:** 2026-11-01 21:39Z by dev
-- **Comments-seen:** 1
+- **PR:** https://github.com/danyaa666/smemories/pull/163
+- **Updated:** 2026-11-01 22:10Z by dev
+- **Comments-seen:** 3
 
 Spec: .team/epics/E09-customisation-editor/24-version-history-panel.md (read it from the main checkout). History button and panel, read-only preview of a snapshot, restore through the T-163 routes with settle first, history cleared after restore, dropped count message, every error mapped, e2e spec editor-history
 
 #### Comments
 - 2026-11-01 21:35Z · leader · T-163 merged (f0eb70f); version routes use the save rate limit (burst 20/10s), so no polling and cache previews
+- 2026-11-01 22:10Z · dev · PR #163 head 1f614a6 (rebased on develop 563b347). Web only. Local: vitest 1078 pass, lint/prettier/tsc/lint:i18n/check:api/build green. e2e (scripts/e2e.sh direct, private stack t165dev, ports 45306/45379/45333, SMEM_TEST_S3_ENDPOINT set): 37 passed 0 failed incl. editor-history.spec.mjs (4 tests: three bursts+preview+restore+reload, dropped image, two tabs 200+409, keyboard only); one earlier run had a one-off failure of editor-gestures touch test (2 px, passed on 2 other runs, unrelated). Print-check not run (no print/page rendering change). To verify: no version-* call before History opens; 31+ snapshots list stops at 30; restore with pending autosave; spec uses mysql CLI to back-date snapshots (docs/editor-history.md). Preview bar lives at top of the panel (keyboard reach). Editor does not mount below 768px so no phone dialog.
+- 2026-11-01 22:11Z · leader · Leader to QA: PR #163 head 1f614a69d57b5b67496ac797160e41a3de4265dd (web only). Run vitest, lint, tsc, lint:i18n, check:api, build and the full e2e (scripts/e2e.sh on your own stack; the new tools/e2e/editor-history.spec.mjs back-dates snapshots with the mysql CLI against SMEM_DB_DSN: confirm the client is documented in docs/e2e.md and the spec fails with a clear message when it is missing). Dev saw one 2 px flake in editor-gestures touch once: run e2e twice and report any repeat. Check per spec 24: no version-* request before History opens (Network); list stops at 30 with 31+ snapshots; restore while an autosave is pending keeps the pending edit; two tabs give one conflict; restore with a deleted design image shows the dropped message; keyboard-only walk and Esc focus return; a failed restore changes nothing. Result lines with counts and full SHA in your comment. Accepted: no phone dialog (editor does not mount below 768 px; phone mode is a later task).
 
 ### T-166 — [E09] Navy Classic: page kinds and editable elements for the layout editor (web + manifest)
 - **Status:** TODO
