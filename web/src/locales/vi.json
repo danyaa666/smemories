@@ -921,5 +921,15 @@
       "front": "Trước các trang của học sinh",
       "back": "Sau các trang của học sinh"
     }
+  },
+  "editor": {
+    "save": {
+      "saving": "Đang lưu...",
+      "saved": "Đã lưu",
+      "offline": "Mất kết nối: thay đổi được giữ ở đây và sẽ lưu khi có mạng trở lại.",
+      "conflict": "Cuốn sách này đã được thay đổi ở tab hoặc thiết bị khác.",
+      "invalid": "Không thể lưu thay đổi này. Hãy hoàn tác hoặc sửa lại.",
+      "gone": "Bạn không còn truy cập được cuốn sách này; không thể lưu thay đổi."
+    }
   }
 }

@@ -921,5 +921,15 @@
       "front": "Before the students' pages",
       "back": "After the students' pages"
     }
+  },
+  "editor": {
+    "save": {
+      "saving": "Saving...",
+      "saved": "Saved",
+      "offline": "Offline: your changes are kept here and saved when you are back online.",
+      "conflict": "This book was changed in another tab or device.",
+      "invalid": "This change cannot be saved. Undo it or change it.",
+      "gone": "This book is no longer available to you; changes cannot be saved."
+    }
   }
 }

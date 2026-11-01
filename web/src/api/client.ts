@@ -9,6 +9,7 @@ export class ApiError extends Error {
   readonly code: string;
   readonly requestId: string | undefined;
   readonly retryAfter: number | undefined; // seconds, from the Retry-After header (429)
+  readonly data: unknown; // `data` of the error body when the code carries one (book-layout: ERROR_VERSION_CONFLICT, ERROR_INVALID_LAYOUT)
 
   constructor(
     status: number,
@@ -16,6 +17,7 @@ export class ApiError extends Error {
     message: string,
     requestId?: string,
     retryAfter?: number,
+    data?: unknown,
   ) {
     super(message);
     this.name = "ApiError";
@@ -23,6 +25,7 @@ export class ApiError extends Error {
     this.code = code;
     this.requestId = requestId;
     this.retryAfter = retryAfter;
+    this.data = data;
   }
 }
 
@@ -31,6 +34,7 @@ interface V2Error {
   status: string;
   error_message?: string;
   request_id?: string;
+  data?: unknown;
 }
 
 // v2 codes whose locale-key spelling is not just the lower-cased name; the locale files and every
@@ -84,6 +88,7 @@ export function apiErrorFrom(
       body.error_message ?? `HTTP ${status}`,
       body.request_id || headerId,
       retryAfter,
+      body.data,
     );
   }
   return new ApiError(status, "unknown_error", `HTTP ${status}`, headerId, retryAfter);
