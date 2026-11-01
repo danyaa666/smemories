@@ -274,7 +274,7 @@ Spec: .team/epics/E09-customisation-editor/15-layout-version-never-goes-back.md 
 - **Branch:** task/t-157-e09-print-check-refuse-a-foreign-server-
 - **PR:** 155
 - **Updated:** 2026-11-01 06:55Z by dev
-- **Comments-seen:** 1
+- **Comments-seen:** 2
 
 Spec: .team/epics/E09-customisation-editor/16-print-check-start-server-strict.md (read it from the main checkout). QA found print-check silently tested a stale vite on :5199
 
