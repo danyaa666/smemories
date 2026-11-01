@@ -285,25 +285,41 @@ Spec: .team/epics/E09-customisation-editor/16-print-check-start-server-strict.md
 - 2026-11-01 07:04Z · leader · merged 4c9b0f6 (PR #155, head 2646dc6); QA_PASS: print-check 181/181, foreign server on port refused, no orphan vite
 
 ### T-158 — [E09] Editor state: document store, undo/redo, autosave and conflict handling (web)
-- **Status:** IN_QA
+- **Status:** QA_FAIL
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
 - **Depends-on:** T-156
 - **Risk:** low
-- **Rework:** 0
+- **Rework:** 1
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** —
 - **Branch:** task/t-158-e09-editor-state-document-store-undo-red
 - **PR:** 156
-- **Updated:** 2026-11-01 07:04Z by qa
-- **Comments-seen:** 2
+- **Updated:** 2026-11-01 07:11Z by qa
+- **Comments-seen:** 4
 
 Spec: .team/epics/E09-customisation-editor/17-editor-state-undo-autosave.md (read it from the main checkout). Pure operations, snapshot history depth 100, debounced autosave with base_version, 409 choices
 
 #### Comments
 - 2026-11-01 06:55Z · leader · T-156 merged 7adc7af; spec notes base_version source
 - 2026-11-01 07:02Z · dev · PR #156 head 6525f4a. web/src/book/editor/ (document, history, store, useLayoutEditor, SaveStatus). Verify: states per req 4-6 in store.ts, base_version only from book-layout/get, tests (vitest src/book/editor, 69). Changed shared api/client.ts: ApiError.data (409/400 bodies). Live check (2 tabs, offline) is QA's per spec; no UI route exists yet. AC4 = server boundary table replayed (no shared fixture file exists).
+- 2026-11-01 07:11Z · qa · QA_FAIL T-158 (PR #156, head tested 6525f4a; QA pushed test-only commit 2b0dfe2 on top). One blocker-class AC4 issue, one minor. Rest verified, see below.
+  
+  ISSUES
+  1. [major, AC4] The client mirror accepts text the server refuses. Repro (live, my own stack): addItem/setText("cover", ...) with "a​b" (also U+200E, U+FEFF, U+2028, U+2029, U+FFFD) returns a doc with no refusal; autosave then gets 400 ERROR_INVALID_LAYOUT, problems [{"path":"pages.cover.items[0].text","code":"bad_text"}], editor goes to `invalid` and stays there until the user undoes. Zero-width/LRM chars are common in pasted text. Cause: document.ts textRefusal() only rejects C0/C1 controls; internal/textx CleanMultiline rejects Cc (except \n), Cf (except ZWJ U+200D), Zl, Zp and U+FFFD. Also the server counts code points AFTER NFC + TrimSpace; the client counts raw: 300 decomposed Vietnamese chars (600 code points, 300 after NFC) and 500 letters + 3 trailing spaces are refused client-side though the server accepts (conservative, but a Vietnamese paste of NFD text is refused wrongly). Fix: in textRefusal use /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}�]/u (allow \n and ‍; keep \r\n -> \n), count [...text.normalize("NFC").trim()]. Test: I added web/src/book/editor/document.mirror.test.ts (8 cases, 7 fail now; they must pass; the dev replay of validate_test did not cover Unicode categories, which is why this slipped). Also fine to leave size/font/color/align/asset/media to the server (they need the manifest; live: bad font gave 400 with path pages.cover.items[0].font unknown_id, state invalid, correct).
+  2. [minor, req 6] A commit while a 429 (or backoff) wait is pending triggers save() through the 1.5 s debounce, which clears the retry timer and sends at once, before Retry-After. Live: 429 after 21 rapid saves; edit during the wait -> one extra request 1.5 s later (429 again), then recovery at ~9.5 s. Same for the `online` event (fine) and for offline backoff (a commit shortens the wait). Suggest: remember `notBefore = now + wait` and have schedule()/save() defer to it (still allow flush() on hide/online/stop).
+  3. [minor, non-blocking] keepMine()/useTheirs() with no conflict body call getBookLayout without a catch (unhandled rejection if offline). Unit tests do not cover it.
+  
+  VERIFIED (head 6525f4a, worktree T-158/web)
+  - eslint 0 problems; prettier --check clean; tsc --noEmit clean; vitest 44 files, 802 passed (802); lint:i18n "i18n check ok"; check:api "api schema ok"; npm run build ok. CI on 6525f4a (run 41283165763): go, web, security success; e2e/image/go-integration skipped (paused, D-37/D-38).
+  - Diff vs develop: 15 files, web only (api/bookLayout.ts, api/client.ts + test, book/editor/*, locales en/vi). No server, no .team, no new dependency. go test not needed: no Go change. client.ts: ApiError gains `data` (body.data); the only reader is the editor store; grep shows no caller logs, renders or JSON.stringify's an ApiError, no console/Sentry in web/src, so no leak or behaviour change for other callers (constructor arg is last and optional).
+  - Code review of store.ts vs req 3-6: one save in flight + one queued (inFlight/queued), conflict/gone/invalid never saved (dirtyAndSavable + schedule), base_version only from getBookLayout and own save answers, flush on visibilitychange hidden / online / stop, leave guard via useLeaveGuard(dirty) (beforeunload + in-app), reset bumps epoch.
+  - Live check (own compose project qa158, ports 13307/16380/19010, API :18158 SMEM_ENV=test, real MySQL/Redis/S3, real fetch; store driven from a throw-away vitest script outside the repo; two stores = two tabs, same user): (a) load v1, edit, autosave -> saved v2, undo/redo each saved, second client loads identical doc and version PASS. (b) conflict from second client, useTheirs: A kept its local doc while in conflict, edits+flush in conflict sent no save (save count +1 only), useTheirs -> B's doc, history cleared, version == server, no further saves PASS. (c) same, keepMine: server ends with A's two items at A's version, then stale B gets 409 in turn (no silent overwrite) PASS. (d) offline -> save attempts at +1502, +2503, +4503, +8504 ms (1.5 s debounce then 1, 2, 4 s... spaced) with doc dirty; edit while offline; reconnect -> saved, a fresh client sees both items PASS. (e) 400: problem path in state, no re-send until next commit, undo recovers PASS (except issue 1). (f) 404 after yearbook/delete: gone, no retry (1 request), further edit sends nothing PASS. (g) real 429 (20 saves/10 s limit hit on the 21st): state stays saving, recovers after Retry-After (~9.5 s) PASS, early extra request = issue 2.
+  - AC1 pass (suite + checks above). AC2 pass (store.test "30 edits, 10 undos, 5 redos and a conflict" present and green; also live conflict). AC3 pass (unit "never two saves in flight", live: no save in conflict/invalid). AC4 FAIL as described in 1; box limits (x/cy/w/h/r, ratio 1419, 40/150 items, id 6..26 alnum, 500 cap) match validate.go constants, checked line by line. A shared fixture does not exist; a replay of the Go table is acceptable for boxes, not for text categories.
+  - Not applicable: Postman (no endpoint change); make test-integration / e2e / print-check not run: web-only change with no server, print or auth flow touched (risk low).
+  Re-test after fix: run document.mirror.test.ts + the suite; I will re-run live scenarios (e) and (g).
+- 2026-11-01 07:11Z · leader · Leader to dev (rework 1): fix all three QA findings, not only the blocker. (1) textRefusal in document.ts must match the server's text validation exactly: read internal/booklayout validate.go for the refused categories (zero-width/format characters, U+2028/2029, U+FFFD, control chars) and the order (NFC and trim first, then count code points); make QA's document.mirror.test.ts (commit 2b0dfe2, pushed on the PR branch; merge it in, no force-push) pass 8 of 8, and add a comment in document.ts naming validate.go as the source of truth. (2) A commit during 429/backoff must not schedule a save before Retry-After/backoff has passed (the debounce must wait for max(1.5 s, remaining wait)); add a fake-timer test. (3) keepMine and useTheirs must catch a refetch that returns no conflict body (move to a clear error/offline state, no unhandled rejection); add a test. Re-run web lint/prettier/tsc/vitest/lint:i18n/check:api/build.
 
 ### T-159 — [E09] Editor route and shell: page strip, zoom, selection overlay, property panel (web)
 - **Status:** BACKLOG
