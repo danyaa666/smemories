@@ -334,7 +334,7 @@ Spec: .team/epics/E09-customisation-editor/17-editor-state-undo-autosave.md (rea
 - 2026-11-01 07:18Z · leader · merged cdaa62d (PR #156, head 0b2c3f3); QA_PASS after rework 1: vitest 814, mirror test 8/8, live 429/conflict/offline scenarios
 
 ### T-159 — [E09] Editor route and shell: page strip, zoom, selection overlay, property panel (web)
-- **Status:** READY_FOR_QA
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -345,8 +345,8 @@ Spec: .team/epics/E09-customisation-editor/17-editor-state-undo-autosave.md (rea
 - **Assignee:** —
 - **Branch:** task/t-159-e09-editor-route-and-shell-page-strip-zo
 - **PR:** https://github.com/danyaa666/smemories/pull/157
-- **Updated:** 2026-11-01 11:54Z by dev
-- **Comments-seen:** 7
+- **Updated:** 2026-11-01 12:18Z by leader
+- **Comments-seen:** 9
 
 Spec: .team/epics/E09-customisation-editor/18-editor-shell-and-selection.md (read it from the main checkout). Route /yearbooks/:id/editor, overlay outside the page clip, panel numeric edits, e2e journey
 
@@ -364,9 +364,18 @@ Spec: .team/epics/E09-customisation-editor/18-editor-shell-and-selection.md (rea
 - 2026-11-01 11:36Z · leader · Leader: QA_FAIL accepted. Rework 1 spec appended to 18-editor-shell-and-selection.md (R1 blocker: Editable boxes drawn relative to positioned ancestors, fix in runtime.tsx so drawn box = stored box for every editable id on A5/A4/Letter + all-ids guard test; R2 Preview as PDF must wait for flush incl. in-flight and queued save; R3 panel inputs patch only the changed field; R4 inline message for out-of-range input). Keep it in this PR; re-run e2e and print-check and list result lines with the head SHA.
 - 2026-11-01 11:54Z · dev · Rework 1 on PR #157, head 264ad0072044b406694a4494919b17888f2655e0. R1: Editable now portals a moved element into its .mb-page (runtime.tsx), so .mb-cover-head/.mb-flow cannot offset it; guard = print-check 'override equal to natural box leaves every editable element where it was' on A5/A4/Letter, 8 ids. Before (A5 profile.photo): x 0.0527->0.1117, y 0.1827->0.2459; cover.title 0.1176/0.1846->0.2356/0.2637. After: max rect change 0.04-0.07 % of page width on all three sizes. R2: store.settle() waits for in-flight + queued save; Preview opens the tab on click, navigates after settle, closes it + inline message on failure; e2e step 5b (save delayed 1.5 s, 3 widths, tab correct 3/3) + unit tests. R3: inputs patch only their own field (Height keeps shown Top via cy); a template element with no stored field yet gets the drawn value once, then other stored values are bit-identical (EditorShell test). Note the first write of a never-moved element still rounds its drawn box to thousandths. R4: inline role=alert 'Between a and b' (vi + en), aria-invalid. RESULTS on 264ad00: web eslint/prettier/tsc ok, vitest 48 files 851 passed, lint:i18n ok, check:api ok, build ok, make e2e 8 passed 0 failed, make print-check 187 pass 0 fail 0 skipped. QA: check Preview with a slow save, the 8 ids moved in the editor, the 'Between' message in vi, and print of a book with moved heading/pact (portal changes z-order: a moved element is above the template's own content, below added items). Resize handles still inert (T-160).
 - 2026-11-01 11:54Z · leader · Leader to QA (rework 1 check): re-run everything on head 264ad0072044b406694a4494919b17888f2655e0. Verify R1 yourself with your own script: override equal to natural box leaves all 8 editable ids in place on A5/A4/Letter (also notes.heading with a book that has notes pages) and printed /book is unchanged for a book with no override; note dev's side effect: a moved template element now draws above the template's own content and below added items (check it is not hidden behind page decoration or the cover photo, and that the selection outline still hugs it). R2: save POST delayed 1.5 s, edit Width, click Preview at once, tab shows the new width; also a failing save (offline/409) closes the tab with an inline message. R3: change only Width, Top/Height unchanged in stored layout (note dev says a never-moved element gets its drawn box written once, rounded to thousandths: confirm drift stays at most 0.1 once, not on every edit). R4: message for 250, -5, empty, 0.04. Then e2e, print-check, web checks; write result lines with head SHA.
+- 2026-11-01 12:18Z · qa · QA rework 1 on PR #157 head 264ad0072044b406694a4494919b17888f2655e0. CI on that head: go, web, security pass (image, e2e, go-integration skipped by policy). Own compose project t159qa (ports 24306/26380/29001), torn down with its volumes after.
+  LOCAL RESULTS: web eslint ok, prettier ok, tsc ok, vitest 48 files / 851 passed / 0 failed, lint:i18n ok, check:api ok, build ok. make e2e: 8 passed, 0 failed (incl. editor-shell.spec.mjs). make print-check: 187 pass / 0 fail / 0 skipped (incl. the 3 new 'override equal to natural box' tests, A5/A4/Letter). (First e2e try failed only because my shell env was overridden by .env's S3 endpoint; re-run with command-line overrides passed.)
+  MY OWN CHECKS (Playwright script against API+built web, new Memory Book, A5/A4/Letter, headless):
+  R1 PASS: on A5, A4 and Letter I selected every editable element on cover (title, photo, sticker), profile (heading, photo) and back (heading, pact), moved each by +5 Left in the panel; for all of them the drawn element, the selection outline and the panel numbers agree (outline vs nearest drawn element distance 0.00-0.01 % of the page; cover.title A5 panel L16.8 T18.4 W82.4 = drawn 16.8/18.42/82.4). Previously cover.title jumped +11.8 %. notes.heading is covered by the print-check guard (book with 2 notes pages, max change < 0.15 %, 8 ids on 3 sizes), not by my script. A book with no override never reaches the portal (Editable returns early without ov), so /book is unchanged by construction; print-check pixel parity (stage vs book, and PDF vs screen) still passes. Stacking: moved title is drawn above the polaroid photo and not hidden, outline hugs it (screenshot checked).
+  R2 PASS: save POST delayed 1.5 s, set Width 35 then 65 and clicked Preview as PDF at once: the new tab showed 0.35 and 0.65 of the page width (was wrong 5 of 6 before). Save answered 500, and browser offline: the tab is closed (open pages 1 -> 1) and the inline alert 'The latest changes could not be saved, so the preview was not opened.' shows.
+  R3 PASS: first edit of a never-moved title writes its drawn box rounded to thousandths once ({x118,cy236,w600,h147}); then Width 60->55 leaves x,cy,h,r identical; Top edit leaves x,w,h,r; Height edit keeps panel Top at 30 (cy moves with h) and x,w,r. No drift on repeated edits.
+  R4 PASS: Width 250, -5, empty, 0.04 each show role=alert 'Between 1 and 200', aria-invalid=true, the old value (55) is restored.
+  NON-BLOCKING (for T-160 or later): (a) when a moved template element overlaps another one (title over the cover photo), a click on the overlap selects the photo, because the hit areas keep the old order while the title is now painted above it; the title is then only selectable via the panel/Tab. Repro: move cover title to Top 30, click on the title text over the photo. (b) After a failed (500) save the status label reads 'Offline: your changes are kept here...', the wording is for offline only. (c) Resize handles still inert (T-160).
+- 2026-11-01 12:18Z · leader · merged PR #157 squash, head 264ad00, QA_PASS with e2e 8/8 and print-check 187/187
 
 ### T-160 — [E09] Editor gestures: move, resize, rotate, snap, guides, with keyboard control (web)
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -377,12 +386,13 @@ Spec: .team/epics/E09-customisation-editor/18-editor-shell-and-selection.md (rea
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-11-01 09:00Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-11-01 12:18Z by leader
+- **Comments-seen:** 1
 
 Spec: .team/epics/E09-customisation-editor/19-editor-gestures-and-keyboard.md (read it from the main checkout). In-house pointer-event module per ADR 0004 Q2, keyboard in the same task, 44 px touch targets
 
 #### Comments
+- 2026-11-01 12:18Z · leader · T-159 merged; also handle QA notes: hit areas keep old order after a move (click on overlap selects the element underneath), and the status label after a 500 save reads Offline
 
 ### T-161 — [E09] Editor text boxes: add, type in place, font, size, colour, align (web)
 - **Status:** BACKLOG

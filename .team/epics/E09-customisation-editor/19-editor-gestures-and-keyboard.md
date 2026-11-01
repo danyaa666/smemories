@@ -27,3 +27,7 @@ Selecting and typing numbers (T-159) is not an editor. Students expect to drag, 
 
 #### Test plan
 Dev: unit tests, the Playwright spec, a recorded fps number. QA: runs everything on the PR head, repeats the pointer exactness on Letter at a non-default zoom, tries rotated-item resize, flush-to-edge items, hostile cases (item dragged beyond the bound, 40 items overlapping, rapid Escape), and the keyboard shortcut set on the platforms it has (macOS at least).
+
+#### Added after T-159 QA (2026-11-01, in scope of this task)
+A1. **Hit areas follow the drawn order.** QA found that after a template element is moved over another one, clicking the overlap selects the element underneath because the overlay's hit areas keep the template order (a moved template element is now drawn above the template's own content and below added items, T-159 rework 1). The overlay's hit order and the selection by Tab must follow the drawn order (topmost first); add a test that moves A over B and clicks the overlap.
+A2. **Save-status label for a server error.** After a 500 on save the status shows "Offline"; a 5xx or other server error must say the save failed and will be retried ("Could not save, retrying"), and "Offline" only when the request itself fails. Unit test on the state mapping in `SaveStatus`/`store.ts`; strings in vi and en.
