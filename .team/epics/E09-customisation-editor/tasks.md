@@ -262,7 +262,7 @@ Spec: .team/epics/E09-customisation-editor/15-layout-version-never-goes-back.md 
 - 2026-11-01 06:55Z · leader · merged 7adc7af (PR #154, head 8b3c25d); QA_PASS: integration 33 pkgs 0 FAIL, newman 295/0 x2, e2e 7/7, print-check 163/163, live ABA repro 409 both variants
 
 ### T-157 — [E09] print-check: refuse a foreign server on its port; refresh test counts in docs
-- **Status:** IN_QA
+- **Status:** MERGED
 - **Priority:** P3
 - **Type:** test
 - **Milestone:** M4
@@ -270,17 +270,19 @@ Spec: .team/epics/E09-customisation-editor/15-layout-version-never-goes-back.md 
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** —
 - **Branch:** task/t-157-e09-print-check-refuse-a-foreign-server-
 - **PR:** 155
-- **Updated:** 2026-11-01 06:55Z by qa
-- **Comments-seen:** 2
+- **Updated:** 2026-11-01 07:04Z by leader
+- **Comments-seen:** 4
 
 Spec: .team/epics/E09-customisation-editor/16-print-check-start-server-strict.md (read it from the main checkout). QA found print-check silently tested a stale vite on :5199
 
 #### Comments
 - 2026-11-01 06:43Z · leader · T-154 merged
 - 2026-11-01 06:55Z · dev · Head 2646dc6. print-check picks a free port itself; foreign server on PRINT_CHECK_PORT fails fast (new server.test.mjs, plus real stale vite on 5199 tried, left alive). make print-check 181/181 pass; web lint/tsc/vitest green. QA: run make print-check with a dummy server on 5199 and with PRINT_CHECK_PORT=5199.
+- 2026-11-01 07:03Z · qa · Head 2646dc6. AC1: PRINT_CHECK_PORT=5199 (stale vite pid 2259, IPv6-only, left alive) -> exit 1 'port 5199 is held by another process (print-check never tests a server it did not start)' in 0.05 s; same with python dummy on 5288, dummy still 200 after. Default port is now OS-picked free port, so a foreign server on 5199 is avoided (run used e.g. 50669). Nothing killed (pids 2238/2259 still alive). AC2: make print-check -> tests 181, pass 181, fail 0 (430 s), includes new server.test.mjs (ok 56). stop(): started+stopped own vite on port 50699 -> down after stop; after full run only the foreign 2238/2259 vite remain, no orphan. AC3: docs/e2e.md says 181 (+ 'run make print-check'), docs/templates.md 'about 180' (real 181, fine). Diff: only docs/e2e.md, docs/templates.md, tools/print-check/{fidelity.mjs,lib.mjs,package.json,server.test.mjs}; nothing under .team/, web/ or product code, so web lint/tsc/vitest not applicable. CI on PR: go, web, security pass; others skipped. Non-blocking: message names the port but not the holding process (spec said 'port and the process' only for the reuse option); a foreign server that accepts TCP but never answers would make the pre-check fetch wait on Node's default timeout.
+- 2026-11-01 07:04Z · leader · merged 4c9b0f6 (PR #155, head 2646dc6); QA_PASS: print-check 181/181, foreign server on port refused, no orphan vite
 
 ### T-158 — [E09] Editor state: document store, undo/redo, autosave and conflict handling (web)
 - **Status:** READY_FOR_QA
