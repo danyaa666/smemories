@@ -404,7 +404,7 @@ Spec: .team/epics/E09-customisation-editor/19-editor-gestures-and-keyboard.md (r
 - 2026-11-01 13:16Z · leader · merged PR #158 squash, head 8363722, QA_PASS: e2e 16/0, print-check 187/0, vitest 899/0; pointer error <=0.55 px at 50-125%, 1.05 px at 150% (thousandths quantisation)
 
 ### T-161 — [E09] Editor text boxes: add, type in place, font, size, colour, align (web)
-- **Status:** READY_FOR_QA
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -415,8 +415,8 @@ Spec: .team/epics/E09-customisation-editor/19-editor-gestures-and-keyboard.md (r
 - **Assignee:** —
 - **Branch:** task/t-161-e09-editor-text-boxes-add-type-in-place-
 - **PR:** https://github.com/danyaa666/smemories/pull/159
-- **Updated:** 2026-11-01 13:48Z by dev
-- **Comments-seen:** 3
+- **Updated:** 2026-11-01 16:38Z by leader
+- **Comments-seen:** 5
 
 Spec: .team/epics/E09-customisation-editor/20-editor-text-boxes.md (read it from the main checkout). Textarea overlay per ADR 0004 Q3, 500-code-point cap at compositionend, plain-text paste, clip warning, property-panel text field as fallback; manual Telex (macOS) and iOS Safari checks are acceptance criteria
 
@@ -424,9 +424,25 @@ Spec: .team/epics/E09-customisation-editor/20-editor-text-boxes.md (read it from
 - 2026-11-01 13:16Z · leader · T-160 merged; start from the T-160 gesture/keyboard code on develop
 - 2026-11-01 13:48Z · dev · PR #159 head d6d2d29188f50c2ca4b6a99717ec509f2d3bbbe4. web lint/prettier/tsc/i18n/check:api/build green, vitest 957 pass. scripts/e2e.sh run directly on own compose project t161stack (ports 43316/46316/49316, SMEM_TEST_S3_ENDPOINT set): 26 pass incl editor-text.spec (10); print-check 187 pass. Parity edit vs printed, 30 cases A5/A4/Letter x rot 0/-4: same font px in all, 0 px over 48/255, 16/30 exactly 0 changed px, worst 0.52% (6 cases >0.2%, long/rotated AA only: above spec's 0.2%, flagged). AC2: Viet Nam duong via CDP no letter lost; 499 -> 502 during composition -> 500 at end. AC3 manual a-d all NOT RUN (unproven), see PR table + docs/editor-text.md. Also: FitText now refits on box resize (stale cut state found by e2e); size label is design px not pt. QA: repeat parity, try Firefox/WebKit, odd pastes.
 - 2026-11-01 13:48Z · leader · Leader to QA: dev reports PR #159 head d6d2d29188f50c2ca4b6a99717ec509f2d3bbbe4 (verify it is still the head). AC1 relaxed in the spec (same font size, same line breaks, changed pixels at most 1 % of the box): please confirm in your own run that the 30 parity cases keep identical wrapping and size, and look at the 6 cases over 0.2 % (long or rotated text) by eye in an image diff to confirm glyph anti-aliasing only, no shifted lines. Please also: Vietnamese typing in Firefox and WebKit (Playwright), odd pastes (lone surrogate, RTL, tabs, 1 MB), the 41st box refusal, and the new FitText refit on box resize. AC3 manual checks (a)-(d) are 'not run' by design: do not fail the task for that, the leader hands them to the owner. NOTE: QA is waiting for the usage window (5h at 72%, resets 16:12Z); the one-shot heartbeat is at 23:12 local.
+- 2026-11-01 16:37Z · qa · QA_PASS T-161, PR #159, head d6d2d29188f50c2ca4b6a99717ec509f2d3bbbe4 (verified still the PR head; CI: go, web, security pass; e2e/go-integration/image skipped by D-37/D-38).
+  RESULT LINES (my own run, worktree on that head): web eslint+prettier clean; tsc clean; lint:i18n ok; check:api ok; vitest 957/957 (53 files); build ok. scripts/e2e.sh run directly on my own compose project q161stack (ports 53161/56161/59161, SMEM_TEST_S3_ENDPOINT set, own API/web ports 28161/24161): 26 passed, 0 failed (incl. editor-text.spec 10/10, editor-gestures, editor-shell). make print-check: 187 pass, 0 fail. make test-integration not run: web-only PR, no Go/SQL touched, no .team/ change, no new dependency. Stack stopped and volumes of my own project removed.
+  EVIDENCE BY AC
+  AC1 parity: my e2e run reproduces dev numbers: 30 cases, same font px edit vs print in all 30, over-48/255 pixels 0 in all, 16/30 exactly 0 changed px, worst 0.52 % (A5, -4 deg, 500 runes), 6 cases over 0.2 % (A5/0 500 runes 0.33, A5/-4 long 0.24, A5/-4 500 runes 0.52, A4/0 long 0.49, A4/-4 500 runes 0.23, Letter/-4 500 runes 0.23); all at most 1 %. Same line breaks: I re-rendered all 30 cases myself (edit png, print png, amplified diff) and compared ink bands (rows of text with x extent) per case: same number of lines and every line band within 1 px in all 30/30 (e.g. A4 long 8 lines both, 500-rune 9 lines both). Looked at the diff images of the worst cases by eye (A5 -4 500 runes, A4 0 long, A5 0 500 runes): identical breaks and positions, the differences are thin anti-aliasing speckles along glyph edges and the box edge, no shifted lines. PASS.
+  AC2: e2e 'Việt Nam đường' by CDP imeSetComposition, 3 compositionstart, no letter lost; 499 -> 502 during composition -> 500 after compositionend (my run: during 502, after 500). PASS. Cross-engine (my scripts, Playwright 1.x Firefox and WebKit, same app build): Firefox real compositionstart at 499, compositionend seen with 502 code points (not cut during) and 500 after; WebKit: 499 + insertText gives 500; synthetic composition window gives 502 during and 500 after; typing at 500 in the middle keeps caret at 4 after 'XY' (head 'bbXYbbb', 500 runes) in Chromium, Firefox, WebKit. NFD text 'Tiếng Việt có dấu' kept in all three.
+  AC4: real clipboard (Ctrl/Cmd+C from a rich contenteditable, then Ctrl/Cmd+V into the field) in Chromium, Firefox, WebKit: plain text only, no markup in the printed text; 600 emoji give 500 code points; 1 MB paste gives 500 in 0.8-0.9 s; tabs become spaces; RTL (Hebrew+Arabic) kept; URL kept verbatim; ZWJ family, flag pair and combining accent kept; lone surrogate 'a\ud800b' gives 'ab' (Chromium synthetic paste); CRLF normalised; rich drop inserts no markup. Ctrl/Cmd+Z in the field leaves the field open and the box in place (e2e and my 3-engine run). PASS.
+  AC5: e2e clip warning appears, goes away on a bigger box and on shorter text; print-check 187/187. PASS. FitText refit (new): in Chromium, Firefox and WebKit a 300x40 box with long text starts at overflow 20 px, grows to ok 40 px when Height is set to 40, stays ok when Width grows, returns to the start state (overflow, 20 px) on undo and re-clips (overflow) with a tiny height. PASS.
+  41st box: refused with 'This page already has 40 items. Delete one to add another.', 40 boxes remain, nothing added (toolbar, in 3 engines; also 41 toolbar adds after one panel add stay at 40). The panel 'Add text' button opens a field. Delete then Undo restores the box (39 -> 40). PASS.
+  AC6: all green as above, no new dependency, nothing under .team/ in the PR. PASS.
+  AC3: manual (a)-(d) NOT RUN by design; not failed. Note: iOS Safari and macOS Telex remain unproven (real keyboard needed), owner item.
+  NON-BLOCKING OBSERVATIONS
+  1. WebKit only, at zero inter-key delay: Playwright keyboard.type('Việt Nam đường về nhà') typed straight after the field opened lost one letter ('ờ': 'Việt Nam đưng về nhà') in 2 of about 200 runs (1/80, 1/120); 0 of 120 for a plain uncontrolled textarea control on the same page, 0 of 60 with a 600 ms wait after opening, 0 of 60 with 25 ms per key. Looks like a controlled-textarea race with Playwright's synthetic insertText under WebKit, not reachable at human speed, but worth a look during the owner's Safari check (a)/(b).
+  2. WebKit does not store the Secure __Host- session cookie over plain http (existing behaviour), so I ran the WebKit checks against a second API with SMEM_ENV=dev (cookie not Secure); same build and database.
+  3. Firefox/WebKit cannot do CDP imeSetComposition: composition there is real events from the engine (Firefox) or synthetic (WebKit); real Telex/VNI is the owner's manual check.
+  4. docs/e2e.md says make e2e in a worktree may hit the main stack; I used scripts/e2e.sh directly as instructed.
+- 2026-11-01 16:38Z · leader · merged PR #159 squash, head d6d2d29, QA_PASS: e2e 26/26, print-check 187/187, vitest 957/957; parity same size and wrapping in 30 cases; AC3 manual checks (macOS Telex, iOS Safari, Firefox, Gboard) NOT RUN, owner to run (docs/editor-text.md); watch: WebKit lost a letter in 2 of 200 zero-delay synthetic runs right after the field opened
 
 ### T-162 — [E09] Editor palette: stickers, shapes, frames, own images and the page background (web)
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -437,11 +453,12 @@ Spec: .team/epics/E09-customisation-editor/20-editor-text-boxes.md (read it from
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-11-01 14:00Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-11-01 16:38Z by leader
+- **Comments-seen:** 1
 
 Spec: .team/epics/E09-customisation-editor/21-editor-palette-assets-images-background.md (read it from the main checkout). Palette over the T-151 registry, design-image upload UI over T-152, page background, delete-in-use rule (removes references, waits for save, clears history)
 
 #### Comments
+- 2026-11-01 16:38Z · leader · T-161 merged
 
 <!-- tasks:end -->
