@@ -188,6 +188,7 @@ func main() {
 	bookStore.OnTemplateChange(designSvc.DeleteByYearbook) // a design is only valid for the template it was made for
 	layoutSvc := booklayout.NewService(booklayout.NewStore(d), mediaSvc, limiters, cfg.LayoutSavesPerMin, nil)
 	layoutSvc.SetCounter(mt.LayoutSave)
+	layoutSvc.SetObserver(booklayout.Observer{Snapshot: mt.LayoutSnapshot, Pruned: mt.LayoutSnapshotsPruned, Restore: mt.LayoutRestore, Log: logger})
 	bookStore.OnTemplateChange(layoutSvc.DeleteByYearbook)                                                                // so is a layout
 	bookSvc := yearbook.NewService(bookStore, cursors, mediaSvc, nil, mediaSvc, notesSvc, classSvc, designSvc, layoutSvc) // classSvc clears a deleted book's class link
 	bookSvc.SetLimiters(limiters)

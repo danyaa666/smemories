@@ -47,6 +47,21 @@ type env struct {
 	h       http.Handler
 	now     time.Time
 	results sync.Map // metric result -> *atomic.Int64
+	history sync.Map // "snapshot:<kind>", "restore:<result>" -> *atomic.Int64
+	pruned  atomic.Int64
+}
+
+func (e *env) bump(key string, n int64) {
+	v, _ := e.history.LoadOrStore(key, new(atomic.Int64))
+	v.(*atomic.Int64).Add(n)
+}
+
+// seen is how often the history reported key ("snapshot:auto", "restore:ok", ...).
+func (e *env) seen(key string) int64 {
+	if v, ok := e.history.Load(key); ok {
+		return v.(*atomic.Int64).Load()
+	}
+	return 0
 }
 
 func (e *env) counted(result string) int64 {
@@ -88,6 +103,11 @@ func newEnv(t *testing.T, limiters *ratelimit.Factory, perMinute int) *env {
 	layout.SetCounter(func(r string) {
 		v, _ := e.results.LoadOrStore(r, new(atomic.Int64))
 		v.(*atomic.Int64).Add(1)
+	})
+	layout.SetObserver(booklayout.Observer{
+		Snapshot: func(k string) { e.bump("snapshot:"+k, 1) },
+		Pruned:   func(n int) { e.pruned.Add(int64(n)) },
+		Restore:  func(r string) { e.bump("restore:"+r, 1) },
 	})
 	ystore := yearbook.NewStore(d)
 	ystore.OnTemplateChange(design.DeleteByYearbook)

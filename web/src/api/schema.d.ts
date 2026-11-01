@@ -778,6 +778,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/book-layout/version-list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * List the saved earlier versions of a book's layout
+         * @description Called by the signed-in owner's layout editor ("version history", T-163). Returns the book's layout snapshots, newest first, at most 30, without the documents (`version-get` reads one). A snapshot is the document as it was before a save that started a new editing burst (the newest snapshot was older than 10 minutes or there was none; kind `auto`), before `reset` (kind `reset`) or before a `restore` (kind `restore`); the oldest beyond 30 are deleted. The history is deleted with the layout when the book's template changes and with the yearbook; `reset` keeps it. A missing book and someone else's both answer `ERROR_NOT_FOUND`; a class admin has no access. Takes from the same per-user limits as `save`. A request with the session cookie must come from an allowed Origin.
+         */
+        post: operations["listBookLayoutVersions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/book-layout/version-get": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Read one saved earlier version of a book's layout
+         * @description Called by the signed-in owner's layout editor to preview a snapshot before `restore` (T-163). Returns the stored document as it was saved (it is not re-validated here; `restore` validates it against the current template and images). `id` is the snapshot's public id from `version-list`. A missing book, someone else's and an unknown or foreign snapshot id all answer `ERROR_NOT_FOUND`. Takes from the same per-user limits as `save`. A request with the session cookie must come from an allowed Origin.
+         */
+        post: operations["getBookLayoutVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/book-layout/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bring back a saved earlier version of a book's layout as a new version
+         * @description Called by the signed-in owner's layout editor ("restore", T-163). Writes the snapshot `id` as the book's layout under a **new, higher** version (the counter only goes up) and stores the document it replaces as a `restore` snapshot, in one transaction. `base_version` is the version the editor holds, as for `save`: a stale one is `ERROR_VERSION_CONFLICT` (409, `data` is the stored `{version, layout}`) and nothing changes. The snapshot is validated like a save against the book's **current** template, the asset registry and the owner's **current** design images; an item or a page background that names an asset id that no longer exists or a design image that was deleted is **dropped**, and `dropped` says how many. Any other problem (unknown key, over a limit) is `ERROR_INVALID_LAYOUT` (400, `data.problems`) and nothing changes. A snapshot made for another template than the book has now is `ERROR_VERSION_TEMPLATE_CHANGED` (409; in practice a template change already deletes the history). A missing book, someone else's and an unknown or foreign snapshot id all answer `ERROR_NOT_FOUND`. Takes from the same per-user limits as `save`. A request with the session cookie must come from an allowed Origin.
+         */
+        post: operations["restoreBookLayoutVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/book-export/get-text": {
         parameters: {
             query?: never;
@@ -2200,6 +2260,110 @@ export interface components {
                  * @description Unix ms.
                  */
                 updated_at: number;
+            };
+        };
+        BookLayoutVersionRequest: {
+            /** @description Required. ULID of the yearbook. */
+            yearbook_id: string;
+            /** @description Required. ULID of the snapshot, from `version-list`. */
+            id: string;
+        };
+        BookLayoutRestoreRequest: {
+            /** @description Required. ULID of the yearbook. */
+            yearbook_id: string;
+            /** @description Required. ULID of the snapshot to bring back, from `version-list`. */
+            id: string;
+            /**
+             * Format: int64
+             * @description Required. The layout version the editor holds (as for `save`); 0 when the book had no layout.
+             */
+            base_version: number;
+        };
+        BookLayoutVersionListResponse: {
+            /**
+             * @description Always `OK` on success.
+             * @constant
+             */
+            status: "OK";
+            /** @description The snapshots. */
+            data: {
+                /** @description Always the empty string: the list is capped at 30 and has no next page (the shape of docs/api-contract.md section 5). */
+                next_id: string;
+                /** @description The book's snapshots, newest first (at most 30), without documents. */
+                items: {
+                    /** @description ULID of the snapshot; the `id` of `version-get` and `restore`. */
+                    id: string;
+                    /**
+                     * Format: int64
+                     * @description The layout version the document held when it was replaced.
+                     */
+                    version: number;
+                    /**
+                     * @description What replaced it: `auto` a save that began a new editing burst, `reset` the reset endpoint, `restore` a restore.
+                     * @enum {string}
+                     */
+                    kind: "auto" | "reset" | "restore";
+                    /**
+                     * Format: int64
+                     * @description Unix ms, when the document was replaced.
+                     */
+                    created_at: number;
+                    /** @description Items on all pages of the document. */
+                    item_count: number;
+                    /** @description Size of the stored document in bytes. */
+                    bytes: number;
+                }[];
+            };
+        };
+        BookLayoutVersionGetResponse: {
+            /**
+             * @description Always `OK` on success.
+             * @constant
+             */
+            status: "OK";
+            /** @description One snapshot with its document. */
+            data: {
+                /** @description ULID of the snapshot. */
+                id: string;
+                /**
+                 * Format: int64
+                 * @description The layout version the document held when it was replaced.
+                 */
+                version: number;
+                /**
+                 * @description What replaced it (see `version-list`).
+                 * @enum {string}
+                 */
+                kind: "auto" | "reset" | "restore";
+                /**
+                 * Format: int64
+                 * @description Unix ms, when the document was replaced.
+                 */
+                created_at: number;
+                layout: components["schemas"]["BookLayoutDocument"];
+            };
+        };
+        BookLayoutRestoredResponse: {
+            /**
+             * @description Always `OK` on success.
+             * @constant
+             */
+            status: "OK";
+            /** @description The new version and the document now stored. */
+            data: {
+                /**
+                 * Format: int64
+                 * @description The new stored version (higher than any issued before).
+                 */
+                version: number;
+                /**
+                 * Format: int64
+                 * @description Unix ms.
+                 */
+                updated_at: number;
+                layout: components["schemas"]["BookLayoutDocument"];
+                /** @description How many items and page backgrounds were left out because their asset or design image no longer exists; 0 when nothing was. */
+                dropped: number;
             };
         };
         /** @description `ERROR_INVALID_LAYOUT` (with `data.problems`) or `ERROR_PARAM` (no `data`). */
@@ -4400,6 +4564,122 @@ export interface operations {
             404: components["responses"]["ApiNotFound"];
             413: components["responses"]["ApiTooLarge"];
             415: components["responses"]["ApiUnsupportedMediaType"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    listBookLayoutVersions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BookLayoutResetRequest"];
+            };
+        };
+        responses: {
+            /** @description The snapshots, newest first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookLayoutVersionListResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            429: components["responses"]["ApiRateLimited"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    getBookLayoutVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BookLayoutVersionRequest"];
+            };
+        };
+        responses: {
+            /** @description The snapshot with its document. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookLayoutVersionGetResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            429: components["responses"]["ApiRateLimited"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    restoreBookLayoutVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BookLayoutRestoreRequest"];
+            };
+        };
+        responses: {
+            /** @description Restored as a new version. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookLayoutRestoredResponse"];
+                };
+            };
+            /** @description `ERROR_PARAM` (malformed body, bad ids, missing `base_version`) or `ERROR_INVALID_LAYOUT` with `data.problems`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookLayoutInvalidError"];
+                };
+            };
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            /** @description `ERROR_VERSION_CONFLICT` (`data` is the stored version and document) or `ERROR_VERSION_TEMPLATE_CHANGED`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookLayoutConflictError"];
+                };
+            };
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            429: components["responses"]["ApiRateLimited"];
             500: components["responses"]["ApiInternal"];
             503: components["responses"]["ApiSessionStoreUnavailable"];
         };

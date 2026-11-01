@@ -112,7 +112,7 @@ Fail policy when Redis is unreachable (`ratelimit.Factory`): **open** lets the r
 | `login_pair` | `SMEM_RATE_LOGIN_FAILS_PER_EMAIL` (10) failures | 15 min | IP + hashed email | closed |
 | `login_ip` | `SMEM_RATE_LOGIN_FAILS_PER_IP` (100) failures | 15 min | IP | closed |
 | `login_account` | `SMEM_RATE_LOGIN_FAILS_PER_ACCOUNT` (50) failures | 15 min | hashed email, any address (T-098) | closed; a successful password reset deletes the key |
-| `book_layout` | `SMEM_RATE_LAYOUT_SAVE_PER_MINUTE` (60) saves | 1 min | user id | open (T-153, `book-layout/save` only) |
+| `book_layout` | `SMEM_RATE_LAYOUT_SAVE_PER_MINUTE` (60) saves | 1 min | user id | open (T-153 `book-layout/save`; T-163 `version-list`, `version-get` and `restore` take from it too) |
 | `book_layout_burst` | 20 saves | 10 s | user id | open (the burst of the line above; a save refused by the minute limit gives its burst hit back) |
 | `forgot_ip` | 5 | 1 h | IP | open |
 | `forgot_email` | 3 | 1 h | hashed email | open |

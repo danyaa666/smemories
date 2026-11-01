@@ -66,7 +66,13 @@ func TestDeleteBookLeavesNoRows(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := []string{"book_design_tab", "book_layout_tab", "media_tab", "note_collection_tab", "note_photo_tab", "note_tab", "profile_tab", "yearbook_tab"}
+	// The layout history of the book (T-163): snapshots, deleted with the book.
+	if _, err := e.db.Exec(`INSERT INTO book_layout_version_tab (public_id, yearbook_id, version, kind, template_id, layout_json, item_count, bytes, created_at)
+		SELECT '01K7QB1B2C3D4E5F6G7H8J9K0M', id, 1, 'auto', 'memory-book', '{"v":1,"pages":{}}', 0, 17, 1 FROM yearbook_tab WHERE public_id = ?`, book); err != nil {
+		t.Fatal(err)
+	}
+
+	want := []string{"book_design_tab", "book_layout_tab", "book_layout_version_tab", "media_tab", "note_collection_tab", "note_photo_tab", "note_tab", "profile_tab", "yearbook_tab"}
 	tables := e.tabTables()
 	if !slices.Equal(tables, want) {
 		t.Fatalf("*_tab tables %v, want %v: register the new table in this test and fill it for the book above", tables, want)

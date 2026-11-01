@@ -1,8 +1,8 @@
 {
   "info": {
     "name": "SMemories - customisation editor (E09)",
-    "description": "Design-image uploads (E09 stage 2, T-152, D-43): `POST /api/media/create` with `purpose=design` and `GET /api/media/get-list?purpose=design` (folder design-images); a run makes about 9 uploads (limit 60 per 10 minutes per user). The 31st design image answers `409 ERROR_DESIGN_IMAGE_LIMIT` with `data.limit` 30 (T-164); that needs 31 uploads, more than this collection's upload budget, so it is proved by the Go integration test `TestDesignQuotas` and the e2e palette spec, not here. Book designs (E09 stage 1, T-141, D-41): `GET /api/book-design/get`, `POST /api/book-design/update`, `POST /api/book-design/reset`, the `design` of `GET /api/book-data/get` and the reset when a book's template changes. `{status,data}` envelope, `ERROR_*` codes. Uses the two verified accounts of notes.postman_collection.json (A owns the books, B is the other user; book-data/get needs a verified email): run that collection's Setup once (or this one's) and then `make verify-newman-users`. Run from the repository root: `newman run postman/customisation-editor.postman_collection.json`. Start the API with SMEM_ENV=dev and the `make up` stack. Each folder creates and deletes its own yearbook, so the collection can run twice in a row; a run makes about 40 design writes (limit 60 per 10 minutes per user, `make reset-limits` clears it), so wait or reset between two runs.",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+<<<<<<< HEAD
+    "description": "Design-image uploads (E09 stage 2, T-152, D-43): `POST /api/media/create` with `purpose=design` and `GET /api/media/get-list?purpose=design` (folder design-images); a run makes about 9 uploads (limit 60 per 10 minutes per user). The 31st design image answers `409 ERROR_DESIGN_IMAGE_LIMIT` with `data.limit` 30 (T-164); that needs 31 uploads, more than this collection's upload budget, so it is proved by the Go integration test `TestDesignQuotas` and the e2e palette spec, not here. Book designs (E09 stage 1, T-141, D-41): `GET /api/book-design/get`, `POST /api/book-design/update`, `POST /api/book-design/reset`, the `design` of `GET /api/book-data/get` and the reset when a book's template changes. `{status,data}` envelope, `ERROR_*` codes. Uses the two verified accounts of notes.postman_collection.json (A owns the books, B is the other user; book-data/get needs a verified email): run that collection's Setup once (or this one's) and then `make verify-newman-users`. Run from the repository root: `newman run postman/customisation-editor.postman_collection.json`. Start the API with SMEM_ENV=dev and the `make up` stack. Each folder creates and deletes its own yearbook, so the collection can run twice in a row; a run makes about 40 design writes (limit 60 per 10 minutes per user, `make reset-limits` clears it), so wait or reset between two runs. Layout history (T-163): folder `book-layout history (T-163)` covers `version-list`, `version-get` and `restore` and the snapshots that `save` and `reset` store; it makes about 12 rate-limited calls (the `save` limits apply, burst 20 per 10 seconds) in its Full flow.",
   },
   "variable": [
     {
@@ -63,6 +63,14 @@
     },
     {
       "key": "layoutVersion",
+      "value": ""
+    },
+    {
+      "key": "historyBookId",
+      "value": ""
+    },
+    {
+      "key": "snapshotId",
       "value": ""
     }
   ],
@@ -6472,6 +6480,1520 @@
                       "pm.test('status 200', () => pm.response.to.have.status(200));",
                       "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
                       "pm.test('still listed', () => pm.expect(pm.response.json().data.items.some(i => i.id === pm.collectionVariables.get('layoutDesignId'))).to.eql(true));"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "book-layout history (T-163)",
+      "item": [
+        {
+          "name": "Full flow",
+          "item": [
+            {
+              "name": "1. Login A",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session="
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"email\":\"{{emailA}}\",\"password\":\"{{password}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "// version-list, version-get and restore take from the save limits (burst 20 per 10 s per user): once, before the first request, let the window of the folders before this one pass.",
+                      "const until = Date.now() + 11000;",
+                      "while (Date.now() < until) { /* wait */ }"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "const m = /smem_session=([^;]+)/.exec(pm.response.headers.get('Set-Cookie') || '');",
+                      "pm.test('session cookie issued', () => pm.expect(m).to.not.be.null);",
+                      "pm.collectionVariables.set('tokenA', m ? m[1] : '');"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "2. Login B",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session="
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"email\":\"{{emailB}}\",\"password\":\"{{password}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "const m = /smem_session=([^;]+)/.exec(pm.response.headers.get('Set-Cookie') || '');",
+                      "pm.test('session cookie issued', () => pm.expect(m).to.not.be.null);",
+                      "pm.collectionVariables.set('tokenB', m ? m[1] : '');"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "3. A creates a book on the memory-book template",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/yearbook/create",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "yearbook",
+                    "create"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"title\":\"History book\",\"language\":\"en\",\"template_id\":\"memory-book\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "pm.collectionVariables.set('historyBookId', pm.response.json().data.id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "4. First save (base_version 0): nothing to snapshot",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/save",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "save"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{historyBookId}}\",\"base_version\":0,\"layout\":{\"v\":1,\"pages\":{\"cover\":{\"items\":[{\"id\":\"aaaa01\",\"t\":\"text\",\"text\":\"Version aaaa01\",\"font\":\"display\",\"size\":28,\"color\":\"accent\",\"align\":\"center\",\"bold\":true,\"x\":100,\"w\":400,\"h\":120,\"cy\":850,\"r\":0}]}}}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "pm.test('version 1', () => pm.expect(pm.response.json().data.version).to.eql(1));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "5. version-list: empty",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/version-list",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "version-list"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{historyBookId}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "pm.test('no snapshot yet', () => pm.expect(pm.response.json().data.items).to.eql([]));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "6. Second save (base_version 1): version 2",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/save",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "save"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{historyBookId}}\",\"base_version\":1,\"layout\":{\"v\":1,\"pages\":{\"cover\":{\"items\":[{\"id\":\"aaaa02\",\"t\":\"text\",\"text\":\"Version aaaa02\",\"font\":\"display\",\"size\":28,\"color\":\"accent\",\"align\":\"center\",\"bold\":true,\"x\":100,\"w\":400,\"h\":120,\"cy\":850,\"r\":0}]}}}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "pm.test('version 2', () => pm.expect(pm.response.json().data.version).to.eql(2));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "7. version-list: one auto snapshot of version 1, no document",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/version-list",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "version-list"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{historyBookId}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "const items = pm.response.json().data.items;",
+                      "pm.test('one snapshot', () => pm.expect(items.length).to.eql(1));",
+                      "pm.test('fields', () => { const s = items[0]; pm.expect(s.kind).to.eql('auto'); pm.expect(s.version).to.eql(1); pm.expect(s.item_count).to.eql(1); pm.expect(s.bytes).to.be.above(0); pm.expect(s.created_at).to.be.a('number'); pm.expect(s.id).to.match(/^[0-9A-HJKMNP-TV-Z]{26}$/); });",
+                      "pm.test('no document in the list', () => pm.expect(items[0]).to.not.have.property('layout'));",
+                      "pm.collectionVariables.set('snapshotId', items[0].id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "8. Third save (base_version 2): same editing burst, still one snapshot",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/save",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "save"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{historyBookId}}\",\"base_version\":2,\"layout\":{\"v\":1,\"pages\":{\"cover\":{\"items\":[{\"id\":\"aaaa03\",\"t\":\"text\",\"text\":\"Version aaaa03\",\"font\":\"display\",\"size\":28,\"color\":\"accent\",\"align\":\"center\",\"bold\":true,\"x\":100,\"w\":400,\"h\":120,\"cy\":850,\"r\":0}]}}}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "8b. version-list: still one snapshot",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/version-list",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "version-list"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{historyBookId}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "pm.test('one snapshot', () => pm.expect(pm.response.json().data.items.length).to.eql(1));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "9. version-get: the document of version 1",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/version-get",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "version-get"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{historyBookId}}\",\"id\":\"{{snapshotId}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "const d = pm.response.json().data;",
+                      "pm.test('snapshot', () => { pm.expect(d.version).to.eql(1); pm.expect(d.kind).to.eql('auto'); pm.expect(d.id).to.eql(pm.collectionVariables.get('snapshotId')); });",
+                      "pm.test('the first text', () => pm.expect(d.layout.pages.cover.items[0].text).to.eql('Version aaaa01'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "10. restore from version 3: new version 4, nothing dropped",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/restore",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "restore"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{historyBookId}}\",\"id\":\"{{snapshotId}}\",\"base_version\":3}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "const d = pm.response.json().data;",
+                      "pm.test('new, higher version', () => pm.expect(d.version).to.eql(4));",
+                      "pm.test('nothing dropped', () => pm.expect(d.dropped).to.eql(0));",
+                      "pm.test('the restored document', () => pm.expect(d.layout.pages.cover.items[0].text).to.eql('Version aaaa01'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "11. version-list: a restore snapshot of version 3 on top",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/version-list",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "version-list"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{historyBookId}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "const items = pm.response.json().data.items;",
+                      "pm.test('two, newest first', () => { pm.expect(items.length).to.eql(2); pm.expect(items[0].kind).to.eql('restore'); pm.expect(items[0].version).to.eql(3); pm.expect(items[1].kind).to.eql('auto'); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "12. restore with the stale base_version 3: 409, nothing changes",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/restore",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "restore"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{historyBookId}}\",\"id\":\"{{snapshotId}}\",\"base_version\":3}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 409', () => pm.response.to.have.status(409));",
+                      "pm.test('ERROR_VERSION_CONFLICT', () => pm.expect(pm.response.json().status).to.eql('ERROR_VERSION_CONFLICT'));",
+                      "const d = pm.response.json().data;",
+                      "pm.test('the stored version and document', () => { pm.expect(d.version).to.eql(4); pm.expect(d.layout.pages.cover.items[0].text).to.eql('Version aaaa01'); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "13. B cannot list A's history (404)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenB}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/version-list",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "version-list"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{historyBookId}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 404', () => pm.response.to.have.status(404));",
+                      "pm.test('ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "14. B cannot read a version (404)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenB}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/version-get",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "version-get"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{historyBookId}}\",\"id\":\"{{snapshotId}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 404', () => pm.response.to.have.status(404));",
+                      "pm.test('ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));",
+                      "pm.test('no document leaked', () => pm.expect(pm.response.text()).to.not.include('Version aaaa'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "15. B cannot restore (404)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenB}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/restore",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "restore"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{historyBookId}}\",\"id\":\"{{snapshotId}}\",\"base_version\":4}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 404', () => pm.response.to.have.status(404));",
+                      "pm.test('ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "16. A resets: the deleted document becomes a snapshot",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/reset",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "reset"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{historyBookId}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "17. version-list: three snapshots, a reset one on top",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/version-list",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "version-list"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{historyBookId}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "const items = pm.response.json().data.items;",
+                      "pm.test('reset snapshot of version 4', () => { pm.expect(items.length).to.eql(3); pm.expect(items[0].kind).to.eql('reset'); pm.expect(items[0].version).to.eql(4); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "18. restore after the reset (base_version 5): back as version 6",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/restore",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "restore"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{historyBookId}}\",\"id\":\"{{snapshotId}}\",\"base_version\":5}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "pm.test('version 6', () => pm.expect(pm.response.json().data.version).to.eql(6));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "19. Delete the book",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/yearbook/delete",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "yearbook",
+                    "delete"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"id\":\"{{historyBookId}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Edge cases",
+          "item": [
+            {
+              "name": "1. Login A",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session="
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"email\":\"{{emailA}}\",\"password\":\"{{password}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "const m = /smem_session=([^;]+)/.exec(pm.response.headers.get('Set-Cookie') || '');",
+                      "pm.test('session cookie issued', () => pm.expect(m).to.not.be.null);",
+                      "pm.collectionVariables.set('tokenA', m ? m[1] : '');"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "2. version-list without a session: 401",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session="
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/version-list",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "version-list"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{historyBookId}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 401', () => pm.response.to.have.status(401));",
+                      "pm.test('ERROR_UNAUTHORIZED', () => pm.expect(pm.response.json().status).to.eql('ERROR_UNAUTHORIZED'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "3. version-get without a session: 401",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session="
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/version-get",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "version-get"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{historyBookId}}\",\"id\":\"{{snapshotId}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 401', () => pm.response.to.have.status(401));",
+                      "pm.test('ERROR_UNAUTHORIZED', () => pm.expect(pm.response.json().status).to.eql('ERROR_UNAUTHORIZED'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "4. restore without a session: 401",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session="
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/restore",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "restore"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{historyBookId}}\",\"id\":\"{{snapshotId}}\",\"base_version\":0}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 401', () => pm.response.to.have.status(401));",
+                      "pm.test('ERROR_UNAUTHORIZED', () => pm.expect(pm.response.json().status).to.eql('ERROR_UNAUTHORIZED'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "5. version-list with a bad yearbook_id: ERROR_PARAM",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/version-list",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "version-list"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"nope\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "6. version-get with a bad snapshot id: ERROR_PARAM",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/version-get",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "version-get"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"01K7QB1B2C3D4E5F6G7H8J9K0M\",\"id\":\"nope\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "7. restore without base_version: ERROR_PARAM",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/restore",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "restore"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"01K7QB1B2C3D4E5F6G7H8J9K0M\",\"id\":\"01K7QB1B2C3D4E5F6G7H8J9K0M\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "8. restore with an unknown field: ERROR_PARAM",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/restore",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "restore"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"01K7QB1B2C3D4E5F6G7H8J9K0M\",\"id\":\"01K7QB1B2C3D4E5F6G7H8J9K0M\",\"base_version\":0,\"extra\":1}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "9. version-list of an unknown book: 404",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/version-list",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "version-list"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"01K7QB1B2C3D4E5F6G7H8J9K0M\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 404', () => pm.response.to.have.status(404));",
+                      "pm.test('ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "10. version-get of an unknown book: 404",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/version-get",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "version-get"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"01K7QB1B2C3D4E5F6G7H8J9K0M\",\"id\":\"01K7QB1B2C3D4E5F6G7H8J9K0M\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 404', () => pm.response.to.have.status(404));",
+                      "pm.test('ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "11. restore of an unknown book: 404",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/restore",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "restore"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"01K7QB1B2C3D4E5F6G7H8J9K0M\",\"id\":\"01K7QB1B2C3D4E5F6G7H8J9K0M\",\"base_version\":0}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 404', () => pm.response.to.have.status(404));",
+                      "pm.test('ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
                     ]
                   }
                 }

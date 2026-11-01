@@ -6,6 +6,7 @@ package metrics
 import (
 	"database/sql"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -30,6 +31,10 @@ type Metrics struct {
 	mediaPanics  prometheus.Counter
 	mediaUploads *prometheus.CounterVec
 	layoutSaves  *prometheus.CounterVec
+
+	layoutSnapshots *prometheus.CounterVec
+	layoutPruned    prometheus.Counter
+	layoutRestores  *prometheus.CounterVec
 }
 
 // New returns a registry with the Go runtime and process collectors and the HTTP and rate-limit instruments.
@@ -62,6 +67,21 @@ func New() *Metrics {
 		layoutSaves: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Namespace: namespace, Name: "layout_saves_total", Help: "Book layout saves (book-layout/save) by result (ok, conflict, invalid, too_large, rate_limited). No ids or document content.",
 		}, []string{"result"}),
+		layoutSnapshots: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Namespace: namespace, Name: "layout_snapshots_total", Help: "Layout history snapshots written (T-163) by kind (auto, reset, restore). No ids or document content.",
+		}, []string{"kind"}),
+		layoutPruned: prometheus.NewCounter(prometheus.CounterOpts{
+			Namespace: namespace, Name: "layout_snapshots_pruned_total", Help: "Layout history snapshots deleted because a book already held 30 (T-163).",
+		}),
+		layoutRestores: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Namespace: namespace, Name: "layout_restores_total", Help: "Layout restores (book-layout/restore) by result (ok, conflict, invalid, template_changed; T-163). No ids or document content.",
+		}, []string{"result"}),
+	}
+	for _, k := range layoutSnapshotKinds {
+		m.layoutSnapshots.WithLabelValues(k) // present at 0 from the first scrape
+	}
+	for _, r := range layoutRestoreResults {
+		m.layoutRestores.WithLabelValues(r)
 	}
 	for _, r := range []string{"ok", "conflict", "invalid", "too_large", "rate_limited"} {
 		m.layoutSaves.WithLabelValues(r) // present at 0 from the first scrape
@@ -75,7 +95,7 @@ func New() *Metrics {
 		m.publicMedia.WithLabelValues(r) // present at 0 from the first scrape
 	}
 	m.reg.MustRegister(collectors.NewGoCollector(), collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
-		m.duration, m.inFlight, m.rateLimited, m.mailFailed, m.publicMedia, m.mediaPanics, m.mediaUploads, m.layoutSaves)
+		m.duration, m.inFlight, m.rateLimited, m.mailFailed, m.publicMedia, m.mediaPanics, m.mediaUploads, m.layoutSaves, m.layoutSnapshots, m.layoutPruned, m.layoutRestores)
 	return m
 }
 
@@ -136,6 +156,30 @@ func (m *Metrics) LayoutSave(result string) {
 		result = "invalid"
 	}
 	m.layoutSaves.WithLabelValues(result).Inc()
+}
+
+var (
+	layoutSnapshotKinds  = []string{"auto", "reset", "restore"}
+	layoutRestoreResults = []string{"ok", "conflict", "invalid", "template_changed"}
+)
+
+// LayoutSnapshot counts one layout history snapshot of the kind (booklayout.Kind*); another value is counted as auto, so the label set stays closed.
+func (m *Metrics) LayoutSnapshot(kind string) {
+	if !slices.Contains(layoutSnapshotKinds, kind) {
+		kind = "auto"
+	}
+	m.layoutSnapshots.WithLabelValues(kind).Inc()
+}
+
+// LayoutSnapshotsPruned counts n snapshots deleted by the keep-30 rule.
+func (m *Metrics) LayoutSnapshotsPruned(n int) { m.layoutPruned.Add(float64(n)) }
+
+// LayoutRestore counts one book-layout/restore by result (booklayout.Restore*); another value is counted as invalid.
+func (m *Metrics) LayoutRestore(result string) {
+	if !slices.Contains(layoutRestoreResults, result) {
+		result = "invalid"
+	}
+	m.layoutRestores.WithLabelValues(result).Inc()
 }
 
 // MediaProcessPanic counts one panic recovered in the image pipeline (T-104).

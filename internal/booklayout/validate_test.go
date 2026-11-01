@@ -330,3 +330,48 @@ func TestOverrideBoundsWithoutAndWithTheOtherFields(t *testing.T) {
 		}
 	}
 }
+
+// T-163: a restore drops the items and the background that name a gone asset or image, counts them, and still reports every other problem.
+func TestValidateRestoreDropsWhatIsGone(t *testing.T) {
+	gone := ulid.New(time.Unix(1_800_000_001, 0))
+	doc := `{"v":1,"pages":{"cover":{"bg":{"media":"` + gone + `"},"items":[` +
+		item("a1b2c3", textItem) + `,` + item("d4e5f6", `"t":"asset","asset":"shape.nope"`) + `,` +
+		item("g7h8i9", `"t":"image","media":"`+gone+`"`) + `,` + item("j1k2l3", `"t":"image","media":"`+mediaA+`"`) + `]},` +
+		`"back":{"bg":{"asset":"shape.nope"}}}}`
+	out, dropped, probs := ValidateRestore([]byte(doc), manifest(t), own(mediaA))
+	if len(probs) != 0 || dropped != 4 {
+		t.Fatalf("dropped %d, problems %v", dropped, probs)
+	}
+	for _, s := range []string{"d4e5f6", "g7h8i9", gone, "shape.nope"} {
+		if strings.Contains(string(out), s) {
+			t.Errorf("%q survived: %s", s, out)
+		}
+	}
+	if !strings.Contains(string(out), "a1b2c3") || !strings.Contains(string(out), "j1k2l3") {
+		t.Errorf("a valid item was dropped: %s", out)
+	}
+	if again, d, probs := ValidateRestore(out, manifest(t), own(mediaA)); len(probs) != 0 || d != 0 || string(again) != string(out) {
+		t.Errorf("the restored form is not stable: %d %v", d, probs)
+	}
+	// a gone image does not hide another problem of the same item or the document
+	bad := page(item("a1b2c3", `"t":"image","media":"`+gone+`","fit":"stretch"`))
+	if _, _, probs := ValidateRestore([]byte(bad), manifest(t), own()); len(probs) != 1 || probs[0].Code != CodeNotOneOf {
+		t.Errorf("problems %v, want not_one_of", probs)
+	}
+	if _, _, probs := ValidateRestore([]byte(`{"v":2,"pages":{}}`), manifest(t), own()); len(probs) != 1 || probs[0].Code != CodeBadVersion {
+		t.Errorf("problems %v, want bad_version", probs)
+	}
+	// Validate (save) still refuses the same document
+	if _, probs := Validate([]byte(doc), manifest(t), own(mediaA)); len(probs) == 0 {
+		t.Error("save accepts a document restore would have to drop from")
+	}
+}
+
+func TestItemCount(t *testing.T) {
+	if n := itemCount([]byte(`{"v":1,"pages":{"cover":{"items":[{},{}]},"back":{"items":[{}]},"notes":{}}}`)); n != 3 {
+		t.Errorf("itemCount = %d, want 3", n)
+	}
+	if itemCount([]byte(`nope`)) != 0 {
+		t.Error("an unreadable document has items")
+	}
+}
