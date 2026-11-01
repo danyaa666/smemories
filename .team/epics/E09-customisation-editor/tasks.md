@@ -532,7 +532,7 @@ Spec: .team/epics/E09-customisation-editor/22-layout-version-history-backend.md 
 - 2026-11-01 21:35Z · leader · merged f0eb70f; QA 2026-11-02: lint/test, integration -race 34 pkgs, booklayout -race x20, migrate up/down, check:api, class matrix, postman 166/374/0. Non-blocking: version routes share save rate limit; restore log field names
 
 ### T-164 — [E09] Palette follow-ups: copy, history edge, distinct cap/quota code (web + one small API change)
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P3
 - **Type:** fix
 - **Milestone:** M4
@@ -540,16 +540,18 @@ Spec: .team/epics/E09-customisation-editor/22-layout-version-history-backend.md 
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-164-e09-palette-follow-ups-copy-history-edge
-- **PR:** —
-- **Updated:** 2026-11-01 21:12Z by dev
-- **Comments-seen:** 1
+- **PR:** https://github.com/danyaa666/smemories/pull/162
+- **Updated:** 2026-11-01 21:38Z by dev
+- **Comments-seen:** 3
 
 Spec: .team/epics/E09-customisation-editor/23-palette-follow-ups.md (read it from the main checkout). Plural copy, accurate PNG/JPEG size message, history counts as in-use when deleting an image, ERROR_DESIGN_IMAGE_LIMIT separate from ERROR_QUOTA_EXCEEDED
 
 #### Comments
 - 2026-11-01 21:12Z · leader · promoted: T-163 in QA, dev free; spec 23-palette-follow-ups.md
+- 2026-11-01 21:38Z · dev · PR #162 head a3d3396 (pre-merge 9aa6f47 + develop/T-163 merge, schema.d.ts regenerated, check:api ok). Done: inUse_one/_other plural; IMAGE_LIMITS constant + imageLimits.test.ts reads Go image.go (12000 px, JPEG 50 MP, PNG/WebP 25 MP); in-use counts undo/redo steps (history-only dialog, history cleared); ERROR_DESIGN_IMAGE_LIMIT 409 data.limit (cap), ERROR_QUOTA_EXCEEDED kept for 200-photo cap and 500 MiB. RESULT LINES (dev, before the develop merge, which only added T-163): make lint ok; go test -race ./... ok; integration -race media/notes/booklayout/api ok; web vitest 60 files 1045 tests, prettier/eslint/tsc/lint:i18n/check:api/build ok; scripts/e2e.sh on private stack t164stack (ports 53164/56164/59164, API 58164, web 54164, SMEM_TEST_S3_ENDPOINT set): 32 passed incl. new history-undo test and 31st-image code check; make print-check 187/187. QA: full make test-integration + e2e + print-check on the head; upload the 31st design image and an over-quota file, check both messages; undo scenario in UI; read the count strings in vi and en. Gap: no Postman case for the cap (31 uploads exceed its rate budget), documented in the collection description.
+- 2026-11-01 21:38Z · leader · Leader to QA: PR #162 head a3d3396 is dev's develop-merge of 9aa6f47; dev ran make lint, go test -race, vitest 1045, -race integration for media/notes/booklayout/api, e2e 32 passed, print-check 187/187 on 9aa6f47 only. Please run full make test-integration, e2e (scripts/e2e.sh on your own stack) and print-check on a3d3396 and report counts + full SHA. Check: 31st design image gives 409 ERROR_DESIGN_IMAGE_LIMIT data.limit=30 and ERROR_QUOTA_EXCEEDED stays for quota/200-photo cap; history-only image dialog and undo cannot resurrect it; vi/en plural strings; size message matches server limits. Accepted: no Postman case for the cap (rate budget).
 
 ### T-165 — [E09] Editor version history panel: list, preview and restore (web)
 - **Status:** TODO
