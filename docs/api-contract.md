@@ -109,6 +109,8 @@ The Postman collection and `web/src/api/schema.d.ts` follow the file; the defini
 
 `ERROR_INVALID_DESIGN` (400, T-141) is the business code of `book-design/update`: the options document is not valid for the book's template, the message names the field; the rules are in [templates.md](templates.md), section "Design block and book designs".
 
+`book-layout/*` (T-153): `get`, `save` and `reset` of the free layout of a book (owner only, 404 for anyone else). Two business codes carry a `data` member next to the usual envelope fields: `ERROR_INVALID_LAYOUT` (400) with `data: {problems: [{path, code}]}` (at most 20), and `ERROR_VERSION_CONFLICT` (409, the optimistic-concurrency refusal: `base_version` is not the stored version) with `data: {version, layout}` of the stored document, so the editor can start from it. `save` answers `ERROR_TOO_LARGE` (413) for a layout over 131072 bytes, before the document is read. The rules are in [templates.md](templates.md), section "Layout block and layout document".
+
 `ERROR_INVALID_SIGNATURE` (400, T-095) is the business code of the optional `signature` part of `submit-note`; the format is in [note-fields.md](note-fields.md), section "Signature".
 
-New endpoints (moderation T-013, book data T-056, template list and print feedback T-061, ...) are written in v2 from the start; pick the namespace by the same rule (`note`, `book-data`, `book-export`, `book-design`, `template`, `print-feedback`).
+New endpoints (moderation T-013, book data T-056, template list and print feedback T-061, ...) are written in v2 from the start; pick the namespace by the same rule (`note`, `book-data`, `book-export`, `book-design`, `book-layout`, `template`, `print-feedback`).

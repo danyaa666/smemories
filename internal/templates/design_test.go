@@ -121,3 +121,57 @@ func TestMemoryBookDesign(t *testing.T) {
 		}
 	}
 }
+
+// T-153: the design.layout block is validated when the manifest loads.
+func TestLayoutBlockValidation(t *testing.T) {
+	const kinds = `"page_kinds":[{"id":"cover","repeats":false,"editable":["cover.title"]}]`
+	with := func(l string) string {
+		return `{"themes":["a"],"font_sets":["f"],"layout":{` + l + `}}`
+	}
+	good := kinds + `,"text_fonts":["display"],"colors":["ink"],"text_size":{"min":8,"max":96},"safe_margin_mm":5`
+	cases := []struct{ name, block, want string }{
+		{"no page kinds", with(`"page_kinds":[],"text_fonts":["d"],"colors":["i"],"text_size":{"min":8,"max":9},"safe_margin_mm":0`), "page_kinds needs 1..8"},
+		{"bad kind id", with(strings.Replace(good, `"id":"cover"`, `"id":"Cover"`, 1)), `id "Cover" must match`},
+		{"dup kind", with(strings.Replace(good, `}]`, `},{"id":"cover","repeats":true,"editable":[]}]`, 1)), `id "cover" is listed twice`},
+		{"dup editable", with(strings.Replace(good, `["cover.title"]`, `["a","a"]`, 1)), `id "a" is listed twice`},
+		{"no fonts", with(strings.Replace(good, `["display"]`, `[]`, 1)), "text_fonts needs 1..4"},
+		{"no colours", with(strings.Replace(good, `["ink"]`, `[]`, 1)), "colors needs 1..32"},
+		{"size inverted", with(strings.Replace(good, `"min":8,"max":96`, `"min":50,"max":20`, 1)), "text_size 50..20"},
+		{"size too big", with(strings.Replace(good, `"max":96`, `"max":201`, 1)), "text_size 8..201"},
+		{"margin", with(strings.Replace(good, `"safe_margin_mm":5`, `"safe_margin_mm":31`, 1)), "safe_margin_mm 31"},
+		{"unknown key", with(good + `,"z":1`), "unknown field"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			_, err := Parse(manifestWith("html", c.block))
+			if err == nil || !strings.Contains(err.Error(), c.want) {
+				t.Fatalf("want error containing %q, got %v", c.want, err)
+			}
+		})
+	}
+	tt, err := Parse(manifestWith("html", with(good)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if k, ok := tt.Design.Layout.Kind("cover"); !ok || k.Editable[0] != "cover.title" {
+		t.Errorf("layout = %+v", tt.Design.Layout)
+	}
+	if _, ok := tt.Design.Layout.Kind("nope"); ok {
+		t.Error("an unknown kind was found")
+	}
+	if l := mustDesign(t, "memory-book").Layout; l == nil || len(l.PageKinds) != 4 || !l.PageKinds[2].Repeats {
+		t.Errorf("memory-book layout = %+v", l)
+	}
+	if mustDesign(t, "navy-classic").Layout != nil {
+		t.Error("navy-classic has a layout block before its own task")
+	}
+}
+
+func mustDesign(t *testing.T, id string) *DesignBlock {
+	t.Helper()
+	d, ok := Design(id)
+	if !ok {
+		t.Fatalf("%s has no design block", id)
+	}
+	return d
+}

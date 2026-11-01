@@ -33,6 +33,18 @@
     ],
     "images": [
       {"id": "cover.pattern", "choices": ["dots", "plain"]}
-    ]
+    ],
+    "layout": {
+      "page_kinds": [
+        {"id": "cover", "repeats": false, "editable": ["cover.title", "cover.photo", "cover.belongs", "cover.sticker"]},
+        {"id": "profile", "repeats": false, "editable": ["profile.heading", "profile.photo"]},
+        {"id": "notes", "repeats": true, "editable": ["notes.heading"]},
+        {"id": "back", "repeats": false, "editable": ["back.heading", "back.subtitle", "back.pact"]}
+      ],
+      "text_fonts": ["display", "body"],
+      "colors": ["ink", "soft", "paper", "white", "accent"],
+      "text_size": {"min": 8, "max": 96},
+      "safe_margin_mm": 5
+    }
   }
 }

@@ -63,15 +63,16 @@ type Profile struct {
 // then the public ids of the media they point at, so the query count does not depend on the page size.
 type Store struct {
 	db               *sql.DB
-	onTemplateChange func(ctx context.Context, tx *sql.Tx, yearbookID uint64) error
+	onTemplateChange []func(ctx context.Context, tx *sql.Tx, yearbookID uint64) error
 }
 
 func NewStore(db *sql.DB) *Store { return &Store{db: db} }
 
 // OnTemplateChange registers what must happen in the same transaction when an update changes a book's template (T-141: the
-// book design made for the old template is deleted). Wired once at start-up; the hook runs after the book row is locked.
+// book design made for the old template is deleted; T-153: so is the layout). Wired at start-up, once per domain; the hooks run in
+// the order they were added, after the book row is locked.
 func (s *Store) OnTemplateChange(f func(ctx context.Context, tx *sql.Tx, yearbookID uint64) error) {
-	s.onTemplateChange = f
+	s.onTemplateChange = append(s.onTemplateChange, f)
 }
 
 const bookCols = `id, public_id, title, school_name, class_name, graduation_year, motto, language, page_size, template_id, cover_media_id, created_at, updated_at, link_epoch`
@@ -342,9 +343,11 @@ func (s *Store) modify(ctx context.Context, ownerID uint64, publicID string, now
 		return nil, err
 	}
 	y.UpdatedAt = nowMs
-	if s.onTemplateChange != nil && templateOf(y) != before {
-		if err := s.onTemplateChange(ctx, tx, y.internalID); err != nil {
-			return nil, err
+	if templateOf(y) != before {
+		for _, f := range s.onTemplateChange {
+			if err := f(ctx, tx, y.internalID); err != nil {
+				return nil, err
+			}
 		}
 	}
 	// A media id must belong to this very book; anything else (also another user's) is invalid_media.

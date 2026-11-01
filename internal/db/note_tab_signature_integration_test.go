@@ -21,7 +21,7 @@ func TestMigrateNoteSignature(t *testing.T) {
 	if !has() {
 		t.Fatal("the test database lacks signature_json")
 	}
-	for i := 0; i < 10 && has(); i++ { // newer migrations go down first
+	for i := 0; i < 30 && has(); i++ { // newer migrations go down first
 		if err := db.MigrateDown(ctx, d); err != nil {
 			t.Fatalf("down: %v", err)
 		}
@@ -62,7 +62,7 @@ func TestMigrateNoteSignature(t *testing.T) {
 		t.Error("a value over 3072 characters was stored")
 	}
 
-	for i := 0; i < 10 && has(); i++ {
+	for i := 0; i < 30 && has(); i++ {
 		if err := db.MigrateDown(ctx, d); err != nil {
 			t.Fatalf("down again: %v", err)
 		}

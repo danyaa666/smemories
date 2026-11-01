@@ -22,7 +22,7 @@ func TestMigrateMediaPurpose(t *testing.T) {
 	if !hasPurpose() {
 		t.Fatal("the test database lacks purpose")
 	}
-	for i := 0; i < 10 && hasPurpose(); i++ { // newer migrations go down first
+	for i := 0; i < 30 && hasPurpose(); i++ { // newer migrations go down first
 		if err := db.MigrateDown(ctx, d); err != nil {
 			t.Fatalf("down: %v", err)
 		}
@@ -56,7 +56,7 @@ func TestMigrateMediaPurpose(t *testing.T) {
 	insert("purpose, ", "D1")
 	equalLines(t, "after a design insert", dump(t, ctx, d, q), []string{"P1|photo", "P2|photo", "P3|photo", "D1|design"})
 
-	for i := 0; i < 10 && hasPurpose(); i++ {
+	for i := 0; i < 30 && hasPurpose(); i++ {
 		if err := db.MigrateDown(ctx, d); err != nil {
 			t.Fatalf("down again: %v", err)
 		}

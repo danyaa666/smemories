@@ -366,6 +366,11 @@ func (e *env) adminCalls(admin person, cls, book, coll, note, media string) map[
 			return e.do(admin, "POST", "/api/book-design/update", `{"yearbook_id":"`+book+`","options":{"theme":"mint"}}`)
 		},
 		"book-design/reset": func() resp { return e.do(admin, "POST", "/api/book-design/reset", body("yearbook_id", book)) },
+		"book-layout/get":   func() resp { return e.do(admin, "GET", "/api/book-layout/get?yearbook_id="+book, "") },
+		"book-layout/save": func() resp {
+			return e.do(admin, "POST", "/api/book-layout/save", `{"yearbook_id":"`+book+`","base_version":0,"layout":{"v":1,"pages":{}}}`)
+		},
+		"book-layout/reset": func() resp { return e.do(admin, "POST", "/api/book-layout/reset", body("yearbook_id", book)) },
 		"book-export/get-text": func() resp {
 			return e.do(admin, "GET", "/api/book-export/get-text?yearbook_id="+book, "")
 		},
@@ -398,6 +403,7 @@ func TestAdminStillHasNoRightsOverAStudentsBook(t *testing.T) {
 			`SELECT GROUP_CONCAT(CONCAT_WS(',', public_id, status, sort_order) ORDER BY id) FROM note_tab WHERE yearbook_id = ?`,
 			`SELECT GROUP_CONCAT(CONCAT_WS(',', public_id, revoked_at) ORDER BY id) FROM note_collection_tab WHERE yearbook_id = ?`,
 			`SELECT COUNT(*) FROM media_tab WHERE yearbook_id = ?`,
+			`SELECT GROUP_CONCAT(CONCAT_WS(',', version, updated_at, layout_json) ORDER BY id) FROM book_layout_tab WHERE yearbook_id = ?`, // T-153
 		} {
 			var v sql.NullString
 			if err := e.db.QueryRow(q, bookRow).Scan(&v); err != nil {
@@ -407,6 +413,9 @@ func TestAdminStillHasNoRightsOverAStudentsBook(t *testing.T) {
 		}
 		return s
 	}
+	e.exec(`UPDATE yearbook_tab SET template_id = 'memory-book' WHERE id = ?`, bookRow)
+	e.exec(`INSERT INTO book_layout_tab (yearbook_id, template_id, layout_json, version, created_at, updated_at) VALUES (?, 'memory-book', ?, 3, 1, 1)`,
+		bookRow, `{"v":1,"pages":{"cover":{"items":[{"id":"abcdef","t":"text","text":"SECRET-LAYOUT","x":0,"w":100,"h":100,"cy":500}]}}}`)
 	snapshot := before()
 
 	calls := e.adminCalls(admin, cls, book, coll, note, media)

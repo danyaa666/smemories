@@ -21,7 +21,7 @@ func TestMigrateYearbookLinkEpoch(t *testing.T) {
 	if !hasEpoch() {
 		t.Fatal("the test database lacks link_epoch")
 	}
-	for i := 0; i < 10 && hasEpoch(); i++ { // newer migrations go down first
+	for i := 0; i < 30 && hasEpoch(); i++ { // newer migrations go down first
 		if err := db.MigrateDown(ctx, d); err != nil {
 			t.Fatalf("down: %v", err)
 		}
@@ -54,7 +54,7 @@ func TestMigrateYearbookLinkEpoch(t *testing.T) {
 	}
 	equalLines(t, "after a bump", dump(t, ctx, d, q), []string{"B1|1", "B2|0", "B3|0"})
 
-	for i := 0; i < 10 && hasEpoch(); i++ {
+	for i := 0; i < 30 && hasEpoch(); i++ {
 		if err := db.MigrateDown(ctx, d); err != nil {
 			t.Fatalf("down again: %v", err)
 		}

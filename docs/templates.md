@@ -155,6 +155,50 @@ texts; `images` lists every slot). On read, an id the manifest no longer has (a 
 passes the rules is ignored, a document that cannot be read is the defaults, and a row made for another template is ignored. `design` is null when the book has no template or its
 template has no `design` block. Not covered here: the class book (T-146) applies each student's own design to their pages; uploads of backgrounds, free text styling and element editing are stage 2.
 
+### Layout block and layout document (E09 stage 2, T-153)
+
+Stage 2 lets a student place things freely on the pages ([ADR 0004](adr/0004-layout-editor.md)). The manifest says what is allowed, the server validates a document against it, the browser draws it.
+
+**The manifest `design.layout` block** (optional, inside `design`; the loader rejects a malformed one and unknown keys):
+
+| Key | Rule |
+|---|---|
+| `page_kinds` | 1..8 `{id, repeats, editable}`; `repeats` is true for a kind printed on many pages (`notes`: its items show on each); `editable` is up to 16 template element ids of the page the student may move, resize, rotate or hide |
+| `text_fonts` | 1..4 font ids a text box may use (`display`, `body`) |
+| `colors` | 1..32 theme token names a text, tint or page background may use |
+| `text_size` | `{min, max}` in points, within 4..200 |
+| `safe_margin_mm` | 0..30; the editor's guide, nothing is clamped to it |
+
+Ids match `[a-z0-9._-]{1,40}`. `memory-book` starts with `cover` (`cover.title, cover.photo, cover.belongs, cover.sticker`), `profile` (`profile.heading, profile.photo`), `notes` (repeats; `notes.heading`) and `back` (`back.heading, back.subtitle, back.pact`); fonts `display`, `body`; colours `ink, soft, paper, white, accent`; sizes 8..96; margin 5 mm.
+**These ids are proposals:** the runtime task (T-154) corrects them to what the template can really move and edits this block in its own PR; the server reads whatever the manifest says. Navy Classic has no layout block yet (a book on it cannot hold a layout).
+
+**The layout document** (`book_layout_tab.layout_json`, one row per yearbook, at most 131072 bytes as sent, `version` +1 per save, `template_id` the template it was made for):
+
+```json
+{"v":1,"pages":{
+  "cover":{"bg":{"asset":"shape.star"},
+           "overrides":{"cover.photo":{"x":120,"w":500,"h":500,"cy":400,"r":0,"hidden":false}},
+           "items":[{"id":"a1b2c3","t":"text","x":100,"w":400,"h":120,"cy":850,"r":-4,"text":"Lớp 12A1","font":"display","size":28,"color":"accent","align":"center","bold":true},
+                    {"id":"d4e5f6","t":"asset","asset":"sticker.gold-star","x":800,"w":150,"h":150,"cy":100,"r":15},
+                    {"id":"g7h8i9","t":"image","media":"<design image id>","fit":"cover","radius":20,"x":0,"w":300,"h":200,"cy":500}]}}}
+```
+
+- **Box (ADR 0004 "centre").** `x` is the left edge and `w`, `h` the size, all integers in thousandths of the page **width**; `cy` is the vertical centre in thousandths of the page **height**; `r` degrees about the centre, -180..180. `w` and `h` are 10..2000. A box may leave the page by at most half of its size: `-w/2 <= x <= 1000 - w/2`; for `cy`, which is in page-height units while `h` is in page-width units, `-h*k/2 <= cy <= 1000 + h*k/2` with k = 1.419 (the A5 height over width, the largest of the papers, so a box legal on any paper passes; `internal/booklayout` `pageRatioPermille`). An override that omits `w` or `h` is checked against the widest/tallest box only. Items are drawn in array order (later on top); there is no `z`.
+- **Page kinds** are the manifest's. Each has optional `bg` (exactly one of `{"asset":id}` from `internal/assets`, `{"media":id}` one of the owner's design images, `{"color":token}`), `overrides` (element id from the kind's `editable` list to any of `x,w,h,cy,r,hidden`) and `items`.
+- **Items.** `id` (6..26 of `[A-Za-z0-9]`, unique in the document), `t` and the box (`x,w,h,cy` required, `r` optional). `text`: `text` (plain, at most 500 code points counted after NFC, newline allowed, no other control or format characters, trimmed), optional `font`, `color`, `align` left|center|right, `bold`, `size` (integer pt in the manifest's range). `asset`: `asset` from the registry, optional `tint` colour token **only if the asset is tintable**. `image`: `media` the id of one of the owner's own `design` images **of this book**, optional `fit` cover|contain and `radius` 0..500.
+- **Limits.** 40 items per page kind, 150 in the document, 20 problems reported. Unknown keys, unknown ids, non-integers and wrong types are errors. Duplicate JSON keys are not detected (the last wins; the stored document is the validated one, re-encoded canonically: compact, keys sorted, no HTML escaping). Text is data: never HTML, rendered as text.
+- **Media ids.** The save path calls `media.Service.DesignImages` for every `bg.media` and `image` item, so a profile or note photo, another book's or user's design image, an unknown id or a lower-case spelling is refused with `not_own_media` at its path, and nothing is stored.
+
+**Endpoints** (owner only; another user's, an unknown book and a class admin get `ERROR_NOT_FOUND`; an anonymous call is `ERROR_UNAUTHORIZED` as for `book-design`): `GET /api/book-layout/get?yearbook_id=` returns `{layout, version, template_id, updated_at}` (`layout` null and `version` 0 while none);
+`POST /api/book-layout/save` `{yearbook_id, base_version, layout}` succeeds only if `base_version` is the stored version (0 for the first save), as one conditional statement (`INSERT` for 0, `UPDATE ... WHERE version = ?` otherwise, under the book's row lock), and answers `{version, updated_at}`; a stale `base_version` is **409 `ERROR_VERSION_CONFLICT`** with `data: {version, layout}` of the stored document (`0` and `null` when the row is gone); an invalid document is **400 `ERROR_INVALID_LAYOUT`** with `data: {problems: [{path, code}]}` (codes in `api/openapi.yaml`); more than 131072 bytes of layout, or a body over about 132 KiB (cut before decoding), is **413 `ERROR_TOO_LARGE`**; `POST /api/book-layout/reset` `{yearbook_id}` deletes the row (idempotent). A reset restarts the version at 1, so an editor holding the old version gets a 409 with `layout: null`; it does not distinguish "reset then saved again" from its own history (version 1 twice), which only matters to two tabs resetting each other.
+Saves are limited per user: `SMEM_RATE_LAYOUT_SAVE_PER_MINUTE` (default 60) per minute and a burst of 20 per 10 seconds, `ERROR_RATE_LIMITED` with `Retry-After`, fail open ([redis.md](redis.md)). Metric `smem_layout_saves_total{result}` (ok, conflict, invalid, too_large, rate_limited); no document content is logged.
+
+**Lifecycle.** Changing the template (`yearbook/update` with another or no `template_id`) deletes the layout in the same transaction (`yearbook.Store.OnTemplateChange`, a list of hooks); answers, photos and design images stay. Deleting the book deletes it (`yearbook.ChildPurger`, orphan pair in `dbtest`). Lock order: `yearbook_tab` row first, then `book_layout_tab`. Account deletion and the data export do not exist yet (T-025): they must delete the layout with the books (the yearbook delete path covers it) and include `GET /api/book-layout/get`'s document in the export.
+
+**What the print gets.** `GET /api/book-data/get` carries `layout` (the document) and `layout_version`, `null` and `0` when there is none, the book's template has no layout block, the row was made for another template or nothing of it validates. The document is **re-validated on every read** with the lenient rule: an asset no longer in the registry, a deleted or no longer own design image, a page kind or editable element the manifest dropped, a tint on a now non-tintable asset or a value now out of range drops that background, override or item (the page kind if it is malformed) and keeps the rest; the stored row is not changed. Up to 128 KiB is added to the response.
+
+**The class admin** reads a design image of a linked member only while that member's layout references it (`bg.media` or an `image` item): `media.Store.readable` looks for `"media":"<id>"` in the stored canonical JSON (a student's text cannot imitate it, its quotes are escaped). See [class-privacy-review.md](class-privacy-review.md).
+
 ### Adding a theme, font set, section, text or picture to an html template (T-147)
 
 A template author does not need to read the runtime. For `<tpl>` (`memory-book`, `navy-classic`) with prefix `<p>` (`mb`, `nc`), the page component file `web/src/book/templates/<name>.tsx` and its `.css`:

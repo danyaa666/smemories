@@ -58,8 +58,8 @@ They are decoded, stripped of metadata, re-encoded and limited exactly like phot
   that owner's yearbook: the layout task must use it before it stores a media id (`TestDesignImageIsolation`).
 - **Limits.** At most 30 design images per yearbook (`maxDesignPerYearbook`); they do not count toward the 200 photos. Their stored bytes (display + thumb + print) count with the photos' in the owner's 500 MiB per user. `ERROR_QUOTA_EXCEEDED` (409) for either.
 - **Delete.** `media/delete` works for a design image (idempotent, objects first). Deleting the yearbook deletes its design images with the rows and the prefix (`TestDesignImageDelete`). A layout that still references a deleted
-  image is the reader's problem (it ignores the missing id); deletion never checks for references.
-- **Class admin.** `media.Store.readable` also opens a design image of a member's linked book for the class admin (read only, `no-store`), whether or not a layout uses it yet; see docs/class-permissions.md and docs/class-privacy-review.md.
+  image is the reader's problem (`book-data/get` drops the background or item, T-153); deletion never checks for references.
+- **Class admin.** `media.Store.readable` also opens a design image of a member's linked book for the class admin (read only, `no-store`) **only while the member's stored layout references it** (T-153: `bg.media` or an `image` item of `book_layout_tab.layout_json`; before T-153 every design image of the book was readable); see docs/class-permissions.md and docs/class-privacy-review.md.
 - **Metrics.** `smem_media_uploads_total{purpose,result}` ([observability.md](observability.md)).
 - **Export and account deletion (T-025).** There is no account deletion or export endpoint yet. When T-025 adds them: a design image is a row of its book, so the yearbook delete path covers it; the export lists a book's design images with
   `media/get-list?purpose=design` (id, size, created_at), the same way it lists photos.

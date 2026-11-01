@@ -4,6 +4,7 @@ package db_test
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -50,7 +51,7 @@ func TestMigrateClassTables(t *testing.T) {
 		}
 	}
 
-	for i := 0; i < 10 && hasTables() != "0"; i++ { // newer migrations go down first
+	for i := 0; i < 30 && hasTables() != "0"; i++ { // newer migrations go down first
 		if err := db.MigrateDown(ctx, d); err != nil {
 			t.Fatalf("down: %v", err)
 		}
@@ -92,7 +93,7 @@ func TestMigrateClassInviteTable(t *testing.T) {
 	if err := invite("I3", "t3"); err != nil {
 		t.Error(err)
 	}
-	for i := 0; i < 10 && exists() != "0"; i++ { // newer migrations go down first
+	for i := 0; i < 30 && exists() != "0"; i++ { // newer migrations go down first
 		if err := db.MigrateDown(ctx, d); err != nil {
 			t.Fatalf("down: %v", err)
 		}
@@ -131,7 +132,7 @@ func TestMigrateClassPageTable(t *testing.T) {
 	if got := dump(t, ctx, d, `SELECT CHAR_LENGTH(body) FROM class_page_tab WHERE public_id = 'P1'`)[0]; got != "4000" {
 		t.Errorf("the body was cut: %s characters", got)
 	}
-	for i := 0; i < 10 && exists("class_page_tab") == "1"; i++ { // newer migrations (T-141, T-152) go down first, then this one
+	for i := 0; i < 30 && exists("class_page_tab") == "1"; i++ { // newer migrations (T-141, T-152) go down first, then this one
 		if err := db.MigrateDown(ctx, d); err != nil {
 			t.Fatalf("down: %v", err)
 		}
@@ -173,7 +174,7 @@ func TestMigrateBookDesignTable(t *testing.T) {
 	if n := dump(t, ctx, d, `SELECT COUNT(*) FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME = 'book_design_tab'`)[0]; n != "0" {
 		t.Errorf("%s foreign keys on book_design_tab", n)
 	}
-	for i := 0; i < 10 && exists() != "0"; i++ { // newer migrations go down first
+	for i := 0; i < 30 && exists() != "0"; i++ { // newer migrations go down first
 		if err := db.MigrateDown(ctx, d); err != nil {
 			t.Fatalf("down: %v", err)
 		}
@@ -186,5 +187,56 @@ func TestMigrateBookDesignTable(t *testing.T) {
 	}
 	if exists() != "1" {
 		t.Fatal("up again did not create the table")
+	}
+}
+
+// T-153 (E09 stage 2): the book layout table keeps one row per yearbook, has no foreign key, holds a 128 KiB document and goes down and up
+// again on its own, newest migration first, leaving the rows of the other tables alone.
+func TestMigrateBookLayoutTable(t *testing.T) {
+	ctx := context.Background()
+	d := dbtest.New(t)
+	exists := func() string {
+		return dump(t, ctx, d, `SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'book_layout_tab'`)[0]
+	}
+	layout := func(yearbook int, doc string) error {
+		_, err := d.ExecContext(ctx, `INSERT INTO book_layout_tab (yearbook_id, template_id, layout_json, version, created_at, updated_at) VALUES (?,'memory-book',?,1,1,1)`, yearbook, doc)
+		return err
+	}
+	if exists() != "1" {
+		t.Fatal("the test database lacks book_layout_tab")
+	}
+	if _, err := d.ExecContext(ctx, `INSERT INTO book_design_tab (yearbook_id, template_id, options_json, created_at, updated_at) VALUES (7,'memory-book','{"v":1}',1,1)`); err != nil {
+		t.Fatal(err)
+	}
+	big := `{"v":1,"pages":{},"pad":"` + strings.Repeat("ệ", 40000) + `"}` // about 120 KB of three-byte characters
+	if err := layout(7, big); err != nil {                                 // no yearbook 7 exists: there is no foreign key
+		t.Fatal(err)
+	}
+	if got := dump(t, ctx, d, `SELECT CHAR_LENGTH(layout_json) FROM book_layout_tab WHERE yearbook_id = 7`)[0]; got != fmt.Sprint(len([]rune(big))) {
+		t.Errorf("stored %s characters, want %d", got, len([]rune(big)))
+	}
+	if err := layout(7, "{}"); err == nil {
+		t.Error("a second layout for one yearbook was accepted")
+	}
+	if err := layout(8, "{}"); err != nil {
+		t.Errorf("a layout for another yearbook: %v", err)
+	}
+	if n := dump(t, ctx, d, `SELECT COUNT(*) FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME = 'book_layout_tab'`)[0]; n != "0" {
+		t.Errorf("%s foreign keys on book_layout_tab", n)
+	}
+	if err := db.MigrateDown(ctx, d); err != nil { // the newest migration is this table's
+		t.Fatalf("down: %v", err)
+	}
+	if exists() != "0" {
+		t.Fatal("down left the table behind")
+	}
+	if n := dump(t, ctx, d, `SELECT COUNT(*) FROM book_design_tab`)[0]; n != "1" {
+		t.Errorf("down touched the design table: %s rows", n)
+	}
+	if err := db.MigrateUp(ctx, d); err != nil {
+		t.Fatalf("up again: %v", err)
+	}
+	if exists() != "1" || dump(t, ctx, d, `SELECT COUNT(*) FROM book_layout_tab`)[0] != "0" {
+		t.Fatal("up again did not create an empty table")
 	}
 }

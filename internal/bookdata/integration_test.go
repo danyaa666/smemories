@@ -20,6 +20,7 @@ import (
 
 	"github.com/danyaa666/smemories/internal/auth"
 	"github.com/danyaa666/smemories/internal/bookdesign"
+	"github.com/danyaa666/smemories/internal/booklayout"
 	"github.com/danyaa666/smemories/internal/db/dbtest"
 	"github.com/danyaa666/smemories/internal/httpx"
 	"github.com/danyaa666/smemories/internal/legal"
@@ -50,7 +51,7 @@ type env struct {
 func (e *env) stack(d *sql.DB) http.Handler {
 	nsvc := notes.NewService(notes.NewStore(d), nil, nil, ratelimit.NewMemoryFactory(time.Now), e.log, nil)
 	ysvc := yearbook.NewService(yearbook.NewStore(d), httpx.NewCursors([]byte(strings.Repeat("c", 32))), nil, nil)
-	return httpx.NewRouter(e.log, e.ah.Routes, NewHandler(NewService(ysvc, nsvc, bookdesign.NewService(bookdesign.NewStore(d), nil, nil)), e.ah.RequireUser).Routes)
+	return httpx.NewRouter(e.log, e.ah.Routes, NewHandler(NewService(ysvc, nsvc, bookdesign.NewService(bookdesign.NewStore(d), nil, nil), booklayout.NewService(booklayout.NewStore(d), nil, nil, 0, nil)), e.ah.RequireUser).Routes)
 }
 
 func newEnv(t *testing.T) *env {
@@ -287,7 +288,7 @@ func TestOwnerGetsApprovedNotesInBookOrder(t *testing.T) {
 	if got := d["profile"].(map[string]any); fmt.Sprint(got) != fmt.Sprint(wantP) {
 		t.Fatalf("profile %v, want %v", got, wantP)
 	}
-	if keys := mapKeys(d); !slices.Equal(keys, []string{"approved_total", "design", "note_count", "notes", "profile", "truncated", "yearbook"}) {
+	if keys := mapKeys(d); !slices.Equal(keys, []string{"approved_total", "design", "layout", "layout_version", "note_count", "notes", "profile", "truncated", "yearbook"}) {
 		t.Fatalf("data keys %v", keys)
 	}
 	if keys := mapKeys(d["notes"].([]any)[0].(map[string]any)); !slices.Equal(keys, []string{"answers", "id", "photo_ids", "signature"}) {

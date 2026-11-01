@@ -29,6 +29,7 @@ type Metrics struct {
 	publicMedia  *prometheus.CounterVec
 	mediaPanics  prometheus.Counter
 	mediaUploads *prometheus.CounterVec
+	layoutSaves  *prometheus.CounterVec
 }
 
 // New returns a registry with the Go runtime and process collectors and the HTTP and rate-limit instruments.
@@ -58,6 +59,12 @@ func New() *Metrics {
 		mediaUploads: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Namespace: namespace, Name: "media_uploads_total", Help: "Owner image uploads (media/create) by purpose (photo, design) and result (ok, quota, invalid, busy, error). No ids or file names.",
 		}, []string{"purpose", "result"}),
+		layoutSaves: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Namespace: namespace, Name: "layout_saves_total", Help: "Book layout saves (book-layout/save) by result (ok, conflict, invalid, too_large, rate_limited). No ids or document content.",
+		}, []string{"result"}),
+	}
+	for _, r := range []string{"ok", "conflict", "invalid", "too_large", "rate_limited"} {
+		m.layoutSaves.WithLabelValues(r) // present at 0 from the first scrape
 	}
 	for _, p := range []string{"photo", "design"} {
 		for _, r := range []string{"ok", "quota", "invalid", "busy", "error"} {
@@ -68,7 +75,7 @@ func New() *Metrics {
 		m.publicMedia.WithLabelValues(r) // present at 0 from the first scrape
 	}
 	m.reg.MustRegister(collectors.NewGoCollector(), collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
-		m.duration, m.inFlight, m.rateLimited, m.mailFailed, m.publicMedia, m.mediaPanics, m.mediaUploads)
+		m.duration, m.inFlight, m.rateLimited, m.mailFailed, m.publicMedia, m.mediaPanics, m.mediaUploads, m.layoutSaves)
 	return m
 }
 
@@ -118,6 +125,17 @@ func (m *Metrics) MediaUpload(purpose, result string) {
 		result = "error"
 	}
 	m.mediaUploads.WithLabelValues(purpose, result).Inc()
+}
+
+// LayoutSave counts one book-layout/save; result is a constant chosen in code (booklayout.Result*). Any other value is counted as invalid
+// so the label set stays closed.
+func (m *Metrics) LayoutSave(result string) {
+	switch result {
+	case "ok", "conflict", "invalid", "too_large", "rate_limited":
+	default:
+		result = "invalid"
+	}
+	m.layoutSaves.WithLabelValues(result).Inc()
 }
 
 // MediaProcessPanic counts one panic recovered in the image pipeline (T-104).

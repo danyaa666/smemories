@@ -33,6 +33,51 @@ type DesignBlock struct {
 	Sections []DesignSection `json:"sections"`
 	Texts    []DesignText    `json:"texts"`
 	Images   []DesignImage   `json:"images"`
+	Layout   *LayoutBlock    `json:"layout,omitempty"` // what the free-layout editor may place and move (E09 stage 2, T-153)
+}
+
+// Limits of a layout block.
+const (
+	MaxPageKinds   = 8
+	MaxEditable    = 16
+	MaxTextFonts   = 4
+	MaxColors      = 32
+	MaxSafeMarginM = 30
+)
+
+// LayoutBlock is the optional "design.layout" block: the page kinds a student may put items on, the template elements they may move or
+// hide, and the fonts, colour tokens and text sizes a text box may use. The layout document of a book (internal/booklayout) is
+// validated against it; the web template decides what each id looks like.
+type LayoutBlock struct {
+	PageKinds    []LayoutPageKind `json:"page_kinds"`
+	TextFonts    []string         `json:"text_fonts"`
+	Colors       []string         `json:"colors"` // theme token names
+	TextSize     LayoutTextSize   `json:"text_size"`
+	SafeMarginMM int              `json:"safe_margin_mm"` // editor guide only, nothing is clamped to it
+}
+
+// LayoutPageKind is one kind of page of the book. Repeats is true for a kind printed on many pages (the notes pages): the items of
+// the kind then appear on each of them. Editable lists the template elements of the page that can be moved, resized or hidden.
+type LayoutPageKind struct {
+	ID       string   `json:"id"`
+	Repeats  bool     `json:"repeats"`
+	Editable []string `json:"editable"`
+}
+
+// Kind returns the page kind with this id.
+func (l *LayoutBlock) Kind(id string) (LayoutPageKind, bool) {
+	for _, k := range l.PageKinds {
+		if k.ID == id {
+			return k, true
+		}
+	}
+	return LayoutPageKind{}, false
+}
+
+// LayoutTextSize is the range of a text box's font size in points.
+type LayoutTextSize struct {
+	Min int `json:"min"`
+	Max int `json:"max"`
 }
 
 // DesignSection is a page group the student may hide or move. Fixed ("first" or "last", or empty) pins it to an end.
@@ -99,6 +144,30 @@ func (v *validator) design() {
 	for _, x := range d.Images {
 		v.designID("design.images", x.ID, seen)
 		v.idList(fmt.Sprintf("design.images %q choices", x.ID), x.Choices, 1, MaxImageChoice)
+	}
+	v.layout(d.Layout)
+}
+
+// layout checks the design.layout block.
+func (v *validator) layout(l *LayoutBlock) {
+	if l == nil {
+		return
+	}
+	if len(l.PageKinds) < 1 || len(l.PageKinds) > MaxPageKinds {
+		v.errf("", "design.layout.page_kinds needs 1..%d entries, has %d", MaxPageKinds, len(l.PageKinds))
+	}
+	seen := map[string]bool{}
+	for _, k := range l.PageKinds {
+		v.designID("design.layout.page_kinds", k.ID, seen)
+		v.idList(fmt.Sprintf("design.layout.page_kinds %q editable", k.ID), k.Editable, 0, MaxEditable)
+	}
+	v.idList("design.layout.text_fonts", l.TextFonts, 1, MaxTextFonts)
+	v.idList("design.layout.colors", l.Colors, 1, MaxColors)
+	if s := l.TextSize; s.Min < 4 || s.Max > 200 || s.Min > s.Max {
+		v.errf("", "design.layout.text_size %d..%d must be within 4..200 with min <= max", s.Min, s.Max)
+	}
+	if l.SafeMarginMM < 0 || l.SafeMarginMM > MaxSafeMarginM {
+		v.errf("", "design.layout.safe_margin_mm %d must be in 0..%d", l.SafeMarginMM, MaxSafeMarginM)
 	}
 }
 
