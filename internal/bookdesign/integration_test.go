@@ -19,6 +19,7 @@ import (
 	"github.com/danyaa666/smemories/internal/auth"
 	"github.com/danyaa666/smemories/internal/bookdata"
 	"github.com/danyaa666/smemories/internal/bookdesign"
+	"github.com/danyaa666/smemories/internal/booklayout"
 	"github.com/danyaa666/smemories/internal/db/dbtest"
 	"github.com/danyaa666/smemories/internal/httpx"
 	"github.com/danyaa666/smemories/internal/legal"
@@ -74,7 +75,7 @@ func newEnv(t *testing.T, limiters *ratelimit.Factory) *env {
 	e.h = httpx.NewRouter(log, ah.Routes,
 		yearbook.NewHandler(ysvc, ah.RequireUser, []string{origin}).Routes,
 		bookdesign.NewHandler(design, ah.RequireUser, []string{origin}).Routes,
-		bookdata.NewHandler(bookdata.NewService(ysvc, nsvc, design), ah.RequireUser).Routes)
+		bookdata.NewHandler(bookdata.NewService(ysvc, nsvc, design, booklayout.NewService(booklayout.NewStore(d), nil, nil, 0, nil)), ah.RequireUser).Routes)
 	return e
 }
 

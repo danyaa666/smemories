@@ -108,6 +108,7 @@ task definition, `SM` = Secrets Manager injected as an environment variable, `SS
 | `SMEM_RATE_LOGIN_FAILS_PER_EMAIL` | no | `10` | no | env | api | per IP and email, 15 min. |
 | `SMEM_RATE_LOGIN_FAILS_PER_IP` | no | `100` | no | env | api | 15 min. |
 | `SMEM_RATE_LOGIN_FAILS_PER_ACCOUNT` | no | `50` | no | env | api | failed logins per account from any address, 15 min; integer >= 1. Fails closed. A successful password reset clears it. |
+| `SMEM_RATE_LAYOUT_SAVE_PER_MINUTE` | no | `60` | no | env | api | `book-layout/save` per user per minute (plus a fixed burst of 20 per 10 seconds); integer >= 1. Fails open when Redis is down. |
 | `SMEM_MEDIA_MAX_BYTES` | no | `10485760` | no | env | api | 1 to 104857600. |
 | `SMEM_MEDIA_MAX_CONCURRENT` | no | `2` | no | env | api | images decoded at once ([media.md](media.md)). |
 | `SMEM_PUBLIC_UPLOAD_CONCURRENT_PER_IP` | no | `8` | no | env | api | |

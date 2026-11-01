@@ -4,8 +4,10 @@ package bookdata
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/danyaa666/smemories/internal/bookdesign"
+	"github.com/danyaa666/smemories/internal/booklayout"
 	"github.com/danyaa666/smemories/internal/notes"
 	"github.com/danyaa666/smemories/internal/yearbook"
 )
@@ -23,6 +25,11 @@ type Notes interface {
 // Designs is the part of the book design service the book data uses: the design to print, nil when the template has none.
 type Designs interface {
 	Resolved(ctx context.Context, ownerID uint64, publicID string, templateID *string) (*bookdesign.Resolved, error)
+}
+
+// Layouts is the part of the book layout service the book data uses: the free layout to print, nil when there is none.
+type Layouts interface {
+	Resolved(ctx context.Context, ownerID uint64, publicID string, templateID *string) (*booklayout.Resolved, error)
 }
 
 // BookInfo is the yearbook as the renderer needs it: no internal ids, no times.
@@ -52,7 +59,9 @@ type ProfileInfo struct {
 type Book struct {
 	Yearbook      BookInfo             `json:"yearbook"`
 	Profile       ProfileInfo          `json:"profile"`
-	Design        *bookdesign.Resolved `json:"design"` // the owner's customisation, defaults filled in (E09, T-141); null when the template has none
+	Design        *bookdesign.Resolved `json:"design"`         // the owner's customisation, defaults filled in (E09, T-141); null when the template has none
+	Layout        json.RawMessage      `json:"layout"`         // the owner's free layout (E09 stage 2, T-153), re-validated, parts that no longer validate left out; null when there is none
+	LayoutVersion int64                `json:"layout_version"` // its version; 0 when layout is null
 	Notes         []*notes.BookNote    `json:"notes"`
 	NoteCount     int                  `json:"note_count"`     // the number of notes returned
 	ApprovedTotal int                  `json:"approved_total"` // every approved note of the book
@@ -64,11 +73,12 @@ type Service struct {
 	books   Books
 	notes   Notes
 	designs Designs
+	layouts Layouts
 }
 
 // NewService wires the sources.
-func NewService(b Books, n Notes, d Designs) *Service {
-	return &Service{books: b, notes: n, designs: d}
+func NewService(b Books, n Notes, d Designs, l Layouts) *Service {
+	return &Service{books: b, notes: n, designs: d, layouts: l}
 }
 
 // Get returns the owner's book. A malformed id is ERROR_PARAM and an unverified email is refused (the notes rule, T-013);
@@ -87,12 +97,20 @@ func (s *Service) Get(ctx context.Context, ownerID uint64, verified bool, bookID
 	if err != nil {
 		return nil, err
 	}
+	layout, err := s.layouts.Resolved(ctx, ownerID, bookID, y.TemplateID)
+	if err != nil {
+		return nil, err
+	}
 	p := &y.Profile
-	return &Book{
+	b := &Book{
 		Yearbook: BookInfo{Title: y.Title, SchoolName: y.SchoolName, ClassName: y.ClassName, GraduationYear: y.GraduationYear, Motto: y.Motto,
 			Language: y.Language, PageSize: y.PageSize, TemplateID: y.TemplateID, CoverMediaID: y.CoverMediaID},
 		Profile: ProfileInfo{FullName: p.FullName, Nickname: p.Nickname, Quote: p.Quote, Hobbies: p.Hobbies, FuturePlans: p.FuturePlans,
 			PhotoMediaID: p.PhotoMediaID},
 		Design: design, Notes: ns, NoteCount: len(ns), ApprovedTotal: total, Truncated: total > len(ns),
-	}, nil
+	}
+	if layout != nil {
+		b.Layout, b.LayoutVersion = layout.Layout, layout.Version
+	}
+	return b, nil
 }

@@ -210,9 +210,11 @@ const ClassAdminRole = "admin"
 
 // readable is owned plus the one read path of a class admin (E07, T-027, docs/class-permissions.md): the media is also readable
 // when the caller is an admin of a class in which the media's yearbook is a member's linked page (the member owns it), and the media
-// is that yearbook's owner profile photo or a photo of one of its approved notes, or a design image of that yearbook (T-152: the
-// backgrounds and decorations of the student's layout, which the class book prints). Nothing else: not the cover, not a photo of a
-// pending or hidden note, not a photo that no note uses, not a yearbook of a removed member or of another class. One statement, so
+// is that yearbook's owner profile photo or a photo of one of its approved notes, or a design image of that yearbook that the
+// member's stored layout references (T-152, T-153: the backgrounds and images of the student's layout, which the class book prints; the
+// layout is canonical compact JSON made by internal/booklayout, where an id appears after "media": only in a background or an image item,
+// and a student's text cannot imitate it because its quotes are escaped). Nothing else: not the cover, not a photo of a
+// pending or hidden note, not a photo that no note uses, not a design image no layout references, not a yearbook of a removed member or of another class. One statement, so
 // a note hidden a moment ago is already a 404. Read only: Delete and every write keep using owned.
 func (s *Store) readable(ctx context.Context, userID uint64, publicID string) (*Media, error) {
 	var owner bool
@@ -222,7 +224,8 @@ func (s *Store) readable(ctx context.Context, userID uint64, publicID string) (*
 		   SELECT 1 FROM class_member_tab cm
 		   JOIN class_member_tab adm ON adm.class_id = cm.class_id AND adm.user_id = ? AND adm.role = ?
 		   WHERE cm.yearbook_id = y.id AND cm.user_id = y.owner_id
-		     AND (m.purpose = ?
+		     AND ((m.purpose = ? AND EXISTS (SELECT 1 FROM book_layout_tab l WHERE l.yearbook_id = y.id
+		                                     AND l.layout_json LIKE CONCAT('%"media":"', m.public_id, '"%')))
 		       OR EXISTS (SELECT 1 FROM profile_tab p WHERE p.yearbook_id = y.id AND p.is_owner = 1 AND p.photo_media_id = m.id)
 		       OR EXISTS (SELECT 1 FROM note_photo_tab np JOIN note_tab n ON n.id = np.note_id
 		                  WHERE np.media_id = m.id AND n.yearbook_id = y.id AND n.status = ?))))`,

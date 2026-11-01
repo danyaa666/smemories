@@ -52,6 +52,18 @@
     {
       "key": "designId2",
       "value": ""
+    },
+    {
+      "key": "layoutDesignId",
+      "value": ""
+    },
+    {
+      "key": "layoutPhotoId",
+      "value": ""
+    },
+    {
+      "key": "layoutVersion",
+      "value": ""
     }
   ],
   "item": [
@@ -4536,6 +4548,1930 @@
                     "type": "text/javascript",
                     "exec": [
                       "pm.test('status 200', () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "book-layout (T-153)",
+      "description": "Free layout document: save with optimistic concurrency, validation (assets, media ownership, limits), owner-only access, template change, print data. Saves are limited to 20 per 10 seconds per user: if two runs follow each other within 10 seconds the later one can get 429; `make reset-limits` clears it. Needs the Setup folder first and the two test accounts email-verified (`make verify-newman-users`).",
+      "item": [
+        {
+          "name": "Full flow",
+          "item": [
+            {
+              "name": "1. Login A",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session="
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"email\":\"{{emailA}}\",\"password\":\"{{password}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "const m = /smem_session=([^;]+)/.exec(pm.response.headers.get('Set-Cookie') || '');",
+                      "pm.test('session cookie issued', () => pm.expect(m).to.not.be.null);",
+                      "pm.collectionVariables.set('tokenA', m ? m[1] : '');"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "2. Login B",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session="
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"email\":\"{{emailB}}\",\"password\":\"{{password}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "const m = /smem_session=([^;]+)/.exec(pm.response.headers.get('Set-Cookie') || '');",
+                      "pm.test('session cookie issued', () => pm.expect(m).to.not.be.null);",
+                      "pm.collectionVariables.set('tokenB', m ? m[1] : '');"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "3. A creates a book on the memory-book template",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/yearbook/create",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "yearbook",
+                    "create"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"title\":\"Layout book\",\"language\":\"en\",\"template_id\":\"memory-book\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "pm.collectionVariables.set('bookId', pm.response.json().data.id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "4. A uploads a design image",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/media/create",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "media",
+                    "create"
+                  ]
+                },
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "yearbook_id",
+                      "type": "text",
+                      "value": "{{bookId}}"
+                    },
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "src": "fixtures/media/photo-gps.jpg"
+                    },
+                    {
+                      "key": "purpose",
+                      "type": "text",
+                      "value": "design"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "pm.collectionVariables.set('layoutDesignId', pm.response.json().data.id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "5. A uploads a photo (not a design image)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/media/create",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "media",
+                    "create"
+                  ]
+                },
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "yearbook_id",
+                      "type": "text",
+                      "value": "{{bookId}}"
+                    },
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "src": "fixtures/media/photo-gps.jpg"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "pm.collectionVariables.set('layoutPhotoId', pm.response.json().data.id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "6. A reads the layout: none, version 0",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/get?yearbook_id={{bookId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "get"
+                  ],
+                  "query": [
+                    {
+                      "key": "yearbook_id",
+                      "value": "{{bookId}}"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "const d = pm.response.json().data;",
+                      "pm.test('none yet', () => { pm.expect(d.layout).to.eql(null); pm.expect(d.version).to.eql(0); pm.expect(d.updated_at).to.eql(null); pm.expect(d.template_id).to.eql('memory-book'); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "7. A saves the first layout (base_version 0): text, design image item and background",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/save",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "save"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"base_version\":0,\"layout\":{\"v\":1,\"pages\":{\"cover\":{\"bg\":{\"media\":\"{{layoutDesignId}}\"},\"overrides\":{\"cover.photo\":{\"x\":120,\"w\":500,\"h\":500,\"cy\":400,\"r\":0,\"hidden\":false}},\"items\":[{\"id\":\"a1b2c3\",\"t\":\"text\",\"text\":\"Lớp 12A1 <b>x</b>\",\"font\":\"display\",\"size\":28,\"color\":\"accent\",\"align\":\"center\",\"bold\":true,\"x\":100,\"w\":400,\"h\":120,\"cy\":850,\"r\":-4},{\"id\":\"g7h8i9\",\"t\":\"image\",\"media\":\"{{layoutDesignId}}\",\"fit\":\"cover\",\"x\":0,\"w\":300,\"h\":200,\"cy\":500,\"r\":0}]}}}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "const d = pm.response.json().data;",
+                      "pm.test('version 1', () => { pm.expect(d.version).to.eql(1); pm.expect(d.updated_at).to.be.a('number'); });",
+                      "pm.collectionVariables.set('layoutVersion', d.version);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "8. A reads it back: same document, version 1",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/get?yearbook_id={{bookId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "get"
+                  ],
+                  "query": [
+                    {
+                      "key": "yearbook_id",
+                      "value": "{{bookId}}"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "const d = pm.response.json().data;",
+                      "pm.test('version 1', () => pm.expect(d.version).to.eql(1));",
+                      "const item = d.layout.pages.cover.items[0];",
+                      "pm.test('text kept as text', () => pm.expect(item.text).to.eql('Lớp 12A1 <b>x</b>'));",
+                      "pm.test('design image referenced', () => { pm.expect(d.layout.pages.cover.items[1].media).to.eql(pm.collectionVariables.get('layoutDesignId')); pm.expect(d.layout.pages.cover.bg.media).to.eql(pm.collectionVariables.get('layoutDesignId')); });",
+                      "pm.test('override kept', () => pm.expect(d.layout.pages.cover.overrides['cover.photo'].hidden).to.eql(false));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "9. The same base_version again: 409 with the stored document",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/save",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "save"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"base_version\":0,\"layout\":{\"v\":1,\"pages\":{\"cover\":{\"overrides\":{\"cover.photo\":{\"x\":120,\"w\":500,\"h\":500,\"cy\":400,\"r\":0,\"hidden\":false}},\"items\":[{\"id\":\"a1b2c3\",\"t\":\"text\",\"text\":\"Lớp 12A1 <b>x</b>\",\"font\":\"display\",\"size\":28,\"color\":\"accent\",\"align\":\"center\",\"bold\":true,\"x\":100,\"w\":400,\"h\":120,\"cy\":850,\"r\":-4}]}}}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 409', () => pm.response.to.have.status(409));",
+                      "pm.test('ERROR_VERSION_CONFLICT', () => pm.expect(pm.response.json().status).to.eql('ERROR_VERSION_CONFLICT'));",
+                      "const d = pm.response.json().data;",
+                      "pm.test('stored version and document', () => { pm.expect(d.version).to.eql(1); pm.expect(d.layout.pages.cover.items.length).to.eql(2); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "10. Save from the version read (1): version 2",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/save",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "save"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"base_version\":{{layoutVersion}},\"layout\":{\"v\":1,\"pages\":{\"cover\":{\"overrides\":{\"cover.photo\":{\"x\":120,\"w\":500,\"h\":500,\"cy\":400,\"r\":0,\"hidden\":false}},\"items\":[{\"id\":\"a1b2c3\",\"t\":\"text\",\"text\":\"Lớp 12A1 <b>x</b>\",\"font\":\"display\",\"size\":28,\"color\":\"accent\",\"align\":\"center\",\"bold\":true,\"x\":100,\"w\":400,\"h\":120,\"cy\":850,\"r\":-4}]}}}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "pm.test('version 2', () => pm.expect(pm.response.json().data.version).to.eql(2));",
+                      "pm.collectionVariables.set('layoutVersion', pm.response.json().data.version);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "11. book-data/get carries the layout and its version",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-data/get?yearbook_id={{bookId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-data",
+                    "get"
+                  ],
+                  "query": [
+                    {
+                      "key": "yearbook_id",
+                      "value": "{{bookId}}"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "const d = pm.response.json().data;",
+                      "pm.test('layout and version', () => { pm.expect(d.layout.v).to.eql(1); pm.expect(d.layout_version).to.eql(2); pm.expect(d.layout.pages.cover.items.length).to.eql(1); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "12. B cannot read, save or reset A's layout (404)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenB}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/get?yearbook_id={{bookId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "get"
+                  ],
+                  "query": [
+                    {
+                      "key": "yearbook_id",
+                      "value": "{{bookId}}"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 404', () => pm.response.to.have.status(404));",
+                      "pm.test('ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "13. B save is 404 too, also for a valid document",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenB}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/save",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "save"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"base_version\":{{layoutVersion}},\"layout\":{\"v\":1,\"pages\":{\"cover\":{\"overrides\":{\"cover.photo\":{\"x\":120,\"w\":500,\"h\":500,\"cy\":400,\"r\":0,\"hidden\":false}},\"items\":[{\"id\":\"a1b2c3\",\"t\":\"text\",\"text\":\"Lớp 12A1 <b>x</b>\",\"font\":\"display\",\"size\":28,\"color\":\"accent\",\"align\":\"center\",\"bold\":true,\"x\":100,\"w\":400,\"h\":120,\"cy\":850,\"r\":-4}]}}}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 404', () => pm.response.to.have.status(404));",
+                      "pm.test('ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "14. B reset is 404 and deletes nothing",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenB}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/reset",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "reset"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 404', () => pm.response.to.have.status(404));",
+                      "pm.test('ERROR_NOT_FOUND', () => pm.expect(pm.response.json().status).to.eql('ERROR_NOT_FOUND'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "15. A resets the layout",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/reset",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "reset"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "16. Reset again: still 200 (idempotent)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/reset",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "reset"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "17. A reads: none again",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/get?yearbook_id={{bookId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "get"
+                  ],
+                  "query": [
+                    {
+                      "key": "yearbook_id",
+                      "value": "{{bookId}}"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "pm.test('none', () => { pm.expect(pm.response.json().data.layout).to.eql(null); pm.expect(pm.response.json().data.version).to.eql(0); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "18. A stale save after the reset: 409 with null and 0",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/save",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "save"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"base_version\":{{layoutVersion}},\"layout\":{\"v\":1,\"pages\":{\"cover\":{\"overrides\":{\"cover.photo\":{\"x\":120,\"w\":500,\"h\":500,\"cy\":400,\"r\":0,\"hidden\":false}},\"items\":[{\"id\":\"a1b2c3\",\"t\":\"text\",\"text\":\"Lớp 12A1 <b>x</b>\",\"font\":\"display\",\"size\":28,\"color\":\"accent\",\"align\":\"center\",\"bold\":true,\"x\":100,\"w\":400,\"h\":120,\"cy\":850,\"r\":-4}]}}}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 409', () => pm.response.to.have.status(409));",
+                      "pm.test('ERROR_VERSION_CONFLICT', () => pm.expect(pm.response.json().status).to.eql('ERROR_VERSION_CONFLICT'));",
+                      "pm.test('row gone', () => { pm.expect(pm.response.json().data.version).to.eql(0); pm.expect(pm.response.json().data.layout).to.eql(null); });"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Edge cases",
+          "item": [
+            {
+              "name": "1. Login A",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session="
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"email\":\"{{emailA}}\",\"password\":\"{{password}}\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "const m = /smem_session=([^;]+)/.exec(pm.response.headers.get('Set-Cookie') || '');",
+                      "pm.collectionVariables.set('tokenA', m ? m[1] : '');"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "2. Unknown asset id",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/save",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "save"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"base_version\":0,\"layout\":{\"v\":1,\"pages\":{\"cover\":{\"items\":[{\"id\":\"abcdef\",\"t\":\"asset\",\"asset\":\"sticker.nope\",\"x\":0,\"w\":100,\"h\":100,\"cy\":500}]}}}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_INVALID_LAYOUT', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_LAYOUT'));",
+                      "pm.test('problem pages.cover.items[0].asset unknown_id', () => pm.expect(pm.response.json().data.problems.some(p => p.path === 'pages.cover.items[0].asset' && p.code === 'unknown_id')).to.eql(true));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "3. Tint on a non-tintable asset",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/save",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "save"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"base_version\":0,\"layout\":{\"v\":1,\"pages\":{\"cover\":{\"items\":[{\"id\":\"abcdef\",\"t\":\"asset\",\"asset\":\"sticker.gold-star\",\"tint\":\"accent\",\"x\":0,\"w\":100,\"h\":100,\"cy\":500}]}}}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_INVALID_LAYOUT', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_LAYOUT'));",
+                      "pm.test('problem pages.cover.items[0].tint not_tintable', () => pm.expect(pm.response.json().data.problems.some(p => p.path === 'pages.cover.items[0].tint' && p.code === 'not_tintable')).to.eql(true));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "4. A profile or note photo is not a design image",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/save",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "save"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"base_version\":0,\"layout\":{\"v\":1,\"pages\":{\"cover\":{\"items\":[{\"id\":\"abcdef\",\"t\":\"image\",\"media\":\"{{layoutPhotoId}}\",\"x\":0,\"w\":100,\"h\":100,\"cy\":500}]}}}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_INVALID_LAYOUT', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_LAYOUT'));",
+                      "pm.test('problem pages.cover.items[0].media not_own_media', () => pm.expect(pm.response.json().data.problems.some(p => p.path === 'pages.cover.items[0].media' && p.code === 'not_own_media')).to.eql(true));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "5. A background that is a photo",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/save",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "save"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"base_version\":0,\"layout\":{\"v\":1,\"pages\":{\"back\":{\"bg\":{\"media\":\"{{layoutPhotoId}}\"}}}}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_INVALID_LAYOUT', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_LAYOUT'));",
+                      "pm.test('problem pages.back.bg.media not_own_media', () => pm.expect(pm.response.json().data.problems.some(p => p.path === 'pages.back.bg.media' && p.code === 'not_own_media')).to.eql(true));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "6. Override of an element the template does not list",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/save",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "save"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"base_version\":0,\"layout\":{\"v\":1,\"pages\":{\"cover\":{\"overrides\":{\"cover.nope\":{\"x\":1}}}}}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_INVALID_LAYOUT', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_LAYOUT'));",
+                      "pm.test('problem pages.cover.overrides.cover.nope unknown_id', () => pm.expect(pm.response.json().data.problems.some(p => p.path === 'pages.cover.overrides.cover.nope' && p.code === 'unknown_id')).to.eql(true));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "7. Unknown key, wrong type and out of range",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/save",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "save"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"base_version\":0,\"layout\":{\"v\":1,\"pages\":{\"cover\":{\"items\":[{\"id\":\"abcdef\",\"t\":\"text\",\"text\":\"x\",\"z\":1,\"x\":0,\"w\":100,\"h\":100,\"cy\":500}]}}}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_INVALID_LAYOUT', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_LAYOUT'));",
+                      "pm.test('problem pages.cover.items[0].z unknown_key', () => pm.expect(pm.response.json().data.problems.some(p => p.path === 'pages.cover.items[0].z' && p.code === 'unknown_key')).to.eql(true));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "8. Box wider than 2000",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/save",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "save"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"base_version\":0,\"layout\":{\"v\":1,\"pages\":{\"cover\":{\"items\":[{\"id\":\"abcdef\",\"t\":\"text\",\"text\":\"x\",\"x\":0,\"w\":2001,\"h\":100,\"cy\":500}]}}}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_INVALID_LAYOUT', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_LAYOUT'));",
+                      "pm.test('problem pages.cover.items[0].w out_of_range', () => pm.expect(pm.response.json().data.problems.some(p => p.path === 'pages.cover.items[0].w' && p.code === 'out_of_range')).to.eql(true));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "9. Duplicate item id",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/save",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "save"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"base_version\":0,\"layout\":{\"v\":1,\"pages\":{\"cover\":{\"items\":[{\"id\":\"abcdef\",\"t\":\"text\",\"text\":\"x\",\"x\":0,\"w\":100,\"h\":100,\"cy\":500},{\"id\":\"abcdef\",\"t\":\"text\",\"text\":\"y\",\"x\":0,\"w\":100,\"h\":100,\"cy\":500}]}}}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_INVALID_LAYOUT', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_LAYOUT'));",
+                      "pm.test('problem pages.cover.items[1].id duplicate', () => pm.expect(pm.response.json().data.problems.some(p => p.path === 'pages.cover.items[1].id' && p.code === 'duplicate')).to.eql(true));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "10. Text over 500 code points",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/save",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "save"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"base_version\":0,\"layout\":{\"v\":1,\"pages\":{\"cover\":{\"items\":[{\"id\":\"abcdef\",\"t\":\"text\",\"text\":\"😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀\",\"x\":0,\"w\":100,\"h\":100,\"cy\":500}]}}}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_INVALID_LAYOUT', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_LAYOUT'));",
+                      "pm.test('problem pages.cover.items[0].text too_long', () => pm.expect(pm.response.json().data.problems.some(p => p.path === 'pages.cover.items[0].text' && p.code === 'too_long')).to.eql(true));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "11. Control character in the text",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/save",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "save"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"base_version\":0,\"layout\":{\"v\":1,\"pages\":{\"cover\":{\"items\":[{\"id\":\"abcdef\",\"t\":\"text\",\"text\":\"a\\u0007b\",\"x\":0,\"w\":100,\"h\":100,\"cy\":500}]}}}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_INVALID_LAYOUT', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_LAYOUT'));",
+                      "pm.test('problem pages.cover.items[0].text bad_text', () => pm.expect(pm.response.json().data.problems.some(p => p.path === 'pages.cover.items[0].text' && p.code === 'bad_text')).to.eql(true));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "12. Version 2",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/save",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "save"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"base_version\":0,\"layout\":{\"v\":2,\"pages\":{}}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_INVALID_LAYOUT', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_LAYOUT'));",
+                      "pm.test('problem v bad_version', () => pm.expect(pm.response.json().data.problems.some(p => p.path === 'v' && p.code === 'bad_version')).to.eql(true));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "13. 128 KiB + 1 byte of layout: 413 before the document is read",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/save",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "save"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"base_version\":0,\"layout\":{}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "// 131073 bytes of layout: blanks inside a valid document (the server counts the bytes as sent)",
+                      "const small = '{\"v\":1,\"pages\":{}}';",
+                      "const layout = '{' + ' '.repeat(131073 - small.length) + small.slice(1);",
+                      "pm.request.body.update('{\"yearbook_id\":\"' + pm.collectionVariables.get('bookId') + '\",\"base_version\":0,\"layout\":' + layout + '}');"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 413', () => pm.response.to.have.status(413));",
+                      "pm.test('ERROR_TOO_LARGE', () => pm.expect(pm.response.json().status).to.eql('ERROR_TOO_LARGE'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "14. No base_version: ERROR_PARAM",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/save",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "save"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"layout\":{\"v\":1,\"pages\":{}}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "15. Unknown request field: ERROR_PARAM",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/save",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "save"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"base_version\":0,\"layout\":{\"v\":1,\"pages\":{}},\"x\":1}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_PARAM', () => pm.expect(pm.response.json().status).to.eql('ERROR_PARAM'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "16. Anonymous: 401",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session="
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/get?yearbook_id={{bookId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "get"
+                  ],
+                  "query": [
+                    {
+                      "key": "yearbook_id",
+                      "value": "{{bookId}}"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 401', () => pm.response.to.have.status(401));",
+                      "pm.test('ERROR_UNAUTHORIZED', () => pm.expect(pm.response.json().status).to.eql('ERROR_UNAUTHORIZED'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "17. A saves a valid layout (nothing stored by the refusals above)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/save",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "save"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"base_version\":0,\"layout\":{\"v\":1,\"pages\":{\"cover\":{\"overrides\":{\"cover.photo\":{\"x\":120,\"w\":500,\"h\":500,\"cy\":400,\"r\":0,\"hidden\":false}},\"items\":[{\"id\":\"a1b2c3\",\"t\":\"text\",\"text\":\"Lớp 12A1 <b>x</b>\",\"font\":\"display\",\"size\":28,\"color\":\"accent\",\"align\":\"center\",\"bold\":true,\"x\":100,\"w\":400,\"h\":120,\"cy\":850,\"r\":-4}]}}}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "pm.test('version 1', () => pm.expect(pm.response.json().data.version).to.eql(1));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "18. Changing the template deletes the layout",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/yearbook/update",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "yearbook",
+                    "update"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"id\":\"{{bookId}}\",\"template_id\":\"navy-classic\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "19. The layout is gone, the design image stays",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/get?yearbook_id={{bookId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "get"
+                  ],
+                  "query": [
+                    {
+                      "key": "yearbook_id",
+                      "value": "{{bookId}}"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "pm.test('no layout, new template', () => { pm.expect(pm.response.json().data.layout).to.eql(null); pm.expect(pm.response.json().data.template_id).to.eql('navy-classic'); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "20. A template without a layout block cannot hold one",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/book-layout/save",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "book-layout",
+                    "save"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"yearbook_id\":\"{{bookId}}\",\"base_version\":0,\"layout\":{\"v\":1,\"pages\":{\"cover\":{\"overrides\":{\"cover.photo\":{\"x\":120,\"w\":500,\"h\":500,\"cy\":400,\"r\":0,\"hidden\":false}},\"items\":[{\"id\":\"a1b2c3\",\"t\":\"text\",\"text\":\"Lớp 12A1 <b>x</b>\",\"font\":\"display\",\"size\":28,\"color\":\"accent\",\"align\":\"center\",\"bold\":true,\"x\":100,\"w\":400,\"h\":120,\"cy\":850,\"r\":-4}]}}}}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 400', () => pm.response.to.have.status(400));",
+                      "pm.test('ERROR_INVALID_LAYOUT', () => pm.expect(pm.response.json().status).to.eql('ERROR_INVALID_LAYOUT'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "21. Back to memory-book",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/yearbook/update",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "yearbook",
+                    "update"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"id\":\"{{bookId}}\",\"template_id\":\"memory-book\"}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "22. The design image survived the template change",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "smem_session={{tokenA}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/media/get-list?yearbook_id={{bookId}}&purpose=design",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "media",
+                    "get-list"
+                  ],
+                  "query": [
+                    {
+                      "key": "yearbook_id",
+                      "value": "{{bookId}}"
+                    },
+                    {
+                      "key": "purpose",
+                      "value": "design"
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('OK', () => pm.expect(pm.response.json().status).to.eql('OK'));",
+                      "pm.test('still listed', () => pm.expect(pm.response.json().data.items.some(i => i.id === pm.collectionVariables.get('layoutDesignId'))).to.eql(true));"
                     ]
                   }
                 }

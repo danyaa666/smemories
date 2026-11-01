@@ -21,7 +21,7 @@ func TestMigrateTermsAcceptance(t *testing.T) {
 	if !has() {
 		t.Fatal("the test database lacks the terms columns")
 	}
-	for i := 0; i < 10 && has(); i++ { // newer migrations go down first
+	for i := 0; i < 30 && has(); i++ { // newer migrations go down first
 		if err := db.MigrateDown(ctx, d); err != nil {
 			t.Fatalf("down: %v", err)
 		}
@@ -59,7 +59,7 @@ func TestMigrateTermsAcceptance(t *testing.T) {
 	equalLines(t, "users after writes", dump(t, ctx, d, users), []string{"U1|NULL|NULL", "U2|2026-10-21|1791374400000"})
 	equalLines(t, "notes after writes", dump(t, ctx, d, notes), []string{"N1|NULL", "N2|2026-10-21"})
 
-	for i := 0; i < 10 && has(); i++ {
+	for i := 0; i < 30 && has(); i++ {
 		if err := db.MigrateDown(ctx, d); err != nil {
 			t.Fatalf("down again: %v", err)
 		}

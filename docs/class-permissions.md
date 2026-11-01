@@ -38,7 +38,7 @@ A class always has at least one admin. Roles are per class: the same person can 
 | Preview an invite link (`class-invite/lookup`, public; T-125) | 200 for a live token, else 404 | same | same | same | same (no session needed) |
 | Join with an invite (`class-invite/accept`, verified email; T-125) | 200, keeps `admin` | 200, keeps `student` | 200, becomes student | 200, becomes student | 401 |
 | Read class book data: profiles, approved notes, each student's design, class pages (`class-book/get`; T-027, T-146) | 200, approved content only | **403** | 404 | 404 | 401 |
-| Open a photo of a member's linked book (`media/get-content`; T-027) | 200 for the profile photo, the photos of **approved** notes and the **design images** (T-152) only, else 404 | 404 | 404 | 404 | 401 |
+| Open a photo of a member's linked book (`media/get-content`; T-027) | 200 for the profile photo, the photos of **approved** notes and the **design images the member's layout references** (T-152, T-153) only, else 404 | 404 | 404 | 404 | 401 |
 | Read a student's pending or hidden notes, their photos, note-link tokens, the cover or any other photo | **never** | own only, via the normal yearbook endpoints | no | no | no |
 | Edit a student's yearbook | **never** | own only | no | no | no |
 | List, create, change, delete class pages (`class-page/get-list`, `create`, `update`, `delete`; T-127) | 200 | **403** | 404 | 404 | 401 |
@@ -156,8 +156,8 @@ yearbooks (`internal/class/book.go`); nothing is copied, so moderation is applie
 5. **The one read path into a member's photos** (`media.Store.readable`, one SQL statement, read only): the caller is an admin of a class in which the media's
    yearbook is a member's linked page **and the member owns it**, and the media is that yearbook's owner profile photo, a photo attached to one of its
    **approved** notes, or one of its **design images** (T-152: the backgrounds and decorations the student uploaded for the layout editor, `purpose = 'design'`; a design image is
-   never a profile photo or a note photo, so the first two clauses never match it). A design image is readable whether or not a layout uses it yet: the layout table does not exist
-   at the time of T-152, and narrowing the clause to the images a layout references is a follow-up of the layout task. Everything else is the 404 of a photo that does not exist, byte for byte: a pending or hidden note's photo, the cover, a photo no
+   never a profile photo or a note photo, so the first two clauses never match it). A design image is readable only while the member's stored layout references it (T-153: `bg.media` or an `image` item in `book_layout_tab.layout_json`; an image
+   the student uploaded but did not place, one they removed from the layout, or one named only inside a text item is a 404 for the admin, `TestAdminMediaReadPath`). Everything else is the 404 of a photo that does not exist, byte for byte: a pending or hidden note's photo, the cover, a photo no
    note uses, an unlinked yearbook, a removed member's or a former member's yearbook, a book linked to another class, and the same photo for an admin of another
    class or for a student. A note hidden, deleted or un-approved, a replaced profile photo, a member who leaves or is removed, and a demoted admin take effect on the next
    request (no cache on the server). A photo served to a class admin through this path is `Cache-Control: private, no-store` (T-133): the student can hide a note at any moment and the

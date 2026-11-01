@@ -78,6 +78,26 @@ func (e *env) designImage(book string) string {
 	return id
 }
 
+// layoutRef stores a layout for the book (as book-layout/save would) that references the media ids as image items, and the first
+// background-wise too when bg is not empty; text is the text of one more item (the document is canonical compact JSON).
+func (e *env) layoutRef(book, bg, text string, imageIDs ...string) {
+	e.t.Helper()
+	var items []string
+	for i, id := range imageIDs {
+		items = append(items, fmt.Sprintf(`{"id":"img%03d","t":"image","media":%q,"x":0,"w":300,"h":200,"cy":500}`, i, id))
+	}
+	tb, _ := json.Marshal(text)
+	items = append(items, fmt.Sprintf(`{"id":"txt000","t":"text","text":%s,"x":0,"w":300,"h":200,"cy":500}`, tb))
+	page := `{"items":[` + strings.Join(items, ",") + `]`
+	if bg != "" {
+		page += `,"bg":{"media":"` + bg + `"}`
+	}
+	e.exec(`UPDATE yearbook_tab SET template_id = 'memory-book' WHERE id = ?`, e.bookRow(book))
+	e.exec(`DELETE FROM book_layout_tab WHERE yearbook_id = ?`, e.bookRow(book))
+	e.exec(`INSERT INTO book_layout_tab (yearbook_id, template_id, layout_json, version, created_at, updated_at) VALUES (?, 'memory-book', ?, 1, 1, 1)`,
+		e.bookRow(book), `{"v":1,"pages":{"cover":`+page+`}}}`)
+}
+
 func (e *env) collectionOf(book string) uint64 {
 	e.t.Helper()
 	var id uint64
@@ -466,8 +486,17 @@ func TestAdminMediaReadPath(t *testing.T) {
 		e.profile(book, "X", ph)
 		e.note(book, "approved", 1, "n", ph)
 	}
-	// T-152: design images (backgrounds and decorations of a layout) of every book, none used by a profile or a note
-	sbDesign, cbDesign, rbDesign, ubDesign, obDesign := e.designImage(sb), e.designImage(cb), e.designImage(rb), e.designImage(ub), e.designImage(ob)
+	// T-152, T-153: design images (backgrounds and decorations of a layout) of every book, none used by a profile or a note. The layouts
+	// of sb and cb reference one image each (sb also a background, and a text that imitates a reference to a third image); the layouts
+	// of the unlinked, removed and other-class books reference theirs too, so only the membership keeps those out.
+	sbDesign, sbBg, sbUnused, sbMimic := e.designImage(sb), e.designImage(sb), e.designImage(sb), e.designImage(sb)
+	cbDesign, cbUnused := e.designImage(cb), e.designImage(cb)
+	rbDesign, ubDesign, obDesign := e.designImage(rb), e.designImage(ub), e.designImage(ob)
+	e.layoutRef(sb, sbBg, `"media":"`+sbMimic+`"`, sbDesign)
+	e.layoutRef(cb, "", "x", cbDesign)
+	e.layoutRef(rb, "", "x", rbDesign)
+	e.layoutRef(ub, "", "x", ubDesign)
+	e.layoutRef(ob, "", "x", obDesign)
 	e.setBook(student, cls, sb).status(200, "OK")
 	e.setBook(classmate, cls, cb).status(200, "OK")
 	e.setBook(removed, cls, rb).status(200, "OK")
@@ -483,16 +512,20 @@ func TestAdminMediaReadPath(t *testing.T) {
 	e.wantPhoto(student, hidden)
 	e.wantPhoto(student, orphan)
 	e.wantPhoto(student, cover)
-	// T-152 AC3: the admin reads the design images of members whose book is in the class (also the ones no layout uses yet), the
-	// owner reads their own, and nobody else reads any
+	// T-153 AC6: the admin reads a design image of a member whose book is in the class only while the member's layout references it
+	// (as an image item or as a background); the owner reads all of theirs
 	e.wantPhoto(admin, sbDesign)
+	e.wantPhoto(admin, sbBg)
 	e.wantPhoto(admin, cbDesign)
-	e.wantPhoto(student, sbDesign)
+	for _, id := range []string{sbDesign, sbBg, sbUnused, sbMimic} {
+		e.wantPhoto(student, id)
+	}
 	// AC2: nothing else, and every refusal is the answer for a photo that does not exist
 	for what, id := range map[string]string{
 		"pending note photo": pending, "hidden note photo": hidden, "photo of no note": orphan, "cover photo": cover,
 		"unlinked yearbook": ubPhoto, "removed member": rbPhoto, "book linked to another class": obPhoto,
-		"design image of an unlinked yearbook": ubDesign, "design image of a removed member": rbDesign, "design image of another class": obDesign,
+		"design image no layout references": sbUnused, "design image of another member no layout references": cbUnused,
+		"design image named only in a text": sbMimic, "design image of an unlinked yearbook": ubDesign, "design image of a removed member": rbDesign, "design image of another class": obDesign,
 	} {
 		e.wantNoPhoto(admin, id, what)
 	}
@@ -513,6 +546,15 @@ func TestAdminMediaReadPath(t *testing.T) {
 	e.wantNoPhoto(admin, sbDesign, "demoted admin")
 	e.exec(`UPDATE class_member_tab SET role = 'admin' WHERE class_id = (SELECT id FROM class_tab WHERE public_id = ?) AND user_id = ?`, cls, admin.row)
 	e.wantPhoto(admin, pp)
+	// the layout stops referencing an image: the admin's access to it ends at once, and starts at once for one it begins to reference
+	e.layoutRef(sb, "", "x", sbUnused)
+	e.wantNoPhoto(admin, sbDesign, "image dropped from the layout")
+	e.wantNoPhoto(admin, sbBg, "background dropped from the layout")
+	e.wantPhoto(admin, sbUnused)
+	e.exec(`DELETE FROM book_layout_tab WHERE yearbook_id = ?`, e.bookRow(sb))
+	e.wantNoPhoto(admin, sbUnused, "layout reset")
+	e.layoutRef(sb, sbBg, "x", sbDesign)
+	e.wantPhoto(admin, sbDesign)
 	// unlinking the page ends the admin's access to its design images at once
 	e.setBook(student, cls, nil).status(200, "OK")
 	e.wantNoPhoto(admin, sbDesign, "unlinked page")

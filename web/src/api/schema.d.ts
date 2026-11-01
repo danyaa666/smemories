@@ -718,6 +718,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/book-layout/get": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the free layout of a book
+         * @description Called by the signed-in owner's layout editor (epic E09 stage 2, ADR 0004) with one request: the stored layout document of the book (what the student moved, hid or added on the pages), its version and when it was last saved. `layout` is null and `version` 0 while the book has none. The document is the one the server stored, in canonical form (compact, keys sorted, text normalised); see `BookLayoutDocument`. Only the owner can read it: a missing book, someone else's and a class admin's all answer `ERROR_NOT_FOUND`. `yearbook_id` must be a canonical ULID (else `ERROR_PARAM`). No email verification is needed. Safe to repeat. What the print renders is `layout` of `GET /api/book-data/get`, which is this document re-validated.
+         */
+        get: operations["getBookLayout"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/book-layout/save": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Save the free layout of a book (full replace, optimistic concurrency)
+         * @description Called by the signed-in owner's layout editor (autosave). Replaces the whole layout document of the book and creates the row when there is none. `base_version` is the version the editor read (0 when there was none): the save succeeds only if it equals the stored version, as one conditional statement, so two tabs cannot both win. A stale `base_version` is `ERROR_VERSION_CONFLICT` (409) and its `data` carries the stored `{version, layout}` for the editor to start from; nothing is stored. The document is validated against the `design.layout` block of the book's current template, the asset registry and the owner's own design images (`purpose=design` of this book; a profile or note photo, another book's or user's image and an unknown id are refused): any unknown key, id or type, a number that is not an integer, a value out of range, a text over 500 code points or with a control character (newline is fine), a duplicate item id, more than 40 items on a page kind or 150 in the document, or a template without a layout block is `ERROR_INVALID_LAYOUT` (400) whose `data.problems` lists at most 20 `{path, code}` entries; nothing is stored. Text is plain and stored normalised (NFC, trimmed); the web renders it as text, never as markup. The layout is at most 131072 bytes as sent (`ERROR_TOO_LARGE`, 413, also for a request body over about 132 KiB, answered before the document is read). A missing book and someone else's both answer `ERROR_NOT_FOUND`, also for an invalid document. Limited to `SMEM_RATE_LAYOUT_SAVE_PER_MINUTE` saves per minute per user (default 60) and 20 per 10 seconds (`ERROR_RATE_LIMITED`, with `Retry-After`; fails open when Redis is down). A request with the session cookie must come from an allowed Origin. Changing the book's template with `POST /api/yearbook/update` deletes the layout.
+         */
+        post: operations["saveBookLayout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/book-layout/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Go back to the template's own pages
+         * @description Called by the signed-in owner's layout editor ("reset layout"). Deletes the stored layout of the book (and its version) so the template's own pages print again. It succeeds, and changes nothing, when the book has no layout (safe to repeat). It cannot be undone; the next save starts at version 1, so an editor that still holds an older version gets `ERROR_VERSION_CONFLICT` with `layout: null`. A missing book and someone else's both answer `ERROR_NOT_FOUND`. A request with the session cookie must come from an allowed Origin.
+         */
+        post: operations["resetBookLayout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/book-export/get-text": {
         parameters: {
             query?: never;
@@ -1917,6 +1977,31 @@ export interface components {
                 /** @description Choice ids, 1 to 8; the first is the default. */
                 choices: string[];
             }[];
+            /** @description Optional (T-153). What the free-layout editor may place and move: the page kinds with their editable element ids, the text fonts and colour tokens, the text size range in points and the safe margin in millimetres (an editor guide only). */
+            layout?: {
+                /** @description The kinds of page the student may put items on, 1 to 8. */
+                page_kinds: {
+                    /** @description Page kind id. */
+                    id: string;
+                    /** @description True for a kind printed on many pages (the notes pages): its items appear on each. */
+                    repeats: boolean;
+                    /** @description Template element ids the student may move */
+                    editable: string[];
+                }[];
+                /** @description Font ids a text box may use. */
+                text_fonts: string[];
+                /** @description Colour token names a text, tint or background may use. */
+                colors: string[];
+                /** @description The range of a text size in points. */
+                text_size: {
+                    /** @description Smallest size in points. */
+                    min: number;
+                    /** @description Largest size in points. */
+                    max: number;
+                };
+                /** @description Editor guide in millimetres; nothing is clamped to it. */
+                safe_margin_mm: number;
+            };
         };
         BookDesignResponse: {
             /**
@@ -1970,6 +2055,179 @@ export interface components {
                 [key: string]: string;
             };
         };
+        /** @description The layout document (version 1), at most 131072 bytes. Boxes use ADR 0004 units: `x`, `w`, `h` in thousandths of the page width, `cy` the vertical centre in thousandths of the page height, `r` degrees about the centre (-180..180); `w` and `h` are 10..2000 and a box may leave the page by at most half of its size. Items are drawn in array order (later on top). Page kinds, editable element ids, fonts, colour tokens and text sizes come from the template's `design.layout` block. Unknown keys are errors. */
+        BookLayoutDocument: {
+            /**
+             * @description Document version.
+             * @constant
+             */
+            v: 1;
+            /** @description Page kind id (`cover`, `profile`, `notes`, `back` for Memory Book) to its content; a kind that is not listed has none. */
+            pages: {
+                [key: string]: {
+                    /** @description Optional page background, exactly one of `asset` (an id of the asset registry), `media` (one of the owner's design images) or `color` (a colour token). */
+                    bg?: {
+                        /** @description An id of the asset registry. */
+                        asset?: string;
+                        /** @description The id of one of the owner design images of this book. */
+                        media?: string;
+                        /** @description A colour token of design.layout.colors. */
+                        color?: string;
+                    };
+                    /** @description Template elements moved, resized, rotated or hidden, by element id (only the ids the kind lists as editable). Every key is optional. */
+                    overrides?: {
+                        [key: string]: {
+                            /** @description Left edge, thousandths of the page width; at most half the box may leave the page. */
+                            x?: number;
+                            /** @description Width, thousandths of the page width, 10 to 2000. */
+                            w?: number;
+                            /** @description Height, thousandths of the page width, 10 to 2000. */
+                            h?: number;
+                            /** @description Vertical centre, thousandths of the page height. */
+                            cy?: number;
+                            /** @description Rotation in degrees about the centre, -180 to 180. */
+                            r?: number;
+                            /** @description True to leave the template element out. */
+                            hidden?: boolean;
+                        };
+                    };
+                    /** @description Added items, at most 40 per page kind and 150 in the document. */
+                    items?: components["schemas"]["BookLayoutItem"][];
+                };
+            };
+        };
+        /** @description An added item. `t` selects the kind: `text` (`text` at most 500 code points, plain text; optional `font`, `size` pt, `color`, `align`, `bold`), `asset` (`asset` an id of the asset registry; optional `tint` colour token, only for a tintable asset) or `image` (`media` the id of one of the owner's design images of this book; optional `fit` and `radius` 0..500). `id` is 6 to 26 characters of `[A-Za-z0-9]`, unique in the document. `x`, `w`, `h`, `cy` are required, `r` defaults to 0. */
+        BookLayoutItem: {
+            /** @description Item id, 6 to 26 characters of A-Za-z0-9, unique in the document. */
+            id: string;
+            /**
+             * @description Item kind.
+             * @enum {string}
+             */
+            t: "text" | "asset" | "image";
+            /** @description Left edge, thousandths of the page width; at most half the box may leave the page. */
+            x: number;
+            /** @description Width, thousandths of the page width, 10 to 2000. */
+            w: number;
+            /** @description Height, thousandths of the page width, 10 to 2000. */
+            h: number;
+            /** @description Vertical centre, thousandths of the page height. */
+            cy: number;
+            /** @description Rotation in degrees about the centre, -180 to 180. */
+            r?: number;
+            /** @description Plain text, at most 500 code points; newline allowed, other control characters are not. */
+            text?: string;
+            /** @description A font id of `design.layout.text_fonts`. */
+            font?: string;
+            /** @description Points, within `design.layout.text_size`. */
+            size?: number;
+            /** @description A colour token of `design.layout.colors`. */
+            color?: string;
+            /**
+             * @description Text alignment.
+             * @enum {string}
+             */
+            align?: "left" | "center" | "right";
+            /** @description True for bold text. */
+            bold?: boolean;
+            /** @description An id of the asset registry. */
+            asset?: string;
+            /** @description A colour token of design.layout.colors; only for a tintable asset. */
+            tint?: string;
+            /** @description The id of one of the owner design images of this book. */
+            media?: string;
+            /**
+             * @description How the image fills its box.
+             * @enum {string}
+             */
+            fit?: "cover" | "contain";
+            /** @description Corner radius, 0 to 500. */
+            radius?: number;
+        };
+        BookLayoutResponse: {
+            /**
+             * @description Always `OK` on success.
+             * @constant
+             */
+            status: "OK";
+            /** @description The stored layout and its version. */
+            data: {
+                /** @description The stored layout document; null when the book has none. */
+                layout: components["schemas"]["BookLayoutDocument"] | null;
+                /**
+                 * Format: int64
+                 * @description Stored version, 1 after the first save and +1 per save; 0 when there is no layout. Send it as `base_version`.
+                 */
+                version: number;
+                /** @description The book's current template; null when it has none. */
+                template_id: string | null;
+                /**
+                 * Format: int64
+                 * @description When the layout was last saved, Unix ms; null without a layout.
+                 */
+                updated_at: number | null;
+            };
+        };
+        BookLayoutSaveRequest: {
+            /** @description Required. ULID of the yearbook. */
+            yearbook_id: string;
+            /**
+             * Format: int64
+             * @description Required. The version the editor read; 0 when the book had no layout.
+             */
+            base_version: number;
+            layout: components["schemas"]["BookLayoutDocument"];
+        };
+        BookLayoutResetRequest: {
+            /** @description Required. ULID of the yearbook. */
+            yearbook_id: string;
+        };
+        BookLayoutSavedResponse: {
+            /**
+             * @description Always `OK` on success.
+             * @constant
+             */
+            status: "OK";
+            /** @description The new version. */
+            data: {
+                /**
+                 * Format: int64
+                 * @description The new stored version.
+                 */
+                version: number;
+                /**
+                 * Format: int64
+                 * @description Unix ms.
+                 */
+                updated_at: number;
+            };
+        };
+        /** @description `ERROR_INVALID_LAYOUT` (with `data.problems`) or `ERROR_PARAM` (no `data`). */
+        BookLayoutInvalidError: components["schemas"]["ApiError"] & {
+            /** @description Present for `ERROR_INVALID_LAYOUT`. */
+            data?: {
+                /** @description What is wrong, at most 20. `path` is like `pages.cover.items[2].x`; `code` is one of invalid_json, bad_version, wrong_type, unknown_key, missing, out_of_range, too_long, too_many, bad_text, bad_id, duplicate, unknown_id, not_tintable, not_own_media, not_one_of, template_not_customisable. */
+                problems?: {
+                    /** @description Where the problem is, like pages.cover.items[2].x. */
+                    path: string;
+                    /** @description What is wrong with it. */
+                    code: string;
+                }[];
+            };
+        };
+        /** @description `ERROR_VERSION_CONFLICT`: `data` is the stored version and document (`version` 0 and `layout` null when the row is gone). */
+        BookLayoutConflictError: components["schemas"]["ApiError"] & {
+            /** @description The stored version and document. */
+            data: {
+                /**
+                 * Format: int64
+                 * @description Stored version; 0 when the row is gone.
+                 */
+                version: number;
+                /** @description The stored layout document; null when the row is gone. */
+                layout: components["schemas"]["BookLayoutDocument"] | null;
+            };
+        };
         BookDataResponse: {
             /**
              * @description Always `OK` on success.
@@ -1978,6 +2236,13 @@ export interface components {
             status: "OK";
             /** @description The book as the renderer needs it. */
             data: {
+                /** @description The owner's free layout (epic E09 stage 2, T-153), re-validated on every read: a part that no longer validates (an asset removed from the registry, a deleted design image, a page kind or element the template dropped) is left out instead of failing the page. Up to 128 KiB. Null when there is none, when the book's template has no layout block or when nothing of it validates. Always present in the answer; not listed as `required` here only so that the web fixtures written before T-153 keep type-checking (the runtime task T-154 reads it and may tighten this). */
+                layout?: components["schemas"]["BookLayoutDocument"] | null;
+                /**
+                 * Format: int64
+                 * @description Stored version of `layout`; 0 when `layout` is null.
+                 */
+                layout_version?: number;
                 /** @description The owner's customisation of the book (epic E09), resolved against the template's design block so the renderer needs no manifest. Null when the book has no template or its template cannot be customised. */
                 design: components["schemas"]["BookDesignResolved"] | null;
                 /** @description The yearbook's printed information. */
@@ -4008,6 +4273,117 @@ export interface operations {
             413: components["responses"]["ApiTooLarge"];
             415: components["responses"]["ApiUnsupportedMediaType"];
             429: components["responses"]["ApiRateLimited"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    getBookLayout: {
+        parameters: {
+            query: {
+                /** @description Yearbook ULID (canonical upper case). */
+                yearbook_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The stored layout. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookLayoutResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    saveBookLayout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BookLayoutSaveRequest"];
+            };
+        };
+        responses: {
+            /** @description Saved. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookLayoutSavedResponse"];
+                };
+            };
+            /** @description `ERROR_PARAM` (malformed body, missing `base_version` or `layout`, bad `yearbook_id`) or `ERROR_INVALID_LAYOUT` with `data.problems`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookLayoutInvalidError"];
+                };
+            };
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            /** @description `ERROR_VERSION_CONFLICT`: another tab or request saved first. `data` is the stored version and document. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookLayoutConflictError"];
+                };
+            };
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
+            429: components["responses"]["ApiRateLimited"];
+            500: components["responses"]["ApiInternal"];
+            503: components["responses"]["ApiSessionStoreUnavailable"];
+        };
+    };
+    resetBookLayout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BookLayoutResetRequest"];
+            };
+        };
+        responses: {
+            /** @description The layout is gone (or there was none). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmptyResponse"];
+                };
+            };
+            400: components["responses"]["ApiBadRequest"];
+            401: components["responses"]["ApiUnauthorized"];
+            403: components["responses"]["ApiForbidden"];
+            404: components["responses"]["ApiNotFound"];
+            413: components["responses"]["ApiTooLarge"];
+            415: components["responses"]["ApiUnsupportedMediaType"];
             500: components["responses"]["ApiInternal"];
             503: components["responses"]["ApiSessionStoreUnavailable"];
         };
