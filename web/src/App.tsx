@@ -31,6 +31,7 @@ import { Yearbooks } from "./pages/Yearbooks";
 // The book screen carries its own CSS and the book fonts, so it is a separate chunk (T-058).
 const Book = lazy(() => import("./pages/Book").then((m) => ({ default: m.Book })));
 const Customise = lazy(() => import("./pages/Customise").then((m) => ({ default: m.Customise })));
+const Editor = lazy(() => import("./pages/Editor").then((m) => ({ default: m.Editor })));
 const ClassBook = lazy(() => import("./pages/ClassBook").then((m) => ({ default: m.ClassBook })));
 // Review page for the asset pack (T-151); `import.meta.env.DEV` is false in a build, so the page and its chunk are not shipped.
 const ContactSheet = import.meta.env.DEV ? lazy(() => import("./book/assets/ContactSheet")) : null;
@@ -97,6 +98,14 @@ export function App() {
             element={
               <Suspense fallback={null}>
                 <Customise />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/yearbooks/:id/editor"
+            element={
+              <Suspense fallback={null}>
+                <Editor />
               </Suspense>
             }
           />

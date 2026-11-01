@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   addItem,
+  clearOverride,
   emptyDoc,
   newItemId,
   removeItem,
@@ -201,6 +202,21 @@ describe("setOverride", () => {
   it("puts a back-page element on its own page kind", () => {
     const d = run(setOverride("back.pact", { hidden: true }), emptyDoc()).doc;
     expect(Object.keys(d.pages)).toEqual(["back"]);
+  });
+});
+
+describe("clearOverride", () => {
+  it("drops one override, keeps the others, and removes an empty map", () => {
+    const d1 = run(setOverride("cover.title", { x: 10, hidden: true }), emptyDoc()).doc;
+    const d2 = run(setOverride("cover.photo", { x: 20 }), d1).doc;
+    const d3 = run(clearOverride("cover.title"), d2).doc;
+    expect(d3.pages.cover?.overrides).toEqual({ "cover.photo": { x: 20 } });
+    const d4 = run(clearOverride("cover.photo"), d3).doc;
+    expect(d4.pages.cover).toEqual({});
+  });
+  it("is a no-op for an element with no override", () => {
+    const d = with3();
+    expect(run(clearOverride("cover.title"), d).doc).toBe(d);
   });
 });
 

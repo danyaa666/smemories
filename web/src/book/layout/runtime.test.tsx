@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { render } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { BookData } from "../../api/book";
@@ -66,6 +67,10 @@ const html = (b: BookData) =>
   renderToStaticMarkup(
     <BookPages data={b} size={b.yearbook.page_size} t={t} eager={false} track={() => {}} />,
   );
+/** The book in a real DOM: a moved element is drawn through a portal, which the server renderer cannot do. */
+const dom = (b: BookData) =>
+  render(<BookPages data={b} size={b.yearbook.page_size} t={t} eager={false} track={() => {}} />)
+    .container;
 const count = (s: string, needle: string) => s.split(needle).length - 1;
 
 const TEXT = {
@@ -239,18 +244,38 @@ describe("items", () => {
 describe("overrides", () => {
   it("a moved element is drawn in its own box, absolutely placed and rotated, with its data", () => {
     const ov = { x: 120, w: 500, h: 500, cy: 400, r: 5 };
-    const out = html(book(doc({ cover: { overrides: { "cover.photo": ov } } })));
+    const el = dom(
+      book(doc({ cover: { overrides: { "cover.photo": ov } } })),
+    ).querySelector<HTMLElement>('[data-layout-id="cover.photo"]')!;
     const r = place(ov, pageBox("A5"));
-    expect(out).toContain(
-      `data-layout-id="cover.photo" class="mb-ov" style="position:absolute;left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;transform:rotate(5deg)"`,
+    expect(el.className).toBe("mb-ov");
+    expect(el.getAttribute("style")).toBe(
+      `position: absolute; left: ${r.left}px; top: ${r.top}px; width: ${r.width}px; height: ${r.height}px; transform: rotate(5deg);`,
     );
-    expect(out).toContain("mb-cover-photo");
+    expect(el.querySelector(".mb-cover-photo")).not.toBeNull();
   });
   it("an override that omits a field starts from the template's own place", () => {
-    const out = html(book(doc({ cover: { overrides: { "cover.sticker": { x: 100 } } } })));
-    expect(out).toContain('data-layout-id="cover.sticker" class="mb-ov"');
-    expect(out).toContain("transform:rotate(10deg)"); // the sticker's own tilt
-    expect(out).toContain("viết"); // the sticker keeps its text (data binding)
+    const el = dom(
+      book(doc({ cover: { overrides: { "cover.sticker": { x: 100 } } } })),
+    ).querySelector('[data-layout-id="cover.sticker"]')!;
+    expect(el.className).toBe("mb-ov");
+    expect(el.getAttribute("style")).toContain("rotate(10deg)"); // the sticker's own tilt
+    expect(el.textContent).toContain("viết"); // the sticker keeps its text (data binding)
+  });
+  it("every editable element moved is a direct child of its page, whatever positioned ancestor it has in the template (T-159 R1)", () => {
+    const kinds = manifest.design.layout.page_kinds;
+    const overrides = (ids: string[]) => Object.fromEntries(ids.map((id) => [id, { x: 100 }]));
+    const pages = Object.fromEntries(
+      kinds.map((k) => [k.id, { overrides: overrides(k.editable) }]),
+    ) as LayoutDoc["pages"];
+    const root = dom(book(doc(pages)));
+    const ids = kinds.flatMap((k) => k.editable);
+    expect(ids.length).toBeGreaterThan(0);
+    for (const id of ids) {
+      const els = root.querySelectorAll(`[data-layout-id="${id}"]`);
+      expect(els.length, id).toBeGreaterThan(0);
+      for (const el of els) expect(el.parentElement?.classList.contains("mb-page"), id).toBe(true);
+    }
   });
   it("hidden leaves the element out; an element in the flow leaves its blank, one that is absolute does not", () => {
     const flow = html(book(doc({ cover: { overrides: { "cover.title": { hidden: true } } } })));

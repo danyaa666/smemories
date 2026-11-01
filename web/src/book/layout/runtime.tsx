@@ -1,11 +1,14 @@
 import {
   createContext,
   useContext,
+  useCallback,
   useEffect,
   useMemo,
+  useState,
   type CSSProperties,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import type { BookData } from "../../api/book";
 import { AssetSvg, getAsset, loadSvg } from "../assets";
 import { Photo, useBookEnv } from "../env";
@@ -82,6 +85,13 @@ export function naturalBox(n: Natural): Box {
 export function Editable({ layoutId: id, children }: { layoutId: string; children: ReactNode }) {
   const ctx = useLayout();
   const { size } = useBookEnv();
+  // A moved box is placed in page units, so it is drawn straight into the page element (a portal): a positioned ancestor of the template
+  // (`.mb-cover-head`, `.mb-flow`) would otherwise offset it (T-159 rework 1). The marker only tells where the page is.
+  const [page, setPage] = useState<Element | null>(null);
+  const mark = useCallback(
+    (n: HTMLSpanElement | null) => setPage(n?.closest(".mb-page") ?? null),
+    [],
+  );
   const ov = ctx?.doc.pages[kindOf(id)]?.overrides?.[id];
   const nat = ctx?.spec.natural[id];
   if (!ctx) return <>{children}</>; // no layout: the page is exactly what it always was
@@ -100,14 +110,16 @@ export function Editable({ layoutId: id, children }: { layoutId: string; childre
     cy: ov.cy ?? base.cy,
     r: ov.r ?? base.r,
   };
+  const drawn = (
+    <div data-layout-id={id} className="mb-ov" style={boxStyle(box, pageBox(size))}>
+      {children}
+    </div>
+  );
   return (
     <>
       {nat.flow && <div aria-hidden="true" style={{ flex: "none", width: nat.w, height: nat.h }} />}
-      {!ov.hidden && (
-        <div data-layout-id={id} className="mb-ov" style={boxStyle(box, pageBox(size))}>
-          {children}
-        </div>
-      )}
+      {!ov.hidden && <span ref={mark} hidden />}
+      {!ov.hidden && page && createPortal(drawn, page)}
     </>
   );
 }

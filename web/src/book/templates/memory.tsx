@@ -737,7 +737,7 @@ function Back({ data }: { data: BookData }) {
 
 /**
  * What the layout layer needs of this template (T-154). `colors` and `fonts` are the CSS behind the manifest's `design.layout` tokens; `natural` lists the
- * elements the student may move (the manifest's `editable` ids; a test pins them) with the place each has on the A5 page, in design px, which an override
+ * elements the student may move (the manifest's `editable` ids; a test pins them) with the place each has on the A5 page (in the order the page draws them: the editor's Tab key follows it), in design px, which an override
  * that omits a field starts from. Sizes come from the template's CSS; the tops of the elements in the page's flow are approximate (the editor writes every field from the element's real box, so an omitted field only matters for a hand-made document). `flow` elements leave a blank of that size when moved.
  */
 const LAYOUT: TemplateLayout = {
@@ -750,9 +750,9 @@ const LAYOUT: TemplateLayout = {
   },
   fonts: { display: "var(--mb-disp)", body: "var(--mb-body)" },
   natural: {
+    "cover.title": { left: 96, top: 166, w: 672, h: 120, flow: true },
     "cover.photo": { left: 190, top: 410, w: 370, h: 400, r: -3 },
     "cover.sticker": { left: 560, top: 680, w: 176, h: 176, r: 10 },
-    "cover.title": { left: 96, top: 166, w: 672, h: 120, flow: true },
     "profile.heading": { left: 48, top: 52, w: 720, h: 84, flow: true },
     "profile.photo": { left: 48, top: 154, w: 240, h: 290, r: -2, flow: true },
     "notes.heading": { left: 48, top: 52, w: 596, h: 84, flow: true },

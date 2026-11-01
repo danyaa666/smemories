@@ -9,7 +9,7 @@ import path from "node:path";
 import { after, before, describe, test } from "node:test";
 import { chromium } from "playwright";
 import { CLASS_BOOK_CASES, DESIGN_IMAGE, DESIGN_TITLE, HIDDEN_PHOTOS, LAYOUT_MARK, classBookPages, designOf, makeBook, makeClassBook, makeDesignClassBook, makeLayout, photoId, SIGNATURES, studentName } from "./fixture.mjs";
-import { BASE, fitBoxes, inkIn, inspect, open, openClassBook, raster, savePdf, serveBook, signatureBoxes, startServer, text, words } from "./lib.mjs";
+import { BASE, fitBoxes, inkIn, inspect, open, openClassBook, openEditor, settleStage, raster, savePdf, serveBook, signatureBoxes, startServer, text, words } from "./lib.mjs";
 
 const squash = (x) => x.replace(/\s+/g, "");
 const PT = { A5: [419.53, 595.28], A4: [595.28, 841.89], Letter: [612, 792] }; // exact sizes in points
@@ -1185,6 +1185,113 @@ describe("layout layer: the printed page is the page on screen (T-154)", () => {
       const sticker = boxes.find((b) => b.id === "sticker1");
       assert.ok(Math.abs(sticker.w - 0.16) < 0.001 && Math.abs(sticker.left - 0.7 * 816) < 0.5, `the sticker's box is x 700 / w 160 of 1000: ${JSON.stringify(sticker)}`);
       await r.page.close();
+    });
+  }
+
+  // T-159 rework 1 (R1): a moved template element is drawn where its stored box says. Every editable id gets an override equal to the box it already has; nothing may move,
+  // wherever the template's own markup puts it (a positioned ancestor such as .mb-cover-head used to offset the box). Rects are read as fractions of the page.
+  for (const size of ["A5", "A4", "Letter"]) {
+    test(`${size}: an override equal to the natural box leaves every editable element where it was`, async () => {
+      const TILT = { "cover.photo": -3, "cover.sticker": 10, "profile.photo": -2 }; // the template's own tilt (memory.tsx LAYOUT.natural)
+      const book = makeBook({ size, notes: 2, template: "memory-book" });
+      book.layout = { v: 1, pages: {} };
+      const read = (p, natural) =>
+        p.evaluate((natural) => {
+          const out = {};
+          for (const w of document.querySelectorAll("[data-layout-id]")) {
+            const id = w.dataset.layoutId;
+            if (out[id]) continue;
+            const el = natural ? w.firstElementChild : w;
+            const s = w.closest(".bk-inner").getBoundingClientRect();
+            const a = el.getBoundingClientRect();
+            const rec = { aabb: { x: (a.left - s.left) / s.width, y: (a.top - s.top) / s.width, w: a.width / s.width, h: a.height / s.width } };
+            if (natural) {
+              const keep = el.style.getPropertyValue("transform");
+              el.style.setProperty("transform", "none", "important"); // the unrotated box is what an override stores
+              const b = el.getBoundingClientRect();
+              el.style.setProperty("transform", keep);
+              rec.box = { x: Math.round(((b.left - s.left) / s.width) * 1000), w: Math.round((b.width / s.width) * 1000), h: Math.round((b.height / s.width) * 1000), cy: Math.round(((b.top + b.height / 2 - s.top) / s.height) * 1000) };
+            }
+            out[id] = rec;
+          }
+          return out;
+        }, natural);
+      const a = await browser.newPage({ viewport: { width: 1400, height: 1900 } });
+      await serveBook(a, book);
+      await open(a);
+      const before = await read(a, true);
+      await a.close();
+      const ids = Object.keys(TILT).concat(["cover.title", "profile.heading", "notes.heading", "back.heading", "back.pact"]);
+      for (const id of ids) assert.ok(before[id], `${id} is on a page of the fixture book`);
+      const pages = {};
+      for (const id of ids) {
+        const kind = id.split(".")[0];
+        (pages[kind] ??= { overrides: {} }).overrides[id] = { ...before[id].box, r: TILT[id] ?? 0 };
+      }
+      book.layout = { v: 1, pages };
+      const b = await browser.newPage({ viewport: { width: 1400, height: 1900 } });
+      await serveBook(b, book);
+      await open(b);
+      const after = await read(b, false);
+      await b.close();
+      const worst = [];
+      for (const id of ids) {
+        const d = Math.max(...["x", "y", "w", "h"].map((k) => Math.abs(before[id].aabb[k] - after[id].aabb[k])));
+        worst.push(`${id} ${(d * 100).toFixed(2)} %`);
+        assert.ok(d < 0.0015, `${size} ${id}: natural ${JSON.stringify(before[id].aabb)} drawn ${JSON.stringify(after[id].aabb)} (budget 0.15 % of the page width, about 1.2 design px)`);
+      }
+      console.log(`# ${size} override = natural box, largest rect change per id: ${worst.join(", ")}`);
+    });
+  }
+
+  // T-159 AC3: the editor's stage draws the same page as the book screen. Both are on-screen renderings at paper size (zoom 100 %, scale 1), so unlike the print
+  // comparison above there is no PDF noise: the layout-bearing page must differ by far less than the 0.5 % budget.
+  for (const size of ["A5", "A4", "Letter"]) {
+    test(`${size}: the editor stage draws the cover and a notes page exactly as the book screen does (difference < 0.5 %)`, async () => {
+      const book = makeBook({ size, notes: 2, template: "memory-book" });
+      book.layout = makeLayout();
+      const ref = await browser.newPage({ viewport: { width: 1400, height: 1900 }, deviceScaleFactor: 2 });
+      await serveBook(ref, book);
+      await open(ref);
+      await ref.addStyleTag({ content: ".bk-ui { display: none !important } .bk-stage { --s: 1 !important; padding: 0 !important }" });
+      const want = { cover: await sheetPicture(ref, "cover", 0), notes: await sheetPicture(ref, "notes", 0) };
+      await ref.close();
+
+      const ed = await browser.newPage({ viewport: { width: 1400, height: 1900 }, deviceScaleFactor: 2 });
+      await serveBook(ed, book);
+      await openEditor(ed);
+      /** Zoom 100 % with the buttons (the default is "fit"). */
+      const to100 = async () => {
+        for (let i = 0; i < 8; i++) {
+          const z = Number(await ed.locator(".ed-pagebox").getAttribute("data-zoom"));
+          if (z === 100) return;
+          await ed.getByRole("button", { name: z > 100 ? "Zoom out" : "Zoom in" }).click();
+        }
+        assert.equal(await ed.locator(".ed-pagebox").getAttribute("data-zoom"), "100");
+      };
+      await to100();
+      for (const [label, button] of [["cover", /^Page 1 of/], ["notes", /^Page 3 of/]]) {
+        await ed.getByRole("button", { name: button }).click();
+        await ed.waitForSelector(`.ed-pagebox .bk-sheet[data-page="${label}"]`);
+        await to100();
+        await settleStage(ed);
+        const sheet = ed.locator(".ed-pagebox .bk-sheet");
+        const box = await sheet.evaluate((e) => {
+          document.querySelector(".ed-overlay").style.display = "none"; // the chrome is not part of the page
+          e.style.cssText += ";position: fixed; left: 0; top: 0; z-index: 99999; box-shadow: none";
+          const r = e.getBoundingClientRect();
+          return { width: r.width, height: r.height };
+        });
+        const got = await grey(await ed.screenshot({ clip: { x: 0, y: 0, ...box }, animations: "disabled", caret: "hide" }));
+        assert.ok(Math.abs(got.w - want[label].w) <= 2 && Math.abs(got.h - want[label].h) <= 2, `${label}: ${got.w}x${got.h} against ${want[label].w}x${want[label].h}`);
+        const diff = difference(want[label], got);
+        console.log(`# ${size} ${label}: stage against the book screen: ${(diff * 100).toFixed(3)} % of the pixels differ`);
+        assert.ok(diff < 0.005, `${size} ${label}: the stage differs from the book screen by ${(diff * 100).toFixed(3)} % (budget 0.5 %)`);
+        await ed.reload();
+        await ed.waitForSelector(".ed-pagebox .bk-sheet");
+        await settleStage(ed);
+      }
+      await ed.close();
     });
   }
 

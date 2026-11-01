@@ -109,6 +109,41 @@ describe("autosave", () => {
     expect(snap()).toMatchObject({ version: 2, dirty: false, saveState: "saved" });
   });
 
+  it("settle() waits for the save in flight and the one queued behind it, and says whether the server has the newest document", async () => {
+    const { srv, store, snap } = await open({ version: 0, layout: null });
+    expect(await store.settle()).toBe(true); // nothing to save
+    let release!: () => void;
+    const held = new Promise<void>((r) => (release = r));
+    srv.s.script.push(async () => {
+      await held;
+      srv.s.version = 1;
+      return srv.body({ version: 1, updated_at: 1 });
+    });
+    store.apply(addItem("cover", item("aaaaaa")));
+    store.flush();
+    await tick(0);
+    store.apply(setText("cover", "aaaaaa", { text: "two" }));
+    let done: boolean | undefined;
+    void store.settle().then((r) => (done = r));
+    await tick(0);
+    expect(done).toBeUndefined(); // the first POST is held
+    release();
+    await tick(0);
+    expect(srv.s.saves).toHaveLength(2);
+    expect(done).toBe(true);
+    expect(snap()).toMatchObject({ dirty: false, saveState: "saved" });
+  });
+  it("settle() is false when the save fails (offline) and when the document is refused", async () => {
+    const { srv, store } = await open({ version: 0, layout: null });
+    srv.s.script.push(() => srv.fail(503, "ERROR_UNAVAILABLE"));
+    store.apply(addItem("cover", item("aaaaaa")));
+    expect(await store.settle()).toBe(false);
+    await tick(10_000); // the backoff retry saves it
+    expect(await store.settle()).toBe(true);
+    srv.s.script.push(() => srv.fail(400, "ERROR_INVALID_ARGUMENT", { problems: [] }));
+    store.apply(setText("cover", "aaaaaa", { text: "two" }));
+    expect(await store.settle()).toBe(false);
+  });
   it("a gesture saves nothing until commit, and is one history step", async () => {
     const { srv, store, snap } = await open({ version: 1, layout: doc1() });
     store.begin();

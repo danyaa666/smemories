@@ -34,18 +34,31 @@ note and book-data routes, (9) as student A: none of B's notes, name or email ap
 
 **Step 7b (T-146)** is the design reaching the class book. Student A switches their book to `navy-classic` and saves a design through the API (burgundy, modern fonts, profile hidden, a replaced "Autographs" heading); the admin's `class-book/get` carries it as that member's `design`, the admin's class print draws A's pages in `burgundy/modern` without the profile page and with the text, B's pages and the class pages keep the default look, and **only the admin gets it: students A and B get 403** on `class-book/get` and nothing of the design text reaches them.
 
-Registration is limited to 5 per address and hour, and the four specs together register 6 accounts (M1: 1, the gallery check: 1, the class journey: 3, the customisation journey: 1). `scripts/e2e.sh` therefore starts the test API with `SMEM_RATE_REGISTER_PER_HOUR=20`, whatever `.env` says (`make` exports `.env`, whose 5 would otherwise win); to change it set `SMEM_E2E_RATE_REGISTER_PER_HOUR`, a variable `.env` never sets (test API only, the default stays 5), and `make e2e` still resets the limits first; after several direct `scripts/e2e.sh` runs
+Registration is limited to 5 per address and hour, and the five specs together register 7 accounts (M1: 1, the gallery check: 1, the class journey: 3, the customisation journey: 1, the layout editor journey: 1). `scripts/e2e.sh` therefore starts the test API with `SMEM_RATE_REGISTER_PER_HOUR=20`, whatever `.env` says (`make` exports `.env`, whose 5 would otherwise win); to change it set `SMEM_E2E_RATE_REGISTER_PER_HOUR`, a variable `.env` never sets (test API only, the default stays 5), and `make e2e` still resets the limits first; after several direct `scripts/e2e.sh` runs
 use `make reset-limits SMEM_ENV=test`. `class-book/get` is limited to 30 reads an hour per user once T-133 is in; the journey reads it about six times. The run deletes the class and the students' yearbooks at the end (the accounts stay).
 
 ## The customisation journey (T-147)
 
-`tools/e2e/design.spec.mjs` runs in the same `make e2e` (about 8 s locally, well inside its 240 s limit; the five specs together take about 25 s). One account, a Memory Book (A5, Vietnamese) with one approved friend note and a profile quote (printed on the profile page only):
+`tools/e2e/design.spec.mjs` runs in the same `make e2e` (about 8 s locally, well inside its 240 s limit; the specs together take about 35 s). One account, a Memory Book (A5, Vietnamese) with one approved friend note and a profile quote (printed on the profile page only):
 (1) register, create the book, choose `memory-book`; (2) a friend sends a note and the student approves it; (3) with no design the print route draws `lavender/playful`, four sheets (cover, profile, notes, back) and `--mb-ink` `#3b2f4a`;
 (4) the customise screen: Peach, the Classic font set, "All about me" switched off, the cover text "this book belongs to" replaced, Save design; (5) after a reload the screen shows the same choices and Save is disabled;
 (6) the print route: `data-book-ready` and `page.pdf()` both say 3 pages, the profile sheet is absent (and its quote is not in the PDF), the cover holds the title and the new text, every page is `peach/classic`, `--mb-ink` is `#4a2c22`, all fonts embedded;
 (7) Reset to template: the default look and four pages come back, the quote is printed again; (8) a design saved again, then the template picker on the customise screen switches to Navy Classic: the "design was reset" notice shows, `book-design/get` has `options: null`, the print route draws `navy/classic` and the note is still in the book.
 The spec asserts the page, theme and text on the screen the student prints (DOM) and on the PDF (page count, fonts, text); pixel parity of the PDF with the preview is the print check's job (`docs/templates.md`, "What print-check covers"). A deliberate break (the print route ignoring the design) fails step 6.
 The spec has no cover-title edit because the cover title is the book's own title (data, not a replaceable text); it edits `cover.belongs`, the cover's only replaceable heading.
+
+## The layout editor journey (T-159)
+
+`tools/e2e/editor-shell.spec.mjs` runs in the same `make e2e` (about 15 s). One account, a Memory Book (A5, Vietnamese) with no notes:
+(1) register, create the book, choose `memory-book`; (2) the customise screen's "Free layout" link opens `/yearbooks/:id/editor`: the page strip has three pages (cover, profile, back), the cover is current, the safe margin guide shows;
+(3) select the cover title, read its width in the property panel (it matches what the page draws), set it to 40 %, `book-layout/save` answers and the title on the stage is 40 % of the page wide;
+(4) set the rotation to 4, undo with Ctrl/Cmd+Z, and that undo is saved too (width 40, rotation 0, Redo enabled); (5) after a reload the saved layout is drawn (width 40, rotation 0, Undo disabled because history is not saved), and "Reset this element" makes the title wide again;
+(6) an item flush to the right and bottom edge (saved through the API) on A5, then A4, then Letter (the book's paper is changed through `yearbook/update`): the south-east handle sticks out of the page and `elementFromPoint` at its outer corner is the handle, so the page's clip does not hide it;
+(5b) with every save delayed 1.5 s, the student sets the width three times and clicks "Preview as PDF" at once: the new tab, opened by the click, goes to `/book` only after the save in flight and the queued one are done and shows the new width each time; an out-of-range number in step 3 shows "Between 1 and 200" and restores the old value; (7) at 700 px wide the editor does not mount and the message with the link back shows. The test uses the role `spinbutton` for the panel numbers because a resize handle is also named "Resize from left".
+
+A template element moved to a box equal to its own is a print-check test too (T-159 rework 1): "an override equal to the natural box leaves every editable element where it was", A5/A4/Letter, all eight editable ids, rect change below 0.15 % of the page width (measured 0.04 to 0.07 %; before the fix up to 12 %).
+
+The stage against the book screen (T-159 AC3) is a print-check test: `make print-check`, "the editor stage draws the cover and a notes page exactly as the book screen does", on A5, A4 and Letter at zoom 100 %. Both are on-screen renderings, so the budget is 0.5 % of the pixels (measured on the fixture book: cover 0.00 to 0.08 %, notes page 0.00 to 0.34 %; the rest is glyph and gradient edges on a fractional CSS zoom, and Letter with its exact zoom is 0.000 %).
 
 ## The gallery check over HTTP/2 (T-107)
 

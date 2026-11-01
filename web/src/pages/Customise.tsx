@@ -197,6 +197,13 @@ function Editor({
     <div className="cu">
       <div className="cu-side">
         <p>{t("customise.intro")}</p>
+        {tpl.layout && (
+          <p>
+            <Link className={buttonClass("secondary")} to={`/yearbooks/${bookId}/editor`}>
+              {t("customise.freeLayout")}
+            </Link>
+          </p>
+        )}
         <TemplatePicker
           bookId={bookId}
           size={data.yearbook.page_size}

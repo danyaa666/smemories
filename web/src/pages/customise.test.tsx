@@ -173,6 +173,10 @@ describe("the customise screen", () => {
     expect(calls.filter((c) => c.path.startsWith("/book-data/get")).length).toBe(1);
     expect(calls.filter((c) => c.path.startsWith("/book-design/get")).length).toBe(1);
     expect(screen.getByRole("button", { name: "Save design" })).toBeDisabled(); // nothing to save yet
+    expect(screen.getByRole("link", { name: "Free layout" })).toHaveAttribute(
+      "href",
+      `/yearbooks/${BOOK}/editor`,
+    ); // T-159: the way into the layout editor
   });
 
   it("applies every choice to the preview at once and saves exactly the validated document", async () => {
