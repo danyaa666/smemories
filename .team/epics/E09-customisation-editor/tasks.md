@@ -604,7 +604,7 @@ Spec: .team/epics/E09-customisation-editor/24-version-history-panel.md (read it 
 - 2026-11-01 22:30Z · leader · merged 3e5c742; QA: vitest 1078, e2e 3 clean runs 37/0 (4th hit register 429, flushed redis), history probes 33 saves->30 rows, pending autosave saved first. Non-blocking: raw ENOENT when mysql client missing; QA probe spec not committed
 
 ### T-166 — [E09] Navy Classic: page kinds and editable elements for the layout editor (web + manifest)
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -612,15 +612,17 @@ Spec: .team/epics/E09-customisation-editor/24-version-history-panel.md (read it 
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-166-e09-navy-classic-page-kinds-and-editable
-- **PR:** —
-- **Updated:** 2026-11-01 22:11Z by dev
-- **Comments-seen:** 0
+- **PR:** https://github.com/danyaa666/smemories/pull/164
+- **Updated:** 2026-11-01 23:01Z by dev
+- **Comments-seen:** 2
 
 Spec: .team/epics/E09-customisation-editor/25-navy-classic-layout.md (read it from the main checkout). design.layout block in navy-classic.json, Editable wrappers in navy.tsx, background replaces the page tone, parity with no layout, print-check parity fixture, server cases, editor-navy e2e
 
 #### Comments
+- 2026-11-01 23:01Z · dev · PR #164, head d6cc27c (rebased on develop e0f0f2c, after T-165). Editable ids and omissions with reasons are in the PR description. Results on this head: web lint/tsc/lint:i18n/check:api/build green, vitest 63 files 1093 tests pass; go test templates+booklayout ok; make test-integration equivalent (go test -race -tags integration ./...) 33 packages ok 0 fail (run before the rebase, same code); scripts/e2e.sh direct 38 passed 0 failed incl. editor-navy.spec.mjs; print-check 193 tests 193 pass 0 fail (incl. Navy fixture on A5/A4/Letter and override=natural for 12 ids). Private stack: compose project t166dev, ports 47306/47379/47333, SMEM_TEST_S3_ENDPOINT set. To verify: Navy book heavy layout on 3 papers vs editor; new text on dark cover is light (EditorShell addText/TextControls now use per-kind default colour, a runtime fix beyond the spec); known limits in PR (title blank 26 px vs 84 px without year).
+- 2026-11-01 23:01Z · leader · Leader to QA: PR #164 head d6cc27c (full SHA from gh pr view). Accepted deviations: runtime generalised (portal target no longer .mb-page, per-kind default text colour paper on cover/back), editor.test.tsx and booklayout 'cannot hold a layout' case now use classic as the layout-less template, print-check class-book case expects Navy to draw its layout, note01 fixture uses body font (3 px display-font diff on A5). Run full make test-integration, e2e (scripts/e2e.sh on own stack; run twice), print-check and the web checks on the head; report counts and full SHA. Verify: heavy Navy layout on A5/A4/Letter vs editor, theme and font switch with a layout, template switch to Memory Book and back, Memory Book editor/print unchanged, no-layout Navy print unchanged, Vietnamese text colour legible on navy cover (paper default), cover title with no graduation year (84 px blank) not overlapping.
 
 ### T-167 — [E09] Class book carries each member's layout (server cap, privacy, web wiring)
 - **Status:** TODO
