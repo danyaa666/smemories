@@ -2,7 +2,7 @@
 // and the same pages of the template (Letter, 816 x 1056 design px at scale 1), writes a side-by-side picture of each, and compares the boxes
 // (elements with a background, a border or a ruled-lines gradient) of the canvas with the template's boxes of the same colour: the largest
 // difference of an edge, in millimetres.
-//   node fidelity.mjs OUT_DIR [memory-book|navy-classic]   (default memory-book; set PRINT_CHECK_PORT if 5199 is taken; dev tool, not part of `make print-check`)
+//   node fidelity.mjs OUT_DIR [memory-book|navy-classic]   (default memory-book; dev tool, not part of `make print-check`)
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";

@@ -1,6 +1,7 @@
 // Helpers of the print check: start the web dev server, serve a fixture book through Playwright routes, print to PDF, inspect the PDF with poppler.
 import { execFileSync, spawn } from "node:child_process";
 import { readFileSync, rmSync, statSync } from "node:fs";
+import net from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { BOOK_ID, CLASS_ID, DESIGN_IMAGE, photoId } from "./fixture.mjs";
@@ -8,24 +9,44 @@ import { BOOK_ID, CLASS_ID, DESIGN_IMAGE, photoId } from "./fixture.mjs";
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const ROOT = path.resolve(HERE, "../..");
 const PHOTOS = process.env.PRINT_CHECK_PHOTOS ?? path.join(HERE, "fixtures"); // the sample PDFs use lighter photos (make-samples.mjs)
-export const PORT = Number(process.env.PRINT_CHECK_PORT ?? 5199);
+// T-157: the check starts its own server on a free port the OS picks, so it never tests a server it did not start (a stale vite from another
+// worktree on the old fixed port 5199 once made 5 of 7 layout tests fail). PRINT_CHECK_PORT still pins a port; if it is taken, the run fails fast.
+const freePort = () =>
+  new Promise((resolve, reject) => {
+    const s = net.createServer().unref().on("error", reject);
+    s.listen(0, "localhost", () => {
+      const { port } = s.address();
+      s.close(() => resolve(port));
+    });
+  });
+export const PORT = Number(process.env.PRINT_CHECK_PORT ?? (await freePort()));
 export const BASE = `http://localhost:${PORT}`;
 
-/** Starts `vite` in web/ and resolves with a stop function. */
+/** Starts `vite` in web/ on PORT and resolves with a stop function. Fails if the port already answers or that vite exits (--strictPort), so a foreign server is never used. */
 export async function startServer() {
-  const child = spawn("npx", ["vite", "--port", String(PORT), "--strictPort"], {
-    cwd: path.join(ROOT, "web"),
-    stdio: "ignore",
-  });
-  for (let i = 0; i < 150; i++) {
+  const held = new Error(`port ${PORT} is held by another process (print-check never tests a server it did not start); free it or set PRINT_CHECK_PORT`);
+  if (await fetch(BASE).then(() => true, () => false)) throw held; // anything answering before we start vite is foreign
+  // detached = its own process group, so stop() also ends the vite that npx starts (no orphan left behind); it only ever kills what it started
+  const child = spawn("npx", ["vite", "--port", String(PORT), "--strictPort"], { cwd: path.join(ROOT, "web"), stdio: "ignore", detached: true });
+  const stop = () => {
     try {
-      if ((await fetch(BASE)).ok) return () => child.kill();
+      process.kill(-child.pid);
+    } catch {
+      /* already gone */
+    }
+  };
+  let exited = false;
+  child.on("exit", () => (exited = true));
+  for (let i = 0; i < 150; i++) {
+    if (exited) throw held;
+    try {
+      if ((await fetch(BASE)).ok && !exited) return stop;
     } catch {
       /* not up yet */
     }
     await new Promise((r) => setTimeout(r, 200));
   }
-  child.kill();
+  stop();
   throw new Error("vite did not start");
 }
 
