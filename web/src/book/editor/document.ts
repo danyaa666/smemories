@@ -249,7 +249,108 @@ export const setText =
     );
   };
 
+/**
+ * Copies an item to the top of its page with a fresh id, shifted by (`dx`, `dcy`) (stored units). A copy that would leave the page too far is
+ * shifted the other way; the limits of `addItem` apply (40 per page, 150 in all).
+ */
+export const duplicateItem =
+  (kind: string, id: string, newId: string, dx: number, dcy: number): Op =>
+  (doc) => {
+    const item = items(doc, kind)[find(doc, kind, id)];
+    if (!item) return refuse(doc, "no_such_item");
+    const at = (sign: 1 | -1): LayoutItem => ({
+      ...item,
+      id: newId,
+      x: item.x + sign * dx,
+      cy: item.cy + sign * dcy,
+    });
+    const r = addItem(kind, at(1))(doc);
+    return r.refused === "bad_box" ? addItem(kind, at(-1))(doc) : r;
+  };
+
+type ItemPatch = Partial<Pick<LayoutItem, "tint" | "fit" | "radius" | "media">>;
+
+/** Changes the picture-related fields of an asset (tint) or an image item (media, fit, radius); `undefined` removes a field. */
+export const setItemProps =
+  (kind: string, id: string, patch: ItemPatch): Op =>
+  (doc) => {
+    const i = find(doc, kind, id);
+    if (i < 0) return refuse(doc, "no_such_item");
+    const item = items(doc, kind)[i]!;
+    const isImage = item.t === "image";
+    for (const [k, v] of Object.entries(patch)) {
+      if (k === "tint" ? item.t !== "asset" : !isImage) return refuse(doc, "bad_value");
+      if (v === undefined) continue;
+      if (k === "fit" ? v !== "cover" && v !== "contain" : false) return refuse(doc, "bad_value");
+      if (k === "radius" && !(int(v) && v >= 0 && v <= 500)) return refuse(doc, "bad_value");
+      if ((k === "tint" || k === "media") && (typeof v !== "string" || v === ""))
+        return refuse(doc, "bad_value");
+    }
+    const next = { ...item, ...patch };
+    for (const k of Object.keys(patch) as (keyof ItemPatch)[])
+      if (next[k] === undefined) delete next[k];
+    return ok(
+      withPage(doc, kind, { ...page(doc, kind), items: replaceAt(items(doc, kind), i, next) }),
+    );
+  };
+
+/** Where a design image is used: the page kinds (an item or the background), for the "used on 2 pages" text. */
+export function mediaUses(doc: LayoutDoc, mediaId: string): string[] {
+  return Object.entries(doc.pages)
+    .filter(
+      ([, p]) =>
+        p.bg?.media === mediaId || p.items?.some((i) => i.t === "image" && i.media === mediaId),
+    )
+    .map(([kind]) => kind);
+}
+
+/** One step that removes every item and background that uses a design image (before the image itself is deleted, T-162). */
+export const purgeMedia =
+  (mediaId: string): Op =>
+  (doc) => {
+    const pages: LayoutDoc["pages"] = {};
+    for (const [kind, p] of Object.entries(doc.pages)) {
+      const next = { ...p };
+      if (p.bg?.media === mediaId) delete next.bg;
+      if (p.items?.some((i) => i.media === mediaId))
+        next.items = p.items.filter((i) => i.media !== mediaId);
+      pages[kind] = next;
+    }
+    return ok({ ...doc, pages });
+  };
+
+/**
+ * One step that removes what the server named in `data.problems` of ERROR_INVALID_LAYOUT: an item (`pages.cover.items[2]` or a field of it) or a
+ * background (`pages.cover.bg...`). Problems elsewhere (an override, a page) are not touched. Unchanged when nothing matches.
+ */
+export const removeProblems =
+  (paths: readonly string[]): Op =>
+  (doc) => {
+    const drop = new Map<string, Set<number>>();
+    const noBg = new Set<string>();
+    for (const path of paths) {
+      const m = /^pages\.([^.[\]]+)\.(?:items\[(\d+)\]|bg)(?:[.[]|$)/.exec(path);
+      if (!m) continue;
+      if (m[2] === undefined) noBg.add(m[1]!);
+      else drop.set(m[1]!, (drop.get(m[1]!) ?? new Set()).add(Number(m[2])));
+    }
+    if (drop.size === 0 && noBg.size === 0) return ok(doc);
+    const pages: LayoutDoc["pages"] = {};
+    for (const [kind, p] of Object.entries(doc.pages)) {
+      const next = { ...p };
+      if (noBg.has(kind)) delete next.bg;
+      const gone = drop.get(kind);
+      if (gone && p.items) next.items = p.items.filter((_, i) => !gone.has(i));
+      pages[kind] = next;
+    }
+    return ok({ ...doc, pages });
+  };
+
 export const ops = {
+  duplicateItem,
+  setItemProps,
+  purgeMedia,
+  removeProblems,
   setItemBox,
   addItem,
   removeItem,

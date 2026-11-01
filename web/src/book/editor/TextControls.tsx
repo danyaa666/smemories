@@ -3,6 +3,7 @@ import type { TemplateLayout } from "../layout/runtime";
 import { MAX_TEXT, runeCount, setText, type LayoutItem, type Op } from "./document";
 import type { GestureStore } from "./gestures/useGestures";
 import { NumField } from "./NumField";
+import { Swatches } from "./Swatches";
 import { TextField } from "./TextField";
 
 const ALIGNS = ["left", "center", "right"] as const;
@@ -98,27 +99,13 @@ export function TextControls({
         onKeyUp={() => store.commit()}
         onBlur={() => store.commit()}
       />
-      <div
-        className="mb-layer ed-swatches"
-        data-theme={scope.theme || undefined}
-        data-fonts={scope.fonts || undefined}
-        role="radiogroup"
-        aria-label={t("editor.color.label")}
-      >
-        {colors.map((c) => (
-          <button
-            key={c}
-            type="button"
-            role="radio"
-            aria-checked={c === color}
-            aria-label={t(`editor.color.${c}`, { defaultValue: c })}
-            title={t(`editor.color.${c}`, { defaultValue: c })}
-            className="ed-swatch"
-            style={{ background: spec.colors[c] }}
-            onClick={() => set({ color: c })}
-          />
-        ))}
-      </div>
+      <Swatches
+        spec={spec}
+        scope={scope}
+        value={color}
+        label={t("editor.color.label")}
+        onPick={(c) => set({ color: c })}
+      />
       <div role="group" aria-label={t("editor.align.label")} className="ed-row">
         {ALIGNS.map((a) => (
           <button

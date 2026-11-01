@@ -1030,7 +1030,6 @@
     "toBack": "Đưa xuống dưới cùng",
     "reordered": "Đã chuyển đến vị trí {{n}} / {{total}}",
     "deleted": "Đã xoá",
-    "delete": "Xoá",
     "show": "Hiện",
     "hide": "Ẩn",
     "resetElement": "Đặt lại thành phần này",
@@ -1120,6 +1119,101 @@
       "center": "Giữa",
       "right": "Phải"
     },
-    "bold": "In đậm"
+    "bold": "In đậm",
+    "palette": {
+      "title": "Thêm vào trang",
+      "tabs": "Các mục của bảng chọn",
+      "tab": {
+        "sticker": "Hình dán",
+        "shape": "Hình khối",
+        "frame": "Khung",
+        "images": "Ảnh của tôi",
+        "background": "Nền"
+      },
+      "kind": {
+        "cover": "bìa",
+        "profile": "trang giới thiệu",
+        "notes": "các trang lưu bút",
+        "back": "bìa sau"
+      },
+      "search": "Tìm theo tên",
+      "noMatch": "Không tìm thấy. Thử từ khác.",
+      "count": "Tìm thấy {{count}}",
+      "added": "Đã thêm: {{name}}",
+      "addedImage": "Đã thêm ảnh của bạn",
+      "addImageN": "Thêm ảnh {{n}} trên {{total}}",
+      "bgNote": "Thay đổi này áp dụng cho nền của {{page}}. Các loại trang khác giữ nguyên.",
+      "bgAll": "Dùng cho mọi loại trang",
+      "bgAllDone": "Đã đặt nền cho mọi loại trang",
+      "bgRemoved": "Đã xoá nền",
+      "bgSet": "Đã đổi nền",
+      "bgColour": "Màu nền",
+      "bgShapes": "Hình dán và hình khối làm nền",
+      "bgMore": "Thêm nền: hình, hình khối, ảnh của bạn",
+      "bgImageN": "Dùng ảnh {{n}} trên {{total}} làm nền",
+      "bgRemove": "Gỡ nền",
+      "toggle": "Thêm vào trang"
+    },
+    "upload": {
+      "zone": "Tải ảnh của bạn lên",
+      "button": "Tải ảnh lên",
+      "hint": "hoặc thả tệp JPEG, PNG, WebP vào đây (tối đa 10 MB mỗi tệp)",
+      "dismiss": "Đóng",
+      "progress": "Đang tải {{name}}",
+      "waiting": "Đang chờ",
+      "cancel": "Huỷ",
+      "verifyLink": "Xác minh email",
+      "listFailed": "Không tải được danh sách ảnh của bạn.",
+      "loading": "Đang tải ảnh của bạn...",
+      "empty": "Chưa có ảnh nào. Hãy tải một ảnh lên để dùng trên các trang.",
+      "count": "{{count}}/{{max}} ảnh",
+      "deleteN": "Xoá ảnh {{n}} trên {{total}}",
+      "more": "Tải thêm",
+      "finished": "Đã tải lên xong",
+      "error": {
+        "generic": "Tải lên không thành công. Vui lòng thử lại.",
+        "offline": "Không có kết nối. Kiểm tra mạng và thử lại.",
+        "tooLarge": "Tệp lớn hơn 10 MB. Hãy chọn tệp nhỏ hơn.",
+        "unsupported": "Chỉ dùng được ảnh JPEG, PNG và WebP.",
+        "corrupt": "Không đọc được ảnh này, hoặc ảnh quá lớn về số điểm ảnh (tối đa 12000 px mỗi cạnh). Hãy thử ảnh khác.",
+        "cap": "Cuốn sách này đã có {{count}}/{{max}} ảnh riêng. Hãy xoá một ảnh để tải ảnh khác.",
+        "quota": "Đã hết dung lượng 500 MB. Hãy xoá bớt ảnh trước.",
+        "rateLimited": "Tải lên quá nhiều cùng lúc hoặc trong thời gian ngắn. Thử lại sau {{seconds}} giây.",
+        "busy": "Máy chủ đang bận. Thử lại sau {{seconds}} giây.",
+        "notVerified": "Hãy xác minh địa chỉ email trước khi tải ảnh lên.",
+        "timeout": "Kết nối bị gián đoạn. Hãy thử lại."
+      }
+    },
+    "image": {
+      "label": "Ảnh",
+      "fit": "Cách vừa khung",
+      "contain": "Cả ảnh",
+      "cover": "Lấp đầy khung (cắt bớt)",
+      "radius": "Bo góc",
+      "replace": "Đổi ảnh",
+      "replaced": "Đã đổi ảnh",
+      "missing": "Ảnh bị mất",
+      "pickN": "Dùng ảnh {{n}} trên {{total}}"
+    },
+    "tint": {
+      "label": "Màu của hình",
+      "original": "Màu gốc"
+    },
+    "duplicate": "Nhân đôi",
+    "duplicated": "Đã nhân đôi",
+    "invalidRemove": "Xoá các mục máy chủ từ chối",
+    "invalidRemoved": "Đã xoá các mục bị từ chối",
+    "deleteImage": {
+      "title": "Xoá ảnh này?",
+      "confirm": "Xoá ảnh",
+      "cancel": "Giữ lại",
+      "plain": "Ảnh sẽ bị xoá vĩnh viễn.",
+      "inUse": "Ảnh này đang dùng ở {{count}} loại trang ({{where}}). Các mục và nền dùng ảnh sẽ bị gỡ khỏi trang của bạn.",
+      "history": "Hoàn tác và làm lại sẽ bị xoá, nên ảnh đã xoá không thể quay lại qua đó.",
+      "done": "Đã xoá ảnh",
+      "saveFailed": "Không lưu được các trang nên ảnh chưa bị xoá. Hãy thử lại khi bố cục đã lưu.",
+      "deleteFailed": "Các trang đã lưu không còn ảnh, nhưng không xoá được ảnh."
+    },
+    "delete": "Xoá"
   }
 }

@@ -76,6 +76,7 @@ export function Photo({
   variant = "print",
   style,
   quiet,
+  fallback,
 }: {
   id: string | null | undefined;
   className?: string;
@@ -84,6 +85,8 @@ export function Photo({
   style?: CSSProperties;
   /** Draw nothing, not an empty frame, when there is no id or the image fails (the layout layer skips what it cannot show). */
   quiet?: boolean;
+  /** With `quiet`: drawn instead of nothing when the image fails (the layout editor's "missing image" placeholder, T-162). */
+  fallback?: ReactNode;
 }) {
   const { eager, track } = useBookEnv();
   const [failed, setFailed] = useState(false);
@@ -98,7 +101,14 @@ export function Photo({
     track(1);
     return settle;
   }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
-  if (!id || failed) return quiet ? null : <div className={`bk-ph ${className ?? ""}`} />;
+  if (!id || failed)
+    return quiet ? (
+      failed ? (
+        (fallback ?? null)
+      ) : null
+    ) : (
+      <div className={`bk-ph ${className ?? ""}`} />
+    );
   return (
     <QueuedImg
       className={`bk-photo ${className ?? ""}`}

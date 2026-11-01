@@ -2,19 +2,36 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } f
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import type { BookData } from "../../api/book";
+import { deleteMedia, uploadMedia, type Media } from "../../api/yearbooks";
 import { errorText } from "../../auth/errors";
 import { Banner } from "../../components/ui/Banner";
 import { Button } from "../../components/ui/Button";
 import { Dialog } from "../../components/ui/Dialog";
 import { Skeleton } from "../../components/ui/Skeleton";
+import { useMediaQuery } from "../../components/useMediaQuery";
 import { resolveDesign } from "../design";
 import { useFitReport } from "../fit";
 import { listPages } from "../BookPages";
 import { pageBox } from "../layout/geometry";
+import { MissingImage } from "../layout/runtime";
 import { getTemplate } from "../templates";
-import { addItem, newItemId, removeBlankText, type LayoutItem } from "./document";
+import {
+  addItem,
+  duplicateItem,
+  mediaUses,
+  newItemId,
+  removeBlankText,
+  removeProblems,
+  type LayoutItem,
+} from "./document";
 import { pageName, targetName } from "./names";
 import { HelpSheet } from "./gestures/HelpSheet";
+import { deleteDesignImage } from "./palette/deleteImage";
+import { DesignImages } from "./palette/DesignImages";
+import { copyShift } from "./palette/defaults";
+import { ALL_KINDS, Palette, type Tab } from "./palette/Palette";
+import { Uploads, MAX_DESIGN_IMAGES } from "./palette/uploads";
+import { useDesignImages } from "./palette/useDesignImages";
 import { PageStrip } from "./PageStrip";
 import { PropertyPanel } from "./PropertyPanel";
 import { SaveStatus } from "./SaveStatus";
@@ -60,6 +77,14 @@ export function EditorShell({
   const [previewFailed, setPreviewFailed] = useState(false);
   const [notice, setNotice] = useState("");
   const [editing, setEditing] = useState<{ id: string; all: boolean } | null>(null);
+  const [tab, setTab] = useState<Tab>("sticker");
+  // The palette is a fourth column, so it is open at first only on a screen wide enough to leave the stage its room; the toolbar button toggles it.
+  const wide = useMediaQuery("(min-width: 1700px)");
+  const [chosen, setPalette] = useState<boolean | null>(null);
+  const paletteOpen = chosen ?? wide;
+  const [deleting, setDeleting] = useState<{ m: Media; uses: string[] } | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
   const { states: fits, Provider: Fit } = useFitReport();
   const readOnly = ed.saveState === "conflict";
 
@@ -75,6 +100,33 @@ export function EditorShell({
   const store = useMemo(
     () => ({ begin, preview, commit, cancel, apply, select }),
     [begin, preview, commit, cancel, apply, select],
+  );
+  const images = useDesignImages(bookId);
+  const uploads = useMemo(() => new Uploads({ yearbookId: bookId, upload: uploadMedia }), [bookId]);
+  const { prepend, items: imageItems, more: moreImages } = images;
+  useEffect(
+    () =>
+      uploads.bind({
+        have: () => (moreImages ? MAX_DESIGN_IMAGES : imageItems.length),
+        onDone: (m) => {
+          prepend(m);
+          say(t("editor.upload.finished"));
+        },
+      }),
+    [uploads, prepend, imageItems.length, moreImages, t, say],
+  );
+  const missing = useMemo(
+    () => (
+      <div className="ed-missing" role="img" aria-label={t("editor.image.missing")}>
+        {t("editor.image.missing")}
+      </div>
+    ),
+    [t],
+  );
+  // every page type of the template, also one the book has no page of yet (no notes), so "use on all page types" covers them all
+  const kinds = useMemo(
+    () => [...new Set([...ALL_KINDS, ...pages.map((p) => p.section)])],
+    [pages],
   );
   const stripData = useDeferredValue(shown); // the thumbnails catch up after a drag instead of redrawing on every pointer move
   const known = useRef(targets);
@@ -130,6 +182,64 @@ export function EditorShell({
     setEditing({ id: text.id, all: true });
     say(t("editor.textAdded"));
   }, [apply, kind, select, spec, t, say, setEditing, setNotice]);
+  /** Adds a palette item (sticker, shape, frame, image) on top of the edited page, selected and focused so the keys of T-160 move it. */
+  const addFromPalette = useCallback(
+    (item: LayoutItem, what: string) => {
+      const why = apply(addItem(kind, item));
+      setNotice(why ? t(`editor.refused.${why}`, { defaultValue: t("editor.refused.other") }) : "");
+      if (why) return;
+      select([item.id]);
+      setEditing(null);
+      say(what);
+      setTimeout(
+        () =>
+          document
+            .querySelector<HTMLElement>(`[data-target="${CSS.escape(item.id)}"] .ed-hit`)
+            ?.focus(),
+        0,
+      );
+    },
+    [apply, kind, select, t, say, setEditing, setNotice],
+  );
+  const duplicate = useCallback(() => {
+    const src = selected?.item;
+    if (!src) return;
+    const id = newItemId();
+    const { dx, dcy } = copyShift(pb);
+    const why = apply(duplicateItem(kind, src.id, id, dx, dcy));
+    setNotice(why ? t(`editor.refused.${why}`, { defaultValue: t("editor.refused.other") }) : "");
+    if (why) return;
+    select([id]);
+    say(t("editor.duplicated"));
+  }, [apply, kind, pb, select, selected, t, say, setNotice]);
+  const askDelete = (m: Media) => {
+    setDeleteError("");
+    setDeleting({ m, uses: mediaUses(ed.doc, m.id) });
+  };
+  const confirmDelete = async () => {
+    if (!deleting) return;
+    setDeleteBusy(true);
+    setDeleteError("");
+    const r = await deleteDesignImage(deleting.m.id, {
+      doc: () => ed.doc,
+      apply: ed.apply,
+      settle: ed.settle,
+      clearHistory: ed.clearHistory,
+      deleteMedia,
+    });
+    setDeleteBusy(false);
+    if (r.ok) {
+      images.drop(deleting.m.id);
+      setDeleting(null);
+      select([]);
+      say(t("editor.deleteImage.done"));
+    } else
+      setDeleteError(
+        r.stage === "save"
+          ? t("editor.deleteImage.saveFailed")
+          : `${t("editor.deleteImage.deleteFailed")} ${errorText(t, r.error)}`,
+      );
+  };
   const pick = (i: number) => {
     if (i === index) return;
     setPageIdx(i);
@@ -165,12 +275,13 @@ export function EditorShell({
       if (!mod || readOnly) return;
       if (k === "z" && !e.shiftKey) undo();
       else if ((k === "z" && e.shiftKey) || (k === "y" && e.ctrlKey)) redo();
+      else if (k === "d" && !e.shiftKey && !e.altKey && el?.tagName !== "INPUT") duplicate();
       else return;
       e.preventDefault();
     };
     document.addEventListener("keydown", key);
     return () => document.removeEventListener("keydown", key);
-  }, [undo, redo, readOnly, asking, help, choose]);
+  }, [undo, redo, readOnly, asking, help, choose, duplicate]);
 
   if (ed.saveState === "gone")
     return (
@@ -208,6 +319,14 @@ export function EditorShell({
         </button>
         <button type="button" disabled={readOnly || !spec} onClick={addText}>
           {t("editor.addText")}
+        </button>
+        <button
+          type="button"
+          aria-expanded={paletteOpen}
+          aria-controls="ed-palette"
+          onClick={() => setPalette(!paletteOpen)}
+        >
+          {t("editor.palette.toggle")}
         </button>
         <SaveStatus state={ed.saveState} dirty={ed.dirty} />
         <button
@@ -275,6 +394,16 @@ export function EditorShell({
       {ed.saveState === "invalid" && (
         <Banner variant="error">
           {t("editor.invalid")}
+          {removeProblems(ed.problems.map((p) => p.path))(ed.doc).doc !== ed.doc && (
+            <Button
+              onClick={() => {
+                ed.apply(removeProblems(ed.problems.map((p) => p.path)));
+                say(t("editor.invalidRemoved"));
+              }}
+            >
+              {t("editor.invalidRemove")}
+            </Button>
+          )}
           {ed.problems.length > 0 && (
             <ul>
               {ed.problems.map((p) => (
@@ -286,7 +415,7 @@ export function EditorShell({
           )}
         </Banner>
       )}
-      <div className="ed-grid">
+      <div className={`ed-grid${paletteOpen ? " has-palette" : ""}`}>
         <PageStrip
           data={stripData}
           size={size}
@@ -295,26 +424,28 @@ export function EditorShell({
           current={index}
           onPick={pick}
         />
-        <Stage
-          data={shown}
-          size={size}
-          bookT={bookT}
-          page={page}
-          kind={kind}
-          spec={spec}
-          selection={ed.selection}
-          onSelect={choose}
-          onTargets={setTargets}
-          readOnly={readOnly}
-          safeMm={safeMm}
-          store={store}
-          announce={say}
-          Fit={Fit}
-          editing={editing}
-          onEdit={edit}
-          onEditDone={editDone}
-          cut={cut}
-        />
+        <MissingImage.Provider value={missing}>
+          <Stage
+            data={shown}
+            size={size}
+            bookT={bookT}
+            page={page}
+            kind={kind}
+            spec={spec}
+            selection={ed.selection}
+            onSelect={choose}
+            onTargets={setTargets}
+            readOnly={readOnly}
+            safeMm={safeMm}
+            store={store}
+            announce={say}
+            Fit={Fit}
+            editing={editing}
+            onEdit={edit}
+            onEditDone={editDone}
+            cut={cut}
+          />
+        </MissingImage.Provider>
         <PropertyPanel
           doc={ed.doc}
           kind={kind}
@@ -330,7 +461,39 @@ export function EditorShell({
           store={store}
           cut={cut}
           onAddText={addText}
+          onDuplicate={duplicate}
+          onMoreBackgrounds={() => {
+            setTab("background");
+            setPalette(true);
+          }}
+          pickImage={(onPick) => (
+            <DesignImages
+              images={images}
+              uploads={uploads}
+              readOnly={readOnly}
+              pickLabel={(n, total) => t("editor.image.pickN", { n, total })}
+              onPick={onPick}
+            />
+          )}
         />
+        {paletteOpen && (
+          <Palette
+            tab={tab}
+            onTab={setTab}
+            kind={kind}
+            kinds={kinds}
+            doc={ed.doc}
+            apply={ed.apply}
+            readOnly={readOnly}
+            announce={say}
+            spec={spec}
+            scope={scope}
+            images={images}
+            uploads={uploads}
+            onAdd={addFromPalette}
+            onAskDelete={askDelete}
+          />
+        )}
       </div>
       <div className="visually-hidden" role="status" aria-live="polite">
         {said}
@@ -362,6 +525,32 @@ export function EditorShell({
           {resetError !== null && (
             <p role="alert" className="error">
               {errorText(t, resetError)}
+            </p>
+          )}
+        </Dialog>
+      )}
+      {deleting && (
+        <Dialog
+          title={t("editor.deleteImage.title")}
+          confirmLabel={t("editor.deleteImage.confirm")}
+          cancelLabel={t("editor.deleteImage.cancel")}
+          danger
+          busy={deleteBusy}
+          onConfirm={() => void confirmDelete()}
+          onCancel={() => !deleteBusy && setDeleting(null)}
+        >
+          <p>
+            {deleting.uses.length > 0
+              ? t("editor.deleteImage.inUse", {
+                  count: deleting.uses.length,
+                  where: deleting.uses.map((k) => t(`editor.palette.kind.${k}`)).join(", "),
+                })
+              : t("editor.deleteImage.plain")}
+          </p>
+          {deleting.uses.length > 0 && <p>{t("editor.deleteImage.history")}</p>}
+          {deleteError && (
+            <p role="alert" className="error">
+              {deleteError}
             </p>
           )}
         </Dialog>

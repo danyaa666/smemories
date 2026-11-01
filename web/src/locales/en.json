@@ -1030,7 +1030,6 @@
     "toBack": "Send to back",
     "reordered": "Moved to position {{n}} of {{total}}",
     "deleted": "Deleted",
-    "delete": "Delete",
     "show": "Show",
     "hide": "Hide",
     "resetElement": "Reset this element",
@@ -1120,6 +1119,101 @@
       "center": "Centre",
       "right": "Right"
     },
-    "bold": "Bold"
+    "bold": "Bold",
+    "palette": {
+      "title": "Add to the page",
+      "tabs": "Palette sections",
+      "tab": {
+        "sticker": "Stickers",
+        "shape": "Shapes",
+        "frame": "Frames",
+        "images": "My images",
+        "background": "Background"
+      },
+      "kind": {
+        "cover": "the cover",
+        "profile": "the profile page",
+        "notes": "the notes pages",
+        "back": "the back cover"
+      },
+      "search": "Search by name",
+      "noMatch": "Nothing found. Try another word.",
+      "count": "{{count}} found",
+      "added": "Added: {{name}}",
+      "addedImage": "Added your image",
+      "addImageN": "Add image {{n}} of {{total}}",
+      "bgNote": "This changes the background of {{page}}. The other page types keep theirs.",
+      "bgAll": "Use on all page types",
+      "bgAllDone": "Background set on every page type",
+      "bgRemoved": "Background removed",
+      "bgSet": "Background changed",
+      "bgColour": "Background colour",
+      "bgShapes": "Stickers and shapes as background",
+      "bgMore": "More backgrounds: pictures, shapes, your images",
+      "bgImageN": "Use image {{n}} of {{total}} as background",
+      "bgRemove": "Remove background",
+      "toggle": "Add to page"
+    },
+    "upload": {
+      "zone": "Upload your own images",
+      "button": "Upload image",
+      "hint": "or drop JPEG, PNG or WebP files here (up to 10 MB each)",
+      "dismiss": "Dismiss",
+      "progress": "Uploading {{name}}",
+      "waiting": "Waiting",
+      "cancel": "Cancel",
+      "verifyLink": "Verify your email",
+      "listFailed": "Your images could not be loaded.",
+      "loading": "Loading your images...",
+      "empty": "No images yet. Upload one to use it on the pages.",
+      "count": "{{count}} of {{max}} images",
+      "deleteN": "Delete image {{n}} of {{total}}",
+      "more": "Load more",
+      "finished": "Upload finished",
+      "error": {
+        "generic": "The upload failed. Please try again.",
+        "offline": "No connection. Check your internet and try again.",
+        "tooLarge": "This file is larger than 10 MB. Choose a smaller one.",
+        "unsupported": "Only JPEG, PNG and WebP images can be used.",
+        "corrupt": "This image could not be read, or it is too large in pixels (at most 12000 px a side). Try another one.",
+        "cap": "This book already has {{count}} of {{max}} own images. Delete one to upload another.",
+        "quota": "Your storage limit of 500 MB is reached. Delete some photos or images first.",
+        "rateLimited": "Too many uploads at once or in a short time. Try again in {{seconds}} s.",
+        "busy": "The server is busy. Try again in {{seconds}} s.",
+        "notVerified": "Verify your email address before uploading.",
+        "timeout": "The connection stalled. Try again."
+      }
+    },
+    "image": {
+      "label": "Image",
+      "fit": "Fit",
+      "contain": "Whole image",
+      "cover": "Fill the box (crop)",
+      "radius": "Corner radius",
+      "replace": "Replace image",
+      "replaced": "Image replaced",
+      "missing": "Missing image",
+      "pickN": "Use image {{n}} of {{total}}"
+    },
+    "tint": {
+      "label": "Colour of the picture",
+      "original": "Original colours"
+    },
+    "duplicate": "Duplicate",
+    "duplicated": "Duplicated",
+    "invalidRemove": "Remove the items the server refused",
+    "invalidRemoved": "Removed the refused items",
+    "deleteImage": {
+      "title": "Delete this image?",
+      "confirm": "Delete image",
+      "cancel": "Keep it",
+      "plain": "The image will be deleted for good.",
+      "inUse": "This image is used on {{count}} page types ({{where}}). Those items and backgrounds will be removed from your pages.",
+      "history": "Undo and redo are cleared, so the deleted image cannot come back through them.",
+      "done": "Image deleted",
+      "saveFailed": "Your pages could not be saved, so the image was not deleted. Try again when the layout is saved.",
+      "deleteFailed": "The pages are saved without the image, but it could not be deleted."
+    },
+    "delete": "Delete"
   }
 }
