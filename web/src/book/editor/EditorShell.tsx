@@ -2,7 +2,9 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } f
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import type { BookData } from "../../api/book";
+import { restoreLayoutVersion, type LayoutVersion } from "../../api/bookLayout";
 import { deleteMedia, uploadMedia, type Media } from "../../api/yearbooks";
+import { getAsset } from "../assets";
 import { errorText } from "../../auth/errors";
 import { Banner } from "../../components/ui/Banner";
 import { Button } from "../../components/ui/Button";
@@ -24,7 +26,9 @@ import {
   removeProblems,
   type LayoutItem,
 } from "./document";
+import { HistoryPanel, PreviewBanner, useErrorText } from "./HistoryPanel";
 import { pageName, targetName } from "./names";
+import { missingCount, restoreVersion } from "./versions";
 import { HelpSheet } from "./gestures/HelpSheet";
 import { deleteDesignImage } from "./palette/deleteImage";
 import { DesignImages } from "./palette/DesignImages";
@@ -68,7 +72,21 @@ export function EditorShell({
   const index = Math.min(pageIdx, pages.length - 1);
   const page = pages[index]!;
   const kind = page.section;
-  const shown = useMemo(() => ({ ...data, layout: ed.doc }), [data, ed.doc]);
+  // history (T-165): the panel replaces the property panel; a previewed version is drawn read-only instead of the edited document
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [viewed, setViewed] = useState<LayoutVersion | null>(null);
+  const [historyKey, setHistoryKey] = useState(0);
+  const [confirmRestore, setConfirmRestore] = useState(false);
+  const [restoring, setRestoring] = useState(false);
+  const [restoreError, setRestoreError] = useState("");
+  const [toast, setToast] = useState("");
+  const restoreOnce = useRef(false);
+  const historyButton = useRef<HTMLButtonElement>(null);
+  const historyText = useErrorText();
+  const shown = useMemo(
+    () => ({ ...data, layout: viewed ? viewed.layout : ed.doc }),
+    [data, ed.doc, viewed],
+  );
   const [said, say] = useState("");
   const [asking, setAsking] = useState(false);
   const [help, setHelp] = useState(false);
@@ -88,12 +106,14 @@ export function EditorShell({
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const { states: fits, Provider: Fit } = useFitReport();
-  const readOnly = ed.saveState === "conflict";
+  const readOnly = ed.saveState === "conflict" || viewed !== null;
 
   const pb = useMemo(() => pageBox(size), [size]);
   // the stage reports where it measured the template's own elements, so the panel shows the numbers of what is drawn
   const [measuredTargets, setTargets] = useState<Target[]>([]);
-  const targets = measuredTargets.length ? measuredTargets : targetsOf(ed.doc, kind, spec, pb);
+  const targets = measuredTargets.length
+    ? measuredTargets
+    : targetsOf(shown.layout ?? ed.doc, kind, spec, pb);
   const selected = targets.find((x) => x.id === ed.selection[0]);
 
   const { select, undo, redo, apply, begin, preview, commit, cancel } = ed;
@@ -265,6 +285,72 @@ export function EditorShell({
     [select, t, say, setEditing, setNotice],
   );
 
+  // --- version history (T-165) ---
+  const closeHistory = useCallback(() => {
+    setViewed(null);
+    setRestoreError("");
+    setHistoryOpen(false);
+    setTimeout(() => historyButton.current?.focus(), 0);
+  }, [setViewed, setRestoreError, setHistoryOpen]);
+  const backToCurrent = useCallback(() => {
+    setViewed(null);
+    setRestoreError("");
+    say(t("editor.history.backDone"));
+  }, [t, say, setViewed, setRestoreError]);
+  const showPreview = useCallback(
+    (v: LayoutVersion) => {
+      select([]);
+      setEditing(null);
+      setNotice("");
+      setRestoreError("");
+      setViewed(v);
+      say(t("editor.history.previewingShort"));
+    },
+    [select, t, say, setEditing, setNotice, setViewed, setRestoreError],
+  );
+  // a design image list that is complete lets the banner count the images that are gone; a partial one counts none (the hint is only a hint)
+  const knownMedia = useMemo(
+    () =>
+      images.status === "ready" && !images.more ? new Set(images.items.map((m) => m.id)) : null,
+    [images.status, images.more, images.items],
+  );
+  const dropping = viewed
+    ? missingCount(
+        viewed.layout,
+        (id) => !!getAsset(id),
+        knownMedia && ((id) => knownMedia.has(id)),
+      )
+    : 0;
+  const doRestore = async () => {
+    if (!viewed || restoreOnce.current) return; // a double click sends one request
+    restoreOnce.current = true;
+    setRestoring(true);
+    setRestoreError("");
+    const r = await restoreVersion(viewed.id, {
+      settle: ed.settle,
+      version: ed.currentVersion,
+      restore: (id, base) => restoreLayoutVersion(bookId, id, base),
+      adopt: ed.adopt,
+      enterConflict: ed.enterConflict,
+    });
+    restoreOnce.current = false;
+    setRestoring(false);
+    setConfirmRestore(false);
+    if (r.ok) {
+      const msg =
+        t("editor.history.restored") +
+        (r.dropped > 0 ? ` ${t("editor.history.droppedMsg", { count: r.dropped })}` : "");
+      setViewed(null);
+      setHistoryKey((k) => k + 1); // the replaced document is a new "Before restore" row
+      setToast(msg);
+      say(msg);
+      return;
+    }
+    setRestoreError(historyText(r.error, r.retryAfter));
+    if (r.error === "conflict") setViewed(null); // the conflict banner takes over with the stored document
+    if (r.error === "gone") setHistoryKey((k) => k + 1);
+  };
+
   // undo and redo from the keyboard (not while a text area has the keys, T-161)
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
@@ -277,6 +363,10 @@ export function EditorShell({
       if (e.key === "Escape" && help) return setHelp(false);
       const k = e.key.toLowerCase();
       const mod = e.ctrlKey || e.metaKey;
+      if (e.key === "Escape" && historyOpen && !asking && !confirmRestore && !deleting) {
+        e.preventDefault();
+        return viewed ? backToCurrent() : closeHistory();
+      }
       if (e.key === "Escape" && !asking) return choose([]);
       if (!mod || readOnly) return;
       if (k === "z" && !e.shiftKey) undo();
@@ -287,7 +377,21 @@ export function EditorShell({
     };
     document.addEventListener("keydown", key);
     return () => document.removeEventListener("keydown", key);
-  }, [undo, redo, readOnly, asking, help, choose, duplicate]);
+  }, [
+    undo,
+    redo,
+    readOnly,
+    asking,
+    help,
+    choose,
+    duplicate,
+    historyOpen,
+    viewed,
+    confirmRestore,
+    deleting,
+    backToCurrent,
+    closeHistory,
+  ]);
 
   if (ed.saveState === "gone")
     return (
@@ -333,6 +437,26 @@ export function EditorShell({
           onClick={() => setPalette(!paletteOpen)}
         >
           {t("editor.palette.toggle")}
+        </button>
+        <button
+          type="button"
+          ref={historyButton}
+          aria-expanded={historyOpen}
+          onClick={() => (historyOpen ? closeHistory() : setHistoryOpen(true))}
+        >
+          <svg
+            aria-hidden="true"
+            width="14"
+            height="14"
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+          >
+            <circle cx="8" cy="8" r="6.2" />
+            <path d="M8 4.5V8l2.4 1.6" />
+          </svg>{" "}
+          {t("editor.history.button")}
         </button>
         <SaveStatus state={ed.saveState} dirty={ed.dirty} />
         <button
@@ -421,7 +545,17 @@ export function EditorShell({
           )}
         </Banner>
       )}
-      <div className={`ed-grid${paletteOpen ? " has-palette" : ""}`}>
+      {toast && (
+        <Banner
+          variant="warning"
+          action={<Button onClick={() => setToast("")}>{t("editor.history.dismiss")}</Button>}
+        >
+          {toast}
+        </Banner>
+      )}
+      <div
+        className={`ed-grid${paletteOpen ? " has-palette" : ""}${viewed ? " is-previewing" : ""}`}
+      >
         <PageStrip
           data={stripData}
           size={size}
@@ -452,36 +586,60 @@ export function EditorShell({
             cut={cut}
           />
         </MissingImage.Provider>
-        <PropertyPanel
-          doc={ed.doc}
-          kind={kind}
-          page={page}
-          pb={pb}
-          selected={selected}
-          apply={ed.apply}
-          select={choose}
-          readOnly={readOnly}
-          announce={say}
-          spec={spec}
-          scope={scope}
-          store={store}
-          cut={cut}
-          onAddText={addText}
-          onDuplicate={duplicate}
-          onMoreBackgrounds={() => {
-            setTab("background");
-            setPalette(true);
-          }}
-          pickImage={(onPick) => (
-            <DesignImages
-              images={images}
-              uploads={uploads}
-              readOnly={readOnly}
-              pickLabel={(n, total) => t("editor.image.pickN", { n, total })}
-              onPick={onPick}
-            />
-          )}
-        />
+        {historyOpen ? (
+          <HistoryPanel
+            bookId={bookId}
+            previewId={viewed?.id ?? null}
+            refreshKey={historyKey}
+            onPreview={showPreview}
+          >
+            {viewed && (
+              <PreviewBanner
+                version={viewed}
+                dropping={dropping}
+                busy={restoring}
+                onRestore={() => setConfirmRestore(true)}
+                onBack={backToCurrent}
+              />
+            )}
+            {restoreError && (
+              <p role="alert" className="error">
+                {restoreError}
+              </p>
+            )}
+          </HistoryPanel>
+        ) : (
+          <PropertyPanel
+            doc={ed.doc}
+            kind={kind}
+            page={page}
+            pb={pb}
+            selected={selected}
+            apply={ed.apply}
+            select={choose}
+            readOnly={readOnly}
+            announce={say}
+            spec={spec}
+            scope={scope}
+            store={store}
+            cut={cut}
+            onAddText={addText}
+            onDuplicate={duplicate}
+            onMoreBackgrounds={() => {
+              setTab("background");
+              setPalette(true);
+            }}
+            pickImage={(onPick) => (
+              <DesignImages
+                images={images}
+                uploads={uploads}
+                readOnly={readOnly}
+                pickLabel={(n, total) => t("editor.image.pickN", { n, total })}
+                onPick={onPick}
+              />
+            )}
+          />
+        )}
         {paletteOpen && (
           <Palette
             tab={tab}
@@ -504,6 +662,18 @@ export function EditorShell({
       <div className="visually-hidden" role="status" aria-live="polite">
         {said}
       </div>
+      {confirmRestore && (
+        <Dialog
+          title={t("editor.history.confirmTitle")}
+          confirmLabel={t("editor.history.restore")}
+          cancelLabel={t("editor.history.cancel")}
+          busy={restoring}
+          onConfirm={() => void doRestore()}
+          onCancel={() => !restoring && setConfirmRestore(false)}
+        >
+          <p>{t("editor.history.confirmBody")}</p>
+        </Dialog>
+      )}
       {asking && (
         <Dialog
           title={t("editor.resetTitle")}

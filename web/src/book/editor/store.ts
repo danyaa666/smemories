@@ -170,6 +170,32 @@ export class EditorStore {
     this.history.clear(this.history.committed);
     this.emit();
   }
+  /** The version the store holds right now (a closure over the snapshot would be stale after `settle`). */
+  currentVersion = () => this.version;
+  /**
+   * Takes a document the server just wrote (a restore, T-165) as the saved state: the undo and redo steps go, because the answer does not descend from them.
+   * Call it only after `settle()` said true and while nothing can edit, so no unsaved edit is thrown away.
+   */
+  adopt(layout: LayoutDoc, version: number) {
+    this.history.clear(layout);
+    this.version = version;
+    this.rev++;
+    this.savedRev = this.rev;
+    this.conflict = null;
+    this.problems = [];
+    this.selection = [];
+    this.attempt = 0;
+    this.saveState = "idle";
+    this.emit();
+  }
+  /** A restore was refused with ERROR_VERSION_CONFLICT: start the conflict flow the autosave has, with the stored document the answer carried. */
+  enterConflict(stored: LayoutConflict | undefined) {
+    this.conflict = stored ?? null;
+    this.saveState = "conflict";
+    this.queued = false;
+    this.clearTimers();
+    this.emit();
+  }
   select = (ids: readonly string[]) => {
     this.selection = ids;
     this.emit();
