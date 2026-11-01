@@ -498,7 +498,7 @@ Spec: .team/epics/E09-customisation-editor/21-editor-palette-assets-images-backg
 - 2026-11-01 17:38Z · leader · merged PR #160 squash, head 78c0fe7, QA_PASS: e2e 31/31, print-check 187/187, vitest 1033; non-blocking follow-ups: dialog copy 'used on 1 page types', PNG 25 MP message, undo after deleting unused image can restore an item whose image is gone (server refuses, remove button cleans), 30-cap vs quota share ERROR_QUOTA_EXCEEDED
 
 ### T-163 — [E09] Layout version history and restore (backend)
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -506,17 +506,19 @@ Spec: .team/epics/E09-customisation-editor/21-editor-palette-assets-images-backg
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-163-e09-layout-version-history-and-restore-b
-- **PR:** —
-- **Updated:** 2026-11-01 17:19Z by dev
-- **Comments-seen:** 2
+- **PR:** https://github.com/danyaa666/smemories/pull/161
+- **Updated:** 2026-11-01 18:02Z by dev
+- **Comments-seen:** 4
 
 Spec: .team/epics/E09-customisation-editor/22-layout-version-history-backend.md (read it from the main checkout). Snapshots before a new editing burst (10 min), newest 30 kept, restore as a new version dropping missing assets/images; owner only; deleted with template change, yearbook and account. QA must run make test-integration and report the lines (migration, concurrency)
 
 #### Comments
 - 2026-11-01 17:18Z · leader · no dependency; dev is free after T-162, runs in parallel with QA on T-162
 - 2026-11-01 17:19Z · leader · Leader to dev: spec 22-layout-version-history-backend.md, backend only; migration + concurrency, so run make test-integration (and -race, repeated) on your own compose stack with non-default ports and put the lines in the board comment. Do not touch web code except regenerated schema types if the repo does that.
+- 2026-11-01 18:02Z · dev · PR #161, head f265cd4b3997c12c8abab2e5a33788b1b827358c. Backend only: migration 20261102120000 book_layout_version_tab (+item_count, bytes columns for the list), snapshot in the save/reset/restore transaction under the yearbook row lock (auto only if newest snapshot older than 10 min, newest 30 kept), routes book-layout/version-list, version-get, restore (owner only, save rate limits), deleted with template change and yearbook, metrics, OpenAPI+schema.d.ts, docs, Postman folder. Results on own stack t163stack (ports 43316/46316/49316): make build lint test green; make test-integration -race all packages ok (first run failed only internal/notes zero-rows tests for the unregistered table, fixed, notes re-run ok 118s); go test -race -count=20 -tags integration ./internal/booklayout/ ok (324s, 20/20); migrate down/up ok; check:api ok; check-class-matrix ok (27 ops); Postman customisation-editor collection 166 requests / 374 assertions / 0 failed (postman CLI, run from postman/ for fixture paths; newman not installed). Verify: fill a book with 40 saves spread over time, restore, delete a design image then restore, two tabs racing restore (one conflict), version-list has no bodies. Notes: no data export or account deletion exists yet (T-025), so the export count is documented for T-025 only; anonymous is 401 as on all book-layout routes (spec said 404); the burst limit means the Postman history folder waits once at its first request. Stack stopped. Not run: e2e/print-check (no web change), image build.
+- 2026-11-01 18:02Z · leader · Leader to QA (when the usage gate lets you run): re-run everything on head f265cd4b3997c12c8abab2e5a33788b1b827358c and write result lines with the head SHA, including make test-integration with -race and booklayout -race -count=20, migrate down/up, check:api, class matrix and the Postman/newman run. Deviations accepted: item_count/bytes columns; anonymous callers get 401 like every book-layout route (matrix: admin, member, other-class admin 404, anonymous 401); no export/account-deletion code exists yet so the snapshot count and deletion are documented for T-025. Check: retention boundary at exactly 10 min, 31st snapshot prunes the oldest, reset/restore snapshots regardless of age, two concurrent saves (no duplicate/no loss), restore with a deleted design image and an asset id removed from the registry (dropped count), restore conflict leaves state unchanged, template change and yearbook delete remove snapshots, version-list has no bodies, foreign book/user 404.
 
 ### T-164 — [E09] Palette follow-ups: copy, history edge, distinct cap/quota code (web + one small API change)
 - **Status:** BACKLOG
