@@ -375,7 +375,7 @@ Spec: .team/epics/E09-customisation-editor/18-editor-shell-and-selection.md (rea
 - 2026-11-01 12:18Z · leader · merged PR #157 squash, head 264ad00, QA_PASS with e2e 8/8 and print-check 187/187
 
 ### T-160 — [E09] Editor gestures: move, resize, rotate, snap, guides, with keyboard control (web)
-- **Status:** READY_FOR_QA
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -386,8 +386,8 @@ Spec: .team/epics/E09-customisation-editor/18-editor-shell-and-selection.md (rea
 - **Assignee:** —
 - **Branch:** task/t-160-e09-editor-gestures-move-resize-rotate-s
 - **PR:** https://github.com/danyaa666/smemories/pull/158
-- **Updated:** 2026-11-01 12:58Z by dev
-- **Comments-seen:** 4
+- **Updated:** 2026-11-01 13:16Z by leader
+- **Comments-seen:** 6
 
 Spec: .team/epics/E09-customisation-editor/19-editor-gestures-and-keyboard.md (read it from the main checkout). In-house pointer-event module per ADR 0004 Q2, keyboard in the same task, 44 px touch targets
 
@@ -396,9 +396,15 @@ Spec: .team/epics/E09-customisation-editor/19-editor-gestures-and-keyboard.md (r
 - 2026-11-01 12:58Z · dev · Head 83637225410caaab1f64655f72d68244f0e26227, PR #158. Results: web lint/prettier/tsc ok, vitest 899/0, lint:i18n ok, check:api ok, build ok; make e2e (own stack t160stack, API 28316, web 24316) 16 passed 0 failed incl. 8 new editor-gestures tests; make print-check 187 pass 0 fail. Pointer error (screen px, Alt held) worst per measure A5/A4/Letter at 100 and 125 pct: drag 0.44, corner resize 0.46, opposite corner 0.55, rotate 0.0 (full table in PR). 100 items, 4x CPU throttle: 59.7 fps, p95 16.8 ms. Keyboard: arrows 1, Shift+arrows 10, Alt+Shift+arrows resize 10 (Ctrl+Alt rejected: VoiceOver/Linux workspaces), comma/period rotate 1 (Shift 15), Delete/Backspace, Esc, Tab, ? help; table in PR. A1 (hit order = DOM order of moved elements) and A2 (new save state failing = Could not save, retrying) done with tests. Decisions to check: clamp keeps box inside the page (stricter than half-outside); keyboard does not snap; no resize snapping. UNPROVEN: Windows/Linux shortcut set (manual check keys in docs/e2e.md), Safari/Firefox any OS, touch in Firefox/WebKit/real tablet, screen readers, AltGr layouts.
 - 2026-11-01 12:58Z · dev · PR #158 head 8363722; gestures + keyboard + A1 + A2; e2e 16/0, print-check 187/0, vitest 899/0; see comment for numbers and unproven list
 - 2026-11-01 12:59Z · leader · Leader to QA: re-run everything on head 83637225410caaab1f64655f72d68244f0e26227 and write result lines with the head SHA. Decisions I want you to judge: (1) dev's clamp keeps the whole box inside the page, stricter than the spec (box may leave the page by at most half its size; server bound unchanged): check a rotated item at a corner and say whether it is a usability problem; I accept the stricter clamp for the first release if nothing else breaks (nothing is cut by print), but it must be documented in docs/e2e.md or the editor docs. (2) Keyboard does not snap and resize does not snap, only move does: fine unless it contradicts an AC. (3) Pointer error was measured at 100% and 125%, not 150% (quantisation): repeat on Letter at a non-default zoom (e.g. 75% and 150%) and report the numbers; pass if the error comes only from the thousandths quantisation (at most 1 px at 100-125%, say what you see at 150%). Also: rotated-item resize, flush-to-edge drag, Escape mid-gesture leaves no history step and no save, one gesture = one undo step, keyboard shortcuts in Chromium (list which you could not try), A1 click on overlap selects the topmost, A2 server error label, touch at 768 px in Chromium (first tap selects, then drag; swipe over an unselected item pans). Note dev's stack t160stack (ports 33316/36316/39316) may still be running: it is the dev's, leave it; use your own project and ports.
+- 2026-11-01 13:15Z · qa · QA_PASS on head 83637225410caaab1f64655f72d68244f0e26227 (PR #158; git rev-parse and gh pr view agree). CI on the head: go pass, web pass, security pass; go-integration/e2e/image skipped (paused, D-37/D-38). Web-only, no Go change, so make test-integration not applicable.
+  RESULT LINES (own stack, compose project t160qa, ports 43316/46316/49316, API 28416, web 24416, removed afterwards): web lint+prettier ok, tsc ok, vitest 899 passed 0 failed (50 files), lint:i18n ok, check:api ok, build ok. e2e (scripts/e2e.sh, same as make e2e): 16 passed 0 failed, incl. 8 editor-gestures tests. make print-check (tools/print-check npm test): 187 pass 0 fail. (Note: make e2e in a worktree whose .env exists reads that .env and overrides the shell ports; I ran scripts/e2e.sh directly with my env so nothing touched the main stack's data. My first two make e2e attempts did run against the main stack's smem_test_e2e DB and smem:test redis keys only, and failed on S3 creds there; ignore them.)
+  EVIDENCE per AC. AC1 pointer exactness: e2e T160-NUMBERS A5/A4/Letter at 100 and 125 percent, worst 0.55 px (drag/resize/corner/rotate). My own run (Alt held, Letter, screen px): zoom 50 drag 0.21 resize 0.20 corner 0.31 NW-resize 0.22; 75: 0.28/0.22/0.05/0.09; 150: 0.70/0.72/1.05/0.79; 200: 0.67/1.03/0.09/0.82. At 150 and 200 the worst is 1.05 and 1.03 px: it comes from the thousandths quantisation of the stored box (1 thousandth is 0.816 design px = 1.2 px at 150, 1.6 at 200), not from the maths; at 100-125 it is under 0.6. Rotated 30 degree item resized from SE with a pointer vector 50 along and 20 across its axes on Letter: size error 0 at 100, 1 and -0.5 at 150, 0 at 200; the opposite corner moved 0.09/0.9/0.49 px, SE corner to pointer 0.09/0.69/0.49. AC2 keyboard (Chromium, macOS, A5 with exact-name Sticker focus): ArrowRight/Up move about 1 design px (0.82 and 1.16 measured: quantised), Shift+Left 9.78, Alt+Shift+Right/Down resize +9.8, Alt+Left does nothing (browser keeps it), Period +1 deg, Comma x2 -1, Shift+Period +15, 13 x Shift+Period wraps to -166 (normalised), Delete and Backspace remove, Ctrl/Cmd+Z restores, Tab/Shift+Tab move between items, Escape clears selection, ? opens the help (14 rows, vi and en strings exist), live region says 'Moved left 10. Position 67.5 percent from the left, 58.6 percent from the top.' and 'Rotated to 24 degrees.'; panel has visible buttons for rotate 1/15, wider/narrower/taller/shorter, z-order, delete. Not tried: Windows, Linux, Safari, Firefox, AltGr layouts, screen readers (dev's manual list in docs/e2e.md stands; owner to check Alt+Shift+arrow does not switch the input language and Alt+Left still goes Back). AC3: Escape (3 presses, then more movement and release) during move, resize and rotate restores the start box, Undo stays disabled, 0 book-layout/save requests in 2.2 s; touchCancel mid drag restores the box, no step. A drag of 20 pointer moves = 1 undo step; a burst of 12 ArrowRight = 1 undo step (12.24 design px) and Redo restores. AC4: e2e fps100 60, p95 16.8 ms, 181 frames (4x CPU throttle). AC5 above. AC6 touch 768: e2e test passes; my touchCancel check ok; Firefox/WebKit touch unproven. A1: e2e test (move A over B, click overlap selects the topmost, Tab order follows draw order) passes; my 40 overlapping items: elementFromPoint at the top item's centre is the last drawn, a click selects the last hit area (index 42 of 43), a 30-move drag moved 119.2 x 60.3 for 120 x 60 (6 px snap), 658 ms. A2: route-mocked save: 500 shows 'Could not save, retrying...', a refused connection shows 'Offline: your changes are kept here and saved when you are back online.', and after the route is released it shows Saved within about 34 s. Flush-to-edge: e2e passes on A5/A4/Letter; item dragged far beyond the page (pointer 200 px outside) stops with its unrotated box inside the page (saved x 700 w 300 on 1000, cy 942), no error.
+  LEADER DECISIONS: (1) stricter clamp: a 45 degree rotated 300x150 item dragged into the bottom-right corner stops with its unrotated box exactly on the page edge; its rotated corners poke out by a few px, which is what the eye expects. Not a usability problem for a first release (same rule as the draw rule in ADR 0004 line 30, which already says the box stays fully inside; no bleed). It is not written in docs/e2e.md; ADR 0004 covers it, add one line to the editor docs when convenient (non-blocking). (2) no snapping on keyboard and resize: no AC says otherwise, fine. (3) 150 percent: see AC1, 1.05 px quantisation.
+  NON-BLOCKING: a. After Esc closes the help sheet, focus falls to BODY (not back to the Help button or the stage); keyboard users must Tab from the start. b. '1 px' keys move 0.82 to 1.16 design px because the box is stored in thousandths of the page; a burst accumulates exactly. c. Help sheet is a region, not a dialog, fine. d. Not run: Firefox/WebKit, Windows, Linux, real tablet, screen readers. No test files added by QA; my exploratory scripts stayed outside the repo.
+- 2026-11-01 13:16Z · leader · merged PR #158 squash, head 8363722, QA_PASS: e2e 16/0, print-check 187/0, vitest 899/0; pointer error <=0.55 px at 50-125%, 1.05 px at 150% (thousandths quantisation)
 
 ### T-161 — [E09] Editor text boxes: add, type in place, font, size, colour, align (web)
-- **Status:** BACKLOG
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -406,14 +412,15 @@ Spec: .team/epics/E09-customisation-editor/19-editor-gestures-and-keyboard.md (r
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-161-e09-editor-text-boxes-add-type-in-place-
 - **PR:** —
-- **Updated:** 2026-11-01 12:00Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-11-01 13:16Z by dev
+- **Comments-seen:** 1
 
 Spec: .team/epics/E09-customisation-editor/20-editor-text-boxes.md (read it from the main checkout). Textarea overlay per ADR 0004 Q3, 500-code-point cap at compositionend, plain-text paste, clip warning, property-panel text field as fallback; manual Telex (macOS) and iOS Safari checks are acceptance criteria
 
 #### Comments
+- 2026-11-01 13:16Z · leader · T-160 merged; start from the T-160 gesture/keyboard code on develop
 
 <!-- tasks:end -->

@@ -68,6 +68,8 @@ The spec has no cover-title edit because the cover title is the book's own title
 (7) one item dragged among 100 (the document is served by the test through `page.route`, because the server allows 40 per page) under `Emulation.setCPUThrottlingRate` 4: at least 30 frames a second (measured 59.7, p95 frame 16.8 ms).
 The numbers print as `T160-NUMBERS {...}` lines.
 
+The editor keeps the whole box inside the page while it is dragged, resized, rotated or moved by keys (ADR 0004 line 30). That is stricter than the saved-layout bound (a box may hang out by half its size), which the server still accepts. A rotated item stops cleanly in a corner; nothing is cut by print. Pointer error is the quantisation of the stored thousandths: at most 0.55 px from 50 to 125 % zoom, about 1.05 px at 150 % and 1.03 px at 200 % (QA, Letter, Alt held).
+
 Not proven by the test, to check by hand (the leader lists these for the owner): the shortcut set on **Windows and Linux** (Alt+Shift+arrow must not switch the input language or move a window; the `,` and `.` keys on a Vietnamese keyboard with Telex on; Alt+Left must still go back), **macOS Safari and Firefox** (Option+Shift+arrow, Option while dragging), **touch in Firefox and WebKit** and on a real tablet, **screen readers** (the live region texts), and a **keyboard layout where `,` or `.` needs AltGr or Shift** (the handler reads the typed character, so `<` and `>` also count).
 
 A template element moved to a box equal to its own is a print-check test too (T-159 rework 1): "an override equal to the natural box leaves every editable element where it was", A5/A4/Letter, all eight editable ids, rect change below 0.15 % of the page width (measured 0.04 to 0.07 %; before the fix up to 12 %).
@@ -95,6 +97,8 @@ like `make print-check`. `scripts/e2e.sh` builds and starts the API on `127.0.0.
 The API runs with `SMEM_ENV=test` (Redis keys `smem:test:*`, which `make e2e` resets because registration is limited to 5 per hour per
 address). The run creates its own data (unique email `e2e-<run>@example.com`, unique title) and deletes its yearbooks, notes and photos at
 the end, also after a failure; the account itself stays (there is no endpoint to delete it). It can be re-run at once.
+
+In a git worktree (an agent's task checkout) `make up` copies `.env.example` to a `.env` of its own with the default ports, so `make e2e` there talks to the main stack (database `smem_test_e2e`, Redis keys `smem:test:*`). To use a private stack, run `scripts/e2e.sh` directly with `COMPOSE_PROJECT_NAME`, your own ports and `SMEM_TEST_S3_ENDPOINT` set, and say so in the PR.
 
 ## Guards (T-087)
 
