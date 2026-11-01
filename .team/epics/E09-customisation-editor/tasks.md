@@ -498,7 +498,7 @@ Spec: .team/epics/E09-customisation-editor/21-editor-palette-assets-images-backg
 - 2026-11-01 17:38Z · leader · merged PR #160 squash, head 78c0fe7, QA_PASS: e2e 31/31, print-check 187/187, vitest 1033; non-blocking follow-ups: dialog copy 'used on 1 page types', PNG 25 MP message, undo after deleting unused image can restore an item whose image is gone (server refuses, remove button cleans), 30-cap vs quota share ERROR_QUOTA_EXCEEDED
 
 ### T-163 — [E09] Layout version history and restore (backend)
-- **Status:** READY_FOR_QA
+- **Status:** IN_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -506,10 +506,10 @@ Spec: .team/epics/E09-customisation-editor/21-editor-palette-assets-images-backg
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** qa
 - **Branch:** task/t-163-e09-layout-version-history-and-restore-b
 - **PR:** https://github.com/danyaa666/smemories/pull/161
-- **Updated:** 2026-11-01 18:02Z by dev
+- **Updated:** 2026-11-01 21:12Z by qa
 - **Comments-seen:** 4
 
 Spec: .team/epics/E09-customisation-editor/22-layout-version-history-backend.md (read it from the main checkout). Snapshots before a new editing burst (10 min), newest 30 kept, restore as a new version dropping missing assets/images; owner only; deleted with template change, yearbook and account. QA must run make test-integration and report the lines (migration, concurrency)
@@ -521,7 +521,7 @@ Spec: .team/epics/E09-customisation-editor/22-layout-version-history-backend.md 
 - 2026-11-01 18:02Z · leader · Leader to QA (when the usage gate lets you run): re-run everything on head f265cd4b3997c12c8abab2e5a33788b1b827358c and write result lines with the head SHA, including make test-integration with -race and booklayout -race -count=20, migrate down/up, check:api, class matrix and the Postman/newman run. Deviations accepted: item_count/bytes columns; anonymous callers get 401 like every book-layout route (matrix: admin, member, other-class admin 404, anonymous 401); no export/account-deletion code exists yet so the snapshot count and deletion are documented for T-025. Check: retention boundary at exactly 10 min, 31st snapshot prunes the oldest, reset/restore snapshots regardless of age, two concurrent saves (no duplicate/no loss), restore with a deleted design image and an asset id removed from the registry (dropped count), restore conflict leaves state unchanged, template change and yearbook delete remove snapshots, version-list has no bodies, foreign book/user 404.
 
 ### T-164 — [E09] Palette follow-ups: copy, history edge, distinct cap/quota code (web + one small API change)
-- **Status:** BACKLOG
+- **Status:** IN_PROGRESS
 - **Priority:** P3
 - **Type:** fix
 - **Milestone:** M4
@@ -529,13 +529,33 @@ Spec: .team/epics/E09-customisation-editor/22-layout-version-history-backend.md 
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
+- **Assignee:** dev
+- **Branch:** task/t-164-e09-palette-follow-ups-copy-history-edge
+- **PR:** —
+- **Updated:** 2026-11-01 21:12Z by dev
+- **Comments-seen:** 1
+
+Spec: .team/epics/E09-customisation-editor/23-palette-follow-ups.md (read it from the main checkout). Plural copy, accurate PNG/JPEG size message, history counts as in-use when deleting an image, ERROR_DESIGN_IMAGE_LIMIT separate from ERROR_QUOTA_EXCEEDED
+
+#### Comments
+- 2026-11-01 21:12Z · leader · promoted: T-163 in QA, dev free; spec 23-palette-follow-ups.md
+
+### T-165 — [E09] Editor version history panel: list, preview and restore (web)
+- **Status:** BACKLOG
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M4
+- **Depends-on:** T-163
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-11-02 08:00Z by leader
+- **Updated:** 2026-11-02 04:50Z by leader
 - **Comments-seen:** 0
 
-Spec: .team/epics/E09-customisation-editor/23-palette-follow-ups.md (read it from the main checkout). Plural copy, accurate PNG/JPEG size message, history counts as in-use when deleting an image, ERROR_DESIGN_IMAGE_LIMIT separate from ERROR_QUOTA_EXCEEDED
+Spec: .team/epics/E09-customisation-editor/24-version-history-panel.md (read it from the main checkout). History button and panel, read-only preview of a snapshot, restore through the T-163 routes with settle first, history cleared after restore, dropped count message, every error mapped, e2e spec editor-history
 
 #### Comments
 
