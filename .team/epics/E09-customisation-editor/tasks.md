@@ -285,7 +285,7 @@ Spec: .team/epics/E09-customisation-editor/16-print-check-start-server-strict.md
 - 2026-11-01 07:04Z · leader · merged 4c9b0f6 (PR #155, head 2646dc6); QA_PASS: print-check 181/181, foreign server on port refused, no orphan vite
 
 ### T-158 — [E09] Editor state: document store, undo/redo, autosave and conflict handling (web)
-- **Status:** QA_FAIL
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -296,8 +296,8 @@ Spec: .team/epics/E09-customisation-editor/16-print-check-start-server-strict.md
 - **Assignee:** —
 - **Branch:** task/t-158-e09-editor-state-document-store-undo-red
 - **PR:** 156
-- **Updated:** 2026-11-01 07:11Z by qa
-- **Comments-seen:** 4
+- **Updated:** 2026-11-01 07:13Z by dev
+- **Comments-seen:** 5
 
 Spec: .team/epics/E09-customisation-editor/17-editor-state-undo-autosave.md (read it from the main checkout). Pure operations, snapshot history depth 100, debounced autosave with base_version, 409 choices
 
@@ -320,6 +320,7 @@ Spec: .team/epics/E09-customisation-editor/17-editor-state-undo-autosave.md (rea
   - Not applicable: Postman (no endpoint change); make test-integration / e2e / print-check not run: web-only change with no server, print or auth flow touched (risk low).
   Re-test after fix: run document.mirror.test.ts + the suite; I will re-run live scenarios (e) and (g).
 - 2026-11-01 07:11Z · leader · Leader to dev (rework 1): fix all three QA findings, not only the blocker. (1) textRefusal in document.ts must match the server's text validation exactly: read internal/booklayout validate.go for the refused categories (zero-width/format characters, U+2028/2029, U+FFFD, control chars) and the order (NFC and trim first, then count code points); make QA's document.mirror.test.ts (commit 2b0dfe2, pushed on the PR branch; merge it in, no force-push) pass 8 of 8, and add a comment in document.ts naming validate.go as the source of truth. (2) A commit during 429/backoff must not schedule a save before Retry-After/backoff has passed (the debounce must wait for max(1.5 s, remaining wait)); add a fake-timer test. (3) keepMine and useTheirs must catch a refetch that returns no conflict body (move to a clear error/offline state, no unhandled rejection); add a test. Re-run web lint/prettier/tsc/vitest/lint:i18n/check:api/build.
+- 2026-11-01 07:13Z · dev · Rework 1, PR #156 head 0b2c3f3 (merged QA's 2b0dfe2, no force-push). (1) document.ts textRefusal now mirrors validate.go/textx.CleanMultiline: CRLF->LF, NFC, Go-style trim (keeps U+FEFF, trims U+0085), refuses Cc/Cf (except ZWJ)/Zl/Zp/U+FFFD/lone surrogates -> bad_text before the 500 code-point count; document.mirror.test.ts 8/8. (2) store.ts notBefore: schedule() delays to max(1.5 s, remaining 429/backoff wait); flush/online/stop still immediate; tests 'commit during a 429 wait' (fails without fix) and 'offline backoff + flush'. (3) stored() catches the refetch failure: stays in conflict (gone on 401/403/404), no rejection, choice can be retried; tests for useTheirs and keepMine (fail without fix). Checks: eslint 0, prettier clean, tsc clean, vitest 45 files 814 passed, lint:i18n ok, check:api ok, build ok. No .team change in PR. QA: re-run live scenarios (e) and (g).
 
 ### T-159 — [E09] Editor route and shell: page strip, zoom, selection overlay, property panel (web)
 - **Status:** BACKLOG
