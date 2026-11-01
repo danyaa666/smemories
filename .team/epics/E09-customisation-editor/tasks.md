@@ -404,7 +404,7 @@ Spec: .team/epics/E09-customisation-editor/19-editor-gestures-and-keyboard.md (r
 - 2026-11-01 13:16Z · leader · merged PR #158 squash, head 8363722, QA_PASS: e2e 16/0, print-check 187/0, vitest 899/0; pointer error <=0.55 px at 50-125%, 1.05 px at 150% (thousandths quantisation)
 
 ### T-161 — [E09] Editor text boxes: add, type in place, font, size, colour, align (web)
-- **Status:** IN_PROGRESS
+- **Status:** READY_FOR_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -412,15 +412,17 @@ Spec: .team/epics/E09-customisation-editor/19-editor-gestures-and-keyboard.md (r
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** dev
+- **Assignee:** —
 - **Branch:** task/t-161-e09-editor-text-boxes-add-type-in-place-
-- **PR:** —
-- **Updated:** 2026-11-01 13:16Z by dev
-- **Comments-seen:** 1
+- **PR:** https://github.com/danyaa666/smemories/pull/159
+- **Updated:** 2026-11-01 13:48Z by dev
+- **Comments-seen:** 3
 
 Spec: .team/epics/E09-customisation-editor/20-editor-text-boxes.md (read it from the main checkout). Textarea overlay per ADR 0004 Q3, 500-code-point cap at compositionend, plain-text paste, clip warning, property-panel text field as fallback; manual Telex (macOS) and iOS Safari checks are acceptance criteria
 
 #### Comments
 - 2026-11-01 13:16Z · leader · T-160 merged; start from the T-160 gesture/keyboard code on develop
+- 2026-11-01 13:48Z · dev · PR #159 head d6d2d29188f50c2ca4b6a99717ec509f2d3bbbe4. web lint/prettier/tsc/i18n/check:api/build green, vitest 957 pass. scripts/e2e.sh run directly on own compose project t161stack (ports 43316/46316/49316, SMEM_TEST_S3_ENDPOINT set): 26 pass incl editor-text.spec (10); print-check 187 pass. Parity edit vs printed, 30 cases A5/A4/Letter x rot 0/-4: same font px in all, 0 px over 48/255, 16/30 exactly 0 changed px, worst 0.52% (6 cases >0.2%, long/rotated AA only: above spec's 0.2%, flagged). AC2: Viet Nam duong via CDP no letter lost; 499 -> 502 during composition -> 500 at end. AC3 manual a-d all NOT RUN (unproven), see PR table + docs/editor-text.md. Also: FitText now refits on box resize (stale cut state found by e2e); size label is design px not pt. QA: repeat parity, try Firefox/WebKit, odd pastes.
+- 2026-11-01 13:48Z · leader · Leader to QA: dev reports PR #159 head d6d2d29188f50c2ca4b6a99717ec509f2d3bbbe4 (verify it is still the head). AC1 relaxed in the spec (same font size, same line breaks, changed pixels at most 1 % of the box): please confirm in your own run that the 30 parity cases keep identical wrapping and size, and look at the 6 cases over 0.2 % (long or rotated text) by eye in an image diff to confirm glyph anti-aliasing only, no shifted lines. Please also: Vietnamese typing in Firefox and WebKit (Playwright), odd pastes (lone surrogate, RTL, tabs, 1 MB), the 41st box refusal, and the new FitText refit on box resize. AC3 manual checks (a)-(d) are 'not run' by design: do not fail the task for that, the leader hands them to the owner. NOTE: QA is waiting for the usage window (5h at 72%, resets 16:12Z); the one-shot heartbeat is at 23:12 local.
 
 <!-- tasks:end -->
