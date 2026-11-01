@@ -82,7 +82,7 @@ export function Palette({
   const assetKind = ASSET_TABS[tab];
   const pickLabelAdd = (n: number, total: number) => t("editor.palette.addImageN", { n, total });
   return (
-    <aside className="ed-panel ed-palette" aria-label={t("editor.palette.title")}>
+    <aside id="ed-palette" className="ed-panel ed-palette" aria-label={t("editor.palette.title")}>
       <h2>{t("editor.palette.title")}</h2>
       <div ref={tabs} role="tablist" aria-label={t("editor.palette.tabs")} className="ed-tabs">
         {TABS.map((id) => (

@@ -92,6 +92,13 @@ async function openEditor(page) {
   await expect(page.getByRole("toolbar", { name: "Editor toolbar" })).toBeVisible();
   await expect(page.locator(".ed-pagebox .bk-sheet[data-page='cover']")).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
+  await showPalette(page);
+}
+/** The palette is a fourth column: closed at first below 1700 px, so the stage keeps its room (the toolbar button opens it). */
+async function showPalette(page) {
+  const toggle = page.getByRole("toolbar").getByRole("button", { name: "Add to page" });
+  if ((await toggle.getAttribute("aria-expanded")) === "false") await toggle.click();
+  await expect(page.getByRole("complementary", { name: "Add to the page" })).toBeVisible();
 }
 const palette = (page) => page.getByRole("complementary", { name: "Add to the page" });
 const tab = (page, name) => palette(page).getByRole("tab", { name });
@@ -160,6 +167,7 @@ test("a sticker, a shape and a frame: added centred at 25 %, tinted, saved, the 
   });
   await step("reload: the same page", async () => {
     await page.reload();
+    await showPalette(page);
     await expect(items(page)).toHaveCount(3);
     expect((await storedCover(page)).items.map((i) => i.asset)).toEqual(["sticker.doodle-squiggle", "shape.heart", "frame.polaroid"]);
     await expect(page.locator(".ed-pagebox [data-layout-item='" + (await storedCover(page)).items[1].id + "'] svg")).toHaveAttribute("data-asset", "shape.heart");
@@ -241,6 +249,7 @@ test("own images: upload through the UI, use as an image and as a background, re
   await step("reload: the same layout", async () => {
     const saved = await storedLayout(page);
     await page.reload();
+    await showPalette(page);
     await expect(items(page)).toHaveCount(1);
     expect((await storedLayout(page)).layout).toEqual(saved.layout);
   });
@@ -304,6 +313,7 @@ test("every upload error has its own message; the 31st image is refused with the
   await step("30 images in the book, then the 31st through the UI: the cap and the count", async () => {
     for (let i = 0; i < 30; i++) await uploadViaApi(page, `fill${i}.png`, i);
     await page.reload();
+    await showPalette(page);
     await tab(page, "My images").click();
     await upload(page, file("one-too-many.png", 9, 64, 64));
     await expect(palette(page).getByRole("alert")).toContainText("already has 30 of 30");

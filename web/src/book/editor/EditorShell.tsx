@@ -8,6 +8,7 @@ import { Banner } from "../../components/ui/Banner";
 import { Button } from "../../components/ui/Button";
 import { Dialog } from "../../components/ui/Dialog";
 import { Skeleton } from "../../components/ui/Skeleton";
+import { useMediaQuery } from "../../components/useMediaQuery";
 import { resolveDesign } from "../design";
 import { useFitReport } from "../fit";
 import { listPages } from "../BookPages";
@@ -77,6 +78,10 @@ export function EditorShell({
   const [notice, setNotice] = useState("");
   const [editing, setEditing] = useState<{ id: string; all: boolean } | null>(null);
   const [tab, setTab] = useState<Tab>("sticker");
+  // The palette is a fourth column, so it is open at first only on a screen wide enough to leave the stage its room; the toolbar button toggles it.
+  const wide = useMediaQuery("(min-width: 1700px)");
+  const [chosen, setPalette] = useState<boolean | null>(null);
+  const paletteOpen = chosen ?? wide;
   const [deleting, setDeleting] = useState<{ m: Media; uses: string[] } | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteError, setDeleteError] = useState("");
@@ -315,6 +320,14 @@ export function EditorShell({
         <button type="button" disabled={readOnly || !spec} onClick={addText}>
           {t("editor.addText")}
         </button>
+        <button
+          type="button"
+          aria-expanded={paletteOpen}
+          aria-controls="ed-palette"
+          onClick={() => setPalette(!paletteOpen)}
+        >
+          {t("editor.palette.toggle")}
+        </button>
         <SaveStatus state={ed.saveState} dirty={ed.dirty} />
         <button
           type="button"
@@ -402,7 +415,7 @@ export function EditorShell({
           )}
         </Banner>
       )}
-      <div className="ed-grid">
+      <div className={`ed-grid${paletteOpen ? " has-palette" : ""}`}>
         <PageStrip
           data={stripData}
           size={size}
@@ -449,7 +462,10 @@ export function EditorShell({
           cut={cut}
           onAddText={addText}
           onDuplicate={duplicate}
-          onMoreBackgrounds={() => setTab("background")}
+          onMoreBackgrounds={() => {
+            setTab("background");
+            setPalette(true);
+          }}
           pickImage={(onPick) => (
             <DesignImages
               images={images}
@@ -460,22 +476,24 @@ export function EditorShell({
             />
           )}
         />
-        <Palette
-          tab={tab}
-          onTab={setTab}
-          kind={kind}
-          kinds={kinds}
-          doc={ed.doc}
-          apply={ed.apply}
-          readOnly={readOnly}
-          announce={say}
-          spec={spec}
-          scope={scope}
-          images={images}
-          uploads={uploads}
-          onAdd={addFromPalette}
-          onAskDelete={askDelete}
-        />
+        {paletteOpen && (
+          <Palette
+            tab={tab}
+            onTab={setTab}
+            kind={kind}
+            kinds={kinds}
+            doc={ed.doc}
+            apply={ed.apply}
+            readOnly={readOnly}
+            announce={say}
+            spec={spec}
+            scope={scope}
+            images={images}
+            uploads={uploads}
+            onAdd={addFromPalette}
+            onAskDelete={askDelete}
+          />
+        )}
       </div>
       <div className="visually-hidden" role="status" aria-live="polite">
         {said}

@@ -1,6 +1,6 @@
 # Palette, images and backgrounds in the editor (T-162)
 
-The layout editor (`/yearbooks/:id/editor`, ADR 0004) has a fourth column, **Add to the page**, next to the property panel. On a screen narrower than 1100 px it goes under the stage.
+The layout editor (`/yearbooks/:id/editor`, ADR 0004) has a fourth column, **Add to the page**, next to the property panel. It takes 280 px from the stage, so it is open at first only on a screen 1700 px wide or more; the toolbar button *Add to page* (`aria-expanded`) opens and closes it (the choice is not kept over a reload). On a screen narrower than 1100 px it goes under the stage.
 
 ## The tabs
 

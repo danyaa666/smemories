@@ -69,6 +69,7 @@ const mount = async (layout: LayoutDoc | null = null, media = IMGS) => {
     </MemoryRouter>,
   );
   await screen.findByRole("toolbar");
+  await userEvent.click(screen.getByRole("button", { name: "Add to page" })); // a narrow screen starts with the palette closed
   return srv;
 };
 const tab = (name: string) => screen.getByRole("tab", { name });
@@ -86,6 +87,29 @@ afterEach(() => {
   cleanup();
   vi.useRealTimers();
   vi.unstubAllGlobals();
+});
+
+describe("the palette column", () => {
+  it("starts closed on a narrow screen and the toolbar button opens and closes it", async () => {
+    const srv = mockServer({ version: 2, layout: null, media: [] });
+    render(
+      <MemoryRouter>
+        <EditorShell bookId={BOOK} data={data()} safeMm={5} />
+      </MemoryRouter>,
+    );
+    await screen.findByRole("toolbar");
+    const toggle = screen.getByRole("button", { name: "Add to page" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("complementary", { name: "Add to the page" })).toBeNull();
+    expect(document.querySelector(".ed-grid")).not.toHaveClass("has-palette");
+    await userEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("complementary", { name: "Add to the page" })).toBeInTheDocument();
+    expect(document.querySelector(".ed-grid")).toHaveClass("has-palette");
+    await userEvent.click(toggle);
+    expect(screen.queryByRole("complementary", { name: "Add to the page" })).toBeNull();
+    expect(srv.s.saves).toHaveLength(0);
+  });
 });
 
 describe("palette tabs and grid", () => {

@@ -1151,7 +1151,8 @@
       "bgShapes": "Hình dán và hình khối làm nền",
       "bgMore": "Thêm nền: hình, hình khối, ảnh của bạn",
       "bgImageN": "Dùng ảnh {{n}} trên {{total}} làm nền",
-      "bgRemove": "Gỡ nền"
+      "bgRemove": "Gỡ nền",
+      "toggle": "Thêm vào trang"
     },
     "upload": {
       "zone": "Tải ảnh của bạn lên",

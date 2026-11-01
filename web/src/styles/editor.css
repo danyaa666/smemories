@@ -34,7 +34,7 @@
 }
 .ed-grid {
   display: grid;
-  grid-template-columns: 112px minmax(0, 1fr) 260px 280px;
+  grid-template-columns: 112px minmax(0, 1fr) 260px;
   gap: var(--space-3);
   align-items: start;
   height: calc(100vh - 230px);
@@ -445,9 +445,12 @@
 }
 
 /* palette, images and backgrounds (T-162) */
+.ed-grid.has-palette {
+  grid-template-columns: 112px minmax(0, 1fr) 260px 280px;
+}
 @media (max-width: 1099px) {
   /* on a narrow tablet the palette goes under the stage and the property panel; the stage keeps a usable height */
-  .ed-grid {
+  .ed-grid.has-palette {
     grid-template-columns: 112px minmax(0, 1fr) 260px;
     grid-template-rows: minmax(420px, 70vh) auto;
     height: auto;

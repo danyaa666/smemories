@@ -1151,7 +1151,8 @@
       "bgShapes": "Stickers and shapes as background",
       "bgMore": "More backgrounds: pictures, shapes, your images",
       "bgImageN": "Use image {{n}} of {{total}} as background",
-      "bgRemove": "Remove background"
+      "bgRemove": "Remove background",
+      "toggle": "Add to page"
     },
     "upload": {
       "zone": "Upload your own images",
