@@ -24,7 +24,7 @@ export function pageCount(data: BookData): number {
 }
 
 /** The pages of one section of the book (the notes section is one page per group of notes). */
-function Section({ id, data }: { id: SectionId; data: BookData }) {
+function Section({ id, data, only }: { id: SectionId; data: BookData; only?: number }) {
   const tpl = getTemplate(data.yearbook.template_id);
   const noteGroups = useMemo(() => paginate(data.notes, tpl.notesPerPage), [data.notes, tpl]);
   if (id === "cover") return <tpl.Cover data={data} />;
@@ -32,10 +32,22 @@ function Section({ id, data }: { id: SectionId; data: BookData }) {
   if (id === "back") return <tpl.Back data={data} />;
   return (
     <>
-      {noteGroups.map((g, gi) => (
-        <tpl.Notes key={g[0]?.id} notes={g} data={data} first={gi * tpl.notesPerPage} />
-      ))}
+      {noteGroups.map((g, gi) =>
+        only === undefined || only === gi ? (
+          <tpl.Notes key={g[0]?.id} notes={g} data={data} first={gi * tpl.notesPerPage} />
+        ) : null,
+      )}
     </>
+  );
+}
+
+/** The pages that print, in book order, each as the `OnePage` that draws it (the notes section is one page per group of notes). */
+export function listPages(data: BookData): OnePage[] {
+  const per = getTemplate(data.yearbook.template_id).notesPerPage;
+  return printSections(data.design).flatMap((section): OnePage[] =>
+    section === "notes"
+      ? paginate(data.notes, per).map((_, index) => ({ section, index }))
+      : [{ section }],
   );
 }
 
@@ -52,19 +64,24 @@ export function ProfilePages({ data }: { data: BookData }) {
   );
 }
 
-/** Every page of the book as fixed-size sheets. Memoised: a change of fit state or photo progress does not re-render the pages. */
+/** One page of the book: a section, and for the notes section which of its pages (T-159: the editor's stage and page strip draw one page at a time). */
+export type OnePage = { section: SectionId; index?: number };
+
+/** Every page of the book as fixed-size sheets, or just `only` one of them. Memoised: a change of fit state or photo progress does not re-render the pages. */
 export const BookPages = memo(function BookPages({
   data,
   size,
   t,
   eager,
   track,
+  only,
 }: {
   data: BookData;
   size: PageSize;
   t: TFunction;
   eager: boolean;
   track: (delta: number) => void;
+  only?: OnePage;
 }) {
   const tpl = getTemplate(data.yearbook.template_id);
   const env = useMemo(() => ({ size, t, eager, track }), [size, t, eager, track]);
@@ -72,9 +89,11 @@ export const BookPages = memo(function BookPages({
     <BookEnvProvider value={env}>
       <DesignProvider design={data.design} ids={tpl.design}>
         <LayoutProvider layout={data.layout} spec={tpl.layout}>
-          {printSections(data.design).map((s) => (
-            <Section key={s} id={s} data={data} />
-          ))}
+          {only ? (
+            <Section id={only.section} data={data} only={only.index} />
+          ) : (
+            printSections(data.design).map((s) => <Section key={s} id={s} data={data} />)
+          )}
         </LayoutProvider>
       </DesignProvider>
     </BookEnvProvider>

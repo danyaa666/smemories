@@ -66,6 +66,10 @@ export async function serveBook(page, book, classBook = null, { mediaDelayMs = 0
       return route.fulfill(ok({ ...book.yearbook, id: BOOK_ID, created_at: 1759276800000, updated_at: 1759276800000, profile: book.profile }));
     if (u.pathname === "/api/note/get-list")
       return route.fulfill(ok({ items: [], counts: { pending: 0, approved: book?.notes.length ?? 0, hidden: 0, total: book?.notes.length ?? 0 }, next_id: "" }));
+    // The layout editor (T-159) reads its own document and saves it; the book's `layout` is what book-data/get carries.
+    if (u.pathname === "/api/book-layout/get" && book)
+      return route.fulfill(ok({ layout: book.layout ?? null, version: 1, template_id: book.yearbook.template_id, updated_at: null }));
+    if (u.pathname === "/api/book-layout/save") return route.fulfill(ok({ version: 2, updated_at: 1 }));
     if (u.pathname === "/api/book-data/get") {
       seen.bookData++;
       return route.fulfill(ok(book));
@@ -99,6 +103,20 @@ export async function open(page) {
   await page.goto(`${BASE}/yearbooks/${BOOK_ID}/book`);
   await page.waitForSelector("html[data-book-ready]", { timeout: 60000 });
   return { readyMs: Math.round(performance.now() - t0) };
+}
+
+/** Opens the layout editor (T-159) on the same fixture book and waits until its stage has drawn the page and every image on it has settled. */
+export async function openEditor(page) {
+  await page.goto(`${BASE}/yearbooks/${BOOK_ID}/editor`);
+  await page.waitForSelector(".ed-pagebox .bk-sheet", { timeout: 60000 });
+  await settleStage(page);
+}
+
+/** Waits for the images and the fonts of the stage (the editor has no ready signal: it is not printed). */
+export async function settleStage(page) {
+  await page.evaluate(() => document.fonts.ready);
+  await page.waitForFunction(() => [...document.querySelectorAll(".ed-pagebox img")].every((i) => i.complete), null, { timeout: 30000 });
+  await page.waitForTimeout(300); // text fitting runs after the fonts; one frame is not enough on a loaded machine
 }
 
 /** Opens the class book screen (T-130) on one paper size and waits until it allows printing. */

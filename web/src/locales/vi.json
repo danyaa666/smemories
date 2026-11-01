@@ -528,7 +528,8 @@
         },
         "images": {}
       }
-    }
+    },
+    "freeLayout": "Bố cục tự do"
   },
   "bookPages": {
     "classOf": "Khóa {{year}}",
@@ -930,6 +931,110 @@
       "conflict": "Cuốn sách này đã được thay đổi ở tab hoặc thiết bị khác.",
       "invalid": "Không thể lưu thay đổi này. Hãy hoàn tác hoặc sửa lại.",
       "gone": "Bạn không còn truy cập được cuốn sách này; không thể lưu thay đổi."
-    }
+    },
+    "title": "Bố cục tự do",
+    "back": "Quay lại tuỳ chỉnh",
+    "loading": "Đang tải bố cục...",
+    "loadFailed": "Không tải được bố cục.",
+    "narrow": "Trình chỉnh bố cục cần màn hình rộng ít nhất 768 px. Hãy mở cuốn sách trên máy tính bảng hoặc máy tính, hoặc quay lại để tuỳ chỉnh thiết kế.",
+    "noLayout": "Mẫu của cuốn sách này chưa hỗ trợ bố cục tự do. Hãy chọn mẫu khác ở màn hình in.",
+    "toolbar": "Thanh công cụ",
+    "undo": "Hoàn tác",
+    "redo": "Làm lại",
+    "resetAll": "Đặt lại toàn bộ bố cục",
+    "preview": "Xem trước dạng PDF",
+    "conflict": "Cuốn sách này vừa được thay đổi ở tab hoặc thiết bị khác. Việc chỉnh sửa tạm dừng cho đến khi bạn chọn.",
+    "useSaved": "Dùng bản đã lưu",
+    "keepMine": "Giữ bản của tôi",
+    "invalid": "Máy chủ từ chối bố cục nên chưa được lưu. Hãy hoàn tác thay đổi gần nhất hoặc sửa lại.",
+    "goneTitle": "Cuốn sách này không còn tồn tại",
+    "goneBody": "Sách đã bị xoá hoặc không còn thuộc về bạn. Không thể lưu thêm.",
+    "goneLink": "Về danh sách kỷ yếu",
+    "strip": "Các trang",
+    "pageOf": "Trang {{n}} / {{total}}: {{name}}",
+    "page": {
+      "cover": "Bìa",
+      "profile": "Giới thiệu",
+      "notes": "Trang lưu bút {{n}}",
+      "back": "Bìa sau"
+    },
+    "stage": "Trang đang chỉnh: {{page}}",
+    "zoomOut": "Thu nhỏ",
+    "zoomIn": "Phóng to",
+    "zoomFit": "Vừa cửa sổ",
+    "zoomLevel": "Mức thu phóng",
+    "safeMargin": "Lề an toàn",
+    "handle": {
+      "nw": "Đổi cỡ từ góc trên trái",
+      "n": "Đổi cỡ từ cạnh trên",
+      "ne": "Đổi cỡ từ góc trên phải",
+      "e": "Đổi cỡ từ cạnh phải",
+      "se": "Đổi cỡ từ góc dưới phải",
+      "s": "Đổi cỡ từ cạnh dưới",
+      "sw": "Đổi cỡ từ góc dưới trái",
+      "w": "Đổi cỡ từ cạnh trái",
+      "rotate": "Xoay"
+    },
+    "item": {
+      "text": "Chữ: {{text}}",
+      "asset": "Hình dán",
+      "image": "Ảnh"
+    },
+    "element": {
+      "cover": {
+        "title": "Tiêu đề bìa",
+        "photo": "Ảnh bìa",
+        "sticker": "Hình dán trên bìa"
+      },
+      "profile": {
+        "heading": "Tiêu đề trang giới thiệu",
+        "photo": "Ảnh trang giới thiệu"
+      },
+      "notes": {
+        "heading": "Tiêu đề trang lưu bút"
+      },
+      "back": {
+        "heading": "Tiêu đề bìa sau",
+        "pact": "Lời hứa ở bìa sau"
+      }
+    },
+    "hiddenName": "{{name}} (đã ẩn)",
+    "selected": "Đã chọn: {{name}}",
+    "cleared": "Đã bỏ chọn",
+    "panel": "Thuộc tính",
+    "pageProps": "Trang: {{page}}",
+    "nothingSelected": "Chọn một thứ trên trang để chỉnh.",
+    "clearBackground": "Xoá nền",
+    "refused": {
+      "bad_box": "Vị trí hoặc kích thước vượt quá giới hạn.",
+      "other": "Không thể thực hiện thay đổi này."
+    },
+    "box": "Vị trí và kích thước (% của trang)",
+    "x": "Trái",
+    "y": "Trên",
+    "w": "Rộng",
+    "h": "Cao",
+    "rotation": "Góc xoay (độ)",
+    "text": "Chữ",
+    "order": "Thứ tự xếp chồng",
+    "toFront": "Đưa lên trên cùng",
+    "forward": "Đưa lên một lớp",
+    "backward": "Lùi xuống một lớp",
+    "toBack": "Đưa xuống dưới cùng",
+    "reordered": "Đã chuyển đến vị trí {{n}} / {{total}}",
+    "deleted": "Đã xoá",
+    "delete": "Xoá",
+    "show": "Hiện",
+    "hide": "Ẩn",
+    "resetElement": "Đặt lại thành phần này",
+    "resetTitle": "Đặt lại toàn bộ bố cục?",
+    "resetBody": "Mọi thành phần đã di chuyển, ẩn hoặc thêm ở tất cả các trang sẽ bị gỡ và các trang trở về mẫu. Không thể hoàn tác.",
+    "resetConfirm": "Đặt lại toàn bộ bố cục",
+    "resetCancel": "Giữ bố cục của tôi",
+    "resetDone": "Đã đặt lại bố cục",
+    "leaveTitle": "Rời trình chỉnh sửa?",
+    "leaveBody": "Những thay đổi gần nhất vẫn đang được lưu. Chúng sẽ được gửi khi bạn rời đi, nhưng hãy xem trạng thái lưu nếu bạn không chắc.",
+    "leaveConfirm": "Rời đi",
+    "leaveCancel": "Ở lại"
   }
 }

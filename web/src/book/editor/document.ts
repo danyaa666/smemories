@@ -182,6 +182,21 @@ export const setOverride =
     return ok(withPage(doc, kind, { ...p, overrides: { ...p.overrides, [elementId]: next } }));
   };
 
+/** Drops the override of a template element: it goes back to the template's own place and shows again (T-159 "reset this element"). */
+export const clearOverride =
+  (elementId: string): Op =>
+  (doc) => {
+    const kind = kindOfElement(elementId);
+    const p = page(doc, kind);
+    if (!p.overrides || !Object.hasOwn(p.overrides, elementId)) return ok(doc);
+    const rest = { ...p.overrides };
+    delete rest[elementId];
+    const next = { ...p };
+    if (Object.keys(rest).length > 0) next.overrides = rest;
+    else delete next.overrides;
+    return ok(withPage(doc, kind, next));
+  };
+
 /** Sets the page background: exactly one of `asset`, `media`, `color`, or null to remove it. */
 export const setBg =
   (kind: string, bg: Bg | null): Op =>
@@ -221,4 +236,13 @@ export const setText =
     );
   };
 
-export const ops = { setItemBox, addItem, removeItem, reorderItem, setOverride, setBg, setText };
+export const ops = {
+  setItemBox,
+  addItem,
+  removeItem,
+  reorderItem,
+  setOverride,
+  clearOverride,
+  setBg,
+  setText,
+};

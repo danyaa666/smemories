@@ -9,7 +9,7 @@ import path from "node:path";
 import { after, before, describe, test } from "node:test";
 import { chromium } from "playwright";
 import { CLASS_BOOK_CASES, DESIGN_IMAGE, DESIGN_TITLE, HIDDEN_PHOTOS, LAYOUT_MARK, classBookPages, designOf, makeBook, makeClassBook, makeDesignClassBook, makeLayout, photoId, SIGNATURES, studentName } from "./fixture.mjs";
-import { BASE, fitBoxes, inkIn, inspect, open, openClassBook, raster, savePdf, serveBook, signatureBoxes, startServer, text, words } from "./lib.mjs";
+import { BASE, fitBoxes, inkIn, inspect, open, openClassBook, openEditor, settleStage, raster, savePdf, serveBook, signatureBoxes, startServer, text, words } from "./lib.mjs";
 
 const squash = (x) => x.replace(/\s+/g, "");
 const PT = { A5: [419.53, 595.28], A4: [595.28, 841.89], Letter: [612, 792] }; // exact sizes in points
@@ -1185,6 +1185,57 @@ describe("layout layer: the printed page is the page on screen (T-154)", () => {
       const sticker = boxes.find((b) => b.id === "sticker1");
       assert.ok(Math.abs(sticker.w - 0.16) < 0.001 && Math.abs(sticker.left - 0.7 * 816) < 0.5, `the sticker's box is x 700 / w 160 of 1000: ${JSON.stringify(sticker)}`);
       await r.page.close();
+    });
+  }
+
+  // T-159 AC3: the editor's stage draws the same page as the book screen. Both are on-screen renderings at paper size (zoom 100 %, scale 1), so unlike the print
+  // comparison above there is no PDF noise: the layout-bearing page must differ by far less than the 0.5 % budget.
+  for (const size of ["A5", "A4", "Letter"]) {
+    test(`${size}: the editor stage draws the cover and a notes page exactly as the book screen does (difference < 0.5 %)`, async () => {
+      const book = makeBook({ size, notes: 2, template: "memory-book" });
+      book.layout = makeLayout();
+      const ref = await browser.newPage({ viewport: { width: 1400, height: 1900 }, deviceScaleFactor: 2 });
+      await serveBook(ref, book);
+      await open(ref);
+      await ref.addStyleTag({ content: ".bk-ui { display: none !important } .bk-stage { --s: 1 !important; padding: 0 !important }" });
+      const want = { cover: await sheetPicture(ref, "cover", 0), notes: await sheetPicture(ref, "notes", 0) };
+      await ref.close();
+
+      const ed = await browser.newPage({ viewport: { width: 1400, height: 1900 }, deviceScaleFactor: 2 });
+      await serveBook(ed, book);
+      await openEditor(ed);
+      /** Zoom 100 % with the buttons (the default is "fit"). */
+      const to100 = async () => {
+        for (let i = 0; i < 8; i++) {
+          const z = Number(await ed.locator(".ed-pagebox").getAttribute("data-zoom"));
+          if (z === 100) return;
+          await ed.getByRole("button", { name: z > 100 ? "Zoom out" : "Zoom in" }).click();
+        }
+        assert.equal(await ed.locator(".ed-pagebox").getAttribute("data-zoom"), "100");
+      };
+      await to100();
+      for (const [label, button] of [["cover", /^Page 1 of/], ["notes", /^Page 3 of/]]) {
+        await ed.getByRole("button", { name: button }).click();
+        await ed.waitForSelector(`.ed-pagebox .bk-sheet[data-page="${label}"]`);
+        await to100();
+        await settleStage(ed);
+        const sheet = ed.locator(".ed-pagebox .bk-sheet");
+        const box = await sheet.evaluate((e) => {
+          document.querySelector(".ed-overlay").style.display = "none"; // the chrome is not part of the page
+          e.style.cssText += ";position: fixed; left: 0; top: 0; z-index: 99999; box-shadow: none";
+          const r = e.getBoundingClientRect();
+          return { width: r.width, height: r.height };
+        });
+        const got = await grey(await ed.screenshot({ clip: { x: 0, y: 0, ...box }, animations: "disabled", caret: "hide" }));
+        assert.ok(Math.abs(got.w - want[label].w) <= 2 && Math.abs(got.h - want[label].h) <= 2, `${label}: ${got.w}x${got.h} against ${want[label].w}x${want[label].h}`);
+        const diff = difference(want[label], got);
+        console.log(`# ${size} ${label}: stage against the book screen: ${(diff * 100).toFixed(3)} % of the pixels differ`);
+        assert.ok(diff < 0.005, `${size} ${label}: the stage differs from the book screen by ${(diff * 100).toFixed(3)} % (budget 0.5 %)`);
+        await ed.reload();
+        await ed.waitForSelector(".ed-pagebox .bk-sheet");
+        await settleStage(ed);
+      }
+      await ed.close();
     });
   }
 

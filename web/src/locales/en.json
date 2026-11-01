@@ -528,7 +528,8 @@
         },
         "images": {}
       }
-    }
+    },
+    "freeLayout": "Free layout"
   },
   "bookPages": {
     "classOf": "Class of {{year}}",
@@ -930,6 +931,110 @@
       "conflict": "This book was changed in another tab or device.",
       "invalid": "This change cannot be saved. Undo it or change it.",
       "gone": "This book is no longer available to you; changes cannot be saved."
-    }
+    },
+    "title": "Free layout",
+    "back": "Back to customise",
+    "loading": "Loading the layout...",
+    "loadFailed": "The layout could not be loaded.",
+    "narrow": "The layout editor needs a screen at least 768 px wide. Open this book on a tablet or a computer, or go back to customise the design.",
+    "noLayout": "This book's template does not support free layout. Choose another template on the print screen.",
+    "toolbar": "Editor toolbar",
+    "undo": "Undo",
+    "redo": "Redo",
+    "resetAll": "Reset all layout",
+    "preview": "Preview as PDF",
+    "conflict": "This book was changed in another tab or device. Editing is paused until you choose.",
+    "useSaved": "Use the saved version",
+    "keepMine": "Keep my version",
+    "invalid": "The server refused the layout, so it is not saved. Undo the last change or change it.",
+    "goneTitle": "This book no longer exists",
+    "goneBody": "It was deleted, or it is not yours any more. Nothing more can be saved.",
+    "goneLink": "Back to my yearbooks",
+    "strip": "Pages",
+    "pageOf": "Page {{n}} of {{total}}: {{name}}",
+    "page": {
+      "cover": "Cover",
+      "profile": "Profile",
+      "notes": "Notes page {{n}}",
+      "back": "Back cover"
+    },
+    "stage": "Page being edited: {{page}}",
+    "zoomOut": "Zoom out",
+    "zoomIn": "Zoom in",
+    "zoomFit": "Fit to window",
+    "zoomLevel": "Zoom",
+    "safeMargin": "Safe margin",
+    "handle": {
+      "nw": "Resize from top left",
+      "n": "Resize from top",
+      "ne": "Resize from top right",
+      "e": "Resize from right",
+      "se": "Resize from bottom right",
+      "s": "Resize from bottom",
+      "sw": "Resize from bottom left",
+      "w": "Resize from left",
+      "rotate": "Rotate"
+    },
+    "item": {
+      "text": "Text: {{text}}",
+      "asset": "Sticker",
+      "image": "Picture"
+    },
+    "element": {
+      "cover": {
+        "title": "Cover title",
+        "photo": "Cover photo",
+        "sticker": "Cover sticker"
+      },
+      "profile": {
+        "heading": "Profile heading",
+        "photo": "Profile photo"
+      },
+      "notes": {
+        "heading": "Notes heading"
+      },
+      "back": {
+        "heading": "Back cover heading",
+        "pact": "Back cover pact"
+      }
+    },
+    "hiddenName": "{{name}} (hidden)",
+    "selected": "Selected: {{name}}",
+    "cleared": "Selection cleared",
+    "panel": "Properties",
+    "pageProps": "Page: {{page}}",
+    "nothingSelected": "Select something on the page to change it.",
+    "clearBackground": "Clear background",
+    "refused": {
+      "bad_box": "That place or size is outside the limits.",
+      "other": "That change is not allowed."
+    },
+    "box": "Place and size (% of the page)",
+    "x": "Left",
+    "y": "Top",
+    "w": "Width",
+    "h": "Height",
+    "rotation": "Rotation (degrees)",
+    "text": "Text",
+    "order": "Stacking order",
+    "toFront": "Bring to front",
+    "forward": "Bring forward",
+    "backward": "Send backward",
+    "toBack": "Send to back",
+    "reordered": "Moved to position {{n}} of {{total}}",
+    "deleted": "Deleted",
+    "delete": "Delete",
+    "show": "Show",
+    "hide": "Hide",
+    "resetElement": "Reset this element",
+    "resetTitle": "Reset all layout?",
+    "resetBody": "Every moved, hidden or added item on every page is removed and the pages go back to the template. This cannot be undone.",
+    "resetConfirm": "Reset all layout",
+    "resetCancel": "Keep my layout",
+    "resetDone": "Layout reset",
+    "leaveTitle": "Leave the editor?",
+    "leaveBody": "Your last changes are still being saved. They are sent when you leave, but check the save status first if you are unsure.",
+    "leaveConfirm": "Leave",
+    "leaveCancel": "Stay"
   }
 }
