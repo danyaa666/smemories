@@ -3,7 +3,7 @@ import { execFileSync, spawn } from "node:child_process";
 import { readFileSync, rmSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { BOOK_ID, CLASS_ID, photoId } from "./fixture.mjs";
+import { BOOK_ID, CLASS_ID, DESIGN_IMAGE, photoId } from "./fixture.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const ROOT = path.resolve(HERE, "../..");
@@ -33,12 +33,18 @@ const ok = (data) => ({ status: 200, contentType: "application/json", body: JSON
 
 /** Serves the signed-in owner, the book and its photos; every other API call is a 404. Counts book-data and media requests. */
 export async function serveBook(page, book, classBook = null, { mediaDelayMs = 0 } = {}) {
-  const seen = { bookData: 0, media: 0, classBook: 0, inFlight: 0, maxInFlight: 0, ids: new Set() }; // a media delay makes the requests in flight visible (T-146)
+  const seen = { bookData: 0, media: 0, classBook: 0, inFlight: 0, maxInFlight: 0, ids: new Set(), variants: new Set() }; // a media delay makes the requests in flight visible (T-146)
   const files = new Map(Array.from({ length: 30 }, (_, i) => [photoId(i + 1), `photo-${String((i % 30) + 1).padStart(2, "0")}.jpg`]));
+  files.set(DESIGN_IMAGE, "photo-05.jpg"); // the student's design image (T-154): a background or an image item; served in the display and the print version
   await page.route(/^https?:\/\/[^/]+\/api\//, async (route) => { // only the API, not the dev server's /src/api/*.ts modules
     const u = new URL(route.request().url());
     if (u.pathname === "/api/user/get-me")
       return route.fulfill(ok({ id: "01J9Z3K6V8Q4M7N2P5R8T0W1XY", email: "hong@example.com", email_verified: true, display_name: "Hồng", locale: "vi", created_at: 1759276800000 }));
+    // The shell around the book screen (YearbookLayout) reads the book and the note counts for the sidebar; without them it shows "this yearbook does not exist" (T-154: found by a run of this check, paused since D-37).
+    if (u.pathname === "/api/yearbook/get" && book)
+      return route.fulfill(ok({ ...book.yearbook, id: BOOK_ID, created_at: 1759276800000, updated_at: 1759276800000, profile: book.profile }));
+    if (u.pathname === "/api/note/get-list")
+      return route.fulfill(ok({ items: [], counts: { pending: 0, approved: book?.notes.length ?? 0, hidden: 0, total: book?.notes.length ?? 0 }, next_id: "" }));
     if (u.pathname === "/api/book-data/get") {
       seen.bookData++;
       return route.fulfill(ok(book));
@@ -52,11 +58,13 @@ export async function serveBook(page, book, classBook = null, { mediaDelayMs = 0
     if (u.pathname === "/api/media/get-content") {
       seen.media++;
       seen.ids.add(u.searchParams.get("id"));
+      seen.variants.add(`${u.searchParams.get("id")}:${u.searchParams.get("variant")}`);
       seen.maxInFlight = Math.max(seen.maxInFlight, ++seen.inFlight);
       if (mediaDelayMs) await new Promise((r) => setTimeout(r, mediaDelayMs));
       seen.inFlight--;
       const f = files.get(u.searchParams.get("id") ?? "");
-      if (u.searchParams.get("variant") !== "print" || !f) return route.fulfill({ status: 404, contentType: "application/json", body: '{"status":"ERROR_NOT_FOUND"}' });
+      const variant = u.searchParams.get("variant");
+      if (!(variant === "print" || (variant === "display" && u.searchParams.get("id") === DESIGN_IMAGE)) || !f) return route.fulfill({ status: 404, contentType: "application/json", body: '{"status":"ERROR_NOT_FOUND"}' });
       return route.fulfill({ status: 200, contentType: "image/jpeg", headers: { "Cache-Control": "private, max-age=3600" }, body: readFileSync(path.join(PHOTOS, f)) });
     }
     return route.fulfill({ status: 404, contentType: "application/json", body: '{"status":"ERROR_NOT_FOUND"}' });

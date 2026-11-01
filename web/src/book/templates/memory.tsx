@@ -4,6 +4,13 @@ import { BookSignature, hasSignature } from "../BookSignature";
 import { FitText } from "../fit";
 import { useDesign } from "../design";
 import { Photo, Sheet, useBookEnv } from "../env";
+import {
+  Editable,
+  hasLayoutBg,
+  LayoutLayer,
+  useLayoutBg,
+  type TemplateLayout,
+} from "../layout/runtime";
 import { designHeight } from "../sizes";
 import type { Template } from "./index";
 import dots from "./memory-dots.png";
@@ -76,14 +83,21 @@ function Page({
   children: ReactNode;
 }) {
   const { theme, fonts } = useDesign();
+  // The student's page background (T-154) replaces the paper colour and picture; `label` is also the page kind of the layout.
+  const lbg = useLayoutBg(label);
+  const own = hasLayoutBg(lbg);
   return (
-    <Sheet label={label}>
+    <Sheet label={label} layer={<LayoutLayer kind={label} theme={theme} fonts={fonts} />}>
       <div
         className="mb-page"
         data-theme={theme || undefined}
         data-fonts={fonts || undefined}
-        style={{ backgroundColor: bg, backgroundImage: pattern ? `url(${pattern})` : undefined }}
+        style={{
+          backgroundColor: lbg.color ?? bg,
+          backgroundImage: pattern && !own ? `url(${pattern})` : undefined,
+        }}
       >
+        {lbg.node}
         {children}
       </div>
     </Sheet>
@@ -283,46 +297,52 @@ function Cover({ data }: { data: BookData }) {
         >
           {t("bookPages.memory.owner", { name: data.profile.full_name })}
         </FitText>
-        <FitText
-          fitKey="cover:title"
-          className="disp mb-cover-title"
-          style={{ fontSize: 100 }}
-          minScale={0.35}
-        >
-          {y.title}
-        </FitText>
+        <Editable layoutId="cover.title">
+          <FitText
+            fitKey="cover:title"
+            className="disp mb-cover-title"
+            style={{ fontSize: 100 }}
+            minScale={0.35}
+          >
+            {y.title}
+          </FitText>
+        </Editable>
         {line && (
           <FitText fitKey="cover:class" className="mb-cover-class" style={{ fontSize: 14 }}>
             {line}
           </FitText>
         )}
       </div>
-      <Polaroid
-        id={y.cover_media_id}
-        className="mb-cover-photo"
-        style={{
-          left: 190,
-          top: 410,
-          width: 370,
-          padding: 14,
-          borderRadius: 20,
-          transform: "rotate(-3deg)",
-        }}
-      />
+      <Editable layoutId="cover.photo">
+        <Polaroid
+          id={y.cover_media_id}
+          className="mb-cover-photo"
+          style={{
+            left: 190,
+            top: 410,
+            width: 370,
+            padding: 14,
+            borderRadius: 20,
+            transform: "rotate(-3deg)",
+          }}
+        />
+      </Editable>
       <div
         className="mb-tape"
         style={{ left: 310, top: 394, width: 140, height: 28, transform: "rotate(-5deg)" }}
       />
-      <div className="mb-sticker" style={{ left: 560, top: 680 }}>
-        <Own
-          id="cover.sticker"
-          fallback={t("bookPages.memory.sticker")}
-          fitKey="cover:sticker"
-          className="cute mb-sticker-text"
-          fitClass="mb-sticker-fit"
-          centered
-        />
-      </div>
+      <Editable layoutId="cover.sticker">
+        <div className="mb-sticker" style={{ left: 560, top: 680 }}>
+          <Own
+            id="cover.sticker"
+            fallback={t("bookPages.memory.sticker")}
+            fitKey="cover:sticker"
+            className="cute mb-sticker-text"
+            fitClass="mb-sticker-fit"
+            centered
+          />
+        </div>
+      </Editable>
       <Icon
         kind="heart"
         size={40}
@@ -380,15 +400,19 @@ function Profile({ data }: { data: BookData }) {
   return (
     <Page label="profile" bg="var(--mb-paper)">
       <div className="mb-flow">
-        <Title
-          fitKey="profile:heading"
-          head={{ id: "profile.heading", fallback: t("bookPages.aboutMe") }}
-          sub={{ id: "profile.subtitle", fallback: t("bookPages.memory.ownerOf") }}
-          icon="sparkle"
-          color="var(--mb-a2)"
-        />
+        <Editable layoutId="profile.heading">
+          <Title
+            fitKey="profile:heading"
+            head={{ id: "profile.heading", fallback: t("bookPages.aboutMe") }}
+            sub={{ id: "profile.subtitle", fallback: t("bookPages.memory.ownerOf") }}
+            icon="sparkle"
+            color="var(--mb-a2)"
+          />
+        </Editable>
         <div className="mb-head-row">
-          <Polaroid id={p.photo_media_id} className="mb-profile-photo" />
+          <Editable layoutId="profile.photo">
+            <Polaroid id={p.photo_media_id} className="mb-profile-photo" />
+          </Editable>
           <div className="mb-fields" style={{ height: 280 }}>
             <Field
               fitKey="profile:name"
@@ -504,22 +528,24 @@ function FriendPage({ note, number, data }: { note: BookNote; number: number; da
   return (
     <Page label="notes" bg="var(--mb-paper)">
       <div className="mb-flow">
-        <Title
-          fitKey={`heading:${note.id}`}
-          head={{ id: "notes.heading", fallback: t("bookPages.memory.friendTitle") }}
-          icon="heart"
-          color="var(--mb-a1)"
-          subNode={
-            <FitText
-              fitKey={`sub:${note.id}`}
-              className="cute mb-title-sub mb-title-line"
-              style={{ fontSize: 26 }}
-            >
-              {data.profile.full_name &&
-                t("bookPages.memory.forYou", { name: data.profile.full_name })}
-            </FitText>
-          }
-        />
+        <Editable layoutId="notes.heading">
+          <Title
+            fitKey={`heading:${note.id}`}
+            head={{ id: "notes.heading", fallback: t("bookPages.memory.friendTitle") }}
+            icon="heart"
+            color="var(--mb-a1)"
+            subNode={
+              <FitText
+                fitKey={`sub:${note.id}`}
+                className="cute mb-title-sub mb-title-line"
+                style={{ fontSize: 26 }}
+              >
+                {data.profile.full_name &&
+                  t("bookPages.memory.forYou", { name: data.profile.full_name })}
+              </FitText>
+            }
+          />
+        </Editable>
         <div className={`mb-head-row${signed ? " mb-signed" : ""}`}>
           {note.photo_ids[0] ? (
             <Polaroid id={note.photo_ids[0]} className="mb-friend-photo" />
@@ -634,13 +660,15 @@ function Back({ data }: { data: BookData }) {
   return (
     <Page label="back" bg="var(--mb-paper)">
       <div className="mb-flow">
-        <Title
-          fitKey="back:heading"
-          head={{ id: "back.heading", fallback: t("bookPages.memory.touchTitle") }}
-          sub={{ id: "back.subtitle", fallback: t("bookPages.memory.touchSub") }}
-          icon="heart"
-          color="var(--mb-a1)"
-        />
+        <Editable layoutId="back.heading">
+          <Title
+            fitKey="back:heading"
+            head={{ id: "back.heading", fallback: t("bookPages.memory.touchTitle") }}
+            sub={{ id: "back.subtitle", fallback: t("bookPages.memory.touchSub") }}
+            icon="heart"
+            color="var(--mb-a1)"
+          />
+        </Editable>
         <table className="mb-table">
           <thead>
             <tr>
@@ -663,34 +691,36 @@ function Back({ data }: { data: BookData }) {
             ))}
           </tbody>
         </table>
-        <div className="mb-pact">
-          <div className="mb-pact-text">
-            <div className="mb-pact-head">
-              <Icon kind="star" size={22} stroke="var(--mb-a3)" />
-              <Own
-                id="back.pact"
-                fallback={t("bookPages.memory.pact")}
-                fitKey="back:pact"
-                className="disp"
-                fitClass="mb-pact-fit"
-                style={{ fontSize: 22, fontWeight: 600 }}
-              />
+        <Editable layoutId="back.pact">
+          <div className="mb-pact">
+            <div className="mb-pact-text">
+              <div className="mb-pact-head">
+                <Icon kind="star" size={22} stroke="var(--mb-a3)" />
+                <Own
+                  id="back.pact"
+                  fallback={t("bookPages.memory.pact")}
+                  fitKey="back:pact"
+                  className="disp"
+                  fitClass="mb-pact-fit"
+                  style={{ fontSize: 22, fontWeight: 600 }}
+                />
+              </div>
+              <div className="cute" style={{ fontSize: 22, lineHeight: 1.1 }}>
+                {t("bookPages.memory.pactSub")}
+              </div>
             </div>
-            <div className="cute" style={{ fontSize: 22, lineHeight: 1.1 }}>
-              {t("bookPages.memory.pactSub")}
+            <div className="mb-fields" style={{ flexGrow: 1 }}>
+              <div className="mb-field">
+                <div className="mb-label">{t("bookPages.memory.date")}</div>
+                <div className="mb-value" />
+              </div>
+              <div className="mb-field">
+                <div className="mb-label">{t("bookPages.memory.place")}</div>
+                <div className="mb-value" />
+              </div>
             </div>
           </div>
-          <div className="mb-fields" style={{ flexGrow: 1 }}>
-            <div className="mb-field">
-              <div className="mb-label">{t("bookPages.memory.date")}</div>
-              <div className="mb-value" />
-            </div>
-            <div className="mb-field">
-              <div className="mb-label">{t("bookPages.memory.place")}</div>
-              <div className="mb-value" />
-            </div>
-          </div>
-        </div>
+        </Editable>
       </div>
       <Icon
         kind="sparkle"
@@ -704,6 +734,32 @@ function Back({ data }: { data: BookData }) {
     </Page>
   );
 }
+
+/**
+ * What the layout layer needs of this template (T-154). `colors` and `fonts` are the CSS behind the manifest's `design.layout` tokens; `natural` lists the
+ * elements the student may move (the manifest's `editable` ids; a test pins them) with the place each has on the A5 page, in design px, which an override
+ * that omits a field starts from. Sizes come from the template's CSS; the tops of the elements in the page's flow are approximate (the editor writes every field from the element's real box, so an omitted field only matters for a hand-made document). `flow` elements leave a blank of that size when moved.
+ */
+const LAYOUT: TemplateLayout = {
+  colors: {
+    ink: "var(--mb-ink)",
+    soft: "var(--mb-soft)",
+    paper: "var(--mb-paper)",
+    white: "var(--mb-white)",
+    accent: "var(--mb-a1)",
+  },
+  fonts: { display: "var(--mb-disp)", body: "var(--mb-body)" },
+  natural: {
+    "cover.photo": { left: 190, top: 410, w: 370, h: 400, r: -3 },
+    "cover.sticker": { left: 560, top: 680, w: 176, h: 176, r: 10 },
+    "cover.title": { left: 96, top: 166, w: 672, h: 120, flow: true },
+    "profile.heading": { left: 48, top: 52, w: 720, h: 84, flow: true },
+    "profile.photo": { left: 48, top: 154, w: 240, h: 290, r: -2, flow: true },
+    "notes.heading": { left: 48, top: 52, w: 596, h: 84, flow: true },
+    "back.heading": { left: 48, top: 52, w: 720, h: 84, flow: true },
+    "back.pact": { left: 48, top: 850, w: 720, h: 105, flow: true },
+  },
+};
 
 export const memoryBook: Template = {
   id: "memory-book",
@@ -725,6 +781,7 @@ export const memoryBook: Template = {
     "back.subtitle": "bookPages.memory.touchSub",
     "back.pact": "bookPages.memory.pact",
   },
+  layout: LAYOUT,
   Cover,
   Profile,
   Notes,

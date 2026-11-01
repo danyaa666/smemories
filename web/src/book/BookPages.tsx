@@ -3,6 +3,7 @@ import { memo, useMemo } from "react";
 import type { BookData } from "../api/book";
 import { DesignProvider, printSections, type SectionId } from "./design";
 import { BookEnvProvider } from "./env";
+import { LayoutProvider } from "./layout/runtime";
 import { paginate } from "./paginate";
 import type { PageSize } from "./sizes";
 import { getTemplate } from "./templates";
@@ -70,9 +71,11 @@ export const BookPages = memo(function BookPages({
   return (
     <BookEnvProvider value={env}>
       <DesignProvider design={data.design} ids={tpl.design}>
-        {printSections(data.design).map((s) => (
-          <Section key={s} id={s} data={data} />
-        ))}
+        <LayoutProvider layout={data.layout} spec={tpl.layout}>
+          {printSections(data.design).map((s) => (
+            <Section key={s} id={s} data={data} />
+          ))}
+        </LayoutProvider>
       </DesignProvider>
     </BookEnvProvider>
   );

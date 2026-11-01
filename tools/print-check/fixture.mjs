@@ -2,6 +2,8 @@
 // Shaped like the answer of GET /api/book-data/get (api/openapi.yaml); the check serves it with Playwright routes, so no API or database is needed.
 const ulid = (kind, n) => `01J9Z3K6V8Q4M7N2P5${kind}${String(n).padStart(6, "0")}`.slice(0, 26).padEnd(26, "0");
 export const photoId = (n) => ulid("P", n);
+/** A design image of the student (T-152/T-154): a layout background or image item; the only id served in the `display` version. */
+export const DESIGN_IMAGE = "01J9Z3K6V8Q4M7N2P5R8DESIGN";
 export const BOOK_ID = "01J9Z3K6V8Q4M7N2P5R8T0AAAA";
 
 const NAMES = ["Nguyễn Thị Hồng Ánh", "Đặng Ngọc Bích Trâm", "Huỳnh Ngọc Diệp", "Trần Quốc Việt", "Lê Hoàng Phương Uyên", "Phạm Thị Thùy Dương"];
@@ -220,4 +222,41 @@ export function makeDesignClassBook() {
   cb.members[0].profile.photo_media_id = HIDDEN_PHOTOS[0]; // a photo only a hidden profile shows: it must never be fetched
   cb.members[1].profile.photo_media_id = HIDDEN_PHOTOS[1];
   return cb;
+}
+
+// ---- The layout layer (T-154) ----
+const RUNES_500 = [..."Việt Nam đường về nhà, nắng chiều dịu dàng 😄 ".repeat(20)].slice(0, 500).join("");
+const CLIP_300 = [..."Một đoạn văn dài sẽ bị cắt ở cuối hộp nhỏ này. ".repeat(10)].slice(0, 300).join("");
+/** Marker words the PDF text check looks for. */
+export const LAYOUT_MARK = { cover: "Lopmark", notes: "Notemark", back: "Backmark", clip: "Clipmark" };
+/**
+ * The fixture layout of ADR 0004 Q5 for Memory Book: on the cover a design image as the background, the cover photo moved and rotated, the sticker hidden, a rotated tinted
+ * sticker, a Vietnamese text of 500 runes, a clipped text and an image item; on the notes pages a colour, a moved heading and an item that repeats; the profile and back have one item each.
+ * `extra` adds items to the cover (the 40-item performance case).
+ */
+export function makeLayout({ extra = 0 } = {}) {
+  const text = (id, x, cy, w, h, t, o = {}) => ({ id, t: "text", x, w, h, cy, text: t, font: "body", size: 20, color: "ink", ...o });
+  const cover = [
+    { id: "sticker1", t: "asset", asset: "shape.heart", tint: "ink", x: 700, w: 160, h: 160, cy: 180, r: 15 },
+    text("longtx", 60, 800, 700, 330, `${LAYOUT_MARK.cover} ${RUNES_500}`, { size: 30, font: "display" }),
+    text("clipped", 60, 960, 260, 70, `${LAYOUT_MARK.clip} ${CLIP_300}`, { size: 22 }),
+    { id: "image01", t: "image", media: DESIGN_IMAGE, fit: "cover", radius: 24, x: 600, w: 300, h: 240, cy: 600, r: -6 },
+    // an asset that is not in the registry and a design image the book does not have are skipped
+    { id: "ghost01", t: "asset", asset: "sticker.nope", x: 10, w: 100, h: 100, cy: 100 },
+    { id: "ghost02", t: "image", media: "01J9Z3K6V8Q4M7N2P5R8GONE00", x: 400, w: 100, h: 100, cy: 100 },
+  ];
+  for (let i = 0; i < extra; i++) cover.push(text(`bulk${String(i).padStart(3, "0")}`, 20 + (i % 8) * 110, 60 + Math.floor(i / 8) * 40, 100, 30, `Chữ ${i}`, { size: 14 }));
+  return {
+    v: 1,
+    pages: {
+      cover: { bg: { media: DESIGN_IMAGE }, overrides: { "cover.photo": { x: 120, w: 480, h: 540, cy: 480, r: 4 }, "cover.sticker": { hidden: true } }, items: cover },
+      profile: { items: [text("prof01", 100, 930, 500, 60, "Hồ sơ của mình", { size: 28 })] },
+      notes: {
+        bg: { color: "white" },
+        overrides: { "notes.heading": { x: 60, w: 600, h: 90, cy: 70 } },
+        items: [text("note01", 60, 950, 500, 60, `${LAYOUT_MARK.notes} nhớ nhé`, { size: 26, font: "display", color: "accent" }), { id: "note02", t: "asset", asset: "shape.circle", tint: "accent", x: 800, w: 120, h: 120, cy: 900, r: 30 }],
+      },
+      back: { items: [text("back01", 80, 40, 600, 60, `${LAYOUT_MARK.back} hẹn gặp lại`, { size: 28 })] },
+    },
+  };
 }

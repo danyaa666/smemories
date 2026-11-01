@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import type { BookData, BookNote } from "../../api/book";
 import type { DesignIds } from "../design";
+import type { TemplateLayout } from "../layout/runtime";
 import { basic } from "./basic";
 import { memoryBook } from "./memory";
 import { navyClassic } from "./navy";
@@ -24,6 +25,8 @@ export type Template = {
   swatch?: { root: string; chips: readonly string[]; serif: string };
   /** Text id to the locale key of the template's own wording of it, for the texts the owner can replace. */
   textDefaults?: Record<string, string>;
+  /** What the free layout (T-154) may place and move on this template; absent: the template cannot hold a layout. */
+  layout?: TemplateLayout;
   Cover: ComponentType<{ data: BookData }>;
   Profile: ComponentType<{ data: BookData }>;
   /** `first` is the index of the first note of the page in the book, `data` the whole book (title, year for the footer). */

@@ -36,10 +36,10 @@
     ],
     "layout": {
       "page_kinds": [
-        {"id": "cover", "repeats": false, "editable": ["cover.title", "cover.photo", "cover.belongs", "cover.sticker"]},
+        {"id": "cover", "repeats": false, "editable": ["cover.title", "cover.photo", "cover.sticker"]},
         {"id": "profile", "repeats": false, "editable": ["profile.heading", "profile.photo"]},
         {"id": "notes", "repeats": true, "editable": ["notes.heading"]},
-        {"id": "back", "repeats": false, "editable": ["back.heading", "back.subtitle", "back.pact"]}
+        {"id": "back", "repeats": false, "editable": ["back.heading", "back.pact"]}
       ],
       "text_fonts": ["display", "body"],
       "colors": ["ink", "soft", "paper", "white", "accent"],
