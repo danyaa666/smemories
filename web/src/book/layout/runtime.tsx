@@ -43,7 +43,17 @@ export type TemplateLayout = {
   natural: Record<string, Natural>;
   /** The manifest's `design.layout.text_size` (design px): the range of a text item's size; a test pins it. */
   textSize: { min: number; max: number };
+  /** The template's page element class (default `mb-page`): a moved element is drawn into the closest one. */
+  pageClass?: string;
+  /** A class added to the layout layer (and the colour swatches) beside `mb-layer`: the template's stylesheet puts its theme and font properties on it. */
+  layerClass?: string;
+  /** The colour token a text item has when it names none, per page kind (default `ink`): a template with dark and light pages needs one for each. */
+  defaultColor?: Record<string, string>;
 };
+
+/** The colour token of a text item that names none on this page kind. */
+export const defaultColorOf = (spec: TemplateLayout, kind: string) =>
+  spec.defaultColor?.[kind] ?? "ink";
 
 /**
  * The editor's text field (T-161): while it is set, the text item with `id` is drawn with the field laid over its printed text. The printed text stays
@@ -103,15 +113,25 @@ export function naturalBox(n: Natural): Box {
  * element is drawn in a box of its own, absolutely placed with the geometry rule and rotated; it is the same element with the same data, only moved (it fills
  * the box, see `.mb-ov`). `hidden` leaves it out. An element in the flow leaves its blank behind.
  */
-export function Editable({ layoutId: id, children }: { layoutId: string; children: ReactNode }) {
+export function Editable({
+  layoutId: id,
+  group,
+  children,
+}: {
+  layoutId: string;
+  /** A class for the box that holds several siblings as one element; it exists only once the element is moved (the page keeps its markup). */
+  group?: string;
+  children: ReactNode;
+}) {
   const ctx = useLayout();
   const { size } = useBookEnv();
   // A moved box is placed in page units, so it is drawn straight into the page element (a portal): a positioned ancestor of the template
   // (`.mb-cover-head`, `.mb-flow`) would otherwise offset it (T-159 rework 1). The marker only tells where the page is.
   const [page, setPage] = useState<Element | null>(null);
+  const pageClass = ctx?.spec.pageClass ?? "mb-page";
   const mark = useCallback(
-    (n: HTMLSpanElement | null) => setPage(n?.closest(".mb-page") ?? null),
-    [],
+    (n: HTMLSpanElement | null) => setPage(n?.closest(`.${pageClass}`) ?? null),
+    [pageClass],
   );
   const ov = ctx?.doc.pages[kindOf(id)]?.overrides?.[id];
   const nat = ctx?.spec.natural[id];
@@ -133,7 +153,7 @@ export function Editable({ layoutId: id, children }: { layoutId: string; childre
   };
   const drawn = (
     <div data-layout-id={id} className="mb-ov" style={boxStyle(box, pageBox(size))}>
-      {children}
+      {group ? <div className={group}>{children}</div> : children}
     </div>
   );
   return (
@@ -193,7 +213,7 @@ function TextItem({
   const color =
     item.color !== undefined && Object.hasOwn(spec.colors, item.color)
       ? spec.colors[item.color]
-      : spec.colors["ink"];
+      : spec.colors[defaultColorOf(spec, kind)];
   const style: CSSProperties = {
     width: "100%",
     height: "100%",
@@ -301,7 +321,11 @@ export function LayoutLayer({
   const items = ctx?.doc.pages[kind]?.items;
   if (!ctx || !items?.length) return null;
   return (
-    <div className="mb-layer" data-theme={theme || undefined} data-fonts={fonts || undefined}>
+    <div
+      className={ctx.spec.layerClass ? `mb-layer ${ctx.spec.layerClass}` : "mb-layer"}
+      data-theme={theme || undefined}
+      data-fonts={fonts || undefined}
+    >
       {items.map((it) => (
         <ItemView key={it.id} item={it} kind={kind} spec={ctx.spec} />
       ))}

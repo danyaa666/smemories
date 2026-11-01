@@ -162,8 +162,20 @@ func TestLayoutBlockValidation(t *testing.T) {
 	if l := mustDesign(t, "memory-book").Layout; l == nil || len(l.PageKinds) != 4 || !l.PageKinds[2].Repeats {
 		t.Errorf("memory-book layout = %+v", l)
 	}
-	if mustDesign(t, "navy-classic").Layout != nil {
-		t.Error("navy-classic has a layout block before its own task")
+	// T-166: Navy Classic has the same four kinds; ids are <kind>.<name> and every one belongs to its kind
+	n := mustDesign(t, "navy-classic").Layout
+	if n == nil || len(n.PageKinds) != 4 || !n.PageKinds[2].Repeats || n.PageKinds[0].Repeats || n.SafeMarginMM != 8 {
+		t.Fatalf("navy-classic layout = %+v", n)
+	}
+	for _, k := range n.PageKinds {
+		for _, id := range k.Editable {
+			if !strings.HasPrefix(id, k.ID+".") {
+				t.Errorf("navy-classic: %q is not an element of %q", id, k.ID)
+			}
+		}
+	}
+	if fmt.Sprint(n.Colors) != "[ink paper gold bronze]" || fmt.Sprint(n.TextFonts) != "[display body]" {
+		t.Errorf("navy-classic colours %v fonts %v", n.Colors, n.TextFonts)
 	}
 }
 

@@ -15,7 +15,7 @@ import { resolveDesign } from "../design";
 import { useFitReport } from "../fit";
 import { listPages } from "../BookPages";
 import { pageBox } from "../layout/geometry";
-import { MissingImage } from "../layout/runtime";
+import { defaultColorOf, MissingImage } from "../layout/runtime";
 import { getTemplate } from "../templates";
 import {
   addItem,
@@ -192,7 +192,7 @@ export function EditorShell({
       r: 0,
       font: "body",
       size: Math.round(((spec?.textSize.min ?? 8) + (spec?.textSize.max ?? 96)) / 2),
-      color: Object.keys(spec?.colors ?? {})[0] ?? "ink",
+      color: spec ? defaultColorOf(spec, kind) : "ink",
       align: "left",
       bold: false,
     };

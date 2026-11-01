@@ -8,7 +8,7 @@ import os from "node:os";
 import path from "node:path";
 import { after, before, describe, test } from "node:test";
 import { chromium } from "playwright";
-import { CLASS_BOOK_CASES, DESIGN_IMAGE, DESIGN_TITLE, HIDDEN_PHOTOS, LAYOUT_MARK, classBookPages, designOf, makeBook, makeClassBook, makeDesignClassBook, makeLayout, photoId, SIGNATURES, studentName } from "./fixture.mjs";
+import { CLASS_BOOK_CASES, DESIGN_IMAGE, DESIGN_TITLE, HIDDEN_PHOTOS, LAYOUT_MARK, classBookPages, designOf, makeBook, makeClassBook, makeDesignClassBook, makeLayout, makeNavyLayout, photoId, SIGNATURES, studentName } from "./fixture.mjs";
 import { BASE, fitBoxes, inkIn, inspect, open, openClassBook, openEditor, settleStage, raster, savePdf, serveBook, signatureBoxes, startServer, text, words } from "./lib.mjs";
 
 const squash = (x) => x.replace(/\s+/g, "");
@@ -1188,12 +1188,65 @@ describe("layout layer: the printed page is the page on screen (T-154)", () => {
     });
   }
 
+  // T-166: the same check for Navy Classic. Five pages: cover, profile, two notes pages (four friends each), back. Every page kind has a background of its own.
+  for (const size of ["A5", "A4", "Letter"]) {
+    test(`${size}: the Navy Classic fixture layout prints as drawn on all four page kinds (difference < 0.5 %, each item within 2 px)`, async () => {
+      const mk = () => makeBook({ size, notes: 5, template: "navy-classic" });
+      const book = mk();
+      book.layout = makeNavyLayout();
+      const pagesToCheck = [["cover", 0, 1], ["profile", 0, 2], ["notes", 0, 3], ["notes", 1, 4], ["back", 0, 5]];
+      const baseline = {};
+      {
+        const plain = await printAndShow(mk(), size, `navy-base-${size}`);
+        for (const [label, nth, pdfPage] of pagesToCheck) baseline[`${label}${nth}`] = difference(raster(plain.file, pdfPage, DPI), await sheetPicture(plain.page, label, nth));
+        await plain.page.close();
+      }
+      const r = await printAndShow(book, size, `navy-${size}`);
+      const info = inspect(r.file);
+      assert.equal(info.pages, 5, "cover, profile, two notes pages, back");
+      for (const [i, want] of PT[size].entries()) assert.ok(Math.abs(info.sizePt[i] - want) < 1, `${size} page size ${info.sizePt} vs ${PT[size]}`);
+      assert.ok(info.allFontsEmbedded, "every font is embedded");
+      const pages = text(r.file).split("\f");
+      assert.ok(squash(pages[0]).includes(LAYOUT_MARK.cover) && squash(pages[0]).includes(squash("Việt Nam đường về nhà")), "the 500-rune text is on the cover (Vietnamese)");
+      assert.ok(!squash(pages[0]).includes(squash("Học, học nữa")), "the hidden motto is gone");
+      assert.ok(squash(pages[0]).toLowerCase().includes(squash("Lớp 12A1").toLowerCase()), "the moved title keeps its text (the cover sets it in capitals)");
+      assert.ok(pages[1].includes("Hồ sơ của mình"), "the profile page item");
+      assert.equal(text(r.file).split(LAYOUT_MARK.notes).length - 1, 2, "the notes item repeats on both notes pages");
+      assert.ok(pages[4].includes(LAYOUT_MARK.back), "the back page item");
+      assert.ok(r.seen.variants.has(`${DESIGN_IMAGE}:display`), "the background is the 3000 px display version");
+      for (const [label, nth, pdfPage] of pagesToCheck) {
+        const pdfPic = raster(r.file, pdfPage, DPI);
+        const scr = await sheetPicture(r.page, label, nth);
+        assert.ok(Math.abs(pdfPic.w - scr.w) <= 2 && Math.abs(pdfPic.h - scr.h) <= 2, `${label}: ${pdfPic.w}x${pdfPic.h} against ${scr.w}x${scr.h}`);
+        const diff = difference(pdfPic, scr);
+        const base = baseline[`${label}${nth}`];
+        console.log(`# navy ${size} ${label}#${nth}: difference ${(diff * 100).toFixed(3)} % (the same page without the layout: ${(base * 100).toFixed(3)} %)`);
+        assert.ok(diff - base < 0.005, `${size} ${label}: ${(diff * 100).toFixed(3)} % of the pixels differ, ${(base * 100).toFixed(3)} % without the layout (the layout may add 0.5 %)`);
+        for (const b of await itemBoxes(r.page, label, nth, scr)) {
+          const box = { x0: b.x0 - 6, y0: b.y0 - 6, x1: b.x1 + 6, y1: b.y1 + 6 };
+          const a = inkBox(scr, box), p = inkBox(pdfPic, box);
+          if (a.n < 400) continue;
+          const edges = /^(longtx|prof01|note01|back01)$/.test(b.id) ? ["x0", "y0"] : ["x0", "y0", "x1", "y1"];
+          for (const k of edges) assert.ok(Math.abs(a[k] - p[k]) <= 2, `${size} ${label} item ${b.id}: ${k} ${a[k]} on screen against ${p[k]} in print (192 dpi)`);
+        }
+      }
+      await r.page.close();
+    });
+  }
+
   // T-159 rework 1 (R1): a moved template element is drawn where its stored box says. Every editable id gets an override equal to the box it already has; nothing may move,
   // wherever the template's own markup puts it (a positioned ancestor such as .mb-cover-head used to offset the box). Rects are read as fractions of the page.
+  const NATURAL_CASES = [
+    { template: "memory-book", notes: 2, tilt: { "cover.photo": -3, "cover.sticker": 10, "profile.photo": -2 }, // the template's own tilt (memory.tsx LAYOUT.natural)
+      ids: ["cover.title", "profile.heading", "notes.heading", "back.heading", "back.pact"] },
+    // T-166: Navy Classic draws no tilt; the cover title is checked with a graduation year (the fixture has one)
+    { template: "navy-classic", notes: 5, tilt: {},
+      ids: ["cover.school", "cover.year", "cover.title", "cover.motto", "cover.class", "profile.eyebrow", "profile.heading", "profile.photo", "notes.eyebrow", "notes.heading", "back.thanks", "back.footer"] },
+  ];
+  for (const { template, notes, tilt: TILT, ids: OTHER } of NATURAL_CASES)
   for (const size of ["A5", "A4", "Letter"]) {
-    test(`${size}: an override equal to the natural box leaves every editable element where it was`, async () => {
-      const TILT = { "cover.photo": -3, "cover.sticker": 10, "profile.photo": -2 }; // the template's own tilt (memory.tsx LAYOUT.natural)
-      const book = makeBook({ size, notes: 2, template: "memory-book" });
+    test(`${size} ${template}: an override equal to the natural box leaves every editable element where it was`, async () => {
+      const book = makeBook({ size, notes, template });
       book.layout = { v: 1, pages: {} };
       const read = (p, natural) =>
         p.evaluate((natural) => {
@@ -1203,12 +1256,18 @@ describe("layout layer: the printed page is the page on screen (T-154)", () => {
             if (out[id]) continue;
             const el = natural ? w.firstElementChild : w;
             const s = w.closest(".bk-inner").getBoundingClientRect();
-            const a = el.getBoundingClientRect();
+            let a = el.getBoundingClientRect();
+            // an element of several siblings (the cover's year block) is the union of their rects
+            if (natural && w.children.length > 1) {
+              const rs = [...w.children].map((c) => c.getBoundingClientRect());
+              const l = Math.min(...rs.map((r) => r.left)), tp = Math.min(...rs.map((r) => r.top));
+              a = { left: l, top: tp, width: Math.max(...rs.map((r) => r.right)) - l, height: Math.max(...rs.map((r) => r.bottom)) - tp };
+            }
             const rec = { aabb: { x: (a.left - s.left) / s.width, y: (a.top - s.top) / s.width, w: a.width / s.width, h: a.height / s.width } };
             if (natural) {
               const keep = el.style.getPropertyValue("transform");
               el.style.setProperty("transform", "none", "important"); // the unrotated box is what an override stores
-              const b = el.getBoundingClientRect();
+              const b = w.children.length > 1 ? a : el.getBoundingClientRect();
               el.style.setProperty("transform", keep);
               rec.box = { x: Math.round(((b.left - s.left) / s.width) * 1000), w: Math.round((b.width / s.width) * 1000), h: Math.round((b.height / s.width) * 1000), cy: Math.round(((b.top + b.height / 2 - s.top) / s.height) * 1000) };
             }
@@ -1221,7 +1280,7 @@ describe("layout layer: the printed page is the page on screen (T-154)", () => {
       await open(a);
       const before = await read(a, true);
       await a.close();
-      const ids = Object.keys(TILT).concat(["cover.title", "profile.heading", "notes.heading", "back.heading", "back.pact"]);
+      const ids = Object.keys(TILT).concat(OTHER);
       for (const id of ids) assert.ok(before[id], `${id} is on a page of the fixture book`);
       const pages = {};
       for (const id of ids) {
@@ -1347,7 +1406,8 @@ describe("layout layer: the printed page is the page on screen (T-154)", () => {
     const cb = makeClassBook({ students: 6 });
     const mark = (i) => ({ v: 1, pages: { profile: { items: [{ id: "cb00001", t: "text", x: 100, w: 600, h: 80, cy: 900, text: `Layoutmark${i}`, size: 28, color: "ink" }] } } });
     cb.members[0].layout = mark(0); // memory-book (every 5th student)
-    cb.members[3].layout = mark(3); // built-in layout (navy-classic): no layout block, so nothing is drawn
+    cb.members[2].layout = mark(2); // built-in layout (no template): no layout block, so nothing is drawn
+    cb.members[3].layout = mark(3); // navy-classic (T-166): has a layout block, drawn on its own pages
     const want = classBookPages(cb);
     const page = await browser.newPage();
     await serveBook(page, null, cb);
@@ -1359,7 +1419,9 @@ describe("layout layer: the printed page is the page on screen (T-154)", () => {
     const pages = text(file).split("\f");
     const hit = (m) => pages.map((t, n) => (squash(t).includes(m) ? n : -1)).filter((n) => n >= 0);
     assert.equal(hit("Layoutmark0").length, 1, "student 0's profile page");
-    assert.equal(hit("Layoutmark3").length, 0, "a student on a template without a layout block draws none");
+    assert.equal(hit("Layoutmark3").length, 1, "student 3 (Navy Classic) draws their layout on their own profile page");
+    assert.ok(squash(pages[hit("Layoutmark3")[0]]).includes(squash(studentName(3))), "on that student's own profile page");
+    assert.equal(hit("Layoutmark2").length, 0, "a student on a template without a layout block draws none");
     assert.ok(squash(pages[hit("Layoutmark0")[0]]).includes(squash(studentName(0))), "on that student's own profile page");
   });
 });

@@ -170,7 +170,7 @@ Stage 2 lets a student place things freely on the pages ([ADR 0004](adr/0004-lay
 | `safe_margin_mm` | 0..30; the editor's guide, nothing is clamped to it |
 
 Ids match `[a-z0-9._-]{1,40}`. `memory-book` has `cover` (`cover.title, cover.photo, cover.sticker`), `profile` (`profile.heading, profile.photo`), `notes` (repeats; `notes.heading`) and `back` (`back.heading, back.pact`); fonts `display`, `body`; colours `ink, soft, paper, white, accent`; sizes 8..96; margin 5 mm.
-**These ids are what Memory Book can really move** (T-154 corrected the proposals: a heading and its subtitle move as one block, and the cover's "this book belongs to" line stays in the cover's header); `memory.tsx` marks each with `data-layout-id` and a test pins the two lists together. Navy Classic has no layout block yet (a book on it cannot hold a layout).
+**These ids are what Memory Book can really move** (T-154 corrected the proposals: a heading and its subtitle move as one block, and the cover's "this book belongs to" line stays in the cover's header); `memory.tsx` marks each with `data-layout-id` and a test pins the two lists together. Navy Classic has a layout block since T-166 (below).
 
 **The layout document** (`book_layout_tab.layout_json`, one row per yearbook, at most 131072 bytes as sent, `version` +1 per save (the counter is `yearbook_tab.layout_version` and never decreases, T-156: reset and a template change also add 1, so a stale editor's `base_version` can never match again; the row mirrors it), `template_id` the template it was made for):
 
@@ -200,6 +200,23 @@ Saves are limited per user: `SMEM_RATE_LAYOUT_SAVE_PER_MINUTE` (default 60) per 
 **What the print gets.** `GET /api/book-data/get` carries `layout` (the document) and `layout_version`, `null` and `0` when there is none, the book's template has no layout block, the row was made for another template or nothing of it validates. The document is **re-validated on every read** with the lenient rule: an asset no longer in the registry, a deleted or no longer own design image, a page kind or editable element the manifest dropped, a tint on a now non-tintable asset or a value now out of range drops that background, override or item (the page kind if it is malformed) and keeps the rest; the stored row is not changed. Up to 128 KiB is added to the response.
 
 **The class admin** reads a design image of a linked member only while that member's layout references it (`bg.media` or an `image` item): `media.Store.readable` looks for `"media":"<id>"` in the stored canonical JSON (a student's text cannot imitate it, its quotes are escaped). See [class-privacy-review.md](class-privacy-review.md).
+
+### Navy Classic in the layout editor (T-166)
+
+`navy-classic.json` has a `design.layout` block of the shape of Memory Book's; `navy.tsx` marks each element with `<Editable layoutId=...>` and lists its natural place in `LAYOUT` (`pageClass` `nc-page`, `layerClass` `nc-layer`, so the layer and the swatches take Navy's theme and font properties; `defaultColor` makes a new text `paper` on the dark cover and back and `ink` on the cream pages). `runtime.test`-style tests (`navy.test.tsx`) pin the manifest, the markers and the colour and font tokens together.
+
+| Page kind | Editable ids | Fixed (and why) |
+|---|---|---|
+| `cover` | `cover.school` (school line), `cover.year` (the "class of" line and the year, one box), `cover.title`, `cover.motto`, `cover.class` | the gold frames, the two dividers and the cap: decoration; the cover has no photo |
+| `profile` | `profile.eyebrow`, `profile.heading`, `profile.photo` (the oval) | the letter paragraphs, the name and the "class of" caption flow by content (a moved paragraph would hide the text or leave a hole that the estimate of the letter cannot follow); the divider and the footer rule |
+| `notes` (repeats) | `notes.eyebrow`, `notes.heading` | the autographs (they fill the four slots by content), the farewell line, the frames and the divider |
+| `back` | `back.thanks`, `back.footer` (the "class of" line) | the school line and the title (they repeat the cover's), the frame, the dividers and the cap |
+
+Colour tokens `ink` (the theme's dark colour, `--nc-dark`), `paper` (`--nc-light`), `gold`, `bronze`; fonts `display` (`--nc-serif`) and `body` (`--nc-caps`: the sans, without the capitals styling); sizes 8..96. The page background of a kind replaces the navy or cream fill behind the frame; the frames and the template's text stay on top, and there is no automatic contrast rewrite (a `gold` background under the cover's light text is the student's choice).
+
+`safe_margin_mm` is 8: the inner gold rule of the cover and back is 44 px from the edge, 8.0 mm on A5 (the notes page's frame is at 34 px, 6.2 mm). The guide is a mm value of the paper, so it is wider in design px on A4 and Letter than the frame, never narrower.
+
+Notes for the next author: the title's blank in the flow is that of the version with a graduation year (26 px; without a year the title is 84 px high); the year block is wrapped in a box only while it is moved (`Editable group`); a moved element is drawn into the page, so `navy.css` re-centres it (`.nc-page .mb-ov`) and lifts the 520 px limit of the thanks text. Print check: "the Navy Classic fixture layout prints as drawn" (`makeNavyLayout()`: a background on each kind, a moved and rotated title, the year block, the oval, the thanks, hidden motto, eyebrow and footer, a tinted heart, 500 Vietnamese runes, an image item; five pages with several notes) on A5, A4 and Letter, and "an override equal to the natural box leaves every editable element where it was" for all twelve ids.
 
 ### The layout layer (T-154)
 
