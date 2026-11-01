@@ -442,7 +442,7 @@ Spec: .team/epics/E09-customisation-editor/20-editor-text-boxes.md (read it from
 - 2026-11-01 16:38Z · leader · merged PR #159 squash, head d6d2d29, QA_PASS: e2e 26/26, print-check 187/187, vitest 957/957; parity same size and wrapping in 30 cases; AC3 manual checks (macOS Telex, iOS Safari, Firefox, Gboard) NOT RUN, owner to run (docs/editor-text.md); watch: WebKit lost a letter in 2 of 200 zero-delay synthetic runs right after the field opened
 
 ### T-162 — [E09] Editor palette: stickers, shapes, frames, own images and the page background (web)
-- **Status:** READY_FOR_QA
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -453,8 +453,8 @@ Spec: .team/epics/E09-customisation-editor/20-editor-text-boxes.md (read it from
 - **Assignee:** —
 - **Branch:** task/t-162-e09-editor-palette-stickers-shapes-frame
 - **PR:** https://github.com/danyaa666/smemories/pull/160
-- **Updated:** 2026-11-01 17:18Z by dev
-- **Comments-seen:** 4
+- **Updated:** 2026-11-01 17:38Z by leader
+- **Comments-seen:** 6
 
 Spec: .team/epics/E09-customisation-editor/21-editor-palette-assets-images-background.md (read it from the main checkout). Palette over the T-151 registry, design-image upload UI over T-152, page background, delete-in-use rule (removes references, waits for save, clears history)
 
@@ -463,11 +463,65 @@ Spec: .team/epics/E09-customisation-editor/21-editor-palette-assets-images-backg
 - 2026-11-01 17:18Z · dev · No missing server route: media/create (purpose=design), media/get-list (purpose=design), media/delete and book-layout/save errors all exist as the spec says. Findings: (1) ERROR_QUOTA_EXCEEDED is one code for both the 30-image cap and the 500 MiB quota, so the client tells them by the list it holds (documented in docs/editor-palette.md); a distinct code would be cleaner (Go change, not done). (2) Palette is a 4th column (280 px); open at first only at >=1700 px, toolbar button 'Add to page' otherwise, because at 1600 px it broke the T-160 e2e 'flush to the edge' handle test. (3) Uploads in flight: 2 (server limit), not 4. (4) Image items on the page use the print variant (shared renderer); backgrounds use display. Results at head 78c0fe72faf9e6e1515a256c2152ed91e8ad69bd: web lint/prettier/tsc/vitest 58 files 1032 tests/lint:i18n/check:api/build green; scripts/e2e.sh 31 passed (incl. editor-palette 5/5) on private stack t162stack; make print-check 187/187. Unproven: two tabs deleting an image, 4000 px phone photo, 12 MiB over real network, screen reader, touch palette, real RATE_LIMITED/BUSY answers (unit-mapped only), Ctrl/Cmd+D in Safari/Firefox.
 - 2026-11-01 17:18Z · dev · PR #160 head 78c0fe7. Palette (5 tabs), tint, image controls, duplicate, background tab, delete-in-use (save, delete, clear history), missing-image placeholder, remove-refused-items button. QA: run e2e (editor-palette spec) and print-check locally; try odd uploads, two-tab delete, 41st sticker, keyboard walk. See docs/editor-palette.md.
 - 2026-11-01 17:19Z · leader · Leader to QA: re-run everything on head 78c0fe72faf9e6e1515a256c2152ed91e8ad69bd and write result lines with the head SHA. Dev's deviations, judge them: (1) palette is a 4th column, open by default only at >=1700 px, else the toolbar button 'Add to page' opens it (check it does not hide the selection/handles at 1280 and 1440 px and the keyboard path works); (2) at most 2 uploads at once (server allows 2/user), the rest queue: accepted; (3) image items on the page use the print variant (<=1800 px JPEG q85), backgrounds use display: check an image item and a background look sharp at 200 % zoom and that /book draws the same as the editor (print-check). Also: the two-tab delete of an in-use image (second tab's next save must give the conflict banner; 'keep mine' then hits ERROR_INVALID_LAYOUT and the remove-offending-items button must clean it), delete-in-use sequence leaves no layout with the deleted id on the server (book-layout/get), undo cannot bring it back, 4000 px phone photo, 12 MiB file, GIF, renamed text file, truncated PNG, PNG with transparency as background, 30-image cap message vs quota message, the real RATE_LIMITED/BUSY answers if you can provoke them (unit-tested only), the 41st sticker, search 'nang' finds 'nắng', palette by keyboard only, Ctrl/Cmd+D in Chromium, missing-image placeholder.
+- 2026-11-01 17:37Z · qa · QA_PASS T-162, PR #160, head 78c0fe72faf9e6e1515a256c2152ed91e8ad69bd (web only, low risk). CI on that head: go, web, security pass (e2e, go-integration, image skipped by D-37/D-38).
+  
+  RESULT LINES (all on the head above, run by me in the T-162 worktree)
+  - web: eslint --max-warnings 0 + prettier --check clean; tsc --noEmit clean; vitest 58 files, 1033 tests pass; lint:i18n ok; check:api ok; build ok.
+  - e2e: scripts/e2e.sh directly on my own compose stack qa162stack (ports 53316/56316/59316, SMEM_TEST_S3_ENDPOINT set, API 58080, web 54173): 31 passed (2.1m), including editor-palette.spec.mjs 5/5.
+  - make print-check: 187 tests, 187 pass, 0 fail (458 s).
+  - No new dependency, nothing under .team/ in the PR (git diff --stat: web/, docs/, tools/e2e only).
+  
+  ACCEPTANCE (AC -> how verified -> result)
+  - AC1 sticker/shape/frame, tint, own image as item and as background, reload same, /book same: e2e specs 1 and 4 + print-check 187/187 (T-154 fixture has asset, image and background on one page) -> pass. Manual: transparent PNG as cover background keeps its transparency (screenshot checked).
+  - AC2 every upload error has its own message: e2e (GIF, text file named .png, truncated PNG, >10 MB, 31st = "already has 30 of 30") + my manual run: GIF refused client-side with 0 requests, renamed text file and 12000x12000 PNG answered by the server in words, 13.9 MB PNG refused with 0 requests; unit tests map each code -> pass. Real RATE_LIMITED: I saturated the per-user slots with parallel API uploads while the UI uploaded 3 files: server 429 + Retry-After 5, UI showed "Too many uploads at once or in a short time. Try again in 5 s." for each -> pass.
+  - AC3 delete in use: e2e + my two-tab run: server book-layout/get has no trace of the deleted id, Undo and Redo disabled, image gone from media list; a plain (unused) delete keeps the history (Undo enabled) -> pass.
+  - AC4 keyboard only: e2e + manual: Tab order tabs -> search -> one grid stop, arrows/Home/End move, Enter adds and focus moves to the new item, live region says "Added: ...", roving ArrowRight on the tab list switches tab -> pass. "mat troi" finds "Mặt trời đeo kính" (vi UI and en UI).
+  - AC5 limits explained: 41st sticker on the cover: 40 items, message "This page already has 40 items. Delete one to add another." -> pass.
+  - AC6 all green, see result lines.
+  
+  LEADER'S POINTS
+  1. Palette column: at 1280 and 1440 px it is closed at first, the toolbar button "Add to page" opens it; with it open the selection and its 9 handles stay inside the page and the page has no horizontal overflow (measured, screenshots). At 1700 it opens by itself. The page is small (39 % at 1280) but usable -> accepted.
+  2. 2 uploads at once, rest queue: accepted (seen working with 3 files).
+  3. Sharpness: image item uses print variant (naturalWidth 1800 for a 3000 px photo, shown 408 css px, so 2x device pixels and 200 % zoom are covered); background uses display (3000 px). Print-check proves /book draws the same.
+  4. Two tabs: tab B (stale) moved the item after tab A deleted the in-use image. B did NOT get the plain "Keep my version" conflict banner: the server validates the layout before it checks the version, so B got the invalid-layout state straight away ("The server refused the layout ... pages.cover.items[0].media: not_own_media") with the button "Remove the items the server refused". Pressing it cleaned the page, the next save went through, the server never held the deleted id. A plain two-tab conflict (no delete) does show "Keep my version". Safe outcome, different path than the brief expected; no change needed.
+  5. Phone photo 4000x3000 JPEG: stored as 3000x2250; PNG with transparency ok; GIF, renamed text, truncated PNG, 12000 px PNG, 13.9 MB PNG as above.
+  6. Missing image: image deleted via API while the layout still names it, fresh browser: the item shows the hatched "Missing image" box, can be selected (panel "Picture") and deleted with Delete, server layout then has no items. (In the same browser the image can still draw from the HTTP cache: expected.)
+  7. Ctrl+D in Chromium duplicates (2 items), Ctrl+Z gives back 1.
+  8. Unused-image delete then Undo: the history is kept (AC3 says so), Undo brings back an item pointing at the deleted image, the server refuses it, the invalid-layout panel appears with the remove button, one click cleans it. Recoverable, as the docs say.
+  
+  NON-BLOCKING OBSERVATIONS
+  - Dialog text reads "used on 1 page types (the cover)": no singular form. Cosmetic.
+  - ERROR_INVALID_IMAGE message says "at most 12000 px a side", but a PNG is capped at 25 megapixels by the server (a 12000x12000 PNG is refused); message is pre-existing wording shared with photos.
+  - ERROR_QUOTA_EXCEEDED shared by cap and 500 MiB quota (dev already noted; client decides by the list).
+  - Not proven by me: ERROR_BUSY (could not provoke), 500 MiB quota message (unit only), touch palette, screen reader, Safari/Firefox shortcuts, a 12 MiB file over a real slow network.
+  - Stack qa162stack and my API/web processes are stopped and its volumes removed.
+- 2026-11-01 17:38Z · leader · merged PR #160 squash, head 78c0fe7, QA_PASS: e2e 31/31, print-check 187/187, vitest 1033; non-blocking follow-ups: dialog copy 'used on 1 page types', PNG 25 MP message, undo after deleting unused image can restore an item whose image is gone (server refuses, remove button cleans), 30-cap vs quota share ERROR_QUOTA_EXCEEDED
 
 ### T-163 — [E09] Layout version history and restore (backend)
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** feature
+- **Milestone:** M4
+- **Depends-on:** none
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** dev
+- **Branch:** task/t-163-e09-layout-version-history-and-restore-b
+- **PR:** —
+- **Updated:** 2026-11-01 17:19Z by dev
+- **Comments-seen:** 2
+
+Spec: .team/epics/E09-customisation-editor/22-layout-version-history-backend.md (read it from the main checkout). Snapshots before a new editing burst (10 min), newest 30 kept, restore as a new version dropping missing assets/images; owner only; deleted with template change, yearbook and account. QA must run make test-integration and report the lines (migration, concurrency)
+
+#### Comments
+- 2026-11-01 17:18Z · leader · no dependency; dev is free after T-162, runs in parallel with QA on T-162
+- 2026-11-01 17:19Z · leader · Leader to dev: spec 22-layout-version-history-backend.md, backend only; migration + concurrency, so run make test-integration (and -race, repeated) on your own compose stack with non-default ports and put the lines in the board comment. Do not touch web code except regenerated schema types if the repo does that.
+
+### T-164 — [E09] Palette follow-ups: copy, history edge, distinct cap/quota code (web + one small API change)
+- **Status:** BACKLOG
+- **Priority:** P3
+- **Type:** fix
 - **Milestone:** M4
 - **Depends-on:** none
 - **Risk:** low
@@ -476,13 +530,11 @@ Spec: .team/epics/E09-customisation-editor/21-editor-palette-assets-images-backg
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-11-01 17:18Z by leader
-- **Comments-seen:** 2
+- **Updated:** 2026-11-02 08:00Z by leader
+- **Comments-seen:** 0
 
-Spec: .team/epics/E09-customisation-editor/22-layout-version-history-backend.md (read it from the main checkout). Snapshots before a new editing burst (10 min), newest 30 kept, restore as a new version dropping missing assets/images; owner only; deleted with template change, yearbook and account. QA must run make test-integration and report the lines (migration, concurrency)
+Spec: .team/epics/E09-customisation-editor/23-palette-follow-ups.md (read it from the main checkout). Plural copy, accurate PNG/JPEG size message, history counts as in-use when deleting an image, ERROR_DESIGN_IMAGE_LIMIT separate from ERROR_QUOTA_EXCEEDED
 
 #### Comments
-- 2026-11-01 17:18Z · leader · no dependency; dev is free after T-162, runs in parallel with QA on T-162
-- 2026-11-01 17:19Z · leader · Leader to dev: spec 22-layout-version-history-backend.md, backend only; migration + concurrency, so run make test-integration (and -race, repeated) on your own compose stack with non-default ports and put the lines in the board comment. Do not touch web code except regenerated schema types if the repo does that.
 
 <!-- tasks:end -->
