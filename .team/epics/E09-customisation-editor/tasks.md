@@ -532,7 +532,7 @@ Spec: .team/epics/E09-customisation-editor/22-layout-version-history-backend.md 
 - 2026-11-01 21:35Z · leader · merged f0eb70f; QA 2026-11-02: lint/test, integration -race 34 pkgs, booklayout -race x20, migrate up/down, check:api, class matrix, postman 166/374/0. Non-blocking: version routes share save rate limit; restore log field names
 
 ### T-164 — [E09] Palette follow-ups: copy, history edge, distinct cap/quota code (web + one small API change)
-- **Status:** READY_FOR_QA
+- **Status:** IN_QA
 - **Priority:** P3
 - **Type:** fix
 - **Milestone:** M4
@@ -540,10 +540,10 @@ Spec: .team/epics/E09-customisation-editor/22-layout-version-history-backend.md 
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** qa
 - **Branch:** task/t-164-e09-palette-follow-ups-copy-history-edge
 - **PR:** https://github.com/danyaa666/smemories/pull/162
-- **Updated:** 2026-11-01 21:38Z by dev
+- **Updated:** 2026-11-01 21:38Z by qa
 - **Comments-seen:** 3
 
 Spec: .team/epics/E09-customisation-editor/23-palette-follow-ups.md (read it from the main checkout). Plural copy, accurate PNG/JPEG size message, history counts as in-use when deleting an image, ERROR_DESIGN_IMAGE_LIMIT separate from ERROR_QUOTA_EXCEEDED
@@ -554,7 +554,7 @@ Spec: .team/epics/E09-customisation-editor/23-palette-follow-ups.md (read it fro
 - 2026-11-01 21:38Z · leader · Leader to QA: PR #162 head a3d3396 is dev's develop-merge of 9aa6f47; dev ran make lint, go test -race, vitest 1045, -race integration for media/notes/booklayout/api, e2e 32 passed, print-check 187/187 on 9aa6f47 only. Please run full make test-integration, e2e (scripts/e2e.sh on your own stack) and print-check on a3d3396 and report counts + full SHA. Check: 31st design image gives 409 ERROR_DESIGN_IMAGE_LIMIT data.limit=30 and ERROR_QUOTA_EXCEEDED stays for quota/200-photo cap; history-only image dialog and undo cannot resurrect it; vi/en plural strings; size message matches server limits. Accepted: no Postman case for the cap (rate budget).
 
 ### T-165 — [E09] Editor version history panel: list, preview and restore (web)
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -562,15 +562,34 @@ Spec: .team/epics/E09-customisation-editor/23-palette-follow-ups.md (read it fro
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-165-e09-editor-version-history-panel-list-pr
 - **PR:** —
-- **Updated:** 2026-11-01 21:35Z by leader
+- **Updated:** 2026-11-01 21:39Z by dev
 - **Comments-seen:** 1
 
 Spec: .team/epics/E09-customisation-editor/24-version-history-panel.md (read it from the main checkout). History button and panel, read-only preview of a snapshot, restore through the T-163 routes with settle first, history cleared after restore, dropped count message, every error mapped, e2e spec editor-history
 
 #### Comments
 - 2026-11-01 21:35Z · leader · T-163 merged (f0eb70f); version routes use the save rate limit (burst 20/10s), so no polling and cache previews
+
+### T-166 — [E09] Navy Classic: page kinds and editable elements for the layout editor (web + manifest)
+- **Status:** TODO
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M4
+- **Depends-on:** none
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-11-02 05:05Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E09-customisation-editor/25-navy-classic-layout.md (read it from the main checkout). design.layout block in navy-classic.json, Editable wrappers in navy.tsx, background replaces the page tone, parity with no layout, print-check parity fixture, server cases, editor-navy e2e
+
+#### Comments
 
 <!-- tasks:end -->
