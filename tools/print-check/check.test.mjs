@@ -1256,3 +1256,80 @@ describe("layout layer: the printed page is the page on screen (T-154)", () => {
     assert.ok(squash(pages[hit("Layoutmark0")[0]]).includes(squash(studentName(0))), "on that student's own profile page");
   });
 });
+
+// ---- T-154 QA: hostile layouts. The server validates a layout, but the runtime treats it as untrusted: it must print the same number of pages, never throw and never HTML-inject. ----
+describe("layout layer: hostile layouts (T-154 QA)", () => {
+  const txt = (id, o = {}) => ({ id, t: "text", x: 100, w: 600, h: 120, cy: 500, text: "x", size: 24, ...o });
+  const hostile = {
+    html: { cover: { items: [txt("h1", { text: '<img src=x onerror="window.__pwned=1"><script>window.__pwned=2</script><b>bold</b> Htmlmark' })] } },
+    huge: { cover: { items: [txt("big1", { text: "Việt Nam đường về nhà ".repeat(1000), w: 900, h: 1000, cy: 500, size: 48 }), txt("big2", { text: "x".repeat(20000), w: 100, h: 40, cy: 900 })] } },
+    overlap: {
+      cover: { items: Array.from({ length: 40 }, (_, i) => ({ id: `ov${String(i).padStart(3, "0")}`, t: "asset", asset: "shape.heart", tint: "accent", x: 850 + (i % 5) * 30, w: 300, h: 300, cy: 950 + (i % 7) * 20, r: i * 9 })) },
+      notes: { items: Array.from({ length: 40 }, (_, i) => txt(`on${String(i).padStart(3, "0")}`, { x: 900, w: 400, h: 200, cy: 20 + i * 25, r: 45 + i, text: `Overlap ${i}` })) },
+    },
+    degenerate: {
+      cover: { bg: { media: "01J9Z3K6V8Q4M7N2P5R8GONE00" }, overrides: { "cover.title": { hidden: true }, "cover.photo": { w: 0, h: 0 }, "nope.what": { hidden: true } }, items: [{ id: "d1", t: "text", x: 0, w: 0, h: 0, cy: 0 }, { id: "d2", t: "image", x: 0, w: 100, h: 100, cy: 100 }, { id: "d3", t: "asset", x: 0, w: 100, h: 100, cy: 100 }, { id: "d4", t: "wat", x: 0, w: 100, h: 100, cy: 100 }, txt("d5", { font: "comic", color: "hotpink", size: 1 }), txt("d6", { size: 5000, text: "Giant" }), txt("d7", { w: 5000, h: 5000, x: -500, cy: -500, text: "Offpage" })] },
+      back: { bg: { asset: "sticker.nope" } },
+      profile: { bg: { color: "not-a-token" }, overrides: { "profile.heading": { hidden: true }, "profile.photo": { hidden: true } } },
+      bogus: { items: [txt("z1")] },
+    },
+  };
+  for (const [name, pages] of Object.entries(hostile))
+    for (const size of ["A5", "Letter"])
+      test(`${name} on ${size}: same pages, no script, nothing outside the sheet`, async () => {
+        const plain = makeBook({ size, notes: 2, template: "memory-book" });
+        const base = await render(plain, `hostile-base-${size}`);
+        const page = await browser.newPage();
+        const errors = [];
+        page.on("pageerror", (e) => errors.push(String(e)));
+        await serveBook(page, { ...plain, layout: { v: 1, pages } });
+        await open(page);
+        const pwned = await page.evaluate(() => window.__pwned ?? null);
+        assert.equal(pwned, null, "no script ran");
+        const escaped = await page.evaluate(() => [...document.querySelectorAll(".bk-sheet")].filter((s) => s.scrollWidth > s.clientWidth + 1 || s.scrollHeight > s.clientHeight + 1).length);
+        const file = path.join(tmp, `hostile-${name}-${size}.pdf`);
+        await savePdf(page, file);
+        const info = inspect(file);
+        await page.close();
+        assert.deepEqual(errors, [], "no page error");
+        assert.equal(info.pages, base.info.pages, "same page count as the book without a layout");
+        assert.ok(info.allFontsEmbedded);
+        assert.equal(escaped, 0, "no sheet scrolls: the layer is clipped by the page");
+        for (const [i, want] of PT[size].entries()) assert.ok(Math.abs(info.sizePt[i] - want) < 1);
+        if (name === "html") {
+          const t = text(file);
+          assert.ok(squash(t).includes(squash('<img src=x onerror="window.__pwned=1"><script>window.__pwned=2</script><b>bold</b> Htmlmark')), "the markup is printed as text");
+        }
+      });
+
+  test("the book is not ready before the layout's images have loaded", async () => {
+    const book = makeBook({ size: "A5", notes: 1, template: "memory-book" });
+    book.layout = makeLayout();
+    const page = await browser.newPage();
+    await serveBook(page, book, null, { mediaDelayMs: 1200 });
+    await open(page);
+    const state = await page.evaluate(() => [...document.querySelectorAll(".bk-sheet[data-page=cover] img")].map((i) => ({ done: i.complete && i.naturalWidth > 0, src: i.src.slice(-60) })));
+    await page.close();
+    assert.ok(state.length >= 3, `images on the cover: ${JSON.stringify(state)}`);
+    assert.ok(state.every((s) => s.done), `all loaded at ready: ${JSON.stringify(state)}`);
+  });
+
+  test("theme and font set switch with a layout present: every combination restyles the text boxes", async () => {
+    const want = { "lavender/playful": ["Baloo 2", "rgb(59, 47, 74)"], "peach/classic": ["Cormorant Garamond", "rgb(74, 44, 34)"], "mint/classic": ["Cormorant Garamond", "rgb(31, 59, 52)"] };
+    for (const [combo, [family, ink]] of Object.entries(want)) {
+      const [theme, fonts] = combo.split("/");
+      const book = makeBook({ size: "A5", notes: 1, template: "memory-book", design: designOf(theme, fonts) });
+      book.layout = makeLayout();
+      const page = await browser.newPage();
+      await serveBook(page, book);
+      await open(page);
+      const look = await page.evaluate(() => {
+        const e = document.querySelector('.bk-sheet[data-page="cover"] [data-layout-item="longtx"] [data-fit]');
+        return { f: getComputedStyle(e).fontFamily, c: getComputedStyle(e).color };
+      });
+      await page.close();
+      assert.ok(look.f.includes(family), `${combo}: ${look.f}`);
+      assert.equal(look.c, ink, combo);
+    }
+  });
+});
