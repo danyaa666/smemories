@@ -442,7 +442,7 @@ Spec: .team/epics/E09-customisation-editor/20-editor-text-boxes.md (read it from
 - 2026-11-01 16:38Z · leader · merged PR #159 squash, head d6d2d29, QA_PASS: e2e 26/26, print-check 187/187, vitest 957/957; parity same size and wrapping in 30 cases; AC3 manual checks (macOS Telex, iOS Safari, Firefox, Gboard) NOT RUN, owner to run (docs/editor-text.md); watch: WebKit lost a letter in 2 of 200 zero-delay synthetic runs right after the field opened
 
 ### T-162 — [E09] Editor palette: stickers, shapes, frames, own images and the page background (web)
-- **Status:** TODO
+- **Status:** IN_PROGRESS
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -450,15 +450,34 @@ Spec: .team/epics/E09-customisation-editor/20-editor-text-boxes.md (read it from
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
-- **Branch:** —
+- **Assignee:** dev
+- **Branch:** task/t-162-e09-editor-palette-stickers-shapes-frame
 - **PR:** —
-- **Updated:** 2026-11-01 16:38Z by leader
+- **Updated:** 2026-11-01 16:38Z by dev
 - **Comments-seen:** 1
 
 Spec: .team/epics/E09-customisation-editor/21-editor-palette-assets-images-background.md (read it from the main checkout). Palette over the T-151 registry, design-image upload UI over T-152, page background, delete-in-use rule (removes references, waits for save, clears history)
 
 #### Comments
 - 2026-11-01 16:38Z · leader · T-161 merged
+
+### T-163 — [E09] Layout version history and restore (backend)
+- **Status:** BACKLOG
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M4
+- **Depends-on:** none
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-11-01 18:00Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E09-customisation-editor/22-layout-version-history-backend.md (read it from the main checkout). Snapshots before a new editing burst (10 min), newest 30 kept, restore as a new version dropping missing assets/images; owner only; deleted with template change, yearbook and account. QA must run make test-integration and report the lines (migration, concurrency)
+
+#### Comments
 
 <!-- tasks:end -->
