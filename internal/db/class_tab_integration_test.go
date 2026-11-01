@@ -224,7 +224,7 @@ func TestMigrateBookLayoutTable(t *testing.T) {
 	if n := dump(t, ctx, d, `SELECT COUNT(*) FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME = 'book_layout_tab'`)[0]; n != "0" {
 		t.Errorf("%s foreign keys on book_layout_tab", n)
 	}
-	for range 2 { // the newest migration is T-156's layout_version column, the one before it this table's
+	for range 3 { // the newest migrations: T-163's version table, T-156's layout_version column, and before them this table
 		if err := db.MigrateDown(ctx, d); err != nil {
 			t.Fatalf("down: %v", err)
 		}
@@ -251,8 +251,10 @@ func TestMigrateYearbookLayoutVersion(t *testing.T) {
 	versions := func() string {
 		return strings.Join(dump(t, ctx, d, `SELECT CONCAT(title, '=', layout_version) FROM yearbook_tab ORDER BY title`), ",")
 	}
-	if err := db.MigrateDown(ctx, d); err != nil {
-		t.Fatalf("down: %v", err)
+	for range 2 { // T-163's version table is newer than the column
+		if err := db.MigrateDown(ctx, d); err != nil {
+			t.Fatalf("down: %v", err)
+		}
 	}
 	if n := dump(t, ctx, d, `SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'yearbook_tab' AND COLUMN_NAME = 'layout_version'`)[0]; n != "0" {
 		t.Fatal("down left the column behind")
@@ -271,8 +273,10 @@ func TestMigrateYearbookLayoutVersion(t *testing.T) {
 	if got := versions(); got != "with=7,without=0" {
 		t.Fatalf("after up: %s", got)
 	}
-	if err := db.MigrateDown(ctx, d); err != nil {
-		t.Fatalf("down again: %v", err)
+	for range 2 {
+		if err := db.MigrateDown(ctx, d); err != nil {
+			t.Fatalf("down again: %v", err)
+		}
 	}
 	if n := dump(t, ctx, d, `SELECT COUNT(*) FROM yearbook_tab`)[0]; n != "2" {
 		t.Fatalf("down touched the rows: %s", n)
@@ -282,5 +286,60 @@ func TestMigrateYearbookLayoutVersion(t *testing.T) {
 	}
 	if got := versions(); got != "with=7,without=0" {
 		t.Fatalf("after up again: %s", got)
+	}
+}
+
+// T-163 (E09): the layout history table has no foreign key, is unique per book and version, accepts a 128 KiB document and goes down and up
+// again on its own, leaving the layout rows alone.
+func TestMigrateBookLayoutVersionTable(t *testing.T) {
+	ctx := context.Background()
+	d := dbtest.New(t)
+	exists := func() string {
+		return dump(t, ctx, d, `SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'book_layout_version_tab'`)[0]
+	}
+	snap := func(public string, yearbook, version int, doc string) error {
+		_, err := d.ExecContext(ctx, `INSERT INTO book_layout_version_tab (public_id, yearbook_id, version, kind, template_id, layout_json, item_count, bytes, created_at)
+			VALUES (?,?,?,'auto','memory-book',?,0,?,1)`, public, yearbook, version, doc, len(doc))
+		return err
+	}
+	if exists() != "1" {
+		t.Fatal("the test database lacks book_layout_version_tab")
+	}
+	big := `{"v":1,"pages":{},"pad":"` + strings.Repeat("ệ", 40000) + `"}`
+	if err := snap("01AAAAAAAAAAAAAAAAAAAAAAA1", 7, 1, big); err != nil { // no yearbook 7 exists: there is no foreign key
+		t.Fatal(err)
+	}
+	if got := dump(t, ctx, d, `SELECT CHAR_LENGTH(layout_json) FROM book_layout_version_tab WHERE yearbook_id = 7`)[0]; got != fmt.Sprint(len([]rune(big))) {
+		t.Errorf("stored %s characters, want %d", got, len([]rune(big)))
+	}
+	if err := snap("01AAAAAAAAAAAAAAAAAAAAAAA2", 7, 1, "{}"); err == nil {
+		t.Error("the same version of one book was stored twice")
+	}
+	if err := snap("01AAAAAAAAAAAAAAAAAAAAAAA1", 8, 1, "{}"); err == nil {
+		t.Error("a public id was used twice")
+	}
+	if err := snap("01AAAAAAAAAAAAAAAAAAAAAAA3", 7, 2, "{}"); err != nil {
+		t.Errorf("another version of the book: %v", err)
+	}
+	if n := dump(t, ctx, d, `SELECT COUNT(*) FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME = 'book_layout_version_tab'`)[0]; n != "0" {
+		t.Errorf("%s foreign keys on book_layout_version_tab", n)
+	}
+	if _, err := d.ExecContext(ctx, `INSERT INTO book_layout_tab (yearbook_id, template_id, layout_json, version, created_at, updated_at) VALUES (9,'memory-book','{}',1,1,1)`); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.MigrateDown(ctx, d); err != nil { // the newest migration is this table's
+		t.Fatalf("down: %v", err)
+	}
+	if exists() != "0" {
+		t.Fatal("down left the table behind")
+	}
+	if n := dump(t, ctx, d, `SELECT COUNT(*) FROM book_layout_tab`)[0]; n != "1" {
+		t.Errorf("down touched the layout table: %s rows", n)
+	}
+	if err := db.MigrateUp(ctx, d); err != nil {
+		t.Fatalf("up again: %v", err)
+	}
+	if exists() != "1" || dump(t, ctx, d, `SELECT COUNT(*) FROM book_layout_version_tab`)[0] != "0" {
+		t.Fatal("up again did not create an empty table")
 	}
 }

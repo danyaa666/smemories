@@ -34,6 +34,71 @@ func (h *Handler) Routes(mux *http.ServeMux) {
 	mux.Handle("GET /api/book-layout/get", h.requireUser(http.HandlerFunc(h.get)))
 	mux.Handle("POST /api/book-layout/save", auth.Guard(h.allowedOrigins, h.requireUser(http.HandlerFunc(h.save))))
 	mux.Handle("POST /api/book-layout/reset", auth.Guard(h.allowedOrigins, h.requireUser(http.HandlerFunc(h.reset))))
+	mux.Handle("POST /api/book-layout/version-list", auth.Guard(h.allowedOrigins, h.requireUser(http.HandlerFunc(h.versionList))))
+	mux.Handle("POST /api/book-layout/version-get", auth.Guard(h.allowedOrigins, h.requireUser(http.HandlerFunc(h.versionGet))))
+	mux.Handle("POST /api/book-layout/restore", auth.Guard(h.allowedOrigins, h.requireUser(http.HandlerFunc(h.restore))))
+}
+
+type versionInput struct {
+	YearbookID  string `json:"yearbook_id"`
+	ID          string `json:"id"`
+	BaseVersion *int64 `json:"base_version"`
+}
+
+func (h *Handler) versionList(w http.ResponseWriter, r *http.Request) {
+	u, ok := auth.MustUser(w, r)
+	if !ok {
+		return
+	}
+	var in resetInput
+	if !httpx.DecodeJSON(w, r, &in) || !validID(w, r, in.YearbookID) {
+		return
+	}
+	items, err := h.svc.Versions(r.Context(), u.InternalID, in.YearbookID)
+	respond(w, r, map[string]any{"items": items, "next_id": ""}, err) // at most 30, so never a next page (api-contract.md section 5 shape)
+}
+
+// decodeVersion decodes the body of version-get and restore and checks the two ids.
+func decodeVersion(w http.ResponseWriter, r *http.Request) (*versionInput, bool) {
+	var in versionInput
+	if !httpx.DecodeJSON(w, r, &in) || !validID(w, r, in.YearbookID) {
+		return nil, false
+	}
+	if !ulid.Valid(in.ID) {
+		fail(w, r, apperr.New(apperr.Param, "id must be a layout version id"))
+		return nil, false
+	}
+	return &in, true
+}
+
+func (h *Handler) versionGet(w http.ResponseWriter, r *http.Request) {
+	u, ok := auth.MustUser(w, r)
+	if !ok {
+		return
+	}
+	in, ok := decodeVersion(w, r)
+	if !ok {
+		return
+	}
+	v, err := h.svc.Version(r.Context(), u.InternalID, in.YearbookID, in.ID)
+	respond(w, r, v, err)
+}
+
+func (h *Handler) restore(w http.ResponseWriter, r *http.Request) {
+	u, ok := auth.MustUser(w, r)
+	if !ok {
+		return
+	}
+	in, ok := decodeVersion(w, r)
+	if !ok {
+		return
+	}
+	if in.BaseVersion == nil {
+		fail(w, r, apperr.New(apperr.Param, "base_version is required"))
+		return
+	}
+	v, err := h.svc.Restore(r.Context(), u.InternalID, in.YearbookID, in.ID, *in.BaseVersion)
+	respond(w, r, v, err)
 }
 
 type saveInput struct {

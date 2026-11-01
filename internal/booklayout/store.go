@@ -63,16 +63,33 @@ type conflict struct {
 	version int64
 }
 
+// policy is what the service decides about snapshots; the store only applies it. nowMs is the time of the write, a new automatic snapshot
+// is taken when the newest one is older than gapMs, and at most keep snapshots stay per book.
+type policy struct {
+	nowMs, gapMs int64
+	keep         int
+}
+
+// written is what a write did besides the document: the version it issued, the kind of snapshot it stored ("" = none) and how many old
+// snapshots it pruned.
+type written struct {
+	version int64
+	snap    string
+	pruned  int64
+}
+
 // save writes layout for the book if base is the book's current version (yearbook_tab.layout_version; 0 = never saved, and after a reset
 // or a template change the version those left behind) and the book still has template tpl, the one the layout was validated against.
-// It returns the new version, or the current state when base is stale.
+// The document it replaces is stored as a snapshot of the given kind in the same transaction: kindAuto only when the newest snapshot is
+// older than pol.gapMs, kindRestore always. It returns the new version, or the current state when base is stale.
 //
-// Lock order (docs/db-conventions.md, Writes): yearbook_tab row (FOR UPDATE) first, then book_layout_tab, like yearbook modify and remove
-// and the template change. The compare and the write happen under that lock.
-func (s *Store) save(ctx context.Context, ownerID uint64, publicID, tpl string, base int64, layout []byte, nowMs int64) (int64, *conflict, error) {
+// Lock order (docs/db-conventions.md, Writes): yearbook_tab row (FOR UPDATE) first, then book_layout_tab and book_layout_version_tab, like
+// yearbook modify and remove and the template change. The compare, the snapshot check and the write happen under that lock, so two
+// parallel saves cannot both see "no recent snapshot".
+func (s *Store) save(ctx context.Context, ownerID uint64, publicID, tpl string, base int64, layout []byte, kind string, pol policy) (*written, *conflict, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		return 0, nil, apperr.Wrap(apperr.Internal, err, "begin")
+		return nil, nil, apperr.Wrap(apperr.Internal, err, "begin")
 	}
 	defer func() { _ = tx.Rollback() }()
 	var id uint64
@@ -80,31 +97,37 @@ func (s *Store) save(ctx context.Context, ownerID uint64, publicID, tpl string, 
 	var version int64
 	err = tx.QueryRowContext(ctx, `SELECT id, template_id, layout_version FROM yearbook_tab WHERE owner_id = ? AND public_id = ? FOR UPDATE`, ownerID, publicID).Scan(&id, &cur, &version)
 	if errors.Is(err, sql.ErrNoRows) {
-		return 0, nil, errNotFound
+		return nil, nil, errNotFound
 	}
 	if err != nil {
-		return 0, nil, apperr.Wrap(apperr.Internal, err, "lock book")
+		return nil, nil, apperr.Wrap(apperr.Internal, err, "lock book")
 	}
 	if !cur.Valid || cur.String != tpl {
-		return 0, nil, apperr.New(apperr.Conflict, "the book's template changed, reload the editor")
+		return nil, nil, apperr.New(apperr.Conflict, "the book's template changed, reload the editor")
 	}
 	if base != version {
-		return s.lost(ctx, tx, id, version)
+		_, c, err := s.lost(ctx, tx, id, version)
+		return nil, c, err
+	}
+	w := &written{}
+	if w.snap, w.pruned, err = snapshotCurrent(ctx, tx, id, kind, pol); err != nil {
+		return nil, nil, err
 	}
 	version++
 	if _, err = tx.ExecContext(ctx, `UPDATE yearbook_tab SET layout_version = ? WHERE id = ?`, version, id); err != nil {
-		return 0, nil, apperr.Wrap(apperr.Internal, err, "bump layout version")
+		return nil, nil, apperr.Wrap(apperr.Internal, err, "bump layout version")
 	}
 	if _, err = tx.ExecContext(ctx,
 		`INSERT INTO book_layout_tab (yearbook_id, template_id, layout_json, version, created_at, updated_at) VALUES (?,?,?,?,?,?)
 		 ON DUPLICATE KEY UPDATE template_id = VALUES(template_id), layout_json = VALUES(layout_json), version = VALUES(version), updated_at = VALUES(updated_at)`,
-		id, tpl, layout, version, nowMs, nowMs); err != nil {
-		return 0, nil, apperr.Wrap(apperr.Internal, err, "write book layout")
+		id, tpl, layout, version, pol.nowMs, pol.nowMs); err != nil {
+		return nil, nil, apperr.Wrap(apperr.Internal, err, "write book layout")
 	}
 	if err := tx.Commit(); err != nil {
-		return 0, nil, apperr.Wrap(apperr.Internal, err, "commit book layout")
+		return nil, nil, apperr.Wrap(apperr.Internal, err, "commit book layout")
 	}
-	return version, nil, nil
+	w.version = version
+	return w, nil, nil
 }
 
 // lost reads the row that won (nil after a reset or a template change), in the same transaction.
@@ -121,25 +144,34 @@ func (s *Store) lost(ctx context.Context, tx *sql.Tx, yearbookID uint64, version
 	return 0, &conflict{row: r, version: version}, nil
 }
 
-// reset deletes the owner's layout row and moves the version on; deleting nothing is fine. Same lock order as save.
-func (s *Store) reset(ctx context.Context, ownerID uint64, publicID string) error {
+// reset deletes the owner's layout row and moves the version on; deleting nothing is fine. The deleted document is stored as a kindReset
+// snapshot first, whatever the age of the newest one. Same lock order as save. It returns the kind stored ("" = no layout) and the number
+// of snapshots pruned.
+func (s *Store) reset(ctx context.Context, ownerID uint64, publicID string, pol policy) (*written, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		return apperr.Wrap(apperr.Internal, err, "begin")
+		return nil, apperr.Wrap(apperr.Internal, err, "begin")
 	}
 	defer func() { _ = tx.Rollback() }()
 	var id uint64
 	err = tx.QueryRowContext(ctx, `SELECT id FROM yearbook_tab WHERE owner_id = ? AND public_id = ? FOR UPDATE`, ownerID, publicID).Scan(&id)
 	if errors.Is(err, sql.ErrNoRows) {
-		return errNotFound
+		return nil, errNotFound
 	}
 	if err != nil {
-		return apperr.Wrap(apperr.Internal, err, "lock book")
+		return nil, apperr.Wrap(apperr.Internal, err, "lock book")
+	}
+	w := &written{}
+	if w.snap, w.pruned, err = snapshotCurrent(ctx, tx, id, KindReset, pol); err != nil {
+		return nil, err
 	}
 	if err := deleteRow(ctx, tx, id); err != nil {
-		return err
+		return nil, err
 	}
-	return apperr.WithCode(apperr.Internal, tx.Commit())
+	if err := tx.Commit(); err != nil {
+		return nil, apperr.Wrap(apperr.Internal, err, "commit reset")
+	}
+	return w, nil
 }
 
 // deleteRow removes the layout row and bumps the book's version, so no version issued before comes back (a stale editor's save is a

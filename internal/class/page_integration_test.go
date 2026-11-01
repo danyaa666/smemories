@@ -325,6 +325,9 @@ func TestRosterHasCountsAndFlagsOnly(t *testing.T) {
 	}
 }
 
+// layoutVersionID is the public id of the layout snapshot TestAdminStillHasNoRightsOverAStudentsBook seeds (T-163).
+const layoutVersionID = "01K7QB1B2C3D4E5F6G7H8J9K0M"
+
 // adminCalls is the admin-404 matrix: every route of api/openapi.yaml that takes a yearbook, note or media id, called as the class admin
 // on a student's linked book. The key is the route (without /api/); a suffix after a space tells variants of one route apart.
 // TestAdminRoutesAreAllInTheMatrix fails when a route of the OpenAPI file that takes such an id is missing from this table.
@@ -371,6 +374,15 @@ func (e *env) adminCalls(admin person, cls, book, coll, note, media string) map[
 			return e.do(admin, "POST", "/api/book-layout/save", `{"yearbook_id":"`+book+`","base_version":0,"layout":{"v":1,"pages":{}}}`)
 		},
 		"book-layout/reset": func() resp { return e.do(admin, "POST", "/api/book-layout/reset", body("yearbook_id", book)) },
+		"book-layout/version-list": func() resp {
+			return e.do(admin, "POST", "/api/book-layout/version-list", body("yearbook_id", book))
+		},
+		"book-layout/version-get": func() resp {
+			return e.do(admin, "POST", "/api/book-layout/version-get", body("yearbook_id", book, "id", layoutVersionID))
+		},
+		"book-layout/restore": func() resp {
+			return e.do(admin, "POST", "/api/book-layout/restore", `{"yearbook_id":"`+book+`","id":"`+layoutVersionID+`","base_version":3}`)
+		},
 		"book-export/get-text": func() resp {
 			return e.do(admin, "GET", "/api/book-export/get-text?yearbook_id="+book, "")
 		},
@@ -403,7 +415,8 @@ func TestAdminStillHasNoRightsOverAStudentsBook(t *testing.T) {
 			`SELECT GROUP_CONCAT(CONCAT_WS(',', public_id, status, sort_order) ORDER BY id) FROM note_tab WHERE yearbook_id = ?`,
 			`SELECT GROUP_CONCAT(CONCAT_WS(',', public_id, revoked_at) ORDER BY id) FROM note_collection_tab WHERE yearbook_id = ?`,
 			`SELECT COUNT(*) FROM media_tab WHERE yearbook_id = ?`,
-			`SELECT GROUP_CONCAT(CONCAT_WS(',', version, updated_at, layout_json) ORDER BY id) FROM book_layout_tab WHERE yearbook_id = ?`, // T-153
+			`SELECT GROUP_CONCAT(CONCAT_WS(',', version, updated_at, layout_json) ORDER BY id) FROM book_layout_tab WHERE yearbook_id = ?`,              // T-153
+			`SELECT GROUP_CONCAT(CONCAT_WS(',', public_id, version, kind, layout_json) ORDER BY id) FROM book_layout_version_tab WHERE yearbook_id = ?`, // T-163
 		} {
 			var v sql.NullString
 			if err := e.db.QueryRow(q, bookRow).Scan(&v); err != nil {
@@ -416,7 +429,24 @@ func TestAdminStillHasNoRightsOverAStudentsBook(t *testing.T) {
 	e.exec(`UPDATE yearbook_tab SET template_id = 'memory-book' WHERE id = ?`, bookRow)
 	e.exec(`INSERT INTO book_layout_tab (yearbook_id, template_id, layout_json, version, created_at, updated_at) VALUES (?, 'memory-book', ?, 3, 1, 1)`,
 		bookRow, `{"v":1,"pages":{"cover":{"items":[{"id":"abcdef","t":"text","text":"SECRET-LAYOUT","x":0,"w":100,"h":100,"cy":500}]}}}`)
+	e.exec(`INSERT INTO book_layout_version_tab (public_id, yearbook_id, version, kind, template_id, layout_json, item_count, bytes, created_at)
+		VALUES (?, ?, 2, 'auto', 'memory-book', ?, 1, 1, 1)`, layoutVersionID, bookRow, `{"v":1,"pages":{"cover":{"items":[{"id":"abcdef","t":"text","text":"SECRET-OLD-LAYOUT","x":0,"w":100,"h":100,"cy":500}]}}}`)
 	snapshot := before()
+
+	// T-163: the three history routes are the owner's alone: a member of the same class and the admin of another class get the 404 too
+	peer, otherAdmin := e.user("Peer"), e.user("OtherAdmin")
+	e.seedClass([]person{otherAdmin}, peer)
+	for who, p := range map[string]person{"member": peer, "other-class admin": otherAdmin} {
+		for _, c := range []struct{ path, body string }{
+			{"version-list", body("yearbook_id", book)},
+			{"version-get", body("yearbook_id", book, "id", layoutVersionID)},
+			{"restore", `{"yearbook_id":"` + book + `","id":"` + layoutVersionID + `","base_version":3}`},
+		} {
+			if r := e.do(p, "POST", "/api/book-layout/"+c.path, c.body); r.Code != 404 || r.code() != "ERROR_NOT_FOUND" || strings.Contains(r.Body.String(), "SECRET") {
+				t.Errorf("%s on book-layout/%s: %d %s", who, c.path, r.Code, r.Body)
+			}
+		}
+	}
 
 	calls := e.adminCalls(admin, cls, book, coll, note, media)
 	// the answer a user gets for a yearbook that does not exist: the admin's answers must be the same kind (404)
