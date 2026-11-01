@@ -4,7 +4,9 @@
    exactly the canvas's colours. The slot names (lav, yellow, pink, peach, mint, sky) are the hues of `lavender`: another theme puts its own hue in the slot.
    Text is --mb-ink or --mb-soft on the surfaces (paper, white and the six pastels); every pair is >= 4.5:1 (checked by design.test.ts, listed in docs/templates.md). */
 .mb-page,
-.mb-page[data-theme="lavender"] {
+.mb-layer,
+.mb-page[data-theme="lavender"],
+.mb-layer[data-theme="lavender"] {
   --mb-ink: #3b2f4a;
   --mb-soft: #5e5170;
   --mb-paper: #fffbf6;
@@ -21,7 +23,8 @@
   --mb-rule: rgba(59, 47, 74, 0.32);
   --mb-shadow: rgba(59, 47, 74, 0.12);
 }
-.mb-page[data-theme="peach"] {
+.mb-page[data-theme="peach"],
+.mb-layer[data-theme="peach"] {
   --mb-ink: #4a2c22;
   --mb-soft: #7a4332;
   --mb-paper: #fffaf4;
@@ -38,7 +41,8 @@
   --mb-rule: rgba(74, 44, 34, 0.32);
   --mb-shadow: rgba(74, 44, 34, 0.12);
 }
-.mb-page[data-theme="mint"] {
+.mb-page[data-theme="mint"],
+.mb-layer[data-theme="mint"] {
   --mb-ink: #1f3b34;
   --mb-soft: #35564d;
   --mb-paper: #f6fffb;
@@ -60,12 +64,15 @@
    the whole Vietnamese alphabet. A @font-face is fetched only when text uses it, so the files of the set that is not active are never requested. No
    other family in the fallback list: a family named there would be fetched for a character the first one lacks. */
 .mb-page,
-.mb-page[data-fonts="playful"] {
+.mb-layer,
+.mb-page[data-fonts="playful"],
+.mb-layer[data-fonts="playful"] {
   --mb-body: Nunito, sans-serif;
   --mb-disp: "Baloo 2", Nunito, sans-serif;
   --mb-cute: "Patrick Hand", Nunito, cursive;
 }
-.mb-page[data-fonts="classic"] {
+.mb-page[data-fonts="classic"],
+.mb-layer[data-fonts="classic"] {
   --mb-body: "Be Vietnam Pro", sans-serif;
   --mb-disp: "Cormorant Garamond", serif;
   --mb-cute: "Cormorant Garamond", serif;
@@ -77,6 +84,25 @@
 .mb-page[data-fonts="classic"] .disp,
 .mb-page[data-fonts="classic"] .cute {
   font-variant-numeric: lining-nums;
+}
+
+/* The layout layer (T-154, layout/runtime.tsx): the student's items over the page. It takes the page's theme and font set (the selectors above), so a colour
+   token or font id of the manifest resolves exactly like the template's own text. Items are `position: absolute` boxes of layout/geometry.ts. */
+.mb-layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+/* A moved template element (Editable): the box is the student's, the element fills it and keeps its own look. Its own position, size and tilt are replaced. */
+.mb-ov > * {
+  position: static !important;
+  inset: auto !important;
+  box-sizing: border-box;
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  transform: none !important;
 }
 
 .mb-page {

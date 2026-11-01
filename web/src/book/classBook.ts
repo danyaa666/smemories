@@ -16,6 +16,9 @@ export const memberPrefix = (m: ClassBookMember) => `m:${m.member_id}:`;
 export const COVER_KEY = "cc:title";
 export const pageKey = (id: string) => `cp:${id}`;
 
+/** A member as `class-book/get` will carry the student's layout (a follow-up of T-154); today the field is absent and nothing is drawn. */
+type MemberLayout = ClassBookMember & { layout?: BookData["layout"] };
+
 /** The student's own yearbook as the existing templates want it (`tpl.Profile`, `tpl.Notes`); null when nothing is printed for them. */
 export function memberBook(
   cls: ClassBook["class"],
@@ -25,6 +28,7 @@ export function memberBook(
   if (!m.linked || !m.yearbook || !m.profile) return null;
   return {
     design: m.design, // the student's own look (T-146); null for a template without one
+    layout: (m as MemberLayout).layout ?? null, // the student's own free layout (T-154), on their pages only; class-book/get does not carry it yet
     yearbook: {
       title: cls.name,
       school_name: cls.school_name,

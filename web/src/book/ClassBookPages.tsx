@@ -6,6 +6,7 @@ import { ProfilePages } from "./BookPages";
 import { DesignProvider } from "./design";
 import { COVER_KEY, memberBook, memberPrefix, pageKey } from "./classBook";
 import { BookEnvProvider, Sheet, useBookEnv } from "./env";
+import { LayoutProvider } from "./layout/runtime";
 import { FitScope, FitText } from "./fit";
 import type { PageSize } from "./sizes";
 import { getTemplate } from "./templates";
@@ -74,9 +75,11 @@ const StudentPages = memo(function StudentPages({
   return (
     <BookEnvProvider value={value}>
       <DesignProvider design={data.design} ids={getTemplate(data.yearbook.template_id).design}>
-        <FitScope prefix={memberPrefix(member)}>
-          <ProfilePages data={data} />
-        </FitScope>
+        <LayoutProvider layout={data.layout} spec={getTemplate(data.yearbook.template_id).layout}>
+          <FitScope prefix={memberPrefix(member)}>
+            <ProfilePages data={data} />
+          </FitScope>
+        </LayoutProvider>
       </DesignProvider>
     </BookEnvProvider>
   );

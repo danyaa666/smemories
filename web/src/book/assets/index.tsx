@@ -82,10 +82,12 @@ export type AssetSvgProps = {
   /** The accessible name; without it the picture is decorative (aria-hidden). */
   label?: string;
   className?: string;
+  /** Fill the parent's box (width and height 100%) and fit the picture in it, instead of taking the height from the asset's aspect ratio. */
+  fill?: boolean;
 };
 
 /** Draws one registered asset inline. Renders nothing for an unknown id or while its kind is loading. */
-export function AssetSvg({ id, tint, size = 64, label, className }: AssetSvgProps) {
+export function AssetSvg({ id, tint, size = 64, label, className, fill }: AssetSvgProps) {
   const asset = byId.get(id);
   const [kids, setKids] = useState<{ id: string; nodes: ReactNode[] } | null>(null);
   useEffect(() => {
@@ -99,11 +101,9 @@ export function AssetSvg({ id, tint, size = 64, label, className }: AssetSvgProp
     };
   }, [id]);
   if (!asset || kids?.id !== id) return null;
-  const style: CSSProperties = {
-    width: size,
-    height: "auto",
-    aspectRatio: `${asset.width} / ${asset.height}`,
-  };
+  const style: CSSProperties = fill
+    ? { width: "100%", height: "100%", display: "block" }
+    : { width: size, height: "auto", aspectRatio: `${asset.width} / ${asset.height}` };
   if (asset.tintable && tint) style.color = tint;
   return (
     <svg

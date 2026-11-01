@@ -8,7 +8,7 @@ import os from "node:os";
 import path from "node:path";
 import { after, before, describe, test } from "node:test";
 import { chromium } from "playwright";
-import { CLASS_BOOK_CASES, DESIGN_TITLE, HIDDEN_PHOTOS, classBookPages, designOf, makeBook, makeClassBook, makeDesignClassBook, photoId, SIGNATURES, studentName } from "./fixture.mjs";
+import { CLASS_BOOK_CASES, DESIGN_IMAGE, DESIGN_TITLE, HIDDEN_PHOTOS, LAYOUT_MARK, classBookPages, designOf, makeBook, makeClassBook, makeDesignClassBook, makeLayout, photoId, SIGNATURES, studentName } from "./fixture.mjs";
 import { BASE, fitBoxes, inkIn, inspect, open, openClassBook, raster, savePdf, serveBook, signatureBoxes, startServer, text, words } from "./lib.mjs";
 
 const squash = (x) => x.replace(/\s+/g, "");
@@ -1019,4 +1019,317 @@ describe("class book with each student's own design: 6 students (T-146)", () => 
       assert.ok(pages.some((t) => t.includes(squash(DESIGN_TITLE).toLowerCase())), "the student's own title is printed");
     });
   }
+});
+
+// ---- T-154: the layout layer. ADR 0004 Q5: the page with a layout, printed and rasterised at 192 dpi, against the on-screen rendering of the same page ----
+describe("layout layer: the printed page is the page on screen (T-154)", () => {
+  const DPI = 192;
+
+  /** An 8-bit grey picture of a PNG screenshot, decoded by the browser itself (no image library in this tool). */
+  async function grey(png) {
+    const p = await browser.newPage();
+    const r = await p.evaluate(async (b64) => {
+      const img = new Image();
+      img.src = `data:image/png;base64,${b64}`;
+      await img.decode();
+      const c = document.createElement("canvas");
+      c.width = img.width;
+      c.height = img.height;
+      const x = c.getContext("2d");
+      x.drawImage(img, 0, 0);
+      const d = x.getImageData(0, 0, c.width, c.height).data;
+      let out = "";
+      for (let i = 0; i < d.length; i += 4 * 8192) {
+        const chunk = [];
+        for (let j = i; j < Math.min(d.length, i + 4 * 8192); j += 4) chunk.push(Math.round(0.299 * d[j] + 0.587 * d[j + 1] + 0.114 * d[j + 2]));
+        out += String.fromCharCode(...chunk);
+      }
+      return { w: c.width, h: c.height, data: btoa(out) };
+    }, png.toString("base64"));
+    await p.close();
+    return { w: r.w, h: r.h, px: Buffer.from(r.data, "base64") };
+  }
+
+  /** The share of pixels that differ by more than 48/255 from every pixel within 1 px of the same place in the other picture (a 1-px tolerant difference). */
+  function difference(a, b) {
+    const w = Math.min(a.w, b.w), h = Math.min(a.h, b.h);
+    let bad = 0;
+    const bands = new Array(20).fill(0);
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++) {
+        const v = a.px[y * a.w + x];
+        if (Math.abs(v - b.px[y * b.w + x]) <= 48) continue;
+        let near = false;
+        for (let dy = -1; dy <= 1 && !near; dy++)
+          for (let dx = -1; dx <= 1 && !near; dx++) {
+            const xx = x + dx, yy = y + dy;
+            if (xx >= 0 && yy >= 0 && xx < w && yy < h && Math.abs(v - b.px[yy * b.w + xx]) <= 48) near = true;
+          }
+        if (!near) { bad++; bands[Math.floor((y / h) * 20)]++; }
+      }
+    if (process.env.PRINT_CHECK_BANDS) console.log(`# bad pixels per 5 % band: ${bands.join(" ")}`);
+    return bad / (w * h);
+  }
+
+  /** The extent of the dark pixels (grey below 110) inside a box in pixels, and how many there are. */
+  function inkBox(pic, box) {
+    const r = { n: 0, x0: Infinity, y0: Infinity, x1: -1, y1: -1 };
+    for (let y = Math.max(0, Math.floor(box.y0)); y < Math.min(pic.h, Math.ceil(box.y1)); y++)
+      for (let x = Math.max(0, Math.floor(box.x0)); x < Math.min(pic.w, Math.ceil(box.x1)); x++)
+        if (pic.px[y * pic.w + x] < 110) { r.n++; r.x0 = Math.min(r.x0, x); r.y0 = Math.min(r.y0, y); r.x1 = Math.max(r.x1, x); r.y1 = Math.max(r.y1, y); }
+    return r;
+  }
+
+  /** Opens the book, prints it, and shows the sheets at paper size and 2x pixels, the way the PDF is rasterised. */
+  async function printAndShow(book, size, name) {
+    const page = await browser.newPage({ viewport: { width: 1400, height: 1900 }, deviceScaleFactor: 2 });
+    const seen = await serveBook(page, book);
+    const urls = [];
+    page.on("request", (r) => urls.push(r.url()));
+    await open(page);
+    const file = path.join(tmp, `${name}.pdf`);
+    await savePdf(page, file);
+    await page.addStyleTag({ content: ".bk-ui { display: none !important } .bk-stage { --s: 1 !important; padding: 0 !important }" });
+    return { page, file, seen, urls, size };
+  }
+
+  /** One sheet at paper size, taken at the top left corner of the window (no fractional offset from the sheets before it), like the first pixel of the PDF's raster. */
+  async function sheetPicture(page, label, nth = 0) {
+    const sheet = page.locator(`.bk-sheet[data-page="${label}"]`).nth(nth);
+    const box = await sheet.evaluate((e) => {
+      e.dataset.shot = "1";
+      e.style.cssText += ";position: fixed; left: 0; top: 0; z-index: 99999; box-shadow: none";
+      const r = e.getBoundingClientRect();
+      return { width: r.width, height: r.height };
+    });
+    const png = await page.screenshot({ clip: { x: 0, y: 0, ...box }, animations: "disabled", caret: "hide" });
+    await sheet.evaluate((e) => {
+      delete e.dataset.shot;
+      e.style.position = e.style.left = e.style.top = e.style.zIndex = e.style.boxShadow = "";
+    });
+    return grey(png);
+  }
+
+  /** The boxes of the items on a sheet, in pixels of the 192 dpi picture, and as fractions of the sheet (for the geometry check). */
+  async function itemBoxes(page, label, nth, pic) {
+    return page.evaluate(([l, n, w, h]) => {
+      const sheet = document.querySelectorAll(`.bk-sheet[data-page="${l}"]`)[n];
+      const s = sheet.getBoundingClientRect();
+      return [...sheet.querySelectorAll("[data-layout-item]")].map((e) => {
+        const r = e.getBoundingClientRect();
+        return { id: e.dataset.layoutItem, x0: ((r.left - s.left) / s.width) * w, y0: ((r.top - s.top) / s.height) * h, x1: ((r.right - s.left) / s.width) * w, y1: ((r.bottom - s.top) / s.height) * h };
+      });
+    }, [label, nth, pic.w, pic.h]);
+  }
+
+  for (const size of ["A5", "A4", "Letter"]) {
+    test(`${size}: the fixture layout prints as drawn on the cover and a notes page (difference < 0.5 %, each item within 2 px)`, async () => {
+      const book = makeBook({ size, notes: 2, template: "memory-book" });
+      book.layout = makeLayout();
+      // The template's own content has a baseline of print-against-screen noise (the ruled lines of a note box are gradients that Chromium rasterises differently for a PDF): the same pages
+      // without the layout give it, and the layout may add less than 0.5 % of the page on top of it.
+      const baseline = {};
+      {
+        const plain = await printAndShow(makeBook({ size, notes: 2, template: "memory-book" }), size, `layout-base-${size}`);
+        for (const [label, nth, pdfPage] of [["cover", 0, 1], ["notes", 0, 3], ["notes", 1, 4]])
+          baseline[`${label}${nth}`] = difference(raster(plain.file, pdfPage, DPI), await sheetPicture(plain.page, label, nth));
+        await plain.page.close();
+      }
+      const r = await printAndShow(book, size, `layout-${size}`);
+      const info = inspect(r.file);
+      assert.equal(info.pages, 5, "cover, profile, two notes pages, back");
+      for (const [i, want] of PT[size].entries()) assert.ok(Math.abs(info.sizePt[i] - want) < 1, `${size} page size ${info.sizePt} vs ${PT[size]}`);
+      assert.ok(info.allFontsEmbedded, "every font is embedded");
+      const t = text(r.file);
+      const pages = t.split("\f");
+      assert.ok(squash(pages[0]).includes(LAYOUT_MARK.cover) && squash(pages[0]).includes(squash("Việt Nam đường về nhà")), "the 500-rune text is on the cover (Vietnamese)");
+      assert.ok(squash(pages[0]).includes(LAYOUT_MARK.clip), "the clipped text is there");
+      assert.ok(!squash(pages[0]).includes(squash("viết vào đây")), "the hidden sticker text is gone");
+      assert.equal(t.split(LAYOUT_MARK.notes).length - 1, 2, "the notes item repeats on both notes pages");
+      assert.ok(pages[4].includes(LAYOUT_MARK.back), "the back page item");
+      assert.ok(pages[1].includes("Hồ sơ của mình"), "the profile page item");
+      assert.ok(r.seen.variants.has(`${DESIGN_IMAGE}:display`), "the background is the 3000 px display version");
+      assert.ok(r.seen.variants.has(`${DESIGN_IMAGE}:print`), "the image item is the print version");
+
+      const fits = await r.page.evaluate(() => Object.fromEntries([...document.querySelectorAll('[data-layout-item]')].map((e) => [e.dataset.layoutItem, e.querySelector("[data-fit]")?.dataset.fit ?? null])));
+      assert.equal(fits.clipped, "overflow", "the small box is cut, as the book's fit rule says");
+      assert.notEqual(fits.longtx, "overflow", "500 runes fit their box after shrinking");
+      assert.ok(!("ghost01" in fits), "an asset the registry does not have is skipped");
+      assert.equal(await r.page.locator('[data-layout-item="ghost02"] *').count(), 0, "a design image that is gone draws nothing (no broken-image frame)");
+
+      for (const [label, nth, pdfPage] of [["cover", 0, 1], ["notes", 0, 3], ["notes", 1, 4]]) {
+        const pdfPic = raster(r.file, pdfPage, DPI);
+        const scr = await sheetPicture(r.page, label, nth);
+        assert.ok(Math.abs(pdfPic.w - scr.w) <= 2 && Math.abs(pdfPic.h - scr.h) <= 2, `${label}: ${pdfPic.w}x${pdfPic.h} against ${scr.w}x${scr.h}`);
+        const diff = difference(pdfPic, scr);
+        const base = baseline[`${label}${nth}`];
+        console.log(`# ${size} ${label}#${nth}: difference ${(diff * 100).toFixed(3)} % (the same page without the layout: ${(base * 100).toFixed(3)} %)`);
+        assert.ok(diff - base < 0.005, `${size} ${label}: ${(diff * 100).toFixed(3)} % of the pixels differ, ${(base * 100).toFixed(3)} % without the layout (the layout may add 0.5 %)`);
+        let checked = 0;
+        for (const b of await itemBoxes(r.page, label, nth, scr)) {
+          const box = { x0: b.x0 - 6, y0: b.y0 - 6, x1: b.x1 + 6, y1: b.y1 + 6 };
+          const a = inkBox(scr, box), p = inkBox(pdfPic, box);
+          if (a.n < 400) continue; // nothing dark enough to follow (a light photo)
+          checked++;
+          // the placed item: its top-left corner of ink, and for a picture or a shape also the bottom-right (the end of a text is where wrapping may differ by a letter)
+          const edges = /^(longtx|clipped|prof01|note01|back01)$/.test(b.id) ? ["x0", "y0"] : ["x0", "y0", "x1", "y1"];
+          for (const k of edges) assert.ok(Math.abs(a[k] - p[k]) <= 2, `${size} ${label} item ${b.id}: ${k} ${a[k]} on screen against ${p[k]} in print (192 dpi)`);
+        }
+        assert.ok(checked >= (label === "cover" ? 3 : 1), `${label}: ${checked} items were followed`);
+      }
+      // the geometry: each item sits where the draw rule puts it (left = x * W, centre = cy * H), inside the page
+      const boxes = await r.page.evaluate(() => [...document.querySelectorAll('.bk-sheet[data-page="cover"] [data-layout-item]')].map((e) => {
+        const s = e.closest(".bk-sheet").getBoundingClientRect(), b = e.getBoundingClientRect(), cs = getComputedStyle(e);
+        return { id: e.dataset.layoutItem, w: parseFloat(cs.width) / (816 * 1), left: parseFloat(cs.left), sw: s.width, top: parseFloat(cs.top), h: parseFloat(cs.height) };
+      }));
+      const sticker = boxes.find((b) => b.id === "sticker1");
+      assert.ok(Math.abs(sticker.w - 0.16) < 0.001 && Math.abs(sticker.left - 0.7 * 816) < 0.5, `the sticker's box is x 700 / w 160 of 1000: ${JSON.stringify(sticker)}`);
+      await r.page.close();
+    });
+  }
+
+  test("a book with no layout, an empty layout or only unknown ids prints exactly as it did", async () => {
+    const plain = makeBook({ size: "A5", notes: 2, template: "memory-book" });
+    const base = await render(plain, "layout-none");
+    for (const [name, layout] of [["empty", { v: 1, pages: {} }], ["unknown", { v: 1, pages: { cover: { overrides: { "cover.nothing": { hidden: true } }, items: [{ id: "ghost01", t: "asset", asset: "sticker.nope", x: 10, w: 100, h: 100, cy: 100 }, { id: "ghost02", t: "image", media: "01J9Z3K6V8Q4M7N2P5R8GONE00", x: 400, w: 100, h: 100, cy: 100 }] } } }]]) {
+      const r = await render({ ...plain, layout }, `layout-${name}`);
+      assert.equal(r.info.pages, base.info.pages, `${name}: same page count`);
+      assert.equal(r.t, base.t, `${name}: same text`);
+      for (const n of [1, 3, 5]) assert.ok(difference(raster(r.file, n, DPI), raster(base.file, n, DPI)) < 0.0005, `${name}: page ${n} is the same picture`);
+    }
+  });
+
+  test("changing the theme and the font set restyles the text boxes and the tinted assets", async () => {
+    const book = makeBook({ size: "A5", notes: 2, template: "memory-book", design: designOf("peach", "classic") });
+    book.layout = makeLayout();
+    const page = await browser.newPage();
+    await serveBook(page, book);
+    await open(page);
+    const look = await page.evaluate(() => {
+      const text = document.querySelector('[data-layout-item="longtx"] [data-fit]');
+      const note = document.querySelector('.bk-sheet[data-page="notes"] [data-layout-item="note02"] svg');
+      return { family: getComputedStyle(text).fontFamily, ink: getComputedStyle(note).color };
+    });
+    assert.match(look.family, /Cormorant Garamond/, "the display font of the classic set");
+    assert.equal(look.ink, "rgb(217, 93, 74)", "the accent of the peach theme (#d95d4a)");
+    await page.close();
+  });
+
+  test("a layout adds no request except its images (and the asset chunk), and 40 more items cost under 10 % of the PDF time", async () => {
+    const mk = (extra, layout = true) => {
+      const b = makeBook({ size: "A5", notes: 1, template: "memory-book" });
+      if (layout) b.layout = makeLayout({ extra });
+      return b;
+    };
+    const base = await render(mk(0, false), "layout-perf-base");
+    const withLayout = await render(mk(0), "layout-perf-0");
+    const extra = new Set(withLayout.urls.map((u) => new URL(u).pathname + new URL(u).search).filter((u) => !base.urls.some((b) => new URL(b).pathname + new URL(b).search === u)));
+    for (const u of extra) assert.match(u, new RegExp(`${DESIGN_IMAGE}|GONE00|/assets/|/src/book/(assets|layout)/|\\.svg`), `unexpected request ${u}`);
+    // the same cover with and without 40 text items, best of 3 (a PDF of one cover takes a few hundred ms; the margin is the jitter of a loaded machine)
+    const best = async (extra) => {
+      const times = [];
+      for (let i = 0; i < 3; i++) times.push((await render(mk(extra), `layout-perf-${extra}-${i}`)).saved.pdfMs);
+      return Math.min(...times);
+    };
+    const t0 = await best(0), t40 = await best(40);
+    console.log(`# pdf time, cover with the fixture layout: ${t0} ms; with 40 more text items: ${t40} ms (${(((t40 - t0) / t0) * 100).toFixed(1)} %)`);
+    assert.ok(t40 <= t0 * 1.1 + 150, `40 items: ${t40} ms against ${t0} ms`);
+  });
+
+  test("the class book draws each student's layout on their own pages only", async () => {
+    const cb = makeClassBook({ students: 6 });
+    const mark = (i) => ({ v: 1, pages: { profile: { items: [{ id: "cb00001", t: "text", x: 100, w: 600, h: 80, cy: 900, text: `Layoutmark${i}`, size: 28, color: "ink" }] } } });
+    cb.members[0].layout = mark(0); // memory-book (every 5th student)
+    cb.members[3].layout = mark(3); // built-in layout (navy-classic): no layout block, so nothing is drawn
+    const want = classBookPages(cb);
+    const page = await browser.newPage();
+    await serveBook(page, null, cb);
+    const opened = await openClassBook(page, "A5");
+    assert.equal(opened.pages, want);
+    const file = path.join(tmp, "class-layout.pdf");
+    await savePdf(page, file);
+    await page.close();
+    const pages = text(file).split("\f");
+    const hit = (m) => pages.map((t, n) => (squash(t).includes(m) ? n : -1)).filter((n) => n >= 0);
+    assert.equal(hit("Layoutmark0").length, 1, "student 0's profile page");
+    assert.equal(hit("Layoutmark3").length, 0, "a student on a template without a layout block draws none");
+    assert.ok(squash(pages[hit("Layoutmark0")[0]]).includes(squash(studentName(0))), "on that student's own profile page");
+  });
+});
+
+// ---- T-154 QA: hostile layouts. The server validates a layout, but the runtime treats it as untrusted: it must print the same number of pages, never throw and never HTML-inject. ----
+describe("layout layer: hostile layouts (T-154 QA)", () => {
+  const txt = (id, o = {}) => ({ id, t: "text", x: 100, w: 600, h: 120, cy: 500, text: "x", size: 24, ...o });
+  const hostile = {
+    html: { cover: { items: [txt("h1", { text: '<img src=x onerror="window.__pwned=1"><script>window.__pwned=2</script><b>bold</b> Htmlmark' })] } },
+    huge: { cover: { items: [txt("big1", { text: "Việt Nam đường về nhà ".repeat(1000), w: 900, h: 1000, cy: 500, size: 48 }), txt("big2", { text: "x".repeat(20000), w: 100, h: 40, cy: 900 })] } },
+    overlap: {
+      cover: { items: Array.from({ length: 40 }, (_, i) => ({ id: `ov${String(i).padStart(3, "0")}`, t: "asset", asset: "shape.heart", tint: "accent", x: 850 + (i % 5) * 30, w: 300, h: 300, cy: 950 + (i % 7) * 20, r: i * 9 })) },
+      notes: { items: Array.from({ length: 40 }, (_, i) => txt(`on${String(i).padStart(3, "0")}`, { x: 900, w: 400, h: 200, cy: 20 + i * 25, r: 45 + i, text: `Overlap ${i}` })) },
+    },
+    degenerate: {
+      cover: { bg: { media: "01J9Z3K6V8Q4M7N2P5R8GONE00" }, overrides: { "cover.title": { hidden: true }, "cover.photo": { w: 0, h: 0 }, "nope.what": { hidden: true } }, items: [{ id: "d1", t: "text", x: 0, w: 0, h: 0, cy: 0 }, { id: "d2", t: "image", x: 0, w: 100, h: 100, cy: 100 }, { id: "d3", t: "asset", x: 0, w: 100, h: 100, cy: 100 }, { id: "d4", t: "wat", x: 0, w: 100, h: 100, cy: 100 }, txt("d5", { font: "comic", color: "hotpink", size: 1 }), txt("d6", { size: 5000, text: "Giant" }), txt("d7", { w: 5000, h: 5000, x: -500, cy: -500, text: "Offpage" })] },
+      back: { bg: { asset: "sticker.nope" } },
+      profile: { bg: { color: "not-a-token" }, overrides: { "profile.heading": { hidden: true }, "profile.photo": { hidden: true } } },
+      bogus: { items: [txt("z1")] },
+    },
+  };
+  for (const [name, pages] of Object.entries(hostile))
+    for (const size of ["A5", "Letter"])
+      test(`${name} on ${size}: same pages, no script, nothing outside the sheet`, async () => {
+        const plain = makeBook({ size, notes: 2, template: "memory-book" });
+        const base = await render(plain, `hostile-base-${size}`);
+        const page = await browser.newPage();
+        const errors = [];
+        page.on("pageerror", (e) => errors.push(String(e)));
+        await serveBook(page, { ...plain, layout: { v: 1, pages } });
+        await open(page);
+        const pwned = await page.evaluate(() => window.__pwned ?? null);
+        assert.equal(pwned, null, "no script ran");
+        const escaped = await page.evaluate(() => [...document.querySelectorAll(".bk-sheet")].filter((s) => s.scrollWidth > s.clientWidth + 1 || s.scrollHeight > s.clientHeight + 1).length);
+        const file = path.join(tmp, `hostile-${name}-${size}.pdf`);
+        await savePdf(page, file);
+        const info = inspect(file);
+        await page.close();
+        assert.deepEqual(errors, [], "no page error");
+        assert.equal(info.pages, base.info.pages, "same page count as the book without a layout");
+        assert.ok(info.allFontsEmbedded);
+        assert.equal(escaped, 0, "no sheet scrolls: the layer is clipped by the page");
+        for (const [i, want] of PT[size].entries()) assert.ok(Math.abs(info.sizePt[i] - want) < 1);
+        if (name === "html") {
+          const t = text(file);
+          assert.ok(squash(t).includes(squash('<img src=x onerror="window.__pwned=1"><script>window.__pwned=2</script><b>bold</b> Htmlmark')), "the markup is printed as text");
+        }
+      });
+
+  test("the book is not ready before the layout's images have loaded", async () => {
+    const book = makeBook({ size: "A5", notes: 1, template: "memory-book" });
+    book.layout = makeLayout();
+    const page = await browser.newPage();
+    await serveBook(page, book, null, { mediaDelayMs: 1200 });
+    await open(page);
+    const state = await page.evaluate(() => [...document.querySelectorAll(".bk-sheet[data-page=cover] img")].map((i) => ({ done: i.complete && i.naturalWidth > 0, src: i.src.slice(-60) })));
+    await page.close();
+    assert.ok(state.length >= 3, `images on the cover: ${JSON.stringify(state)}`);
+    assert.ok(state.every((s) => s.done), `all loaded at ready: ${JSON.stringify(state)}`);
+  });
+
+  test("theme and font set switch with a layout present: every combination restyles the text boxes", async () => {
+    const want = { "lavender/playful": ["Baloo 2", "rgb(59, 47, 74)"], "peach/classic": ["Cormorant Garamond", "rgb(74, 44, 34)"], "mint/classic": ["Cormorant Garamond", "rgb(31, 59, 52)"] };
+    for (const [combo, [family, ink]] of Object.entries(want)) {
+      const [theme, fonts] = combo.split("/");
+      const book = makeBook({ size: "A5", notes: 1, template: "memory-book", design: designOf(theme, fonts) });
+      book.layout = makeLayout();
+      const page = await browser.newPage();
+      await serveBook(page, book);
+      await open(page);
+      const look = await page.evaluate(() => {
+        const e = document.querySelector('.bk-sheet[data-page="cover"] [data-layout-item="longtx"] [data-fit]');
+        return { f: getComputedStyle(e).fontFamily, c: getComputedStyle(e).color };
+      });
+      await page.close();
+      assert.ok(look.f.includes(family), `${combo}: ${look.f}`);
+      assert.equal(look.c, ink, combo);
+    }
+  });
 });

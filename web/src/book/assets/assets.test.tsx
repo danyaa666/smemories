@@ -172,6 +172,15 @@ describe("AssetSvg", () => {
     expect(await b.findByRole("img", { name: "A circle" })).toBeTruthy();
   });
 
+  it("fill makes the picture fit the parent's box instead of following its own aspect ratio (the layout layer)", async () => {
+    const { container } = render(<AssetSvg id="shape.circle" size="100%" fill />);
+    await waitFor(() => expect(container.querySelector("svg")).not.toBeNull());
+    const style = container.querySelector("svg")?.getAttribute("style") ?? "";
+    expect(style).toContain("width: 100%");
+    expect(style).toContain("height: 100%");
+    expect(style).not.toContain("aspect-ratio");
+  });
+
   it("draws nothing for an id that is not in the registry", async () => {
     const { container } = render(<AssetSvg id="sticker.unknown" />);
     expect(await loadSvg("sticker.unknown")).toBeUndefined();
