@@ -285,7 +285,7 @@ Spec: .team/epics/E09-customisation-editor/16-print-check-start-server-strict.md
 - 2026-11-01 07:04Z · leader · merged 4c9b0f6 (PR #155, head 2646dc6); QA_PASS: print-check 181/181, foreign server on port refused, no orphan vite
 
 ### T-158 — [E09] Editor state: document store, undo/redo, autosave and conflict handling (web)
-- **Status:** READY_FOR_QA
+- **Status:** IN_QA
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -293,10 +293,10 @@ Spec: .team/epics/E09-customisation-editor/16-print-check-start-server-strict.md
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** —
+- **Assignee:** qa
 - **Branch:** task/t-158-e09-editor-state-document-store-undo-red
 - **PR:** 156
-- **Updated:** 2026-11-01 07:02Z by dev
+- **Updated:** 2026-11-01 07:04Z by qa
 - **Comments-seen:** 2
 
 Spec: .team/epics/E09-customisation-editor/17-editor-state-undo-autosave.md (read it from the main checkout). Pure operations, snapshot history depth 100, debounced autosave with base_version, 409 choices
@@ -321,6 +321,25 @@ Spec: .team/epics/E09-customisation-editor/17-editor-state-undo-autosave.md (rea
 - **Comments-seen:** 0
 
 Spec: .team/epics/E09-customisation-editor/18-editor-shell-and-selection.md (read it from the main checkout). Route /yearbooks/:id/editor, overlay outside the page clip, panel numeric edits, e2e journey
+
+#### Comments
+
+### T-160 — [E09] Editor gestures: move, resize, rotate, snap, guides, with keyboard control (web)
+- **Status:** BACKLOG
+- **Priority:** P2
+- **Type:** feature
+- **Milestone:** M4
+- **Depends-on:** T-159
+- **Risk:** low
+- **Rework:** 0
+- **Owner-approved:** —
+- **Assignee:** —
+- **Branch:** —
+- **PR:** —
+- **Updated:** 2026-11-01 09:00Z by leader
+- **Comments-seen:** 0
+
+Spec: .team/epics/E09-customisation-editor/19-editor-gestures-and-keyboard.md (read it from the main checkout). In-house pointer-event module per ADR 0004 Q2, keyboard in the same task, 44 px touch targets
 
 #### Comments
 
