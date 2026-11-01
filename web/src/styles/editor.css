@@ -584,3 +584,29 @@
   font: 600 14px/1.2 sans-serif;
   text-align: center;
 }
+
+/* version history panel (T-165): it takes the property panel's place; rows are radio buttons */
+.ed-history:focus {
+  outline: none;
+}
+.ed-history-list {
+  display: grid;
+  gap: var(--space-1);
+  margin-top: var(--space-3);
+}
+.ed-panel .ed-history-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+}
+.ed-panel .ed-history-row[aria-checked="true"] {
+  background: var(--color-primary-soft);
+  border-color: var(--color-primary);
+}
+.ed-grid.is-previewing .ed-stage {
+  outline: 3px dashed var(--color-primary);
+  outline-offset: -3px;
+}

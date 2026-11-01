@@ -924,6 +924,44 @@
     }
   },
   "editor": {
+    "history": {
+      "button": "Lịch sử",
+      "title": "Lịch sử phiên bản",
+      "list": "Các phiên bản trước",
+      "refresh": "Làm mới",
+      "loading": "Đang tải các phiên bản trước...",
+      "empty": "Chưa có phiên bản trước. Chúng xuất hiện khi bạn chỉnh sửa.",
+      "items": "Số mục: {{count}}",
+      "kind": {
+        "auto": "Tự động lưu",
+        "reset": "Trước khi đặt lại",
+        "restore": "Trước khi khôi phục"
+      },
+      "previewing": "Đang xem trước phiên bản lúc {{time}}. Bản hiện tại của bạn không thay đổi.",
+      "previewingShort": "Đang xem trước một phiên bản cũ. Bản hiện tại của bạn không thay đổi.",
+      "willDrop": "{{count}} mục sẽ bị bỏ vì ảnh hoặc hình dán của chúng không còn.",
+      "willDropOne": "1 mục sẽ bị bỏ vì ảnh hoặc hình dán của nó không còn.",
+      "restore": "Khôi phục phiên bản này",
+      "back": "Quay lại bản hiện tại",
+      "backDone": "Đã quay lại bản hiện tại của bạn.",
+      "cancel": "Hủy",
+      "dismiss": "Đóng",
+      "confirmTitle": "Khôi phục phiên bản này?",
+      "confirmBody": "Phiên bản này sẽ trở thành bố cục hiện tại. Bản hiện tại của bạn được giữ trong lịch sử. Hoàn tác và làm lại bắt đầu lại từ bản đã khôi phục, vì không thể quay ngược qua một lần khôi phục.",
+      "restored": "Đã khôi phục phiên bản.",
+      "droppedMsg": "{{count}} mục không khôi phục được vì ảnh hoặc hình dán của chúng không còn.",
+      "droppedMsgOne": "1 mục không khôi phục được vì ảnh hoặc hình dán của nó không còn.",
+      "err": {
+        "conflict": "Cuốn sách đã được sửa ở tab hoặc thiết bị khác nên chưa khôi phục gì. Hãy chọn giữ phiên bản nào ở phía trên.",
+        "invalid": "Phiên bản này không còn khớp với mẫu nên không khôi phục được. Hãy quay lại bản hiện tại.",
+        "template": "Phiên bản này được làm cho mẫu khác nên không khôi phục được. Hãy quay lại bản hiện tại.",
+        "gone": "Phiên bản này không còn nữa. Danh sách đã được làm mới.",
+        "busy": "Quá nhiều yêu cầu. Thử lại sau {{seconds}} giây.",
+        "offline": "Bạn đang ngoại tuyến. Kiểm tra kết nối rồi thử lại.",
+        "unsaved": "Các thay đổi mới nhất chưa lưu được nên chưa khôi phục gì. Hãy thử lại sau giây lát.",
+        "other": "Có lỗi xảy ra. Không có gì bị thay đổi."
+      }
+    },
     "save": {
       "saving": "Đang lưu...",
       "saved": "Đã lưu",
