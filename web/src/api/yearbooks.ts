@@ -63,6 +63,12 @@ export const mediaUrl = (id: string, variant: "thumb" | "display" | "print" = "t
 export const DEFAULT_MAX_BYTES = 10 * 1024 * 1024; // SMEM_MEDIA_MAX_BYTES default
 
 /**
+ * What the server refuses as ERROR_INVALID_IMAGE, for the message (T-164). The Go limits are maxSide, maxPixels (JPEG) and maxPixelsPNGWebP in
+ * internal/media/image.go; imageLimits.test.ts fails when the two drift apart. The words are interpolated by i18n (`{{side}}`, `{{jpegMp}}`, `{{pngMp}}`).
+ */
+export const IMAGE_LIMITS = { side: 12000, jpegMp: 50, pngMp: 25 };
+
+/**
  * fetch has no upload progress, so the upload uses XHR. `onProgress` gets 0..1. `opts.purpose` "design" stores a layout-editor image (T-152);
  * `opts.signal` aborts it (the promise then rejects with an `AbortError`).
  */

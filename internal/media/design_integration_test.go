@@ -5,6 +5,7 @@ package media
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"mime/multipart"
@@ -165,8 +166,12 @@ func TestDesignQuotas(t *testing.T) {
 	book, book2 := e.newBook(u), e.newBook(u)
 
 	e.fillPurpose(book, "design", maxDesignPerYearbook-1, 10, 1, 1)
-	e.uploadDesign(u, book, photo(t)).status(200, "") // the 30th
-	e.uploadDesign(u, book, photo(t)).status(409, "ERROR_QUOTA_EXCEEDED")
+	e.uploadDesign(u, book, photo(t)).status(200, "")                                   // the 30th
+	capped := e.uploadDesign(u, book, photo(t)).status(409, "ERROR_DESIGN_IMAGE_LIMIT") // T-164: its own code, with the cap in data
+	var capBody struct{ Data struct{ Limit int } }
+	if err := json.Unmarshal(capped.Body.Bytes(), &capBody); err != nil || capBody.Data.Limit != maxDesignPerYearbook {
+		t.Fatalf("data.limit = %d (%v), want %d: %s", capBody.Data.Limit, err, maxDesignPerYearbook, capped.Body)
+	}
 	e.uploadDesign(u, book2, photo(t)).status(200, "")                 // the cap is per yearbook
 	e.upload(u, book, "a.jpg", "image/jpeg", photo(t)).status(200, "") // design images are not photos: they take no photo room
 

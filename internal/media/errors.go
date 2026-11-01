@@ -14,8 +14,11 @@ var (
 	CodeUnsupportedMediaType = apperr.NewCode("ERROR_UNSUPPORTED_MEDIA_TYPE", 415)
 	CodeInvalidImage         = apperr.NewCode("ERROR_INVALID_IMAGE", 400)
 	CodeQuotaExceeded        = apperr.NewCode("ERROR_QUOTA_EXCEEDED", 409)
-	CodeBusy                 = apperr.NewCode("ERROR_BUSY", 503)
-	CodeEmailNotVerified     = apperr.NewCode("ERROR_EMAIL_NOT_VERIFIED", 403) // the same code as the moderation endpoints (internal/notes)
+	// CodeDesignImageLimit: the yearbook holds its maximum of design images (T-164). The answer carries data {limit}; the byte
+	// quota keeps CodeQuotaExceeded.
+	CodeDesignImageLimit = apperr.NewCode("ERROR_DESIGN_IMAGE_LIMIT", 409)
+	CodeBusy             = apperr.NewCode("ERROR_BUSY", 503)
+	CodeEmailNotVerified = apperr.NewCode("ERROR_EMAIL_NOT_VERIFIED", 403) // the same code as the moderation endpoints (internal/notes)
 	// CodeStorage is the object store failing: 502, the BadGateway family, with its own name for the client.
 	CodeStorage = apperr.NewCode("ERROR_STORAGE_ERROR", 502)
 )
@@ -26,6 +29,8 @@ var (
 	ErrNotFound = apperr.New(apperr.NotFound, "not found")
 	// ErrQuota: the yearbook or the user is at a storage limit.
 	ErrQuota = apperr.New(CodeQuotaExceeded, "storage quota reached")
+	// ErrDesignLimit: the yearbook already holds maxDesignPerYearbook design images.
+	ErrDesignLimit = apperr.New(CodeDesignImageLimit, "this yearbook already has the most design images it can hold")
 	// ErrContributorQuota: the yearbook's room for photos sent through links is used up (T-105). Same code as ErrQuota; the
 	// message is one a friend without an account understands.
 	ErrContributorQuota = apperr.New(CodeQuotaExceeded, "this yearbook cannot take more photos right now, send your note without photos")

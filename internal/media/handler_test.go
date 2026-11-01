@@ -320,3 +320,18 @@ func TestReadFormPurpose(t *testing.T) {
 		}
 	}
 }
+
+// T-164: the design-image cap is 409 ERROR_DESIGN_IMAGE_LIMIT with data.limit; the byte quota keeps ERROR_QUOTA_EXCEEDED without data.
+func TestFailDesignImageLimit(t *testing.T) {
+	h := &Handler{logger: nopLogger()}
+	rec := httptest.NewRecorder()
+	h.fail(rec, httptest.NewRequest("POST", "/api/media/create", nil), ErrDesignLimit)
+	if rec.Code != 409 || !strings.Contains(rec.Body.String(), `"status":"ERROR_DESIGN_IMAGE_LIMIT"`) || !strings.Contains(rec.Body.String(), `"data":{"limit":30}`) {
+		t.Fatalf("design limit: %d %s", rec.Code, rec.Body)
+	}
+	rec = httptest.NewRecorder()
+	h.fail(rec, httptest.NewRequest("POST", "/api/media/create", nil), ErrQuota)
+	if rec.Code != 409 || !strings.Contains(rec.Body.String(), `"status":"ERROR_QUOTA_EXCEEDED"`) || strings.Contains(rec.Body.String(), `"data"`) {
+		t.Fatalf("quota: %d %s", rec.Code, rec.Body)
+	}
+}

@@ -28,6 +28,8 @@ const LAYOUT: LayoutDoc = {
   },
 };
 
+const mediaUsesNow = (store: EditorStore) => JSON.stringify(store.getSnapshot().doc).includes(IMG);
+
 afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
@@ -50,6 +52,7 @@ async function open(layout: LayoutDoc) {
     apply: store.apply.bind(store),
     settle: store.settle,
     clearHistory: store.clearHistory.bind(store),
+    usesInHistory: store.usesImageInHistory.bind(store),
     deleteMedia,
   });
   return { srv, store, deps };
@@ -85,6 +88,27 @@ describe("deleteDesignImage", () => {
     expect(r).toEqual({ ok: true, cleared: false });
     expect(srv.s.calls).toEqual([`delete:${IMG}`]); // no save was needed for the delete
     expect(store.getSnapshot().canUndo).toBe(true);
+  });
+  // T-164 requirement 3 / AC3: only the history points at the image (the item was removed before), undo must not bring it back
+  it("only the history uses it: no save, delete, and the history is cleared so undo cannot bring the item back", async () => {
+    const { srv, store, deps } = await open({
+      v: 1,
+      pages: { cover: { items: [img("bbbbbb", OTHER)] } },
+    });
+    store.apply(addItem("cover", img("aaaaaa", IMG))); // add an image item ...
+    store.apply((doc) => ({
+      ok: true,
+      doc: { ...doc, pages: { cover: { items: [img("bbbbbb", OTHER)] } } },
+    })); // ... and remove it again
+    expect(mediaUsesNow(store)).toBe(false);
+    expect(store.usesImageInHistory(IMG)).toBe(true);
+    const r = await deleteDesignImage(IMG, deps());
+    expect(r).toEqual({ ok: true, cleared: true });
+    expect(srv.s.calls).toEqual([`delete:${IMG}`]); // nothing to save: no page uses it
+    expect(store.getSnapshot()).toMatchObject({ canUndo: false, canRedo: false });
+    store.undo();
+    expect(JSON.stringify(store.getSnapshot().doc)).not.toContain(IMG);
+    expect(store.usesImageInHistory(IMG)).toBe(false);
   });
   it("the layout cannot be saved: the image is NOT deleted", async () => {
     const { srv, store, deps } = await open(LAYOUT);

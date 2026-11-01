@@ -21,7 +21,7 @@ const media = (id: string): Media => ({
 });
 
 /** An upload fake that waits for the test to finish each call. */
-function setup(have = 0) {
+function setup() {
   const calls: {
     file: File;
     progress: (f: number) => void;
@@ -38,7 +38,7 @@ function setup(have = 0) {
         calls.push({ file: f, progress, ok, fail, signal: o.signal });
       }),
   });
-  up.bind({ have: () => have, onDone: (m) => done.push(m) });
+  up.bind({ onDone: (m) => done.push(m) });
   return { up, calls, done, jobs: () => up.getSnapshot() };
 }
 const tick = () => new Promise((r) => setTimeout(r, 0));
@@ -108,25 +108,30 @@ describe("Uploads", () => {
     up.dismiss(jobs()[0]!.key);
     expect(jobs()).toHaveLength(0);
   });
-  it("the cap is told from the quota by how many images the book has", async () => {
-    const { up, calls, jobs } = setup(30);
-    up.add([file("a.png")]);
-    calls[0]!.fail(new ApiError(400, "quota_exceeded", "x"));
+  it("the cap and the quota have their own codes (T-164), whatever the list holds", async () => {
+    const { up, calls, jobs } = setup();
+    up.add([file("a.png"), file("b.png")]);
+    calls[0]!.fail(
+      new ApiError(409, "design_image_limit", "x", undefined, undefined, { limit: 30 }),
+    );
+    calls[1]!.fail(new ApiError(409, "quota_exceeded", "x"));
     await tick();
-    expect(jobs()[0]!.failure).toEqual({ code: "cap", count: 30 });
+    expect(jobs().map((j) => j.failure)).toEqual([{ code: "cap", count: 30 }, { code: "quota" }]);
   });
 });
 
 describe("failureOf: each error has its own reason", () => {
-  const e = (status: number, code: string, retry?: number) =>
-    new ApiError(status, code, "m", undefined, retry);
+  const e = (status: number, code: string, retry?: number, data?: unknown) =>
+    new ApiError(status, code, "m", undefined, retry, data);
   it.each([
     [e(0, "network_error"), 3, { code: "offline" }],
     [e(413, "payload_too_large"), 3, { code: "tooLarge" }],
     [e(415, "unsupported_media_type"), 3, { code: "unsupported" }],
     [e(400, "invalid_image"), 3, { code: "corrupt" }],
-    [e(400, "quota_exceeded"), 30, { code: "cap", count: 30 }],
-    [e(400, "quota_exceeded"), 12, { code: "quota" }],
+    [e(409, "design_image_limit", undefined, { limit: 30 }), 3, { code: "cap", count: 30 }],
+    [e(409, "design_image_limit"), 3, { code: "cap", count: 30 }], // no data: the known cap
+    [e(409, "quota_exceeded"), 30, { code: "quota" }],
+    [e(409, "quota_exceeded"), 12, { code: "quota" }],
     [e(429, "rate_limited", 7), 3, { code: "rateLimited", seconds: 7 }],
     [e(429, "rate_limited"), 3, { code: "rateLimited", seconds: 5 }],
     [e(503, "busy", 9), 3, { code: "busy", seconds: 9 }],
@@ -134,8 +139,8 @@ describe("failureOf: each error has its own reason", () => {
     [e(408, "request_timeout"), 3, { code: "timeout" }],
     [e(500, "storage_error"), 3, { code: "generic" }],
     [new Error("boom"), 3, { code: "generic" }],
-  ])("%#", (err, have, want) => {
-    expect(failureOf(err, have)).toEqual(want);
+  ])("%#", (err, _have, want) => {
+    expect(failureOf(err)).toEqual(want);
   });
   it("every reason has a message in both languages", async () => {
     const en = (await import("../../../locales/en.json")).default.editor.upload.error as Record<

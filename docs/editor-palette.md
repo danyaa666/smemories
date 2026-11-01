@@ -23,8 +23,9 @@ At most 2 run at once (the server allows 2 per user and answers `ERROR_RATE_LIMI
 | client: not JPEG, PNG or WebP | only those types |
 | client: over 10 MiB, or `ERROR_TOO_LARGE` | larger than 10 MB |
 | `ERROR_UNSUPPORTED_MEDIA_TYPE` | only JPEG, PNG and WebP |
-| `ERROR_INVALID_IMAGE` | could not be read, or too large in pixels |
-| `ERROR_QUOTA_EXCEEDED` | **the cap**: "already has N of 30" when the book has 30 design images; otherwise the 500 MiB storage limit. The server uses one code for both, so the client tells them by the list it holds (when the list has more pages it assumes 30) |
+| `ERROR_INVALID_IMAGE` | could not be read, or too large in pixels: "at most 12000 px a side; JPEG up to 50 megapixels, PNG and WebP up to 25 megapixels". The numbers are `IMAGE_LIMITS` in `web/src/api/yearbooks.ts`; `imageLimits.test.ts` reads `maxSide`, `maxPixels` and `maxPixelsPNGWebP` from `internal/media/image.go` and fails when they differ (T-164) |
+| `ERROR_DESIGN_IMAGE_LIMIT` (409, T-164) | **the cap**: "already has N of 30"; N is `data.limit` of the answer |
+| `ERROR_QUOTA_EXCEEDED` | the 500 MiB storage limit (the 30-image cap no longer shares this code) |
 | `ERROR_RATE_LIMITED`, `ERROR_BUSY` | "try again in N s" from `Retry-After` |
 | `ERROR_EMAIL_NOT_VERIFIED` | verify first, with a link to `/verify-email` (new tab) |
 | no connection | offline |
@@ -34,14 +35,14 @@ A phone photo of 4000 px is accepted: the server resizes to 3000 px (T-152).
 
 ## Deleting a design image, and why the history is cleared
 
-The server refuses a layout that points at an image that is not the owner's, and **undo could bring such a layout back** after the image is gone. So an image that is **in use** (an item or a background on any page type; the dialog says "used on N page types (the cover, ...)") is deleted in this order (`palette/deleteImage.ts`, unit-tested with the real store and a fake server):
+The server refuses a layout that points at an image that is not the owner's, and **undo could bring such a layout back** after the image is gone. So an image that is **in use** (an item or a background on any page type; the dialog says "used on 1 page (the cover)" / "used on 2 pages (...)", i18n plural keys `inUse_one` and `inUse_other`) is deleted in this order (`palette/deleteImage.ts`, unit-tested with the real store and a fake server):
 
 1. one history step removes every item and background that uses it;
 2. `store.settle()` waits until the server has that layout; if it cannot be saved the image is **not** deleted and the dialog says so;
 3. `media/delete`; if this fails the layout is already saved without the image (nothing is lost on the server), the image stays in the list and the error is shown;
 4. the undo and redo stacks are cleared (`store.clearHistory()`), and the dialog said so before the click.
 
-An image that is **not in use** is deleted with a plain confirmation and the history stays. (An older step could still hold the image; undoing into it would be refused by the server and the editor then shows the problem list with *Remove the items the server refused*, which drops the items and backgrounds named by `data.problems`.)
+An image counts as in use when the current document **or any step of the undo or redo stacks** uses it (`store.usesImageInHistory`, T-164). If only the history does (the item was removed earlier), the dialog says "No page uses this image now, but your undo and redo steps still do", step 1 and the wait are skipped, and steps 3 and 4 run as above, so undo cannot bring the item back. An image that is **in no page and in no step** is deleted with a plain confirmation and the history stays. (A history that was cleared elsewhere, or a layout saved by another tab, can still point at a deleted image; the server then refuses the save and the editor shows the problem list with *Remove the items the server refused*.)
 
 An image that a loaded layout names but the server no longer has is drawn on the page as a hatched "Missing image" box that can be selected and deleted (the print and the class book draw nothing, as before).
 

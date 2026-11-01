@@ -259,7 +259,7 @@ test("own images: upload through the UI, use as an image and as a background, re
     const n = (await designImages(page)).findIndex((m) => m.id === bgId) + 1;
     await palette(page).getByRole("button", { name: `Delete image ${n} of 2` }).click();
     const dlg = page.getByRole("dialog");
-    await expect(dlg).toContainText("used on 1 page types (the cover)");
+    await expect(dlg).toContainText("used on 1 page (the cover)");
     await expect(dlg).toContainText("Undo and redo are cleared");
     await dlg.getByRole("button", { name: "Delete image" }).click();
     await expect(dlg).toHaveCount(0);
@@ -280,6 +280,29 @@ test("own images: upload through the UI, use as an image and as a background, re
     expect(JSON.stringify((await storedLayout(page)).layout)).not.toContain(used);
     expect(await designImages(page)).toHaveLength(0);
   });
+});
+
+test("an image that only the undo steps use: deleting it clears the history, undo cannot bring the item back (T-164)", async ({ browser }) => {
+  test.skip(!BASE || !OTP || !bookId, "needs the setup test");
+  const page = await ownerPage(browser);
+  await resetLayout(page);
+  await openEditor(page);
+  await tab(page, "My images").click();
+  await upload(page, file("history.png", 5, 400, 300));
+  await palette(page).getByRole("button", { name: "Add image 1 of 1" }).click();
+  await expect(items(page)).toHaveCount(1);
+  await expect(page.getByRole("heading", { name: "Picture" })).toBeVisible();
+  await page.getByRole("button", { name: "Delete", exact: true }).click(); // the item is gone, the step before it still holds the image
+  await expect(items(page)).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Undo" })).toBeEnabled();
+  await palette(page).getByRole("button", { name: "Delete image 1 of 1" }).click();
+  const dlg = page.getByRole("dialog");
+  await expect(dlg).toContainText("No page uses this image now, but your undo and redo steps still do");
+  await dlg.getByRole("button", { name: "Delete image" }).click();
+  await expect(dlg).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Undo" })).toBeDisabled();
+  await expect(items(page)).toHaveCount(0);
+  expect(await designImages(page)).toHaveLength(0);
 });
 
 test("every upload error has its own message; the 31st image is refused with the cap", async ({ browser }) => {
@@ -318,6 +341,10 @@ test("every upload error has its own message; the 31st image is refused with the
     await upload(page, file("one-too-many.png", 9, 64, 64));
     await expect(palette(page).getByRole("alert")).toContainText("already has 30 of 30");
     expect(await designImages(page)).toHaveLength(30);
+    const f = file("again.png", 10, 64, 64); // T-164: the cap has its own code and carries the limit
+    const res = await page.request.post("/api/media/create", { headers: { Origin: BASE }, multipart: { yearbook_id: bookId, purpose: "design", file: { name: f.name, mimeType: f.mimeType, buffer: f.buffer } } });
+    expect(res.status()).toBe(409);
+    expect(await res.json()).toMatchObject({ status: "ERROR_DESIGN_IMAGE_LIMIT", data: { limit: 30 } });
   });
   await step("the list pages: 24 first, the rest on 'Load more'", async () => {
     await expect(palette(page).locator(".ed-thumbs .ed-tile")).toHaveCount(24);

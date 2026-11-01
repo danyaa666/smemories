@@ -916,7 +916,8 @@ paths:
         - {code: ERROR_NOT_FOUND, description: The yearbook does not exist or belongs to someone else; the two cannot be told apart.}
         - {code: ERROR_INVALID_IMAGE, description: "The image is corrupt, over 12000 px on a side, over 50 megapixels for JPEG or 25 megapixels for PNG and WebP, or its estimated decoded size is over 128 MiB."}
         - {code: ERROR_UNSUPPORTED_MEDIA_TYPE, description: The request is not multipart/form-data, or the file is not a JPEG, PNG or WebP image.}
-        - {code: ERROR_QUOTA_EXCEEDED, description: "The yearbook already holds 200 photos (or 30 design images, for `purpose=design`) or the user's photos and design images together reach 500 MiB."}
+        - {code: ERROR_QUOTA_EXCEEDED, description: "The yearbook already holds 200 photos (for a photo) or the user's photos and design images together reach 500 MiB (for either)."}
+        - {code: ERROR_DESIGN_IMAGE_LIMIT, description: "The yearbook already holds 30 design images (`purpose=design` only); `data.limit` is 30."}
         - {code: ERROR_TOO_LARGE, description: "The file or the request body is over the cap (`SMEM_MEDIA_MAX_BYTES` plus framing)."}
         - {code: ERROR_REQUEST_TIMEOUT, description: The request body did not arrive in time; nothing was stored.}
         - {code: ERROR_RATE_LIMITED, description: "More than 60 uploads in 10 minutes for this user, or already 2 uploads in progress for this user or 4 for this client address; wait `Retry-After` seconds."}
@@ -954,7 +955,11 @@ paths:
         "403": {$ref: "#/components/responses/ApiForbidden"}
         "404": {$ref: "#/components/responses/ApiNotFound"}
         "408": {$ref: "#/components/responses/ApiRequestTimeout"}
-        "409": {$ref: "#/components/responses/ApiConflict"}
+        "409":
+          description: "`ERROR_QUOTA_EXCEEDED` (photo cap or the 500 MiB quota) or `ERROR_DESIGN_IMAGE_LIMIT` (30 design images; `data.limit`)."
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/MediaCreateConflictError"}
         "413": {$ref: "#/components/responses/ApiTooLarge"}
         "415": {$ref: "#/components/responses/ApiUnsupportedMediaType"}
         "429": {$ref: "#/components/responses/ApiRateLimited"}
@@ -4251,6 +4256,18 @@ components:
                     properties:
                       path: {type: string, description: "Where the problem is, like pages.cover.items[2].x."}
                       code: {type: string, description: "What is wrong with it."}
+    MediaCreateConflictError:
+      description: "`ERROR_QUOTA_EXCEEDED` (no `data`) or `ERROR_DESIGN_IMAGE_LIMIT` (`data.limit`)."
+      allOf:
+        - {$ref: "#/components/schemas/ApiError"}
+        - type: object
+          properties:
+            data:
+              type: object
+              description: Only on `ERROR_DESIGN_IMAGE_LIMIT`.
+              required: [limit]
+              properties:
+                limit: {type: integer, description: The most design images one yearbook can hold (30).}
     BookLayoutConflictError:
       description: "`ERROR_VERSION_CONFLICT`: `data` is the stored version and document (`layout` null when it was reset or the template changed)."
       allOf:

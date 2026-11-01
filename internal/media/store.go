@@ -114,11 +114,10 @@ func checkQuota(ctx context.Context, q rowQuerier, ownerID, yearbookID uint64, k
 		 WHERE y.owner_id = ? AND m.uploader_kind = ?`, ownerID, KindOwner).Scan(&used); err != nil {
 		return dbError(err, "sum photo bytes")
 	}
-	limit := maxPerYearbook
-	if purpose == PurposeDesign {
-		limit = maxDesignPerYearbook
+	if purpose == PurposeDesign && n >= maxDesignPerYearbook {
+		return ErrDesignLimit
 	}
-	if n >= limit || used+int64(add) > maxBytesPerUser {
+	if (purpose == PurposePhoto && n >= maxPerYearbook) || used+int64(add) > maxBytesPerUser {
 		return ErrQuota
 	}
 	return nil
