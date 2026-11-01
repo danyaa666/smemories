@@ -236,7 +236,7 @@ A template author does not need to read the runtime. For `<tpl>` (`memory-book`,
 
 ### What print-check covers (T-147)
 
-`make print-check` (`tools/print-check/check.test.mjs`, about 170 tests, 5-6 min) renders fixture books in Chromium, prints them to PDF and inspects the PDF. Every theme x font set x size of both customisable templates is a cell with **two tests**: the render (page count, page size, all fonts embedded, that set's fonts only, self-hosted files, no foreign host, no blank page, names and emoji present) and the stress test (long Vietnamese names and emoji everywhere: no text cut off, nothing outside its page, none wider than its box, the set's fonts loaded at the ready signal).
+`make print-check` (`tools/print-check/check.test.mjs`, about 180 tests, 5-6 min) renders fixture books in Chromium, prints them to PDF and inspects the PDF. Every theme x font set x size of both customisable templates is a cell with **two tests**: the render (page count, page size, all fonts embedded, that set's fonts only, self-hosted files, no foreign host, no blank page, names and emoji present) and the stress test (long Vietnamese names and emoji everywhere: no text cut off, nothing outside its page, none wider than its box, the set's fonts loaded at the ready signal).
 
 | Template | Themes | Font sets | Sizes | Cells | Tests |
 |---|---|---|---|---|---|

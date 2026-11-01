@@ -92,7 +92,7 @@ Redis db, and run again.
 
 **The `e2e` job is paused (D-37, T-132; `image` and `go-integration` are paused too, see [ci.md](ci.md)):** it does not run on pushes and pull requests (it shows as skipped) and runs only by hand with `gh workflow run ci.yml --ref <branch>`. QA runs the same commands locally (`make e2e` and the print-check, see CLAUDE.md "CI scope"). To switch it back on, delete the `if:` line above the job.
 
-The print-check suite has 170 tests (T-154 added the layout layer) and takes about 5-6 min locally (about 319 s); the job's "Print check" step is limited to 15 min and the whole job to 25 min (T-149), and the step prints `print-check: N s`.
+The print-check suite has 181 tests (run `make print-check` for the current number) and takes about 5-6 min locally (about 319 s); the job's "Print check" step is limited to 15 min and the whole job to 25 min (T-149), and the step prints `print-check: N s`.
 
 The `e2e` job in `.github/workflows/ci.yml` starts MySQL, the S3 store and Valkey like `go-integration`, then runs `scripts/e2e.sh`. The
 error starts with `STEP FAILED: <n. title>`, then Playwright's own message and code frame. On failure the artifact `e2e-failure`
