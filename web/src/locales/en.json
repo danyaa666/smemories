@@ -1026,18 +1026,26 @@
       "cover": {
         "title": "Cover title",
         "photo": "Cover photo",
-        "sticker": "Cover sticker"
+        "sticker": "Cover sticker",
+        "school": "School line",
+        "year": "Class-of year",
+        "motto": "Motto",
+        "class": "Class name"
       },
       "profile": {
         "heading": "Profile heading",
-        "photo": "Profile photo"
+        "photo": "Profile photo",
+        "eyebrow": "Profile small heading"
       },
       "notes": {
-        "heading": "Notes heading"
+        "heading": "Notes heading",
+        "eyebrow": "Notes small heading"
       },
       "back": {
         "heading": "Back cover heading",
-        "pact": "Back cover pact"
+        "pact": "Back cover pact",
+        "thanks": "Thank-you line",
+        "footer": "Back cover footer"
       }
     },
     "hiddenName": "{{name}} (hidden)",
@@ -1150,7 +1158,9 @@
       "soft": "Soft ink",
       "paper": "Paper",
       "white": "White",
-      "accent": "Accent"
+      "accent": "Accent",
+      "gold": "Gold",
+      "bronze": "Bronze"
     },
     "align": {
       "label": "Alignment",

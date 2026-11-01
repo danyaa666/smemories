@@ -25,6 +25,18 @@
       {"id": "notes.heading", "max": 24},
       {"id": "back.thanks", "max": 80}
     ],
-    "images": []
+    "images": [],
+    "layout": {
+      "page_kinds": [
+        {"id": "cover", "repeats": false, "editable": ["cover.school", "cover.year", "cover.title", "cover.motto", "cover.class"]},
+        {"id": "profile", "repeats": false, "editable": ["profile.eyebrow", "profile.heading", "profile.photo"]},
+        {"id": "notes", "repeats": true, "editable": ["notes.eyebrow", "notes.heading"]},
+        {"id": "back", "repeats": false, "editable": ["back.thanks", "back.footer"]}
+      ],
+      "text_fonts": ["display", "body"],
+      "colors": ["ink", "paper", "gold", "bronze"],
+      "text_size": {"min": 8, "max": 96},
+      "safe_margin_mm": 8
+    }
   }
 }

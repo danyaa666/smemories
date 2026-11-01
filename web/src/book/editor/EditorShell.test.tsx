@@ -805,3 +805,27 @@ describe("words", () => {
     expect(screen.getByRole("region", { name: "Trang đang chỉnh: Bìa" })).toBeInTheDocument();
   });
 });
+
+describe("Navy Classic in the editor (T-166)", () => {
+  it("the page strip shows its four kinds, the panel its fonts and colours, and a new text on the dark cover is light", async () => {
+    await mount(null, { yearbook: { ...data().yearbook, template_id: "navy-classic" } });
+    const strip = screen.getByRole("navigation", { name: "Pages" });
+    expect(
+      within(strip)
+        .getAllByRole("button")
+        .map((b) => b.getAttribute("aria-label")?.replace(/^Page \d+ of \d+: /, "")),
+    ).toEqual(["Cover", "Profile", "Notes page 1", "Back cover"]);
+    expect(hit("Cover title")).toBeInTheDocument();
+    expect(hit("School line")).toBeInTheDocument();
+    await userEvent.click(
+      within(screen.getByRole("toolbar")).getByRole("button", { name: "Add text" }),
+    );
+    const light = document.querySelector<HTMLElement>(".ed-pagebox [data-layout-item] .bk-fit");
+    expect(light?.style.color || getComputedStyle(light!).color).toMatch(/nc-light|247, 243, 234/);
+    expect(screen.getByRole("radiogroup", { name: "Colour" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Paper" })).toBeChecked();
+    expect(screen.getAllByRole("radio").map((r) => r.getAttribute("aria-label"))).toEqual(
+      expect.arrayContaining(["Ink", "Paper", "Gold", "Bronze"]),
+    );
+  });
+});

@@ -1026,18 +1026,26 @@
       "cover": {
         "title": "Tiêu đề bìa",
         "photo": "Ảnh bìa",
-        "sticker": "Hình dán trên bìa"
+        "sticker": "Hình dán trên bìa",
+        "school": "Dòng tên trường",
+        "year": "Năm tốt nghiệp",
+        "motto": "Phương châm",
+        "class": "Tên lớp"
       },
       "profile": {
         "heading": "Tiêu đề trang giới thiệu",
-        "photo": "Ảnh trang giới thiệu"
+        "photo": "Ảnh trang giới thiệu",
+        "eyebrow": "Dòng nhỏ trang giới thiệu"
       },
       "notes": {
-        "heading": "Tiêu đề trang lưu bút"
+        "heading": "Tiêu đề trang lưu bút",
+        "eyebrow": "Dòng nhỏ trang lưu bút"
       },
       "back": {
         "heading": "Tiêu đề bìa sau",
-        "pact": "Lời hứa ở bìa sau"
+        "pact": "Lời hứa ở bìa sau",
+        "thanks": "Lời cảm ơn",
+        "footer": "Chân trang bìa sau"
       }
     },
     "hiddenName": "{{name}} (đã ẩn)",
@@ -1150,7 +1158,9 @@
       "soft": "Mực nhạt",
       "paper": "Giấy",
       "white": "Trắng",
-      "accent": "Nhấn"
+      "accent": "Nhấn",
+      "gold": "Vàng ánh kim",
+      "bronze": "Đồng"
     },
     "align": {
       "label": "Căn lề",

@@ -260,3 +260,41 @@ export function makeLayout({ extra = 0 } = {}) {
     },
   };
 }
+
+/**
+ * T-166: the fixture layout for Navy Classic. Cover: a design image as the background, the title moved and rotated, the year block moved, the motto hidden, a tinted sticker, a
+ * Vietnamese text of 500 runes and an image item; profile: a colour, the oval photo moved, the eyebrow hidden, a text; notes: a colour, a moved heading and an item that repeats;
+ * back: a colour, the thanks moved, the footer hidden, a text. Item colours are dark tokens so the print-against-screen check can follow their ink on the light backgrounds.
+ */
+export function makeNavyLayout() {
+  const text = (id, x, cy, w, h, t, o = {}) => ({ id, t: "text", x, w, h, cy, text: t, font: "body", size: 20, color: "ink", ...o });
+  return {
+    v: 1,
+    pages: {
+      cover: {
+        bg: { media: DESIGN_IMAGE },
+        overrides: { "cover.title": { x: 100, w: 600, h: 90, cy: 330, r: -4 }, "cover.year": { x: 250, w: 500, h: 270, cy: 520, r: 3 }, "cover.motto": { hidden: true } },
+        items: [
+          { id: "sticker1", t: "asset", asset: "shape.heart", tint: "ink", x: 700, w: 160, h: 160, cy: 180, r: 15 },
+          text("longtx", 60, 800, 700, 330, `${LAYOUT_MARK.cover} ${RUNES_500}`, { size: 30, font: "display" }),
+          { id: "image01", t: "image", media: DESIGN_IMAGE, fit: "cover", radius: 24, x: 600, w: 300, h: 240, cy: 600, r: -6 },
+        ],
+      },
+      profile: {
+        bg: { color: "paper" },
+        overrides: { "profile.photo": { x: 560, w: 200, h: 260, cy: 700, r: 5 }, "profile.eyebrow": { hidden: true } },
+        items: [text("prof01", 100, 930, 500, 60, "Hồ sơ của mình", { size: 28 })],
+      },
+      notes: {
+        bg: { color: "gold" },
+        overrides: { "notes.heading": { x: 60, w: 600, h: 90, cy: 70 } },
+        items: [text("note01", 60, 150, 500, 60, `${LAYOUT_MARK.notes} nhớ nhé`, { size: 26 }), { id: "note02", t: "asset", asset: "shape.circle", tint: "ink", x: 800, w: 120, h: 120, cy: 900, r: 30 }],
+      },
+      back: {
+        bg: { color: "paper" },
+        overrides: { "back.thanks": { x: 200, w: 560, h: 110, cy: 700, r: -2 }, "back.footer": { hidden: true } },
+        items: [text("back01", 80, 40, 600, 60, `${LAYOUT_MARK.back} hẹn gặp lại`, { size: 28 })],
+      },
+    },
+  };
+}
