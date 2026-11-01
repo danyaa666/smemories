@@ -39,6 +39,7 @@ export function useLayoutEditor(yearbookId: string) {
       undo: store.undo.bind(store),
       redo: store.redo.bind(store),
       flush: store.flush,
+      settle: store.settle,
       select: store.select,
       clearSelection: () => store.select([]),
       useTheirs: store.useTheirs.bind(store),

@@ -280,10 +280,62 @@ describe("property panel", () => {
       document.querySelector<HTMLElement>(".ed-pagebox [data-layout-item=starBB]")!;
     expect(parseFloat(star().style.left)).toBeCloseTo(81.6, 0);
     await setNum("Width", "500"); // far outside the limits
-    expect(await screen.findByRole("alert")).toHaveTextContent("outside the limits");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Between 1 and 200");
     expect(field("Width")).toHaveValue(15);
     await setNum("Width", "20");
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("explains an empty or out-of-range entry, puts the old value back and stores nothing (R4)", async () => {
+    await mount();
+    await userEvent.click(hit("Cover title"));
+    for (const bad of ["250", "-5", "0.04", ""]) {
+      await setNum("Width", bad);
+      expect(screen.getByRole("alert")).toHaveTextContent("Between 1 and 200");
+      expect(field("Width")).toHaveValue(82.4);
+    }
+    expect(field("Width")).toHaveAttribute("aria-invalid", "true");
+    expect(moved("cover.title")).toBe(false);
+    expect(screen.getByRole("button", { name: "Undo" })).toBeDisabled();
+    await setNum("Width", "50"); // a good entry clears the message
+    expect(screen.queryByRole("alert")).toBeNull();
+    await i18n.changeLanguage("vi");
+    await userEvent.click(hit("Tiêu đề bìa"));
+    await setNum("Rộng", "999");
+    expect(screen.getByRole("alert")).toHaveTextContent("Nhập số từ 1 đến 200");
+  });
+
+  it("an edit writes only the field the student changed; the other stored values stay bit-identical (R3)", async () => {
+    const stored = { x: 117, w: 601, h: 133, cy: 187, r: 0 };
+    const srv = await mount({
+      v: 1,
+      pages: { cover: { overrides: { "cover.title": stored } } },
+    });
+    await userEvent.click(hit("Cover title"));
+    const saved = async () => {
+      await userEvent.click(screen.getByRole("link", { name: "Preview as PDF" }));
+      await waitFor(() =>
+        expect(srv.s.layout?.pages.cover?.overrides?.["cover.title"]).toBeDefined(),
+      );
+      return srv.s.layout!.pages.cover!.overrides!["cover.title"];
+    };
+    const tab = { close: vi.fn(), location: { href: "" }, opener: {} };
+    vi.stubGlobal(
+      "open",
+      vi.fn(() => tab),
+    );
+    await setNum("Width", "50");
+    expect(await saved()).toEqual({ ...stored, w: 500 });
+    await setNum("Left", "20");
+    await setNum("Top", "30"); // Top commits cy from the stored height only
+    await waitFor(() => expect(field("Top")).toHaveValue(30));
+    await userEvent.click(screen.getByRole("link", { name: "Preview as PDF" }));
+    await waitFor(() => expect(srv.s.saves.length).toBeGreaterThan(1));
+    const ov = srv.s.layout!.pages.cover!.overrides!["cover.title"]!;
+    expect(ov).toMatchObject({ x: 200, w: 500, h: 133, r: 0 });
+    await setNum("Height", "20"); // keeps the shown Top, moves the centre
+    expect(field("Top")).toHaveValue(30);
+    vi.unstubAllGlobals();
   });
 
   it("reorders, hides, resets and deletes", async () => {
@@ -366,6 +418,50 @@ describe("toolbar and banners", () => {
     const a = screen.getByRole("link", { name: "Preview as PDF" });
     expect(a).toHaveAttribute("href", `/yearbooks/${BOOK}/book`);
     expect(a).toHaveAttribute("target", "_blank");
+  });
+
+  it("sends the new tab to the book only after the save in flight and the one queued behind it are done (R2)", async () => {
+    const srv = await mount();
+    const tab = { close: vi.fn(), location: { href: "" }, opener: {} };
+    const open = vi.fn(() => tab);
+    vi.stubGlobal("open", open);
+    let release!: () => void;
+    const held = new Promise<void>((r) => (release = r));
+    srv.s.script.push(async () => {
+      await held;
+      srv.s.version++;
+      return srv.body({ version: srv.s.version, updated_at: 1 });
+    });
+    await userEvent.click(hit("Cover title"));
+    await setNum("Width", "40");
+    await userEvent.click(screen.getByRole("link", { name: "Preview as PDF" })); // starts the first save
+    await waitFor(() => expect(srv.s.saves).toHaveLength(1));
+    await setNum("Width", "45"); // an edit while the first save is in flight: queued
+    await userEvent.click(screen.getByRole("link", { name: "Preview as PDF" }));
+    expect(open).toHaveBeenCalledWith("about:blank", "_blank"); // opened by the click, still blank
+    expect(tab.location.href).toBe("");
+    release();
+    await waitFor(() => expect(tab.location.href).toBe(`/yearbooks/${BOOK}/book`));
+    expect(srv.s.saves).toHaveLength(2);
+    expect(srv.s.layout?.pages.cover?.overrides?.["cover.title"]?.w).toBe(450); // the tab opens on the last edit
+    vi.unstubAllGlobals();
+  });
+
+  it("closes the tab and says so when the latest edit could not be saved (R2)", async () => {
+    const srv = await mount();
+    const tab = { close: vi.fn(), location: { href: "" }, opener: {} };
+    vi.stubGlobal(
+      "open",
+      vi.fn(() => tab),
+    );
+    srv.s.script.push(() => srv.fail(400, "ERROR_INVALID_ARGUMENT", { problems: [] }));
+    await userEvent.click(hit("Cover title"));
+    await setNum("Width", "40");
+    await userEvent.click(screen.getByRole("link", { name: "Preview as PDF" }));
+    await waitFor(() => expect(tab.close).toHaveBeenCalled());
+    expect(tab.location.href).toBe("");
+    expect(await screen.findByText(/preview was not opened/)).toBeInTheDocument();
+    vi.unstubAllGlobals();
   });
 
   it("shows the conflict banner, blocks edits until a choice and both choices work", async () => {

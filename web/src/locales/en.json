@@ -943,6 +943,8 @@
     "redo": "Redo",
     "resetAll": "Reset all layout",
     "preview": "Preview as PDF",
+    "previewFailed": "The latest changes could not be saved, so the preview was not opened.",
+    "range": "Between {{min}} and {{max}}",
     "conflict": "This book was changed in another tab or device. Editing is paused until you choose.",
     "useSaved": "Use the saved version",
     "keepMine": "Keep my version",

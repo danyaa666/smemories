@@ -114,6 +114,10 @@ test("layout editor shell: open, select, change the width, undo, reload; handles
     expect(before, "the title is wide").toBeGreaterThan(50);
     const share0 = await titleShare();
     expect(Math.abs(share0 * 100 - before), "the panel shows the width the page draws").toBeLessThan(2);
+    await width.fill("250"); // out of range: the old value comes back with a message (R4)
+    await width.press("Enter");
+    await expect(owner.getByRole("alert").filter({ hasText: "Between 1 and 200" })).toBeVisible();
+    await expect(width).toHaveValue(String(before));
     const done = saved();
     await width.fill("40");
     await width.press("Enter");
@@ -152,6 +156,40 @@ test("layout editor shell: open, select, change the width, undo, reload; handles
     await owner.getByRole("button", { name: "Reset this element" }).click();
     await done;
     await expect.poll(titleShare).toBeGreaterThan(0.6);
+  });
+
+  await step("5b. 'Preview as PDF' shows the just-edited layout even when the save is slow (R2)", async () => {
+    // every save takes 1.5 s; the student edits the width and clicks Preview at once, three times
+    await owner.route("**/api/book-layout/save", async (route) => {
+      await new Promise((r) => setTimeout(r, 1500));
+      await route.continue();
+    });
+    try {
+      await owner.getByRole("button", { name: "Cover title" }).click();
+      for (const want of [35, 45, 55]) {
+        await num("Width").fill(String(want));
+        await num("Width").press("Enter");
+        const popup = owner.context().waitForEvent("page");
+        await owner.getByRole("link", { name: "Preview as PDF" }).click();
+        const tab = await popup;
+        await tab.waitForURL(/\/book$/, { timeout: STEP_MS });
+        await tab.waitForSelector("html[data-book-ready]", { timeout: STEP_MS });
+        const share = await tab.evaluate(() => {
+          const el = document.querySelector("[data-page='cover'] [data-layout-id='cover.title']");
+          const s = el?.closest(".bk-inner");
+          return el && s ? el.getBoundingClientRect().width / s.getBoundingClientRect().width : null;
+        });
+        expect(share, `the tab shows width ${want}`).toBeGreaterThan(want / 100 - 0.02);
+        expect(share).toBeLessThan(want / 100 + 0.02);
+        await tab.close();
+      }
+    } finally {
+      await owner.unroute("**/api/book-layout/save");
+    }
+    // back to the template's own place for the steps below
+    const done = saved();
+    await owner.getByRole("button", { name: "Reset this element" }).click();
+    await done;
   });
 
   await step("6. the handles of an item flush to the page edge are reachable on A5, A4 and Letter", async () => {

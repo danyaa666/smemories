@@ -1,10 +1,9 @@
 import {
   createContext,
   useContext,
+  useCallback,
   useEffect,
-  useLayoutEffect,
   useMemo,
-  useRef,
   useState,
   type CSSProperties,
   type ReactNode,
@@ -88,13 +87,13 @@ export function Editable({ layoutId: id, children }: { layoutId: string; childre
   const { size } = useBookEnv();
   // A moved box is placed in page units, so it is drawn straight into the page element (a portal): a positioned ancestor of the template
   // (`.mb-cover-head`, `.mb-flow`) would otherwise offset it (T-159 rework 1). The marker only tells where the page is.
-  const marker = useRef<HTMLSpanElement>(null);
   const [page, setPage] = useState<Element | null>(null);
+  const mark = useCallback(
+    (n: HTMLSpanElement | null) => setPage(n?.closest(".mb-page") ?? null),
+    [],
+  );
   const ov = ctx?.doc.pages[kindOf(id)]?.overrides?.[id];
   const nat = ctx?.spec.natural[id];
-  useLayoutEffect(() => {
-    setPage(marker.current?.closest(".mb-page") ?? null);
-  });
   if (!ctx) return <>{children}</>; // no layout: the page is exactly what it always was
   const moves = ov && (ov.hidden || [ov.x, ov.w, ov.h, ov.cy, ov.r].some((v) => v !== undefined));
   if (!moves || !nat)
@@ -119,7 +118,7 @@ export function Editable({ layoutId: id, children }: { layoutId: string; childre
   return (
     <>
       {nat.flow && <div aria-hidden="true" style={{ flex: "none", width: nat.w, height: nat.h }} />}
-      {!ov.hidden && <span ref={marker} hidden />}
+      {!ov.hidden && <span ref={mark} hidden />}
       {!ov.hidden && page && createPortal(drawn, page)}
     </>
   );

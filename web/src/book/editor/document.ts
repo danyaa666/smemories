@@ -13,9 +13,9 @@ export type Box = { x: number; w: number; h: number; cy: number; r?: number };
 export const MAX_ITEMS_PAGE = 40;
 export const MAX_ITEMS_TOTAL = 150;
 export const MAX_TEXT = 500; // code points
-const MIN_BOX = 10;
-const MAX_BOX = 2000;
-const RATIO = 1419; // A5 height over width in thousandths, as the server (pageRatioPermille): a box legal on any paper passes
+export const MIN_BOX = 10;
+export const MAX_BOX = 2000;
+export const RATIO = 1419; // A5 height over width in thousandths, as the server (pageRatioPermille): a box legal on any paper passes
 
 export type Refusal =
   | "too_many_on_page"

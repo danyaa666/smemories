@@ -943,6 +943,8 @@
     "redo": "Làm lại",
     "resetAll": "Đặt lại toàn bộ bố cục",
     "preview": "Xem trước dạng PDF",
+    "previewFailed": "Chưa lưu được các thay đổi mới nhất nên chưa mở bản xem trước.",
+    "range": "Nhập số từ {{min}} đến {{max}}",
     "conflict": "Cuốn sách này vừa được thay đổi ở tab hoặc thiết bị khác. Việc chỉnh sửa tạm dừng cho đến khi bạn chọn.",
     "useSaved": "Dùng bản đã lưu",
     "keepMine": "Giữ bản của tôi",

@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { OnePage } from "../BookPages";
-import type { PageBox, Rect } from "../layout/geometry";
+import type { Box, PageBox } from "../layout/geometry";
 import {
   clearOverride,
+  MAX_BOX,
+  MIN_BOX,
   ops,
+  RATIO,
   removeItem,
   reorderItem,
   setBg,
@@ -18,7 +21,10 @@ import { overrideOf, patchOf, type Target } from "./targets";
 
 const tenth = (v: number) => String(Math.round(v * 10) / 10);
 
-/** A number that is committed on Enter or when it loses the focus: one history step per committed input. `onCommit` returns false when the change was refused. */
+/**
+ * A number that is committed on Enter or when it loses the focus: one history step per committed input. `onCommit` returns false when the change was refused.
+ * An empty, non-numeric or out-of-range entry puts the previous value back and says which range is allowed (R4).
+ */
 function NumField({
   label,
   value,
@@ -31,34 +37,50 @@ function NumField({
   label: string;
   value: number;
   step: number;
-  min?: number;
-  max?: number;
+  min: number;
+  max: number;
   disabled: boolean;
   onCommit: (n: number) => boolean;
 }) {
+  const { t } = useTranslation();
   const [text, setText] = useState(tenth(value));
+  const [bad, setBad] = useState(false);
+  const lo = Math.ceil(min * 10) / 10; // what the input can show, so the message and the check agree
+  const hi = Math.floor(max * 10) / 10;
   const commit = () => {
     const n = Number(text);
-    if (text.trim() === "" || !Number.isFinite(n) || Math.abs(n - value) < 0.05)
-      return setText(tenth(value));
+    const valid = text.trim() !== "" && Number.isFinite(n) && n >= lo && n <= hi;
+    setBad(!valid);
+    if (!valid || Math.abs(n - value) < 0.05) return setText(tenth(value));
     if (!onCommit(n)) setText(tenth(value));
   };
   return (
-    <label className="ed-field">
-      <span>{label}</span>
-      <input
-        type="number"
-        inputMode="decimal"
-        step={step}
-        min={min}
-        max={max}
-        value={text}
-        disabled={disabled}
-        onChange={(e) => setText(e.target.value)}
-        onBlur={commit}
-        onKeyDown={(e) => e.key === "Enter" && commit()}
-      />
-    </label>
+    <>
+      <label className="ed-field">
+        <span>{label}</span>
+        <input
+          type="number"
+          inputMode="decimal"
+          step={step}
+          min={lo}
+          max={hi}
+          value={text}
+          disabled={disabled}
+          aria-invalid={bad || undefined}
+          onChange={(e) => {
+            setText(e.target.value);
+            setBad(false);
+          }}
+          onBlur={commit}
+          onKeyDown={(e) => e.key === "Enter" && commit()}
+        />
+      </label>
+      {bad && (
+        <p role="alert" className="ed-field-error">
+          {t("editor.range", { min: tenth(lo), max: tenth(hi) })}
+        </p>
+      )}
+    </>
   );
 }
 
@@ -119,20 +141,26 @@ export function PropertyPanel({
   }
 
   const item = selected.item;
-  const write = (rect: Rect, r: number) => {
-    const patch = patchOf(rect, r, pb);
-    return run(
-      item ? ops.setItemBox(selected.kind, selected.id, patch) : setOverride(selected.id, patch),
-    );
-  };
   const rect = selected.rect;
+  const ov = overrideOf(doc, selected.id);
+  /** Writes only the fields the student changed. A template element that has no stored value for a field yet gets the one it is drawn with, so it stays put. */
+  const write = (patch: Partial<Box>) => {
+    if (item) return run(ops.setItemBox(selected.kind, selected.id, patch));
+    const drawn: Partial<Box> = patchOf(rect, selected.r, pb);
+    const have = (k: keyof Box) => ov?.[k] !== undefined;
+    for (const k of Object.keys(drawn) as (keyof Box)[]) if (have(k)) delete drawn[k];
+    return run(setOverride(selected.id, { ...drawn, ...patch }));
+  };
+  // The limits of the server (document.ts boxOk) in the units the inputs show: % of the page width or height.
+  const wSt = (rect.width * 1000) / pb.w; // stored width and height of the box as drawn
+  const hSt = (rect.height * 1000) / pb.w;
+  const slack = Math.floor((hSt * RATIO) / 2000);
   const field = (
     label: string,
     value: number,
-    make: (n: number) => [Rect, number],
+    [min, max]: [number, number],
+    make: (n: number) => Partial<Box>,
     step = 0.1,
-    min?: number,
-    max?: number,
   ) => (
     <NumField
       key={`${label}:${tenth(value)}`}
@@ -142,7 +170,7 @@ export function PropertyPanel({
       min={min}
       max={max}
       disabled={readOnly}
-      onCommit={(n) => write(...make(n))}
+      onCommit={(n) => write(make(n))}
     />
   );
   const list = doc.pages[kind]?.items ?? [];
@@ -158,23 +186,32 @@ export function PropertyPanel({
       <h2>{targetName(t, selected)}</h2>
       <fieldset disabled={readOnly}>
         <legend>{t("editor.box")}</legend>
-        {field(t("editor.x"), (rect.left / pb.w) * 100, (n) => [
-          { ...rect, left: (n / 100) * pb.w },
-          selected.r,
-        ])}
-        {field(t("editor.y"), (rect.top / pb.h) * 100, (n) => [
-          { ...rect, top: (n / 100) * pb.h },
-          selected.r,
-        ])}
-        {field(t("editor.w"), (rect.width / pb.w) * 100, (n) => [
-          { ...rect, width: (n / 100) * pb.w },
-          selected.r,
-        ])}
-        {field(t("editor.h"), (rect.height / pb.h) * 100, (n) => [
-          { ...rect, height: (n / 100) * pb.h },
-          selected.r,
-        ])}
-        {field(t("editor.rotation"), selected.r, (n) => [rect, Math.round(n)], 1, -180, 180)}
+        {field(t("editor.x"), (rect.left / pb.w) * 100, [-wSt / 20, (2000 - wSt) / 20], (n) => ({
+          x: n * 10,
+        }))}
+        {field(
+          t("editor.y"),
+          (rect.top / pb.h) * 100,
+          [
+            (-slack - (hSt / 2) * (pb.w / pb.h)) / 10,
+            (1000 + slack - (hSt / 2) * (pb.w / pb.h)) / 10,
+          ],
+          // the stored centre is the new top plus half of the stored height
+          (n) => ({ cy: ((n / 100) * pb.h + rect.height / 2) * (1000 / pb.h) }),
+        )}
+        {field(t("editor.w"), (rect.width / pb.w) * 100, [MIN_BOX / 10, MAX_BOX / 10], (n) => ({
+          w: n * 10,
+        }))}
+        {field(
+          t("editor.h"),
+          (rect.height / pb.h) * 100,
+          [(MIN_BOX * pb.w) / pb.h / 10, (MAX_BOX * pb.w) / pb.h / 10],
+          (n) => {
+            const px = (n / 100) * pb.h; // the new height; the shown Top stays, so the centre moves
+            return { h: (px * 1000) / pb.w, cy: ((rect.top + px / 2) * 1000) / pb.h };
+          },
+        )}
+        {field(t("editor.rotation"), selected.r, [-180, 180], (n) => ({ r: Math.round(n) }), 1)}
       </fieldset>
       {refused && (
         <p role="alert">

@@ -50,6 +50,7 @@ export function EditorShell({
   const [asking, setAsking] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [resetError, setResetError] = useState<unknown>(null);
+  const [previewFailed, setPreviewFailed] = useState(false);
   const readOnly = ed.saveState === "conflict";
 
   const pb = useMemo(() => pageBox(size), [size]);
@@ -141,11 +142,32 @@ export function EditorShell({
           href={`/yearbooks/${bookId}/book`}
           target="_blank"
           rel="noopener"
-          onClick={() => ed.flush()}
+          onClick={(e) => {
+            // The tab is opened by the click (a popup blocker allows that) and sent to the book once everything is saved, the save in flight and the one
+            // queued behind it included; if saving fails, the tab is closed and the editor says so.
+            if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey) return void ed.flush();
+            e.preventDefault();
+            setPreviewFailed(false);
+            const tab = window.open("about:blank", "_blank");
+            if (tab) tab.opener = null;
+            const url = `/yearbooks/${bookId}/book`;
+            void ed.settle().then((saved) => {
+              if (!saved) {
+                tab?.close();
+                setPreviewFailed(true);
+              } else if (tab) tab.location.href = url;
+              else window.open(url, "_blank", "noopener");
+            });
+          }}
         >
           {t("editor.preview")}
         </a>
       </div>
+      {previewFailed && (
+        <p role="alert" className="error">
+          {t("editor.previewFailed")}
+        </p>
+      )}
       {ed.saveState === "conflict" && (
         <Banner
           variant="warning"

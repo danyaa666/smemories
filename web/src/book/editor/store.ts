@@ -44,6 +44,7 @@ export class EditorStore {
   private epoch = 0; // bumped by reset: answers of older saves are ignored
   private inFlight = false;
   private queued = false;
+  private idle: Promise<void> = Promise.resolve(); // settles when the save in flight has ended
   private attempt = 0;
   private debounce: ReturnType<typeof setTimeout> | undefined;
   private retry: ReturnType<typeof setTimeout> | undefined;
@@ -200,6 +201,19 @@ export class EditorStore {
   }
   /** Saves now (page hide, leaving, the user asked). */
   flush = () => void this.save();
+  /**
+   * Saves now and resolves when nothing is pending: a save already in flight and the newest document queued behind it are both waited for (the
+   * preview must show the last edit). True when the server has the newest document; false when a save failed, is waiting to retry, or cannot be made.
+   */
+  settle = async (): Promise<boolean> => {
+    for (let i = 0; i < 50; i++) {
+      if (this.inFlight) await this.idle;
+      else if (this.dirtyAndSavable()) await this.save();
+      else break;
+      if (this.attempt > 0 || this.notBefore > Date.now()) return false; // offline or a 429 wait: do not hammer the server
+    }
+    return this.loaded === "ready" && !this.inFlight && this.rev === this.savedRev;
+  };
 
   private async save(): Promise<void> {
     this.clearTimers();
@@ -210,6 +224,8 @@ export class EditorStore {
     }
     this.inFlight = true;
     this.queued = false;
+    let release!: () => void;
+    this.idle = new Promise<void>((r) => (release = r));
     const { epoch, rev } = this;
     const doc = this.history.committed;
     this.saveState = "saving";
@@ -230,6 +246,7 @@ export class EditorStore {
       this.queued = false;
       this.emit();
       if (again) void this.save(); // edits during the save: one more save of the newest document
+      release();
     }
   }
 

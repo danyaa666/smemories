@@ -49,12 +49,14 @@ The spec has no cover-title edit because the cover title is the book's own title
 
 ## The layout editor journey (T-159)
 
-`tools/e2e/editor-shell.spec.mjs` runs in the same `make e2e` (about 6 s). One account, a Memory Book (A5, Vietnamese) with no notes:
+`tools/e2e/editor-shell.spec.mjs` runs in the same `make e2e` (about 15 s). One account, a Memory Book (A5, Vietnamese) with no notes:
 (1) register, create the book, choose `memory-book`; (2) the customise screen's "Free layout" link opens `/yearbooks/:id/editor`: the page strip has three pages (cover, profile, back), the cover is current, the safe margin guide shows;
 (3) select the cover title, read its width in the property panel (it matches what the page draws), set it to 40 %, `book-layout/save` answers and the title on the stage is 40 % of the page wide;
 (4) set the rotation to 4, undo with Ctrl/Cmd+Z, and that undo is saved too (width 40, rotation 0, Redo enabled); (5) after a reload the saved layout is drawn (width 40, rotation 0, Undo disabled because history is not saved), and "Reset this element" makes the title wide again;
 (6) an item flush to the right and bottom edge (saved through the API) on A5, then A4, then Letter (the book's paper is changed through `yearbook/update`): the south-east handle sticks out of the page and `elementFromPoint` at its outer corner is the handle, so the page's clip does not hide it;
-(7) at 700 px wide the editor does not mount and the message with the link back shows. The test uses the role `spinbutton` for the panel numbers because a resize handle is also named "Resize from left".
+(5b) with every save delayed 1.5 s, the student sets the width three times and clicks "Preview as PDF" at once: the new tab, opened by the click, goes to `/book` only after the save in flight and the queued one are done and shows the new width each time; an out-of-range number in step 3 shows "Between 1 and 200" and restores the old value; (7) at 700 px wide the editor does not mount and the message with the link back shows. The test uses the role `spinbutton` for the panel numbers because a resize handle is also named "Resize from left".
+
+A template element moved to a box equal to its own is a print-check test too (T-159 rework 1): "an override equal to the natural box leaves every editable element where it was", A5/A4/Letter, all eight editable ids, rect change below 0.15 % of the page width (measured 0.04 to 0.07 %; before the fix up to 12 %).
 
 The stage against the book screen (T-159 AC3) is a print-check test: `make print-check`, "the editor stage draws the cover and a notes page exactly as the book screen does", on A5, A4 and Letter at zoom 100 %. Both are on-screen renderings, so the budget is 0.5 % of the pixels (measured on the fixture book: cover 0.00 to 0.08 %, notes page 0.00 to 0.34 %; the rest is glyph and gradient edges on a fractional CSS zoom, and Letter with its exact zoom is 0.000 %).
 
