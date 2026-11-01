@@ -498,7 +498,7 @@ Spec: .team/epics/E09-customisation-editor/21-editor-palette-assets-images-backg
 - 2026-11-01 17:38Z · leader · merged PR #160 squash, head 78c0fe7, QA_PASS: e2e 31/31, print-check 187/187, vitest 1033; non-blocking follow-ups: dialog copy 'used on 1 page types', PNG 25 MP message, undo after deleting unused image can restore an item whose image is gone (server refuses, remove button cleans), 30-cap vs quota share ERROR_QUOTA_EXCEEDED
 
 ### T-163 — [E09] Layout version history and restore (backend)
-- **Status:** IN_QA
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -506,11 +506,11 @@ Spec: .team/epics/E09-customisation-editor/21-editor-palette-assets-images-backg
 - **Risk:** low
 - **Rework:** 0
 - **Owner-approved:** —
-- **Assignee:** qa
+- **Assignee:** —
 - **Branch:** task/t-163-e09-layout-version-history-and-restore-b
 - **PR:** https://github.com/danyaa666/smemories/pull/161
-- **Updated:** 2026-11-01 21:12Z by qa
-- **Comments-seen:** 4
+- **Updated:** 2026-11-01 21:35Z by leader
+- **Comments-seen:** 6
 
 Spec: .team/epics/E09-customisation-editor/22-layout-version-history-backend.md (read it from the main checkout). Snapshots before a new editing burst (10 min), newest 30 kept, restore as a new version dropping missing assets/images; owner only; deleted with template change, yearbook and account. QA must run make test-integration and report the lines (migration, concurrency)
 
@@ -519,6 +519,17 @@ Spec: .team/epics/E09-customisation-editor/22-layout-version-history-backend.md 
 - 2026-11-01 17:19Z · leader · Leader to dev: spec 22-layout-version-history-backend.md, backend only; migration + concurrency, so run make test-integration (and -race, repeated) on your own compose stack with non-default ports and put the lines in the board comment. Do not touch web code except regenerated schema types if the repo does that.
 - 2026-11-01 18:02Z · dev · PR #161, head f265cd4b3997c12c8abab2e5a33788b1b827358c. Backend only: migration 20261102120000 book_layout_version_tab (+item_count, bytes columns for the list), snapshot in the save/reset/restore transaction under the yearbook row lock (auto only if newest snapshot older than 10 min, newest 30 kept), routes book-layout/version-list, version-get, restore (owner only, save rate limits), deleted with template change and yearbook, metrics, OpenAPI+schema.d.ts, docs, Postman folder. Results on own stack t163stack (ports 43316/46316/49316): make build lint test green; make test-integration -race all packages ok (first run failed only internal/notes zero-rows tests for the unregistered table, fixed, notes re-run ok 118s); go test -race -count=20 -tags integration ./internal/booklayout/ ok (324s, 20/20); migrate down/up ok; check:api ok; check-class-matrix ok (27 ops); Postman customisation-editor collection 166 requests / 374 assertions / 0 failed (postman CLI, run from postman/ for fixture paths; newman not installed). Verify: fill a book with 40 saves spread over time, restore, delete a design image then restore, two tabs racing restore (one conflict), version-list has no bodies. Notes: no data export or account deletion exists yet (T-025), so the export count is documented for T-025 only; anonymous is 401 as on all book-layout routes (spec said 404); the burst limit means the Postman history folder waits once at its first request. Stack stopped. Not run: e2e/print-check (no web change), image build.
 - 2026-11-01 18:02Z · leader · Leader to QA (when the usage gate lets you run): re-run everything on head f265cd4b3997c12c8abab2e5a33788b1b827358c and write result lines with the head SHA, including make test-integration with -race and booklayout -race -count=20, migrate down/up, check:api, class matrix and the Postman/newman run. Deviations accepted: item_count/bytes columns; anonymous callers get 401 like every book-layout route (matrix: admin, member, other-class admin 404, anonymous 401); no export/account-deletion code exists yet so the snapshot count and deletion are documented for T-025. Check: retention boundary at exactly 10 min, 31st snapshot prunes the oldest, reset/restore snapshots regardless of age, two concurrent saves (no duplicate/no loss), restore with a deleted design image and an asset id removed from the registry (dropped count), restore conflict leaves state unchanged, template change and yearbook delete remove snapshots, version-list has no bodies, foreign book/user 404.
+- 2026-11-01 21:34Z · qa · QA_PASS on head f265cd4b3997c12c8abab2e5a33788b1b827358c (CI go/web/security green on PR #161). Own stack: compose project t163qastack, ports 43416/46416/49416, SMEM_TEST_S3_ENDPOINT=http://127.0.0.1:49416, API on 48416; stack removed afterwards (own project only).
+  RESULT LINES: make lint test: exit 0 (gofmt, vet, golangci-lint, web lint; 32 go pkgs ok, 0 FAIL; web vitest 53 files / 957 tests passed). make test-integration (go test -race -count=1 -timeout 30m -tags integration ./...): EXIT 0, 34 packages ok, 0 FAIL (booklayout 121s, notes 284s, class 251s, db 211s). go test -race -count=20 -tags integration ./internal/booklayout/: ok 433s, 20/20. migrate: up applied 20261102120000, migrate-down removed book_layout_version_tab (book_layout_tab stayed), migrate up recreated it: ok. npm run check:api: api schema ok. scripts/check-class-matrix.sh: 27 ops, all documented. Postman (postman CLI, customisation-editor collection, run from postman/ after make verify-newman-users + reset-limits): run 1 and run 2 back to back each 166 requests, 374 assertions, 0 failures. e2e/print-check not run: no web code change (only regenerated schema.d.ts).
+  AC EVIDENCE (explore script against the real API+MySQL, 51/51 checks pass; created_at back-dated in DB for time control):
+  AC1: 40 saves each after a back-dated gap -> version 40, exactly 30 rows, versions 39..10 newest first (1..9 pruned); 3 saves inside the burst add none; newest snapshot aged 9:55 -> no new one, 10:05 -> new one; reset and restore snapshot immediately regardless of age (kinds reset/restore on top), count stays 30.
+  AC2: restore gives a new higher version (46->47), restored doc == snapshot; restore after reset ok (v50). Deleted design image + unknown asset id (snapshot edited to gone.asset-xyz): 200, dropped=3 (bg + image item + asset item), text kept, stored layout == answer. Unknown key in snapshot -> 400 ERROR_INVALID_LAYOUT with problem list, nothing written. Stale base_version -> 409 ERROR_VERSION_CONFLICT with stored document; get/version/snapshot count unchanged. Two-tab race (two threads, same base_version, different snapshots) x8: always [200,409], version +1, no duplicate (yearbook,version) rows, still 30.
+  AC3: other user B on list/get/restore of A's book -> 404; A's snapshot id under A's other book -> 404 (get/restore); anonymous 401 (accepted deviation); foreign Origin 403. Template change (memory-book->classic) deleted layout row + all snapshots; yearbook delete removed 30 snapshots, no orphans. Account deletion and export count: no such code exists (T-025), documented there, not testable.
+  AC4: booklayout -race -count=20 ok; plus the 8 real HTTP races above.
+  AC5: all lines above.
+  Other: version-list with 30 entries is 3558 bytes, no layout bodies (keys id,version,kind,created_at,item_count,bytes); version-get 317 bytes. Empty history -> items []; negative base_version -> 400. Metrics smem_layout_snapshots_total{kind}, pruned_total, restores_total{result} populated; the layout restored slog line has public id, versions, dropped, no document content (API log grep for document text: 0 hits).
+  NON-BLOCKING: (1) version-list/get/restore consume the save rate limit (burst 20/10s) by spec; a client polling version-list will eat save budget. (2) Log fields restored_version/from_version are confusing: from_version is the version replaced, restored_version the snapshot's version. (3) The collection description says run from repo root, but the fixture paths need the postman/ directory with the postman CLI. (4) make verify-newman-users is needed before the collection (documented).
+- 2026-11-01 21:35Z · leader · merged f0eb70f; QA 2026-11-02: lint/test, integration -race 34 pkgs, booklayout -race x20, migrate up/down, check:api, class matrix, postman 166/374/0. Non-blocking: version routes share save rate limit; restore log field names
 
 ### T-164 — [E09] Palette follow-ups: copy, history edge, distinct cap/quota code (web + one small API change)
 - **Status:** IN_PROGRESS
@@ -541,7 +552,7 @@ Spec: .team/epics/E09-customisation-editor/23-palette-follow-ups.md (read it fro
 - 2026-11-01 21:12Z · leader · promoted: T-163 in QA, dev free; spec 23-palette-follow-ups.md
 
 ### T-165 — [E09] Editor version history panel: list, preview and restore (web)
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -552,11 +563,12 @@ Spec: .team/epics/E09-customisation-editor/23-palette-follow-ups.md (read it fro
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-11-02 04:50Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-11-01 21:35Z by leader
+- **Comments-seen:** 1
 
 Spec: .team/epics/E09-customisation-editor/24-version-history-panel.md (read it from the main checkout). History button and panel, read-only preview of a snapshot, restore through the T-163 routes with settle first, history cleared after restore, dropped count message, every error mapped, e2e spec editor-history
 
 #### Comments
+- 2026-11-01 21:35Z · leader · T-163 merged (f0eb70f); version routes use the save rate limit (burst 20/10s), so no polling and cache previews
 
 <!-- tasks:end -->
