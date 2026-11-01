@@ -285,7 +285,7 @@ Spec: .team/epics/E09-customisation-editor/16-print-check-start-server-strict.md
 - 2026-11-01 07:04Z · leader · merged 4c9b0f6 (PR #155, head 2646dc6); QA_PASS: print-check 181/181, foreign server on port refused, no orphan vite
 
 ### T-158 — [E09] Editor state: document store, undo/redo, autosave and conflict handling (web)
-- **Status:** READY_FOR_QA
+- **Status:** MERGED
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -296,8 +296,8 @@ Spec: .team/epics/E09-customisation-editor/16-print-check-start-server-strict.md
 - **Assignee:** —
 - **Branch:** task/t-158-e09-editor-state-document-store-undo-red
 - **PR:** 156
-- **Updated:** 2026-11-01 07:13Z by dev
-- **Comments-seen:** 5
+- **Updated:** 2026-11-01 07:18Z by leader
+- **Comments-seen:** 7
 
 Spec: .team/epics/E09-customisation-editor/17-editor-state-undo-autosave.md (read it from the main checkout). Pure operations, snapshot history depth 100, debounced autosave with base_version, 409 choices
 
@@ -321,9 +321,20 @@ Spec: .team/epics/E09-customisation-editor/17-editor-state-undo-autosave.md (rea
   Re-test after fix: run document.mirror.test.ts + the suite; I will re-run live scenarios (e) and (g).
 - 2026-11-01 07:11Z · leader · Leader to dev (rework 1): fix all three QA findings, not only the blocker. (1) textRefusal in document.ts must match the server's text validation exactly: read internal/booklayout validate.go for the refused categories (zero-width/format characters, U+2028/2029, U+FFFD, control chars) and the order (NFC and trim first, then count code points); make QA's document.mirror.test.ts (commit 2b0dfe2, pushed on the PR branch; merge it in, no force-push) pass 8 of 8, and add a comment in document.ts naming validate.go as the source of truth. (2) A commit during 429/backoff must not schedule a save before Retry-After/backoff has passed (the debounce must wait for max(1.5 s, remaining wait)); add a fake-timer test. (3) keepMine and useTheirs must catch a refetch that returns no conflict body (move to a clear error/offline state, no unhandled rejection); add a test. Re-run web lint/prettier/tsc/vitest/lint:i18n/check:api/build.
 - 2026-11-01 07:13Z · dev · Rework 1, PR #156 head 0b2c3f3 (merged QA's 2b0dfe2, no force-push). (1) document.ts textRefusal now mirrors validate.go/textx.CleanMultiline: CRLF->LF, NFC, Go-style trim (keeps U+FEFF, trims U+0085), refuses Cc/Cf (except ZWJ)/Zl/Zp/U+FFFD/lone surrogates -> bad_text before the 500 code-point count; document.mirror.test.ts 8/8. (2) store.ts notBefore: schedule() delays to max(1.5 s, remaining 429/backoff wait); flush/online/stop still immediate; tests 'commit during a 429 wait' (fails without fix) and 'offline backoff + flush'. (3) stored() catches the refetch failure: stays in conflict (gone on 401/403/404), no rejection, choice can be retried; tests for useTheirs and keepMine (fail without fix). Checks: eslint 0, prettier clean, tsc clean, vitest 45 files 814 passed, lint:i18n ok, check:api ok, build ok. No .team change in PR. QA: re-run live scenarios (e) and (g).
+- 2026-11-01 07:18Z · qa · QA_PASS T-158 rework 1, PR #156 head 0b2c3f3 (tested on exactly this SHA; worktree clean).
+  DIFF since 6525f4a: 4 files, web only: document.ts, store.ts, store.test.ts, document.mirror.test.ts (my 2b0dfe2 merged, no force-push). No server/.team/dependency change.
+  CHECKS (web, 0b2c3f3): eslint 0 problems; prettier --check clean; tsc --noEmit clean; vitest 45 files, 814 passed (814); document.mirror.test.ts 8/8; lint:i18n 'i18n check ok'; check:api 'api schema ok'; npm run build ok. PR CI on 0b2c3f3 (run 41283902848): go pass, web pass, security pass; e2e/image/go-integration skipped (paused D-37/D-38); mergeable.
+  LIVE (own compose project qa158, ports 13307/16380/19010, API :18158 SMEM_ENV=test, SMEM_TEST_S3_ENDPOINT set, real MySQL/Redis/S3, store driven from throw-away vitest outside the repo; stack removed afterwards):
+  (1) Text mirror, client vs real server: client now refuses U+200B, U+200E, U+FEFF, U+2028, U+2029, U+FFFD, NUL, tab, lone surrogate (bad_text) and 501 letters / 501 NFC chars (text_too_long); accepts and server saves: ZWJ U+200D, CRLF, U+0085 and U+00A0 at the edges (trimmed), 300 decomposed Vietnamese chars (600 cp, 300 NFC), 500 letters + 5 trailing spaces. No case where client accepts and server refuses.
+  (2) Real 429 (21st save in 10 s): state stays saving; an edit during the wait sent 0 save requests in the following 2.0 s (was 1 before the fix); recovered at ~9.0 s after the 429 (Retry-After) and saved. Offline backoff attempts at +1501, +2503, +4504, +8505 ms; edit while offline then reconnect -> saved, fresh client sees both items.
+  (3) Refetch with no conflict body (409 body data stripped by the fetch shim) and network offline: useTheirs and keepMine both resolve with no throw and 0 unhandledRejection; state stays conflict, 0 save requests in 2.5 s; after reconnect the same choice works (useTheirs -> B's doc; keepMine -> saved with A's doc).
+  REGRESSION (full earlier live set re-run on the new head, 7 tests pass): load/edit/autosave/undo/redo/version; conflict useTheirs and keepMine from a second client (no silent overwrite of stale B); 400 bad font -> invalid with problem path, no re-send, undo recovers; 404 after delete -> gone, 1 request only.
+  AC1-AC4 now all pass (AC4 text categories and order match textx.CleanMultiline/validate.go). make test-integration, e2e, print-check not run: web-only change, no server, print or auth flow touched (risk low). Postman n/a (no endpoint change).
+  Non-blocking: none new.
+- 2026-11-01 07:18Z · leader · merged cdaa62d (PR #156, head 0b2c3f3); QA_PASS after rework 1: vitest 814, mirror test 8/8, live 429/conflict/offline scenarios
 
 ### T-159 — [E09] Editor route and shell: page strip, zoom, selection overlay, property panel (web)
-- **Status:** BACKLOG
+- **Status:** TODO
 - **Priority:** P2
 - **Type:** feature
 - **Milestone:** M4
@@ -334,12 +345,13 @@ Spec: .team/epics/E09-customisation-editor/17-editor-state-undo-autosave.md (rea
 - **Assignee:** —
 - **Branch:** —
 - **PR:** —
-- **Updated:** 2026-11-01 08:00Z by leader
-- **Comments-seen:** 0
+- **Updated:** 2026-11-01 07:18Z by leader
+- **Comments-seen:** 1
 
 Spec: .team/epics/E09-customisation-editor/18-editor-shell-and-selection.md (read it from the main checkout). Route /yearbooks/:id/editor, overlay outside the page clip, panel numeric edits, e2e journey
 
 #### Comments
+- 2026-11-01 07:18Z · leader · T-158 merged cdaa62d
 
 ### T-160 — [E09] Editor gestures: move, resize, rotate, snap, guides, with keyboard control (web)
 - **Status:** BACKLOG
